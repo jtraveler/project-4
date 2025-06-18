@@ -1,5 +1,5 @@
 """
-WSGI config for prompts project.
+WSGI config for prompts_manager project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'prompts.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'prompts_manager.settings')
 
 application = get_wsgi_application()

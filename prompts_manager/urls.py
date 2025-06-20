@@ -25,5 +25,6 @@ admin.site.index_title = "Welcome to Prompts Manager Administration"
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("summernote/", include('django_summernote.urls')),
+    path("accounts/", include("django.contrib.auth.urls")),
     path("", include("prompts.urls"), name="prompts-urls"),
 ]

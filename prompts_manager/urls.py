@@ -17,8 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+# Customize admin site headers
+admin.site.site_header = "Prompts Manager Administration"
+admin.site.site_title = "Prompts Manager Admin"
+admin.site.index_title = "Welcome to Prompts Manager Administration"
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('summernote/', include('django_summernote.urls')),  # Add this
-    path('', include('prompts.urls', namespace='prompts')),
+    path("admin/", admin.site.urls),
+    path("summernote/", include('django_summernote.urls')),
+    path("", include("prompts.urls"), name="prompts-urls"),
 ]

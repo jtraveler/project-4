@@ -4,19 +4,17 @@ from .models import Prompt, Comment
 
 @admin.register(Prompt)
 class PromptAdmin(SummernoteModelAdmin):
-    summernote_fields = ('content', 'excerpt')
-    list_display = ('title', 'author', 'created_on')
-    search_fields = ['title', 'content']
-    list_filter = ('created_on', 'author')
+    # Basic display - adjust these field names to match your actual model
+    list_display = ('title', 'created_on', 'author')
+    summernote_fields = ('content',)
+    
+    # Show newest first
+    ordering = ['-created_on']
 
 @admin.register(Comment)
-class CommentAdmin(SummernoteModelAdmin):
-    summernote_fields = ('body',)
-    list_display = ('prompt', 'author', 'body', 'approved', 'created_on')
-    list_filter = ('approved', 'created_on', 'author')
-    search_fields = ['body', 'author__username', 'prompt__title']
-    actions = ['approve_comments']
-
-    def approve_comments(self, request, queryset):
-        queryset.update(approved=True)
-    approve_comments.short_description = "Mark selected comments as approved"
+class CommentAdmin(admin.ModelAdmin):
+    # Basic display - adjust these field names to match your actual model  
+    list_display = ('author', 'body', 'prompt', 'created_on')
+    
+    # Show newest comments first
+    ordering = ['-created_on']

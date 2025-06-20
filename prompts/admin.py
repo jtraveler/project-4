@@ -1,15 +1,17 @@
 from django.contrib import admin
+from django_summernote.admin import SummernoteModelAdmin
 from .models import Prompt, Comment
 
-# Register your models here.
 @admin.register(Prompt)
-class PromptAdmin(admin.ModelAdmin):
+class PromptAdmin(SummernoteModelAdmin):
+    summernote_fields = ('content', 'excerpt')
     list_display = ('title', 'author', 'created_on')
     search_fields = ['title', 'content']
     list_filter = ('created_on', 'author')
 
 @admin.register(Comment)
-class CommentAdmin(admin.ModelAdmin):
+class CommentAdmin(SummernoteModelAdmin):
+    summernote_fields = ('body',)
     list_display = ('prompt', 'author', 'body', 'approved', 'created_on')
     list_filter = ('approved', 'created_on', 'author')
     search_fields = ['body', 'author__username', 'prompt__title']

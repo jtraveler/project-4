@@ -1,4 +1,3 @@
-cat > prompts/templates/prompts/prompt_list.html << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,10 +8,9 @@ cat > prompts/templates/prompts/prompt_list.html << 'EOF'
 <body>
     <h1>Prompts list</h1>
     {% for prompt in prompt_list %}
-    <h2><a href="{% url 'prompts:prompt_detail' prompt.pk %}">{{ prompt.title }}</a></h2>
+    <h2><a href="{% url 'prompts:prompt_detail' prompt.slug %}">{{ prompt.title }}</a></h2>
     <p>{{ prompt.excerpt }}</p>
     <p>Author: {{ prompt.author }}</p>
     {% endfor %}
 </body>
 </html>
-EOF

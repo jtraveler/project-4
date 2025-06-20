@@ -4,17 +4,16 @@ from .models import Prompt, Comment
 
 @admin.register(Prompt)
 class PromptAdmin(SummernoteModelAdmin):
-    # Basic display - adjust these field names to match your actual model
-    list_display = ('title', 'created_on', 'author')
+    list_display = ('title', 'slug', 'status', 'created_on', 'author')
+    search_fields = ['title', 'content']
+    list_filter = ('status', 'created_on', 'author')
+    prepopulated_fields = {'slug': ('title',)}  #Enabling auto-population
     summernote_fields = ('content',)
-    
-    # Show newest first
     ordering = ['-created_on']
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    # Basic display - adjust these field names to match your actual model  
-    list_display = ('author', 'body', 'prompt', 'created_on')
-    
-    # Show newest comments first
+    list_display = ('author', 'body', 'prompt', 'created_on', 'approved')
+    list_filter = ('approved', 'created_on')
+    search_fields = ('author__username', 'body')
     ordering = ['-created_on']

@@ -7,11 +7,11 @@ STATUS = ((0, "Draft"), (1, "Published"))
 
 class Prompt(models.Model):
     title = models.CharField(max_length=200, unique=True)
-    slug = models.SlugField(max_length=200, unique=True)  # Add this field
+    slug = models.SlugField(max_length=200, unique=True, blank=False)
     content = models.TextField()
     excerpt = models.TextField(blank=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="prompts")
-    status = models.IntegerField(choices=STATUS, default=0)  # Add this field
+    status = models.IntegerField(choices=STATUS, default=0)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     
@@ -32,7 +32,7 @@ class Comment(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comments")
     body = models.TextField()
     approved = models.BooleanField(default=False)
-    created_on = models.DateTimeField(auto_now_add=True)
+    created_on = models.DateTimeField(auto_now_add=True)  # Fixed this line
     
     class Meta:
         ordering = ['created_on']

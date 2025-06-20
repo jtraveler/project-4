@@ -2,5 +2,6 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('prompts/', views.my_prompts, name='prompts'),
+    path('', views.PromptList.as_view(), name='home'),
+    path('<int:pk>/', views.PromptDetail.as_view(), name='prompt_detail'),
 ]

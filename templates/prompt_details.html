@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ prompt.title }}</title>
+</head>
+<body>
+    <h1>{{ prompt.title }}</h1>
+    <p>Author: {{ prompt.author }}</p>
+    <p>{{ prompt.content }}</p>
+    
+    <h3>Comments</h3>
+    {% for comment in comments %}
+        <p><strong>{{ comment.author }}:</strong> {{ comment.body }}</p>
+    {% empty %}
+        <p>No comments yet.</p>
+    {% endfor %}
+    
+    <a href="{% url 'home' %}">Back to list</a>
+</body>
+</html>

@@ -159,3 +159,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Whitenoise static files compression
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Serve static files in development
+if DEBUG:
+    import os
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static'),
+    ]

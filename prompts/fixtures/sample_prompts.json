@@ -1,86 +1,142 @@
 [
-  {
-      "model": "prompts.prompt",
-      "pk": 1,
-      "fields": {
-          "title": "Fantasy Landscape with Magical Elements",
-          "slug": "fantasy-landscape-with-magical-elements",
-          "author": 1,
-          "content": "Create a mystical forest scene with glowing mushrooms, ethereal lighting, and fantasy art style. Include floating islands in the background, crystal formations, and magical particles in the air. Use vibrant colors like deep purples, blues, and greens with golden highlights.",
-          "excerpt": "Mystical forest scene with glowing mushrooms, ethereal lighting, fantasy art style",
-          "created_on": "2025-06-20T10:00:00Z",
-          "status": 1,
-          "updated_on": "2025-06-20T10:00:00Z"
-      }
-  },
-  {
-      "model": "prompts.prompt",
-      "pk": 2,
-      "fields": {
-          "title": "Cyberpunk Cityscape at Night",
-          "slug": "cyberpunk-cityscape-at-night",
-          "author": 1,
-          "content": "Generate a futuristic cyberpunk city at night with neon lights, flying cars, and rain-soaked streets. Include towering skyscrapers with holographic advertisements, blade runner aesthetic, and dramatic lighting with pink and blue color schemes.",
-          "excerpt": "Futuristic cyberpunk city with neon lights, flying cars, rain-soaked streets",
-          "created_on": "2025-06-20T10:15:00Z",
-          "status": 1,
-          "updated_on": "2025-06-20T10:15:00Z"
-      }
-  },
-  {
-      "model": "prompts.prompt",
-      "pk": 3,
-      "fields": {
-          "title": "Minimalist Product Photography Setup",
-          "slug": "minimalist-product-photography-setup",
-          "author": 1,
-          "content": "Create a clean, minimalist product photography setup with soft lighting, neutral background, and elegant shadows. Perfect for showcasing products with professional commercial photography style, clean aesthetic, and subtle reflections.",
-          "excerpt": "Clean minimalist setup with soft lighting, neutral background, elegant shadows",
-          "created_on": "2025-06-20T10:30:00Z",
-          "status": 1,
-          "updated_on": "2025-06-20T10:30:00Z"
-      }
-  },
-  {
-      "model": "prompts.prompt",
-      "pk": 4,
-      "fields": {
-          "title": "Abstract Digital Art with Geometric Patterns",
-          "slug": "abstract-digital-art-with-geometric-patterns",
-          "author": 1,
-          "content": "Design abstract digital artwork featuring geometric patterns, gradient colors, and modern design elements. Include flowing shapes, mathematical precision, and contemporary art style with bold color combinations and dynamic composition.",
-          "excerpt": "Abstract digital art with geometric patterns, gradients, modern design",
-          "created_on": "2025-06-20T10:45:00Z",
-          "status": 1,
-          "updated_on": "2025-06-20T10:45:00Z"
-      }
-  },
-  {
-      "model": "prompts.prompt",
-      "pk": 5,
-      "fields": {
-          "title": "Vintage Travel Poster Design",
-          "slug": "vintage-travel-poster-design",
-          "author": 1,
-          "content": "Create a vintage-style travel poster with retro typography, classic color palette, and nostalgic design elements. Include iconic landmarks, art deco styling, and promotional travel poster aesthetic from the 1930s-1950s era.",
-          "excerpt": "Vintage travel poster with retro typography, classic colors, art deco styling",
-          "created_on": "2025-06-20T11:00:00Z",
-          "status": 1,
-          "updated_on": "2025-06-20T11:00:00Z"
-      }
-  },
-  {
-      "model": "prompts.prompt",
-      "pk": 6,
-      "fields": {
-          "title": "Character Design for Fantasy RPG",
-          "slug": "character-design-for-fantasy-rpg",
-          "author": 1,
-          "content": "Design a fantasy RPG character with detailed armor, magical weapons, and epic fantasy styling. Include character sheet elements, multiple poses, and concept art approach with rich details and fantasy game aesthetic.",
-          "excerpt": "Fantasy RPG character with detailed armor, magical weapons, epic styling",
-          "created_on": "2025-06-20T11:15:00Z",
-          "status": 0,
-          "updated_on": "2025-06-20T11:15:00Z"
-      }
-  }
+    {
+        "model": "prompts.prompt",
+        "pk": 1,
+        "fields": {
+            "title": "Fantasy Landscape with Magical Elements",
+            "slug": "fantasy-landscape-with-magical-elements",
+            "author": 1,
+            "content": "Create a mystical forest scene with glowing mushrooms, ethereal lighting, and fantasy art style. Include floating islands in the background, crystal formations, and magical particles in the air. Use vibrant colors like deep purples, blues, and greens with golden highlights.",
+            "excerpt": "Mystical forest scene with glowing mushrooms, ethereal lighting, fantasy art style",
+            "created_on": "2025-06-20T10:00:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T10:00:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 2,
+        "fields": {
+            "title": "Cyberpunk Cityscape at Night",
+            "slug": "cyberpunk-cityscape-at-night",
+            "author": 1,
+            "content": "Generate a futuristic cyberpunk city at night with neon lights, flying cars, and rain-soaked streets. Include towering skyscrapers with holographic advertisements, blade runner aesthetic, and dramatic lighting with pink and blue color schemes.",
+            "excerpt": "Futuristic cyberpunk city with neon lights, flying cars, rain-soaked streets",
+            "created_on": "2025-06-20T10:15:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T10:15:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 3,
+        "fields": {
+            "title": "Minimalist Product Photography Setup",
+            "slug": "minimalist-product-photography-setup",
+            "author": 1,
+            "content": "Create a clean, minimalist product photography setup with soft lighting, neutral background, and elegant shadows. Perfect for showcasing products with professional commercial photography style, clean aesthetic, and subtle reflections.",
+            "excerpt": "Clean minimalist setup with soft lighting, neutral background, elegant shadows",
+            "created_on": "2025-06-20T10:30:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T10:30:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 4,
+        "fields": {
+            "title": "Abstract Digital Art with Geometric Patterns",
+            "slug": "abstract-digital-art-with-geometric-patterns",
+            "author": 1,
+            "content": "Design abstract digital artwork featuring geometric patterns, gradient colors, and modern design elements. Include flowing shapes, mathematical precision, and contemporary art style with bold color combinations and dynamic composition.",
+            "excerpt": "Abstract digital art with geometric patterns, gradients, modern design",
+            "created_on": "2025-06-20T10:45:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T10:45:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 5,
+        "fields": {
+            "title": "Vintage Travel Poster Design",
+            "slug": "vintage-travel-poster-design",
+            "author": 1,
+            "content": "Create a vintage-style travel poster with retro typography, classic color palette, and nostalgic design elements. Include iconic landmarks, art deco styling, and promotional travel poster aesthetic from the 1930s-1950s era.",
+            "excerpt": "Vintage travel poster with retro typography, classic colors, art deco styling",
+            "created_on": "2025-06-20T11:00:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T11:00:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 6,
+        "fields": {
+            "title": "Character Design for Fantasy RPG",
+            "slug": "character-design-for-fantasy-rpg",
+            "author": 1,
+            "content": "Design a fantasy RPG character with detailed armor, magical weapons, and epic fantasy styling. Include character sheet elements, multiple poses, and concept art approach with rich details and fantasy game aesthetic.",
+            "excerpt": "Fantasy RPG character with detailed armor, magical weapons, epic styling",
+            "created_on": "2025-06-20T11:15:00Z",
+            "status": 0,
+            "updated_on": "2025-06-20T11:15:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 7,
+        "fields": {
+            "title": "Realistic Portrait with Dramatic Lighting",
+            "slug": "realistic-portrait-with-dramatic-lighting",
+            "author": 1,
+            "content": "Create a photorealistic portrait with dramatic chiaroscuro lighting, reminiscent of Renaissance masters. Focus on capturing emotion through subtle facial expressions, detailed skin texture, and masterful use of light and shadow to create depth and mood.",
+            "excerpt": "Photorealistic portrait with dramatic chiaroscuro lighting, Renaissance style",
+            "created_on": "2025-06-20T11:30:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T11:30:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 8,
+        "fields": {
+            "title": "Steampunk Mechanical Workshop",
+            "slug": "steampunk-mechanical-workshop",
+            "author": 1,
+            "content": "Design a detailed steampunk workshop filled with intricate brass machinery, steam-powered contraptions, and Victorian-era industrial elements. Include gears, pipes, clockwork mechanisms, and warm amber lighting creating an atmosphere of invention and discovery.",
+            "excerpt": "Detailed steampunk workshop with brass machinery and Victorian industrial elements",
+            "created_on": "2025-06-20T11:45:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T11:45:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 9,
+        "fields": {
+            "title": "Surreal Dreamscape with Floating Objects",
+            "slug": "surreal-dreamscape-with-floating-objects",
+            "author": 1,
+            "content": "Create a surreal dreamlike landscape where gravity doesn't apply. Include floating islands, upside-down trees, melting clocks, and impossible architecture. Use soft, otherworldly colors and create a sense of wonder and mystery that defies physical laws.",
+            "excerpt": "Surreal dreamscape with floating islands, impossible architecture, otherworldly colors",
+            "created_on": "2025-06-20T12:00:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T12:00:00Z"
+        }
+    },
+    {
+        "model": "prompts.prompt",
+        "pk": 10,
+        "fields": {
+            "title": "Modern Architecture with Glass and Steel",
+            "slug": "modern-architecture-with-glass-and-steel",
+            "author": 1,
+            "content": "Design a cutting-edge modern building featuring sleek glass facades, steel frameworks, and innovative geometric shapes. Emphasize clean lines, transparency, and the interplay between interior and exterior spaces with natural light integration.",
+            "excerpt": "Modern building with glass facades, steel frameworks, innovative geometry",
+            "created_on": "2025-06-20T12:15:00Z",
+            "status": 1,
+            "updated_on": "2025-06-20T12:15:00Z"
+        }
+    }
 ]

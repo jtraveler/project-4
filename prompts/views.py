@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views import generic
 from django.contrib import messages
 from django.http import HttpResponseRedirect
+from django.urls import reverse
 from .models import Prompt, Comment
 from .forms import CommentForm
 

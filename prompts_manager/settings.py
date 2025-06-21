@@ -33,7 +33,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'mj-project-4-68750ca94690.herokuapp.com', '.herokuapp.com']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 
 

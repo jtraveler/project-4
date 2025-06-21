@@ -1,22 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ prompt.title }}</title>
-</head>
-<body>
-    <h1>{{ prompt.title }}</h1>
-    <p>Author: {{ prompt.author }}</p>
-    <p>{{ prompt.content }}</p>
-    
-    <h3>Comments</h3>
-    {% for comment in comments %}
-        <p><strong>{{ comment.author }}:</strong> {{ comment.body }}</p>
-    {% empty %}
-        <p>No comments yet.</p>
-    {% endfor %}
-    
-    <a href="{% url 'prompts:home' %}">Back to list</a>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="masthead">
+    <div class="container">
+        <div class="row g-0">
+            <div class="col-md-6 masthead-text">
+                <h1 class="post-title">{{ prompt.title }}</h1>
+                <p class="post-subtitle">{{ prompt.author }} | {{ prompt.created_on|date:"F d, Y" }}</p>
+            </div>
+            <div class="d-none d-md-block col-md-6 masthead-image">
+                <!-- Placeholder for future image -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col card mb-4 mt-3 left top">
+            <div class="card-body">
+                <!-- The prompt content with proper HTML rendering -->
+                <p class="card-text">
+                    {{ prompt.content|safe }}
+                </p>
+                {% if prompt.excerpt %}
+                <div class="row">
+                    <div class="col-1">
+                        <strong>Excerpt:</strong>
+                    </div>
+                    <div class="col-md-10 card-text">
+                        {{ prompt.excerpt }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <hr>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-8 card mb-4 mt-3">
+            <h3>Comments:</h3>
+            <div class="card-body">
+                <!-- We iterate through each comment in comments -->
+                {% for comment in prompt.comments.all %}
+                {% if comment.approved %}
+                <div class="comments" style="padding: 10px;">
+                    <p class="font-weight-bold">
+                        {{ comment.author }}
+                        <span class="text-muted font-weight-normal">
+                            {{ comment.created_on|date:"F d, Y" }}
+                        </span> wrote:
+                    </p>
+                    {{ comment.body|linebreaks }}
+                </div>
+                {% endif %}
+                {% empty %}
+                <p>No comments yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-md-4 card mb-4 mt-3">
+            <div class="card-body">
+                <!-- For later -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

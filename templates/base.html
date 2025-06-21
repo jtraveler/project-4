@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html class="h-100" lang="en">
 <head>
-    <title>CodeStar Blog</title>
+    <title>Prompts Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- Google Fonts CSS -->
     <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -40,6 +40,19 @@
             </div>
         </div>
     </nav>
+
+    <!-- User Status Message -->
+    <div class="container mt-3">
+        <div class="row">
+            <div class="col">
+                {% if user.is_authenticated %}
+                    <p class="text-end text-muted"><i class="fas fa-user"></i> Welcome back, <strong>{{ user.username }}</strong></p>
+                {% else %}
+                    <p class="text-end text-muted"><i class="fas fa-sign-in-alt"></i> <a href="{% url 'account_login' %}">Please log in</a></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
     <main class="flex-shrink-0 main-bg">
 
         <!-- Messages -->

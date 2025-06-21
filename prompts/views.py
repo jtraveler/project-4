@@ -48,22 +48,38 @@ def comment_edit(request, slug, comment_id):
     """
     View to edit comments
     """
+    prompt = get_object_or_404(Prompt, slug=slug)
+    comment = get_object_or_404(Comment, pk=comment_id)
+    
+    # Check if user owns the comment
+    if comment.author != request.user:
+        messages.add_message(request, messages.ERROR, 'You can only edit your own comments!')
+        return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
+    
     if request.method == "POST":
-        prompt = get_object_or_404(Prompt, slug=slug)
-        comment = get_object_or_404(Comment, pk=comment_id)
         comment_form = CommentForm(data=request.POST, instance=comment)
-
-        if comment_form.is_valid() and comment.author == request.user:
+        if comment_form.is_valid():
             comment = comment_form.save(commit=False)
             comment.prompt = prompt
-            comment.approved = False
+            comment.approved = False  # Requires re-approval after edit
             comment.save()
-            messages.add_message(request, messages.SUCCESS, 'Comment Updated!')
+            messages.add_message(request, messages.SUCCESS, 'Comment updated!')
+            return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
         else:
             messages.add_message(request, messages.ERROR, 'Error updating comment!')
-
-    return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
-
+    else:
+        # GET request - show the edit form
+        comment_form = CommentForm(instance=comment)
+    
+    return render(
+        request,
+        'prompts/comment_edit.html',
+        {
+            'comment_form': comment_form,
+            'prompt': prompt,
+            'comment': comment,
+        }
+    )
 
 def comment_delete(request, slug, comment_id):
     """

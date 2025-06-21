@@ -31,4 +31,15 @@ def prompt_detail(request, slug):
             )
             return HttpResponseRedirect(request.path_info)
     else:
-        comment_form = CommentFo
+        comment_form = CommentForm()
+    
+    return render(
+        request,
+        "prompts/prompt_detail.html",
+        {
+            "prompt": prompt,
+            "comments": comments,
+            "comment_count": comment_count,
+            "comment_form": comment_form,
+        },
+    )

@@ -7,10 +7,7 @@
     <div class="row">
         <div class="col-md-8 mt-3 offset-md-2">
             <h3>{% trans "Sign In" %}</h3>
-            <p>{% blocktrans %}Welcome back to the Prompts Manager. To leave a comment or interact with prompts, please log in. If
-                you
-                have not created an account yet, then <a class="link" href="{{ signup_url }}">sign up</a>
-                first.{% endblocktrans %}</p>
+            <p>Welcome back to the Prompts Manager. To leave a comment or interact with prompts, please log in. If you have not created an account yet, then <a class="link" href="{% url 'account_signup' %}">sign up</a> first.</p>
         </div>
     </div>
     <div class="row">

@@ -23,6 +23,7 @@ admin.site.site_title = "Prompts Manager Admin"
 admin.site.index_title = "Welcome to Prompts Manager Administration"
 
 urlpatterns = [
+    path("about/", include("about.urls"), name="about-urls"),
     path("admin/", admin.site.urls),
     path("summernote/", include('django_summernote.urls')),
     path("accounts/", include("django.contrib.auth.urls")),

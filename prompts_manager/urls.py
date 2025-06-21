@@ -26,6 +26,6 @@ urlpatterns = [
     path("about/", include("about.urls"), name="about-urls"),
     path("admin/", admin.site.urls),
     path("summernote/", include('django_summernote.urls')),
-    path("accounts/", include("django.contrib.auth.urls")),
+    path("accounts/", include("allauth.urls")),
     path("", include("prompts.urls"), name="prompts-urls"),
 ]

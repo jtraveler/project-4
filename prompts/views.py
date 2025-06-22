@@ -116,11 +116,17 @@ def collaborate_request(request):
             collaborate_form.save()
             messages.add_message(
                 request, messages.SUCCESS,
-                'Collaboration request sent successfully! We will get back to you soon.'
+                'Collaboration request received! I endeavour to respond within 2 working days.'
             )
-            return HttpResponseRedirect(request.path_info)
-    else:
-        collaborate_form = CollaborateForm()
+            # Redirect to the same page to prevent form resubmission
+            return HttpResponseRedirect(reverse('prompts:collaborate'))
+        else:
+            messages.add_message(
+                request, messages.ERROR,
+                'There was an error with your submission. Please check the form and try again.'
+            )
+    
+    collaborate_form = CollaborateForm()
     
     return render(
         request,

@@ -28,7 +28,11 @@ class Prompt(models.Model):
 
 
 class Comment(models.Model):
-    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE, related_name="comments")
+    prompt = models.ForeignKey(
+        Prompt, 
+        on_delete=models.CASCADE, 
+        related_name="comments"
+    )
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comments")
     body = models.TextField()
     approved = models.BooleanField(default=False)

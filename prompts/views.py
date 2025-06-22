@@ -134,9 +134,9 @@ def prompt_edit(request, slug):
         if prompt_form.is_valid():
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
-            prompt.status = 0  # Set to draft for re-approval
+            prompt.status = 1  # Always publish immediately
             prompt.save()
-            messages.add_message(request, messages.SUCCESS, 'Prompt updated successfully! Your changes are now pending admin approval and will be visible to others once approved.')
+            messages.add_message(request, messages.SUCCESS, 'Prompt updated successfully!')
             return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
         else:
             messages.add_message(request, messages.ERROR, 'Error updating prompt!')

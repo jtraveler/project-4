@@ -1,5 +1,5 @@
 from django import forms
-from .models import Comment
+from .models import Comment, CollaborateRequest
 
 
 class CommentForm(forms.ModelForm):
@@ -13,4 +13,26 @@ class CommentForm(forms.ModelForm):
             'class': 'form-control',
             'placeholder': 'Write your comment here...',
             'rows': 4
+        })
+
+
+class CollaborateForm(forms.ModelForm):
+    class Meta:
+        model = CollaborateRequest
+        fields = ('name', 'email', 'message')
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['name'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Your name'
+        })
+        self.fields['email'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Your email address'
+        })
+        self.fields['message'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Tell us about your collaboration idea...',
+            'rows': 5
         })

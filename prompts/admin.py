@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django_summernote.admin import SummernoteModelAdmin
-from .models import Prompt, Comment
+from .models import Prompt, Comment, CollaborateRequest
 
 @admin.register(Prompt)
 class PromptAdmin(SummernoteModelAdmin):
@@ -16,4 +16,11 @@ class CommentAdmin(admin.ModelAdmin):
     list_display = ('author', 'body', 'prompt', 'created_on', 'approved')
     list_filter = ('approved', 'created_on')
     search_fields = ('author__username', 'body')
+    ordering = ['-created_on']
+
+@admin.register(CollaborateRequest)
+class CollaborateRequestAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'message', 'read', 'created_on')
+    list_filter = ('read', 'created_on')
+    search_fields = ('name', 'email')
     ordering = ['-created_on']

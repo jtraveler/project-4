@@ -38,7 +38,8 @@ def prompt_detail(request, slug):
     else:
         comments = prompt.comments.filter(approved=True).order_by('created_on')
     
-    comment_count = comments.count()
+    # Always show only approved comments count for consistency
+    comment_count = prompt.comments.filter(approved=True).count()
     
     if request.method == "POST":
         comment_form = CommentForm(data=request.POST)

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0"><i class="fas fa-handshake me-2"></i>Let's Collaborate!</h2>
+                </div>
+                <div class="card-body">
+                    <p class="lead mb-4">
+                        I believe in the power of shared knowledge and collective effort.
+                        Whether you have a project in mind, wish to co-author a prompt,
+                        or simply want to brainstorm some ideas, I'm excited to hear from you.
+                        Fill out the form and we can get the ball rolling!
+                    </p>
+                    
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ collaborate_form.name|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ collaborate_form.email|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ collaborate_form.message|as_crispy_field }}
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Send Collaboration Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-muted text-center">
+                    <small>We'll get back to you as soon as possible!</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

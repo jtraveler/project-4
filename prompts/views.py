@@ -3,9 +3,9 @@ from django.views import generic
 from django.contrib import messages
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.db import models  # Add this import
+from django.db import models
 from .models import Prompt, Comment
-from .forms import CommentForm
+from .forms import CommentForm, CollaborateForm
 
 class PromptList(generic.ListView):
     queryset = Prompt.objects.filter(status=1)  # Only show published prompts
@@ -26,7 +26,7 @@ def prompt_detail(request, slug):
     else:
         comments = prompt.comments.filter(approved=True).order_by('created_on')
     
-    comment_count = comments.count()  # Fixed indentation - moved outside else block
+    comment_count = comments.count()
     
     if request.method == "POST":
         comment_form = CommentForm(data=request.POST)
@@ -105,3 +105,27 @@ def comment_delete(request, slug, comment_id):
         messages.add_message(request, messages.ERROR, 'You can only delete your own comments!')
 
     return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
+
+def collaborate_request(request):
+    """
+    View to handle collaboration requests
+    """
+    if request.method == "POST":
+        collaborate_form = CollaborateForm(data=request.POST)
+        if collaborate_form.is_valid():
+            collaborate_form.save()
+            messages.add_message(
+                request, messages.SUCCESS,
+                'Collaboration request sent successfully! We will get back to you soon.'
+            )
+            return HttpResponseRedirect(request.path_info)
+    else:
+        collaborate_form = CollaborateForm()
+    
+    return render(
+        request,
+        "prompts/collaborate.html",
+        {
+            "collaborate_form": collaborate_form,
+        },
+    )

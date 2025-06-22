@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import generic
 from django.contrib import messages
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.db import models
 from .models import Prompt, Comment
@@ -17,7 +17,18 @@ def prompt_detail(request, slug):
     """
     Display an individual prompt and handle comment submission.
     """
-    prompt = get_object_or_404(Prompt, slug=slug, status=1)
+    # If user is the author, show draft prompts too
+    if request.user.is_authenticated:
+        prompt = get_object_or_404(
+            Prompt, 
+            slug=slug
+        )
+        # Check if prompt is published OR user is the author
+        if prompt.status != 1 and prompt.author != request.user:
+            # Prompt is draft and user is not the author
+            raise Http404("Prompt not found")
+    else:
+        prompt = get_object_or_404(Prompt, slug=slug, status=1)
     
     # Show approved comments for everyone, plus user's own unapproved comments
     if request.user.is_authenticated:
@@ -107,36 +118,6 @@ def comment_delete(request, slug, comment_id):
 
     return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
 
-def collaborate_request(request):
-    """
-    View to handle collaboration requests
-    """
-    if request.method == "POST":
-        collaborate_form = CollaborateForm(data=request.POST)
-        if collaborate_form.is_valid():
-            collaborate_form.save()
-            messages.add_message(
-                request, messages.SUCCESS,
-                'Collaboration request received! I endeavour to respond within 2 working days.'
-            )
-            # Redirect to the same page to prevent form resubmission
-            return HttpResponseRedirect(reverse('prompts:collaborate'))
-        else:
-            messages.add_message(
-                request, messages.ERROR,
-                'There was an error with your submission. Please check the form and try again.'
-            )
-    
-    collaborate_form = CollaborateForm()
-    
-    return render(
-        request,
-        "prompts/collaborate.html",
-        {
-            "collaborate_form": collaborate_form,
-        },
-    )
-
 def prompt_edit(request, slug):
     """
     View to edit prompts
@@ -155,7 +136,7 @@ def prompt_edit(request, slug):
             prompt.author = request.user
             prompt.status = 0  # Set to draft for re-approval
             prompt.save()
-            messages.add_message(request, messages.SUCCESS, 'Prompt updated successfully!')
+            messages.add_message(request, messages.SUCCESS, 'Prompt updated successfully! Your changes are now pending admin approval and will be visible to others once approved.')
             return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
         else:
             messages.add_message(request, messages.ERROR, 'Error updating prompt!')
@@ -185,3 +166,33 @@ def prompt_delete(request, slug):
     else:
         messages.add_message(request, messages.ERROR, 'You can only delete your own prompts!')
         return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
+
+def collaborate_request(request):
+    """
+    View to handle collaboration requests
+    """
+    if request.method == "POST":
+        collaborate_form = CollaborateForm(data=request.POST)
+        if collaborate_form.is_valid():
+            collaborate_form.save()
+            messages.add_message(
+                request, messages.SUCCESS,
+                'Collaboration request received! I endeavour to respond within 2 working days.'
+            )
+            # Redirect to the same page to prevent form resubmission
+            return HttpResponseRedirect(reverse('prompts:collaborate'))
+        else:
+            messages.add_message(
+                request, messages.ERROR,
+                'There was an error with your submission. Please check the form and try again.'
+            )
+    
+    collaborate_form = CollaborateForm()
+    
+    return render(
+        request,
+        "prompts/collaborate.html",
+        {
+            "collaborate_form": collaborate_form,
+        },
+    )

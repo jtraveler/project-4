@@ -5,7 +5,8 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.db import models
 from .models import Prompt, Comment
-from .forms import CommentForm, CollaborateForm
+from .forms import CommentForm, CollaborateForm, PromptForm
+
 
 class PromptList(generic.ListView):
     queryset = Prompt.objects.filter(status=1)  # Only show published prompts
@@ -135,3 +136,52 @@ def collaborate_request(request):
             "collaborate_form": collaborate_form,
         },
     )
+
+def prompt_edit(request, slug):
+    """
+    View to edit prompts
+    """
+    prompt = get_object_or_404(Prompt, slug=slug)
+    
+    # Check if user owns the prompt
+    if prompt.author != request.user:
+        messages.add_message(request, messages.ERROR, 'You can only edit your own prompts!')
+        return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
+    
+    if request.method == "POST":
+        prompt_form = PromptForm(data=request.POST, instance=prompt)
+        if prompt_form.is_valid():
+            prompt = prompt_form.save(commit=False)
+            prompt.author = request.user
+            prompt.status = 0  # Set to draft for re-approval
+            prompt.save()
+            messages.add_message(request, messages.SUCCESS, 'Prompt updated successfully!')
+            return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
+        else:
+            messages.add_message(request, messages.ERROR, 'Error updating prompt!')
+    else:
+        # GET request - show the edit form
+        prompt_form = PromptForm(instance=prompt)
+    
+    return render(
+        request,
+        'prompts/prompt_edit.html',
+        {
+            'prompt_form': prompt_form,
+            'prompt': prompt,
+        }
+    )
+
+def prompt_delete(request, slug):
+    """
+    View to delete prompt
+    """
+    prompt = get_object_or_404(Prompt, slug=slug)
+
+    if prompt.author == request.user:
+        prompt.delete()
+        messages.add_message(request, messages.SUCCESS, 'Prompt deleted successfully!')
+        return HttpResponseRedirect(reverse('prompts:home'))
+    else:
+        messages.add_message(request, messages.ERROR, 'You can only delete your own prompts!')
+        return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))

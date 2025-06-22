@@ -3,6 +3,7 @@ from django.views import generic
 from django.contrib import messages
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.db import models  # Add this import
 from .models import Prompt, Comment
 from .forms import CommentForm
 
@@ -16,8 +17,16 @@ def prompt_detail(request, slug):
     Display an individual prompt and handle comment submission.
     """
     prompt = get_object_or_404(Prompt, slug=slug, status=1)
-    comments = prompt.comments.filter(approved=True).order_by('created_on')
-    comment_count = comments.count()
+    
+    # Show approved comments for everyone, plus user's own unapproved comments
+    if request.user.is_authenticated:
+        comments = prompt.comments.filter(
+            models.Q(approved=True) | models.Q(author=request.user)
+        ).order_by('created_on')
+    else:
+        comments = prompt.comments.filter(approved=True).order_by('created_on')
+    
+    comment_count = comments.count()  # Fixed indentation - moved outside else block
     
     if request.method == "POST":
         comment_form = CommentForm(data=request.POST)

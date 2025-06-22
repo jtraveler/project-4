@@ -43,31 +43,39 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-8 card mb-4 mt-3">
-            <h3>Comments:</h3>
-            <div class="card-body">
-                <!-- To iterate through each comment in comments -->
-                {% for comment in comments %}
-                <div class="comments" style="padding: 10px;">
-                    <p class="font-weight-bold">
-                        {{ comment.author }}
-                        <span class="text-muted font-weight-normal">
-                            {{ comment.created_on|date:"F d, Y" }}
-                        </span> wrote:
-                    </p>
-                    {{ comment.body|linebreaks }}
-                    {% if user.is_authenticated and comment.author == user %}
-                        <div class="btn-group" role="group" aria-label="Comment actions">
-                            <a href="{% url 'prompts:comment_edit' prompt.slug comment.id %}" class="btn btn-warning btn-sm">Edit</a>
-                            <a href="{% url 'prompts:comment_delete' prompt.slug comment.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this comment?')">Delete</a>
-                        </div>
-                    {% endif %}
+        <!-- Comments section -->
+<div class="col-md-8 card mb-4 mt-3">
+    <h3>Comments:</h3>
+    <div class="card-body">
+        {% for comment in comments %}
+            <div class="p-2 comments
+                {% if comment.approved and comment.author == user %}
+                    text-muted
+                {% elif not comment.approved and comment.author == user %}
+                    border border-warning
+                {% endif %}">
+                <p class="font-weight-bold">
+                    {{ comment.author }}
+                    <span class="font-weight-normal">
+                        {{ comment.created_on }}
+                    </span>
+                </p>
+                {% if not comment.approved and comment.author == user %}
+                    <p class="text-warning">This comment is awaiting approval</p>
+                {% endif %}
+                <div id="comment{{ comment.id }}">
+                    {{ comment.body | linebreaks }}
                 </div>
-                {% empty %}
-                <p>No comments yet.</p>
-                {% endfor %}
+                {% if user.is_authenticated and comment.author == user %}
+                    <button class="btn btn-delete" comment_id="{{ comment.id }}">Delete</button>
+                    <button class="btn btn-edit" comment_id="{{ comment.id }}">Edit</button>
+                {% endif %}
             </div>
-        </div>
+        {% empty %}
+            <p>No comments yet.</p>
+        {% endfor %}
+    </div>
+</div>
         <div class="col-md-4 card mb-4 mt-3">
             <div class="card-body">
                 {% if user.is_authenticated %}

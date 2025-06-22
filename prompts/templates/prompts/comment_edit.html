@@ -10,7 +10,7 @@
             <form method="post">
                 {% csrf_token %}
                 {{ comment_form.as_p }}
-                <button type="submit" class="btn btn-success">Update Comment</button>
+                <button type="submit" class="btn btn-success">Update & Submit for Review</button>
                 <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="btn btn-secondary">Cancel</a>
             </form>
         </div>

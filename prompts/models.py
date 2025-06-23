@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
+from cloudinary.models import CloudinaryField
+
 
 # Add status choices
 STATUS = ((0, "Draft"), (1, "Published"))
@@ -10,6 +12,7 @@ class Prompt(models.Model):
     slug = models.SlugField(max_length=200, unique=True, blank=False)
     content = models.TextField()
     excerpt = models.TextField(blank=True)
+    featured_image = CloudinaryField('image', default='placeholder')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="prompts")
     status = models.IntegerField(choices=STATUS, default=0)
     created_on = models.DateTimeField(auto_now_add=True)

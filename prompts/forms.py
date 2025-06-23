@@ -41,7 +41,7 @@ class CollaborateForm(forms.ModelForm):
 class PromptForm(forms.ModelForm):
     class Meta:
         model = Prompt
-        fields = ('title', 'content', 'excerpt')
+        fields = ('title', 'content', 'excerpt', 'featured_image')
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

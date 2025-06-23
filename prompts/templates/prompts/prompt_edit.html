@@ -16,25 +16,28 @@
                     </div>
                     
                     <form method="post" class="mt-4">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            {{ prompt_form.title|as_crispy_field }}
-                        </div>
-                        <div class="mb-3">
-                            {{ prompt_form.excerpt|as_crispy_field }}
-                        </div>
-                        <div class="mb-3">
-                            {{ prompt_form.content|as_crispy_field }}
-                        </div>
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="btn btn-secondary me-md-2">
-                                <i class="fas fa-times me-2"></i>Cancel
-                            </a>
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-save me-2"></i>Update Prompt
-                            </button>
-                        </div>
-                    </form>
+                      {% csrf_token %}
+                      <div class="mb-3">
+                          {{ prompt_form.title|as_crispy_field }}
+                      </div>
+                      <div class="mb-3">
+                          {{ prompt_form.excerpt|as_crispy_field }}
+                      </div>
+                      <div class="mb-3">
+                          {{ prompt_form.featured_image|as_crispy_field }}
+                      </div>
+                      <div class="mb-3">
+                          {{ prompt_form.content|as_crispy_field }}
+                      </div>
+                      <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                          <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="btn btn-secondary me-md-2">
+                              <i class="fas fa-times me-2"></i>Cancel
+                          </a>
+                          <button type="submit" class="btn btn-warning">
+                              <i class="fas fa-save me-2"></i>Update Prompt
+                          </button>
+                      </div>
+                  </form>
                 </div>
                 <div class="card-footer text-muted text-center">
                     <small>Changes will be published immediately</small>

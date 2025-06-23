@@ -86,7 +86,7 @@ def comment_edit(request, slug, comment_id):
             comment.prompt = prompt
             comment.approved = False  # Requires re-approval after edit
             comment.save()
-            messages.add_message(request, messages.SUCCESS, 'Comment updated!')
+            messages.add_message(request, messages.SUCCESS, 'Comment updated and awaiting approval!')
             return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
         else:
             messages.add_message(request, messages.ERROR, 'Error updating comment!')

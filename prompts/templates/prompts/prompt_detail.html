@@ -150,29 +150,24 @@
 </div>
 
 <!-- Enhanced JavaScript for better edit button interactivity -->
+<!-- Enhanced JavaScript for better edit button interactivity -->
 <script>
     /**
      * Enhanced edit form toggle with better visual feedback
+     * Works with existing inline form structure to avoid duplicate cancel buttons
      */
     function toggleEditForm(commentId) {
         var editForm = document.getElementById('editForm' + commentId);
         var commentContent = document.getElementById('comment' + commentId);
-        var editButton = document.querySelector(`button[onclick="toggleEditForm(${commentId})"]`);
         
         if (editForm.style.display === 'none' || editForm.style.display === '') {
-            // Show edit form
+            // Show edit form and hide original comment content
             editForm.style.display = 'block';
             commentContent.style.display = 'none';
-            editButton.innerHTML = '<i class="fas fa-times"></i> Cancel';
-            editButton.classList.remove('btn-outline-warning');
-            editButton.classList.add('btn-outline-secondary');
         } else {
-            // Hide edit form
+            // Hide edit form and show original comment content
             editForm.style.display = 'none';
             commentContent.style.display = 'block';
-            editButton.innerHTML = '<i class="fas fa-edit"></i> Edit';
-            editButton.classList.remove('btn-outline-secondary');
-            editButton.classList.add('btn-outline-warning');
         }
     }
     

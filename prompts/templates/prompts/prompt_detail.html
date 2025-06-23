@@ -209,6 +209,37 @@ function confirmDelete(deleteUrl) {
     var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     deleteModal.show();
 }
+
+
+/**
+ * Prevents double-click form submissions
+ */
+ function handleCommentSubmit(event) {
+    var submitButton = document.getElementById('submitButton');
+    var form = document.getElementById('commentForm');
+    
+    // Disable the submit button to prevent double clicks
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+    
+    // Re-enable button after 3 seconds in case of form validation errors
+    setTimeout(function() {
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Submit';
+    }, 3000);
+    
+    // Allow form to submit normally
+    return true;
+}
+
+// Add event listener when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    var commentForm = document.getElementById('commentForm');
+    if (commentForm) {
+        commentForm.addEventListener('submit', handleCommentSubmit);
+    }
+});
+
 </script>
 
 {% endblock content %}

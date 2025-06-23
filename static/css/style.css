@@ -152,10 +152,27 @@ body {
   border: none;
 }
 
+/* Enhanced faded style for unapproved comments */
 .faded {
-  color: rgb(172, 175, 175);
+  opacity: 0.6;
+  background-color: #f8f9fa;
+  border-left: 3px solid #ffc107;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 10px 0;
+  color: #6c757d;
+  font-style: italic;
 }
 
+/* Enhanced approval message styling */
 .approval {
-  color: rgb(222, 146, 168);
+  color: #856404;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  margin-top: 10px;
+  font-weight: 500;
+  display: inline-block;
 }

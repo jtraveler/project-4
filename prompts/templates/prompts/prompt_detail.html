@@ -62,10 +62,8 @@
     <div class="card-body">
         {% for comment in comments %}
             <div class="p-2 comments
-                {% if comment.approved and comment.author == user %}
-                    text-muted
-                {% elif not comment.approved and comment.author == user %}
-                    border border-warning
+                {% if not comment.approved and comment.author == user %}
+                    border border-warning faded
                 {% endif %}">
                 <p class="font-weight-bold">
                     {{ comment.author }}
@@ -74,7 +72,7 @@
                     </span>
                 </p>
                 {% if not comment.approved and comment.author == user %}
-                    <p class="text-warning">This comment is awaiting approval</p>
+                    <p class="approval">This comment is awaiting approval</p>
                 {% endif %}
                 <div id="comment{{ comment.id }}">
                     {{ comment.body | linebreaks }}

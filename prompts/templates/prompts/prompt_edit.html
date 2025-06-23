@@ -26,11 +26,16 @@
                       <div class="mb-3">
                         <label class="form-label">Featured Image</label>
                         {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
-                            <div class="current-image-preview mb-2">
-                                <p class="text-muted small">Current image:</p>
-                                <img src="{{ prompt.featured_image.url }}" alt="Current featured image" 
-                                     style="max-width: 200px; max-height: 150px; border: 1px solid #ddd; border-radius: 4px;">
-                            </div>
+                        <div class="current-image-preview mb-2">
+                          <p class="text-muted small">Current image: 
+                              <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal" class="text-primary">
+                                  {{ prompt.featured_image.public_id }}.{{ prompt.featured_image.format }}
+                              </a>
+                          </p>
+                          <img src="{{ prompt.featured_image.url }}" alt="Current featured image" 
+                               style="max-width: 200px; max-height: 150px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;"
+                               data-bs-toggle="modal" data-bs-target="#imageModal">
+                      </div>
                         {% endif %}
                         {{ prompt_form.featured_image|as_crispy_field }}
                     </div>
@@ -53,5 +58,22 @@
             </div>
         </div>
     </div>
+</div>
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h5 class="modal-title" id="imageModalLabel">Current Featured Image</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+              {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
+                  <img src="{{ prompt.featured_image.url }}" alt="Featured image full size" class="img-fluid">
+                  <p class="mt-2 text-muted">{{ prompt.featured_image.public_id }}.{{ prompt.featured_image.format }}</p>
+              {% endif %}
+          </div>
+      </div>
+  </div>
 </div>
 {% endblock content %}

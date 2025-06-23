@@ -149,24 +149,43 @@
     </div>
 </div>
 
-<!-- Simple JavaScript for inline comment editing and delete modal -->
+<!-- Enhanced JavaScript for better edit button interactivity -->
 <script>
-function toggleEditForm(commentId) {
-    var editForm = document.getElementById('editForm' + commentId);
-    if (editForm.style.display === 'none') {
-        editForm.style.display = 'block';
-    } else {
-        editForm.style.display = 'none';
+    /**
+     * Enhanced edit form toggle with better visual feedback
+     */
+    function toggleEditForm(commentId) {
+        var editForm = document.getElementById('editForm' + commentId);
+        var commentContent = document.getElementById('comment' + commentId);
+        var editButton = document.querySelector(`button[onclick="toggleEditForm(${commentId})"]`);
+        
+        if (editForm.style.display === 'none' || editForm.style.display === '') {
+            // Show edit form
+            editForm.style.display = 'block';
+            commentContent.style.display = 'none';
+            editButton.innerHTML = '<i class="fas fa-times"></i> Cancel';
+            editButton.classList.remove('btn-outline-warning');
+            editButton.classList.add('btn-outline-secondary');
+        } else {
+            // Hide edit form
+            editForm.style.display = 'none';
+            commentContent.style.display = 'block';
+            editButton.innerHTML = '<i class="fas fa-edit"></i> Edit';
+            editButton.classList.remove('btn-outline-secondary');
+            editButton.classList.add('btn-outline-warning');
+        }
     }
-}
-
-function confirmDelete(deleteUrl) {
-    // Set the delete URL in the modal's confirm button
-    document.getElementById('confirmDeleteBtn').href = deleteUrl;
-    // Show the modal
-    var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
-}
-</script>
+    
+    /**
+     * Existing delete confirmation modal function
+     */
+    function confirmDelete(deleteUrl) {
+        // Set the delete URL in the modal's confirm button
+        document.getElementById('confirmDeleteBtn').href = deleteUrl;
+        // Show the modal
+        var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show();
+    }
+    </script>
 
 {% endblock content %}

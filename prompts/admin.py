@@ -4,12 +4,22 @@ from .models import Prompt, Comment, CollaborateRequest
 
 @admin.register(Prompt)
 class PromptAdmin(SummernoteModelAdmin):
-    list_display = ('title', 'slug', 'status', 'created_on', 'author')
-    search_fields = ['title', 'content']
-    list_filter = ('status', 'created_on', 'author')
-    prepopulated_fields = {'slug': ('title',)}  #Enabling auto-population
+    list_display = ('title', 'slug', 'status', 'created_on', 'author', 'tag_list')
+    search_fields = ['title', 'content', 'tags__name']  # Only one search_fields definition
+    list_filter = ('status', 'created_on', 'author', 'tags')  # Added author back
+    prepopulated_fields = {'slug': ('title',)}
     summernote_fields = ('content',)
     ordering = ['-created_on']
+    actions = ['make_published']
+
+    def tag_list(self, obj):
+        return ", ".join(o.name for o in obj.tags.all())
+    tag_list.short_description = 'Tags'
+
+    def make_published(self, request, queryset):
+        queryset.update(status=1)
+        self.message_user(request, f'{queryset.count()} prompts marked as published.')
+    make_published.short_description = 'Mark selected prompts as published'
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):

@@ -24,8 +24,16 @@
                           {{ prompt_form.excerpt|as_crispy_field }}
                       </div>
                       <div class="mb-3">
-                          {{ prompt_form.featured_image|as_crispy_field }}
-                      </div>
+                        <label class="form-label">Featured Image</label>
+                        {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
+                            <div class="current-image-preview mb-2">
+                                <p class="text-muted small">Current image:</p>
+                                <img src="{{ prompt.featured_image.url }}" alt="Current featured image" 
+                                     style="max-width: 200px; max-height: 150px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        {% endif %}
+                        {{ prompt_form.featured_image|as_crispy_field }}
+                    </div>
                       <div class="mb-3">
                           {{ prompt_form.content|as_crispy_field }}
                       </div>

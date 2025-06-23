@@ -210,11 +210,10 @@ function confirmDelete(deleteUrl) {
     deleteModal.show();
 }
 
-
 /**
  * Prevents double-click form submissions
  */
- function handleCommentSubmit(event) {
+function handleCommentSubmit(event) {
     var submitButton = document.getElementById('submitButton');
     var form = document.getElementById('commentForm');
     
@@ -232,14 +231,83 @@ function confirmDelete(deleteUrl) {
     return true;
 }
 
+/**
+ * Enhanced form validation feedback
+ */
+function addValidationFeedback() {
+    var commentForm = document.getElementById('commentForm');
+    var submitButton = document.getElementById('submitButton');
+    
+    if (commentForm) {
+        // Add validation on form submit
+        commentForm.addEventListener('submit', function(event) {
+            var textArea = commentForm.querySelector('textarea[name="body"]');
+            var isValid = true;
+            
+            // Remove existing validation classes
+            textArea.classList.remove('is-valid', 'is-invalid');
+            
+            // Check if textarea has content
+            if (!textArea.value.trim()) {
+                textArea.classList.add('is-invalid');
+                isValid = false;
+                
+                // Show error feedback
+                showValidationMessage(textArea, 'Please enter a comment before submitting.', 'invalid');
+            } else if (textArea.value.trim().length < 3) {
+                textArea.classList.add('is-invalid');
+                isValid = false;
+                
+                // Show error feedback
+                showValidationMessage(textArea, 'Comment must be at least 3 characters long.', 'invalid');
+            } else {
+                textArea.classList.add('is-valid');
+                
+                // Show success feedback
+                showValidationMessage(textArea, 'Comment looks good!', 'valid');
+            }
+            
+            // Prevent submission if invalid
+            if (!isValid) {
+                event.preventDefault();
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Submit';
+                return false;
+            }
+        });
+    }
+}
+
+/**
+ * Show validation message helper function
+ */
+function showValidationMessage(element, message, type) {
+    // Remove existing feedback
+    var existingFeedback = element.parentNode.querySelector('.feedback-message');
+    if (existingFeedback) {
+        existingFeedback.remove();
+    }
+    
+    // Create new feedback element
+    var feedback = document.createElement('div');
+    feedback.className = 'feedback-message ' + (type === 'valid' ? 'valid-feedback' : 'invalid-feedback');
+    feedback.style.display = 'block';
+    feedback.textContent = message;
+    
+    // Insert after the textarea
+    element.parentNode.appendChild(feedback);
+}
+
 // Add event listener when page loads
 document.addEventListener('DOMContentLoaded', function() {
     var commentForm = document.getElementById('commentForm');
     if (commentForm) {
         commentForm.addEventListener('submit', handleCommentSubmit);
+        
+        // Add validation feedback
+        addValidationFeedback();
     }
 });
-
 </script>
 
 {% endblock content %}

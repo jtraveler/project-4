@@ -1,5 +1,9 @@
 {% load static %}
 {% url 'prompts:home' as home_url %}
+{% url 'prompts:collaborate' as collaborate_url %}
+{% url 'account_login' as login_url %}
+{% url 'account_logout' as logout_url %}
+{% url 'account_signup' as signup_url %}
 <!DOCTYPE html>
 <html class="h-100" lang="en">
 <head>
@@ -18,11 +22,10 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="d-flex flex-column h-100 main-bg">
-    <!-- Navigation -->
+    <!-- Enhanced Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'prompts:home' %}"><span class="brand">c<span class="red-o">o</span>de<span
-                        class="thin">|star</span></span></a>
+            <a class="navbar-brand" href="{% url 'prompts:home' %}"><span class="brand">c<span class="red-o">o</span>de<span class="thin">|star</span></span></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText"
                 aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -33,6 +36,29 @@
                         <a class="nav-link {% if request.path == home_url %}active{% endif %}" aria-current="page"
                             href="{% url 'prompts:home' %}">Home</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/about/' in request.path %}active{% endif %}" aria-current="page" 
+                            href="/about/">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'prompts:collaborate' %}" 
+                            class="nav-link {% if request.path == collaborate_url %}active{% endif %}">Collaborate</a>
+                    </li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == logout_url %}active{% endif %}" aria-current="page" 
+                                href="{% url 'account_logout' %}">Logout</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == signup_url %}active{% endif %}" aria-current="page" 
+                                href="{% url 'account_signup' %}">Register</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == login_url %}active{% endif %}" aria-current="page" 
+                                href="{% url 'account_login' %}">Login</a>
+                        </li>
+                    {% endif %}
                 </ul>
                 <span class="navbar-text text-muted">
                     adventures of a software developer
@@ -40,6 +66,7 @@
             </div>
         </div>
     </nav>
+    <!-- rest of your template stays the same -->
 
     <!-- User Status Message -->
     <div class="container mt-3">

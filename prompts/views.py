@@ -131,7 +131,7 @@ def prompt_edit(request, slug):
         return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
     
     if request.method == "POST":
-        prompt_form = PromptForm(data=request.POST, instance=prompt)
+        prompt_form = PromptForm(data=request.POST, files=request.FILES, instance=prompt)
         if prompt_form.is_valid():
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user

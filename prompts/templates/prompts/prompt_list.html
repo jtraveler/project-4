@@ -75,32 +75,31 @@
     {% endif %}
 </div>
 <script>
-    // Following W3Schools filter elements tutorial
+    // Modern JavaScript following W3Schools filter elements tutorial
     // Source: https://www.w3schools.com/howto/howto_js_filter_elements.asp
     document.addEventListener('DOMContentLoaded', function() {
-        // Get all clickable tag badges
-        var tagBadges = document.querySelectorAll('.tag-clickable');
+        // Get all clickable tag badges (modern const syntax)
+        const tagBadges = document.querySelectorAll('.tag-clickable');
         
-        // Add click handler to each tag badge (following W3Schools pattern)
-        for (var i = 0; i < tagBadges.length; i++) {
-            tagBadges[i].addEventListener('click', function() {
-                var tagName = this.getAttribute('data-tag');
+        // Add click handler to each tag badge (modern forEach)
+        tagBadges.forEach(function(badge) {
+            badge.addEventListener('click', function() {
+                const tagName = this.getAttribute('data-tag');
                 
                 // Simple alert following tutorial approach
-                alert('Clicked tag: ' + tagName + '\n\nFiltering functionality would go here!');
+                alert(`Clicked tag: ${tagName}\n\nFiltering functionality would go here!`);
                 
                 // Visual feedback following W3Schools active button pattern
-                this.style.backgroundColor = '#666';
+                this.style.backgroundColor = '#555';
                 this.style.color = 'white';
                 
-                // Reset after 1 second
-                var element = this;
-                setTimeout(function() {
-                    element.style.backgroundColor = '';
-                    element.style.color = '';
+                // Reset after 1 second (modern arrow function)
+                setTimeout(() => {
+                    this.style.backgroundColor = '';
+                    this.style.color = '';
                 }, 1000);
             });
-        }
+        });
     });
     </script>
 <!-- prompt_list.html content ends here -->

@@ -150,7 +150,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 return; // Tag already exists, don't add again
             }
             
+            // Add tag to input field
+            if (currentTags === '') {
+                tagsInput.value = tagName;
+            } else {
+                tagsInput.value = currentTags + ', ' + tagName;
+            }
             
+            // Optional: highlight the badge briefly
+            this.classList.add('bg-success', 'text-white');
+            this.classList.remove('bg-light', 'text-dark');
+            
+            setTimeout(() => {
+                this.classList.remove('bg-success', 'text-white');
+                this.classList.add('bg-light', 'text-dark');
+            }, 500);
         });
     });
 });

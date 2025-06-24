@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.db import models
+from taggit.models import Tag
 from .models import Prompt, Comment
 from .forms import CommentForm, CollaborateForm, PromptForm
 
@@ -130,6 +131,9 @@ def prompt_edit(request, slug):
         messages.add_message(request, messages.ERROR, 'You can only edit your own prompts!')
         return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
     
+    # Get existing tags for display to user
+    existing_tags = Tag.objects.all().order_by('name')[:20]  # Show top 20 most common tags
+    
     if request.method == "POST":
         prompt_form = PromptForm(data=request.POST, files=request.FILES, instance=prompt)
         if prompt_form.is_valid():
@@ -137,6 +141,8 @@ def prompt_edit(request, slug):
             prompt.author = request.user
             prompt.status = 1  # Always publish immediately
             prompt.save()
+            # Save tags (many-to-many relationship)
+            prompt_form.save_m2m()
             messages.add_message(request, messages.SUCCESS, 'Prompt updated successfully!')
             return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
         else:
@@ -151,6 +157,7 @@ def prompt_edit(request, slug):
         {
             'prompt_form': prompt_form,
             'prompt': prompt,
+            'existing_tags': existing_tags,
         }
     )
 

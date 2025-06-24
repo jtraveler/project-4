@@ -327,35 +327,20 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
-    // Modern JavaScript for detail page tags following W3Schools tutorial
-    // Source: https://www.w3schools.com/howto/howto_js_filter_elements.asp
+    // Real tag filtering for detail page following bobbyhadz tutorial
+    // Source: https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript
     document.addEventListener('DOMContentLoaded', function() {
-        // Get all tag badges on detail page (different class than list page)
         const tagBadges = document.querySelectorAll('.badge');
         
-        // Add click handler to each tag badge
         tagBadges.forEach(function(badge) {
-            // Make badges look clickable
             badge.style.cursor = 'pointer';
             
             badge.addEventListener('click', function() {
                 const tagName = this.textContent.trim();
                 
-                // Alert with different message for detail page
-                alert(`Tag: ${tagName}\n\nThis could navigate to filtered prompt list!`);
-                
-                // Visual feedback following W3Schools pattern  
-                const originalBg = this.style.backgroundColor;
-                const originalColor = this.style.color;
-                
-                this.style.backgroundColor = '#28a745';
-                this.style.color = 'white';
-                
-                // Reset after 1 second
-                setTimeout(() => {
-                    this.style.backgroundColor = originalBg;
-                    this.style.color = originalColor;
-                }, 1200);
+                // Redirect to homepage with tag filter parameter (following tutorial)
+                const url = window.location.origin;
+                window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
             });
         });
     });

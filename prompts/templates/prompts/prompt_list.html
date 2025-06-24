@@ -75,29 +75,18 @@
     {% endif %}
 </div>
 <script>
-    // Modern JavaScript following W3Schools filter elements tutorial
-    // Source: https://www.w3schools.com/howto/howto_js_filter_elements.asp
+    // Real tag filtering following bobbyhadz tutorial
+    // Source: https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript
     document.addEventListener('DOMContentLoaded', function() {
-        // Get all clickable tag badges (modern const syntax)
         const tagBadges = document.querySelectorAll('.tag-clickable');
         
-        // Add click handler to each tag badge (modern forEach)
         tagBadges.forEach(function(badge) {
             badge.addEventListener('click', function() {
                 const tagName = this.getAttribute('data-tag');
                 
-                // Simple alert following tutorial approach
-                alert(`Clicked tag: ${tagName}\n\nFiltering functionality would go here!`);
-                
-                // Visual feedback following W3Schools active button pattern
-                this.style.backgroundColor = '#555';
-                this.style.color = 'white';
-                
-                // Reset after 1 second (modern arrow function)
-                setTimeout(() => {
-                    this.style.backgroundColor = '';
-                    this.style.color = '';
-                }, 1000);
+                // Redirect to homepage with tag filter parameter (following tutorial)
+                const url = window.location.origin;
+                window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
             });
         });
     });

@@ -10,9 +10,25 @@ from .forms import CommentForm, CollaborateForm, PromptForm
 
 
 class PromptList(generic.ListView):
-    queryset = Prompt.objects.filter(status=1)  # Only show published prompts
-    template_name = "prompts/prompt_list.html"  # Updated to correct path
+    template_name = "prompts/prompt_list.html"
     paginate_by = 6
+    
+    def get_queryset(self):
+        # Start with published prompts
+        queryset = Prompt.objects.filter(status=1)
+        
+        # Check for tag filter parameter (following URL parameter tutorial)
+        tag_name = self.request.GET.get('tag')
+        if tag_name:
+            queryset = queryset.filter(tags__name=tag_name)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add the current tag filter to context for display
+        context['current_tag'] = self.request.GET.get('tag')
+        return context
 
 def prompt_detail(request, slug):
     """

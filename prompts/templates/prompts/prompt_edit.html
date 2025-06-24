@@ -128,4 +128,31 @@
       </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the tags input field
+    const tagsInput = document.querySelector('input[name="tags"]');
+    
+    // Get all tag badges
+    const tagBadges = document.querySelectorAll('.badge');
+    
+    // Add click handler to each badge
+    tagBadges.forEach(function(badge) {
+        badge.style.cursor = 'pointer'; // Make it look clickable
+        
+        badge.addEventListener('click', function() {
+            const tagName = this.textContent.trim();
+            const currentTags = tagsInput.value.trim();
+            
+            // Check if tag already exists
+            if (currentTags.includes(tagName)) {
+                return; // Tag already exists, don't add again
+            }
+            
+            
+        });
+    });
+});
+</script>
 {% endblock content %}

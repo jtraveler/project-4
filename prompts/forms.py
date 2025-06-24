@@ -1,4 +1,5 @@
 from django import forms
+from taggit.forms import TagWidget
 from .models import Comment, CollaborateRequest, Prompt
 
 
@@ -41,7 +42,13 @@ class CollaborateForm(forms.ModelForm):
 class PromptForm(forms.ModelForm):
     class Meta:
         model = Prompt
-        fields = ('title', 'content', 'excerpt', 'featured_image')
+        fields = ('title', 'content', 'excerpt', 'featured_image', 'tags')
+        widgets = {
+            'tags': TagWidget(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter tags separated by commas (e.g. photography, digital art, tutorial)'
+            })
+        }
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

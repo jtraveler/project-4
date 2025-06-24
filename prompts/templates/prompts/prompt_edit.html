@@ -43,6 +43,30 @@
                       <div class="mb-3">
                           {{ prompt_form.excerpt|as_crispy_field }}
                       </div>
+
+                      <!-- Tags Field -->
+                    <div class="mb-3">
+                        <label for="{{ prompt_form.tags.id_for_label }}" class="form-label">Tags</label>
+                        {{ prompt_form.tags }}
+                        
+                        <!-- Existing Tags Helper -->
+                        {% if existing_tags %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <strong>Popular tags:</strong>
+                                {% for tag in existing_tags %}
+                                    <span class="badge bg-light text-dark me-1">{{ tag.name }}</span>
+                                {% endfor %}
+                            </small>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="form-text">
+                            Enter tags separated by commas. Example: photography, digital art, tutorial
+                        </div>
+                    </div>
+
+
                       <div class="mb-3">
                         <label class="form-label">Featured Image</label>
                         {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}

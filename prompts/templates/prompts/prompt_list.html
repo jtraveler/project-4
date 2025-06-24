@@ -74,5 +74,34 @@
     </nav>
     {% endif %}
 </div>
+<script>
+    // Following W3Schools filter elements tutorial
+    // Source: https://www.w3schools.com/howto/howto_js_filter_elements.asp
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all clickable tag badges
+        var tagBadges = document.querySelectorAll('.tag-clickable');
+        
+        // Add click handler to each tag badge (following W3Schools pattern)
+        for (var i = 0; i < tagBadges.length; i++) {
+            tagBadges[i].addEventListener('click', function() {
+                var tagName = this.getAttribute('data-tag');
+                
+                // Simple alert following tutorial approach
+                alert('Clicked tag: ' + tagName + '\n\nFiltering functionality would go here!');
+                
+                // Visual feedback following W3Schools active button pattern
+                this.style.backgroundColor = '#666';
+                this.style.color = 'white';
+                
+                // Reset after 1 second
+                var element = this;
+                setTimeout(function() {
+                    element.style.backgroundColor = '';
+                    element.style.color = '';
+                }, 1000);
+            });
+        }
+    });
+    </script>
 <!-- prompt_list.html content ends here -->
 {% endblock %}

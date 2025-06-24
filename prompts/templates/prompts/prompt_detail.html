@@ -38,9 +38,22 @@
                 {% endif %}
                 
                 <!-- The prompt content with proper HTML rendering -->
-                <p class="card-text">
+                <div class="card-text">
                     {{ prompt.content|safe }}
-                </p>
+                </div>
+
+                <!-- Tags Display Section (Following django-taggit tutorial) -->
+                {% if prompt.tags.all %}
+                <div class="row mt-3 mb-3">
+                    <div class="col-12">
+                        <strong>Tags:</strong>
+                        {% for tag in prompt.tags.all %}
+                            <span class="badge bg-secondary me-1">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if prompt.excerpt %}
                 <div class="row">
                     <div class="col-1">

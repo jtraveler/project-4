@@ -30,6 +30,20 @@
                             {% if prompt.excerpt %}
                                 <p class="card-text">{{ prompt.excerpt|truncatewords:15 }}</p>
                             {% endif %}
+
+                            <!-- Tags Display Section (Following Stack Overflow tutorial) -->
+                            {% if prompt.tags.all %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Tags:</small>
+                                    {% for tag in prompt.tags.all %}
+                                        <span class="badge bg-info text-dark me-1 tag-clickable" 
+                                              style="cursor: pointer;" 
+                                              data-tag="{{ tag.name }}">
+                                            {{ tag.name }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

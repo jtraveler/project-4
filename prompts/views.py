@@ -11,7 +11,7 @@ from .forms import CommentForm, CollaborateForm, PromptForm
 
 class PromptList(generic.ListView):
     template_name = "prompts/prompt_list.html"
-    paginate_by = 6
+    paginate_by = 100
     
     def get_queryset(self):
         # Start with published prompts

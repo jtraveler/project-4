@@ -1,14 +1,12 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<!-- prompt_list.html content starts here -->
-<div class="container-fluid">
-    <div class="row">
-        <!-- Prompt Entries Column -->
-        <div class="col-12 mt-3 left">
-            <div class="row">
-                {% for prompt in prompt_list %}
-                <div class="col-md-4">
+<!-- Basic Masonry Container Structure -->
+<div class="masonry-container">
+    <div class="masonry-grid">
+        {% for prompt in prompt_list %}
+        <div class="masonry-item">
+            <div class="prompt-card">
                     <div class="card mb-4">
                         <div class="card-body">
                             <div class="image-container">
@@ -47,12 +45,8 @@
                         </div>
                     </div>
                 </div>
-                {% if forloop.counter|divisibleby:3 %}
             </div>
-            <div class="row">
-                {% endif %}
-                {% endfor %}
-            </div>
+            {% endfor %}
         </div>
     </div>
     

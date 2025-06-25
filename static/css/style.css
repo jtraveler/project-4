@@ -180,20 +180,9 @@ body {
 
 
 /* ===== HERO SECTION STYLES ===== */
-header {
-  height: 140px;
-  overflow: hidden;
-}
 
 
-.header-content {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
-  z-index: 2;
-}
+
 
 .hero-title {
   font-size: 2.5rem;
@@ -330,4 +319,36 @@ header {
 
 .copy-btn i {
   font-size: 0.75rem;
+}
+
+
+
+/* ===== BASIC MASONRY STRUCTURE ===== */
+.masonry-container {
+  max-width: 100%;
+  margin: 0;
+  padding: 20px;
+  width: 100%;
+}
+
+.masonry-grid {
+  column-count: 3; /* Start with 3 columns for testing */
+  column-gap: 15px;
+  width: 100%;
+}
+
+.masonry-item {
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 15px;
+  break-inside: avoid;
+  background: #f0f0f0;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.prompt-card {
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
 }

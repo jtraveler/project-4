@@ -47,22 +47,19 @@
         </div>
     </div>
     
-    <!-- Basic Tutorial Pagination -->
-    {% if is_paginated %}
-    <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a href="?page={{ page_obj.previous_page_number }}" class="page-link">&laquo; PREV</a>
-            </li>
-            {% endif %}
-            {% if page_obj.has_next %}
-            <li class="page-item">
-                <a href="?page={{ page_obj.next_page_number }}" class="page-link">NEXT &raquo;</a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
+    <!-- Load More Button (AJAX-based pagination) -->
+    {% if page_obj.has_next %}
+    <div class="load-more-container text-center mt-5">
+        <button id="load-more-btn" 
+                class="btn btn-primary btn-lg" 
+                data-next-page="{{ page_obj.next_page_number }}">
+            <i class="fas fa-plus-circle me-2"></i>
+            Load More Prompts
+        </button>
+        <div id="loading-spinner" class="mt-3" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i> Loading more prompts...
+        </div>
+    </div>
     {% endif %}
 </div>
 <script>
@@ -80,6 +77,63 @@
                 window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
             });
         });
+    });
+    </script>
+
+<script>
+    // Load More functionality following Simple is Better Than Complex tutorial
+    // Source: https://simpleisbetterthancomplex.com/tutorial/2017/03/13/how-to-create-infinite-scroll-with-django.html
+    document.addEventListener('DOMContentLoaded', function() {
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const masonryGrid = document.querySelector('.masonry-grid');
+        
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function() {
+                const nextPage = this.getAttribute('data-next-page');
+                const currentUrl = window.location.pathname;
+                
+                // Show loading state
+                loadMoreBtn.style.display = 'none';
+                loadingSpinner.style.display = 'block';
+                
+                // AJAX request to load next page
+                fetch(`${currentUrl}?page=${nextPage}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        // Parse the response HTML
+                        const parser = new DOMParser();
+                        const newDoc = parser.parseFromString(html, 'text/html');
+                        
+                        // Extract new prompt items
+                        const newItems = newDoc.querySelectorAll('.masonry-item');
+                        
+                        // Append new items to masonry grid
+                        newItems.forEach(item => {
+                            masonryGrid.appendChild(item);
+                        });
+                        
+                        // Check if there are more pages
+                        const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
+                        if (newLoadMoreBtn) {
+                            // Update next page number
+                            loadMoreBtn.setAttribute('data-next-page', newLoadMoreBtn.getAttribute('data-next-page'));
+                            loadMoreBtn.style.display = 'block';
+                        } else {
+                            // No more pages - hide load more button
+                            loadMoreBtn.remove();
+                        }
+                        
+                        // Hide loading spinner
+                        loadingSpinner.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error loading more prompts:', error);
+                        loadingSpinner.style.display = 'none';
+                        loadMoreBtn.style.display = 'block';
+                    });
+            });
+        }
     });
     </script>
 <!-- prompt_list.html content ends here -->

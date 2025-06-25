@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from taggit.models import Tag
 from .models import Prompt, Comment
 from .forms import CommentForm, CollaborateForm, PromptForm
+from django.http import JsonResponse
 
 
 
@@ -235,16 +236,28 @@ def collaborate_request(request):
 def prompt_like(request, slug):
     """
     Handle like/unlike functionality for prompts.
-    Following DEV.to tutorial by Radu Alexandru.
+    Supports both AJAX and regular POST requests.
+    Following Simple is Better Than Complex AJAX tutorial.
     """
     prompt = get_object_or_404(Prompt, slug=slug)
     
+    # Check if user already liked the prompt
     if prompt.likes.filter(id=request.user.id).exists():
         # User already liked it, so unlike it
         prompt.likes.remove(request.user)
+        liked = False
     else:
         # User hasn't liked it, so add the like
         prompt.likes.add(request.user)
+        liked = True
     
-    # Redirect back to the same prompt detail page
+    # If it's an AJAX request, return JSON response
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        data = {
+            'liked': liked,
+            'like_count': prompt.number_of_likes(),
+        }
+        return JsonResponse(data)
+    
+    # Otherwise, redirect back to the prompt detail page (existing functionality)
     return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[str(slug)]))

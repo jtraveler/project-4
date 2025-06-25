@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% load static %}
+
 {% block content %}
+<!-- Hidden CSRF token for AJAX requests -->
+<div style="display: none;">
+    {% csrf_token %}
+</div>
+
 <!-- Basic Masonry Container Structure -->
 <div class="masonry-container">
     <div class="masonry-grid">
@@ -24,15 +30,36 @@
                             <span class="platform-info">
                                 <i class="fas fa-robot"></i> Midjourney
                             </span>
+                           <!-- Replace your heart-counter section with this fixed version -->
                             <span class="heart-counter">
-                                
-                                <small>
-                                    <i class="far fa-heart me-1"></i>
-                                    {{ prompt.number_of_likes }} like{{ prompt.number_of_likes|pluralize }}
-                                </small>
+                                {% if user.is_authenticated %}
+                                    <small class="like-section" 
+                                        data-prompt-slug="{{ prompt.slug }}"
+                                        style="cursor: pointer; user-select: none;">
+                                        {% if user in prompt.likes.all %}
+                                            <i class="fas fa-heart me-1" style="color: white;"></i>
+                                        {% else %}
+                                            <i class="far fa-heart me-1" style="color: white;"></i>
+                                        {% endif %}
+                                        <span class="like-count">{{ prompt.number_of_likes }}</span> 
+                                        like<span class="like-plural">{% if prompt.number_of_likes != 1 %}s{% endif %}</span>
+                                    </small>
+                                {% else %}
+                                    <a href="{% url 'account_login' %}?next={{ request.path }}" 
+                                    class="text-decoration-none"
+                                    style="color: white;">
+                                        <small>
+                                            <i class="far fa-heart me-1"></i>
+                                            <span>{{ prompt.number_of_likes }}</span> 
+                                            like{% if prompt.number_of_likes != 1 %}s{% endif %}
+                                        </small>
+                                    </a>
+                                {% endif %}
                             </span>
                         </div>
                     </div>
+
+
                 </div>
                 
                 <!-- Clickable link overlay -->
@@ -44,11 +71,9 @@
                         <span class="tag-clickable" data-tag="{{ tag.name }}">{{ tag.name }}</span>
                     {% endfor %}
                 </div>
-                    
-                </div>
             </div>
-            {% endfor %}
         </div>
+        {% endfor %}
     </div>
     
     <!-- Load More Button (AJAX-based pagination) -->
@@ -66,79 +91,144 @@
     </div>
     {% endif %}
 </div>
+
 <script>
-    // Real tag filtering following bobbyhadz tutorial
-    // Source: https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript
-    document.addEventListener('DOMContentLoaded', function() {
-        const tagBadges = document.querySelectorAll('.tag-clickable');
-        
-        tagBadges.forEach(function(badge) {
-            badge.addEventListener('click', function() {
-                const tagName = this.getAttribute('data-tag');
+// Real tag filtering following bobbyhadz tutorial
+// Source: https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript
+document.addEventListener('DOMContentLoaded', function() {
+    const tagBadges = document.querySelectorAll('.tag-clickable');
+    
+    tagBadges.forEach(function(badge) {
+        badge.addEventListener('click', function() {
+            const tagName = this.getAttribute('data-tag');
+            
+            // Redirect to homepage with tag filter parameter (following tutorial)
+            const url = window.location.origin;
+            window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
+        });
+    });
+});
+</script>
+
+<script>
+// Load More functionality following Simple is Better Than Complex tutorial
+// Source: https://simpleisbetterthancomplex.com/tutorial/2017/03/13/how-to-create-infinite-scroll-with-django.html
+document.addEventListener('DOMContentLoaded', function() {
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const masonryGrid = document.querySelector('.masonry-grid');
+    
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function() {
+            const nextPage = this.getAttribute('data-next-page');
+            const currentUrl = window.location.pathname;
+            
+            // Show loading state
+            loadMoreBtn.style.display = 'none';
+            loadingSpinner.style.display = 'block';
+            
+            // AJAX request to load next page
+            fetch(`${currentUrl}?page=${nextPage}`)
+                .then(response => response.text())
+                .then(html => {
+                    // Parse the response HTML
+                    const parser = new DOMParser();
+                    const newDoc = parser.parseFromString(html, 'text/html');
+                    
+                    // Extract new prompt items
+                    const newItems = newDoc.querySelectorAll('.masonry-item');
+                    
+                    // Append new items to masonry grid
+                    newItems.forEach(item => {
+                        masonryGrid.appendChild(item);
+                    });
+                    
+                    // Check if there are more pages
+                    const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
+                    if (newLoadMoreBtn) {
+                        // Update next page number
+                        loadMoreBtn.setAttribute('data-next-page', newLoadMoreBtn.getAttribute('data-next-page'));
+                        loadMoreBtn.style.display = 'block';
+                    } else {
+                        // No more pages - hide load more button
+                        loadMoreBtn.remove();
+                    }
+                    
+                    // Hide loading spinner
+                    loadingSpinner.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading more prompts:', error);
+                    loadingSpinner.style.display = 'none';
+                    loadMoreBtn.style.display = 'block';
+                });
+        });
+    }
+});
+</script>
+
+<script>
+// Simple vanilla JavaScript heart functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all like sections
+    const likeSections = document.querySelectorAll('.like-section');
+    
+    likeSections.forEach(function(section) {
+        section.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const promptSlug = this.getAttribute('data-prompt-slug');
+            const heartIcon = this.querySelector('i');
+            const likeCount = this.querySelector('.like-count');
+            const likePlural = this.querySelector('.like-plural');
+            
+            console.log('Clicked heart for:', promptSlug);
+            console.log('Heart icon found:', heartIcon);
+            
+            // Make AJAX request
+            fetch('/prompts/' + promptSlug + '/like/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
                 
-                // Redirect to homepage with tag filter parameter (following tutorial)
-                const url = window.location.origin;
-                window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
+                // Update like count
+                likeCount.textContent = data.like_count;
+                
+                // Update pluralization
+                if (data.like_count === 1) {
+                    likePlural.textContent = '';
+                } else {
+                    likePlural.textContent = 's';
+                }
+                
+                // Update heart icon
+                if (data.liked) {
+                    // User just liked it - show filled heart
+                    heartIcon.className = 'fas fa-heart me-1';
+                    console.log('Set to filled heart');
+                } else {
+                    // User just unliked it - show outline heart  
+                    heartIcon.className = 'far fa-heart me-1';
+                    console.log('Set to outline heart');
+                }
+                
+                // Keep white color
+                heartIcon.style.color = 'white';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Something went wrong. Please try again.');
             });
         });
     });
-    </script>
-
-<script>
-    // Load More functionality following Simple is Better Than Complex tutorial
-    // Source: https://simpleisbetterthancomplex.com/tutorial/2017/03/13/how-to-create-infinite-scroll-with-django.html
-    document.addEventListener('DOMContentLoaded', function() {
-        const loadMoreBtn = document.getElementById('load-more-btn');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const masonryGrid = document.querySelector('.masonry-grid');
-        
-        if (loadMoreBtn) {
-            loadMoreBtn.addEventListener('click', function() {
-                const nextPage = this.getAttribute('data-next-page');
-                const currentUrl = window.location.pathname;
-                
-                // Show loading state
-                loadMoreBtn.style.display = 'none';
-                loadingSpinner.style.display = 'block';
-                
-                // AJAX request to load next page
-                fetch(`${currentUrl}?page=${nextPage}`)
-                    .then(response => response.text())
-                    .then(html => {
-                        // Parse the response HTML
-                        const parser = new DOMParser();
-                        const newDoc = parser.parseFromString(html, 'text/html');
-                        
-                        // Extract new prompt items
-                        const newItems = newDoc.querySelectorAll('.masonry-item');
-                        
-                        // Append new items to masonry grid
-                        newItems.forEach(item => {
-                            masonryGrid.appendChild(item);
-                        });
-                        
-                        // Check if there are more pages
-                        const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
-                        if (newLoadMoreBtn) {
-                            // Update next page number
-                            loadMoreBtn.setAttribute('data-next-page', newLoadMoreBtn.getAttribute('data-next-page'));
-                            loadMoreBtn.style.display = 'block';
-                        } else {
-                            // No more pages - hide load more button
-                            loadMoreBtn.remove();
-                        }
-                        
-                        // Hide loading spinner
-                        loadingSpinner.style.display = 'none';
-                    })
-                    .catch(error => {
-                        console.error('Error loading more prompts:', error);
-                        loadingSpinner.style.display = 'none';
-                        loadMoreBtn.style.display = 'block';
-                    });
-            });
-        }
-    });
-    </script>
-<!-- prompt_list.html content ends here -->
+});
+</script>
 {% endblock %}

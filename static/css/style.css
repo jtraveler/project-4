@@ -384,3 +384,70 @@ body {
   z-index: 10;
   text-decoration: none;
 }
+
+/* Overlay styles */
+.card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.7) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.prompt-card:hover .card-overlay {
+  opacity: 1;
+}
+
+/* Overlay content */
+.overlay-top {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.overlay-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-info {
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.platform-info {
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.platform-info i {
+  margin-right: 4px;
+}
+
+.heart-counter {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.heart-counter i {
+  margin-right: 4px;
+}

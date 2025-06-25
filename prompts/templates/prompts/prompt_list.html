@@ -14,6 +14,21 @@
                     {% else %}
                         <img src="{{ prompt.featured_image.url }}" alt="{{ prompt.title }}">
                     {% endif %}
+                    
+                    <!-- Overlay with user info, platform, and heart -->
+                    <div class="card-overlay">
+                        <div class="overlay-top">
+                            <span class="user-info">@{{ prompt.author }}</span>
+                        </div>
+                        <div class="overlay-bottom">
+                            <span class="platform-info">
+                                <i class="fas fa-robot"></i> Midjourney
+                            </span>
+                            <span class="heart-counter">
+                                <i class="fas fa-heart"></i> 42
+                            </span>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Clickable link overlay -->

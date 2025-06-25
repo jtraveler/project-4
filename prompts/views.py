@@ -75,6 +75,12 @@ def prompt_detail(request, slug):
     else:
         comment_form = CommentForm()
     
+    # Like functionality context (following DEV.to tutorial)
+    liked = False
+    if request.user.is_authenticated:
+        if prompt.likes.filter(id=request.user.id).exists():
+            liked = True
+
     return render(
         request,
         "prompts/prompt_detail.html",
@@ -83,6 +89,8 @@ def prompt_detail(request, slug):
             "comments": comments,
             "comment_count": comment_count,
             "comment_form": comment_form,
+            "number_of_likes": prompt.number_of_likes(),
+            "prompt_is_liked": liked,
         },
     )
 

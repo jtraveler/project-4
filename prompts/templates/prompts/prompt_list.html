@@ -168,67 +168,60 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// Simple vanilla JavaScript heart functionality
-document.addEventListener('DOMContentLoaded', function() {
-    // Get all like sections
-    const likeSections = document.querySelectorAll('.like-section');
-    
-    likeSections.forEach(function(section) {
-        section.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const promptSlug = this.getAttribute('data-prompt-slug');
-            const heartIcon = this.querySelector('i');
-            const likeCount = this.querySelector('.like-count');
-            const likePlural = this.querySelector('.like-plural');
-            
-            console.log('Clicked heart for:', promptSlug);
-            console.log('Heart icon found:', heartIcon);
-            
-            // Make AJAX request
-            fetch('/prompts/' + promptSlug + '/like/', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Success:', data);
+    // Simple vanilla JavaScript heart functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all like sections
+        const likeSections = document.querySelectorAll('.like-section');
+        
+        likeSections.forEach(function(section) {
+            section.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 
-                // Update like count
-                likeCount.textContent = data.like_count;
+                const promptSlug = this.getAttribute('data-prompt-slug');
+                const heartIcon = this.querySelector('i');
+                const likeCount = this.querySelector('.like-count');
+                const likePlural = this.querySelector('.like-plural');
                 
-                // Update pluralization
-                if (data.like_count === 1) {
-                    likePlural.textContent = '';
-                } else {
-                    likePlural.textContent = 's';
-                }
-                
-                // Update heart icon
-                if (data.liked) {
-                    // User just liked it - show filled heart
-                    heartIcon.className = 'fas fa-heart me-1';
-                    console.log('Set to filled heart');
-                } else {
-                    // User just unliked it - show outline heart  
-                    heartIcon.className = 'far fa-heart me-1';
-                    console.log('Set to outline heart');
-                }
-                
-                // Keep white color
-                heartIcon.style.color = 'white';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Something went wrong. Please try again.');
+                // Make AJAX request
+                fetch('/' + promptSlug + '/like/', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Update like count
+                    likeCount.textContent = data.like_count;
+                    
+                    // Update pluralization
+                    if (data.like_count === 1) {
+                        likePlural.textContent = '';
+                    } else {
+                        likePlural.textContent = 's';
+                    }
+                    
+                    // Update heart icon
+                    if (data.liked) {
+                        // User just liked it - show filled heart
+                        heartIcon.className = 'fas fa-heart me-1';
+                    } else {
+                        // User just unliked it - show outline heart  
+                        heartIcon.className = 'far fa-heart me-1';
+                    }
+                    
+                    // Keep white color
+                    heartIcon.style.color = 'white';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Something went wrong. Please try again.');
+                });
             });
         });
     });
-});
-</script>
+    </script>
 {% endblock %}

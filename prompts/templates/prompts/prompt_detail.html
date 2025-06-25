@@ -2,22 +2,17 @@
 {% load static %}
 {% block content %}
 
-<!-- Hero Section with Large Image and Overlay -->
-<div class="hero-section position-relative">
-    
-    
-    <!-- Dark overlay for text readability -->
-    <div class="hero-overlay"></div>
+<!-- Head Section -->
+<header class="position-relative">
     
     <!-- Hero content overlay -->
-    <div class="hero-content col-lg-12">
+    <div class="header-content col-lg-12">
         <div class="container">
             <div class="row">
                 <div class="col-lg-8">
                     <h1 class="hero-title">{{ prompt.title }}</h1>
                     <p class="hero-meta">
-                        <span class="author-badge">By @{{ prompt.author }}</span> | 
-                        <span class="date-text">{{ prompt.created_on|date:"F d, Y" }}</span>
+                        <span class="author-badge">By @{{ prompt.author }}</span>
                     </p>
                 </div>
                 <div class="col-lg-4">
@@ -42,14 +37,14 @@
             </div>
         </div>
     </div>
-</div>
+</header>
 
 <!-- Main Content Area -->
 <div class="container mt-5">
     <div class="row">
         <!-- Main Content Area -->
         <div class="col-lg-8">
-            <div>
+            <div class="hero-image-shell">
 
                 {% if "placeholder" in prompt.featured_image.url %}
         <img src="{% static 'images/default.jpg' %}" class="hero-image" alt="{{ prompt.title }}">
@@ -66,127 +61,138 @@
         <div class="col-lg-4">
             <div class="sidebar">
                 <!-- Prompt Description Card -->
-                <div class="sidebar-card">
-                    <h4 class="sidebar-title">Prompt Description</h4>
+                <div class="mb-5">
+                    <h2 class="sidebar-title">Prompt Description</h2>
                     {% if prompt.excerpt %}
-                        <p class="prompt-description">{{ prompt.excerpt }}</p>
+                        <p>{{ prompt.excerpt }}</p>
                     {% else %}
                         <p class="prompt-description text-muted">No description provided for this prompt.</p>
                     {% endif %}
                 </div>
 
                 <!-- The prompt content -->
-                <div class="sidebar-card">
-                    <h4 class="sidebar-title">Prompt Used</h4>
+                <div class="sidebar-card mb-4">
+                    <h2 class="sidebar-title">Prompt Used</h2>
                     <div class="prompt-content">
                         {{ prompt.content|safe }}
                     </div>
                 </div>
-                
+                <div class="prompt-metadata mb-5">
+                    <div class="metadata-item">
+                        <i class="fas fa-robot me-2"></i>
+                        <span>Midjourney</span>
+                    </div>
+                    <div class="metadata-item">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <span>Created <span class="date-text">{{ prompt.created_on|date:"F d, Y" }}</span></span>
+                    </div>
+                </div>
+
+                <div class="mb-5">
                 <!-- Tags Card -->
                 {% if prompt.tags.all %}
-                <div class="sidebar-card">
-                    <h4 class="sidebar-title">Tags</h4>
-                    <div class="tags-container">
-                        {% for tag in prompt.tags.all %}
-                            <span class="tag-badge" data-tag="{{ tag.name }}">{{ tag.name }}</span>
+                
+                <h2 class="sidebar-title">Tags</h2>
+                <div class="tags-container">
+                    {% for tag in prompt.tags.all %}
+                        <span class="tag-badge" data-tag="{{ tag.name }}">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
+               
+                {% endif %}
+            </div>
+                
+                
+            </div>
+        </div>
+        
+                <div class="col-lg-8">
+
+                    <!-- Comments Section -->
+                    <div class="comments-section">
+                    <h2 class="section-title">Comments ({{ comment_count }})</h2>
+                    
+                    <!-- Comments List -->
+                    <div class="comments-list">
+                        {% for comment in comments %}
+                            <div class="comment-card p-3 mb-3
+                                {% if not comment.approved and comment.author == user %}
+                                    border border-warning faded
+                                {% endif %}">
+                                <p class="font-weight-bold">
+                                    {{ comment.author }}
+                                    <span class="font-weight-normal text-muted">
+                                        {{ comment.created_on }}
+                                    </span>
+                                </p>
+                                {% if not comment.approved and comment.author == user %}
+                                    <p class="approval">This comment is awaiting approval</p>
+                                {% endif %}
+                                <div id="comment{{ comment.id }}">
+                                    {{ comment.body | linebreaks }}
+                                </div>
+                                <!-- Comment edit/delete buttons -->
+                                {% if user.is_authenticated and comment.author == user %}
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-warning" onclick="toggleEditForm({{ comment.id }})">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="confirmDelete('{% url 'prompts:comment_delete' prompt.slug comment.id %}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                    
+                                    <!-- Hidden inline edit form -->
+                                    <div id="editForm{{ comment.id }}" style="display: none;" class="mt-3">
+                                        <form method="post" action="{% url 'prompts:comment_edit' prompt.slug comment.id %}">
+                                            {% csrf_token %}
+                                            <div class="mb-2">
+                                                <textarea name="body" class="form-control" rows="3" required>{{ comment.body }}</textarea>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button type="submit" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-save"></i> Update
+                                                </button>
+                                                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEditForm({{ comment.id }})">
+                                                    <i class="fas fa-times"></i> Cancel
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <div class="no-comments">
+                                <p class="text-center text-muted">No comments yet. Be the first to share your thoughts!</p>
+                            </div>
                         {% endfor %}
                     </div>
                 </div>
-                {% endif %}
-                
-                
-            </div>
-        </div>
-        <div class="col-lg-12 d-flex mt-5">
-
-            <div class="col-lg-8">
-
-                <!-- Comments Section -->
-            <div class="comments-section">
-                <h3 class="section-title">Comments ({{ comment_count }})</h3>
-                
-                <!-- Comments List -->
-                <div class="comments-list">
-                    {% for comment in comments %}
-                        <div class="comment-card p-3 mb-3
-                            {% if not comment.approved and comment.author == user %}
-                                border border-warning faded
-                            {% endif %}">
-                            <p class="font-weight-bold">
-                                {{ comment.author }}
-                                <span class="font-weight-normal text-muted">
-                                    {{ comment.created_on }}
-                                </span>
-                            </p>
-                            {% if not comment.approved and comment.author == user %}
-                                <p class="approval">This comment is awaiting approval</p>
-                            {% endif %}
-                            <div id="comment{{ comment.id }}">
-                                {{ comment.body | linebreaks }}
-                            </div>
-                            <!-- Comment edit/delete buttons -->
-                            {% if user.is_authenticated and comment.author == user %}
-                            <div class="mt-2">
-                                <button class="btn btn-sm btn-outline-warning" onclick="toggleEditForm({{ comment.id }})">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" 
-                                        onclick="confirmDelete('{% url 'prompts:comment_delete' prompt.slug comment.id %}')">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                                
-                                <!-- Hidden inline edit form -->
-                                <div id="editForm{{ comment.id }}" style="display: none;" class="mt-3">
-                                    <form method="post" action="{% url 'prompts:comment_edit' prompt.slug comment.id %}">
-                                        {% csrf_token %}
-                                        <div class="mb-2">
-                                            <textarea name="body" class="form-control" rows="3" required>{{ comment.body }}</textarea>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            <button type="submit" class="btn btn-success btn-sm">
-                                                <i class="fas fa-save"></i> Update
-                                            </button>
-                                            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEditForm({{ comment.id }})">
-                                                <i class="fas fa-times"></i> Cancel
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-                    {% empty %}
-                        <div class="no-comments">
-                            <p class="text-center text-muted">No comments yet. Be the first to share your thoughts!</p>
-                        </div>
-                    {% endfor %}
                 </div>
-            </div>
-            </div>
-            <div class="col-lg-4">
-                <!-- Comment Form Card -->
-                {% if user.is_authenticated %}
-                <div class="sidebar-card">
-                    <h4 class="sidebar-title">Leave a comment</h4>
-                    <p class="posting-as">Posting as: <strong>{{ user.username }}</strong></p>
-                    {% load crispy_forms_tags %}
-                    <form id="commentForm" method="post" class="comment-form">
-                        {% csrf_token %}
-                        {{ comment_form|crispy }}
-                        <button id="submitButton" type="submit" class="btn btn-primary w-100 mt-3">Submit Comment</button>
-                    </form>
-                </div>
-                {% else %}
-                <div class="sidebar-card">
-                    <h4 class="sidebar-title">Join the Discussion</h4>
-                    <p>Please <a href="{% url 'account_login' %}">log in</a> to leave a comment.</p>
-                </div>
-                {% endif %}
+                <div class="col-lg-4">
+                    <!-- Comment Form Card -->
+                    {% if user.is_authenticated %}
+                    <div>
+                        <h2 class="sidebar-title">Leave a comment</h2>
+                        {% load crispy_forms_tags %}
+                        <form id="commentForm" method="post" class="comment-form">
+                            {% csrf_token %}
+                            {{ comment_form|crispy }}
+                            <button id="submitButton" type="submit" class="btn btn-primary w-100 mt-3">Submit Comment</button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="sidebar-card">
+                        <h4 class="sidebar-title">Join the Discussion</h4>
+                        <p>Please <a href="{% url 'account_login' %}">log in</a> to leave a comment.</p>
+                    </div>
+                    {% endif %}
 
 
-            </div>
-        </div>
+                </div>
+            
+        
     </div>
 </div>
 

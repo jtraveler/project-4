@@ -4,9 +4,11 @@ from django.contrib import messages
 from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.db import models
+from django.contrib.auth.decorators import login_required
 from taggit.models import Tag
 from .models import Prompt, Comment
 from .forms import CommentForm, CollaborateForm, PromptForm
+
 
 
 class PromptList(generic.ListView):
@@ -220,3 +222,21 @@ def collaborate_request(request):
             "collaborate_form": collaborate_form,
         },
     )
+
+@login_required
+def prompt_like(request, slug):
+    """
+    Handle like/unlike functionality for prompts.
+    Following DEV.to tutorial by Radu Alexandru.
+    """
+    prompt = get_object_or_404(Prompt, slug=slug)
+    
+    if prompt.likes.filter(id=request.user.id).exists():
+        # User already liked it, so unlike it
+        prompt.likes.remove(request.user)
+    else:
+        # User hasn't liked it, so add the like
+        prompt.likes.add(request.user)
+    
+    # Redirect back to the same prompt detail page
+    return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[str(slug)]))

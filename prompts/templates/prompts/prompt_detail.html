@@ -31,7 +31,29 @@
                         </div>
                         {% endif %}
                         
-                        
+                        <!-- Like Button Section -->
+
+                        <div class="like-section mb-4">
+                            {% if user.is_authenticated %}
+                                <form action="{% url 'prompts:prompt_like' prompt.slug %}" method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    {% if prompt_is_liked %}
+                                        <button type="submit" name="prompt_id" value="{{ prompt.id }}" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-heart"></i> Unlike
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" name="prompt_id" value="{{ prompt.id }}" class="btn btn-outline-danger btn-sm">
+                                            <i class="far fa-heart"></i> Like
+                                        </button>
+                                    {% endif %}
+                                </form>
+                            {% else %}
+                                <a class="btn btn-outline-danger btn-sm" href="{% url 'account_login' %}?next={{ request.path }}">
+                                    <i class="far fa-heart"></i> Like
+                                </a>
+                            {% endif %}
+                            <span class="text-muted ms-2">{{ number_of_likes }} like{{ number_of_likes|pluralize }}</span>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -19,6 +19,8 @@ class Prompt(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     tags = TaggableManager()
+    likes = models.ManyToManyField(
+    User, related_name='prompt_likes', blank=True)
     
     class Meta:
         ordering = ['-created_on']
@@ -31,6 +33,8 @@ class Prompt(models.Model):
             self.slug = slugify(self.title)
         super().save(*args, **kwargs)
 
+    def number_of_likes(self):
+        return self.likes.count()
 
 class Comment(models.Model):
     prompt = models.ForeignKey(

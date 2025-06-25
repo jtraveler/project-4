@@ -7,43 +7,25 @@
         {% for prompt in prompt_list %}
         <div class="masonry-item">
             <div class="prompt-card">
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="image-container">
-
-                                {% if "placeholder" in prompt.featured_image.url %}
-                                    <img class="card-img-top" src="{% static 'images/default.jpg' %}" alt="placeholder image">
-                                {% else %}
-                                    <img class="card-img-top" src="{{ prompt.featured_image.url }}" alt="{{ prompt.title }}">
-                                {% endif %}
-                                <div class="image-flash">
-                                    <p class="author">Author: {{ prompt.author }}</p>
-                                </div>
-                            </div>
-                            <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="post-link">
-                                <h2 class="card-title">{{ prompt.title }}</h2>
-                            </a>
-                            <hr />
-                            <p class="card-text text-muted h6">{{ prompt.created_on|date:"F d, Y" }}</p>
-                            {% if prompt.excerpt %}
-                                <p class="card-text">{{ prompt.excerpt|truncatewords:15 }}</p>
-                            {% endif %}
-
-                            <!-- Tags Display Section (Following Stack Overflow tutorial) -->
-                            {% if prompt.tags.all %}
-                                <div class="mt-2">
-                                    <small class="text-muted">Tags:</small>
-                                    {% for tag in prompt.tags.all %}
-                                        <span class="badge bg-info text-dark me-1 tag-clickable" 
-                                              style="cursor: pointer;" 
-                                              data-tag="{{ tag.name }}">
-                                            {{ tag.name }}
-                                        </span>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
+                <!-- Image wrapper -->
+                <div class="image-wrapper">
+                    {% if "placeholder" in prompt.featured_image.url %}
+                        <img src="{% static 'images/default.jpg' %}" alt="{{ prompt.title }}">
+                    {% else %}
+                        <img src="{{ prompt.featured_image.url }}" alt="{{ prompt.title }}">
+                    {% endif %}
+                </div>
+                
+                <!-- Clickable link overlay -->
+                <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="card-link"></a>
+                
+                <!-- Hidden tags for filtering (keep existing functionality) -->
+                <div class="hidden-tags" style="display: none;">
+                    {% for tag in prompt.tags.all %}
+                        <span class="tag-clickable" data-tag="{{ tag.name }}">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
+                    
                 </div>
             </div>
             {% endfor %}

@@ -5,13 +5,26 @@ from .models import Prompt, Comment, CollaborateRequest
 
 @admin.register(Prompt)
 class PromptAdmin(SummernoteModelAdmin):
-    list_display = ('title', 'slug', 'status', 'created_on', 'author', 'tag_list', 'number_of_likes')
+    list_display = ('title', 'slug', 'status', 'created_on', 'author', 'tag_list', 'number_of_likes', 'ai_generator')
     search_fields = ['title', 'content', 'tags__name']  # Only one search_fields definition
-    list_filter = ('status', 'created_on', 'author', 'tags')  # Added author back
+    list_filter = ('status', 'created_on', 'author', 'tags', 'ai_generator')  # Added ai_generator
     prepopulated_fields = {'slug': ('title',)}
     summernote_fields = ('content',)
     ordering = ['-created_on']
     actions = ['make_published']
+    
+    # Added ai_generator to the fieldsets for better organization
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'slug', 'author', 'status')
+        }),
+        ('Content', {
+            'fields': ('excerpt', 'content', 'featured_image')
+        }),
+        ('Metadata', {
+            'fields': ('tags', 'ai_generator')
+        }),
+    )
 
     def tag_list(self, obj):
         return ", ".join(o.name for o in obj.tags.all())

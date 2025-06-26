@@ -8,6 +8,20 @@ from taggit.managers import TaggableManager
 # Add status choices
 STATUS = ((0, "Draft"), (1, "Published"))
 
+# AI Generator choices
+AI_GENERATOR_CHOICES = [
+    ('midjourney', 'Midjourney'),
+    ('dall-e-3', 'DALL-E 3'),
+    ('stable-diffusion', 'Stable Diffusion'),
+    ('adobe-firefly', 'Adobe Firefly'),
+    ('flux', 'Flux'),
+    ('sora', 'Sora'),
+    ('leonardo-ai', 'Leonardo AI'),
+    ('ideogram', 'Ideogram'),
+    ('runwayml', 'RunwayML'),
+    ('other', 'Other'),
+]
+
 class Prompt(models.Model):
     title = models.CharField(max_length=200, unique=True)
     slug = models.SlugField(max_length=200, unique=True, blank=False)
@@ -19,8 +33,13 @@ class Prompt(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     tags = TaggableManager()
-    likes = models.ManyToManyField(
-    User, related_name='prompt_likes', blank=True)
+    likes = models.ManyToManyField(User, related_name='prompt_likes', blank=True)
+    ai_generator = models.CharField(
+        max_length=50,
+        choices=AI_GENERATOR_CHOICES,
+        default='midjourney',
+        help_text='Select the AI tool used to generate this image'
+    )
     
     class Meta:
         ordering = ['-created_on']
@@ -35,6 +54,11 @@ class Prompt(models.Model):
 
     def number_of_likes(self):
         return self.likes.count()
+    
+    def get_ai_generator_display_name(self):
+        """Return the display name for the AI generator"""
+        return dict(AI_GENERATOR_CHOICES).get(self.ai_generator, 'Unknown')
+
 
 class Comment(models.Model):
     prompt = models.ForeignKey(

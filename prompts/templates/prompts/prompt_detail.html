@@ -16,45 +16,104 @@
                     </p>
                 </div>
                 <div class="col-lg-4">
-                    
-                    <div>
-                        <!-- Prompt edit/delete buttons for author only -->
-                        {% if user.is_authenticated and prompt.author == user %}
-                        <div class="d-flex justify-content-end mb-4">
-                            <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="btn btn-outline-warning btn-sm me-2">
-                                <i class="fas fa-edit"></i> Edit Prompt
-                            </a>
-                            <button type="button" class="btn btn-outline-danger btn-sm" 
-                                    onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')">
-                                <i class="fas fa-trash"></i> Delete Prompt
-                            </button>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Like Button Section -->
 
-                        <div class="like-section mb-4">
-                            {% if user.is_authenticated %}
-                                <form action="{% url 'prompts:prompt_like' prompt.slug %}" method="POST" class="d-inline">
-                                    {% csrf_token %}
-                                    {% if prompt_is_liked %}
-                                        <button type="submit" name="prompt_id" value="{{ prompt.id }}" class="btn btn-danger btn-sm">
-                                            <i class="fas fa-heart"></i> Unlike
-                                        </button>
-                                    {% else %}
-                                        <button type="submit" name="prompt_id" value="{{ prompt.id }}" class="btn btn-outline-danger btn-sm">
-                                            <i class="far fa-heart"></i> Like
-                                        </button>
-                                    {% endif %}
-                                </form>
-                            {% else %}
-                                <a class="btn btn-outline-danger btn-sm" href="{% url 'account_login' %}?next={{ request.path }}">
-                                    <i class="far fa-heart"></i> Like
-                                </a>
-                            {% endif %}
-                            <span class="text-muted ms-2">{{ number_of_likes }} like{{ number_of_likes|pluralize }}</span>
-                        </div>
-                    </div>
+                    <!-- Add this to your prompt_detail.html template -->
+<!-- Place it in the sidebar or wherever you want the action buttons -->
+
+<div class="action-buttons mb-4">
+    <div class="button-group d-flex gap-2 align-items-center">
+        
+        <!-- Comment Button -->
+        <button class="action-btn btn-comment" onclick="scrollToComments()">
+            <i class="far fa-comment"></i>
+        </button>
+        
+        <!-- Edit Button (only for prompt author) -->
+        {% if user.is_authenticated and prompt.author == user %}
+        <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-btn btn-edit">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+        
+        <!-- Delete Button (only for prompt author) -->
+        {% if user.is_authenticated and prompt.author == user %}
+        <button class="action-btn btn-delete" 
+                onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')">
+            <i class="fas fa-trash"></i>
+        </button>
+        {% endif %}
+        
+        <!-- Like Button -->
+        {% if user.is_authenticated %}
+            <button class="action-btn btn-like {% if prompt_is_liked %}liked{% endif %}" 
+                    data-prompt-slug="{{ prompt.slug }}"
+                    onclick="toggleLike(this)">
+                <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart me-2"></i>
+                <span class="like-text">Like</span>
+                <span class="like-count">{{ number_of_likes }}</span>
+            </button>
+        {% else %}
+            <a href="{% url 'account_login' %}?next={{ request.path }}" class="action-btn btn-like">
+                <i class="far fa-heart me-2"></i>
+                <span class="like-text">Like</span>
+                <span class="like-count">{{ number_of_likes }}</span>
+            </a>
+        {% endif %}
+        
+    </div>
+</div>
+
+
+
+<!-- JavaScript for functionality -->
+<script>
+// Scroll to comments function
+function scrollToComments() {
+    const commentsSection = document.querySelector('.comments-section');
+    if (commentsSection) {
+        commentsSection.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+}
+
+// AJAX Like toggle for detail page
+function toggleLike(button) {
+    const promptSlug = button.getAttribute('data-prompt-slug');
+    const heartIcon = button.querySelector('i');
+    const likeCount = button.querySelector('.like-count');
+    
+    fetch('/' + promptSlug + '/like/', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update like count
+        likeCount.textContent = data.like_count;
+        
+        // Update button appearance
+        if (data.liked) {
+            button.classList.add('liked');
+            heartIcon.className = 'fas fa-heart me-2';
+        } else {
+            button.classList.remove('liked');
+            heartIcon.className = 'far fa-heart me-2';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Something went wrong. Please try again.');
+    });
+}
+</script>
+                    
+                
                 </div>
             </div>
         </div>

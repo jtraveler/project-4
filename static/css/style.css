@@ -620,7 +620,7 @@ main {
   border-radius: 12px !important;
   font-size: 16px !important;
   font-family: inherit !important;
-  background: #ffffff !important;
+  background: var(--light-blue) !important;
   transition: all 0.2s ease !important;
   box-sizing: border-box !important;
 }
@@ -873,6 +873,36 @@ main {
 
 .file-upload-label:hover i {
   color: var(--main-blue);
+}
+
+/* ===== SELECT DROPDOWN WITH ARROW ===== */
+.edit-form .modern-select-dropdown,
+select.modern-select-dropdown {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+  background-position: right 16px center !important;
+  background-repeat: no-repeat !important;
+  background-size: 30px !important;
+  padding-right: 48px !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+}
+
+.edit-form .modern-select-dropdown:focus,
+select.modern-select-dropdown:focus {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23007bff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+}
+
+/* Fallback for specific select element */
+select#id_ai_generator {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+  background-position: right 16px center !important;
+  background-repeat: no-repeat !important;
+  background-size: 16px !important;
+  padding-right: 48px !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
 }
 
 /* ===== RESPONSIVE BREAKPOINTS FOR DIFFERENT SCREEN SIZES ===== */

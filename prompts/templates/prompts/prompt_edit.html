@@ -38,7 +38,7 @@
             </div>
 
             <!-- Tags Field -->
-            <div class="field-group">
+            <div class="field-group mb-4">
                 <label for="id_tags" class="field-label">Tags</label>
                 {{ prompt_form.tags }}
                 
@@ -48,7 +48,7 @@
                     <span class="popular-tags-label">Popular tags:</span>
                     <div class="popular-tags-list">
                         {% for tag in existing_tags %}
-                            <button type="button" class="tag-option" onclick="addTag('{{ tag.name }}')">{{ tag.name }}</button>
+                            <span type="button" class="tag-badge" onclick="addTag('{{ tag.name }}')">{{ tag.name }}</span>
                         {% endfor %}
                     </div>
                 </div>
@@ -56,7 +56,7 @@
             </div>
 
             <!-- AI Generator Field -->
-            <div class="field-group">
+            <div class="field-group mb-4">
                 <label for="id_ai_generator" class="field-label">AI Generator</label>
                 {{ prompt_form.ai_generator }}
                 <div class="field-help">

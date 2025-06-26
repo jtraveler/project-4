@@ -49,7 +49,7 @@ class PromptForm(forms.ModelForm):
                 'placeholder': 'photography, digital art, portrait'
             }),
             'ai_generator': forms.Select(attrs={
-                'class': 'form-control modern-select'
+                'class': 'form-control modern-select modern-select-dropdown'
             })
         }
         

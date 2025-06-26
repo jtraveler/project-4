@@ -566,10 +566,10 @@ main {
 
 
 
-/* ===== MODERN FORM FOUNDATION ===== */
+/* ===== MODERN FORM STYLING FOR PROMPTFLOW ===== */
 
 /* Form Container */
-.form-container {
+.modern-form-container {
   max-width: 600px;
   margin: 0 auto;
   background: white;
@@ -579,32 +579,40 @@ main {
   border: 1px solid #f1f3f4;
 }
 
-/* Form Header */
-.form-header {
+.modern-form-header {
   text-align: center;
   margin-bottom: 32px;
 }
 
-.form-title {
+.modern-form-title {
   font-size: 2rem;
   font-weight: 700;
   color: #1f2937;
   margin-bottom: 8px;
 }
 
-.form-subtitle {
+.modern-form-subtitle {
   color: #6b7280;
   font-size: 1rem;
   margin: 0;
 }
 
-/* Field Groups */
-.field-group {
+/* Form Groups */
+.modern-form-group {
   margin-bottom: 24px;
 }
 
+.modern-form-group.half-width {
+  width: 48%;
+  display: inline-block;
+}
+
+.modern-form-group.half-width:first-child {
+  margin-right: 4%;
+}
+
 /* Labels */
-.field-label {
+.modern-form-label {
   display: block;
   font-weight: 600;
   color: #374151;
@@ -612,106 +620,121 @@ main {
   font-size: 0.95rem;
 }
 
-/* Input Fields - Basic Styling */
-.edit-form .form-control {
-  width: 100% !important;
-  padding: 16px 20px !important;
-  border: 2px solid #e5e7eb !important;
-  border-radius: 12px !important;
-  font-size: 16px !important;
-  font-family: inherit !important;
-  background: #ffffff !important;
-  transition: all 0.2s ease !important;
-  box-sizing: border-box !important;
+.modern-form-label.required::after {
+  content: " *";
+  color: #ef4444;
 }
 
-.edit-form .form-control:focus {
-  outline: none !important;
-  border-color: var(--main-blue) !important;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
-  background: #ffffff !important;
-}
-
-
-/* Form input classes from forms.py */
-.modern-input,
-.modern-textarea,
-.modern-select {
+/* Input Fields */
+.modern-form-input,
+.modern-form-textarea,
+.modern-form-select {
   width: 100%;
   padding: 16px 20px;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
   font-size: 16px;
+  font-family: inherit;
+  background: #ffffff;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
-.modern-input:focus,
-.modern-textarea:focus,
-.modern-select:focus {
+.modern-form-input:focus,
+.modern-form-textarea:focus,
+.modern-form-select:focus {
+  outline: none;
   border-color: var(--main-blue);
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  background: #ffffff;
 }
 
-/* Help Text */
-.field-help {
+.modern-form-input::placeholder,
+.modern-form-textarea::placeholder {
+  color: #9ca3af;
+  font-size: 15px;
+}
+
+/* Textarea specific */
+.modern-form-textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.modern-form-textarea.large {
+  min-height: 200px;
+}
+
+/* Select dropdown */
+.modern-form-select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 16px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 48px;
+  appearance: none;
+}
+
+/* File Upload */
+.modern-file-upload {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.modern-file-input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.modern-file-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.modern-file-label:hover {
+  border-color: var(--main-blue);
+  background: var(--light-blue);
+  color: var(--main-blue);
+}
+
+.modern-file-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  color: #9ca3af;
+}
+
+/* Tags Input */
+.modern-tags-container {
+  position: relative;
+}
+
+.modern-tags-input {
+  padding-bottom: 12px;
+}
+
+.modern-tags-help {
   font-size: 0.875rem;
   color: #6b7280;
   margin-top: 6px;
-  line-height: 1.4;
+  font-style: italic;
 }
 
-/* Button Styling */
-.form-actions {
-  display: flex;
-  gap: 16px;
-  margin-top: 32px;
-  justify-content: center;
-}
-
-.btn-primary,
-.btn-secondary {
-  padding: 14px 28px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 16px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  border: none;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 120px;
-}
-
-.btn-primary {
-  background: var(--main-blue);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: var(--main-blue-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-  color: white;
-  text-decoration: none;
-}
-
-.btn-secondary {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #d1d5db;
-}
-
-.btn-secondary:hover {
-  background: #e5e7eb;
-  color: #374151;
-  text-decoration: none;
-}
-
-
-
-/* Popular Tags Styling */
 .popular-tags {
   margin-top: 12px;
 }
@@ -729,7 +752,7 @@ main {
   gap: 8px;
 }
 
-.tag-option {
+.popular-tag {
   background: var(--light-blue);
   color: var(--main-blue);
   padding: 6px 12px;
@@ -740,14 +763,55 @@ main {
   transition: all 0.2s ease;
 }
 
-.tag-option:hover {
+.popular-tag:hover {
   background: var(--main-blue);
   color: white;
   transform: translateY(-1px);
 }
 
+/* Help Text */
+.modern-form-help {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 6px;
+  line-height: 1.4;
+}
 
-/* Form Button Styling */
+/* Error States */
+.modern-form-input.error,
+.modern-form-textarea.error,
+.modern-form-select.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.modern-form-error {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.modern-form-error i {
+  margin-right: 6px;
+}
+
+/* Success States */
+.modern-form-input.success,
+.modern-form-textarea.success,
+.modern-form-select.success {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Button Styling */
+.modern-form-buttons {
+  display: flex;
+  gap: 16px;
+  margin-top: 32px;
+  justify-content: flex-end;
+}
 
 .modern-btn {
   padding: 14px 28px;
@@ -789,8 +853,91 @@ main {
   text-decoration: none;
 }
 
+.modern-btn i {
+  margin-right: 8px;
+}
 
-/* Footer styling */
+/* Google Sign-in Button */
+.modern-google-btn {
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  color: #374151;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  text-decoration: none;
+}
+
+.modern-google-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
+  text-decoration: none;
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+}
+
+/* Divider */
+.modern-form-divider {
+  text-align: center;
+  margin: 24px 0;
+  position: relative;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.modern-form-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.modern-form-divider span {
+  background: white;
+  padding: 0 16px;
+  position: relative;
+}
+
+/* Checkbox/Radio */
+.modern-checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  margin: 20px 0;
+}
+
+.modern-checkbox {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  margin-top: 2px;
+  accent-color: var(--main-blue);
+  cursor: pointer;
+}
+
+.modern-checkbox-label {
+  font-size: 0.95rem;
+  color: #6b7280;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+/* Footer Links */
 .modern-form-footer {
   text-align: center;
   margin-top: 24px;
@@ -803,85 +950,34 @@ main {
   font-size: 0.95rem;
 }
 
-/* ===== ENHANCED FILE UPLOAD STYLING ===== */
-
-/* Current Image Display */
-.current-image {
-  margin-bottom: 16px;
-}
-
-.current-image-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 8px;
-}
-
-.current-image-preview {
-  max-width: 200px;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 2px solid #e5e7eb;
-  transition: all 0.2s ease;
-}
-
-.current-image-preview:hover {
-  border-color: var(--main-blue);
-  transform: scale(1.02);
-}
-
-/* File Upload Area */
-.file-upload-area {
-  position: relative;
-  width: 100%;
-}
-
-.file-input {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-}
-
-.file-upload-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 20px;
-  border: 2px dashed #d1d5db;
-  border-radius: 12px;
-  background: #f9fafb;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-  color: #6b7280;
-  font-weight: 500;
-  min-height: 80px;
-}
-
-.file-upload-label:hover {
-  border-color: var(--main-blue);
-  background: var(--light-blue);
+.modern-form-footer-link {
   color: var(--main-blue);
+  text-decoration: none;
+  font-weight: 600;
 }
 
-.file-upload-label i {
-  font-size: 24px;
-  margin-right: 12px;
-  color: #9ca3af;
+.modern-form-footer-link:hover {
+  color: var(--main-blue-hover);
+  text-decoration: underline;
 }
 
-.file-upload-label:hover i {
-  color: var(--main-blue);
-}
-
-
-
-
-/* ===== RESPONSIVE BREAKPOINTS FOR DIFFERENT SCREEN SIZES ===== */
-
-/* Responsive Design for max width 768px */
+/* Responsive Design */
 @media (max-width: 768px) {
+  .modern-form-container {
+      margin: 20px;
+      padding: 24px;
+      border-radius: 12px;
+  }
+  
+  .modern-form-group.half-width {
+      width: 100%;
+      display: block;
+      margin-right: 0;
+  }
+  
+  .form-actions {
+      flex-direction: column;
+  }
   
   .modern-btn {
       width: 100%;
@@ -889,7 +985,61 @@ main {
   }
 }
 
+/* Integration with Django Crispy Forms */
+.crispy-form .form-group {
+  margin-bottom: 24px;
+}
 
+.crispy-form .form-control {
+  padding: 16px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.crispy-form .form-control:focus {
+  border-color: var(--main-blue);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Override Bootstrap form styles */
+.form-control {
+  padding: 16px 20px !important;
+  border: 2px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  font-size: 16px !important;
+  transition: all 0.2s ease !important;
+}
+
+.form-control:focus {
+  border-color: var(--main-blue) !important;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+
+  .button-group {
+    background: var(--light-blue);
+    justify-content: center;
+    padding: 12px;
+    margin-top: 30px;;
+  }
+  
+  .action-btn {
+      min-width: 40px;
+      height: 40px;
+      font-size: 14px;
+  }
+  
+  .btn-like {
+      padding: 0 12px;
+  }
+}
+
+/* Responsive breakpoints for different screen sizes */
 @media (max-width: 1400px) {
   .masonry-grid {
     column-count: 4 !important;

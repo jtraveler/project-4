@@ -72,7 +72,14 @@
                 {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
                     <div class="current-image">
                         <p class="current-image-label">Current image:</p>
-                        <img src="{{ prompt.featured_image.url }}" alt="Current featured image" class="current-image-preview">
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
+                           <img src="{{ prompt.featured_image.url }}" alt="Current featured image" class="current-image-preview">
+                        </a>
+                        <p class="small text-muted mb-2">
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal" class="text-primary">
+                                {{ prompt.featured_image.public_id }}.{{ prompt.featured_image.format }}
+                            </a>
+                        </p>
                     </div>
                 {% endif %}
                 
@@ -97,14 +104,18 @@
 
             <!-- Form Buttons -->
             <div class="form-actions">
-                <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="btn-secondary">
+                <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="modern-btn btn-secondary">
                     Cancel
                 </a>
-                <button type="submit" class="btn-primary">
+                <button type="submit" class="modern-btn btn-primary">
                     Update Prompt
                 </button>
             </div>
         </form>
+        <!-- Footer -->
+        <div class="modern-form-footer">
+            <p class="modern-form-footer-text">Changes will be published immediately</p>
+        </div>
     </div>
 </div>
 

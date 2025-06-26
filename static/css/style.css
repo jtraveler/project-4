@@ -632,6 +632,26 @@ main {
   background: #ffffff !important;
 }
 
+
+/* Form input classes from forms.py */
+.modern-input,
+.modern-textarea,
+.modern-select {
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.modern-input:focus,
+.modern-textarea:focus,
+.modern-select:focus {
+  border-color: var(--main-blue);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
 /* Help Text */
 .field-help {
   font-size: 0.875rem;
@@ -690,6 +710,98 @@ main {
 }
 
 
+
+/* Popular Tags Styling */
+.popular-tags {
+  margin-top: 12px;
+}
+
+.popular-tags-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.popular-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-option {
+  background: var(--light-blue);
+  color: var(--main-blue);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.tag-option:hover {
+  background: var(--main-blue);
+  color: white;
+  transform: translateY(-1px);
+}
+
+
+/* Form Button Styling */
+
+.modern-btn {
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.modern-btn-primary {
+  background: var(--main-blue);
+  color: white;
+}
+
+.modern-btn-primary:hover {
+  background: var(--main-blue-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  color: white;
+  text-decoration: none;
+}
+
+.modern-btn-secondary {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.modern-btn-secondary:hover {
+  background: #e5e7eb;
+  color: #374151;
+  text-decoration: none;
+}
+
+
+/* Footer styling */
+.modern-form-footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.modern-form-footer-text {
+  color: #6b7280;
+  font-size: 0.95rem;
+}
 
 /* ===== ENHANCED FILE UPLOAD STYLING ===== */
 
@@ -762,44 +874,6 @@ main {
 .file-upload-label:hover i {
   color: var(--main-blue);
 }
-
-/* Popular Tags Styling */
-.popular-tags {
-  margin-top: 12px;
-}
-
-.popular-tags-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.popular-tags-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag-option {
-  background: var(--light-blue);
-  color: var(--main-blue);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-}
-
-.tag-option:hover {
-  background: var(--main-blue);
-  color: white;
-  transform: translateY(-1px);
-}
-
-
-
 
 
 

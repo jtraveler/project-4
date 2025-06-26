@@ -665,7 +665,7 @@ main {
   display: flex;
   gap: 16px;
   margin-top: 32px;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .btn-primary,
@@ -877,19 +877,7 @@ main {
 
 
 
-
-/* ===== RESPONSIVE BREAKPOINTS FOR DIFFERENT SCREEN SIZES ===== */
-
-/* Responsive Design for max width 768px */
-@media (max-width: 768px) {
-  
-  .modern-btn {
-      width: 100%;
-      justify-content: center;
-  }
-}
-
-
+/* Responsive breakpoints for different screen sizes */
 @media (max-width: 1400px) {
   .masonry-grid {
     column-count: 4 !important;

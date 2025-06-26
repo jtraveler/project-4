@@ -12,6 +12,15 @@ body {
 /* Sut main buttin color */
 .btn-primary {background-color: var(--main-blue);}
 
+main {
+  margin-top: 50px;
+  margin-bottom: 100px;
+}
+
+
+.main-bg {
+  background-color: white;
+}
 
 .brand {
   font-family: Lato, sans-serif;
@@ -36,9 +45,7 @@ body {
   background-color: #445261;
 }
 
-.main-bg {
-  background-color: white;
-}
+
 
 .card {
   border: none;
@@ -496,7 +503,7 @@ body {
   background: none;
   backdrop-filter: blur(10px);
   border-radius: 25px;
-  padding: 8px;
+  padding: 0;
   justify-content: right;
 }
 
@@ -560,14 +567,12 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 992px) {
-  .button-group {
-      justify-content: center;
-  }
 
   .button-group {
     background: var(--light-blue);
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 12px;
+    margin-top: 30px;;
   }
   
   .action-btn {

@@ -42,11 +42,14 @@ class CollaborateForm(forms.ModelForm):
 class PromptForm(forms.ModelForm):
     class Meta:
         model = Prompt
-        fields = ('title', 'content', 'excerpt', 'featured_image', 'tags')
+        fields = ('title', 'content', 'excerpt', 'featured_image', 'tags', 'ai_generator')
         widgets = {
             'tags': TagWidget(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter tags separated by commas (e.g. photography, digital art, tutorial)'
+            }),
+            'ai_generator': forms.Select(attrs={
+                'class': 'form-control'
             })
         }
         
@@ -66,3 +69,5 @@ class PromptForm(forms.ModelForm):
             'placeholder': 'Brief description (optional)',
             'rows': 3
         })
+        self.fields['ai_generator'].label = 'AI Generator'
+        self.fields['ai_generator'].help_text = 'Select the AI tool used to create this image'

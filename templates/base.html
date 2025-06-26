@@ -22,64 +22,459 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="d-flex flex-column h-100 main-bg">
-    <!-- Enhanced Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'prompts:home' %}"><span class="brand">c<span class="red-o">o</span>de<span class="thin">|star</span></span></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText"
-                aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarText">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == home_url %}active{% endif %}" aria-current="page"
-                            href="{% url 'prompts:home' %}">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if '/about/' in request.path %}active{% endif %}" aria-current="page" 
-                            href="/about/">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{% url 'prompts:collaborate' %}" 
-                            class="nav-link {% if request.path == collaborate_url %}active{% endif %}">Collaborate</a>
-                    </li>
-                    {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.path == logout_url %}active{% endif %}" aria-current="page" 
-                                href="{% url 'account_logout' %}">Logout</a>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.path == signup_url %}active{% endif %}" aria-current="page" 
-                                href="{% url 'account_signup' %}">Register</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.path == login_url %}active{% endif %}" aria-current="page" 
-                                href="{% url 'account_login' %}">Login</a>
-                        </li>
-                    {% endif %}
-                </ul>
-                <span class="navbar-text text-muted">
-                    adventures of a software developer
-                </span>
+    <!-- Update your base.html navigation section with this modern menu -->
+
+<nav class="modern-navbar">
+    <div class="nav-container container">
+        
+        <!-- Left Side: Logo and Navigation Links -->
+        <div class="nav-left">
+            <a href="{% url 'prompts:home' %}" class="logo">
+                <span class="logo-text"><div class="logo-text-flow">Prompt</div>Flow</span>
+            </a>
+            
+            <div class="nav-links">
+                <a href="{% url 'about' %}" class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
+                    About
+                </a>
+                <a href="{% url 'prompts:collaborate' %}" class="nav-link {% if request.resolver_match.url_name == 'collaborate' %}active{% endif %}">
+                    Contact
+                </a>
             </div>
         </div>
-    </nav>
+        
+        <!-- Center: Search Bar -->
+        <div class="nav-search">
+            <form class="search-form" method="GET" action="{% url 'prompts:home' %}">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input 
+                        type="text" 
+                        name="search" 
+                        class="search-input" 
+                        placeholder="Search prompts..." 
+                        value="{{ request.GET.search }}"
+                    >
+                </div>
+            </form>
+        </div>
+        
+        <!-- Right Side: User Info and Upload -->
+        <div class="nav-right">
+            {% if user.is_authenticated %}
+                <span class="welcome-text">
+                    Welcome back, <strong>{{ user.username }}</strong>!
+                </span>
+                
+                <div class="user-menu">
+                    <button class="user-avatar" onclick="toggleUserDropdown()">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="#" class="dropdown-item">
+                            <i class="fas fa-user me-2"></i>Profile
+                        </a>
+                        <a href="{% url 'account_logout' %}" class="dropdown-item">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a>
+                    </div>
+                </div>
+                <a href="#" class="upload-btn" onclick="createNewPrompt()">
+                    <i class="fas fa-upload me-2"></i>Upload
+                </a>
+            {% else %}
+                <a href="{% url 'account_login' %}" class="login-btn">
+                    Log In
+                </a>
+                <a href="{% url 'account_login' %}" class="upload-btn">
+                    <i class="fas fa-upload me-2"></i>Upload
+                </a>
+            {% endif %}
+        </div>
+        
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+    </div>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="{% url 'about' %}" class="mobile-nav-link">About</a>
+        <a href="{% url 'prompts:collaborate' %}" class="mobile-nav-link">Contact</a>
+        {% if user.is_authenticated %}
+            <div class="mobile-user-info">
+                Welcome back, <strong>{{ user.username }}</strong>!
+            </div>
+            <a href="{% url 'account_logout' %}" class="mobile-nav-link">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout
+            </a>
+            <a href="#" class="mobile-nav-link" onclick="createNewPrompt()">
+                <i class="fas fa-upload me-2"></i>Upload Prompt
+            </a>
+        {% else %}
+            <a href="{% url 'account_login' %}" class="mobile-nav-link">Log In</a>
+            <a href="{% url 'account_login' %}" class="mobile-nav-link">
+                <i class="fas fa-upload me-2"></i>Upload Prompt
+            </a>
+        {% endif %}
+    </div>
+</nav>
+
+<!-- CSS Styles -->
+<style>
+.modern-navbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.nav-container {
+   
+    margin: 0 auto;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    height: 64px;
+    gap: 24px;
+}
+
+/* Left Side */
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    flex-shrink: 0;
+}
+
+.logo {
+    text-decoration: none;
+    color: #1f2937;
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--main-blue);
+    float: left;
+}
+
+.logo-text-flow {
+    color: var(--main-blue-hover);
+    float: left;
+}
+
+.nav-links {
+    display: flex;
+    gap: 24px;
+}
+
+.nav-link {
+    color: #6b7280;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 15px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #374151;
+    background: #f9fafb;
+    text-decoration: none;
+}
+
+.nav-link.active {
+    color: #2563eb;
+    background: #eff6ff;
+}
+
+/* Center Search */
+.nav-search {
+    flex: 1;
+    width: 100%;
+}
+
+.search-form {
+    width: 100%;
+}
+
+.search-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 16px;
+}
+
+.search-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px 0 48px;
+    border: 1px solid #d1d5db;
+    border-radius: 22px;
+    background: var(--light-blue);
+    font-size: 15px;
+    transition: all 0.2s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Right Side */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.welcome-text {
+    color: #374151;
+    white-space: nowrap;
+}
+
+.login-btn {
+    color: #374151;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.login-btn:hover {
+    color: #2563eb;
+    background: #f3f4f6;
+    text-decoration: none;
+}
+
+.upload-btn {
+    background: var(--main-blue);
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 20px;
+    border-radius: 50px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+}
+
+.upload-btn:hover {
+    background: var(--main-blue-hover);
+    color: white;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* User Menu */
+.user-menu {
+    position: relative;
+}
+
+.user-avatar {
+    background: none;
+    border: none;
+    color: var(--main-blue-hover);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.user-avatar:hover {
+    color: var(--main-blue);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    min-width: 150px;
+    display: none;
+    z-index: 1000;
+}
+
+.user-dropdown.show {
+    display: block;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    color: var(--main-blue-hover);
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background: #f9fafb;
+    color: #2563eb;
+    text-decoration: none;
+}
+
+/* Mobile Menu */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: #374151;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.mobile-menu {
+    display: none;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    padding: 16px 24px;
+}
+
+.mobile-nav-link {
+    display: block;
+    color: #374151;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.mobile-nav-link:hover {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.mobile-user-info {
+    color: #6b7280;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .nav-container {
+        padding: 0 16px;
+        gap: 16px;
+    }
+    
+    .nav-links, .welcome-text, .user-menu {
+        display: none;
+    }
+    
+    .mobile-menu-toggle {
+        display: block;
+    }
+    
+    .nav-search {
+        max-width: none;
+        flex: 1;
+    }
+    
+    .search-input {
+        height: 40px;
+    }
+    
+    .upload-btn {
+        display: none;
+    }
+}
+
+@media (max-width: 992px) {
+    .mobile-menu.show {
+        display: block;
+    }
+    
+    .logo-text {
+        font-size: 20px;
+    }
+    
+    .nav-container {
+        height: 60px;
+    }
+}
+</style>
+
+<!-- JavaScript for functionality -->
+<script>
+// Create new prompt function
+function createNewPrompt() {
+    {% if user.is_authenticated %}
+        // Will redirect to create prompt URL once we set it up
+        window.location.href = '/create-prompt/';
+    {% else %}
+        window.location.href = '{% url "account_login" %}';
+    {% endif %}
+}
+
+// Toggle user dropdown
+function toggleUserDropdown() {
+    const dropdown = document.getElementById('userDropdown');
+    dropdown.classList.toggle('show');
+}
+
+// Toggle mobile menu
+function toggleMobileMenu() {
+    const mobileMenu = document.getElementById('mobileMenu');
+    mobileMenu.classList.toggle('show');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    const userDropdown = document.getElementById('userDropdown');
+    const userAvatar = document.querySelector('.user-avatar');
+    
+    if (!userAvatar.contains(event.target)) {
+        userDropdown.classList.remove('show');
+    }
+});
+
+// Handle search form submission
+document.querySelector('.search-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const searchValue = document.querySelector('.search-input').value;
+    if (searchValue.trim()) {
+        window.location.href = `{% url 'prompts:home' %}?search=${encodeURIComponent(searchValue)}`;
+    }
+});
+</script>
     <!-- rest of your template stays the same -->
 
-    <!-- User Status Message -->
-    <div class="container mt-3">
-        <div class="row">
-            <div class="col">
-                {% if user.is_authenticated %}
-                    <p class="text-end text-muted"><i class="fas fa-user"></i> Welcome back, <strong>{{ user.username }}</strong></p>
-                {% else %}
-                    <p class="text-end text-muted"><i class="fas fa-sign-in-alt"></i> <a href="{% url 'account_login' %}">Please log in</a></p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+    
     <main class="flex-shrink-0 main-bg">
 
         <!-- Messages -->

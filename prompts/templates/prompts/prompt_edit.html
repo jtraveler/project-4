@@ -37,6 +37,15 @@
                 </div>
             </div>
 
+            <!-- AI Genertor Field -->
+            <div class="field-group">
+                <label for="id_ai_generator" class="field-label">AI Generator</label>
+                {{ prompt_form.ai_generator }}
+                <div class="field-help">
+                    Choose the AI tool you used to generate this image
+                </div>
+            </div>
+
             <!-- Tags Field -->
             <div class="field-group">
                 <label for="id_tags" class="field-label">Tags</label>
@@ -59,7 +68,7 @@
             <div class="field-group">
                 <label class="field-label">Featured Image</label>
                 
-                <!-- Current Image Display -->
+                <!-- Current Image Dispay -->
                 {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
                     <div class="current-image">
                         <p class="current-image-label">Current image:</p>

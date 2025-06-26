@@ -45,28 +45,28 @@ class PromptForm(forms.ModelForm):
         fields = ('title', 'content', 'excerpt', 'featured_image', 'tags', 'ai_generator')
         widgets = {
             'tags': TagWidget(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter tags separated by commas (e.g. photography, digital art, tutorial)'
+                'class': 'form-control modern-tags-input',
+                'placeholder': 'photography, digital art, portrait'
             }),
             'ai_generator': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control modern-select'
             })
         }
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['title'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': 'Enter prompt title'
+            'class': 'form-control modern-input',
+            'placeholder': 'Enter a catchy title for your prompt'
         })
         self.fields['content'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': 'Write your prompt content...',
+            'class': 'form-control modern-textarea',
+            'placeholder': 'Enter the detailed prompt text that generates this image...',
             'rows': 10
         })
         self.fields['excerpt'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': 'Brief description (optional)',
+            'class': 'form-control modern-textarea',
+            'placeholder': 'Brief description of what this prompt creates (optional)',
             'rows': 3
         })
         self.fields['ai_generator'].label = 'AI Generator'

@@ -7,7 +7,7 @@ register = template.Library()
 def cloudinary_transform(image_url, transformations):
     """
     Insert Cloudinary transformations in the correct position
-    Usage: {{ image.url|cloudinary_transform:"f_auto,q_auto,w_auto,c_limit,dpr_auto" }}
+    Usage: {{ image.url|cloudinary_transform:"f_auto,q_auto,w_400,h_600,c_limit,dpr_auto" }}
     """
     if not image_url or 'cloudinary.com' not in image_url:
         return image_url

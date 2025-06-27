@@ -913,7 +913,7 @@ select#id_ai_generator {
 
 /* ===== TAG FILTER HEADER STYLES ===== */
 .tag-filter-header {
-  background: linear-gradient(135deg, var(--light-blue) 0%, #f8f9fa 100%);
+  background: var(--light-blue);
   padding: 2rem 0;
   margin-bottom: 2rem;
   border-bottom: 1px solid #e9ecef;
@@ -941,11 +941,16 @@ select#id_ai_generator {
   border-radius: 20px;
   padding: 0.5rem 1.5rem;
   transition: all 0.2s ease;
+  color: var(--main-blue-hover);
+  border-color: var(--main-blue-hover);
 }
 
 .tag-filter-header .btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+  background-color: var(--main-blue);
+  color: white;
+  border-color: var(--main-blue);
 }
 
 /* ===== RESPONSIVE BREAKPOINTS FOR DIFFERENT SCREEN SIZES ===== */

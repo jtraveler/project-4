@@ -909,6 +909,45 @@ select#id_ai_generator {
   -moz-appearance: none !important;
 }
 
+
+
+/* ===== TAG FILTER HEADER STYLES ===== */
+.tag-filter-header {
+  background: linear-gradient(135deg, var(--light-blue) 0%, #f8f9fa 100%);
+  padding: 2rem 0;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.tag-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.tag-name {
+  color: var(--main-blue);
+  font-weight: 700;
+}
+
+.tag-subtitle {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tag-filter-header .btn {
+  border-radius: 20px;
+  padding: 0.5rem 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.tag-filter-header .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
 /* ===== RESPONSIVE BREAKPOINTS FOR DIFFERENT SCREEN SIZES ===== */
 
 @media (max-width: 768px) {

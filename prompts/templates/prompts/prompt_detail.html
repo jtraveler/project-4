@@ -170,7 +170,7 @@ function toggleLike(button) {
                 <div class="prompt-metadata mb-5">
                     <div class="metadata-item">
                         <i class="fas fa-robot me-2"></i>
-                        <span>Midjourney</span>
+                        <span>{{ prompt.get_ai_generator_display|default:"Not specified" }}</span>
                     </div>
                     <div class="metadata-item">
                         <i class="fas fa-calendar-alt me-2"></i>

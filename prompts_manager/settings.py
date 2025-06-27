@@ -35,7 +35,17 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'mj-project-4-68750ca94690.herokuapp.
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Security headers for better Lighthouse scores
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 
+# Force HTTPS in production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
 
 
 # Application definition

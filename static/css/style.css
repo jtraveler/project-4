@@ -530,9 +530,10 @@ main {
 }
 
 .action-btn:hover {
-  background: rgb(234, 234, 234);
+  background: var(--main-blue);
   text-decoration: none;
   transform: translateY(-1px);
+  color: white;
 }
 
 .action-btn i {

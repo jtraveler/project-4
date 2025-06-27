@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Modern Form Container -->
+    <div class="form-container">
+        
+        <!-- Form Header -->
+        <div class="form-header">
+            <h1 class="form-title">Create New Prompt</h1>
+            <p class="form-subtitle">Share your creative AI prompt with the community</p>
+        </div>
+
+        <!-- Info Alert -->
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Getting Started:</strong> Fill out the details below to share your amazing AI-generated image and prompt.
+        </div>
+        
+        <!-- Form placeholder - we'll add fields in next steps -->
+        <form method="post" enctype="multipart/form-data" class="edit-form">
+            {% csrf_token %}
+            
+            <!-- Fields will be added in subsequent steps -->
+            <div class="field-group">
+                <p class="text-muted">Form fields coming in next steps...</p>
+            </div>
+
+            <!-- Form Buttons -->
+            <div class="form-actions">
+                <a href="{% url 'prompts:home' %}" class="btn-secondary">
+                    Cancel
+                </a>
+                <button type="submit" class="btn-primary" disabled>
+                    Create Prompt
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

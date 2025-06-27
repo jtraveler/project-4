@@ -76,7 +76,7 @@
                 
                 <!-- File Upload -->
                 <div class="file-upload-area">
-                    <div class="mt-2"><strong>Upload Your AI-Generated Image:</strong></div>
+                    <div class="mt-2 field-label mb-3">Upload Your AI-Generated Image:</div>
                     
                     <!-- Custom file input -->
                     <div class="custom-file-input-only mb-4">
@@ -110,4 +110,43 @@
         </form>
     </div>
 </div>
+
+<!-- JavaScript -->
+<script>
+function addTag(tagName) {
+    const tagsInput = document.querySelector('input[name="tags"]');
+    const currentTags = tagsInput.value;
+    
+    if (currentTags) {
+        const tagArray = currentTags.split(',').map(tag => tag.trim().toLowerCase());
+        if (!tagArray.includes(tagName.toLowerCase())) {
+            tagsInput.value = currentTags + ', ' + tagName;
+        }
+    } else {
+        tagsInput.value = tagName;
+    }
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.edit-form');
+    const submitBtn = document.querySelector('.btn-primary');
+    
+    form.addEventListener('submit', function(e) {
+        const title = document.querySelector('input[name="title"]');
+        const content = document.querySelector('textarea[name="content"]');
+        const image = document.querySelector('input[name="featured_image"]');
+        
+        if (!title.value.trim() || !content.value.trim() || !image.files.length) {
+            e.preventDefault();
+            alert('Please fill in all required fields and upload an image.');
+            return false;
+        }
+        
+        // Disable submit button to prevent double submission
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+    });
+});
+</script>
 {% endblock content %}

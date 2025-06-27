@@ -22,9 +22,31 @@
         <form method="post" enctype="multipart/form-data" class="edit-form">
             {% csrf_token %}
             
-            <!-- Fields will be added in subsequent steps -->
+            <!-- Title Field -->
             <div class="field-group">
-                <p class="text-muted">Form fields coming in next steps...</p>
+                <label for="id_title" class="field-label">Title</label>
+                {{ prompt_form.title }}
+                <div class="field-help">
+                    Create a catchy title that describes your prompt
+                </div>
+            </div>
+
+            <!-- Excerpt Field -->
+            <div class="field-group">
+                <label for="id_excerpt" class="field-label">Short Description</label>
+                {{ prompt_form.excerpt }}
+                <div class="field-help">
+                    Help others understand what your prompt creates
+                </div>
+            </div>
+
+            <!-- Content Field -->
+            <div class="field-group">
+                <label for="id_content" class="field-label">Prompt Content</label>
+                {{ prompt_form.content }}
+                <div class="field-help">
+                    Paste the exact prompt you used to generate your image
+                </div>
             </div>
 
             <!-- Form Buttons -->
@@ -32,7 +54,7 @@
                 <a href="{% url 'prompts:home' %}" class="btn-secondary">
                     Cancel
                 </a>
-                <button type="submit" class="btn-primary" disabled>
+                <button type="submit" class="btn-primary">
                     Create Prompt
                 </button>
             </div>

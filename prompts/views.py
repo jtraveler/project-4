@@ -188,6 +188,37 @@ def prompt_edit(request, slug):
         }
     )
 
+@login_required
+def prompt_create(request):
+    """
+    View for creating new prompts
+    """
+    if request.method == 'POST':
+        prompt_form = PromptForm(request.POST, request.FILES)
+        if prompt_form.is_valid():
+            prompt = prompt_form.save(commit=False)
+            prompt.author = request.user
+            prompt.status = 1  # Published
+            prompt.save()
+            prompt_form.save_m2m()  # Save tags
+            
+            messages.success(request, 'Your prompt has been created successfully!')
+            return redirect('prompts:prompt_detail', slug=prompt.slug)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        prompt_form = PromptForm()
+    
+    # Get popular tags for the template
+    existing_tags = Tag.objects.all()[:20]
+    
+    context = {
+        'prompt_form': prompt_form,
+        'existing_tags': existing_tags,
+    }
+    
+    return render(request, 'prompts/prompt_create.html', context)
+
 def prompt_delete(request, slug):
     """
     View to delete prompt

@@ -18,7 +18,7 @@
             <strong>Getting Started:</strong> Fill out the details below to share your amazing AI-generated image and prompt.
         </div>
         
-        <!-- Form placeholder - we'll add fields in next steps -->
+        <!-- Form -->
         <form method="post" enctype="multipart/form-data" class="edit-form">
             {% csrf_token %}
             
@@ -26,6 +26,12 @@
             <div class="field-group">
                 <label for="id_title" class="field-label">Title*</label>
                 {{ prompt_form.title }}
+                {% if prompt_form.title.errors %}
+                    <div class="text-danger mt-1" style="font-weight: 600;">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        {{ prompt_form.title.errors|first }}
+                    </div>
+                {% endif %}
                 <div class="field-help">
                     Create a catchy title that describes your prompt
                 </div>
@@ -35,6 +41,12 @@
             <div class="field-group">
                 <label for="id_excerpt" class="field-label">Short Description</label>
                 {{ prompt_form.excerpt }}
+                {% if prompt_form.excerpt.errors %}
+                    <div class="text-danger mt-1" style="font-weight: 600;">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        {{ prompt_form.excerpt.errors|first }}
+                    </div>
+                {% endif %}
                 <div class="field-help">
                     Help others understand what your prompt creates
                 </div>
@@ -44,6 +56,12 @@
             <div class="field-group mb-4">
                 <label for="id_tags" class="field-label">Tags*</label>
                 {{ prompt_form.tags }}
+                {% if prompt_form.tags.errors %}
+                    <div class="text-danger mt-1" style="font-weight: 600;">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        {{ prompt_form.tags.errors|first }}
+                    </div>
+                {% endif %}
                 
                 <!-- Popular Tags -->
                 {% if existing_tags %}
@@ -63,8 +81,14 @@
 
             <!-- AI Generator Field -->
             <div class="field-group mb-4">
-                <label for="id_ai_generator" class="field-label">AI Generator*</label>
+                <label for="id_ai_generator" class="field-label">AI Generator</label>
                 {{ prompt_form.ai_generator }}
+                {% if prompt_form.ai_generator.errors %}
+                    <div class="text-danger mt-1" style="font-weight: 600;">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        {{ prompt_form.ai_generator.errors|first }}
+                    </div>
+                {% endif %}
                 <div class="field-help">
                     Select the AI tool you used to create this image
                 </div>
@@ -78,10 +102,17 @@
                 <div class="file-upload-area">
                     <div class="mt-2 field-label mb-3">Upload Your AI-Generated Image:</div>
                     
-                    <!-- Custom file input -->
+                    <!-- Django file input -->
                     <div class="custom-file-input-only mb-4">
-                        <input type="file" name="featured_image" id="id_featured_image" accept="image/*" required>
+                        {{ prompt_form.featured_image }}
                     </div>
+                    
+                    {% if prompt_form.featured_image.errors %}
+                        <div class="text-danger mt-1" style="font-weight: 600;">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            {{ prompt_form.featured_image.errors|first }}
+                        </div>
+                    {% endif %}
                     
                     <div class="field-help">
                         Upload the image that was created using your prompt
@@ -93,6 +124,12 @@
             <div class="field-group">
                 <label for="id_content" class="field-label">Prompt Content*</label>
                 {{ prompt_form.content }}
+                {% if prompt_form.content.errors %}
+                    <div class="text-danger mt-1" style="font-weight: 600;">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        {{ prompt_form.content.errors|first }}
+                    </div>
+                {% endif %}
                 <div class="field-help">
                     Paste the exact prompt you used to generate your image
                 </div>
@@ -127,23 +164,13 @@ function addTag(tagName) {
     }
 }
 
-// Form validation
+// Form validation and submit button feedback
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('.edit-form');
     const submitBtn = document.querySelector('.btn-primary');
     
     form.addEventListener('submit', function(e) {
-        const title = document.querySelector('input[name="title"]');
-        const content = document.querySelector('textarea[name="content"]');
-        const image = document.querySelector('input[name="featured_image"]');
-        
-        if (!title.value.trim() || !content.value.trim() || !image.files.length) {
-            e.preventDefault();
-            alert('Please fill in all required fields and upload an image.');
-            return false;
-        }
-        
-        // Disable submit button to prevent double submission
+        // Let Django handle validation, just provide user feedback
         submitBtn.disabled = true;
         submitBtn.textContent = 'Creating...';
     });

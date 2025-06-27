@@ -17,6 +17,26 @@
     {% csrf_token %}
 </div>
 
+<!-- Tag Filter Header -->
+{% if current_tag %}
+<div class="tag-filter-header">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <h2 class="tag-title">
+                    <i class="fas fa-tag me-2"></i>
+                    Showing prompts tagged with: <span class="tag-name">"{{ current_tag }}"</span>
+                </h2>
+                <p class="tag-subtitle">{{ page_obj.paginator.count }} prompt{{ page_obj.paginator.count|pluralize }} found</p>
+                <a href="{% url 'prompts:home' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i> Show all prompts
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Basic Masonry Container Structure -->
 <div class="masonry-container">
     <div class="masonry-grid">

@@ -84,12 +84,21 @@
                 {% endif %}
                 
                 <!-- File Upload -->
+
                 <div class="file-upload-area">
-                    <input type="file" name="featured_image" id="id_featured_image" accept="image/*" class="file-input">
-                    <label for="id_featured_image" class="file-upload-label">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <span>Choose image file</span>
-                    </label>
+
+                    {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
+                
+            
+                    <div class="mt-4 mb-2">Replace Image:</div>
+                    {% else %}
+                    <div class="mt-2"><strong>Upload Image:</strong></div>
+                     {% endif %}
+                
+                    <!-- Custom file input -->
+                    <div class="custom-file-input-only mb-4">
+                        <input type="file" name="featured_image" id="id_featured_image" accept="image/*">
+                    </div>
                 </div>
             </div>
 

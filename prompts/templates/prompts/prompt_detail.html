@@ -24,22 +24,23 @@
     <div class="button-group d-flex gap-2 align-items-center">
         
         <!-- Comment Button -->
-        <button class="action-btn btn-comment" onclick="scrollToComments()">
-            <i class="far fa-comment"></i>
+        <button class="action-btn btn-comment" onclick="scrollToComments()" aria-label="Scroll to comments section">
+            <i class="far fa-comment" aria-hidden="true"></i>
         </button>
         
         <!-- Edit Button (only for prompt author) -->
         {% if user.is_authenticated and prompt.author == user %}
-        <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-btn btn-edit">
-            <i class="fas fa-edit"></i>
+        <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-btn btn-edit" aria-label="Edit this prompt">
+            <i class="fas fa-edit" aria-hidden="true"></i>
         </a>
         {% endif %}
         
         <!-- Delete Button (only for prompt author) -->
         {% if user.is_authenticated and prompt.author == user %}
         <button class="action-btn btn-delete" 
-                onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')">
-            <i class="fas fa-trash"></i>
+                onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
+                aria-label="Delete this prompt">
+            <i class="fas fa-trash" aria-hidden="true"></i>
         </button>
         {% endif %}
         
@@ -47,14 +48,15 @@
         {% if user.is_authenticated %}
             <button class="action-btn btn-like {% if prompt_is_liked %}liked{% endif %}" 
                     data-prompt-slug="{{ prompt.slug }}"
-                    onclick="toggleLike(this)">
-                <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart me-2"></i>
+                    onclick="toggleLike(this)"
+                    aria-label="{% if prompt_is_liked %}Unlike this prompt{% else %}Like this prompt{% endif %}">
+                <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart me-2" aria-hidden="true"></i>
                 <span class="like-text">Like</span>
                 <span class="like-count">{{ number_of_likes }}</span>
             </button>
         {% else %}
-            <a href="{% url 'account_login' %}?next={{ request.path }}" class="action-btn btn-like">
-                <i class="far fa-heart me-2"></i>
+            <a href="{% url 'account_login' %}?next={{ request.path }}" class="action-btn btn-like" aria-label="Log in to like this prompt">
+                <i class="far fa-heart me-2" aria-hidden="true"></i>
                 <span class="like-text">Like</span>
                 <span class="like-count">{{ number_of_likes }}</span>
             </a>

@@ -7,7 +7,7 @@ register = template.Library()
 def cloudinary_transform(image_url, transformations):
     """
     Insert Cloudinary transformations in the correct position and force HTTPS
-    Usage: {{ image.url|cloudinary_transform:"q_auto,w_350,h_600,c_limit" }}
+    Usage: {{ image.url|cloudinary_transform:"q_auto,w_300,h_500,c_limit" }}
     """
     if not image_url or 'cloudinary.com' not in image_url:
         return image_url

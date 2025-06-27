@@ -40,6 +40,36 @@
                 </div>
             </div>
 
+            <!-- Tags Field -->
+            <div class="field-group mb-4">
+                <label for="id_tags" class="field-label">Tags</label>
+                {{ prompt_form.tags }}
+                
+                <!-- Popular Tags -->
+                {% if existing_tags %}
+                <div class="popular-tags">
+                    <span class="popular-tags-label">Popular tags:</span>
+                    <div class="popular-tags-list">
+                        {% for tag in existing_tags %}
+                            <span type="button" class="tag-badge" onclick="addTag('{{ tag.name }}')">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="field-help">
+                    Add relevant tags to help others discover your prompt
+                </div>
+            </div>
+
+            <!-- AI Generator Field -->
+            <div class="field-group mb-4">
+                <label for="id_ai_generator" class="field-label">AI Generator</label>
+                {{ prompt_form.ai_generator }}
+                <div class="field-help">
+                    Select the AI tool you used to create this image
+                </div>
+            </div>
+
             <!-- Content Field -->
             <div class="field-group">
                 <label for="id_content" class="field-label">Prompt Content</label>

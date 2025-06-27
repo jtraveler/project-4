@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% load static %}
+{% load cloudinary_tags %}
 
 {% block extra_head %}
 <!-- Preload critical above-the-fold images for LCP optimization -->
 {% for prompt in prompt_list|slice:":4" %}
     {% if not "placeholder" in prompt.featured_image.url %}
-        <link rel="preload" as="image" href="{{ prompt.featured_image.url|add:'/f_auto,q_auto,w_auto,c_limit,dpr_auto/' }}" />
+        <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'f_auto,q_auto,w_auto,c_limit,dpr_auto' }}" />
     {% endif %}
 {% endfor %}
 {% endblock %}
@@ -17,7 +18,7 @@
 </div>
 
 <!-- Basic Masonry Container Structure -->
-<div class="masonry-container">TEST
+<div class="masonry-container">
     <div class="masonry-grid">
         {% for prompt in prompt_list %}
         <div class="masonry-item">
@@ -38,7 +39,7 @@
                         - c_limit: limit crop mode to prevent upscaling
                         - dpr_auto: automatic device pixel ratio optimization
                         {% endcomment %}
-                        <img src="{{ prompt.featured_image.url|add:'/f_auto,q_auto,w_auto,c_limit,dpr_auto/' }}" 
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'f_auto,q_auto,w_auto,c_limit,dpr_auto' }}" 
                              alt="{{ prompt.title }}"
                              {% if forloop.counter > 4 %}loading="lazy"{% endif %}
                              {% if forloop.first %}fetchpriority="high"{% endif %}>

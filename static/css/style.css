@@ -392,7 +392,7 @@ main {
   text-decoration: none;
 }
 
-/* Overlay styles */
+/* Overlay styles - Bottom gradient only */
 .card-overlay {
   position: absolute;
   top: 0;
@@ -401,10 +401,9 @@ main {
   bottom: 0;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.7) 0%,
-    transparent 30%,
-    transparent 70%,
-    rgba(0, 0, 0, 0.8) 100%
+    transparent 0%,
+    transparent 90%,
+    rgba(0, 0, 0, 0.5) 100%
   );
   display: flex;
   flex-direction: column;
@@ -429,6 +428,7 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  opacity: .9;
 }
 
 .user-info {

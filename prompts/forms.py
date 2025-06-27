@@ -25,17 +25,20 @@ class CollaborateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['name'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': 'Your name'
+            'class': 'form-control modern-input',
+            'placeholder': 'Your name',
+            'required': True
         })
         self.fields['email'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': 'Your email address'
+            'class': 'form-control modern-input',
+            'placeholder': 'Your email address',
+            'required': True
         })
         self.fields['message'].widget.attrs.update({
-            'class': 'form-control',
+            'class': 'form-control modern-textarea',
             'placeholder': 'Tell us about your collaboration idea...',
-            'rows': 5
+            'rows': 5,
+            'required': True
         })
 
 
@@ -57,17 +60,22 @@ class PromptForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['title'].widget.attrs.update({
             'class': 'form-control modern-input',
-            'placeholder': 'Enter a catchy title for your prompt'
+            'placeholder': 'Enter a catchy title for your prompt',
+            'required': True
         })
         self.fields['content'].widget.attrs.update({
             'class': 'form-control modern-textarea',
             'placeholder': 'Enter the detailed prompt text that generates this image...',
-            'rows': 10
+            'rows': 10,
+            'required': True
         })
         self.fields['excerpt'].widget.attrs.update({
             'class': 'form-control modern-textarea',
             'placeholder': 'Brief description of what this prompt creates (optional)',
             'rows': 3
+        })
+        self.fields['featured_image'].widget.attrs.update({
+            'required': True
         })
         self.fields['ai_generator'].label = 'AI Generator'
         self.fields['ai_generator'].help_text = 'Select the AI tool used to create this image'

@@ -18,6 +18,9 @@ main {
 }
 
 
+.alert-success {background-color: var(--light-blue);}
+
+
 .main-bg {
   background-color: white;
 }

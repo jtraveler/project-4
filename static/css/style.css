@@ -917,6 +917,7 @@ select#id_ai_generator {
   padding: 2rem 0;
   margin-bottom: 2rem;
   border-bottom: 1px solid #e9ecef;
+  
 }
 
 .tag-title {
@@ -935,6 +936,8 @@ select#id_ai_generator {
   color: #666;
   font-size: 1rem;
   margin-bottom: 1rem;
+  font-weight: 700;
+  margin: 20px 0;
 }
 
 .tag-filter-header .btn {
@@ -943,6 +946,7 @@ select#id_ai_generator {
   transition: all 0.2s ease;
   color: var(--main-blue-hover);
   border-color: var(--main-blue-hover);
+  font-weight: 600;
 }
 
 .tag-filter-header .btn:hover {

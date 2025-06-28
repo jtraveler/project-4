@@ -11,7 +11,6 @@ from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
 
 
-
 class PromptList(generic.ListView):
     template_name = "prompts/prompt_list.html"
     paginate_by = 100
@@ -25,12 +24,19 @@ class PromptList(generic.ListView):
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name)
         
+        # Adding search functionality
+        search_query = self.request.GET.get('search')
+        if search_query:
+            queryset = queryset.filter(title__icontains=search_query)
+        
         return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Add the current tag filter to context for display
+        # Adding the current tag filter to context for display
         context['current_tag'] = self.request.GET.get('tag')
+        # Adding search query to context for display
+        context['search_query'] = self.request.GET.get('search')
         return context
 
 def prompt_detail(request, slug):

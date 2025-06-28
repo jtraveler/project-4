@@ -3,6 +3,7 @@
   --main-blue: #007bff;
   --light-blue: #eff3f8;
   --main-blue-hover: #0056b3;
+  --tw-blur: blur(64px);
 }
 
 body {

@@ -386,13 +386,55 @@
 }
 
 
-/* ===== HERO SECTION BASIC STYLES ===== */
+
+
+/* ===== COMPLETE HERO SECTION WITH ORGANIC SHAPED BLUR EFFECT ===== */
 .hero-section {
     padding: 80px 0 100px 0;
     margin-top: 0;
     position: relative;
     overflow: hidden;
-    min-height: 600px; /* Fix: Add minimum height */
+    min-height: 600px;
+}
+
+/* Primary organic blur shape - inspired by modern design patterns */
+.hero-section::before {
+        content: '';
+    position: absolute;
+    right: 5%;
+    top: 13%;
+    z-index: -10;
+    width: 60%;
+    opacity: 60;
+    height: 70%;
+    filter: blur(80px);
+    background: conic-gradient(
+        from 45deg at 97% 50%, 
+        rgba(99, 102, 241, 0.3) 0deg, /* indigo */ 
+        rgba(168, 85, 247, 0.25) 120deg, /* purple */
+        rgba(244, 114, 182, 0.2) 240deg, /* pink */
+        rgba(59, 130, 246, 0.3) 360deg /* blue */);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    transform: rotate(15deg);
+    animation: float 20s ease-in-out infinite;
+}
+
+
+
+/* Floating animation for organic movement */
+@keyframes float {
+    0%, 100% {
+        transform: rotate(15deg) translateY(0px) scale(1);
+    }
+    25% {
+        transform: rotate(18deg) translateY(-10px) scale(1.02);
+    }
+    50% {
+        transform: rotate(12deg) translateY(-5px) scale(0.98);
+    }
+    75% {
+        transform: rotate(20deg) translateY(-15px) scale(1.01);
+    }
 }
 
 .hero-content {
@@ -482,22 +524,155 @@
     box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3);
 }
 
-/* Placeholder styling for now */
+/* Enhanced gallery with glass morphism to complement the blur effect */
 .hero-gallery {
     position: relative;
-    height: 500px; /* Fix: Increase height */
+    height: 500px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--light-blue);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px) saturate(180%);
     border-radius: 20px;
     margin-left: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    display: none;
 }
 
 .hero-placeholder {
     text-align: center;
 }
 
+/* ===== RESPONSIVE DESIGN FOR HERO SECTION ===== */
+
+/* Large screens (1200px+) */
+@media (max-width: 1200px) {
+    .hero-main-title {
+        font-size: 3rem;
+    }
+    
+    .hero-gallery {
+        margin-left: 1rem;
+    }
+    
+    .hero-section::before {
+        right: -15%;
+        width: 65%;
+    }
+    
+    .hero-section::after {
+        right: 15%;
+        width: 45%;
+    }
+}
+
+/* Medium screens (992px and below) */
+@media (max-width: 992px) {
+    .hero-section {
+        padding: 60px 0 80px 0;
+        min-height: 500px;
+    }
+    
+    .hero-main-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-content {
+        padding-right: 0;
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .hero-gallery {
+        margin-left: 0;
+        height: 400px;
+    }
+    
+    .hero-actions {
+        justify-content: center;
+    }
+    
+    .hero-section::before {
+        right: -20%;
+        top: -10%;
+        width: 70%;
+        height: 100%;
+        filter: blur(60px);
+    }
+    
+    .hero-section::after {
+        right: 10%;
+        top: 50%;
+        width: 50%;
+        height: 70%;
+        filter: blur(45px);
+    }
+}
+
+/* Small screens (768px and below) */
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 400px;
+    }
+    
+    .hero-main-title {
+        font-size: 2rem;
+    }
+    
+    .hero-description {
+        max-width: 100%;
+        font-size: 1rem;
+    }
+    
+    .hero-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .hero-btn-primary,
+    .hero-btn-secondary {
+        width: 100%;
+        max-width: 280px;
+        justify-content: center;
+    }
+    
+    .hero-gallery {
+        height: 300px;
+        backdrop-filter: blur(10px) saturate(150%);
+    }
+    
+    .hero-section::before {
+        right: -25%;
+        width: 80%;
+        filter: blur(40px); /* Reduce blur on mobile for performance */
+        animation: none; /* Disable animation on mobile for performance */
+    }
+    
+    .hero-section::after {
+        right: 5%;
+        width: 60%;
+        filter: blur(30px);
+        animation: none;
+    }
+}
+
+/* Extra small screens (576px and below) */
+@media (max-width: 576px) {
+    .hero-section {
+        padding: 40px 0 60px 0;
+    }
+    
+    .hero-main-title {
+        font-size: 1.75rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+}
 
 
 /* ===== RESPONSIVE BREAKPOINTS FOR DIFFERENT SCREEN SIZES ===== */
@@ -547,62 +722,10 @@
 
 
 
-    .hero-section {
-        padding: 60px 0 80px 0;
-        min-height: 500px; /* Fix: Responsive min-height */
-    }
-    
-    .hero-main-title {
-        font-size: 2.5rem;
-    }
-    
-    .hero-content {
-        padding-right: 0;
-        text-align: center;
-        margin-bottom: 3rem;
-    }
-    
-    .hero-gallery {
-        margin-left: 0;
-        height: 400px;
-    }
-    
-    .hero-actions {
-        justify-content: center;
-    }
 }
 
 
-@media (max-width: 768px) {
-    .hero-section {
-        min-height: 400px; /* Fix: Mobile min-height */
-    }
-    
-    .hero-main-title {
-        font-size: 2rem;
-    }
-    
-    .hero-description {
-        max-width: 100%;
-        font-size: 1rem;
-    }
-    
-    .hero-actions {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .hero-btn-primary,
-    .hero-btn-secondary {
-        width: 100%;
-        max-width: 280px;
-        justify-content: center;
-    }
-    
-    .hero-gallery {
-        height: 300px;
-    }
-}
+
 
 
 </style>
@@ -649,6 +772,45 @@ document.querySelector('.search-form').addEventListener('submit', function(e) {
         window.location.href = `{% url 'prompts:home' %}?search=${encodeURIComponent(searchValue)}`;
     }
 });
+
+
+
+
+// Hero section smooth scroll functionality
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle smooth scroll for browse prompts buttons
+    const browseButtons = document.querySelectorAll('a[href="#browse-prompts"]');
+    browseButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Scroll to the masonry container (where prompts are displayed)
+            const target = document.querySelector('.masonry-container');
+            if (target) {
+                const navbarHeight = document.querySelector('.modern-navbar').offsetHeight;
+                const targetPosition = target.offsetTop - navbarHeight - 20;
+                
+                window.scrollTo({
+                    top: targetPosition,
+                    behavior: 'smooth'
+                });
+            } else {
+                // Fallback: scroll to main content if masonry container not found
+                const mainContent = document.querySelector('#browse-prompts');
+                if (mainContent) {
+                    const navbarHeight = document.querySelector('.modern-navbar').offsetHeight;
+                    const targetPosition = mainContent.offsetTop - navbarHeight - 20;
+                    
+                    window.scrollTo({
+                        top: targetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        });
+    });
+});
 </script>
  
 
@@ -656,7 +818,7 @@ document.querySelector('.search-form').addEventListener('submit', function(e) {
 {% if request.resolver_match.url_name == 'home' %}
 <section class="hero-section">
     <div class="container">
-        <div class="row align-items-center">
+       <div class="row align-items-center">
             <!-- Left Content Column -->
             <div class="col-lg-6">
                 <div class="hero-content">

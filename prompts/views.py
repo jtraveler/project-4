@@ -5,6 +5,7 @@ from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.db import models
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q  # Import Q objects for complex search following LearnDjango tutorial
 from taggit.models import Tag
 from .models import Prompt, Comment
 from .forms import CommentForm, CollaborateForm, PromptForm
@@ -24,18 +25,27 @@ class PromptList(generic.ListView):
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name)
         
-        # Adding search functionality
+        # Enhanced search functionality using Q objects following LearnDjango tutorial
+        # https://learndjango.com/tutorials/django-search-tutorial
         search_query = self.request.GET.get('search')
         if search_query:
-            queryset = queryset.filter(title__icontains=search_query)
+            # Multi-field search using Q objects with OR logic
+            # Search across: title, content, excerpt, author username, and tags
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(content__icontains=search_query) |
+                Q(excerpt__icontains=search_query) |
+                Q(author__username__icontains=search_query) |
+                Q(tags__name__icontains=search_query)
+            ).distinct()  # Use distinct() to avoid duplicate results from tag matches
         
         return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Adding the current tag filter to context for display
+        # Add the current tag filter to context for display
         context['current_tag'] = self.request.GET.get('tag')
-        # Adding search query to context for display
+        # Add search query to context for display
         context['search_query'] = self.request.GET.get('search')
         return context
 

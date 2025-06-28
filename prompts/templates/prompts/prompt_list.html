@@ -36,19 +36,29 @@
 </div>
 {% endif %}
 
-<!-- Search Results Header (following same styling as tag filter) -->
+<!-- Enhanced Search Results Header following LearnDjango tutorial styling -->
 {% if search_query %}
 <div class="tag-filter-header">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-8 text-center">
+            <div class="col-md-10 text-center">
                 <h2 class="tag-title">
-                    Search results for: <span class="tag-name">"{{ search_query }}"</span>
+                    <i class="fas fa-search me-2"></i>Search results for: <span class="tag-name">"{{ search_query }}"</span>
                 </h2>
-                <p class="tag-subtitle">{{ page_obj.paginator.count }} prompt{{ page_obj.paginator.count|pluralize }} found</p>
-                <a href="{% url 'prompts:home' %}" class="btn btn-outline-primary btn-sm">
-                    <i class="fas fa-arrow-left me-1"></i> Show all prompts
-                </a>
+                <p class="tag-subtitle">
+                    {{ page_obj.paginator.count }} prompt{{ page_obj.paginator.count|pluralize }} found
+                    {% if page_obj.paginator.count > 0 %}
+                        <br>
+                        <small class="text-muted">
+                            Searched in: titles, content, descriptions, authors, and tags
+                        </small>
+                    {% endif %}
+                </p>
+                <div class="search-actions mt-3">
+                    <a href="{% url 'prompts:home' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Show all prompts
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -133,6 +143,31 @@
                 </div>
             </div>
         </div>
+        {% empty %}
+        <!-- No results message for search -->
+        {% if search_query %}
+        <div class="col-12 text-center py-5">
+            <div class="no-results-message">
+                <i class="fas fa-search-minus mb-3" style="font-size: 3rem; color: #6c757d;"></i>
+                <h3 class="text-muted">No prompts found</h3>
+                <p class="text-muted mb-4">
+                    We couldn't find any prompts matching "<strong>{{ search_query }}</strong>"
+                </p>
+                <div class="suggestions">
+                    <p class="text-muted mb-3">Try:</p>
+                    <ul class="list-unstyled text-muted">
+                        <li><i class="fas fa-lightbulb me-2"></i>Using different keywords</li>
+                        <li><i class="fas fa-spell-check me-2"></i>Checking your spelling</li>
+                        <li><i class="fas fa-search me-2"></i>Searching for author names or tags</li>
+                        <li><i class="fas fa-times me-2"></i>Using fewer or broader terms</li>
+                    </ul>
+                </div>
+                <a href="{% url 'prompts:home' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-home me-2"></i>Browse all prompts
+                </a>
+            </div>
+        </div>
+        {% endif %}
         {% endfor %}
     </div>
     

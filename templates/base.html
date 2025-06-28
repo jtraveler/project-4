@@ -472,10 +472,65 @@ document.querySelector('.search-form').addEventListener('submit', function(e) {
     }
 });
 </script>
-    <!-- rest of your template stays the same -->
+ 
 
-    
-    <main class="flex-shrink-0 main-bg">
+<!-- Hero Section - Only show on homepage -->
+{% if request.resolver_match.url_name == 'home' %}
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <!-- Left Content Column -->
+            <div class="col-lg-6">
+                <div class="hero-content">
+                    <h1 class="hero-main-title">
+                        Welcome to <span class="hero-brand">PromptFlow</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        (Your Creative AI Community)
+                    </p>
+                    <p class="hero-description">
+                        Discover, share, and craft exceptional AI prompts with our vibrant community. 
+                        From creative inspiration to technical precision, find the perfect prompts 
+                        to unleash your AI potential.
+                    </p>
+                    
+                    <div class="hero-actions">
+                        {% if user.is_authenticated %}
+                            <a href="#" onclick="createNewPrompt()" class="btn hero-btn-primary">
+                                <i class="fas fa-upload me-2"></i>Share Your Prompt
+                            </a>
+                            <a href="#browse-prompts" class="btn hero-btn-secondary">
+                                <i class="fas fa-search me-2"></i>Explore Community
+                            </a>
+                        {% else %}
+                            <a href="{% url 'account_signup' %}" class="btn hero-btn-primary">
+                                <i class="fas fa-rocket me-2"></i>Join Community
+                            </a>
+                            <a href="#browse-prompts" class="btn hero-btn-secondary">
+                                <i class="fas fa-eye me-2"></i>Browse Prompts
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Image Gallery Column -->
+            <div class="col-lg-6">
+                <div class="hero-gallery">
+                    <!-- Placeholder for now - we'll add images in next step -->
+                    <div class="hero-placeholder">
+                        <i class="fas fa-image" style="font-size: 4rem; color: #ccc;"></i>
+                        <p style="color: #999; margin-top: 1rem;">Hero Images Coming Soon</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+
+    <main class="flex-shrink-0 main-bg" id="browse-prompts">    
 
         <!-- Messages -->
         {% if messages %}

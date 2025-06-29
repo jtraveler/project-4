@@ -4,9 +4,9 @@
 
 {% block extra_head %}
 <!-- Preload critical above-the-fold images for LCP optimization -->
-{% for prompt in prompt_list|slice:":4" %}
+{% for prompt in prompt_list|slice:":3" %}
     {% if not "placeholder" in prompt.featured_image.url %}
-        <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_300,h_500,c_limit' }}" />
+        <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" />
     {% endif %}
 {% endfor %}
 {% endblock %}
@@ -65,30 +65,35 @@
 </div>
 {% endif %}
 
-<!-- Basic Masonry Container Structure -->
+<!-- OPTIMIZED Masonry Container Structure -->
 <div class="masonry-container">
     <div class="masonry-grid">
         {% for prompt in prompt_list %}
         <div class="masonry-item">
             <div class="prompt-card">
-                <!-- Image wrapper -->
+                <!-- OPTIMIZED Image wrapper -->
                 <div class="image-wrapper">
                     {% if "placeholder" in prompt.featured_image.url %}
                         <img src="{% static 'images/default.jpg' %}" 
                              alt="{{ prompt.title }}"
-                             {% if forloop.counter > 4 %}loading="lazy"{% endif %}
-                             {% if forloop.first %}fetchpriority="high"{% endif %}>
+                             {% if forloop.counter <= 3 %}loading="eager"{% else %}loading="lazy"{% endif %}
+                             {% if forloop.first %}fetchpriority="high"{% endif %}
+                             width="280" 
+                             height="420">
                     {% else %}
                         {% comment %}
-                        Complete Cloudinary optimization with aggressive sizing:
-                        - q_auto: intelligent quality compression using perceptual metrics
-                        - w_300,h_500: maximum dimensions closer to display size (332x593)
-                        - c_limit: limit crop mode to prevent upscaling
+                        OPTIMIZED Cloudinary settings for LCP:
+                        - q_auto: intelligent quality compression
+                        - w_280,h_420: exact dimensions for layout stability
+                        - c_fill: crop to exact size
+                        - f_auto: auto format (WebP/AVIF)
                         {% endcomment %}
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_300,h_500,c_limit' }}" 
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" 
                              alt="{{ prompt.title }}"
-                             {% if forloop.counter > 4 %}loading="lazy"{% endif %}
-                             {% if forloop.first %}fetchpriority="high"{% endif %}>
+                             {% if forloop.counter <= 3 %}loading="eager"{% else %}loading="lazy"{% endif %}
+                             {% if forloop.first %}fetchpriority="high"{% endif %}
+                             width="280" 
+                             height="420">
                     {% endif %}
                     
                     <!-- Overlay with user info, platform, and heart -->
@@ -100,7 +105,7 @@
                             <span class="platform-info">
                                 <i class="fas fa-user"></i> {{ prompt.author }}
                             </span>
-                           <!-- Replace your heart-counter section with this fixed version -->
+                          
                             <span class="heart-counter">
                                 {% if user.is_authenticated %}
                                     <small class="like-section" 
@@ -128,7 +133,6 @@
                             </span>
                         </div>
                     </div>
-
 
                 </div>
                 

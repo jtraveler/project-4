@@ -3,12 +3,71 @@
 {% load cloudinary_tags %}
 
 {% block extra_head %}
-<!-- Preload critical above-the-fold images for LCP optimization -->
-{% for prompt in prompt_list|slice:":3" %}
-    {% if not "placeholder" in prompt.featured_image.url %}
-        <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" />
+<!-- Only preload the FIRST image for true LCP optimization -->
+{% with first_prompt=prompt_list.0 %}
+    {% if first_prompt and not "placeholder" in first_prompt.featured_image.url %}
+        <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" />
     {% endif %}
-{% endfor %}
+{% endwith %}
+
+<!-- Critical CSS for above-the-fold content -->
+<style>
+/* Inline critical masonry CSS */
+.masonry-container {
+    max-width: 100%;
+    margin: 0;
+    padding: 20px 40px;
+    width: 100%;
+}
+
+.masonry-grid {
+    column-count: 4;
+    column-gap: 15px;
+    width: 100%;
+}
+
+.masonry-item {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 15px;
+    break-inside: avoid;
+    background: none;
+    border-radius: 8px;
+}
+
+.prompt-card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: #fff;
+}
+
+.image-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.image-wrapper img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+}
+
+/* Mobile responsive */
+@media (max-width: 800px) {
+    .masonry-grid {
+        column-count: 2 !important;
+    }
+}
+
+@media (max-width: 500px) {
+    .masonry-grid {
+        column-count: 1 !important;
+    }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -36,7 +95,7 @@
 </div>
 {% endif %}
 
-<!-- Enhanced Search Results Header following LearnDjango tutorial styling -->
+<!-- Enhanced Search Results Header -->
 {% if search_query %}
 <div class="tag-filter-header">
     <div class="container">
@@ -65,35 +124,39 @@
 </div>
 {% endif %}
 
-<!-- OPTIMIZED Masonry Container Structure -->
+<!-- AGGRESSIVE MOBILE LAZY LOADING Masonry Container -->
 <div class="masonry-container">
     <div class="masonry-grid">
         {% for prompt in prompt_list %}
         <div class="masonry-item">
             <div class="prompt-card">
-                <!-- OPTIMIZED Image wrapper -->
+                <!-- MOBILE-OPTIMIZED Image wrapper with intersection observer -->
                 <div class="image-wrapper">
                     {% if "placeholder" in prompt.featured_image.url %}
                         <img src="{% static 'images/default.jpg' %}" 
                              alt="{{ prompt.title }}"
-                             {% if forloop.counter <= 3 %}loading="eager"{% else %}loading="lazy"{% endif %}
-                             {% if forloop.first %}fetchpriority="high"{% endif %}
+                             {% if forloop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
                              width="280" 
                              height="420">
                     {% else %}
-                        {% comment %}
-                        OPTIMIZED Cloudinary settings for LCP:
-                        - q_auto: intelligent quality compression
-                        - w_280,h_420: exact dimensions for layout stability
-                        - c_fill: crop to exact size
-                        - f_auto: auto format (WebP/AVIF)
-                        {% endcomment %}
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" 
-                             alt="{{ prompt.title }}"
-                             {% if forloop.counter <= 3 %}loading="eager"{% else %}loading="lazy"{% endif %}
-                             {% if forloop.first %}fetchpriority="high"{% endif %}
-                             width="280" 
-                             height="420">
+                        {% if forloop.first %}
+                            <!-- ONLY the first image loads immediately -->
+                            <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" 
+                                 alt="{{ prompt.title }}"
+                                 loading="eager"
+                                 fetchpriority="high"
+                                 width="280" 
+                                 height="420">
+                        {% else %}
+                            <!-- ALL other images use aggressive lazy loading -->
+                            <img data-src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" 
+                                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='420'%3E%3Crect width='100%25' height='100%25' fill='%23f0f2f5'/%3E%3C/svg%3E"
+                                 alt="{{ prompt.title }}"
+                                 loading="lazy"
+                                 class="lazy-image"
+                                 width="280" 
+                                 height="420">
+                        {% endif %}
                     {% endif %}
                     
                     <!-- Overlay with user info, platform, and heart -->
@@ -105,7 +168,6 @@
                             <span class="platform-info">
                                 <i class="fas fa-user"></i> {{ prompt.author }}
                             </span>
-                          
                             <span class="heart-counter">
                                 {% if user.is_authenticated %}
                                     <small class="like-section" 
@@ -133,13 +195,12 @@
                             </span>
                         </div>
                     </div>
-
                 </div>
                 
                 <!-- Clickable link overlay -->
                 <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="card-link"></a>
                 
-                <!-- Hidden tags for filtering (keep existing functionality) -->
+                <!-- Hidden tags for filtering -->
                 <div class="hidden-tags" style="display: none;">
                     {% for tag in prompt.tags.all %}
                         <span class="tag-clickable" data-tag="{{ tag.name }}">{{ tag.name }}</span>
@@ -175,7 +236,7 @@
         {% endfor %}
     </div>
     
-    <!-- Load More Button (AJAX-based pagination) -->
+    <!-- Load More Button -->
     {% if page_obj.has_next %}
     <div class="load-more-container text-center mt-5">
         <button id="load-more-btn" 
@@ -191,27 +252,52 @@
     {% endif %}
 </div>
 
+<!-- Aggreesive Lazy Loading Script -->
 <script>
-// Real tag filtering following bobbyhadz tutorial
-// Source: https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript
+document.addEventListener('DOMContentLoaded', function() {
+    // Intersection Observer for aggressive lazy loading
+    const lazyImages = document.querySelectorAll('.lazy-image');
+    
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.remove('lazy-image');
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            // Only load when image is 50px away from viewport
+            rootMargin: '50px'
+        });
+
+        lazyImages.forEach(img => {
+            imageObserver.observe(img);
+        });
+    } else {
+        // Fallback for browsers without IntersectionObserver
+        lazyImages.forEach(img => {
+            img.src = img.dataset.src;
+        });
+    }
+});
+
+// Real tag filtering
 document.addEventListener('DOMContentLoaded', function() {
     const tagBadges = document.querySelectorAll('.tag-clickable');
     
     tagBadges.forEach(function(badge) {
         badge.addEventListener('click', function() {
             const tagName = this.getAttribute('data-tag');
-            
-            // Redirect to homepage with tag filter parameter (following tutorial)
             const url = window.location.origin;
             window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
         });
     });
 });
-</script>
 
-<script>
-// Load More functionality following Simple is Better Than Complex tutorial
-// Source: https://simpleisbetterthancomplex.com/tutorial/2017/03/13/how-to-create-infinite-scroll-with-django.html
+// Load More functionality
 document.addEventListener('DOMContentLoaded', function() {
     const loadMoreBtn = document.getElementById('load-more-btn');
     const loadingSpinner = document.getElementById('loading-spinner');
@@ -223,41 +309,40 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentUrl = window.location.pathname;
             const currentParams = new URLSearchParams(window.location.search);
             
-            // Preserve existing URL parameters (search, tag filters)
             currentParams.set('page', nextPage);
             
-            // Show loading state
             loadMoreBtn.style.display = 'none';
             loadingSpinner.style.display = 'block';
             
-            // AJAX request to load next page with preserved parameters
             fetch(`${currentUrl}?${currentParams.toString()}`)
                 .then(response => response.text())
                 .then(html => {
-                    // Parse the response HTML
                     const parser = new DOMParser();
                     const newDoc = parser.parseFromString(html, 'text/html');
-                    
-                    // Extract new prompt items
                     const newItems = newDoc.querySelectorAll('.masonry-item');
                     
-                    // Append new items to masonry grid
                     newItems.forEach(item => {
                         masonryGrid.appendChild(item);
                     });
                     
-                    // Check if there are more pages
+                    // Re-initialize lazy loading for new images
+                    const newLazyImages = item.querySelectorAll('.lazy-image');
+                    newLazyImages.forEach(img => {
+                        if ('IntersectionObserver' in window) {
+                            imageObserver.observe(img);
+                        } else {
+                            img.src = img.dataset.src;
+                        }
+                    });
+                    
                     const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
                     if (newLoadMoreBtn) {
-                        // Update next page number
                         loadMoreBtn.setAttribute('data-next-page', newLoadMoreBtn.getAttribute('data-next-page'));
                         loadMoreBtn.style.display = 'block';
                     } else {
-                        // No more pages - hide load more button
                         loadMoreBtn.remove();
                     }
                     
-                    // Hide loading spinner
                     loadingSpinner.style.display = 'none';
                 })
                 .catch(error => {
@@ -268,63 +353,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-</script>
 
-<script>
-    // Simple vanilla JavaScript heart functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        // Get all like sections
-        const likeSections = document.querySelectorAll('.like-section');
-        
-        likeSections.forEach(function(section) {
-            section.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
+// Heart functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const likeSections = document.querySelectorAll('.like-section');
+    
+    likeSections.forEach(function(section) {
+        section.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const promptSlug = this.getAttribute('data-prompt-slug');
+            const heartIcon = this.querySelector('i');
+            const likeCount = this.querySelector('.like-count');
+            const likePlural = this.querySelector('.like-plural');
+            
+            fetch('/' + promptSlug + '/like/', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                likeCount.textContent = data.like_count;
                 
-                const promptSlug = this.getAttribute('data-prompt-slug');
-                const heartIcon = this.querySelector('i');
-                const likeCount = this.querySelector('.like-count');
-                const likePlural = this.querySelector('.like-plural');
+                if (data.like_count === 1) {
+                    likePlural.textContent = '';
+                } else {
+                    likePlural.textContent = 's';
+                }
                 
-                // Make AJAX request
-                fetch('/' + promptSlug + '/like/', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                        'Content-Type': 'application/json',
-                    },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Update like count
-                    likeCount.textContent = data.like_count;
-                    
-                    // Update pluralization
-                    if (data.like_count === 1) {
-                        likePlural.textContent = '';
-                    } else {
-                        likePlural.textContent = 's';
-                    }
-                    
-                    // Update heart icon
-                    if (data.liked) {
-                        // User just liked it - show filled heart
-                        heartIcon.className = 'fas fa-heart me-1';
-                    } else {
-                        // User just unliked it - show outline heart  
-                        heartIcon.className = 'far fa-heart me-1';
-                    }
-                    
-                    // Keep white color
-                    heartIcon.style.color = 'white';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Something went wrong. Please try again.');
-                });
+                if (data.liked) {
+                    heartIcon.className = 'fas fa-heart me-1';
+                } else {
+                    heartIcon.className = 'far fa-heart me-1';
+                }
+                
+                heartIcon.style.color = 'white';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Something went wrong. Please try again.');
             });
         });
     });
+});
 </script>
 {% endblock %}

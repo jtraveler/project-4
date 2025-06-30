@@ -10,14 +10,20 @@ from taggit.models import Tag
 from .models import Prompt, Comment
 from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
+import time  # DEBUG: Add timing to measure performance
+import logging  # DEBUG: Add logging to track queries
 
+# DEBUG: Set up logger for performance tracking
+logger = logging.getLogger(__name__)
 
 class PromptList(generic.ListView):
     template_name = "prompts/prompt_list.html"
     paginate_by = 100
     
     def get_queryset(self):
-        # Start with published prompts
+        # DEBUG: Time the queryset generation
+        start_time = time.time()
+        
         queryset = Prompt.objects.filter(status=1)
         
         # Check for tag filter parameter (following URL parameter tutorial)
@@ -39,6 +45,10 @@ class PromptList(generic.ListView):
                 Q(tags__name__icontains=search_query)
             ).distinct()  # Use distinct() to avoid duplicate results from tag matches
         
+        # DEBUG: Log timing
+        end_time = time.time()
+        logger.warning(f"DEBUG: Queryset generation took {end_time - start_time:.3f} seconds")
+        
         return queryset
     
     def get_context_data(self, **kwargs):
@@ -53,12 +63,11 @@ def prompt_detail(request, slug):
     """
     Display an individual prompt and handle comment submission.
     """
-    # If user is the author, show draft prompts too
+    # DEBUG: Time the view execution
+    start_time = time.time()
+    
     if request.user.is_authenticated:
-        prompt = get_object_or_404(
-            Prompt, 
-            slug=slug
-        )
+        prompt = get_object_or_404(Prompt, slug=slug)
         # Check if prompt is published OR user is the author
         if prompt.status != 1 and prompt.author != request.user:
             # Prompt is draft and user is not the author
@@ -74,7 +83,6 @@ def prompt_detail(request, slug):
     else:
         comments = prompt.comments.filter(approved=True).order_by('created_on')
     
-    # Always show only approved comments count for consistency
     comment_count = prompt.comments.filter(approved=True).count()
     
     if request.method == "POST":
@@ -92,11 +100,14 @@ def prompt_detail(request, slug):
     else:
         comment_form = CommentForm()
     
-    # Like functionality context (following DEV.to tutorial)
     liked = False
     if request.user.is_authenticated:
         if prompt.likes.filter(id=request.user.id).exists():
             liked = True
+
+    # DEBUG: Log timing
+    end_time = time.time()
+    logger.warning(f"DEBUG: prompt_detail view took {end_time - start_time:.3f} seconds")
 
     return render(
         request,
@@ -106,7 +117,7 @@ def prompt_detail(request, slug):
             "comments": comments,
             "comment_count": comment_count,
             "comment_form": comment_form,
-            "number_of_likes": prompt.number_of_likes(),
+            "number_of_likes": prompt.number_of_likes(),  # This will cause another query!
             "prompt_is_liked": liked,
         },
     )
@@ -174,7 +185,6 @@ def prompt_edit(request, slug):
         messages.add_message(request, messages.ERROR, 'You can only edit your own prompts!')
         return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
     
-    # Get existing tags for display to user
     existing_tags = Tag.objects.all().order_by('name')[:20]  # Show top 20 most common tags
     
     if request.method == "POST":
@@ -225,7 +235,6 @@ def prompt_create(request):
     else:
         prompt_form = PromptForm()
     
-    # Get popular tags for the template
     existing_tags = Tag.objects.all()[:20]
     
     context = {

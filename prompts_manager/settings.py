@@ -71,6 +71,16 @@ INSTALLED_APPS = [
     'about',
 ]
 
+# DEBUG: Adds debug toolbar for development to visualize queries
+if DEBUG:
+    INSTALLED_APPS += ['debug_toolbar']
+    
+    # Add internal IPs for debug toolbar
+    INTERNAL_IPS = [
+        '127.0.0.1',
+        'localhost',
+    ]
+
 SITE_ID = 1
 
 MIDDLEWARE = [
@@ -84,6 +94,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# DEBUG: Add debug toolbar middleware for development
+if DEBUG:
+    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
 
 ROOT_URLCONF = 'prompts_manager.urls'
 
@@ -196,3 +210,41 @@ if DEBUG:
 # Crispy Forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# DEBUG: Enhanced logging to track performance issues
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'prompts.views': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'WARNING',
+            'propagate': False,
+        },
+    },
+}

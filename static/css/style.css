@@ -388,7 +388,7 @@ main {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10;
+  z-index: 5;
   text-decoration: none;
 }
 
@@ -426,9 +426,14 @@ main {
 
 .overlay-bottom {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   opacity: .9;
+  position: absolute;
+  height: 40px;
+  width: 100%;
+  bottom: 5px;
+  padding: 0 10px 0 20px;
+  z-index: 99;
 }
 
 .user-info {
@@ -454,7 +459,8 @@ main {
   color: white;
   font-size: 1rem;
   font-weight: 600;
-  z-index: 99;
+  width: 80px;
+  margin-left: auto;
 }
 
 .heart-counter i {

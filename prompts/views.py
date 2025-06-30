@@ -24,7 +24,9 @@ class PromptList(generic.ListView):
         # DEBUG: Time the queryset generation
         start_time = time.time()
         
-        queryset = Prompt.objects.filter(status=1)
+        # FIX 1: Add select_related to fetch author data in same query (SQL JOIN)
+        # This eliminates N+1 queries for prompt authors
+        queryset = Prompt.objects.select_related('author').filter(status=1)
         
         # Check for tag filter parameter (following URL parameter tutorial)
         tag_name = self.request.GET.get('tag')
@@ -66,14 +68,15 @@ def prompt_detail(request, slug):
     # DEBUG: Time the view execution
     start_time = time.time()
     
+    # FIX 1: Add select_related for author to reduce queries
     if request.user.is_authenticated:
-        prompt = get_object_or_404(Prompt, slug=slug)
+        prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
         # Check if prompt is published OR user is the author
         if prompt.status != 1 and prompt.author != request.user:
             # Prompt is draft and user is not the author
             raise Http404("Prompt not found")
     else:
-        prompt = get_object_or_404(Prompt, slug=slug, status=1)
+        prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug, status=1)
     
     # Show approved comments for everyone, plus user's own unapproved comments
     if request.user.is_authenticated:
@@ -117,7 +120,7 @@ def prompt_detail(request, slug):
             "comments": comments,
             "comment_count": comment_count,
             "comment_form": comment_form,
-            "number_of_likes": prompt.number_of_likes(),  # This will cause another query!
+            "number_of_likes": prompt.number_of_likes(),
             "prompt_is_liked": liked,
         },
     )
@@ -126,8 +129,9 @@ def comment_edit(request, slug, comment_id):
     """
     View to edit comments
     """
-    prompt = get_object_or_404(Prompt, slug=slug)
-    comment = get_object_or_404(Comment, pk=comment_id)
+    # FIX 1: Add select_related for authors
+    prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
+    comment = get_object_or_404(Comment.objects.select_related('author'), pk=comment_id)
     
     # Check if user owns the comment
     if comment.author != request.user:
@@ -163,8 +167,9 @@ def comment_delete(request, slug, comment_id):
     """
     View to delete comment
     """
-    prompt = get_object_or_404(Prompt, slug=slug)
-    comment = get_object_or_404(Comment, pk=comment_id)
+    # FIX 1: Add select_related for authors
+    prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
+    comment = get_object_or_404(Comment.objects.select_related('author'), pk=comment_id)
 
     if comment.author == request.user:
         comment.delete()
@@ -178,7 +183,8 @@ def prompt_edit(request, slug):
     """
     View to edit prompts
     """
-    prompt = get_object_or_404(Prompt, slug=slug)
+    # FIX 1: Add select_related for author
+    prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
     
     # Check if user owns the prompt
     if prompt.author != request.user:
@@ -248,7 +254,8 @@ def prompt_delete(request, slug):
     """
     View to delete prompt
     """
-    prompt = get_object_or_404(Prompt, slug=slug)
+    # FIX 1: Add select_related for author
+    prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
 
     if prompt.author == request.user:
         prompt.delete()
@@ -295,7 +302,8 @@ def prompt_like(request, slug):
     Supports both AJAX and regular POST requests.
     Following Simple is Better Than Complex AJAX tutorial.
     """
-    prompt = get_object_or_404(Prompt, slug=slug)
+    # FIX 1: Add select_related for author
+    prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
     
     # Check if user already liked the prompt
     if prompt.likes.filter(id=request.user.id).exists():

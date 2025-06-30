@@ -35,7 +35,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'mj-project-4-68750ca94690.herokuapp.
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# Security headers for better Lighthouse scores
+# ENHANCED SECURITY HEADERS FOR LIGHTHOUSE BEST PRACTICES
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
@@ -46,7 +46,7 @@ SECURE_HSTS_PRELOAD = True
 # Force HTTPS in production
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
-
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 
@@ -73,8 +73,10 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
+# PERFORMANCE OPTIMIZATION: Add GZip compression as first middleware
 MIDDLEWARE = [
-    'prompts.middleware.InfrastructureDebugMiddleware',
+    'prompts.middleware.InfrastructureDebugMiddleware',  # Keep debug middleware
+    'django.middleware.gzip.GZipMiddleware',  # Enable GZIP compression
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -110,8 +112,16 @@ WSGI_APPLICATION = 'prompts_manager.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# PERFORMANCE OPTIMIZATION: Enhanced database configuration with connection pooling
 DATABASES = {
-    'default': dj_database_url.parse(os.environ.get("DATABASE_URL"))
+    'default': {
+        **dj_database_url.parse(os.environ.get("DATABASE_URL")),
+        'CONN_MAX_AGE': 60,  # Connection pooling - keep connections alive for 60 seconds
+        'OPTIONS': {
+            'MAX_CONNS': 20,  # Maximum number of connections
+            'MIN_CONNS': 5,   # Minimum number of connections
+        } if not DEBUG else {},
+    }
 }
 
 CSRF_TRUSTED_ORIGINS = [
@@ -149,6 +159,7 @@ USE_I18N = True
 
 USE_TZ = True
 
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -172,8 +183,12 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Whitenoise static files compression
+# PERFORMANCE OPTIMIZATION: Enhanced Whitenoise configuration
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Enable static file compression and caching
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = True
 
 # Serve static files in development
 if DEBUG:
@@ -186,3 +201,64 @@ if DEBUG:
 # Crispy Forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# PERFORMANCE OPTIMIZATION: Enhanced session and cookie security
+SESSION_COOKIE_SECURE = not DEBUG  # Only send session cookies over HTTPS in production
+CSRF_COOKIE_SECURE = not DEBUG     # Only send CSRF cookies over HTTPS in production
+SESSION_COOKIE_HTTPONLY = True     # Prevent JavaScript access to session cookies
+CSRF_COOKIE_HTTPONLY = True        # Prevent JavaScript access to CSRF cookies
+
+# Session optimization for better performance
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_SAVE_EVERY_REQUEST = False  # Don't save session on every request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# PERFORMANCE OPTIMIZATION: Caching configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'cache_table',
+        'TIMEOUT': 300,  # 5 minutes default cache timeout
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# PERFORMANCE OPTIMIZATION: Logging configuration for monitoring
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'prompts.views': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'WARNING',
+            'propagate': False,
+        },
+    },
+}

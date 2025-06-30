@@ -124,39 +124,26 @@
 </div>
 {% endif %}
 
-<!-- AGGRESSIVE MOBILE LAZY LOADING Masonry Container -->
+<!-- FIXED: All images load immediately - no lazy loading -->
 <div class="masonry-container">
     <div class="masonry-grid">
         {% for prompt in prompt_list %}
         <div class="masonry-item">
             <div class="prompt-card">
-                <!-- MOBILE-OPTIMIZED Image wrapper with intersection observer -->
+                <!-- FIXED: All images load immediately -->
                 <div class="image-wrapper">
                     {% if "placeholder" in prompt.featured_image.url %}
                         <img src="{% static 'images/default.jpg' %}" 
                              alt="{{ prompt.title }}"
-                             {% if forloop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
                              width="280" 
                              height="420">
                     {% else %}
-                        {% if forloop.first %}
-                            <!-- ONLY the first image loads immediately -->
-                            <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" 
-                                 alt="{{ prompt.title }}"
-                                 loading="eager"
-                                 fetchpriority="high"
-                                 width="280" 
-                                 height="420">
-                        {% else %}
-                            <!-- ALL other images use aggressive lazy loading -->
-                            <img data-src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" 
-                                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='420'%3E%3Crect width='100%25' height='100%25' fill='%23f0f2f5'/%3E%3C/svg%3E"
-                                 alt="{{ prompt.title }}"
-                                 loading="lazy"
-                                 class="lazy-image"
-                                 width="280" 
-                                 height="420">
-                        {% endif %}
+                        <!-- ALL images load immediately with src (no data-src) -->
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" 
+                             alt="{{ prompt.title }}"
+                             {% if forloop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                             width="280" 
+                             height="420">
                     {% endif %}
                     
                     <!-- Overlay with user info, platform, and heart -->
@@ -252,38 +239,8 @@
     {% endif %}
 </div>
 
-<!-- Aggreesive Lazy Loading Script -->
+<!-- SIMPLIFIED: No lazy loading script -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Intersection Observer for aggressive lazy loading
-    const lazyImages = document.querySelectorAll('.lazy-image');
-    
-    if ('IntersectionObserver' in window) {
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src;
-                    img.classList.remove('lazy-image');
-                    observer.unobserve(img);
-                }
-            });
-        }, {
-            // Only load when image is 50px away from viewport
-            rootMargin: '50px'
-        });
-
-        lazyImages.forEach(img => {
-            imageObserver.observe(img);
-        });
-    } else {
-        // Fallback for browsers without IntersectionObserver
-        lazyImages.forEach(img => {
-            img.src = img.dataset.src;
-        });
-    }
-});
-
 // Real tag filtering
 document.addEventListener('DOMContentLoaded', function() {
     const tagBadges = document.querySelectorAll('.tag-clickable');
@@ -297,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Load More functionality
+// SIMPLIFIED: Load More functionality (no lazy loading re-init)
 document.addEventListener('DOMContentLoaded', function() {
     const loadMoreBtn = document.getElementById('load-more-btn');
     const loadingSpinner = document.getElementById('loading-spinner');
@@ -325,15 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         masonryGrid.appendChild(item);
                     });
                     
-                    // Re-initialize lazy loading for new images
-                    const newLazyImages = item.querySelectorAll('.lazy-image');
-                    newLazyImages.forEach(img => {
-                        if ('IntersectionObserver' in window) {
-                            imageObserver.observe(img);
-                        } else {
-                            img.src = img.dataset.src;
-                        }
-                    });
+                    // No lazy loading re-initialization needed
                     
                     const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
                     if (newLoadMoreBtn) {

@@ -5,7 +5,7 @@ from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.db import models
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q  # Import Q objects for complex search following LearnDjango tutorial
+from django.db.models import Q, Prefetch  # Import Prefetch for optimized queries
 from taggit.models import Tag
 from .models import Prompt, Comment
 from .forms import CommentForm, CollaborateForm, PromptForm
@@ -18,15 +18,20 @@ logger = logging.getLogger(__name__)
 
 class PromptList(generic.ListView):
     template_name = "prompts/prompt_list.html"
-    paginate_by = 100
+    paginate_by = 18  # Reduce pagination from 100 to 18 for faster loading
     
     def get_queryset(self):
         # DEBUG: Time the queryset generation
         start_time = time.time()
         
-        # FIX 1: Add select_related to fetch author data in same query (SQL JOIN)
-        # This eliminates N+1 queries for prompt authors
-        queryset = Prompt.objects.select_related('author').filter(status=1)
+        # Add both select_related and prefetch_related for optimal queries
+        # select_related: Get author data in same query (SQL JOIN)
+        # prefetch_related: Efficiently fetch tags and likes in separate optimized queries
+        queryset = Prompt.objects.select_related('author').prefetch_related(
+            'tags',  # Fetch all tags efficiently
+            'likes',  # Fetch likes efficiently
+            Prefetch('comments', queryset=Comment.objects.filter(approved=True))  # Only approved comments
+        ).filter(status=1).order_by('-created_on')
         
         # Check for tag filter parameter (following URL parameter tutorial)
         tag_name = self.request.GET.get('tag')
@@ -68,25 +73,33 @@ def prompt_detail(request, slug):
     # DEBUG: Time the view execution
     start_time = time.time()
     
-    # FIX 1: Add select_related for author to reduce queries
+    # Optimize prompt query with relationships
+    prompt_queryset = Prompt.objects.select_related('author').prefetch_related(
+        'tags',
+        'likes',
+        Prefetch('comments', queryset=Comment.objects.select_related('author').order_by('created_on'))
+    )
+    
     if request.user.is_authenticated:
-        prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
+        prompt = get_object_or_404(prompt_queryset, slug=slug)
         # Check if prompt is published OR user is the author
         if prompt.status != 1 and prompt.author != request.user:
             # Prompt is draft and user is not the author
             raise Http404("Prompt not found")
     else:
-        prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug, status=1)
+        prompt = get_object_or_404(prompt_queryset, slug=slug, status=1)
     
-    # Show approved comments for everyone, plus user's own unapproved comments
+    # Use prefetched comments instead of making new queries
     if request.user.is_authenticated:
-        comments = prompt.comments.filter(
-            models.Q(approved=True) | models.Q(author=request.user)
-        ).order_by('created_on')
+        comments = [
+            comment for comment in prompt.comments.all() 
+            if comment.approved or comment.author == request.user
+        ]
     else:
-        comments = prompt.comments.filter(approved=True).order_by('created_on')
+        comments = [comment for comment in prompt.comments.all() if comment.approved]
     
-    comment_count = prompt.comments.filter(approved=True).count()
+    # Calculate comment count from prefetched data
+    comment_count = len([c for c in prompt.comments.all() if c.approved])
     
     if request.method == "POST":
         comment_form = CommentForm(data=request.POST)
@@ -103,10 +116,10 @@ def prompt_detail(request, slug):
     else:
         comment_form = CommentForm()
     
+    # Use prefetched likes data instead of new query
     liked = False
     if request.user.is_authenticated:
-        if prompt.likes.filter(id=request.user.id).exists():
-            liked = True
+        liked = request.user in prompt.likes.all()
 
     # DEBUG: Log timing
     end_time = time.time()
@@ -120,7 +133,7 @@ def prompt_detail(request, slug):
             "comments": comments,
             "comment_count": comment_count,
             "comment_form": comment_form,
-            "number_of_likes": prompt.number_of_likes(),
+            "number_of_likes": prompt.likes.count(),  # Use prefetched data
             "prompt_is_liked": liked,
         },
     )
@@ -129,7 +142,7 @@ def comment_edit(request, slug, comment_id):
     """
     View to edit comments
     """
-    # FIX 1: Add select_related for authors
+    # Add select_related for authors
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
     comment = get_object_or_404(Comment.objects.select_related('author'), pk=comment_id)
     
@@ -167,7 +180,7 @@ def comment_delete(request, slug, comment_id):
     """
     View to delete comment
     """
-    # FIX 1: Add select_related for authors
+    # Add select_related for authors
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
     comment = get_object_or_404(Comment.objects.select_related('author'), pk=comment_id)
 
@@ -183,8 +196,8 @@ def prompt_edit(request, slug):
     """
     View to edit prompts
     """
-    # FIX 1: Add select_related for author
-    prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
+    # Add prefetch_related for tags
+    prompt = get_object_or_404(Prompt.objects.select_related('author').prefetch_related('tags'), slug=slug)
     
     # Check if user owns the prompt
     if prompt.author != request.user:
@@ -254,7 +267,7 @@ def prompt_delete(request, slug):
     """
     View to delete prompt
     """
-    # FIX 1: Add select_related for author
+    # Add select_related for author
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
 
     if prompt.author == request.user:
@@ -302,8 +315,8 @@ def prompt_like(request, slug):
     Supports both AJAX and regular POST requests.
     Following Simple is Better Than Complex AJAX tutorial.
     """
-    # FIX 1: Add select_related for author
-    prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
+    # Optimize the query with select_related and prefetch_related
+    prompt = get_object_or_404(Prompt.objects.select_related('author').prefetch_related('likes'), slug=slug)
     
     # Check if user already liked the prompt
     if prompt.likes.filter(id=request.user.id).exists():
@@ -319,7 +332,7 @@ def prompt_like(request, slug):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         data = {
             'liked': liked,
-            'like_count': prompt.number_of_likes(),
+            'like_count': prompt.likes.count(),  # Use the updated count
         }
         return JsonResponse(data)
     

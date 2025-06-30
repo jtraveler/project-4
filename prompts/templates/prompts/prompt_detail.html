@@ -156,6 +156,9 @@ function toggleLike(button) {
                 <!-- The prompt content -->
                 <!-- The prompt content -->
                 <div class="sidebar-card mb-4">
+
+
+                {% if user.is_authenticated %}
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h2 class="sidebar-title mb-0">Prompt Used</h2>
                         <button class="btn btn-outline-primary btn-sm copy-btn" onclick="copyPromptText()" id="copyButton">
@@ -166,6 +169,19 @@ function toggleLike(button) {
                     <div class="prompt-content" id="promptContent">
                         {{ prompt.content|safe }}
                     </div>
+                {% else %}
+            <div class="sidebar-card">
+                <h4 class="sidebar-title">Your Are One Step Closer</h4>
+                <p>Please <a href="{% url 'account_login' %}">log in</a> to see the prompt.</p>
+            </div>
+            {% endif %}
+
+
+
+
+
+
+                    
                 </div>
                 <div class="prompt-metadata mb-5">
                     <div class="metadata-item">

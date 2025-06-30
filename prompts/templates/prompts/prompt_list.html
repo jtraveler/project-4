@@ -6,7 +6,7 @@
 <!-- Only preload the FIRST image for true LCP optimization -->
 {% with first_prompt=prompt_list.0 %}
     {% if first_prompt and not "placeholder" in first_prompt.featured_image.url %}
-    <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'w_280' }}" />
+        <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'q_90,w_280,f_auto,dpr_auto' }}" />
     {% endif %}
 {% endwith %}
 
@@ -138,7 +138,8 @@
                              width="280">
                     {% else %}
                         <!-- FIXED: Higher quality with better compression settings -->
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_280' }}"
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_90,w_280,f_auto,dpr_auto' }}" 
+                             alt="{{ prompt.title }}"
                              {% if forloop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
                              width="280">
                     {% endif %}
@@ -148,42 +149,42 @@
                         <div class="overlay-top">
                             <span class="user-info">@{{ prompt.author }}</span>
                         </div>
-                        
+                        <div class="overlay-bottom">
+                            <span class="platform-info">
+                                <i class="fas fa-user"></i> {{ prompt.author }}
+                            </span>
+                            <span class="heart-counter">
+                                {% if user.is_authenticated %}
+                                    <small class="like-section" 
+                                        data-prompt-slug="{{ prompt.slug }}"
+                                        style="cursor: pointer; user-select: none;">
+                                        {% if user in prompt.likes.all %}
+                                            <i class="fas fa-heart me-1" style="color: white;"></i>
+                                        {% else %}
+                                            <i class="far fa-heart me-1" style="color: white;"></i>
+                                        {% endif %}
+                                        <span class="like-count">{{ prompt.number_of_likes }}</span> 
+                                        like<span class="like-plural">{% if prompt.number_of_likes != 1 %}s{% endif %}</span>
+                                    </small>
+                                {% else %}
+                                    <a href="{% url 'account_login' %}?next={{ request.path }}" 
+                                    class="text-decoration-none"
+                                    style="color: white;">
+                                        <small>
+                                            <i class="far fa-heart me-1"></i>
+                                            <span>{{ prompt.number_of_likes }}</span> 
+                                            like{% if prompt.number_of_likes != 1 %}s{% endif %}
+                                        </small>
+                                    </a>
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Clickable link overlay -->
                 <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="card-link"></a>
-                <div class="overlay-bottom">
-                    <span class="platform-info">
-                        <i class="fas fa-user"></i> {{ prompt.author }}
-                    </span>
-                    <span class="heart-counter">
-                        {% if user.is_authenticated %}
-                            <small class="like-section" 
-                                data-prompt-slug="{{ prompt.slug }}"
-                                style="cursor: pointer; user-select: none;">
-                                {% if user in prompt.likes.all %}
-                                    <i class="fas fa-heart me-1" style="color: white;"></i>
-                                {% else %}
-                                    <i class="far fa-heart me-1" style="color: white;"></i>
-                                {% endif %}
-                                <span class="like-count">{{ prompt.number_of_likes }}</span> 
-                                like<span class="like-plural">{% if prompt.number_of_likes != 1 %}s{% endif %}</span>
-                            </small>
-                        {% else %}
-                            <a href="{% url 'account_login' %}?next={{ request.path }}" 
-                            class="text-decoration-none"
-                            style="color: white;">
-                                <small>
-                                    <i class="far fa-heart me-1"></i>
-                                    <span>{{ prompt.number_of_likes }}</span> 
-                                    like{% if prompt.number_of_likes != 1 %}s{% endif %}
-                                </small>
-                            </a>
-                        {% endif %}
-                    </span>
-                </div>
+                
                 <!-- Hidden tags for filtering -->
                 <div class="hidden-tags" style="display: none;">
                     {% for tag in prompt.tags.all %}

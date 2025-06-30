@@ -524,8 +524,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
  
 
-<!-- Hero Section - Only show on homepage -->
-{% if request.resolver_match.url_name == 'home' %}
+<!-- Hero Section - Only show on homepage WITHOUT search or tag filters -->
+{% if request.resolver_match.url_name == 'home' and not request.GET.search and not request.GET.tag %}
 <section class="hero-section">
     <div class="container">
        <div class="row align-items-center">
@@ -565,8 +565,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             
             <!-- Right Image Gallery Column -->
-             
-            
             <div class="col-lg-6 hero-gallery-container-shell">
                 <div class="hero-gallery-container">
                     <div class="hero-image-grid">

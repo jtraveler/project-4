@@ -461,6 +461,7 @@ main {
   font-weight: 600;
   width: 80px;
   margin-left: auto;
+  margin-right: 20px;
 }
 
 .heart-counter i {
@@ -1269,6 +1270,12 @@ select#id_ai_generator {
   .column-2, .column-3 {
     width: 40%;
   }
+}
+
+
+footer {
+
+  box-shadow: -1px -3px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Medium screens (992px and below) */

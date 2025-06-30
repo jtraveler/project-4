@@ -6,7 +6,7 @@
 <!-- Only preload the FIRST image for true LCP optimization -->
 {% with first_prompt=prompt_list.0 %}
     {% if first_prompt and not "placeholder" in first_prompt.featured_image.url %}
-        <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" />
+        <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,f_auto' }}" />
     {% endif %}
 {% endwith %}
 
@@ -124,26 +124,24 @@
 </div>
 {% endif %}
 
-<!-- FIXED: All images load immediately - no lazy loading -->
+<!-- FIXED: Images now maintain aspect ratio with varied heights -->
 <div class="masonry-container">
     <div class="masonry-grid">
         {% for prompt in prompt_list %}
         <div class="masonry-item">
             <div class="prompt-card">
-                <!-- FIXED: All images load immediately -->
+                <!-- FIXED: Images maintain original aspect ratio -->
                 <div class="image-wrapper">
                     {% if "placeholder" in prompt.featured_image.url %}
                         <img src="{% static 'images/default.jpg' %}" 
                              alt="{{ prompt.title }}"
-                             width="280" 
-                             height="420">
+                             width="280">
                     {% else %}
-                        <!-- ALL images load immediately with src (no data-src) -->
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,h_420,c_fill,f_auto' }}" 
+                        <!-- FIXED: Only width constraint, height maintains aspect ratio -->
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_auto,w_280,f_auto' }}" 
                              alt="{{ prompt.title }}"
                              {% if forloop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
-                             width="280" 
-                             height="420">
+                             width="280">
                     {% endif %}
                     
                     <!-- Overlay with user info, platform, and heart -->
@@ -239,7 +237,7 @@
     {% endif %}
 </div>
 
-<!-- SIMPLIFIED: No lazy loading script -->
+<!-- JavaScript functionality remains the same -->
 <script>
 // Real tag filtering
 document.addEventListener('DOMContentLoaded', function() {
@@ -254,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// SIMPLIFIED: Load More functionality (no lazy loading re-init)
+// Load More functionality
 document.addEventListener('DOMContentLoaded', function() {
     const loadMoreBtn = document.getElementById('load-more-btn');
     const loadingSpinner = document.getElementById('loading-spinner');
@@ -281,8 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     newItems.forEach(item => {
                         masonryGrid.appendChild(item);
                     });
-                    
-                    // No lazy loading re-initialization needed
                     
                     const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
                     if (newLoadMoreBtn) {

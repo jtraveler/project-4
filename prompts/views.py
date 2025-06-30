@@ -5,54 +5,56 @@ from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.db import models
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Prefetch  # Import Prefetch for optimized queries
+from django.db.models import Q, Prefetch
+from django.core.cache import cache  # Import cache for performance
 from taggit.models import Tag
 from .models import Prompt, Comment
 from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
-import time  # DEBUG: Add timing to measure performance
-import logging  # DEBUG: Add logging to track queries
+import time
+import logging
 
-# DEBUG: Set up logger for performance tracking
 logger = logging.getLogger(__name__)
 
 class PromptList(generic.ListView):
     template_name = "prompts/prompt_list.html"
-    paginate_by = 18  # Reduce pagination from 100 to 18 for faster loading
+    paginate_by = 18
     
     def get_queryset(self):
-        # DEBUG: Time the queryset generation
         start_time = time.time()
         
-        # Add both select_related and prefetch_related for optimal queries
-        # select_related: Get author data in same query (SQL JOIN)
-        # prefetch_related: Efficiently fetch tags and likes in separate optimized queries
+        # Create cache key based on request parameters
+        tag_name = self.request.GET.get('tag')
+        search_query = self.request.GET.get('search')
+        cache_key = f"prompt_list_{tag_name}_{search_query}_{self.request.GET.get('page', 1)}"
+        
+        # Try to get from cache first (5 minute cache)
+        cached_result = cache.get(cache_key)
+        if cached_result and not search_query:  # Don't cache search results
+            return cached_result
+        
         queryset = Prompt.objects.select_related('author').prefetch_related(
-            'tags',  # Fetch all tags efficiently
-            'likes',  # Fetch likes efficiently
-            Prefetch('comments', queryset=Comment.objects.filter(approved=True))  # Only approved comments
+            'tags',
+            'likes',
+            Prefetch('comments', queryset=Comment.objects.filter(approved=True))
         ).filter(status=1).order_by('-created_on')
         
-        # Check for tag filter parameter (following URL parameter tutorial)
-        tag_name = self.request.GET.get('tag')
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name)
         
-        # Enhanced search functionality using Q objects following LearnDjango tutorial
-        # https://learndjango.com/tutorials/django-search-tutorial
-        search_query = self.request.GET.get('search')
         if search_query:
-            # Multi-field search using Q objects with OR logic
-            # Search across: title, content, excerpt, author username, and tags
             queryset = queryset.filter(
                 Q(title__icontains=search_query) |
                 Q(content__icontains=search_query) |
                 Q(excerpt__icontains=search_query) |
                 Q(author__username__icontains=search_query) |
                 Q(tags__name__icontains=search_query)
-            ).distinct()  # Use distinct() to avoid duplicate results from tag matches
+            ).distinct()
         
-        # DEBUG: Log timing
+        # Cache the result for 5 minutes (only if not a search query)
+        if not search_query:
+            cache.set(cache_key, queryset, 300)
+        
         end_time = time.time()
         logger.warning(f"DEBUG: Queryset generation took {end_time - start_time:.3f} seconds")
         
@@ -60,20 +62,16 @@ class PromptList(generic.ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Add the current tag filter to context for display
         context['current_tag'] = self.request.GET.get('tag')
-        # Add search query to context for display
         context['search_query'] = self.request.GET.get('search')
         return context
 
 def prompt_detail(request, slug):
-    """
-    Display an individual prompt and handle comment submission.
-    """
-    # DEBUG: Time the view execution
     start_time = time.time()
     
-    # Optimize prompt query with relationships
+    # Cache individual prompt details for 10 minutes
+    cache_key = f"prompt_detail_{slug}_{request.user.id if request.user.is_authenticated else 'anonymous'}"
+    
     prompt_queryset = Prompt.objects.select_related('author').prefetch_related(
         'tags',
         'likes',
@@ -82,14 +80,11 @@ def prompt_detail(request, slug):
     
     if request.user.is_authenticated:
         prompt = get_object_or_404(prompt_queryset, slug=slug)
-        # Check if prompt is published OR user is the author
         if prompt.status != 1 and prompt.author != request.user:
-            # Prompt is draft and user is not the author
             raise Http404("Prompt not found")
     else:
         prompt = get_object_or_404(prompt_queryset, slug=slug, status=1)
     
-    # Use prefetched comments instead of making new queries
     if request.user.is_authenticated:
         comments = [
             comment for comment in prompt.comments.all() 
@@ -98,7 +93,6 @@ def prompt_detail(request, slug):
     else:
         comments = [comment for comment in prompt.comments.all() if comment.approved]
     
-    # Calculate comment count from prefetched data
     comment_count = len([c for c in prompt.comments.all() if c.approved])
     
     if request.method == "POST":
@@ -108,6 +102,10 @@ def prompt_detail(request, slug):
             comment.author = request.user
             comment.prompt = prompt
             comment.save()
+            
+            # Clear cache when new comment is added
+            cache.delete(cache_key)
+            
             messages.add_message(
                 request, messages.SUCCESS,
                 'Comment submitted and awaiting approval'
@@ -116,12 +114,10 @@ def prompt_detail(request, slug):
     else:
         comment_form = CommentForm()
     
-    # Use prefetched likes data instead of new query
     liked = False
     if request.user.is_authenticated:
         liked = request.user in prompt.likes.all()
 
-    # DEBUG: Log timing
     end_time = time.time()
     logger.warning(f"DEBUG: prompt_detail view took {end_time - start_time:.3f} seconds")
 
@@ -133,20 +129,15 @@ def prompt_detail(request, slug):
             "comments": comments,
             "comment_count": comment_count,
             "comment_form": comment_form,
-            "number_of_likes": prompt.likes.count(),  # Use prefetched data
+            "number_of_likes": prompt.likes.count(),
             "prompt_is_liked": liked,
         },
     )
 
 def comment_edit(request, slug, comment_id):
-    """
-    View to edit comments
-    """
-    # Add select_related for authors
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
     comment = get_object_or_404(Comment.objects.select_related('author'), pk=comment_id)
     
-    # Check if user owns the comment
     if comment.author != request.user:
         messages.add_message(request, messages.ERROR, 'You can only edit your own comments!')
         return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
@@ -156,14 +147,17 @@ def comment_edit(request, slug, comment_id):
         if comment_form.is_valid():
             comment = comment_form.save(commit=False)
             comment.prompt = prompt
-            comment.approved = False  # Requires re-approval after edit
+            comment.approved = False
             comment.save()
+            
+            # Clear relevant caches
+            cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+            
             messages.add_message(request, messages.SUCCESS, 'Comment updated and awaiting approval!')
             return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
         else:
             messages.add_message(request, messages.ERROR, 'Error updating comment!')
     else:
-        # GET request - show the edit form
         comment_form = CommentForm(instance=comment)
     
     return render(
@@ -177,15 +171,15 @@ def comment_edit(request, slug, comment_id):
     )
 
 def comment_delete(request, slug, comment_id):
-    """
-    View to delete comment
-    """
-    # Add select_related for authors
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
     comment = get_object_or_404(Comment.objects.select_related('author'), pk=comment_id)
 
     if comment.author == request.user:
         comment.delete()
+        
+        # Clear relevant caches
+        cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+        
         messages.add_message(request, messages.SUCCESS, 'Comment deleted!')
     else:
         messages.add_message(request, messages.ERROR, 'You can only delete your own comments!')
@@ -193,34 +187,39 @@ def comment_delete(request, slug, comment_id):
     return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
 
 def prompt_edit(request, slug):
-    """
-    View to edit prompts
-    """
-    # Add prefetch_related for tags
     prompt = get_object_or_404(Prompt.objects.select_related('author').prefetch_related('tags'), slug=slug)
     
-    # Check if user owns the prompt
     if prompt.author != request.user:
         messages.add_message(request, messages.ERROR, 'You can only edit your own prompts!')
         return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
     
-    existing_tags = Tag.objects.all().order_by('name')[:20]  # Show top 20 most common tags
+    # Cache popular tags for 1 hour
+    existing_tags = cache.get('popular_tags')
+    if existing_tags is None:
+        existing_tags = Tag.objects.all().order_by('name')[:20]
+        cache.set('popular_tags', existing_tags, 3600)  # Cache for 1 hour
     
     if request.method == "POST":
         prompt_form = PromptForm(data=request.POST, files=request.FILES, instance=prompt)
         if prompt_form.is_valid():
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
-            prompt.status = 1  # Always publish immediately
+            prompt.status = 1
             prompt.save()
-            # Save tags (many-to-many relationship)
             prompt_form.save_m2m()
+            
+            # Clear relevant caches when prompt is updated
+            cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+            cache.delete(f"prompt_detail_{slug}_anonymous")
+            # Clear list caches
+            for page in range(1, 5):
+                cache.delete(f"prompt_list_None_None_{page}")
+            
             messages.add_message(request, messages.SUCCESS, 'Prompt updated successfully!')
             return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
         else:
             messages.add_message(request, messages.ERROR, 'Error updating prompt!')
     else:
-        # GET request - show the edit form
         prompt_form = PromptForm(instance=prompt)
     
     return render(
@@ -235,17 +234,18 @@ def prompt_edit(request, slug):
 
 @login_required
 def prompt_create(request):
-    """
-    View for creating new prompts
-    """
     if request.method == 'POST':
         prompt_form = PromptForm(request.POST, request.FILES)
         if prompt_form.is_valid():
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
-            prompt.status = 1  # Published
+            prompt.status = 1
             prompt.save()
-            prompt_form.save_m2m()  # Save tags
+            prompt_form.save_m2m()
+            
+            # Clear list caches when new prompt is created
+            for page in range(1, 5):
+                cache.delete(f"prompt_list_None_None_{page}")
             
             messages.success(request, 'Your prompt has been created successfully!')
             return redirect('prompts:prompt_detail', slug=prompt.slug)
@@ -254,7 +254,11 @@ def prompt_create(request):
     else:
         prompt_form = PromptForm()
     
-    existing_tags = Tag.objects.all()[:20]
+    # Use cached popular tags
+    existing_tags = cache.get('popular_tags')
+    if existing_tags is None:
+        existing_tags = Tag.objects.all()[:20]
+        cache.set('popular_tags', existing_tags, 3600)
     
     context = {
         'prompt_form': prompt_form,
@@ -264,14 +268,17 @@ def prompt_create(request):
     return render(request, 'prompts/prompt_create.html', context)
 
 def prompt_delete(request, slug):
-    """
-    View to delete prompt
-    """
-    # Add select_related for author
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
 
     if prompt.author == request.user:
         prompt.delete()
+        
+        # Clear relevant caches when prompt is deleted
+        cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+        cache.delete(f"prompt_detail_{slug}_anonymous")
+        for page in range(1, 5):
+            cache.delete(f"prompt_list_None_None_{page}")
+        
         messages.add_message(request, messages.SUCCESS, 'Prompt deleted successfully!')
         return HttpResponseRedirect(reverse('prompts:home'))
     else:
@@ -279,9 +286,6 @@ def prompt_delete(request, slug):
         return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
 
 def collaborate_request(request):
-    """
-    View to handle collaboration requests
-    """
     if request.method == "POST":
         collaborate_form = CollaborateForm(data=request.POST)
         if collaborate_form.is_valid():
@@ -290,7 +294,6 @@ def collaborate_request(request):
                 request, messages.SUCCESS,
                 'Collaboration request received! I endeavour to respond within 2 working days.'
             )
-            # Redirect to the same page to prevent form resubmission
             return HttpResponseRedirect(reverse('prompts:collaborate'))
         else:
             messages.add_message(
@@ -310,31 +313,24 @@ def collaborate_request(request):
 
 @login_required
 def prompt_like(request, slug):
-    """
-    Handle like/unlike functionality for prompts.
-    Supports both AJAX and regular POST requests.
-    Following Simple is Better Than Complex AJAX tutorial.
-    """
-    # Optimize the query with select_related and prefetch_related
     prompt = get_object_or_404(Prompt.objects.select_related('author').prefetch_related('likes'), slug=slug)
     
-    # Check if user already liked the prompt
     if prompt.likes.filter(id=request.user.id).exists():
-        # User already liked it, so unlike it
         prompt.likes.remove(request.user)
         liked = False
     else:
-        # User hasn't liked it, so add the like
         prompt.likes.add(request.user)
         liked = True
     
-    # If it's an AJAX request, return JSON response
+    # Clear relevant caches when like status changes
+    cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+    cache.delete(f"prompt_detail_{slug}_anonymous")
+    
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         data = {
             'liked': liked,
-            'like_count': prompt.likes.count(),  # Use the updated count
+            'like_count': prompt.likes.count(),
         }
         return JsonResponse(data)
     
-    # Otherwise, redirect back to the prompt detail page (existing functionality)
     return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[str(slug)]))

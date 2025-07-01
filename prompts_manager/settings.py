@@ -271,29 +271,34 @@ LOGGING = {
     },
 }
 
-# CLOUDINARY CONFIGURATION - Aggressive cookie reduction approach
-# Use CLOUDINARY_URL environment variable (matches Heroku setup)
+# CLOUDINARY CONFIGURATION - Using individual environment variables
+# This approach should work better with cookie reduction settings
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+    'SECURE': True,
+    'STATIC_IMAGES_EXTENSIONS': ['jpg', 'jpe', 'jpeg', 'jpc', 'jp2', 'j2k', 'wdp', 'jxr', 'hdp', 'png', 'gif', 'webp', 'bmp', 'tif', 'tiff', 'ico'],
+}
 
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-# Configure using CLOUDINARY_URL with all tracking disabled
+# Configure with individual vars and aggressive cookie reduction
 cloudinary.config(
-    secure=True,  # Always use HTTPS
-    # Disable ALL analytics and tracking
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+    secure=True,
+    # Aggressive cookie reduction
     analytics=False,
     usage_tracking=False,
     auto_tagging=False,
-    # Additional settings to minimize cookies
     track_breakpoints=False,
     track_usage=False,
 )
-
-# Alternative approach: Use environment variable to disable tracking globally
-import os
-os.environ['CLOUDINARY_ANALYTICS'] = 'false'
-os.environ['CLOUDINARY_USAGE_TRACKING'] = 'false'
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 

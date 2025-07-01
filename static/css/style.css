@@ -538,7 +538,7 @@ main {
 .btn-primary,
 .btn-secondary {
   padding: 14px 28px;
-  border-radius: 10px;
+  border-radius: 50px;
   font-weight: 600;
   font-size: 16px;
   transition: all 0.2s ease;

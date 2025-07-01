@@ -271,18 +271,29 @@ LOGGING = {
     },
 }
 
-# CLOUDINARY CONFIGURATION - Simple approach for cookie reduction
+# CLOUDINARY CONFIGURATION - Aggressive cookie reduction approach
 # Use CLOUDINARY_URL environment variable (matches Heroku setup)
 
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 
-# Configure using CLOUDINARY_URL (works with Heroku's setup)
+# Configure using CLOUDINARY_URL with all tracking disabled
 cloudinary.config(
     secure=True,  # Always use HTTPS
-    analytics=False,  # Disable analytics cookies for better Lighthouse scores
+    # Disable ALL analytics and tracking
+    analytics=False,
+    usage_tracking=False,
+    auto_tagging=False,
+    # Additional settings to minimize cookies
+    track_breakpoints=False,
+    track_usage=False,
 )
+
+# Alternative approach: Use environment variable to disable tracking globally
+import os
+os.environ['CLOUDINARY_ANALYTICS'] = 'false'
+os.environ['CLOUDINARY_USAGE_TRACKING'] = 'false'
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 

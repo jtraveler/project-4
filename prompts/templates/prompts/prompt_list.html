@@ -6,7 +6,7 @@
 <!-- Only preload the FIRST image for true LCP optimization -->
 {% with first_prompt=prompt_list.0 %}
     {% if first_prompt and not "placeholder" in first_prompt.featured_image.url %}
-        <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'q_90,w_280,f_auto,dpr_auto' }}" />
+        <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_100,dpr_auto' }}" />
     {% endif %}
 {% endwith %}
 
@@ -124,24 +124,27 @@
 </div>
 {% endif %}
 
-<!-- FIXED: Images now maintain aspect ratio with varied heights -->
+<!-- Optimized masonry grid -->
 <div class="masonry-container">
     <div class="masonry-grid">
         {% for prompt in prompt_list %}
         <div class="masonry-item">
             <div class="prompt-card">
-                <!-- FIXED: Images maintain original aspect ratio -->
                 <div class="image-wrapper">
                     {% if "placeholder" in prompt.featured_image.url %}
                         <img src="{% static 'images/default.jpg' %}" 
                              alt="{{ prompt.title }}"
-                             width="280">
+                             width="440"
+                             height="584"
+                             loading="lazy">
                     {% else %}
-                        <!-- FIXED: Higher quality with better compression settings -->
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'q_90,w_280,f_auto,dpr_auto' }}" 
+                        <!-- Lighthouse-optimized image with proper dimensions -->
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_100,dpr_auto' }}" 
                              alt="{{ prompt.title }}"
+                             width="440"
+                             height="584"
                              {% if forloop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
-                             width="280">
+                             decoding="async">
                     {% endif %}
                     
                     <!-- Overlay with user info, platform, and heart -->
@@ -183,7 +186,7 @@
                 </div>
                 
                 <!-- Clickable link overlay -->
-                <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="card-link"></a>
+                <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="card-link" aria-label="View {{ prompt.title }} details"></a>
                 
                 <!-- Hidden tags for filtering -->
                 <div class="hidden-tags" style="display: none;">
@@ -226,7 +229,8 @@
     <div class="load-more-container text-center mt-5">
         <button id="load-more-btn" 
                 class="btn btn-primary btn-lg" 
-                data-next-page="{{ page_obj.next_page_number }}">
+                data-next-page="{{ page_obj.next_page_number }}"
+                aria-label="Load more prompts">
             <i class="fas fa-plus-circle me-2"></i>
             Load More Prompts
         </button>
@@ -237,7 +241,7 @@
     {% endif %}
 </div>
 
-<!-- JavaScript functionality remains the same -->
+<!-- Optimized JavaScript -->
 <script>
 // Real tag filtering
 document.addEventListener('DOMContentLoaded', function() {
@@ -252,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Load More functionality
+// Optimized Load More functionality
 document.addEventListener('DOMContentLoaded', function() {
     const loadMoreBtn = document.getElementById('load-more-btn');
     const loadingSpinner = document.getElementById('loading-spinner');
@@ -276,9 +280,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     const newDoc = parser.parseFromString(html, 'text/html');
                     const newItems = newDoc.querySelectorAll('.masonry-item');
                     
+                    // Use document fragment for better performance
+                    const fragment = document.createDocumentFragment();
                     newItems.forEach(item => {
-                        masonryGrid.appendChild(item);
+                        fragment.appendChild(item);
                     });
+                    masonryGrid.appendChild(fragment);
+                    
+                    // Update masonry layout if using JS masonry
+                    if (window.masonryInstance) {
+                        setTimeout(() => {
+                            window.masonryInstance.refresh();
+                        }, 100);
+                    }
                     
                     const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
                     if (newLoadMoreBtn) {
@@ -299,12 +313,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Heart functionality
+// Optimized Heart functionality with debouncing
 document.addEventListener('DOMContentLoaded', function() {
     const likeSections = document.querySelectorAll('.like-section');
     
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
     likeSections.forEach(function(section) {
-        section.addEventListener('click', function(e) {
+        section.addEventListener('click', debounce(function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -343,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 alert('Something went wrong. Please try again.');
             });
-        });
+        }, 300));
     });
 });
 </script>

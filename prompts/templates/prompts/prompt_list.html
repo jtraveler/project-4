@@ -313,24 +313,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Optimized Heart functionality with debouncing
+// Heart functionality
 document.addEventListener('DOMContentLoaded', function() {
     const likeSections = document.querySelectorAll('.like-section');
     
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-    
     likeSections.forEach(function(section) {
-        section.addEventListener('click', debounce(function(e) {
+        section.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -369,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 alert('Something went wrong. Please try again.');
             });
-        }, 300));
+        });
     });
 });
 </script>

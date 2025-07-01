@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'cloudinary',
     'taggit',
+    'csp',  # CSP for Content Security Policy
     'prompts',
     'about',
 ]
@@ -84,6 +85,7 @@ MIDDLEWARE = [
     'prompts.middleware.InfrastructureDebugMiddleware',  # Keep debug middleware
     'django.middleware.gzip.GZipMiddleware',  # Enable GZIP compression
     'django.middleware.security.SecurityMiddleware',
+    'csp.middleware.CSPMiddleware',  # CSP Middleware for security
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -268,3 +270,49 @@ LOGGING = {
         },
     },
 }
+
+# CONTENT SECURITY POLICY CONFIGURATION
+# Protects against XSS attacks by controlling resource loading
+
+CSP_DEFAULT_SRC = ("'self'",)
+
+CSP_SCRIPT_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # Required for inline scripts in templates
+    "https://cdn.jsdelivr.net",  # Bootstrap JS
+    "https://cdnjs.cloudflare.com",  # Font Awesome and other CDN resources
+)
+
+CSP_STYLE_SRC = (
+    "'self'",
+    "'unsafe-inline'",  # Required for inline styles and dynamic CSS
+    "https://fonts.googleapis.com",  # Google Fonts CSS
+    "https://cdn.jsdelivr.net",  # Bootstrap CSS
+    "https://cdnjs.cloudflare.com",  # Font Awesome CSS
+)
+
+CSP_FONT_SRC = (
+    "'self'",
+    "https://fonts.gstatic.com",  # Google Fonts
+    "https://cdnjs.cloudflare.com",  # Font Awesome fonts
+)
+
+CSP_IMG_SRC = (
+    "'self'",
+    "data:",  # For inline images/icons
+    "https://res.cloudinary.com",  # Cloudinary images
+    "https://*.cloudinary.com",  # All Cloudinary subdomains
+)
+
+CSP_CONNECT_SRC = (
+    "'self'",
+    "https://res.cloudinary.com",  # For AJAX requests to Cloudinary
+)
+
+CSP_FRAME_SRC = ("'none'",)  # Prevent embedding in frames for security
+
+# CSP Enforcement - Report-only in development, enforced in production
+if not DEBUG:
+    CSP_REPORT_ONLY = False  # Enforce CSP in production
+else:
+    CSP_REPORT_ONLY = True   # Report-only mode in development (logs violations)

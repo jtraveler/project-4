@@ -272,15 +272,17 @@ LOGGING = {
 }
 
 # CLOUDINARY CONFIGURATION - Simple approach for cookie reduction
-# Keep existing setup, just add minimal cookie reduction
+# Use CLOUDINARY_URL environment variable (matches Heroku setup)
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
-    'SECURE': True,
-    'STATIC_IMAGES_EXTENSIONS': ['jpg', 'jpe', 'jpeg', 'jpc', 'jp2', 'j2k', 'wdp', 'jxr', 'hdp', 'png', 'gif', 'webp', 'bmp', 'tif', 'tiff', 'ico'],
-}
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+# Configure using CLOUDINARY_URL (works with Heroku's setup)
+cloudinary.config(
+    secure=True,  # Always use HTTPS
+    analytics=False,  # Disable analytics cookies for better Lighthouse scores
+)
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 

@@ -271,6 +271,19 @@ LOGGING = {
     },
 }
 
+# CLOUDINARY CONFIGURATION - Simple approach for cookie reduction
+# Keep existing setup, just add minimal cookie reduction
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+    'SECURE': True,
+    'STATIC_IMAGES_EXTENSIONS': ['jpg', 'jpe', 'jpeg', 'jpc', 'jp2', 'j2k', 'wdp', 'jxr', 'hdp', 'png', 'gif', 'webp', 'bmp', 'tif', 'tiff', 'ico'],
+}
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 # CONTENT SECURITY POLICY CONFIGURATION
 # Protects against XSS attacks by controlling resource loading
 

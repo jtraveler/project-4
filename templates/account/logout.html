@@ -1,17 +1,56 @@
-{% extends "account/base.html" %}
+{% extends 'base.html' %}
 {% load i18n %}
 
-{% block head_title %}{% trans "Sign Out" %}{% endblock %}
-{% block header_title %}{% trans "Sign Out" %}{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <!-- Modern Form Container -->
+    <div class="form-container">
+        
+        <!-- Form Header -->
+        <div class="form-header">
+            <h1 class="form-title">Sign Out</h1>
+            <p class="form-subtitle">Are you sure you want to sign out of your account?</p>
+        </div>
 
-{% block account_content %}
-<p>{% trans 'Are you sure you want to sign out?' %}</p>
+        <!-- Warning Alert -->
+        <div class="alert alert-warning mb-4">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Just to confirm:</strong> You will be logged out and redirected to the homepage.
+        </div>
+        
+        <!-- Form -->
+        <form method="post" action="{% url 'account_logout' %}" class="edit-form">
+            {% csrf_token %}
+            
+            <!-- Hidden redirect field -->
+            {% if redirect_field_value %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+            {% endif %}
 
-<form method="post" action="{% url 'account_logout' %}">
-    {% csrf_token %}
-    {% if redirect_field_value %}
-    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
-    {% endif %}
-    <button class="btn btn-signup right" type="submit">{% trans 'Sign Out' %}</button>
-</form>
+            <!-- Info Content -->
+            <div class="field-group">
+                <div class="field-help" style="font-size: 1rem; color: #374151; line-height: 1.6; text-align: center;">
+                    You can always sign back in anytime using your username and password.
+                </div>
+            </div>
+
+            <!-- Form Buttons -->
+            <div class="form-actions">
+                <a href="{% url 'prompts:home' %}" class="btn-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-sign-out-alt me-2"></i>Sign Out
+                </button>
+            </div>
+        </form>
+
+        <!-- Footer -->
+        <div class="modern-form-footer">
+            <p class="modern-form-footer-text">
+                Need help? <a href="{% url 'prompts:home' %}" class="text-primary">Return to homepage</a> if you have any issues
+            </p>
+        </div>
+    </div>
+</div>
 {% endblock %}

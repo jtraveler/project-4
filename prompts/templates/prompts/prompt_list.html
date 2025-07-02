@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const likeCount = this.querySelector('.like-count');
             const likePlural = this.querySelector('.like-plural');
             
-            fetch('/' + promptSlug + '/like/', {
+            fetch('/prompt/' + promptSlug + '/like/', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',

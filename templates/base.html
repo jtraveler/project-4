@@ -504,8 +504,8 @@ function handlePromptsNavigation(event) {
 // Create new prompt function
 function createNewPrompt() {
     {% if user.is_authenticated %}
-        // Will redirect to create prompt URL once we set it up
-        window.location.href = '/create-prompt/';
+        // Updated to use the correct URL with prompt/ prefix
+        window.location.href = '{% url "prompts:prompt_create" %}';
     {% else %}
         window.location.href = '{% url "account_login" %}';
     {% endif %}

@@ -12,11 +12,11 @@ admin.site.site_title = "Prompts Manager Admin"
 admin.site.index_title = "Welcome to Prompts Manager Administration"
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
     path("summernote/", include('django_summernote.urls')),
-    path("about/", include("about.urls")),
-    path("accounts/", include("allauth.urls")),
-    path("", include("prompts.urls")),
+    #path("about/", include("about.urls")),
+    #path("accounts/", include("allauth.urls")),
+    #path("", include("prompts.urls")),
 ]
 
 # Serve media files in development

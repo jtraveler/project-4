@@ -82,10 +82,9 @@ SITE_ID = 1
 
 # PERFORMANCE OPTIMIZATION: Add GZip compression as first middleware
 MIDDLEWARE = [
-    'prompts.middleware.InfrastructureDebugMiddleware',  # Keep debug middleware
-    'django.middleware.gzip.GZipMiddleware',  # Enable GZIP compression
+    'django.middleware.gzip.GZipMiddleware',  # Add back for compression
     'django.middleware.security.SecurityMiddleware',
-    'csp.middleware.CSPMiddleware',  # CSP Middleware for security
+    'csp.middleware.CSPMiddleware',  # Add back for security (CSP)
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -190,6 +189,10 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files (user uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # PERFORMANCE OPTIMIZATION: Enhanced Whitenoise configuration
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

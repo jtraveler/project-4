@@ -95,7 +95,7 @@ function toggleLike(button) {
     const heartIcon = button.querySelector('i');
     const likeCount = button.querySelector('.like-count');
     
-    fetch('/' + promptSlug + '/like/', {
+    fetch('/prompt/' + promptSlug + '/like/', {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',

@@ -1,5 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load cloudinary_tags %}
+
+{% block extra_head %}
+<!-- Preload the hero image for LCP optimization -->
+{% if not "placeholder" in prompt.featured_image.url %}
+    <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_85,dpr_auto' }}" />
+{% endif %}
+{% endblock %}
+
 {% block content %}
 
 <!-- Head Section -->
@@ -125,15 +134,24 @@ function toggleLike(button) {
 <!-- Main Content Area -->
 <div class="container mt-5">
     <div class="row">
-        <!-- Image Area -->
+        <!-- Optimized Image Area with Cloudinary transforms and proper dimensions -->
         <div class="col-lg-8 pb-5">
             <div class="hero-image-shell">
 
                 {% if "placeholder" in prompt.featured_image.url %}
-        <img src="{% static 'images/default.jpg' %}" class="hero-image" alt="{{ prompt.title }}">
-    {% else %}
-        <img src="{{ prompt.featured_image.url }}" class="hero-image" alt="{{ prompt.title }}">
-    {% endif %}
+                    <img src="{% static 'images/default.jpg' %}" 
+                         class="hero-image" 
+                         alt="{{ prompt.title }}"
+                         width="824"
+                         height="800">
+                {% else %}
+                    <!-- Optimized Cloudinary image with proper dimensions -->
+                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_85,dpr_auto' }}" 
+                         class="hero-image" 
+                         alt="{{ prompt.title }}"
+                         width="824"
+                         height="800">
+                {% endif %}
             </div>
             
             

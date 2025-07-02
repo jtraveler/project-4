@@ -137,7 +137,7 @@
     
     <!-- Mobile Menu -->
     <div class="mobile-menu" id="mobileMenu">
-        <a href="{% url 'prompt:home' %}#browse-prompts" class="mobile-nav-link" onclick="handlePromptsNavigation(event)">Prompts</a>
+        <a href="{% url 'prompts:home' %}#browse-prompts" class="mobile-nav-link" onclick="handlePromptsNavigation(event)">Prompts</a>
         <a href="{% url 'about' %}" class="mobile-nav-link">About</a>
         <a href="{% url 'prompts:collaborate' %}" class="mobile-nav-link">Contact</a>
         {% if user.is_authenticated %}

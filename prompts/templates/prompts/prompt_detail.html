@@ -5,7 +5,7 @@
 {% block extra_head %}
 <!-- Preload the hero image for LCP optimization -->
 {% if not "placeholder" in prompt.featured_image.url %}
-    <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_85,dpr_auto' }}" />
+    <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_100,dpr_auto' }}" />
 {% endif %}
 {% endblock %}
 
@@ -146,7 +146,7 @@ function toggleLike(button) {
                          height="800">
                 {% else %}
                     <!-- Optimized Cloudinary image with proper dimensions -->
-                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_85,dpr_auto' }}" 
+                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_100,dpr_auto' }}" 
                          class="hero-image" 
                          alt="{{ prompt.title }}"
                          width="824"

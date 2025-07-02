@@ -51,6 +51,8 @@
         
         <!-- Favicon (optional but recommended) -->
         <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+        
+        {% block extra_head %}{% endblock %}
     </head>
 <body class="d-flex flex-column h-100 main-bg">
     <!-- Update your base.html navigation section with this modern menu -->
@@ -65,6 +67,9 @@
             </a>
             
             <div class="nav-links">
+                <a href="{% url 'prompts:home' %}#browse-prompts" class="nav-link" onclick="handlePromptsNavigation(event)">
+                    Prompts
+                </a>
                 <a href="{% url 'about' %}" class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
                     About
                 </a>
@@ -132,6 +137,7 @@
     
     <!-- Mobile Menu -->
     <div class="mobile-menu" id="mobileMenu">
+        <a href="{% url 'prompt:home' %}#browse-prompts" class="mobile-nav-link" onclick="handlePromptsNavigation(event)">Prompts</a>
         <a href="{% url 'about' %}" class="mobile-nav-link">About</a>
         <a href="{% url 'prompts:collaborate' %}" class="mobile-nav-link">Contact</a>
         {% if user.is_authenticated %}
@@ -473,6 +479,28 @@
 
 <!-- JavaScript for functionality -->
 <script>
+// Handle Prompts navigation - goes to home page with #browse-prompts
+function handlePromptsNavigation(event) {
+    event.preventDefault();
+    
+    // If we're already on the home page, just scroll to browse-prompts
+    if (window.location.pathname === '{% url "prompts:home" %}' || window.location.pathname === '/') {
+        const target = document.querySelector('#browse-prompts') || document.querySelector('.masonry-container');
+        if (target) {
+            const navbarHeight = document.querySelector('.modern-navbar').offsetHeight;
+            const targetPosition = target.offsetTop - navbarHeight - 20;
+            
+            window.scrollTo({
+                top: targetPosition,
+                behavior: 'smooth'
+            });
+        }
+    } else {
+        // If we're on a different page, navigate to home page with anchor
+        window.location.href = '{% url "prompts:home" %}#browse-prompts';
+    }
+}
+
 // Create new prompt function
 function createNewPrompt() {
     {% if user.is_authenticated %}
@@ -514,11 +542,7 @@ document.querySelector('.search-form').addEventListener('submit', function(e) {
     }
 });
 
-
-
-
 // Hero section smooth scroll functionality
-
 document.addEventListener('DOMContentLoaded', function() {
     // Handle smooth scroll for browse prompts buttons
     const browseButtons = document.querySelectorAll('a[href="#browse-prompts"]');
@@ -551,6 +575,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Handle anchor navigation from external links
+    if (window.location.hash === '#browse-prompts') {
+        setTimeout(() => {
+            const target = document.querySelector('.masonry-container') || document.querySelector('#browse-prompts');
+            if (target) {
+                const navbarHeight = document.querySelector('.modern-navbar').offsetHeight;
+                const targetPosition = target.offsetTop - navbarHeight - 20;
+                
+                window.scrollTo({
+                    top: targetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        }, 500); // Small delay to ensure page is loaded
+    }
 });
 </script>
  

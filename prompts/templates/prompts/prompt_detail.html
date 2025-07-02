@@ -172,7 +172,6 @@ function toggleLike(button) {
                 </div>
 
                 <!-- The prompt content -->
-                <!-- The prompt content -->
                 <div class="sidebar-card mb-4">
 
 
@@ -188,8 +187,8 @@ function toggleLike(button) {
                         {{ prompt.content|safe }}
                     </div>
                 {% else %}
-            <div class="sidebar-card">
-                <h4 class="sidebar-title">Your Are One Step Closer</h4>
+            <div class="">
+                <h4 class="sidebar-title">Prompts Available to Members Only</h4>
                 <p>Please <a href="{% url 'account_login' %}">log in</a> to see the prompt.</p>
             </div>
             {% endif %}

@@ -3,6 +3,7 @@
   --main-blue: #007bff;
   --light-blue: #eff3f8;
   --main-blue-hover: #0056b3;
+  --main-border-color: #e5e7eb;
 }
 
 body {
@@ -114,7 +115,7 @@ main {
 }
 
 .sidebar-title {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 600;
   margin-bottom: 1rem;
   color: #333;
@@ -151,18 +152,16 @@ main {
 }
 
 /* ===== COMMENTS STYLES ===== */
-.section-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  color: #333;
+
+/* This the label above the comment field on the detail list page */
+#commentForm .form-label {
+  display: none;
 }
 
 .comment-card {
   background: #fff;
-  border: 1px solid #e9ecef;
+  border: 2px solid var(--main-border-color);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .comment-form {
@@ -480,11 +479,16 @@ main {
   font-size: 0.95rem;
 }
 
+.form-control {
+  border: 2px solid var(--main-border-color);
+
+}
+
 /* Input Fields - Basic Styling */
 .edit-form .form-control {
   width: 100% !important;
   padding: 16px 20px !important;
-  border: 2px solid #e5e7eb !important;
+  border: 2px solid (--main-border-color) !important;
   border-radius: 12px !important;
   font-size: 16px !important;
   font-family: inherit !important;
@@ -574,6 +578,20 @@ main {
   background: #e5e7eb;
   color: #374151;
   text-decoration: none;
+}
+
+
+/* Small buttons - mainly for the comment form */
+.btn-small {
+  font-size: 14px;
+  padding: 10px 10px;
+  min-width: 96px;
+  background-color: var(--light-blue);
+  color: var(--main-blue-hover);
+}
+
+.btn-small:hover {
+  background-color: var(--main-blue);
 }
 
 /* Popular Tags Styling */

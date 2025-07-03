@@ -235,7 +235,7 @@ function toggleLike(button) {
 
             <!-- Comments Section -->
             <div class="comments-section">
-            <h2 class="section-title">Comments ({{ comment_count }})</h2>
+            <h2 class="sidebar-title">Comments ({{ comment_count }})</h2>
             
             <!-- Comments List -->
             <div class="comments-list">
@@ -245,9 +245,9 @@ function toggleLike(button) {
                             border border-warning faded
                         {% endif %}">
                         <p class="font-weight-bold">
-                            {{ comment.author }}
+                            By {{ comment.author }} 
                             <span class="font-weight-normal text-muted">
-                                {{ comment.created_on }}
+                                on {{ comment.created_on }}
                             </span>
                         </p>
                         {% if not comment.approved and comment.author == user %}
@@ -258,13 +258,13 @@ function toggleLike(button) {
                         </div>
                         <!-- Comment edit/delete buttons -->
                         {% if user.is_authenticated and comment.author == user %}
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-outline-warning" onclick="toggleEditForm({{ comment.id }})">
-                                <i class="fas fa-edit"></i> Edit
+                        <div class="mt-2 d-flex gap-2 mt-4">
+                            <button class="btn btn-small btn-primary" onclick="toggleEditForm({{ comment.id }})">
+                                <i class="fas fa-edit"></i>&nbsp; Edit
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                            <button type="button" class="btn btn-small btn-primary" 
                                     onclick="confirmDelete('{% url 'prompts:comment_delete' prompt.slug comment.id %}')">
-                                <i class="fas fa-trash"></i> Delete
+                                <i class="fas fa-trash"></i>&nbsp; Delete
                             </button>
                             
                             <!-- Hidden inline edit form -->

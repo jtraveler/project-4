@@ -63,7 +63,7 @@
         <!-- Left Side: Logo and Navigation Links -->
         <div class="nav-left">
             <a href="{% url 'prompts:home' %}" class="logo">
-                <span class="logo-text"><div class="logo-text-flow">Prompt</div>Flow</span>
+                <span class="logo-text">PromptFlow</span>
             </a>
             
             <div class="nav-links">
@@ -99,7 +99,7 @@
         <div class="nav-right">
             {% if user.is_authenticated %}
                 <span class="welcome-text">
-                    Welcome back, <strong>{{ user.username }}</strong>!
+                    Welcome back, {{ user.username }}!
                 </span>
                 
                 <div class="user-menu">
@@ -196,15 +196,15 @@
 
 .logo-text {
     font-size: 24px;
-    font-weight: 700;
-    color: var(--main-blue);
+    font-weight: 800;
     float: left;
+    background: linear-gradient(135deg, var(--main-blue-hover) 0%, var(--main-blue) 50%, var(--main-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
 }
 
-.logo-text-flow {
-    color: var(--main-blue-hover);
-    float: left;
-}
 
 .nav-links {
     display: flex;
@@ -213,23 +213,26 @@
 
 .nav-link {
     color: #6b7280;
+    color: var(--main-blue-hover);
     text-decoration: none;
-    font-weight: 500;
-    font-size: 15px;
+    font-weight: 700;
+    font-size: .9375rem;
     padding: 8px 12px;
     border-radius: 6px;
     transition: all 0.2s ease;
 }
 
 .nav-link:hover {
-    color: #374151;
-    background: #f9fafb;
+    color: var(--main-blue);
+    background: var(--light-blue);
     text-decoration: none;
+    border-radius: 100px;
 }
 
 .nav-link.active {
     color: #2563eb;
     background: #eff6ff;
+    border-radius: 100px;
 }
 
 /* Center Search */
@@ -260,10 +263,10 @@
     width: 100%;
     height: 44px;
     padding: 0 16px 0 48px;
-    border: 1px solid #c0cad9;
+    border: 1px solid #c0cad9; /* Custom color to match the background */
     border-radius: 22px;
     background: var(--light-blue);
-    font-size: 15px;
+    font-size: .9375rem;
     transition: all 0.2s ease;
 }
 
@@ -290,6 +293,8 @@
 .welcome-text {
     color: #374151;
     white-space: nowrap;
+    font-size: .9375rem;
+    font-weight: 600;
 }
 
 .login-btn {

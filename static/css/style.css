@@ -182,6 +182,7 @@ main {
   padding: 0.25rem 0.75rem;
   color: var(--main-blue-hover);
   border-color: var(--main-blue-hover);
+  font-weight: 500;
 }
 
 .copy-btn:hover {
@@ -341,7 +342,7 @@ main {
 }
 
 #load-more-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--main-blue);
   border: none;
   border-radius: 25px;
   padding: 12px 30px;
@@ -353,7 +354,7 @@ main {
 #load-more-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  background: var(--main-blue-hover);
 }
 
 #loading-spinner {
@@ -412,6 +413,7 @@ main {
   color: var(--main-blue-hover);
   padding: 0 16px;
   min-width: auto;
+  font-weight: 700;
 }
 
 .btn-like:hover {
@@ -893,7 +895,7 @@ select#id_ai_generator {
 }
 
 .hero-brand {
-  background: linear-gradient(135deg, var(--main-blue), var(--main-blue-hover));
+  background: linear-gradient(135deg, var(--main-blue-hover) 0%, var(--main-blue) 40%, var(--main-blue) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -922,7 +924,6 @@ select#id_ai_generator {
 }
 
 .hero-btn-primary {
-  background: linear-gradient(135deg, var(--main-blue), var(--main-blue-hover));
   color: white;
   border: none;
   padding: 16px 32px;
@@ -934,6 +935,7 @@ select#id_ai_generator {
   align-items: center;
   transition: all 0.3s ease;
   box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3);
+  background: var(--main-blue);
 }
 
 .hero-btn-primary:hover {

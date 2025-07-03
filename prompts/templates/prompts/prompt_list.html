@@ -86,7 +86,7 @@
                     Showing prompts tagged with: <span class="tag-name">"{{ current_tag }}"</span>
                 </h2>
                 <p class="tag-subtitle">{{ page_obj.paginator.count }} prompt{{ page_obj.paginator.count|pluralize }} found</p>
-                <a href="{% url 'prompts:home' %}" class="btn btn-outline-primary btn-sm">
+                <a href="{% url 'prompts:home' %}#browse-prompts" class="btn btn-outline-primary btn-sm">
                     <i class="fas fa-arrow-left me-1"></i> Show all prompts
                 </a>
             </div>
@@ -114,7 +114,7 @@
                     {% endif %}
                 </p>
                 <div class="search-actions mt-3">
-                    <a href="{% url 'prompts:home' %}" class="btn btn-outline-primary btn-sm">
+                    <a href="{% url 'prompts:home' %}#browse-prompts" class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-arrow-left me-1"></i> Show all prompts
                     </a>
                 </div>
@@ -199,7 +199,7 @@
         {% empty %}
         <!-- No results message for search -->
         {% if search_query %}
-        <div class="col-12 text-center py-5">
+        <div class="col-12 text-center py-5 container">
             <div class="no-results-message">
                 <i class="fas fa-search-minus mb-3" style="font-size: 3rem; color: #6c757d;"></i>
                 <h3 class="text-muted">No prompts found</h3>

@@ -67,9 +67,7 @@
             </a>
             
             <div class="nav-links">
-                <a href="{% url 'prompts:home' %}#browse-prompts" class="nav-link" onclick="handlePromptsNavigation(event)">
-                    Prompts
-                </a>
+                <a href="{% url 'prompts:home' %}#browse-prompts" class="nav-link onclick="clearFiltersAndNavigate(event)">Prompts</a>
                 <a href="{% url 'about' %}" class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
                     About
                 </a>
@@ -818,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <!-- Links -->
             <div class="footer-header mb-4">Products</div>
             
-            <p><a href="{% url 'prompts:home' %}#browse-prompts" onclick="handlePromptsNavigation(event)">Prompts</a></p>
+            <p><a href="{% url 'prompts:home' %}#browse-prompts" onclick="clearFiltersAndNavigate(event)">Prompts</a></p>
         <p><a href="{% url 'about' %}">About</a></p>
         <p><a href="{% url 'prompts:collaborate' %}">Contact</a></p>
             

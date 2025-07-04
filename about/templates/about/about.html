@@ -1,27 +1,82 @@
 {% extends 'base.html' %}
-{% block content %}
 {% load static %}
+{% load cloudinary_tags %}
+
+{% block content %}
+
+
+<!-- Main Content Area -->
 <div class="container mt-5">
     <div class="row">
-        <div class="col-4 text-center">
-            {% if "placeholder" in about.profile_image.url %}
-            <img src="{% static 'images/nobody.jpg' %}" width="75%" alt="placeholder image">
+
+        <!-- Content Area -->
+        <div class="col-lg-6">
+            <div class="content-area">
+                
+                <!-- Main About Content -->
+                <div class="mb-5">
+                    <h1 class="hero-title">About PromptFlow</h1>
+                    {% if about.content %}
+                        {{ about.content|safe }}
+                    {% else %}
+                        <p class="mb-4">
+                            PromptFlow is a vibrant community platform that's been revolutionizing how creators and AI enthusiasts share, discover, and craft exceptional prompts since 2024. We believe in the transformative power of well-crafted AI prompts and their ability to unlock creativity.
+                        </p>
+                        
+                        <p class="mb-4">
+                            Founded by passionate AI enthusiasts and creative professionals, PromptFlow first opened its digital doors to provide a space where innovation meets inspiration. We've since developed a loyal community of creators, artists, writers, and AI practitioners.
+                        </p>
+                        
+                        <p class="mb-4">
+                            Our platform combines cutting-edge technology with an intuitive user experience, featuring everything from beginner-friendly prompt templates to advanced AI generation techniques. With features like community-driven content, tag-based discovery, and collaborative sharing, PromptFlow has become the go-to destination for AI prompt excellence.
+                        </p>
+                        
+                        <p class="mb-4">
+                            At PromptFlow, we believe in the democratization of AI creativity. Whether you're crafting your first prompt or you're a seasoned AI artist, we consider every moment to be a perfectly valid occasion to explore, learn, and create something extraordinary. We hope you'll agree.
+                        </p>
+                    {% endif %}
+                </div>
+
+                
+                <!-- Updated On -->
+                <div class="metadata-section">
+                    <div class="d-flex align-items-center text-muted">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <span>
+                            {% if about.updated_on %}
+                                Last updated on {{ about.updated_on|date:"F d, Y" }}
+                            {% else %}
+                                Established in 2024
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- Large Image Area -->
+        <div class="col-lg-6 pb-5 px-5 d-flex flex-wrap gap-3">
+            
+            {% if about.profile_image and not "placeholder" in about.profile_image.url %}
+                <img src="{{ about.profile_image.url }}" 
+                        class="hero-image" 
+                        alt="{{ about.title }}"
+                        width="824"
+                        height="800">
             {% else %}
-                <img src="{{ about.profile_image.url }}" width="75%" alt="{{ about.title }}">
+                <img src="{% static 'images/nobody.jpg' %}" 
+                        class="hero-image" 
+                        alt="About PromptFlow"
+                        width="824"
+                        height="800">
             {% endif %}
+            <span>View prompt for this image</span>
+           
         </div>
-        <div class="col-8">
-            <!-- Title goes between these h2 tags -->
-            <h2>{{ about.title }}</h2>
-            <!-- Content goes directly underneath this -->
-            {{ about.content|safe }}
-        </div>
+        
+        
     </div>
-    <div class="row">
-        <div class="col text-right">
-            <!-- Updated on field goes in here -->
-            <p class="text-end"><em>Updated on: {{ about.updated_on|date:"F d, Y" }}</em></p>
-        </div>
-      </div>
 </div>
+
 {% endblock content %}

@@ -3,6 +3,11 @@
 {% load cloudinary_tags %}
 
 {% block extra_head %}
+<!-- DNS prefetch for external resources -->
+<link rel="dns-prefetch" href="//res.cloudinary.com">
+<link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+
 <!-- Preload the hero image for LCP optimization -->
 {% if not "placeholder" in prompt.featured_image.url %}
     <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_100,dpr_auto' }}" />

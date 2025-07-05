@@ -8,9 +8,18 @@
 <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 
-<!-- Preload the hero image for LCP optimization -->
+<!-- Preload the hero image for LCP optimization with responsive sizing -->
 {% if not "placeholder" in prompt.featured_image.url %}
-    <link rel="preload" as="image" href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_100,dpr_auto' }}" />
+    <!-- Preload optimized for mobile first, then larger screens -->
+    <link rel="preload" as="image" 
+          href="{{ prompt.featured_image.url|cloudinary_transform:'w_600,h_700,c_limit,f_webp,q_100,dpr_2.0' }}"
+          media="(max-width: 768px)" />
+    <link rel="preload" as="image" 
+          href="{{ prompt.featured_image.url|cloudinary_transform:'w_900,h_1000,c_limit,f_webp,q_100,dpr_2.0' }}"
+          media="(min-width: 769px) and (max-width: 1200px)" />
+    <link rel="preload" as="image" 
+          href="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,h_1400,c_limit,f_webp,q_100,dpr_2.0' }}"
+          media="(min-width: 1201px)" />
 {% endif %}
 {% endblock %}
 

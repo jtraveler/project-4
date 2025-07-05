@@ -2,8 +2,14 @@
 {% load static %}
 {% load cloudinary_tags %}
 
-{% block content %}
+{% block extra_head %}
+<!-- Preload the hero image for LCP optimization -->
+{% if about.profile_image and not "placeholder" in about.profile_image.url %}
+    <link rel="preload" as="image" href="{{ about.profile_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_100,dpr_auto' }}" />
+{% endif %}
+{% endblock %}
 
+{% block content %}
 
 <!-- Main Content Area -->
 <div class="container mt-5">
@@ -11,73 +17,73 @@
 
         <!-- Content Area -->
         <div class="col-lg-6">
-            <div class="content-area">
-                
-                <!-- Main About Content -->
-                <div class="mb-5">
-                    <h1 class="hero-title mb-4">About <span class="hero-brand">PromptFlow</span></h1>
-                    {% if about.content and about.content|striptags|length > 0 %}
-                        {{ about.content|safe }}
+            <div class="mb-5">
+                <h1 class="hero-title mb-4">About <span class="hero-brand">PromptFlow</span></h1>
+                {% if about.content and about.content|striptags|length > 0 %}
+                    {{ about.content|safe }}
+                {% else %}
+                    <!-- Backup text displays here -->
+                    <p class="mb-4">
+                        PromptFlow started in 2024 as a simple idea: to create a space where people could share, explore, and improve the way we use prompts with AI. What began as a small side project quickly grew into a collaborative community of artists, developers, writers, and curious thinkers who wanted to learn and build together.
+                    </p>
+                    
+                    <p class="mb-4">
+                        At its core, PromptFlow is not just about technology. It's about people. The prompts are great, but it's the community that brings them to life. Every shared prompt, experiment, and conversation adds value. Whether you're just getting started or you've been deep in the AI world for a while, there's room here for you.
+                    </p>
+                    
+                    <p class="mb-4">
+                        We aim to make AI creativity more approachable and useful. That means offering a mix of easy-to-use templates, creative tools, and helpful resources without overcomplicating things. We care about usability, creativity, and making the process feel open and enjoyable.
+                    </p>
+                    
+                    <p class="mb-4">
+                        If you have ideas to share, questions to ask, or prompts to contribute, we'd love to connect. PromptFlow works best when it's built together. Feel free to reach out or join the community. Let's see where this takes us.
+                    </p>
+                {% endif %}
+            </div>
+
+            <!-- Updated On -->
+            <div class="d-flex align-items-center text-muted">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <span>
+                    {% if about.updated_on %}
+                        Last updated on {{ about.updated_on|date:"F d, Y" }}
                     {% else %}
-                        <!-- Backup text displays here -->
-                        <p class="mb-4">
-                            PromptFlow started in 2024 as a simple idea: to create a space where people could share, explore, and improve the way we use prompts with AI. What began as a small side project quickly grew into a collaborative community of artists, developers, writers, and curious thinkers who wanted to learn and build together.                        </p>
-                        
-                        <p class="mb-4">
-                            At its core, PromptFlow is not just about technology. It’s about people. The prompts are great, but it's the community that brings them to life. Every shared prompt, experiment, and conversation adds value. Whether you're just getting started or you've been deep in the AI world for a while, there's room here for you.
-
-                        </p>
-                        
-                        <p class="mb-4">
-                            We aim to make AI creativity more approachable and useful. That means offering a mix of easy-to-use templates, creative tools, and helpful resources without overcomplicating things. We care about usability, creativity, and making the process feel open and enjoyable.
-
-                        </p>
-                        
-                        <p class="mb-4">
-                            If you have ideas to share, questions to ask, or prompts to contribute, we’d love to connect. PromptFlow works best when it's built together. Feel free to reach out or join the community. Let’s see where this takes us.
-
-                        </p>
+                        Established in 2024
                     {% endif %}
-                </div>
-
-                
-                <!-- Updated On -->
-                <div class="metadata-section">
-                    <div class="d-flex align-items-center text-muted">
-                        <i class="fas fa-calendar-alt me-2"></i>
-                        <span>
-                            {% if about.updated_on %}
-                                Last updated on {{ about.updated_on|date:"F d, Y" }}
-                            {% else %}
-                                Established in 2024
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-                
+                </span>
             </div>
         </div>
 
-        <!-- Large Image Area -->
-        <div class="col-lg-6 pb-5 px-5 d-flex flex-wrap gap-3">
+        <!-- Optimized Image Area -->
+        <div class="col-lg-6 pb-5 px-5">
+                {% if about.profile_image and not "placeholder" in about.profile_image.url %}
+                    <img src="{{ about.profile_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_100,dpr_auto' }}" 
+                         class="hero-image" 
+                         alt="{{ about.title }}"
+                         width="824"
+                         height="800"
+                         loading="lazy"
+                         decoding="async">
+                {% else %}
+                    <img src="{% static 'images/nobody.jpg' %}" 
+                         class="hero-image" 
+                         alt="About PromptFlow"
+                         width="824"
+                         height="800"
+                         loading="lazy"
+                         decoding="async">
+                {% endif %}
             
-            {% if about.profile_image and not "placeholder" in about.profile_image.url %}
-                <img src="{{ about.profile_image.url }}" 
-                        class="hero-image" 
-                        alt="{{ about.title }}"
-                        width="824"
-                        height="800">
-            {% else %}
-                <img src="{% static 'images/nobody.jpg' %}" 
-                        class="hero-image" 
-                        alt="About PromptFlow"
-                        width="824"
-                        height="800">
-            {% endif %}
-            <span><a href="../prompt/mystical-floating-island-with-towering-structures/">View prompt for this image</a></span>
-           
+            
+            <!-- View prompt link -->
+            <div class="mt-3">
+                <span class="text-muted">
+                    <a href="../prompt/mystical-floating-island-with-towering-structures/">
+                        View prompt for this image
+                    </a>
+                </span>
+            </div>
         </div>
-        
         
     </div>
 </div>

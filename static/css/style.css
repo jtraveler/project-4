@@ -14,7 +14,7 @@ body {
 a {
 
   text-decoration: none;
-    color: var(--main-blue);
+    color: #0071eb;
 }
 /* Main button color */
 .btn-primary {

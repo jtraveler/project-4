@@ -15,24 +15,27 @@
                 
                 <!-- Main About Content -->
                 <div class="mb-5">
-                    <h1 class="hero-title">About PromptFlow</h1>
-                    {% if about.content %}
+                    <h1 class="hero-title mb-4">About <span class="hero-brand">PromptFlow</span></h1>
+                    {% if about.content and about.content|striptags|length > 0 %}
                         {{ about.content|safe }}
                     {% else %}
+                        <!-- Backup text displays here -->
                         <p class="mb-4">
-                            PromptFlow is a vibrant community platform that's been revolutionizing how creators and AI enthusiasts share, discover, and craft exceptional prompts since 2024. We believe in the transformative power of well-crafted AI prompts and their ability to unlock creativity.
+                            PromptFlow started in 2024 as a simple idea: to create a space where people could share, explore, and improve the way we use prompts with AI. What began as a small side project quickly grew into a collaborative community of artists, developers, writers, and curious thinkers who wanted to learn and build together.                        </p>
+                        
+                        <p class="mb-4">
+                            At its core, PromptFlow is not just about technology. It’s about people. The prompts are great, but it's the community that brings them to life. Every shared prompt, experiment, and conversation adds value. Whether you're just getting started or you've been deep in the AI world for a while, there's room here for you.
+
                         </p>
                         
                         <p class="mb-4">
-                            Founded by passionate AI enthusiasts and creative professionals, PromptFlow first opened its digital doors to provide a space where innovation meets inspiration. We've since developed a loyal community of creators, artists, writers, and AI practitioners.
+                            We aim to make AI creativity more approachable and useful. That means offering a mix of easy-to-use templates, creative tools, and helpful resources without overcomplicating things. We care about usability, creativity, and making the process feel open and enjoyable.
+
                         </p>
                         
                         <p class="mb-4">
-                            Our platform combines cutting-edge technology with an intuitive user experience, featuring everything from beginner-friendly prompt templates to advanced AI generation techniques. With features like community-driven content, tag-based discovery, and collaborative sharing, PromptFlow has become the go-to destination for AI prompt excellence.
-                        </p>
-                        
-                        <p class="mb-4">
-                            At PromptFlow, we believe in the democratization of AI creativity. Whether you're crafting your first prompt or you're a seasoned AI artist, we consider every moment to be a perfectly valid occasion to explore, learn, and create something extraordinary. We hope you'll agree.
+                            If you have ideas to share, questions to ask, or prompts to contribute, we’d love to connect. PromptFlow works best when it's built together. Feel free to reach out or join the community. Let’s see where this takes us.
+
                         </p>
                     {% endif %}
                 </div>
@@ -71,7 +74,7 @@
                         width="824"
                         height="800">
             {% endif %}
-            <span>View prompt for this image</span>
+            <span><a href="../prompt/mystical-floating-island-with-towering-structures/">View prompt for this image</a></span>
            
         </div>
         

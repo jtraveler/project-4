@@ -10,6 +10,12 @@ body {
   background-color: white;
 }
 
+
+a {
+
+  text-decoration: none;
+    color: var(--main-blue);
+}
 /* Main button color */
 .btn-primary {
   background-color: var(--main-blue);

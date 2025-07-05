@@ -90,52 +90,292 @@
 
 
 
-<!-- JavaScript for functionality -->
+<!-- Deferred JavaScript to prevent render blocking -->
 <script>
-// Scroll to comments function
-function scrollToComments() {
-    const commentsSection = document.querySelector('.comments-section');
-    if (commentsSection) {
-        commentsSection.scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'start'
-        });
-    }
-}
-
-// AJAX Like toggle for detail page
-function toggleLike(button) {
-    const promptSlug = button.getAttribute('data-prompt-slug');
-    const heartIcon = button.querySelector('i');
-    const likeCount = button.querySelector('.like-count');
+// Defer all non-critical JavaScript to after page load
+document.addEventListener('DOMContentLoaded', function() {
     
-    fetch('/prompt/' + promptSlug + '/like/', {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            'Content-Type': 'application/json',
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Update like count
-        likeCount.textContent = data.like_count;
-        
-        // Update button appearance
-        if (data.liked) {
-            button.classList.add('liked');
-            heartIcon.className = 'fas fa-heart me-2';
-        } else {
-            button.classList.remove('liked');
-            heartIcon.className = 'far fa-heart me-2';
+    /**
+     * Scroll to comments function
+     */
+    window.scrollToComments = function() {
+        const commentsSection = document.querySelector('.comments-section');
+        if (commentsSection) {
+            commentsSection.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Something went wrong. Please try again.');
+    };
+
+    /**
+     * AJAX Like toggle for detail page
+     */
+    window.toggleLike = function(button) {
+        const promptSlug = button.getAttribute('data-prompt-slug');
+        const heartIcon = button.querySelector('i');
+        const likeCount = button.querySelector('.like-count');
+        
+        fetch('/prompt/' + promptSlug + '/like/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Update like count
+            likeCount.textContent = data.like_count;
+            
+            // Update button appearance
+            if (data.liked) {
+                button.classList.add('liked');
+                heartIcon.className = 'fas fa-heart me-2';
+            } else {
+                button.classList.remove('liked');
+                heartIcon.className = 'far fa-heart me-2';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Something went wrong. Please try again.');
+        });
+    };
+
+    /**
+     * Enhanced edit form toggle with better visual feedback
+     * Works with existing inline form structure to avoid duplicate cancel buttons
+     */
+    window.toggleEditForm = function(commentId) {
+        var editForm = document.getElementById('editForm' + commentId);
+        var commentContent = document.getElementById('comment' + commentId);
+        
+        if (editForm.style.display === 'none' || editForm.style.display === '') {
+            // Show edit form and hide original comment content
+            editForm.style.display = 'block';
+            commentContent.style.display = 'none';
+        } else {
+            // Hide edit form and show original comment content
+            editForm.style.display = 'none';
+            commentContent.style.display = 'block';
+        }
+    };
+
+    /**
+     * Enhanced delete confirmation with dynamic messaging
+     */
+    window.confirmDelete = function(deleteUrl) {
+        var modalTitle = document.getElementById('deleteModalLabel');
+        var modalMessage = document.getElementById('deleteModalMessage');
+        var confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        // Determine what type of content is being deleted based on URL
+        if (deleteUrl.includes('/delete_comment/')) {
+            modalTitle.textContent = 'Delete Comment?';
+            modalMessage.textContent = 'Are you sure you want to delete this comment? This action cannot be undone.';
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Comment';
+        } else if (deleteUrl.includes('/delete/')) {
+            modalTitle.textContent = 'Delete Prompt?';
+            modalMessage.textContent = 'Are you sure you want to delete this prompt? This will also delete all associated comments and cannot be undone.';
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Prompt';
+        } else {
+            // Fallback for other deletion types
+            modalTitle.textContent = 'Confirm Deletion';
+            modalMessage.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+        }
+        
+        // Set the delete URL in the modal's confirm button
+        confirmBtn.href = deleteUrl;
+        
+        // Show the modal
+        var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show();
+    };
+
+    /**
+     * Prevents double-click form submissions
+     */
+    function handleCommentSubmit(event) {
+        var submitButton = document.getElementById('submitButton');
+        var form = document.getElementById('commentForm');
+        
+        // Disable the submit button to prevent double clicks
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        
+        // Re-enable button after 3 seconds in case of form validation errors
+        setTimeout(function() {
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Submit';
+        }, 3000);
+        
+        // Allow form to submit normally
+        return true;
+    }
+
+    /**
+     * Enhanced form validation feedback
+     */
+    function addValidationFeedback() {
+        var commentForm = document.getElementById('commentForm');
+        var submitButton = document.getElementById('submitButton');
+        
+        if (commentForm) {
+            // Add validation on form submit
+            commentForm.addEventListener('submit', function(event) {
+                var textArea = commentForm.querySelector('textarea[name="body"]');
+                var isValid = true;
+                
+                // Remove existing validation classes
+                textArea.classList.remove('is-valid', 'is-invalid');
+                
+                // Check if textarea has content
+                if (!textArea.value.trim()) {
+                    textArea.classList.add('is-invalid');
+                    isValid = false;
+                    
+                    // Show error feedback
+                    showValidationMessage(textArea, 'Please enter a comment before submitting.', 'invalid');
+                } else if (textArea.value.trim().length < 3) {
+                    textArea.classList.add('is-invalid');
+                    isValid = false;
+                    
+                    // Show error feedback
+                    showValidationMessage(textArea, 'Comment must be at least 3 characters long.', 'invalid');
+                } else {
+                    textArea.classList.add('is-valid');
+                    
+                    // Show success feedback
+                    showValidationMessage(textArea, 'Comment looks good!', 'valid');
+                }
+                
+                // Prevent submission if invalid
+                if (!isValid) {
+                    event.preventDefault();
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = 'Submit';
+                    return false;
+                }
+            });
+        }
+    }
+
+    /**
+     * Show validation message helper function
+     */
+    function showValidationMessage(element, message, type) {
+        // Remove existing feedback
+        var existingFeedback = element.parentNode.querySelector('.feedback-message');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+        
+        // Create new feedback element
+        var feedback = document.createElement('div');
+        feedback.className = 'feedback-message ' + (type === 'valid' ? 'valid-feedback' : 'invalid-feedback');
+        feedback.style.display = 'block';
+        feedback.textContent = message;
+        
+        // Insert after the textarea
+        element.parentNode.appendChild(feedback);
+    }
+
+    // Initialize form functionality
+    var commentForm = document.getElementById('commentForm');
+    if (commentForm) {
+        commentForm.addEventListener('submit', handleCommentSubmit);
+        addValidationFeedback();
+    }
+
+    // Real tag filtering for detail page following bobbyhadz tutorial
+    // Source: https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript
+    const tagBadges = document.querySelectorAll('.tag-badge');
+    
+    tagBadges.forEach(function(badge) {
+        badge.style.cursor = 'pointer';
+        
+        badge.addEventListener('click', function() {
+            const tagName = this.textContent.trim();
+            
+            // Redirect to homepage with tag filter parameter (following tutorial)
+            const url = window.location.origin;
+            window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
+        });
     });
-}
+
+    /**
+     * Copy prompt text to clipboard following W3Schools and GeeksforGeeks tutorials
+     * Sources: w3schools.com/howto/howto_js_copy_clipboard.asp
+     *         geeksforgeeks.org/how-to-create-copy-to-clipboard-button/
+     */
+    window.copyPromptText = async function() {
+        const promptContent = document.getElementById('promptContent');
+        const copyButton = document.getElementById('copyButton');
+        const copyButtonText = document.getElementById('copyButtonText');
+        const copyIcon = copyButton.querySelector('i');
+        
+        try {
+            // Get the text content (strip HTML tags)
+            const textToCopy = promptContent.textContent || promptContent.innerText;
+            
+            // Use modern Clipboard API
+            await navigator.clipboard.writeText(textToCopy);
+            
+            // Update button appearance to show success
+            copyIcon.className = 'fas fa-check me-1';
+            copyButtonText.textContent = 'Copied!';
+            copyButton.classList.remove('btn-outline-primary');
+            copyButton.classList.add('btn-success');
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                copyIcon.className = 'fas fa-copy me-1';
+                copyButtonText.textContent = 'Copy';
+                copyButton.classList.remove('btn-success');
+                copyButton.classList.add('btn-outline-primary');
+            }, 2000);
+            
+            console.log('Prompt text copied to clipboard');
+            
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            
+            // Fallback for older browsers - show user the text to copy manually
+            fallbackCopyTextToClipboard(textToCopy);
+        }
+    };
+
+    /**
+     * Fallback copy method for older browsers
+     */
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        
+        // Avoid scrolling to bottom
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.position = 'fixed';
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                console.log('Fallback: Prompt text copied to clipboard');
+            }
+        } catch (err) {
+            console.error('Fallback: Unable to copy', err);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+});
 </script>
                     
                 
@@ -378,247 +618,4 @@ function toggleLike(button) {
     </div>
 </div>
 
-<!-- Enhanced JavaScript for better edit button interactivity and delete confirmations -->
-<script>
-/**
- * Enhanced edit form toggle with better visual feedback
- * Works with existing inline form structure to avoid duplicate cancel buttons
- */
-function toggleEditForm(commentId) {
-    var editForm = document.getElementById('editForm' + commentId);
-    var commentContent = document.getElementById('comment' + commentId);
-    
-    if (editForm.style.display === 'none' || editForm.style.display === '') {
-        // Show edit form and hide original comment content
-        editForm.style.display = 'block';
-        commentContent.style.display = 'none';
-    } else {
-        // Hide edit form and show original comment content
-        editForm.style.display = 'none';
-        commentContent.style.display = 'block';
-    }
-}
-
-/**
- * Enhanced delete confirmation with dynamic messaging
- */
-function confirmDelete(deleteUrl) {
-    var modalTitle = document.getElementById('deleteModalLabel');
-    var modalMessage = document.getElementById('deleteModalMessage');
-    var confirmBtn = document.getElementById('confirmDeleteBtn');
-    
-    // Determine what type of content is being deleted based on URL
-    if (deleteUrl.includes('/delete_comment/')) {
-        modalTitle.textContent = 'Delete Comment?';
-        modalMessage.textContent = 'Are you sure you want to delete this comment? This action cannot be undone.';
-        confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Comment';
-    } else if (deleteUrl.includes('/delete/')) {
-        modalTitle.textContent = 'Delete Prompt?';
-        modalMessage.textContent = 'Are you sure you want to delete this prompt? This will also delete all associated comments and cannot be undone.';
-        confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Prompt';
-    } else {
-        // Fallback for other deletion types
-        modalTitle.textContent = 'Confirm Deletion';
-        modalMessage.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
-        confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
-    }
-    
-    // Set the delete URL in the modal's confirm button
-    confirmBtn.href = deleteUrl;
-    
-    // Show the modal
-    var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
-}
-
-/**
- * Prevents double-click form submissions
- */
-function handleCommentSubmit(event) {
-    var submitButton = document.getElementById('submitButton');
-    var form = document.getElementById('commentForm');
-    
-    // Disable the submit button to prevent double clicks
-    submitButton.disabled = true;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-    
-    // Re-enable button after 3 seconds in case of form validation errors
-    setTimeout(function() {
-        submitButton.disabled = false;
-        submitButton.innerHTML = 'Submit';
-    }, 3000);
-    
-    // Allow form to submit normally
-    return true;
-}
-
-/**
- * Enhanced form validation feedback
- */
-function addValidationFeedback() {
-    var commentForm = document.getElementById('commentForm');
-    var submitButton = document.getElementById('submitButton');
-    
-    if (commentForm) {
-        // Add validation on form submit
-        commentForm.addEventListener('submit', function(event) {
-            var textArea = commentForm.querySelector('textarea[name="body"]');
-            var isValid = true;
-            
-            // Remove existing validation classes
-            textArea.classList.remove('is-valid', 'is-invalid');
-            
-            // Check if textarea has content
-            if (!textArea.value.trim()) {
-                textArea.classList.add('is-invalid');
-                isValid = false;
-                
-                // Show error feedback
-                showValidationMessage(textArea, 'Please enter a comment before submitting.', 'invalid');
-            } else if (textArea.value.trim().length < 3) {
-                textArea.classList.add('is-invalid');
-                isValid = false;
-                
-                // Show error feedback
-                showValidationMessage(textArea, 'Comment must be at least 3 characters long.', 'invalid');
-            } else {
-                textArea.classList.add('is-valid');
-                
-                // Show success feedback
-                showValidationMessage(textArea, 'Comment looks good!', 'valid');
-            }
-            
-            // Prevent submission if invalid
-            if (!isValid) {
-                event.preventDefault();
-                submitButton.disabled = false;
-                submitButton.innerHTML = 'Submit';
-                return false;
-            }
-        });
-    }
-}
-
-/**
- * Show validation message helper function
- */
-function showValidationMessage(element, message, type) {
-    // Remove existing feedback
-    var existingFeedback = element.parentNode.querySelector('.feedback-message');
-    if (existingFeedback) {
-        existingFeedback.remove();
-    }
-    
-    // Create new feedback element
-    var feedback = document.createElement('div');
-    feedback.className = 'feedback-message ' + (type === 'valid' ? 'valid-feedback' : 'invalid-feedback');
-    feedback.style.display = 'block';
-    feedback.textContent = message;
-    
-    // Insert after the textarea
-    element.parentNode.appendChild(feedback);
-}
-
-// Add event listener when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    var commentForm = document.getElementById('commentForm');
-    if (commentForm) {
-        commentForm.addEventListener('submit', handleCommentSubmit);
-        
-        // Add validation feedback
-        addValidationFeedback();
-    }
-});
-</script>
-<script>
-    // Real tag filtering for detail page following bobbyhadz tutorial
-    // Source: https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript
-    document.addEventListener('DOMContentLoaded', function() {
-        const tagBadges = document.querySelectorAll('.tag-badge');
-        
-        tagBadges.forEach(function(badge) {
-            badge.style.cursor = 'pointer';
-            
-            badge.addEventListener('click', function() {
-                const tagName = this.textContent.trim();
-                
-                // Redirect to homepage with tag filter parameter (following tutorial)
-                const url = window.location.origin;
-                window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
-            });
-        });
-    });
-</script>
-<script>
-
-    /**
- * Copy prompt text to clipboard following W3Schools and GeeksforGeeks tutorials
- * Sources: w3schools.com/howto/howto_js_copy_clipboard.asp
- *         geeksforgeeks.org/how-to-create-copy-to-clipboard-button/
- */
-async function copyPromptText() {
-    const promptContent = document.getElementById('promptContent');
-    const copyButton = document.getElementById('copyButton');
-    const copyButtonText = document.getElementById('copyButtonText');
-    const copyIcon = copyButton.querySelector('i');
-    
-    try {
-        // Get the text content (strip HTML tags)
-        const textToCopy = promptContent.textContent || promptContent.innerText;
-        
-        // Use modern Clipboard API
-        await navigator.clipboard.writeText(textToCopy);
-        
-        // Update button appearance to show success
-        copyIcon.className = 'fas fa-check me-1';
-        copyButtonText.textContent = 'Copied!';
-        copyButton.classList.remove('btn-outline-primary');
-        copyButton.classList.add('btn-success');
-        
-        // Reset button after 2 seconds
-        setTimeout(() => {
-            copyIcon.className = 'fas fa-copy me-1';
-            copyButtonText.textContent = 'Copy';
-            copyButton.classList.remove('btn-success');
-            copyButton.classList.add('btn-outline-primary');
-        }, 2000);
-        
-        console.log('Prompt text copied to clipboard');
-        
-    } catch (err) {
-        console.error('Failed to copy text: ', err);
-        
-        // Fallback for older browsers - show user the text to copy manually
-        fallbackCopyTextToClipboard(textToCopy);
-    }
-}
-
-/**
- * Fallback copy method for older browsers
- */
-function fallbackCopyTextToClipboard(text) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    
-    // Avoid scrolling to bottom
-    textArea.style.top = '0';
-    textArea.style.left = '0';
-    textArea.style.position = 'fixed';
-    
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-            console.log('Fallback: Prompt text copied to clipboard');
-        }
-    } catch (err) {
-        console.error('Fallback: Unable to copy', err);
-    }
-    
-    document.body.removeChild(textArea);
-}
-</script>
 {% endblock content %}

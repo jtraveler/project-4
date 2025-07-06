@@ -318,8 +318,8 @@ CSP_FONT_SRC = (
 CSP_IMG_SRC = (
     "'self'",
     "data:",  # For inline images/icons
-    "https://res.cloudinary.com",  # Cloudinary images
-    "https://*.cloudinary.com",  # All Cloudinary subdomains
+    "https://res.cloudinary.com",  # Cloudinary images - HTTPS only
+    "https://*.cloudinary.com",  # All Cloudinary subdomains - HTTPS only
 )
 
 CSP_CONNECT_SRC = (

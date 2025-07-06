@@ -213,6 +213,15 @@ if DEBUG:
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
+# CLOUDINARY HTTPS CONFIGURATION - Force HTTPS for all Cloudinary URLs
+CLOUDINARY_STORAGE = {
+    'CLOUDINARY_URL': os.environ.get('CLOUDINARY_URL'),
+}
+
+# Force Cloudinary to use HTTPS
+import cloudinary
+cloudinary.config(secure=True)
+
 # PERFORMANCE OPTIMIZATION: Enhanced session and cookie security
 SESSION_COOKIE_SECURE = not DEBUG  # Only send session cookies over HTTPS in production
 CSRF_COOKIE_SECURE = not DEBUG     # Only send CSRF cookies over HTTPS in production

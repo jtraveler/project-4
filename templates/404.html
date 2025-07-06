@@ -1,18 +1,48 @@
 {% extends 'base.html' %}
-{% block content %}
+{% load static %}
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-12 text-center mt-5">
-            <h1 class="display-1">404</h1>
-            <h2>Page Not Found</h2>
-            <p class="lead">Sorry, the page you're looking for doesn't exist.</p>
-            <p>The requested resource was not found on this server.</p>
-            <a href="{% url 'prompts:home' %}" class="btn btn-primary btn-lg">
-                <i class="fas fa-home"></i> Go Home
-            </a>
+{% block extra_head %}
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section with Organic Blur Effect (matching homepage style) -->
+<section class="hero-section" style="min-height: 600px;">
+    <div class="container">
+        <div class="row align-items-center justify-content-center">
+            <!-- Main 404 Content -->
+            <div class="col-lg-8 text-center">
+                <div class="hero-content">
+                    <!-- Large 404 Number -->
+                    <h1 class="hero-main-title" style="font-size: 6rem; margin-bottom: 1rem;">
+                        4<span class="hero-brand">0</span>4
+                    </h1>
+                    
+                    <!-- Main Title -->
+                    <h2 class="hero-subtitle" style="font-size: 2rem; margin-bottom: 1.5rem; color: #1f2937;">
+                        Oops! Page Not Found
+                    </h2>
+                    
+                    <!-- Description -->
+                    <p class="hero-description" style="max-width: 100%; text-align: center; margin-bottom: 3rem;">
+                        The page you're looking for seems to have vanished into the digital void. 
+                        It might have been moved, deleted, or perhaps it never existed at all.
+                    </p>
+                    
+                    <!-- Action Buttons -->
+                    <div class="hero-actions" style="justify-content: center;">
+                        <a href="javascript:history.back()" class="btn hero-btn-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Go Back
+                        </a>
+                        <a href="{% url 'prompts:home' %}#browse-prompts" class="btn hero-btn-secondary">
+                            <i class="fas fa-eye me-2"></i>Browse Prompts
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</section>
+
 
 {% endblock content %}

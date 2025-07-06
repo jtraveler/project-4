@@ -130,10 +130,6 @@ DATABASES = {
     'default': {
         **dj_database_url.parse(os.environ.get("DATABASE_URL")),
         'CONN_MAX_AGE': 60,  # Connection pooling - keep connections alive for 60 seconds
-        'OPTIONS': {
-            'MAX_CONNS': 20,  # Maximum number of connections
-            'MIN_CONNS': 5,   # Minimum number of connections
-        } if not DEBUG else {},
     }
 }
 

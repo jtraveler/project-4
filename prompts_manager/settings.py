@@ -42,14 +42,17 @@ X_FRAME_OPTIONS = 'DENY'
 
 # HSTS Headers - Enhanced for production/development
 if not DEBUG:
-    # Production HSTS settings (2 years)
-    SECURE_HSTS_SECONDS = 63072000  # 2 years
+    # Production HSTS settings (1 year minimum for Lighthouse)
+    SECURE_HSTS_SECONDS = 31536000  # 1 year (minimum for Lighthouse)
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
+    # Additional security headers for production
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 else:
-    # Development HSTS settings (1 year, but won't activate over HTTP)
+    # Development HSTS settings (1 year but won't activate over HTTP)
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True

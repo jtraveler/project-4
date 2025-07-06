@@ -314,8 +314,5 @@ CSP_CONNECT_SRC = (
 
 CSP_FRAME_SRC = ("'none'",)  # Prevent embedding in frames for security
 
-# CSP Enforcement - Report-only in development, enforced in production
-if not DEBUG:
-    CSP_REPORT_ONLY = False  # Enforce CSP in production
-else:
-    CSP_REPORT_ONLY = True   # Report-only mode in development (logs violations)
+# CSP Enforcement
+CSP_REPORT_ONLY = False  # Always enforce CSP for security

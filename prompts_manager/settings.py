@@ -40,6 +40,9 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 
+# ADDITIONAL SECURITY HEADERS FOR LIGHTHOUSE COMPLIANCE
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+
 # HSTS Headers - Enhanced for production/development
 if not DEBUG:
     # Production HSTS settings (1 year minimum for Lighthouse)

@@ -1108,8 +1108,8 @@ footer {
   }
 }
 
-/* Medium screens (992px and below) */
-@media (max-width: 992px) {
+/* Medium screens (991px and below) */
+@media (max-width: 991px) {
   .hero-section {
     margin-top: 60px;
     overflow: unset;

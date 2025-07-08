@@ -6,10 +6,35 @@
   --main-border-color: #e5e7eb;
 }
 
+/* ===== FONT FAMILY DECLARATIONS ===== */
+
+/* Base font for body and most text */
 body {
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background-color: white;
 }
 
+/* Headings and navigation use Roboto */
+h1, h2, h3, h4, h5, h6,
+.hero-main-title,
+.hero-subtitle,
+.form-title,
+.sidebar-title,
+.nav-link,
+.logo-text,
+.footer-header {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Buttons use Roboto for consistency */
+.btn,
+.hero-btn-primary,
+.hero-btn-secondary,
+.action-btn,
+.upload-btn,
+.login-btn {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
 
 a {
 

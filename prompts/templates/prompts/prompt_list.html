@@ -247,69 +247,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Optimized Load More functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const loadMoreBtn = document.getElementById('load-more-btn');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    const masonryGrid = document.querySelector('.masonry-grid');
-    
-    if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', function() {
-            const nextPage = this.getAttribute('data-next-page');
-            const currentUrl = window.location.pathname;
-            const currentParams = new URLSearchParams(window.location.search);
-            
-            currentParams.set('page', nextPage);
-            
-            loadMoreBtn.style.display = 'none';
-            loadingSpinner.style.display = 'block';
-            
-            fetch(`${currentUrl}?${currentParams.toString()}`)
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const newDoc = parser.parseFromString(html, 'text/html');
-                    const newItems = newDoc.querySelectorAll('.masonry-item');
-                    
-                    // Use document fragment for better performance
-                    const fragment = document.createDocumentFragment();
-                    newItems.forEach(item => {
-                        fragment.appendChild(item);
-                    });
-                    masonryGrid.appendChild(fragment);
-                    
-                    // Update masonry layout if using JS masonry
-                    if (window.masonryInstance) {
-                        setTimeout(() => {
-                            window.masonryInstance.refresh();
-                        }, 100);
-                    }
-                    
-                    const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
-                    if (newLoadMoreBtn) {
-                        loadMoreBtn.setAttribute('data-next-page', newLoadMoreBtn.getAttribute('data-next-page'));
-                        loadMoreBtn.style.display = 'block';
-                    } else {
-                        loadMoreBtn.remove();
-                    }
-                    
-                    loadingSpinner.style.display = 'none';
-                })
-                .catch(error => {
-                    console.error('Error loading more prompts:', error);
-                    loadingSpinner.style.display = 'none';
-                    loadMoreBtn.style.display = 'block';
-                });
-        });
-    }
-});
-
-// Heart functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const likeSections = document.querySelectorAll('.like-section');
+// Function to attach heart functionality to elements
+function attachHeartFunctionality(container = document) {
+    const likeSections = container.querySelectorAll('.like-section');
     
     likeSections.forEach(function(section) {
-        section.addEventListener('click', function(e) {
+        // Remove existing listeners to avoid duplicates
+        const newSection = section.cloneNode(true);
+        section.parentNode.replaceChild(newSection, section);
+        
+        newSection.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -350,6 +297,69 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+}
+
+// Optimized Load More functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach heart functionality to initial content
+    attachHeartFunctionality();
+    
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const masonryGrid = document.querySelector('.masonry-grid');
+    
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function() {
+            const nextPage = this.getAttribute('data-next-page');
+            const currentUrl = window.location.pathname;
+            const currentParams = new URLSearchParams(window.location.search);
+            
+            currentParams.set('page', nextPage);
+            
+            loadMoreBtn.style.display = 'none';
+            loadingSpinner.style.display = 'block';
+            
+            fetch(`${currentUrl}?${currentParams.toString()}`)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const newDoc = parser.parseFromString(html, 'text/html');
+                    const newItems = newDoc.querySelectorAll('.masonry-item');
+                    
+                    // Use document fragment for better performance
+                    const fragment = document.createDocumentFragment();
+                    newItems.forEach(item => {
+                        fragment.appendChild(item);
+                    });
+                    masonryGrid.appendChild(fragment);
+                    
+                    // Attach heart functionality to newly loaded content
+                    attachHeartFunctionality(masonryGrid);
+                    
+                    // Update masonry layout if using JS masonry
+                    if (window.masonryInstance) {
+                        setTimeout(() => {
+                            window.masonryInstance.refresh();
+                        }, 100);
+                    }
+                    
+                    const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
+                    if (newLoadMoreBtn) {
+                        loadMoreBtn.setAttribute('data-next-page', newLoadMoreBtn.getAttribute('data-next-page'));
+                        loadMoreBtn.style.display = 'block';
+                    } else {
+                        loadMoreBtn.remove();
+                    }
+                    
+                    loadingSpinner.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading more prompts:', error);
+                    loadingSpinner.style.display = 'none';
+                    loadMoreBtn.style.display = 'block';
+                });
+        });
+    }
 });
 </script>
 {% endblock %}

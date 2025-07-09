@@ -612,6 +612,13 @@ main {
   text-decoration: none;
 }
 
+/* Red button - mostly used when the user wants to delete a prompt or comment */
+.btn-danger {
+
+border-radius: 100px;
+padding: 14px 28px;
+}
+
 
 /* Small buttons - mainly for the comment form */
 .btn-small {
@@ -1084,6 +1091,14 @@ select#id_ai_generator {
 
 footer {
   box-shadow: -1px -3px 3px rgba(0, 0, 0, 0.1);
+}
+
+
+/* ===== MODALS ===== */
+
+.modal-footer {
+  justify-content: center;
+
 }
 
 /* ===== RESPONSIVE DESIGN ===== */

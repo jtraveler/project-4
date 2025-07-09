@@ -292,7 +292,7 @@ def collaborate_request(request):
             collaborate_form.save()
             messages.add_message(
                 request, messages.SUCCESS,
-                'Collaboration request received! I endeavour to respond within 2 working days.'
+                'Your message has been received! We generally respond to messages within 2 working days.'
             )
             return HttpResponseRedirect(reverse('prompts:collaborate'))
         else:

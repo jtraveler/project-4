@@ -6,7 +6,7 @@
 
 ---
 
-![Image](static/images/README/UI%20(2).png)
+![Image](static/images/for-readme/mockup-from-techsini-dot-com.jpg)
 
 ## [LIVE SITE](https://mj-project-4-68750ca94690.herokuapp.com/)
 
@@ -16,15 +16,14 @@
 
 - [Manual Testing](#manual-testing)
   - [User Stories Testing](#user-stories-testing)
-- [Lighthouse Testing](#lighthouse-testing)
-  - [Mobile Phone](#mobile-phone)
-  - [Desctop](#desctop)
+- [Lighthouse Testing](#lighthouse)
+  - [All Pages](#all-pages)
 - [Code Validation](#code-validation)
-  - [Html](#html)
-  - [CSS](#css)
-  - [Python](#python)
-- [Browser Compatibility](#browser-compatibility)
-- [Bugs Issue](#bugs-issue)
+  - [HTML Validation](#html-validation)
+  - [CSS Validation](#css-validation)
+  - [Python Testing](#python-testing)
+- [Browser Compatibility](#browser-compability)
+- [Manual Testing of Features](#manual-testing-of-features)
 
 
 
@@ -59,92 +58,57 @@ All testing was completed successfully, confirming that the PromptFlow platform 
 
 The following Lighthouse testing is only for the mobile versions of the pages as the tests were done with a mobile-first approach.
 
-## Homepage
-![Image](static/images/README/mobile.re.png)
+## All Pages
+![Image](static/images/for-readme/lighthouse-scores/01-lighthouse-homepage.jpg)
 
-## About
-![Image](static/images/README/testing1.png)
+# Code Validation
 
-## Contact Form
-![Image](static/images/README/testing1.png)
+## HTML Validation
+### [W3C HTML Validator](https://validator.w3.org/)
 
-## Prompt Detail
-![Image](static/images/README/testing1.png)
+All HTML templates were tested using the W3C HTML Validator to ensure compliance with HTML5 standards. The validation was performed on the following key pages:
 
-## Edit Prompt
-![Image](static/images/README/testing1.png)
+- **Homepage** (`/`) - Prompts listing with pagination and tag filtering
+- **About Page** (`/about/`) - About section with profile information  
+- **Collaborate Page** (`/collaborate/`) - Contact form for collaboration requests
+- **Prompt Detail Page** (`/prompt/epic-fusion-of-science-and-space-adventure/`) - Individual prompt viewing with comments
 
-## Create Prompt
-![Image](static/images/README/testing1.png)
+All pages passed HTML validation with no errors or warnings after addressing initial validation issues including proper heading hierarchy, meta tag corrections, and removal of invalid attributes. There is one Google error but that seems to be related to Google.
 
-## Sign In
-![Image](static/images/README/testing1.png)
+![Image](static/images/for-readme/html-validator.png)
 
-## Sign Out
-![Image](static/images/README/testing1.png)
+## CSS Validation
+### [W3C CSS Validator](https://jigsaw.w3.org/css-validator/)
 
-## Sign Up
-![Image](static/images/README/testing1.png)
+The custom CSS stylesheet was validated using the W3C CSS Validation Service to ensure proper syntax and compliance with CSS3 standards. All custom styles passed validation without errors.
 
-## Reset Password
-![Image](static/images/README/testing1.png)
+![Image](static/images/for-readme/css-validation.png)
 
-## Reset Password - Email Sent
-![Image](static/images/README/testing1.png)
+## Python Testing
+### [PEP8CI Python Validator](https://pep8ci.herokuapp.com/)
 
-## Search Results
-![Image](static/images/README/testing1.png)
+All Python files were tested using PEP8CI for PEP8 compliance validation and visual confirmation of docstring inclusion. The validation covered all core application files across both the `prompts` and `about` apps.
 
-## Tags
-![Image](static/images/README/testing1.png)
+| File | PEP8CI Validation | Docstrings (if applicable) |
+|------|-------------------|---------------------------|
+| prompts/models.py | Clear | yes |
+| prompts/views.py | Clear | yes |
+| prompts/forms.py | Clear | yes |
+| prompts/admin.py | Clear | yes |
+| prompts/urls.py | Clear | n/a |
+| about/models.py | Clear | yes |
+| about/views.py | Clear | yes |
+| about/admin.py | Clear | yes |
+| about/urls.py | Clear | n/a |
+| prompts_manager/settings.py | Clear | n/a |
+| prompts_manager/urls.py | Clear | n/a |
 
-## 404
-![Image](static/images/README/testing1.png)
+### Python Validation Screenshots
 
-
-
-# Code validation
-## [Html](https://validator.w3.org/)
-### index.html
-![Image](static/images/README/Indexhtml.png)
-### posts.html
-![Image](static/images/README/postshtml.png)
-### post_detail.html
-![Image](static/images/README/postdetailhtml.png)
-### profile.html
-![Image](static/images/README/profilehtml.png)
-![Image](static/images/README/editprofilehtml.png)
-### edit_post.html
-![Image](static/images/README/editposthtml.png)
-### blogpost_confirm_delete.html
-![Image](static/images/README/deteteposthtml.png)
-### add_post.html
-![Image](static/images/README/newposthtml.png)
-### add_comment.html
-![Image](static/images/README/commentposthtml.png)
+**Results are the same for all files mentioned above**
+![Image](static/images/python-validation.png)
 
 
-## CSS
-## [CSS-Valitador](#https://jigsaw.w3.org/css-validator/)
-![Image](static/images/css.png)
-# Python
-## [pep8ci](#https://pep8ci.herokuapp.com/)
-![Image](static/images/README/test1.png)
-![Image](static/images/README/test2.png)
-![Image](static/images/README/test3.png)
-![Image](static/images/README/test4.png)
-![Image](static/images/README/test5.png)
-![Image](static/images/README/test6.png)
-![Image](static/images/README/test7.png)
-![Image](static/images/README/test8.png)
-![Image](static/images/README/test9.png)
-![Image](static/images/README/test10.png)
-![Image](static/images/README/test11.png)
-![Image](static/images/README/test12.png)
-![Image](static/images/README/test13.png)
-![Image](static/images/README/test14.png)
-![Image](static/images/README/test15.png)
-![Image](static/images/README/test16.png)
 
 # Browser Compability
 
@@ -161,30 +125,37 @@ The site was tested across multiple browsers for consistency and responsiveness:
 
 The site maintains a **consistent design** and remains **fully responsive** across different browsers.
 
+# Manual Testing of Features
 
-# Bug-Issue
-## ISSUE #1 Deployment and Debugging Issues (Heroku, Cloudinary, and django-allauth)
-### During the project setup and development, the following issues and resolutions were encountered:
+| Feature | Expected Result | Pass or Fail |
+| :------ | :-------------- | :----------: |
+| PromptFlow logo in navigation bar takes users to homepage | User clicks the logo and returns to the main page | Pass |
+| Navigation menu links function correctly | Users click About, Collaborate, or Prompts to access relevant sections | Pass |
+| Mobile hamburger menu appears on screens below 992px | Responsive navigation displays properly on mobile devices | Pass |
+| User registration allows new account creation | Registration form accepts valid information and creates new user account | Pass |
+| User login and logout work securely | Users can sign in and out of their accounts safely | Pass |
+| Homepage displays all published prompts in masonry grid layout | Prompts appear in an attractive card-based layout with proper spacing | Pass |
+| Prompt detail pages show complete information | Individual prompt pages display title, image, content, tags, and comments | Pass |
+| Create prompt form accepts text and image uploads | Users can submit new prompts with titles, content, tags, and featured images | Pass |
+| Edit prompt functionality works for prompt authors | Users can modify their own prompts but not others' content | Pass |
+| Delete prompt feature removes user's own prompts | Confirmation modal appears and deletion works correctly for prompt owners | Pass |
+| Comment system allows users to add feedback | Comment form submits successfully and displays pending approval message | Pass |
+| Edit comment feature works for comment authors | Users can modify their own comments through the edit interface | Pass |
+| Delete comment functionality removes user's comments | Comment deletion works with proper confirmation for comment owners | Pass |
+| Admin approval system manages comment visibility | Comments require admin approval before appearing publicly | Pass |
+| Tag filtering system displays relevant prompts | Clicking tags filters prompts to show only those with matching tags | Pass |
+| Search functionality finds prompts by keywords | Search bar returns relevant results based on prompt content and tags | Pass |
+| Heart/like button updates prompt engagement | Like feature works and displays current like count accurately | Pass |
+| Contact form sends collaboration requests | Collaborate page form submits messages successfully with validation | Pass |
+| About page displays platform information | About section loads properly with profile content and images | Pass |
+| Pagination navigates through multiple prompt pages | Previous/Next buttons work correctly for browsing large prompt collections | Pass |
+| Responsive design adapts to different screen sizes | Website displays correctly on desktop, tablet, and mobile devices | Pass |
+| Image uploads integrate with Cloudinary storage | Featured images upload successfully and display with proper optimization | Pass |
+| Form validation prevents submission of incomplete data | Required field validation works and displays helpful error messages | Pass |
+| User authentication redirects appropriately | Login/logout processes redirect users to correct pages | Pass |
+| Admin interface allows content management | Admin panel provides access to manage prompts, comments, and user accounts | Pass |
+| 404 error page displays for invalid URLs | Custom 404 page appears when users navigate to non-existent pages | Pass |
+| Success messages appear after user actions | System displays confirmation messages for creating, editing, and deleting content | Pass |
+| Error handling prevents application crashes | Invalid operations display appropriate error messages without breaking the site | Pass |
 
-Image Not Found (404 Error) in Admin Panel
-After the initial setup, images were not loading in the admin panel, resulting in a 404 error. Updating the django-allauth and Django versions resolved this issue.
-
-### 500 Error on Heroku After Modifying account.html
-
-Locally, with DEBUG = True in settings.py, the application worked as expected.
-However, deploying the changes to Heroku with DEBUG = False resulted in a 500 error. No error trace was visible in the terminal logs.
-After updating django and django-allauth once again, the 500 error was resolved on Heroku.
-Cloudinary Configuration Issue
-A missing configuration in models.py related to Cloudinary was causing errors. Adding the correct command in models.py fixed the issue.
-+from cloudinary_storage.storage import MediaCloudinaryStorage, +storage=MediaCloudinaryStorage(), =class BlogPost
-
-## ISSUE #2
-After upgrading texteditor reachtexteditor was changed to simple texteditor, so I lefted 4.14.0 with allert message.
-![image](static/images/bug.png)
-
-## ADVISE 
-By advise in #peer-code-review in **Slack** changed Like button for a fivicon. ![Image](static/images/README/Screenshot%202025-03-04%20093035.png)
-
-# Addition 
-
-If a user tries to access the profile link with an account number (e.g., https://green-wisdom-99e0528945fb.herokuapp.com/profiles/user/1/) without logging in, they will encounter a 500 error. If they attempt to access the link without specifying an account number (e.g., https://green-wisdom-99e0528945fb.herokuapp.com/profiles/user/), they will be redirected to a 404 customer error page.
+All manual testing was completed successfully, confirming that PromptFlow delivers a reliable and user-friendly experience across all core features and functionality.

@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+import cloudinary
+
 if os.path.isfile('env.py'):
     import env
 
@@ -30,7 +32,12 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'mj-project-4-68750ca94690.herokuapp.com', '.herokuapp.com']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'mj-project-4-68750ca94690.herokuapp.com',
+    '.herokuapp.com'
+]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -51,7 +58,7 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    
+
     # Additional security headers for production
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 else:
@@ -125,11 +132,12 @@ WSGI_APPLICATION = 'prompts_manager.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# PERFORMANCE OPTIMIZATION: Enhanced database configuration with connection pooling
+# PERFORMANCE OPTIMIZATION: Enhanced database configuration with pooling
 DATABASES = {
     'default': {
         **dj_database_url.parse(os.environ.get("DATABASE_URL")),
-        'CONN_MAX_AGE': 60,  # Connection pooling - keep connections alive for 60 seconds
+        # Connection pooling - keep connections alive for 60 seconds
+        'CONN_MAX_AGE': 60,
     }
 }
 
@@ -143,16 +151,25 @@ CSRF_TRUSTED_ORIGINS = [
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'UserAttributeSimilarityValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.MinimumLengthValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.CommonPasswordValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.NumericPasswordValidator'
+        ),
     },
 ]
 
@@ -197,7 +214,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # PERFORMANCE OPTIMIZATION: Enhanced Whitenoise configuration
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = (
+    'whitenoise.storage.CompressedManifestStaticFilesStorage'
+)
 
 # Enable static file compression and caching
 WHITENOISE_USE_FINDERS = True
@@ -221,14 +240,17 @@ CLOUDINARY_STORAGE = {
 }
 
 # Force Cloudinary to use HTTPS
-import cloudinary
 cloudinary.config(secure=True)
 
 # PERFORMANCE OPTIMIZATION: Enhanced session and cookie security
-SESSION_COOKIE_SECURE = not DEBUG  # Only send session cookies over HTTPS in production
-CSRF_COOKIE_SECURE = not DEBUG     # Only send CSRF cookies over HTTPS in production
-SESSION_COOKIE_HTTPONLY = True     # Prevent JavaScript access to session cookies
-CSRF_COOKIE_HTTPONLY = True        # Prevent JavaScript access to CSRF cookies
+# Only send session cookies over HTTPS in production
+SESSION_COOKIE_SECURE = not DEBUG
+# Only send CSRF cookies over HTTPS in production
+CSRF_COOKIE_SECURE = not DEBUG
+# Prevent JavaScript access to session cookies
+SESSION_COOKIE_HTTPONLY = True
+# Prevent JavaScript access to CSRF cookies
+CSRF_COOKIE_HTTPONLY = True
 
 # Session optimization for better performance
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
@@ -253,7 +275,10 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'format': (
+                '{levelname} {asctime} {module} {process:d} {thread:d} '
+                '{message}'
+            ),
             'style': '{',
         },
         'simple': {

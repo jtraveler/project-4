@@ -26,21 +26,27 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 
 # Content
 * [PromptFlow](#promptflow)
-* [Project Overview](#prject-overview)
 * [Goal & UX](#goal--ux)
-  * [Website Structure](#website-structure)
-  * [Responsiveness](#responsiveness)
+  * [Project Overview](#project-overview)
+  * [Project Goals](#project-goals)
+  * [First-Time Visitors' Experience](#first-time-visitors-experience)
+  * [Returning Visitors' Experience](#returning-visitors-experience)
+  * [Frequent Visitors' Experience](#frequent-visitors-experience)
+* [Website Structure](#website-structure-of-main-templates)
+  * [Page Structure Overview](#page-structure-overview)
+  * [Key Navigation Elements](#key-navigation-elements)
+  * [Page Details](#page-details)
+  * [Common Elements on All Pages](#common-elements-on-all-pages)
+* [Responsiveness](#responsiveness)
 * [Wireframes](#wireframes)
-* [Development Process](#development-process)
 * [Future Adding](#future-adding)
 * [Agile Methodology](#agile-methodology)
 * [Testing](#testing)
-* [Features](#features)
-  * [Technologies Used](#technologies-used)
-  * [Libraries](#libraries)
-  * [VsCode migration](#vs-code-migration)
-  * [PostgreSQL Setup](#postgresql-setup)
-  * [Deployment](#deployment)
+* [Technologies Used](#technologies-used)
+* [Libraries](#libraries)
+* [VS Code Migration](#vs-code-migration)
+* [PostgreSQL Setup](#postgresql-setup)
+* [Deployment](#deployment)
 * [Acknowledgements](#acknowledgements)
 
 
@@ -122,7 +128,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Implements "Load More" button to show more preview images
 - Prioritizes fresh content to encourage frequent visits
 
-[Insert image of homepage hero section and masonry grid]
+![Image](static/images/for-readme/responsive/01-homepage.png)
 
 
 ### Prompt Detail Page (`prompt_detail.html`)
@@ -138,8 +144,10 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Features clickable tags for related content discovery
 - Provides responsive image display optimized for all devices with using the Cloudinary image optimization options.
 
-[Insert image of prompt detail page showing full image and prompt text]
-[Insert image of comment section and interaction buttons]
+![Image](static/images/for-readme/responsive/04-prompt-detail.png)
+
+Comments 
+![Image](static/images/for-readme/features/feature-prompt-details-comments-for-members.png)
 
 
 ### Create Prompt Page (`prompt_create.html`)
@@ -158,14 +166,14 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Enables tag editing and content updates
 - Includes confirmation dialog upon saving
 
-[Insert image of edit prompt form with pre-filled data]
+![Image](static/images/for-readme/responsive/05-edit-prompt.png)
 
 
 ### About Page (`about.html`)
 - Explains PromptFlow's mission and platform purpose
 - Highlights community benefits
 
-[Insert image of about page layout and content sections]
+![Image](static/images/for-readme/responsive/02-about.png)
 
 
 ### Contact Page (`collaborate.html`)
@@ -173,7 +181,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Implements form validation and success messaging
 - Includes confirmation dialog with response time expectation upon submission
 
-[Insert image of contact form and information layout]
+![Image](static/images/for-readme/responsive/03-contact.png)
 
 
 ### Authentication Pages
@@ -184,7 +192,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Features mobile-optimized form layout
 - Implements form validation to ensure quality submissions
 
-[Insert image of signup form and validation messages]
+![Image](static/images/for-readme/responsive/10-sign-up.png)
 
 
 #### Sign In Page (`account/login.html`)
@@ -194,14 +202,14 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Provides error messaging for failed login attempts
 - Shows registration link for new users
 
-[Insert image of login form and layout]
+![Image](static/images/for-readme/responsive/07-sign-in.png)
 
 
 #### Password Reset Pages (`account/password_reset.html`)
 - Password Reset Request: Simple email input form with instructions
 - Email Sent Confirmation: Success message with next steps guidance
 
-[Insert image of password reset flow screens]
+![Image](static/images/for-readme/responsive/11-reset-password.png)
 
 
 ### Search Results (`index.html` with search parameters)
@@ -210,7 +218,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Includes result count and search refinement options
 - Features "no results" messaging for no results and a button for going to the prompt feed
 
-[Insert image of search results page with highlighted terms]
+![Image](static/images/for-readme/responsive/13-search.png)
 
 
 ### Tag Filter Page (`index.html` with tag parameter)
@@ -218,7 +226,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Includes prompt count for the selected tag
 - Maintains masonry layout for visual consistency
 
-[Insert image of tag-filtered results with tag information]
+![Image](static/images/for-readme/responsive/14-tags.png)
 
 
 ### 404 Error Page (`404.html`)
@@ -226,7 +234,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - Includes buttons to go back tp the previous page they were on or view main prompt feed
 - Maintains site branding and design consistency
 
-[Insert image of 404 error page design]
+![Image](static/images/for-readme/responsive/15-404.png)
 
 
 ### Common Elements on All Pages
@@ -252,7 +260,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
     - **Log In Button** - Link to sign in page
     - **Upload Button** - Takes visitors to login page first
 
-[Insert image of desktop navigation bar with user logged in]
+![Image](static/images/for-readme/features/feature-desktop-navigation.png)
 
 - **Mobile Navigation**  
   On phones and tablets, the navigation becomes mobile-friendly:
@@ -262,7 +270,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
   - **User Info** - Welcome message and options for logged-in users
   - **Quick Upload** - Upload button available in mobile menu
 
-[Insert image of mobile navigation menu open]
+![Image](static/images/for-readme/features/feature-mobile-navigation.png)
 
 - **Footer**  
   The footer appears at the bottom of all pages and includes:
@@ -271,7 +279,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
   - **Quick Links** - Fast navigation to key pages
   - **Contact Details** - Ways to reach support
 
-[Insert image of footer with social media icons]
+![Image](static/images/for-readme/features/feature-desktop-footer.png)
 
 - **User Authentication**  
   Login and account features work the same across the site:
@@ -280,7 +288,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
   - **User Status** - Shows if you're logged in or not
   - **Protected Features** - Upload and edit require login
 
-[Insert image of authentication elements]
+![Image](static/images/for-readme/responsive/07-sign-in.png)
 
 - **Search and Filtering**  
   Search features work throughout the platform:
@@ -289,7 +297,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
   - **Real-time Results** - See results as you type
   - **Mobile Optimized** - Search works well on all devices
 
-[Insert image of search results with tag filtering]
+![Image](static/images/for-readme/responsive/13-search.png)
 
 - **Responsive Design**  
   All page elements adapt to different screen sizes:
@@ -298,7 +306,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
   - **Mobile View** - Touch-friendly design for phones
   - **Consistent Experience** - Same features on all devices
 
-[Insert image showing responsive design across devices]
+![Image](static/images/for-readme/responsive/01-homepage-mobile-view.png)
 
 
 
@@ -313,27 +321,51 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 
 - **Homepage/Landing Page**: Dynamic masonry grids with responsive column counts (4 columns desktop → 2 tablet → 1 mobile).
 
-![Image](static/images/for-readme/homepage-responsive.png)
+![Image](static/images/for-readme/responsive/01-homepage.png)
+
+![Image](static/images/for-readme/responsive/01-homepage-tablet-view.png)
+
+![Image](static/images/for-readme/responsive/01-homepage-mobile-view.png)
 
 - **Prompt Detail Page**: Full-featured prompt viewing with responsive image display and mobile-optimized action buttons.
 
-![Image](static/images/for-readme/prompt-detail-responsive.png)
+![Image](static/images/for-readme/responsive/04-prompt-detail.png)
+
+![Image](static/images/for-readme/responsive/04-prompt-detail-tablet.png)
+
+![Image](static/images/for-readme/responsive/04-prompt-detail-mobile.png)
 
 - **Create Prompt Page**: Intuitive upload form with upload functionality and mobile-friendly file selection.
 
-![Image](static/images/for-readme/create-prompt-responsive.png)
+![Image](static/images/for-readme/responsive/06-create-pompt.png)
+
+![Image](static/images/for-readme/responsive/06-create-pompt-tablet.png)
+
+![Image](static/images/for-readme/responsive/06-create-pompt-mobile.png)
 
 - **Edit Prompt Page**: Pre-filled editing interface with responsive form layout.
 
-![Image](static/images/for-readme/edit-prompt-responsive.png)
+![Image](static/images/for-readme/responsive/05-edit-prompt.png)
+
+![Image](static/images/for-readme/responsive/05-edit-prompt-tablet.png)
+
+![Image](static/images/for-readme/responsive/05-edit-prompt-mobile.png)
 
 - **About Page**: Clean informational layout with responsive text columns and image optimization.
 
-![Image](static/images/for-readme/about-responsive.png)
+![Image](static/images/for-readme/responsive/02-about.png)
+
+![Image](static/images/for-readme/responsive/02-about-tablet.png)
+
+![Image](static/images/for-readme/responsive/02-about-mobile.png)
 
 - **Contact Page**: Mobile-friendly contact form with optimized input fields and touch-accessible buttons.
 
-![Image](static/images/for-readme/contact-responsive.png)
+![Image](static/images/for-readme/responsive/03-contact.png)
+
+![Image](static/images/for-readme/responsive/03-contact-tablet.png)
+
+![Image](static/images/for-readme/responsive/03-contact-mobile.png)
 
 ## User Authentication & Management Pages
 
@@ -341,31 +373,59 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 
 - **Sign-Up Page**: Streamlined registration with mobile-optimized form validation.
 
-![Image](static/images/for-readme/signup-responsive.png)
+![Image](static/images/for-readme/responsive/10-sign-up.png)
+
+![Image](static/images/for-readme/responsive/10-sign-up-tablet.png)
+
+![Image](static/images/for-readme/responsive/10-sign-up-mobile.png)
 
 - **Sign-In Page**: Clean login interface with responsive layout and "Remember Me" functionality.
 
-![Image](static/images/for-readme/signin-responsive.png)
+![Image](static/images/for-readme/responsive/07-sign-in.png)
+
+![Image](static/images/for-readme/responsive/07-sign-in-tablet.png)
+
+![Image](static/images/for-readme/responsive/08-sign-in-tablet.png)
 
 - **Sign-Out Page**: Confirmation interface with clear action buttons and responsive messaging.
 
-![Image](static/images/for-readme/signout-responsive.png)
+![Image](static/images/for-readme/responsive/09-sign-out.png)
+
+![Image](static/images/for-readme/responsive/09-sign-out-tablet.png)
+
+![Image](static/images/for-readme/responsive/09-sign-out-mobile.png)
 
 - **Password Reset Pages**: Multi-step reset process with mobile-friendly forms and clear progress indicators.
 
-![Image](static/images/for-readme/password-reset-responsive.png)
+![Image](static/images/for-readme/responsive/11-reset-password.png)
+
+![Image](static/images/for-readme/responsive/11-reset-password-tablet.png)
+
+![Image](static/images/for-readme/responsive/11-reset-password-mobile.png)
 
 - **Search Results Page**: Responsive prompt grid with search highlighting and mobile-optimized filtering.
 
-![Image](static/images/for-readme/search-results-responsive.png)
+![Image](static/images/for-readme/responsive/13-search.png)
+
+![Image](static/images/for-readme/responsive/13-search-tablet.png)
+
+![Image](static/images/for-readme/responsive/13-search-mobile.png)
 
 - **Tag Filter Page**: Dynamic content displayed in a grid with filtering, responsive tag display and mobile-friendly layout.
 
-![Image](static/images/for-readme/tag-filter-responsive.png)
+![Image](static/images/for-readme/responsive/14-tags.png)
+
+![Image](static/images/for-readme/responsive/14-tags-tablet.png)
+
+![Image](static/images/for-readme/responsive/14-tags-mobile.png)
 
 - **404 Error Page**: User-friendly error handling with responsive layout and helpful buttons.
 
-![Image](static/images/for-readme/404-responsive.png)
+![Image](static/images/for-readme/responsive/15-404.png)
+
+![Image](static/images/for-readme/responsive/15-404-tablet.png)
+
+![Image](static/images/for-readme/responsive/15-404-mobile.png)
 
 ## Key Responsive Features
 
@@ -393,10 +453,10 @@ The **Homepage** serves as the main landing page and content discovery hub:
 - **Load More** - Infinite scroll experience(assuming many prompts available) for seamless content browsing. 
 
 ### Desktop
-![Image](static/images/for-readme/wireframe-homepage-desktop.png)
+![Image](static/images/for-readme/wireframes/homepage-desktop.png)
 
 ### Mobile
-![Image](static/images/for-readme/wireframe-homepage-mobile.png)
+![Image](static/images/for-readme/wireframes/homepage-mobile.png)
 
 ## Prompt Detail Page Layout
 
@@ -409,10 +469,10 @@ The **Prompt Detail Page** provides comprehensive prompt viewing and interaction
 - **Responsive Layout** - Optimized content flow for all device sizes
 
 ### Desktop
-![Image](static/images/for-readme/wireframe-prompt-detail-desktop.png)
+![Image](static/images/for-readme/wireframes/prompt-details-desktop.png)
 
 ### Mobile
-![Image](static/images/for-readme/wireframe-prompt-detail-mobile.png)
+![Image](static/images/for-readme/wireframes/prompt-details-mobile.png)
 
 ## About Page Layout
 
@@ -423,10 +483,10 @@ The **About Page** explains the platform's mission and features:
 
 
 ### Desktop
-![Image](static/images/for-readme/wireframe-about-desktop.png)
+![Image](static/images/for-readme/wireframes/about-desktop.png)
 
 ### Mobile
-![Image](static/images/for-readme/wireframe-about-mobile.png)
+![Image](static/images/for-readme/wireframes/about-mobile.png)
 
 ## Form Pages Template Layout
 
@@ -441,10 +501,10 @@ The **About Page** explains the platform's mission and features:
 **Note:** All form pages (Contact, Create Prompt, Edit Prompt, Sign Up, Sign In, Password Reset) follow this same layout structure with content-specific modifications.
 
 ### Desktop
-![Image](static/images/for-readme/wireframe-contact-desktop.png)
+![Image](static/images/for-readme/wireframes/contact-form-desktop.png)
 
 ### Mobile
-![Image](static/images/for-readme/wireframe-contact-mobile.png)
+![Image](static/images/for-readme/wireframes/contact-form-mobile.png)
 
 ## Design Consistency
 
@@ -520,9 +580,15 @@ I organized the entire project into **4 main epics** that cover everything the p
 
 Each epic had several user stories that moved through the board as I worked on them. Stories started in To Do, moved to In Progress when I began working, and ended in Done when they were finished and tested.
 
-![Image](static/images/for-readme/agile-board-overview.png)
+![Image](static/images/for-readme/agile.png)
 
-![Image](static/images/for-readme/agile-epic-details.png)
+
+## **Testing**
+- **Manual Testing:** Validated all user stories through structured tests.
+- **Google Lighthouse Performance:** Performance scores captured for mobile and desktop.
+- **Browser Compatibility:** Verified across Chrome, Firefox, Edge, Opera.
+- **Code Validation:** W3C Code Validator and PEP8 formatting were used.  CI Python Linter, CSS Validation.
+- For detailed testing results, see Testing [Testing Documentation](TESTING.md).
 
 
 

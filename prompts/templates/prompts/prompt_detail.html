@@ -8,377 +8,99 @@
 <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 
-<!-- Preload the hero image for LCP optimization with responsive sizing -->
+<!-- Preload the hero image for LCP optimization with proper sizing -->
 {% if not "placeholder" in prompt.featured_image.url %}
-    <!-- Preload optimized for mobile first, then larger screens -->
+    <!-- Optimized preload for faster LCP - smaller dimensions for better performance -->
     <link rel="preload" as="image" 
-          href="{{ prompt.featured_image.url|cloudinary_transform:'w_600,h_700,c_limit,f_webp,q_100,dpr_2.0' }}"
-          media="(max-width: 768px)" />
-    <link rel="preload" as="image" 
-          href="{{ prompt.featured_image.url|cloudinary_transform:'w_900,h_1000,c_limit,f_webp,q_100,dpr_2.0' }}"
-          media="(min-width: 769px) and (max-width: 1200px)" />
-    <link rel="preload" as="image" 
-          href="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,h_1400,c_limit,f_webp,q_100,dpr_2.0' }}"
-          media="(min-width: 1201px)" />
+          href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_90' }}"
+          fetchpriority="high" />
 {% endif %}
+
+<!-- Critical CSS inline for faster rendering -->
+<style>
+.hero-image-shell {
+    position: relative;
+    width: 100%;
+    max-width: 824px;
+}
+
+.hero-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+}
+
+.action-buttons {
+    margin-bottom: 1.5rem;
+}
+
+.sidebar-title {
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+</style>
 {% endblock %}
 
 {% block content %}
+<h1 class="visually-hidden">{{ prompt.title }} - AI Prompt Details</h1>
 
 <!-- Head Section -->
 <header class="position-relative pt-5">
-    
-    <!-- Hero content overlay -->
     <div class="col-lg-12">
         <div class="container">
             <div class="row">
                 <div class="col-lg-8">
-                    <h1 class="hero-title">{{ prompt.title }}</h1>
+                    <h2 class="hero-title">{{ prompt.title }}</h2>
                     <p class="hero-meta">
                         <span class="author-badge">By @{{ prompt.author }}</span>
                     </p>
                 </div>
                 <div class="col-lg-4">
-
-                    <!-- Add this to your prompt_detail.html template -->
-<!-- Place it in the sidebar or wherever you want the action buttons -->
-
-<div class="action-buttons mb-4">
-    <div class="button-group d-flex gap-2 align-items-center">
-        
-        <!-- Comment Button -->
-        <button class="action-btn btn-comment" onclick="scrollToComments()" aria-label="Scroll to comments section">
-            <i class="fas fa-comment" aria-hidden="true"></i>
-        </button>
-        
-        <!-- Edit Button (only for prompt author) -->
-        {% if user.is_authenticated and prompt.author == user %}
-        <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-btn btn-edit" aria-label="Edit this prompt">
-            <i class="fas fa-edit" aria-hidden="true"></i>
-        </a>
-        {% endif %}
-        
-        <!-- Delete Button (only for prompt author) -->
-        {% if user.is_authenticated and prompt.author == user %}
-        <button class="action-btn btn-delete" 
-                onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
-                aria-label="Delete this prompt">
-            <i class="fas fa-trash" aria-hidden="true"></i>
-        </button>
-        {% endif %}
-        
-        <!-- Like Button -->
-        {% if user.is_authenticated %}
-            <button class="action-btn btn-like {% if prompt_is_liked %}liked{% endif %}" 
-                    data-prompt-slug="{{ prompt.slug }}"
-                    onclick="toggleLike(this)"
-                    aria-label="{% if prompt_is_liked %}Unlike this prompt{% else %}Like this prompt{% endif %}">
-                <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart me-2" aria-hidden="true"></i>
-                <span class="like-text">Like</span>
-                <span class="like-count">{{ number_of_likes }}</span>
-            </button>
-        {% else %}
-            <a href="{% url 'account_login' %}?next={{ request.path }}" class="action-btn btn-like" aria-label="Log in to like this prompt">
-                <i class="far fa-heart me-2" aria-hidden="true"></i>
-                <span class="like-text">Like</span>
-                <span class="like-count">{{ number_of_likes }}</span>
-            </a>
-        {% endif %}
-        
-    </div>
-</div>
-
-
-
-<!-- Deferred JavaScript to prevent render blocking -->
-<script>
-// Defer all non-critical JavaScript to after page load
-document.addEventListener('DOMContentLoaded', function() {
-    
-    /**
-     * Scroll to comments function
-     */
-    window.scrollToComments = function() {
-        const commentsSection = document.querySelector('.comments-section');
-        if (commentsSection) {
-            commentsSection.scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    };
-
-    /**
-     * AJAX Like toggle for detail page
-     */
-    window.toggleLike = function(button) {
-        const promptSlug = button.getAttribute('data-prompt-slug');
-        const heartIcon = button.querySelector('i');
-        const likeCount = button.querySelector('.like-count');
-        
-        fetch('/prompt/' + promptSlug + '/like/', {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Update like count
-            likeCount.textContent = data.like_count;
-            
-            // Update button appearance
-            if (data.liked) {
-                button.classList.add('liked');
-                heartIcon.className = 'fas fa-heart me-2';
-            } else {
-                button.classList.remove('liked');
-                heartIcon.className = 'far fa-heart me-2';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Something went wrong. Please try again.');
-        });
-    };
-
-    /**
-     * Enhanced edit form toggle with better visual feedback
-     * Works with existing inline form structure to avoid duplicate cancel buttons
-     */
-    window.toggleEditForm = function(commentId) {
-        var editForm = document.getElementById('editForm' + commentId);
-        var commentContent = document.getElementById('comment' + commentId);
-        
-        if (editForm.style.display === 'none' || editForm.style.display === '') {
-            // Show edit form and hide original comment content
-            editForm.style.display = 'block';
-            commentContent.style.display = 'none';
-        } else {
-            // Hide edit form and show original comment content
-            editForm.style.display = 'none';
-            commentContent.style.display = 'block';
-        }
-    };
-
-    /**
-     * Enhanced delete confirmation with dynamic messaging
-     */
-    window.confirmDelete = function(deleteUrl) {
-        var modalTitle = document.getElementById('deleteModalLabel');
-        var modalMessage = document.getElementById('deleteModalMessage');
-        var confirmBtn = document.getElementById('confirmDeleteBtn');
-        
-        // Determine what type of content is being deleted based on URL
-        if (deleteUrl.includes('/delete_comment/')) {
-            modalTitle.textContent = 'Delete Comment?';
-            modalMessage.textContent = 'Are you sure you want to delete this comment? This action cannot be undone.';
-            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete Comment';
-        } else if (deleteUrl.includes('/delete/')) {
-            modalTitle.textContent = 'Delete Prompt?';
-            modalMessage.textContent = 'Are you sure you want to delete this prompt? This will also delete all associated comments and cannot be undone.';
-            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete Prompt';
-        } else {
-            // Fallback for other deletion types
-            modalTitle.textContent = 'Confirm Deletion';
-            modalMessage.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
-            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete';
-        }
-        
-        // Set the delete URL in the modal's confirm button
-        confirmBtn.href = deleteUrl;
-        
-        // Show the modal
-        var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-        deleteModal.show();
-    };
-
-    /**
-     * Prevents double-click form submissions
-     */
-    function handleCommentSubmit(event) {
-        var submitButton = document.getElementById('submitButton');
-        var form = document.getElementById('commentForm');
-        
-        // Disable the submit button to prevent double clicks
-        submitButton.disabled = true;
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-        
-        // Re-enable button after 3 seconds in case of form validation errors
-        setTimeout(function() {
-            submitButton.disabled = false;
-            submitButton.innerHTML = 'Submit';
-        }, 3000);
-        
-        // Allow form to submit normally
-        return true;
-    }
-
-    /**
-     * Enhanced form validation feedback
-     */
-    function addValidationFeedback() {
-        var commentForm = document.getElementById('commentForm');
-        var submitButton = document.getElementById('submitButton');
-        
-        if (commentForm) {
-            // Add validation on form submit
-            commentForm.addEventListener('submit', function(event) {
-                var textArea = commentForm.querySelector('textarea[name="body"]');
-                var isValid = true;
-                
-                // Remove existing validation classes
-                textArea.classList.remove('is-valid', 'is-invalid');
-                
-                // Check if textarea has content
-                if (!textArea.value.trim()) {
-                    textArea.classList.add('is-invalid');
-                    isValid = false;
-                    
-                    // Show error feedback
-                    showValidationMessage(textArea, 'Please enter a comment before submitting.', 'invalid');
-                } else if (textArea.value.trim().length < 3) {
-                    textArea.classList.add('is-invalid');
-                    isValid = false;
-                    
-                    // Show error feedback
-                    showValidationMessage(textArea, 'Comment must be at least 3 characters long.', 'invalid');
-                } else {
-                    textArea.classList.add('is-valid');
-                    
-                    // Show success feedback
-                    showValidationMessage(textArea, 'Comment looks good!', 'valid');
-                }
-                
-                // Prevent submission if invalid
-                if (!isValid) {
-                    event.preventDefault();
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = 'Submit';
-                    return false;
-                }
-            });
-        }
-    }
-
-    /**
-     * Show validation message helper function
-     */
-    function showValidationMessage(element, message, type) {
-        // Remove existing feedback
-        var existingFeedback = element.parentNode.querySelector('.feedback-message');
-        if (existingFeedback) {
-            existingFeedback.remove();
-        }
-        
-        // Create new feedback element
-        var feedback = document.createElement('div');
-        feedback.className = 'feedback-message ' + (type === 'valid' ? 'valid-feedback' : 'invalid-feedback');
-        feedback.style.display = 'block';
-        feedback.textContent = message;
-        
-        // Insert after the textarea
-        element.parentNode.appendChild(feedback);
-    }
-
-    // Initialize form functionality
-    var commentForm = document.getElementById('commentForm');
-    if (commentForm) {
-        commentForm.addEventListener('submit', handleCommentSubmit);
-        addValidationFeedback();
-    }
-
-    // Real tag filtering for detail page following bobbyhadz tutorial
-    // Source: https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript
-    const tagBadges = document.querySelectorAll('.tag-badge');
-    
-    tagBadges.forEach(function(badge) {
-        badge.style.cursor = 'pointer';
-        
-        badge.addEventListener('click', function() {
-            const tagName = this.textContent.trim();
-            
-            // Redirect to homepage with tag filter parameter (following tutorial)
-            const url = window.location.origin;
-            window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
-        });
-    });
-
-    /**
-     * Copy prompt text to clipboard following W3Schools and GeeksforGeeks tutorials
-     * Sources: w3schools.com/howto/howto_js_copy_clipboard.asp
-     *         geeksforgeeks.org/how-to-create-copy-to-clipboard-button/
-     */
-    window.copyPromptText = async function() {
-        const promptContent = document.getElementById('promptContent');
-        const copyButton = document.getElementById('copyButton');
-        const copyButtonText = document.getElementById('copyButtonText');
-        const copyIcon = copyButton.querySelector('i');
-        
-        try {
-            // Get the text content (strip HTML tags)
-            const textToCopy = promptContent.textContent || promptContent.innerText;
-            
-            // Use modern Clipboard API
-            await navigator.clipboard.writeText(textToCopy);
-            
-            // Update button appearance to show success
-            copyIcon.className = 'fas fa-check me-1';
-            copyButtonText.textContent = 'Copied!';
-            copyButton.classList.remove('btn-outline-primary');
-            copyButton.classList.add('btn-success');
-            
-            // Reset button after 2 seconds
-            setTimeout(() => {
-                copyIcon.className = 'fas fa-copy me-1';
-                copyButtonText.textContent = 'Copy';
-                copyButton.classList.remove('btn-success');
-                copyButton.classList.add('btn-outline-primary');
-            }, 2000);
-            
-            console.log('Prompt text copied to clipboard');
-            
-        } catch (err) {
-            console.error('Failed to copy text: ', err);
-            
-            // Fallback for older browsers - show user the text to copy manually
-            fallbackCopyTextToClipboard(textToCopy);
-        }
-    };
-
-    /**
-     * Fallback copy method for older browsers
-     */
-    function fallbackCopyTextToClipboard(text) {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        
-        // Avoid scrolling to bottom
-        textArea.style.top = '0';
-        textArea.style.left = '0';
-        textArea.style.position = 'fixed';
-        
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-                console.log('Fallback: Prompt text copied to clipboard');
-            }
-        } catch (err) {
-            console.error('Fallback: Unable to copy', err);
-        }
-        
-        document.body.removeChild(textArea);
-    }
-});
-</script>
-                    
-                
+                    <div class="action-buttons mb-4">
+                        <div class="button-group d-flex gap-2 align-items-center">
+                            
+                            <!-- Comment Button -->
+                            <button class="action-btn btn-comment" onclick="scrollToComments()" aria-label="Scroll to comments section">
+                                <i class="fas fa-comment" aria-hidden="true"></i>
+                            </button>
+                            
+                            <!-- Edit Button (only for prompt author) -->
+                            {% if user.is_authenticated and prompt.author == user %}
+                            <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-btn btn-edit" aria-label="Edit this prompt">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
+                            </a>
+                            {% endif %}
+                            
+                            <!-- Delete Button (only for prompt author) -->
+                            {% if user.is_authenticated and prompt.author == user %}
+                            <button class="action-btn btn-delete" 
+                                    onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
+                                    aria-label="Delete this prompt">
+                                <i class="fas fa-trash" aria-hidden="true"></i>
+                            </button>
+                            {% endif %}
+                            
+                            <!-- Like Button -->
+                            {% if user.is_authenticated %}
+                                <button class="action-btn btn-like {% if prompt_is_liked %}liked{% endif %}" 
+                                        data-prompt-slug="{{ prompt.slug }}"
+                                        onclick="toggleLike(this)"
+                                        aria-label="{% if prompt_is_liked %}Unlike this prompt{% else %}Like this prompt{% endif %}">
+                                    <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart me-2" aria-hidden="true"></i>
+                                    <span class="like-text">Like</span>
+                                    <span class="like-count">{{ number_of_likes }}</span>
+                                </button>
+                            {% else %}
+                                <a href="{% url 'account_login' %}?next={{ request.path }}" class="action-btn btn-like" aria-label="Log in to like this prompt">
+                                    <i class="far fa-heart me-2" aria-hidden="true"></i>
+                                    <span class="like-text">Like</span>
+                                    <span class="like-count">{{ number_of_likes }}</span>
+                                </a>
+                            {% endif %}
+                            
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -388,44 +110,26 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Main Content Area -->
 <div class="container mt-5">
     <div class="row">
-        <!-- Optimized Image Area with Cloudinary transforms and proper dimensions -->
+        <!-- Optimized Image Area with properly sized Cloudinary image -->
         <div class="col-lg-8 pb-5">
             <div class="hero-image-shell">
-
                 {% if "placeholder" in prompt.featured_image.url %}
                     <img src="{% static 'images/default.jpg' %}" 
                          class="hero-image" 
                          alt="{{ prompt.title }}"
                          width="824"
                          height="800"
-                         loading="eager"
-                         fetchpriority="high">
+                         loading="eager">
                 {% else %}
-                    <!-- High-resolution responsive Cloudinary image with proper DPR -->
-                    <picture>
-                        <!-- Mobile: Higher resolution for retina displays -->
-                        <source media="(max-width: 768px)" 
-                                srcset="{{ prompt.featured_image.url|cloudinary_transform:'w_600,h_700,c_limit,f_webp,q_100,dpr_2.0' }}">
-                        <!-- Tablet: Higher resolution for retina displays -->
-                        <source media="(min-width: 769px) and (max-width: 1200px)" 
-                                srcset="{{ prompt.featured_image.url|cloudinary_transform:'w_900,h_1000,c_limit,f_webp,q_100,dpr_2.0' }}">
-                        <!-- Desktop: Higher resolution for retina displays -->
-                        <source media="(min-width: 1201px)" 
-                                srcset="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,h_1400,c_limit,f_webp,q_100,dpr_2.0' }}">
-                        <!-- Fallback image with higher resolution -->
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,h_1400,c_limit,f_webp,q_100,dpr_2.0' }}" 
-                             class="hero-image" 
-                             alt="{{ prompt.title }}"
-                             width="824"
-                             height="800"
-                             loading="eager"
-                             fetchpriority="high">
-                    </picture>
+                    <!-- Optimized single image for better performance -->
+                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_90' }}" 
+                         class="hero-image" 
+                         alt="{{ prompt.title }}"
+                         width="824"
+                         height="800"
+                         loading="eager">
                 {% endif %}
             </div>
-            
-            
-            
         </div>
         
         <!-- Sidebar -->
@@ -433,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="sidebar">
                 <!-- Prompt Description Card -->
                 <div class="mb-5">
-                    <h2 class="sidebar-title">Prompt Description</h2>
+                    <h3 class="sidebar-title">Prompt Description</h3>
                     {% if prompt.excerpt %}
                         <p>{{ prompt.excerpt }}</p>
                     {% else %}
@@ -443,33 +147,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- The prompt content -->
                 <div class="sidebar-card mb-4">
-
-
-                {% if user.is_authenticated %}
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="sidebar-title mb-0">Prompt Used</h2>
-                        <button class="btn btn-outline-primary btn-sm copy-btn" onclick="copyPromptText()" id="copyButton">
-                            <i class="fas fa-copy me-1"></i>
-                            <span id="copyButtonText">Copy</span>
-                        </button>
-                    </div>
-                    <div class="prompt-content" id="promptContent">
-                        {{ prompt.content|safe }}
-                    </div>
-                {% else %}
-            <div class="">
-                <h4 class="sidebar-title">Prompts Available to Members Only</h4>
-                <p>Please <a href="{% url 'account_login' %}">log in</a> to see the prompt.</p>
-            </div>
-            {% endif %}
-
-
-
-
-
-
-                    
+                    {% if user.is_authenticated %}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="sidebar-title mb-0">Prompt Used</h3>
+                            <button class="btn btn-outline-primary btn-sm copy-btn" onclick="copyPromptText()" id="copyButton">
+                                <i class="fas fa-copy me-1"></i>
+                                <span id="copyButtonText">Copy</span>
+                            </button>
+                        </div>
+                        <div class="prompt-content" id="promptContent">
+                            {{ prompt.content|safe }}
+                        </div>
+                    {% else %}
+                        <div class="">
+                            <h3 class="sidebar-title">Prompts Available to Members Only</h3>
+                            <p>Please <a href="{% url 'account_login' %}">log in</a> to see the prompt.</p>
+                        </div>
+                    {% endif %}
                 </div>
+                
                 <div class="prompt-metadata mb-5">
                     <div class="metadata-item">
                         <i class="fas fa-robot me-2"></i>
@@ -482,94 +178,86 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
 
                 <div class="mb-5">
-                <!-- Tags Card -->
-                {% if prompt.tags.all %}
-                
-                <h2 class="sidebar-title">Tags</h2>
-                <div class="tags-container">
-                    {% for tag in prompt.tags.all %}
-                        <span class="tag-badge" data-tag="{{ tag.name }}">{{ tag.name }}</span>
-                    {% endfor %}
+                    {% if prompt.tags.all %}
+                        <h3 class="sidebar-title">Tags</h3>
+                        <div class="tags-container">
+                            {% for tag in prompt.tags.all %}
+                                <span class="tag-badge" data-tag="{{ tag.name }}">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
-               
-                {% endif %}
-            </div>
-                
-                
             </div>
         </div>
-
 
         <!-- Comments -->
         <div class="col-lg-8">
-
             <!-- Comments Section -->
             <div class="comments-section">
-            <h2 class="sidebar-title">Comments ({{ comment_count }})</h2>
-            
-            <!-- Comments List -->
-            <div class="comments-list">
-                {% for comment in comments %}
-                    <div class="comment-card p-3 mb-3
-                        {% if not comment.approved and comment.author == user %}
-                            border border-warning faded
-                        {% endif %}">
-                        <p class="font-weight-bold">
-                            By {{ comment.author }} 
-                            <span class="font-weight-normal text-muted">
-                                on {{ comment.created_on }}
-                            </span>
-                        </p>
-                        {% if not comment.approved and comment.author == user %}
-                            <p class="approval">This comment is awaiting approval</p>
-                        {% endif %}
-                        <div id="comment{{ comment.id }}">
-                            {{ comment.body | linebreaks }}
-                        </div>
-                        <!-- Comment edit/delete buttons -->
-                        {% if user.is_authenticated and comment.author == user %}
-                        <div class="mt-2 d-flex gap-2 mt-4">
-                            <button class="btn btn-small btn-primary" onclick="toggleEditForm({{ comment.id }})">
-                                <i class="fas fa-edit"></i>&nbsp; Edit
-                            </button>
-                            <button type="button" class="btn btn-small btn-primary" 
-                                    onclick="confirmDelete('{% url 'prompts:comment_delete' prompt.slug comment.id %}')">
-                                <i class="fas fa-trash"></i>&nbsp; Delete
-                            </button>
-                            
-                            <!-- Hidden inline edit form -->
-                            <div id="editForm{{ comment.id }}" style="display: none;" class="mt-3">
-                                <form method="post" action="{% url 'prompts:comment_edit' prompt.slug comment.id %}">
-                                    {% csrf_token %}
-                                    <div class="mb-2">
-                                        <textarea name="body" class="form-control" rows="3" required>{{ comment.body }}</textarea>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <button type="submit" class="btn btn-success btn-sm">
-                                            <i class="fas fa-save"></i> Update
-                                        </button>
-                                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEditForm({{ comment.id }})">
-                                            <i class="fas fa-times"></i> Cancel
-                                        </button>
-                                    </div>
-                                </form>
+                <h3 class="sidebar-title">Comments ({{ comment_count }})</h3>
+                
+                <!-- Comments List -->
+                <div class="comments-list">
+                    {% for comment in comments %}
+                        <div class="comment-card p-3 mb-3
+                            {% if not comment.approved and comment.author == user %}
+                                border border-warning faded
+                            {% endif %}">
+                            <p class="font-weight-bold">
+                                By {{ comment.author }} 
+                                <span class="font-weight-normal text-muted">
+                                    on {{ comment.created_on }}
+                                </span>
+                            </p>
+                            {% if not comment.approved and comment.author == user %}
+                                <p class="approval">This comment is awaiting approval</p>
+                            {% endif %}
+                            <div id="comment{{ comment.id }}">
+                                {{ comment.body | linebreaks }}
                             </div>
+                            {% if user.is_authenticated and comment.author == user %}
+                            <div class="mt-2 d-flex gap-2 mt-4">
+                                <button class="btn btn-small btn-primary" onclick="toggleEditForm({{ comment.id }})">
+                                    <i class="fas fa-edit"></i>&nbsp; Edit
+                                </button>
+                                <button type="button" class="btn btn-small btn-primary" 
+                                        onclick="confirmDelete('{% url 'prompts:comment_delete' prompt.slug comment.id %}')">
+                                    <i class="fas fa-trash"></i>&nbsp; Delete
+                                </button>
+                                
+                                <!-- Hidden inline edit form -->
+                                <div id="editForm{{ comment.id }}" style="display: none;" class="mt-3">
+                                    <form method="post" action="{% url 'prompts:comment_edit' prompt.slug comment.id %}">
+                                        {% csrf_token %}
+                                        <div class="mb-2">
+                                            <textarea name="body" class="form-control" rows="3" required>{{ comment.body }}</textarea>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-save"></i> Update
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEditForm({{ comment.id }})">
+                                                <i class="fas fa-times"></i> Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
-                    </div>
-                {% empty %}
-                    <div class="no-comments">
-                        <p class="text-center text-muted">No comments yet. Be the first to share your thoughts!</p>
-                    </div>
-                {% endfor %}
+                    {% empty %}
+                        <div class="no-comments">
+                            <p class="text-center text-muted">No comments yet. Be the first to share your thoughts!</p>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
-        </div>
+        
         <div class="col-lg-4 ps-lg-4">
-            <!-- Comment Form Card -->
             {% if user.is_authenticated %}
             <div>
-                <h2 class="sidebar-title">Leave a comment</h2>
+                <h3 class="sidebar-title">Leave a comment</h3>
                 {% load crispy_forms_tags %}
                 <form id="commentForm" method="post" class="comment-form">
                     {% csrf_token %}
@@ -579,15 +267,11 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             {% else %}
             <div class="sidebar-card">
-                <h4 class="sidebar-title">Join the Discussion</h4>
+                <h3 class="sidebar-title">Join the Discussion</h3>
                 <p>Please <a href="{% url 'account_login' %}">log in</a> to leave a comment.</p>
             </div>
             {% endif %}
-
-
         </div>
-            
-        
     </div>
 </div>
 
@@ -619,3 +303,211 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 {% endblock content %}
+
+{% block extras %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    window.scrollToComments = function() {
+        const commentsSection = document.querySelector('.comments-section');
+        if (commentsSection) {
+            commentsSection.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    };
+
+    window.toggleLike = function(button) {
+        const promptSlug = button.getAttribute('data-prompt-slug');
+        const heartIcon = button.querySelector('i');
+        const likeCount = button.querySelector('.like-count');
+        
+        fetch('/prompt/' + promptSlug + '/like/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            likeCount.textContent = data.like_count;
+            
+            if (data.liked) {
+                button.classList.add('liked');
+                heartIcon.className = 'fas fa-heart me-2';
+            } else {
+                button.classList.remove('liked');
+                heartIcon.className = 'far fa-heart me-2';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Something went wrong. Please try again.');
+        });
+    };
+
+    window.toggleEditForm = function(commentId) {
+        var editForm = document.getElementById('editForm' + commentId);
+        var commentContent = document.getElementById('comment' + commentId);
+        
+        if (editForm.style.display === 'none' || editForm.style.display === '') {
+            editForm.style.display = 'block';
+            commentContent.style.display = 'none';
+        } else {
+            editForm.style.display = 'none';
+            commentContent.style.display = 'block';
+        }
+    };
+
+    window.confirmDelete = function(deleteUrl) {
+        var modalTitle = document.getElementById('deleteModalLabel');
+        var modalMessage = document.getElementById('deleteModalMessage');
+        var confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        if (deleteUrl.includes('/delete_comment/')) {
+            modalTitle.textContent = 'Delete Comment?';
+            modalMessage.textContent = 'Are you sure you want to delete this comment? This action cannot be undone.';
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete Comment';
+        } else if (deleteUrl.includes('/delete/')) {
+            modalTitle.textContent = 'Delete Prompt?';
+            modalMessage.textContent = 'Are you sure you want to delete this prompt? This will also delete all associated comments and cannot be undone.';
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete Prompt';
+        } else {
+            modalTitle.textContent = 'Confirm Deletion';
+            modalMessage.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete';
+        }
+        
+        confirmBtn.href = deleteUrl;
+        var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show();
+    };
+
+    function handleCommentSubmit(event) {
+        var submitButton = document.getElementById('submitButton');
+        
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        
+        setTimeout(function() {
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Submit';
+        }, 3000);
+        
+        return true;
+    }
+
+    function addValidationFeedback() {
+        var commentForm = document.getElementById('commentForm');
+        
+        if (commentForm) {
+            commentForm.addEventListener('submit', function(event) {
+                var textArea = commentForm.querySelector('textarea[name="body"]');
+                var isValid = true;
+                
+                textArea.classList.remove('is-valid', 'is-invalid');
+                
+                if (!textArea.value.trim()) {
+                    textArea.classList.add('is-invalid');
+                    isValid = false;
+                    showValidationMessage(textArea, 'Please enter a comment before submitting.', 'invalid');
+                } else if (textArea.value.trim().length < 3) {
+                    textArea.classList.add('is-invalid');
+                    isValid = false;
+                    showValidationMessage(textArea, 'Comment must be at least 3 characters long.', 'invalid');
+                } else {
+                    textArea.classList.add('is-valid');
+                    showValidationMessage(textArea, 'Comment looks good!', 'valid');
+                }
+                
+                if (!isValid) {
+                    event.preventDefault();
+                    document.getElementById('submitButton').disabled = false;
+                    document.getElementById('submitButton').innerHTML = 'Submit';
+                    return false;
+                }
+            });
+        }
+    }
+
+    function showValidationMessage(element, message, type) {
+        var existingFeedback = element.parentNode.querySelector('.feedback-message');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+        
+        var feedback = document.createElement('div');
+        feedback.className = 'feedback-message ' + (type === 'valid' ? 'valid-feedback' : 'invalid-feedback');
+        feedback.style.display = 'block';
+        feedback.textContent = message;
+        
+        element.parentNode.appendChild(feedback);
+    }
+
+    var commentForm = document.getElementById('commentForm');
+    if (commentForm) {
+        commentForm.addEventListener('submit', handleCommentSubmit);
+        addValidationFeedback();
+    }
+
+    const tagBadges = document.querySelectorAll('.tag-badge');
+    tagBadges.forEach(function(badge) {
+        badge.style.cursor = 'pointer';
+        badge.addEventListener('click', function() {
+            const tagName = this.textContent.trim();
+            const url = window.location.origin;
+            window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
+        });
+    });
+
+    window.copyPromptText = async function() {
+        const promptContent = document.getElementById('promptContent');
+        const copyButton = document.getElementById('copyButton');
+        const copyButtonText = document.getElementById('copyButtonText');
+        const copyIcon = copyButton.querySelector('i');
+        
+        try {
+            const textToCopy = promptContent.textContent || promptContent.innerText;
+            await navigator.clipboard.writeText(textToCopy);
+            
+            copyIcon.className = 'fas fa-check me-1';
+            copyButtonText.textContent = 'Copied!';
+            copyButton.classList.remove('btn-outline-primary');
+            copyButton.classList.add('btn-success');
+            
+            setTimeout(() => {
+                copyIcon.className = 'fas fa-copy me-1';
+                copyButtonText.textContent = 'Copy';
+                copyButton.classList.remove('btn-success');
+                copyButton.classList.add('btn-outline-primary');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            fallbackCopyTextToClipboard(textToCopy);
+        }
+    };
+
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.position = 'fixed';
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+        } catch (err) {
+            console.error('Fallback: Unable to copy', err);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+});
+</script>
+{% endblock %}

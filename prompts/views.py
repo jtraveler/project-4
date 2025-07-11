@@ -16,7 +16,29 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class PromptList(generic.ListView):
+    """
+    Display a paginated list of published AI prompts with filtering options.
+    
+    Shows 18 prompts per page with support for tag filtering and search functionality.
+    Uses caching for better performance and includes optimized database queries.
+    
+    Features:
+        - Tag filtering: Filter prompts by specific tags
+        - Search: Search in titles, content, excerpts, authors, and tags
+        - Pagination: 18 prompts per page
+        - Performance: Uses select_related and prefetch_related for optimization
+        - Caching: 5-minute cache for non-search results
+    
+    Context variables:
+        object_list: Paginated list of Prompt objects
+        current_tag: The tag being filtered (if any)
+        search_query: The search term (if any)
+    
+    Template: prompts/prompt_list.html
+    URL: / (homepage)
+    """
     template_name = "prompts/prompt_list.html"
     paginate_by = 18
     
@@ -66,7 +88,33 @@ class PromptList(generic.ListView):
         context['search_query'] = self.request.GET.get('search')
         return context
 
+
 def prompt_detail(request, slug):
+    """
+    Display a single AI prompt with its image, content, and comments.
+    
+    Shows the full prompt details including the AI-generated image, prompt text,
+    metadata, and all comments. Handles comment submission and like status.
+    Only shows approved comments to non-authors.
+    
+    Features:
+        - Comment form for logged-in users
+        - Like status tracking
+        - Permission checking (drafts only visible to authors)
+        - Comment approval system
+        - Performance optimization with caching
+    
+    Variables:
+        slug: URL slug to identify the prompt
+        prompt: The Prompt object being displayed
+        comments: List of comments (approved + user's own)
+        comment_form: Form for submitting new comments
+        liked: Whether current user has liked this prompt
+        comment_count: Number of approved comments
+    
+    Template: prompts/prompt_detail.html
+    URL: /prompt/<slug>/
+    """
     start_time = time.time()
     
     # Cache individual prompt details for 10 minutes
@@ -134,7 +182,25 @@ def prompt_detail(request, slug):
         },
     )
 
+
 def comment_edit(request, slug, comment_id):
+    """
+    Allow users to edit their own comments on prompts.
+    
+    Users can only edit comments they authored. Edited comments are reset to
+    unapproved status and must be re-approved by admin. Clears relevant caches
+    after successful edit.
+    
+    Variables:
+        slug: URL slug of the prompt
+        comment_id: ID of the comment being edited
+        prompt: The Prompt object the comment belongs to
+        comment: The Comment object being edited
+        comment_form: Form for editing the comment
+    
+    Template: prompts/comment_edit.html
+    URL: /prompt/<slug>/edit_comment/<comment_id>/
+    """
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
     comment = get_object_or_404(Comment.objects.select_related('author'), pk=comment_id)
     
@@ -170,7 +236,22 @@ def comment_edit(request, slug, comment_id):
         }
     )
 
+
 def comment_delete(request, slug, comment_id):
+    """
+    Allow users to delete their own comments.
+    
+    Users can only delete comments they authored. Permanently removes the comment
+    from the database and clears relevant caches. Redirects back to prompt detail.
+    
+    Variables:
+        slug: URL slug of the prompt
+        comment_id: ID of the comment being deleted
+        prompt: The Prompt object (for redirect)
+        comment: The Comment object being deleted
+    
+    URL: /prompt/<slug>/delete_comment/<comment_id>/
+    """
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
     comment = get_object_or_404(Comment.objects.select_related('author'), pk=comment_id)
 
@@ -186,7 +267,23 @@ def comment_delete(request, slug, comment_id):
 
     return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
 
+
 def prompt_edit(request, slug):
+    """
+    Allow users to edit their own AI prompts.
+    
+    Users can only edit prompts they created. Updates the prompt with new content,
+    image, tags, and other metadata. Clears relevant caches after successful update.
+    
+    Variables:
+        slug: URL slug of the prompt being edited
+        prompt: The Prompt object being edited
+        prompt_form: Form for editing prompt details
+        existing_tags: Popular tags for suggestions (cached)
+    
+    Template: prompts/prompt_edit.html
+    URL: /prompt/<slug>/edit/
+    """
     prompt = get_object_or_404(Prompt.objects.select_related('author').prefetch_related('tags'), slug=slug)
     
     if prompt.author != request.user:
@@ -232,8 +329,24 @@ def prompt_edit(request, slug):
         }
     )
 
+
 @login_required
 def prompt_create(request):
+    """
+    Allow logged-in users to create new AI prompts.
+    
+    Users can upload an AI-generated image along with the prompt text used to create it.
+    Includes form for title, description, tags, AI generator type, and image upload.
+    Automatically publishes the prompt upon creation.
+    
+    Variables:
+        prompt_form: Form for creating new prompts
+        existing_tags: Popular tags for suggestions (cached)
+        prompt: The newly created Prompt object (on successful submission)
+    
+    Template: prompts/prompt_create.html
+    URL: /create-prompt/
+    """
     if request.method == 'POST':
         prompt_form = PromptForm(request.POST, request.FILES)
         if prompt_form.is_valid():
@@ -267,7 +380,21 @@ def prompt_create(request):
     
     return render(request, 'prompts/prompt_create.html', context)
 
+
 def prompt_delete(request, slug):
+    """
+    Allow users to delete their own AI prompts.
+    
+    Users can only delete prompts they created. Permanently removes the prompt
+    and all associated comments from the database. Clears relevant caches and
+    redirects to homepage.
+    
+    Variables:
+        slug: URL slug of the prompt being deleted
+        prompt: The Prompt object being deleted
+    
+    URL: /prompt/<slug>/delete/
+    """
     prompt = get_object_or_404(Prompt.objects.select_related('author'), slug=slug)
 
     if prompt.author == request.user:
@@ -285,7 +412,20 @@ def prompt_delete(request, slug):
         messages.add_message(request, messages.ERROR, 'You can only delete your own prompts!')
         return HttpResponseRedirect(reverse('prompts:prompt_detail', args=[slug]))
 
+
 def collaborate_request(request):
+    """
+    Handle the contact/collaboration form submissions.
+    
+    Displays a contact form where users can send messages for collaboration,
+    questions, or feedback. Saves valid submissions to the database for admin review.
+    
+    Variables:
+        collaborate_form: Form for contact/collaboration requests
+    
+    Template: prompts/collaborate.html
+    URL: /collaborate/
+    """
     if request.method == "POST":
         collaborate_form = CollaborateForm(data=request.POST)
         if collaborate_form.is_valid():
@@ -311,8 +451,27 @@ def collaborate_request(request):
         },
     )
 
+
 @login_required
 def prompt_like(request, slug):
+    """
+    Handle AJAX requests to like/unlike AI prompts.
+    
+    Logged-in users can like or unlike prompts. Toggles the like status and
+    returns JSON response for AJAX requests or redirects for regular requests.
+    Clears relevant caches when like status changes.
+    
+    Variables:
+        slug: URL slug of the prompt being liked/unliked
+        prompt: The Prompt object being liked
+        liked: Boolean indicating new like status
+    
+    Returns:
+        JSON response with liked status and like count (for AJAX)
+        HTTP redirect to prompt detail (for regular requests)
+    
+    URL: /prompt/<slug>/like/
+    """
     prompt = get_object_or_404(Prompt.objects.select_related('author').prefetch_related('likes'), slug=slug)
     
     if prompt.likes.filter(id=request.user.id).exists():

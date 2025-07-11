@@ -765,3 +765,5 @@ Django settings were updated to use `dj_database_url.parse()` for automatic data
 - **Bobby Hadz JavaScript Tutorials** - [Page Navigation with Parameters](https://bobbyhadz.com/blog/redirect-to-another-page-with-parameters-using-javascript) - Referenced for JavaScript tag filtering functionality and page navigation with parameters.
 
 - **Stack Overflow Community** - Very good resource for troubleshooting deployment issues, Python version conflicts, Django best practices, and performance optimization techniques.
+
+- **PromptDen** - [PromptDen](https://promptden.com) The images used in the project are for example only and are from PRomptDen. Also, the layout for the Prompt Detail page is inspired by PromptDen's.

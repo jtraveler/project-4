@@ -9,6 +9,64 @@
         <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}" />
     {% endif %}
 {% endwith %}
+
+<!-- Critical masonry CSS -->
+<style>
+.masonry-container {
+    max-width: 100%;
+    margin: 0;
+    padding: 20px 40px;
+    width: 100%;
+}
+
+.masonry-grid {
+    column-count: 4;
+    column-gap: 15px;
+    width: 100%;
+}
+
+.masonry-item {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 15px;
+    break-inside: avoid;
+    background: none;
+    border-radius: 8px;
+}
+
+.prompt-card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: #fff;
+}
+
+.image-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.image-wrapper img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+}
+
+/* Mobile responsive */
+@media (max-width: 800px) {
+    .masonry-grid {
+        column-count: 2 !important;
+    }
+}
+
+@media (max-width: 500px) {
+    .masonry-grid {
+        column-count: 1 !important;
+    }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -175,64 +233,6 @@
 {% endblock %}
 
 {% block extras %}
-<!-- Critical masonry CSS inline in extras to avoid render blocking -->
-<style>
-.masonry-container {
-    max-width: 100%;
-    margin: 0;
-    padding: 20px 40px;
-    width: 100%;
-}
-
-.masonry-grid {
-    column-count: 4;
-    column-gap: 15px;
-    width: 100%;
-}
-
-.masonry-item {
-    display: inline-block;
-    width: 100%;
-    margin-bottom: 15px;
-    break-inside: avoid;
-    background: none;
-    border-radius: 8px;
-}
-
-.prompt-card {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    background: #fff;
-}
-
-.image-wrapper {
-    position: relative;
-    width: 100%;
-}
-
-.image-wrapper img {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 12px;
-}
-
-/* Mobile responsive */
-@media (max-width: 800px) {
-    .masonry-grid {
-        column-count: 2 !important;
-    }
-}
-
-@media (max-width: 500px) {
-    .masonry-grid {
-        column-count: 1 !important;
-    }
-}
-</style>
-
 <script>
 // Real tag filtering
 document.addEventListener('DOMContentLoaded', function() {

@@ -53,10 +53,8 @@
         <!-- Favicon (optional but recommended) -->
         <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
         
-        {% block extra_head %}{% endblock %}
 
-
-<!-- CSS Styles -->
+        <!-- CSS Styles -->
 <style>
     .modern-navbar {
         background: #ffffff;
@@ -422,7 +420,11 @@
     
     
     
-    </style>
+    </style>        
+        {% block extra_head %}{% endblock %}
+
+
+
     </head>
 <body class="d-flex flex-column h-100 main-bg">
     <!-- Update your base.html navigation section with this modern menu -->

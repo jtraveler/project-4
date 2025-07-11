@@ -37,10 +37,10 @@ h1, h2, h3, h4, h5, h6,
 }
 
 a {
-
   text-decoration: none;
-    color: #0071eb;
+  color: #0071eb;
 }
+
 /* Main button color */
 .btn-primary {
   background-color: var(--main-blue);
@@ -513,27 +513,26 @@ main {
 
 .form-control {
   border: 2px solid var(--main-border-color);
-
 }
 
-/* Input Fields - Basic Styling */
+/* FIXED: Input Fields - Basic Styling with corrected syntax */
 .edit-form .form-control {
-  width: 100% !important;
-  padding: 16px 20px !important;
-  border: 2px solid (--main-border-color) !important;
-  border-radius: 12px !important;
-  font-size: 16px !important;
-  font-family: inherit !important;
-  background: var(--light-blue) !important;
-  transition: all 0.2s ease !important;
-  box-sizing: border-box !important;
+  width: 100%;
+  padding: 16px 20px;
+  border: 2px solid var(--main-border-color);
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  background: var(--light-blue);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .edit-form .form-control:focus {
-  outline: none !important;
-  border-color: var(--main-blue) !important;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
-  background: #ffffff !important;
+  outline: none;
+  border-color: var(--main-blue);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  background: #ffffff;
 }
 
 /* Form input classes from forms.py */
@@ -614,11 +613,9 @@ main {
 
 /* Red button - mostly used when the user wants to delete a prompt or comment */
 .btn-danger {
-
-border-radius: 100px;
-padding: 14px 28px;
+  border-radius: 100px;
+  padding: 14px 28px;
 }
-
 
 /* Small buttons - mainly for the comment form */
 .btn-small {
@@ -797,31 +794,31 @@ padding: 14px 28px;
 /* ===== SELECT DROPDOWN WITH ARROW ===== */
 .edit-form .modern-select-dropdown,
 select.modern-select-dropdown {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
-  background-position: right 16px center !important;
-  background-repeat: no-repeat !important;
-  background-size: 30px !important;
-  padding-right: 48px !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 16px center;
+  background-repeat: no-repeat;
+  background-size: 30px;
+  padding-right: 48px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .edit-form .modern-select-dropdown:focus,
 select.modern-select-dropdown:focus {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23007bff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23007bff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
 }
 
 /* Fallback for specific select element */
 select#id_ai_generator {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
-  background-position: right 16px center !important;
-  background-repeat: no-repeat !important;
-  background-size: 16px !important;
-  padding-right: 48px !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 16px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 48px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 /* ===== TAG FILTER HEADER STYLES ===== */
@@ -877,7 +874,7 @@ select#id_ai_generator {
   overflow: hidden;
   height: auto;
   padding-top: 50px;
-  min-height: 787px;
+  min-height: 787px; /* FIXED: Added px unit */
 }
 
 /* Primary organic blur shape */
@@ -1093,12 +1090,9 @@ footer {
   box-shadow: -1px -3px 3px rgba(0, 0, 0, 0.1);
 }
 
-
 /* ===== MODALS ===== */
-
 .modal-footer {
   justify-content: center;
-
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
@@ -1183,28 +1177,28 @@ footer {
 
 @media (max-width: 1400px) {
   .masonry-grid {
-    column-count: 4 !important;
+    column-count: 4;
   }
 }
 
 @media (max-width: 1100px) {
   .masonry-grid {
-    column-count: 3 !important;
+    column-count: 3;
   }
 }
 
 @media (max-width: 800px) {
   .masonry-grid {
-    column-count: 2 !important;
+    column-count: 2;
   }
 }
 
 @media (max-width: 500px) {
   .masonry-grid {
-    column-count: 1 !important;
+    column-count: 1;
   }
 
   .hero-section {
-    min-height: 450;
+    min-height: 450px; /* FIXED: Added px unit */
   }
 }

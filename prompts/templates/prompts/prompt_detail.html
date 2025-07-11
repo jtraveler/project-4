@@ -12,8 +12,7 @@
 {% if not "placeholder" in prompt.featured_image.url %}
     <!-- Optimized preload for faster LCP - smaller dimensions for better performance -->
     <link rel="preload" as="image" 
-          href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_90' }}"
-          fetchpriority="high" />
+      href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_90' }}" />
 {% endif %}
 
 <!-- Critical CSS inline for faster rendering -->

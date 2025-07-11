@@ -6,71 +6,12 @@
 <!-- Only preload the FIRST image for true LCP optimization -->
 {% with first_prompt=prompt_list.0 %}
     {% if first_prompt and not "placeholder" in first_prompt.featured_image.url %}
-        <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_100,dpr_auto' }}" />
+        <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}" fetchpriority="high" />
     {% endif %}
 {% endwith %}
-
-<style>
-/* Inline critical masonry CSS */
-.masonry-container {
-    max-width: 100%;
-    margin: 0;
-    padding: 20px 40px;
-    width: 100%;
-}
-
-.masonry-grid {
-    column-count: 4;
-    column-gap: 15px;
-    width: 100%;
-}
-
-.masonry-item {
-    display: inline-block;
-    width: 100%;
-    margin-bottom: 15px;
-    break-inside: avoid;
-    background: none;
-    border-radius: 8px;
-}
-
-.prompt-card {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    background: #fff;
-}
-
-.image-wrapper {
-    position: relative;
-    width: 100%;
-}
-
-.image-wrapper img {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 12px;
-}
-
-/* Mobile responsive */
-@media (max-width: 800px) {
-    .masonry-grid {
-        column-count: 2 !important;
-    }
-}
-
-@media (max-width: 500px) {
-    .masonry-grid {
-        column-count: 1 !important;
-    }
-}
-</style>
 {% endblock %}
 
 {% block content %}
-
 <h1 class="visually-hidden">PromptFlow - AI Prompt Gallery and Community</h1>
 
 <!-- Hidden CSRF token for AJAX requests -->
@@ -142,7 +83,7 @@
                              height="584"
                              loading="lazy">
                     {% else %}
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_100,dpr_auto' }}" 
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}" 
                              alt="{{ prompt.title }}"
                              width="440"
                              height="584"
@@ -231,7 +172,67 @@
 </div>
 {% endif %}
 
-<!-- Optimized JavaScript -->
+{% endblock %}
+
+{% block extras %}
+<!-- Critical masonry CSS inline in extras to avoid render blocking -->
+<style>
+.masonry-container {
+    max-width: 100%;
+    margin: 0;
+    padding: 20px 40px;
+    width: 100%;
+}
+
+.masonry-grid {
+    column-count: 4;
+    column-gap: 15px;
+    width: 100%;
+}
+
+.masonry-item {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 15px;
+    break-inside: avoid;
+    background: none;
+    border-radius: 8px;
+}
+
+.prompt-card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: #fff;
+}
+
+.image-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.image-wrapper img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+}
+
+/* Mobile responsive */
+@media (max-width: 800px) {
+    .masonry-grid {
+        column-count: 2 !important;
+    }
+}
+
+@media (max-width: 500px) {
+    .masonry-grid {
+        column-count: 1 !important;
+    }
+}
+</style>
+
 <script>
 // Real tag filtering
 document.addEventListener('DOMContentLoaded', function() {

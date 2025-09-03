@@ -10,9 +10,9 @@
 
 <!-- Preload the hero image for LCP optimization with proper sizing -->
 {% if not "placeholder" in prompt.featured_image.url %}
-    <!-- Optimized preload for faster LCP - smaller dimensions for better performance -->
+    <!-- FIXED: Remove height constraint, only limit width to preserve aspect ratio -->
     <link rel="preload" as="image" 
-      href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_90' }}" />
+      href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" />
 {% endif %}
 
 <!-- Critical CSS inline for faster rendering -->
@@ -25,9 +25,10 @@
 
 .hero-image {
     width: 100%;
-    height: auto;
+    height: auto; /* CRITICAL: This ensures aspect ratio is preserved */
     display: block;
     border-radius: 12px;
+    /* Remove any max-height or height constraints */
 }
 
 .action-buttons {
@@ -109,23 +110,19 @@
 <!-- Main Content Area -->
 <div class="container mt-5">
     <div class="row">
-        <!-- Optimized Image Area with properly sized Cloudinary image -->
+        <!-- Optimized Image Area that preserves aspect ratios -->
         <div class="col-lg-8 pb-5">
             <div class="hero-image-shell">
                 {% if "placeholder" in prompt.featured_image.url %}
                     <img src="{% static 'images/default.jpg' %}" 
                          class="hero-image" 
                          alt="{{ prompt.title }}"
-                         width="824"
-                         height="800"
                          loading="eager">
                 {% else %}
-                    <!-- Optimized single image for better performance -->
-                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,h_800,c_limit,f_webp,q_90' }}" 
+                    <!-- Remove height constraint from Cloudinary transform and HTML attributes -->
+                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" 
                          class="hero-image" 
                          alt="{{ prompt.title }}"
-                         width="824"
-                         height="800"
                          loading="eager">
                 {% endif %}
             </div>

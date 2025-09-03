@@ -40,7 +40,7 @@ ALLOWED_HOSTS = [
 ]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # ENHANCED SECURITY HEADERS FOR LIGHTHOUSE BEST PRACTICES
 SECURE_CONTENT_TYPE_NOSNIFF = True

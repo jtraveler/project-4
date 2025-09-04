@@ -10,62 +10,137 @@
     {% endif %}
 {% endwith %}
 
-<!-- Critical masonry CSS -->
+<!-- Working Masonry with Columns -->
 <style>
-.masonry-container {
-    max-width: 100%;
-    margin: 0;
-    padding: 20px 40px;
-    width: 100%;
-}
-
-.masonry-grid {
-    column-count: 4;
-    column-gap: 15px;
-    width: 100%;
-}
-
-.masonry-item {
-    display: inline-block;
-    width: 100%;
-    margin-bottom: 15px;
-    break-inside: avoid;
-    background: none;
-    border-radius: 8px;
-}
-
-.prompt-card {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    background: #fff;
-}
-
-.image-wrapper {
-    position: relative;
-    width: 100%;
-}
-
-.image-wrapper img {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 12px;
-}
-
-/* Mobile responsive */
-@media (max-width: 800px) {
-    .masonry-grid {
-        column-count: 2 !important;
+    .masonry-container {
+        max-width: 100%;
+        margin: 0;
+        padding: 20px 40px;
+        width: 100%;
     }
-}
-
-@media (max-width: 500px) {
-    .masonry-grid {
-        column-count: 1 !important;
+    
+    /* Wrapper to contain the columns */
+    .masonry-wrapper {
+        position: relative;
+        width: 100%;
     }
-}
+    
+    /* Use flexbox for columns to maintain order */
+    .masonry-grid {
+        display: flex !important;
+        gap: 15px;
+        width: 100%;
+        align-items: flex-start;
+    }
+    
+    /* Individual columns */
+    .masonry-column {
+        flex: 1;
+        display: flex !important;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .masonry-item {
+        width: 100% !important;
+        margin-bottom: 0 !important;
+        display: block !important;
+        position: relative !important;
+        float: none !important;
+        opacity: 0;
+        animation: fadeIn 0.5s ease forwards;
+    }
+    
+    /* Ensure images load properly */
+    .prompt-card {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: #fff;
+        width: 100%;
+        height: fit-content;
+    }
+
+    .prompt-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .image-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .image-wrapper img {
+        width: 100% !important;
+        height: auto !important;
+        display: block;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1100px) {
+        .masonry-grid[data-columns="3"] .masonry-column:nth-child(4) {
+            display: none !important;
+        }
+    }
+    
+    @media (max-width: 800px) {
+        .masonry-grid[data-columns="2"] .masonry-column:nth-child(3),
+        .masonry-grid[data-columns="2"] .masonry-column:nth-child(4) {
+            display: none !important;
+        }
+    }
+    
+    @media (max-width: 500px) {
+        .masonry-grid[data-columns="1"] .masonry-column:nth-child(2),
+        .masonry-grid[data-columns="1"] .masonry-column:nth-child(3),
+        .masonry-grid[data-columns="1"] .masonry-column:nth-child(4) {
+            display: none !important;
+        }
+    }
+    
+    /* Animation for items */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .masonry-item.new-item {
+        animation: fadeIn 0.6s ease forwards;
+    }
+    
+    /* Hide unused elements */
+    .grid-sizer,
+    .gutter-sizer {
+        display: none !important;
+    }
+    
+    /* End of results message */
+    .end-of-results {
+        padding: 40px 0;
+    }
+
+    .end-message {
+        animation: fadeIn 0.6s ease forwards;
+    }
+
+    .end-message h3 {
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .end-message p {
+        font-size: 1.1rem;
+        margin-bottom: 0;
+    }
 </style>
 {% endblock %}
 
@@ -129,19 +204,26 @@
 {% if prompt_list %}
 <!-- Optimized masonry grid -->
 <div class="masonry-container">
-    <div class="masonry-grid">
+    <div class="masonry-wrapper">
+        <div class="masonry-grid" id="masonry-grid">
+            <!-- Columns will be created by JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Store items in a hidden container for JavaScript to process -->
+    <div id="items-container" style="display: none;">
         {% for prompt in prompt_list %}
-        <div class="masonry-item">
+        <div class="masonry-item" data-item>
             <div class="prompt-card">
                 <div class="image-wrapper">
                     {% if "placeholder" in prompt.featured_image.url %}
-                        <img src="{% static 'images/default.jpg' %}" 
+                        <img src="{% static 'images/default.jpg' %}"
                              alt="{{ prompt.title }}"
                              width="440"
                              height="584"
                              loading="lazy">
                     {% else %}
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}" 
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
                              alt="{{ prompt.title }}"
                              width="440"
                              height="584"
@@ -161,23 +243,23 @@
                             <span class="heart-counter">
                                 {% if user.is_authenticated %}
                                     <small class="like-section" 
-                                        data-prompt-slug="{{ prompt.slug }}"
-                                        style="cursor: pointer; user-select: none;">
+                                           data-prompt-slug="{{ prompt.slug }}"
+                                           style="cursor: pointer; user-select: none;">
                                         {% if user in prompt.likes.all %}
                                             <i class="fas fa-heart me-1" style="color: white;"></i>
                                         {% else %}
                                             <i class="far fa-heart me-1" style="color: white;"></i>
                                         {% endif %}
-                                        <span class="like-count">{{ prompt.number_of_likes }}</span> 
+                                        <span class="like-count">{{ prompt.number_of_likes }}</span>
                                         like<span class="like-plural">{% if prompt.number_of_likes != 1 %}s{% endif %}</span>
                                     </small>
                                 {% else %}
                                     <a href="{% url 'account_login' %}?next={{ request.path }}" 
-                                    class="text-decoration-none"
-                                    style="color: white;">
+                                       class="text-decoration-none" 
+                                       style="color: white;">
                                         <small>
                                             <i class="far fa-heart me-1"></i>
-                                            <span>{{ prompt.number_of_likes }}</span> 
+                                            <span>{{ prompt.number_of_likes }}</span>
                                             like{% if prompt.number_of_likes != 1 %}s{% endif %}
                                         </small>
                                     </a>
@@ -205,7 +287,7 @@
     {% if page_obj.has_next %}
     <div class="load-more-container text-center mt-5">
         <button id="load-more-btn" 
-                class="btn btn-primary btn-lg" 
+                class="btn btn-primary btn-lg"
                 data-next-page="{{ page_obj.next_page_number }}"
                 aria-label="Load more prompts">
             <i class="fas fa-plus-circle me-2"></i>
@@ -215,9 +297,17 @@
             <i class="fas fa-spinner fa-spin"></i> Loading more prompts...
         </div>
     </div>
+    {% else %}
+    <!-- End of results message -->
+    <div class="end-of-results text-center mt-5">
+        <div class="end-message">
+            <i class="fas fa-check-circle text-muted mb-3" style="font-size: 3rem;"></i>
+            <h3 class="text-muted">You have reached the end.</h3>
+            <p class="text-muted">No more prompts to load</p>
+        </div>
+    </div>
     {% endif %}
 </div>
-
 {% else %}
 <!-- No results message - Outside masonry container -->
 <div class="container">
@@ -229,91 +319,165 @@
     </div>
 </div>
 {% endif %}
-
 {% endblock %}
 
 {% block extras %}
 <script>
-// Real tag filtering
 document.addEventListener('DOMContentLoaded', function() {
-    const tagBadges = document.querySelectorAll('.tag-clickable');
+    // Masonry column management
+    let columns = [];
+    let columnCount = 4;
     
-    tagBadges.forEach(function(badge) {
-        badge.addEventListener('click', function() {
-            const tagName = this.getAttribute('data-tag');
-            const url = window.location.origin;
-            window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
-        });
-    });
-});
-
-// Function to attach heart functionality to elements
-function attachHeartFunctionality(container = document) {
-    const likeSections = container.querySelectorAll('.like-section');
+    function getColumnCount() {
+        const width = window.innerWidth;
+        if (width < 500) return 1;
+        if (width < 800) return 2;
+        if (width < 1100) return 3;
+        return 4;
+    }
     
-    likeSections.forEach(function(section) {
-        // Remove existing listeners to avoid duplicates
-        const newSection = section.cloneNode(true);
-        section.parentNode.replaceChild(newSection, section);
+    function createColumns() {
+        const grid = document.getElementById('masonry-grid');
+        grid.innerHTML = '';
+        columns = [];
         
-        newSection.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
+        const newColumnCount = getColumnCount();
+        grid.setAttribute('data-columns', newColumnCount);
+        
+        for (let i = 0; i < 4; i++) { // Always create 4 columns, CSS will hide extras
+            const column = document.createElement('div');
+            column.className = 'masonry-column';
+            column.id = `column-${i}`;
+            grid.appendChild(column);
+            columns.push(column);
+        }
+        
+        columnCount = newColumnCount;
+    }
+    
+    function getShortestColumn() {
+        let shortest = columns[0];
+        let minHeight = shortest.offsetHeight;
+        
+        for (let i = 0; i < columnCount; i++) {
+            if (columns[i].offsetHeight < minHeight) {
+                minHeight = columns[i].offsetHeight;
+                shortest = columns[i];
+            }
+        }
+        
+        return shortest;
+    }
+    
+    // Find the shortest column starting from a specific index
+    function getShortestColumnFrom(startIndex) {
+        let shortestIndex = startIndex;
+        let minHeight = columns[startIndex].offsetHeight;
+        
+        // Check columns in order from startIndex
+        for (let i = startIndex; i < columnCount; i++) {
+            if (columns[i].offsetHeight < minHeight) {
+                minHeight = columns[i].offsetHeight;
+                shortestIndex = i;
+            }
+        }
+        
+        // If we didn't find a shorter column to the right, check from the beginning
+        for (let i = 0; i < startIndex; i++) {
+            if (columns[i].offsetHeight < minHeight) {
+                minHeight = columns[i].offsetHeight;
+                shortestIndex = i;
+            }
+        }
+        
+        return columns[shortestIndex];
+    }
+    
+    // Distribute items with left-to-right preference
+    function distributeItems(items, animate = false, preferLeftToRight = false) {
+        let lastColumnIndex = 0;
+        
+        items.forEach((item, index) => {
+            let targetColumn;
             
-            const promptSlug = this.getAttribute('data-prompt-slug');
-            const heartIcon = this.querySelector('i');
-            const likeCount = this.querySelector('.like-count');
-            const likePlural = this.querySelector('.like-plural');
+            if (preferLeftToRight) {
+                // For new items, find shortest column but prefer left-to-right order
+                targetColumn = getShortestColumnFrom(lastColumnIndex);
+                lastColumnIndex = (columns.indexOf(targetColumn) + 1) % columnCount;
+            } else {
+                // For initial load, use pure shortest column
+                targetColumn = getShortestColumn();
+            }
             
-            fetch('/prompt/' + promptSlug + '/like/', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                likeCount.textContent = data.like_count;
-                
-                if (data.like_count === 1) {
-                    likePlural.textContent = '';
-                } else {
-                    likePlural.textContent = 's';
-                }
-                
-                if (data.liked) {
-                    heartIcon.className = 'fas fa-heart me-1';
-                } else {
-                    heartIcon.className = 'far fa-heart me-1';
-                }
-                
-                heartIcon.style.color = 'white';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Something went wrong. Please try again.');
-            });
+            if (animate) {
+                item.classList.add('new-item');
+                item.style.animationDelay = `${index * 0.1}s`;
+            }
+            
+            targetColumn.appendChild(item);
         });
-    });
-}
-
-// Optimized Load More functionality
-document.addEventListener('DOMContentLoaded', function() {
-    // Attach heart functionality to initial content
+    }
+    
+    // Initialize columns
+    createColumns();
+    
+    // Distribute initial items
+    const itemsContainer = document.getElementById('items-container');
+    const initialItems = Array.from(itemsContainer.querySelectorAll('[data-item]'));
+    distributeItems(initialItems, false, false);
+    
+    // Heart functionality
+    function attachHeartFunctionality(container = document) {
+        const likeSections = container.querySelectorAll('.like-section');
+        
+        likeSections.forEach(function(section) {
+            if (section.dataset.listenerAttached) return;
+            
+            section.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const promptSlug = this.getAttribute('data-prompt-slug');
+                const heartIcon = this.querySelector('i');
+                const likeCount = this.querySelector('.like-count');
+                const likePlural = this.querySelector('.like-plural');
+                
+                fetch('/prompt/' + promptSlug + '/like/', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    likeCount.textContent = data.like_count;
+                    likePlural.textContent = data.like_count === 1 ? '' : 's';
+                    heartIcon.className = data.liked ? 'fas fa-heart me-1' : 'far fa-heart me-1';
+                    heartIcon.style.color = 'white';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Something went wrong. Please try again.');
+                });
+            });
+            
+            section.dataset.listenerAttached = 'true';
+        });
+    }
+    
     attachHeartFunctionality();
     
+    // Load More functionality
     const loadMoreBtn = document.getElementById('load-more-btn');
     const loadingSpinner = document.getElementById('loading-spinner');
-    const masonryGrid = document.querySelector('.masonry-grid');
     
     if (loadMoreBtn) {
         loadMoreBtn.addEventListener('click', function() {
             const nextPage = this.getAttribute('data-next-page');
             const currentUrl = window.location.pathname;
             const currentParams = new URLSearchParams(window.location.search);
-            
             currentParams.set('page', nextPage);
             
             loadMoreBtn.style.display = 'none';
@@ -324,31 +488,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(html => {
                     const parser = new DOMParser();
                     const newDoc = parser.parseFromString(html, 'text/html');
-                    const newItems = newDoc.querySelectorAll('.masonry-item');
+                    const newItems = Array.from(newDoc.querySelectorAll('[data-item]'));
                     
-                    // Use document fragment for better performance
-                    const fragment = document.createDocumentFragment();
-                    newItems.forEach(item => {
-                        fragment.appendChild(item);
-                    });
-                    masonryGrid.appendChild(fragment);
+                    // Distribute new items with left-to-right preference
+                    distributeItems(newItems, true, true);
                     
-                    // Attach heart functionality to newly loaded content
-                    attachHeartFunctionality(masonryGrid);
+                    // Attach heart functionality to new items
+                    attachHeartFunctionality();
                     
-                    // Update masonry layout if using JS masonry
-                    if (window.masonryInstance) {
-                        setTimeout(() => {
-                            window.masonryInstance.refresh();
-                        }, 100);
-                    }
-                    
+                    // Update load more button
                     const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
                     if (newLoadMoreBtn) {
-                        loadMoreBtn.setAttribute('data-next-page', newLoadMoreBtn.getAttribute('data-next-page'));
+                        loadMoreBtn.setAttribute('data-next-page', 
+                            newLoadMoreBtn.getAttribute('data-next-page'));
                         loadMoreBtn.style.display = 'block';
                     } else {
-                        loadMoreBtn.remove();
+                        // Replace the load more container with end message
+                        const loadMoreContainer = document.querySelector('.load-more-container');
+                        if (loadMoreContainer) {
+                            loadMoreContainer.innerHTML = `
+                                <div class="end-of-results text-center">
+                                    <div class="end-message">
+                                        <i class="fas fa-check-circle text-muted mb-3" style="font-size: 3rem;"></i>
+                                        <h3 class="text-muted">You have reached the end.</h3>
+                                        <p class="text-muted">No more prompts to load</p>
+                                    </div>
+                                </div>
+                            `;
+                        }
                     }
                     
                     loadingSpinner.style.display = 'none';
@@ -360,6 +527,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     }
+    
+    // Tag filtering
+    const tagBadges = document.querySelectorAll('.tag-clickable');
+    tagBadges.forEach(function(badge) {
+        badge.addEventListener('click', function() {
+            const tagName = this.getAttribute('data-tag');
+            const url = window.location.origin;
+            window.location.href = `${url}/?tag=${encodeURIComponent(tagName)}`;
+        });
+    });
+    
+    // Handle window resize
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (getColumnCount() !== columnCount) {
+                // Collect all items
+                const allItems = [];
+                columns.forEach(column => {
+                    const items = Array.from(column.querySelectorAll('.masonry-item'));
+                    allItems.push(...items);
+                });
+                
+                // Recreate columns and redistribute
+                createColumns();
+                distributeItems(allItems, false, false);
+            }
+        }, 250);
+    });
 });
 </script>
 {% endblock %}

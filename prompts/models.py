@@ -25,9 +25,9 @@ AI_GENERATOR_CHOICES = [
 
 class Prompt(models.Model):
     """
-    Model representing an AI prompt with its associated image and metadata.
+    Model representing an AI prompt with its associated image/video and metadata.
 
-    This model stores user-generated AI prompts along with the images they
+    This model stores user-generated AI prompts along with the images or videos they
     created, supporting features like tagging, likes, comments, and AI
     generator tracking.
 
@@ -35,17 +35,19 @@ class Prompt(models.Model):
         title (CharField): The prompt's title (max 200 chars, unique)
         slug (SlugField): URL-friendly version of title (auto-generated)
         content (TextField): The actual AI prompt text used to generate the
-            image
+            image/video
         excerpt (TextField): Optional short description of the prompt
         featured_image (CloudinaryField): The AI-generated image stored on
             Cloudinary
+        featured_video (CloudinaryField): The AI-generated video stored on
+            Cloudinary (optional)
         author (ForeignKey): User who created the prompt
         status (IntegerField): Publication status (Draft=0, Published=1)
         created_on (DateTimeField): When the prompt was first created
         updated_on (DateTimeField): When the prompt was last modified
         tags (TaggableManager): Tags for categorization and discovery
         likes (ManyToManyField): Users who liked this prompt
-        ai_generator (CharField): Which AI tool was used to create the image
+        ai_generator (CharField): Which AI tool was used to create the image/video
 
     Related Models:
         - User (via author and likes)
@@ -57,6 +59,9 @@ class Prompt(models.Model):
         number_of_likes(): Returns count of users who liked this prompt
         get_ai_generator_display_name(): Returns human-readable AI generator
             name
+        is_video(): Returns True if this prompt has a video instead of image
+        get_media_url(): Returns the appropriate media URL (video or image)
+        get_thumbnail_url(): Returns thumbnail URL for videos or image URL
 
     Example:
         prompt = Prompt.objects.create(
@@ -70,7 +75,17 @@ class Prompt(models.Model):
     slug = models.SlugField(max_length=200, unique=True, blank=False)
     content = models.TextField()
     excerpt = models.TextField(blank=True)
-    featured_image = CloudinaryField('image', default='placeholder')
+    featured_image = CloudinaryField('image', default='placeholder', blank=True)
+    featured_video = CloudinaryField(
+        'video',
+        resource_type='video',
+        blank=True,
+        null=True,
+        transformation={
+            'quality': 'auto',
+            'fetch_format': 'auto'
+        }
+    )
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="prompts"
     )
@@ -85,7 +100,7 @@ class Prompt(models.Model):
         max_length=50,
         choices=AI_GENERATOR_CHOICES,
         default='midjourney',
-        help_text='Select the AI tool used to generate this image'
+        help_text='Select the AI tool used to generate this image/video'
     )
 
     class Meta:
@@ -126,6 +141,56 @@ class Prompt(models.Model):
             prompt.get_ai_generator_display_name()  # Returns 'DALL-E 3'
         """
         return dict(AI_GENERATOR_CHOICES).get(self.ai_generator, 'Unknown')
+    
+    def is_video(self):
+        """
+        Check if this prompt contains a video instead of an image.
+        
+        Returns:
+            bool: True if this prompt has a video, False otherwise
+        """
+        return bool(self.featured_video) and not str(self.featured_video).startswith('placeholder')
+    
+    def get_media_url(self):
+        """
+        Get the URL of the media file (video or image).
+        
+        Returns:
+            str: URL of the video if available, otherwise image URL
+        """
+        if self.is_video():
+            return self.featured_video.url
+        return self.featured_image.url
+    
+    def get_thumbnail_url(self, width=440):
+        """
+        Get thumbnail URL for the prompt.
+        
+        For videos, generates a thumbnail from the first frame.
+        For images, returns the image URL with specified width.
+        
+        Args:
+            width (int): Desired width of the thumbnail
+            
+        Returns:
+            str: Cloudinary URL for the thumbnail
+        """
+        if self.is_video():
+            # Generate thumbnail from video at 0 seconds
+            return f"{self.featured_video.url.split('.')[0]}.jpg?w={width}&so_0"
+        return self.featured_image.build_url(width=width, format='jpg')
+    
+    def clean(self):
+        """
+        Validate that either featured_image or featured_video is provided.
+        """
+        from django.core.exceptions import ValidationError
+        
+        if not self.featured_image and not self.featured_video:
+            raise ValidationError('Either featured image or featured video must be provided.')
+        
+        if self.featured_image and self.featured_video:
+            raise ValidationError('Please provide either an image or a video, not both.')
 
 
 class Comment(models.Model):

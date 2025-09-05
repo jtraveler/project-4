@@ -8,7 +8,7 @@ from .models import Prompt, Comment, CollaborateRequest
 class PromptAdmin(SummernoteModelAdmin):
     list_display = (
         'title', 'slug', 'status', 'created_on', 'author', 'tag_list',
-        'number_of_likes', 'ai_generator'
+        'number_of_likes', 'ai_generator', 'media_type'
     )
     search_fields = ['title', 'content', 'tags__name']
     list_filter = (
@@ -19,13 +19,17 @@ class PromptAdmin(SummernoteModelAdmin):
     ordering = ['-created_on']
     actions = ['make_published']
 
-    # Added ai_generator to the fieldsets for better organization
+    # Updated fieldsets to include video field
     fieldsets = (
         ('Basic Information', {
             'fields': ('title', 'slug', 'author', 'status')
         }),
         ('Content', {
-            'fields': ('excerpt', 'content', 'featured_image')
+            'fields': ('excerpt', 'content')
+        }),
+        ('Media', {
+            'fields': ('featured_image', 'featured_video'),
+            'description': 'Upload either an image OR a video, not both.'
         }),
         ('Metadata', {
             'fields': ('tags', 'ai_generator')
@@ -35,6 +39,13 @@ class PromptAdmin(SummernoteModelAdmin):
     def tag_list(self, obj):
         return ", ".join(o.name for o in obj.tags.all())
     tag_list.short_description = 'Tags'
+
+    def media_type(self, obj):
+        """Display whether the prompt contains an image or video"""
+        if obj.is_video():
+            return '🎥 Video'
+        return '🖼️ Image'
+    media_type.short_description = 'Type'
 
     def make_published(self, request, queryset):
         queryset.update(status=1)

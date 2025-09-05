@@ -15,7 +15,7 @@
         <!-- Info Alert -->
         <div class="alert alert-info mb-4">
             <i class="fas fa-info-circle me-2"></i>
-            <strong>Getting Started:</strong> Fill out the details below to share your amazing AI-generated image and prompt.
+            <strong>Getting Started:</strong> Fill out the details below to share your amazing AI-generated content.
         </div>
         
         <!-- Form -->
@@ -90,12 +90,29 @@
                     </div>
                 {% endif %}
                 <div class="field-help">
-                    Select the AI tool you used to create this image
+                    Select the AI tool you used to create this content
+                </div>
+            </div>
+
+            <!-- Media Type Selection -->
+            <div class="field-group mb-4">
+                <label class="field-label">Media Type*</label>
+                <div class="media-type-selection">
+                    {{ prompt_form.media_type }}
+                </div>
+                {% if prompt_form.media_type.errors %}
+                    <div class="text-danger mt-1" style="font-weight: 600;">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        {{ prompt_form.media_type.errors|first }}
+                    </div>
+                {% endif %}
+                <div class="field-help">
+                    Choose whether to upload an image or video
                 </div>
             </div>
 
             <!-- Featured Image Field -->
-            <div class="field-group">
+            <div class="field-group" id="image-upload-section">
                 <label class="field-label">Featured Image*</label>
                 
                 <!-- File Upload -->
@@ -120,6 +137,32 @@
                 </div>
             </div>
 
+            <!-- Featured Video Field -->
+            <div class="field-group" id="video-upload-section" style="display: none;">
+                <label class="field-label">Featured Video*</label>
+                
+                <!-- File Upload -->
+                <div class="file-upload-area">
+                    <div class="mt-2 field-label mb-3">Upload Your AI-Generated Video:</div>
+                    
+                    <!-- Django file input -->
+                    <div class="custom-file-input-only mb-4">
+                        {{ prompt_form.featured_video }}
+                    </div>
+                    
+                    {% if prompt_form.featured_video.errors %}
+                        <div class="text-danger mt-1" style="font-weight: 600;">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            {{ prompt_form.featured_video.errors|first }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="field-help">
+                        {{ prompt_form.featured_video.help_text }}
+                    </div>
+                </div>
+            </div>
+
             <!-- Content Field -->
             <div class="field-group">
                 <label for="id_content" class="field-label">Prompt Content*</label>
@@ -131,7 +174,7 @@
                     </div>
                 {% endif %}
                 <div class="field-help">
-                    Paste the exact prompt you used to generate your image
+                    Paste the exact prompt you used to generate your content
                 </div>
             </div>
 
@@ -164,10 +207,34 @@ function addTag(tagName) {
     }
 }
 
+// Toggle between image and video upload
+function toggleMediaFields() {
+    const mediaType = document.querySelector('input[name="media_type"]:checked').value;
+    const imageSection = document.getElementById('image-upload-section');
+    const videoSection = document.getElementById('video-upload-section');
+    
+    if (mediaType === 'video') {
+        imageSection.style.display = 'none';
+        videoSection.style.display = 'block';
+    } else {
+        imageSection.style.display = 'block';
+        videoSection.style.display = 'none';
+    }
+}
+
 // Form validation and submit button feedback
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('.edit-form');
     const submitBtn = document.querySelector('.btn-primary');
+    
+    // Initial media field toggle
+    toggleMediaFields();
+    
+    // Add event listeners to radio buttons
+    const radioButtons = document.querySelectorAll('input[name="media_type"]');
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', toggleMediaFields);
+    });
     
     form.addEventListener('submit', function(e) {
         // Let Django handle validation, just provide user feedback
@@ -176,4 +243,37 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Add custom styles for radio buttons -->
+<style>
+.media-type-selection {
+    display: flex;
+    gap: 20px;
+}
+
+.media-type-selection label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 10px 20px;
+    border: 2px solid var(--main-border-color);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.media-type-selection input[type="radio"] {
+    margin-right: 8px;
+}
+
+.media-type-selection input[type="radio"]:checked + label,
+.media-type-selection label:has(input:checked) {
+    border-color: var(--main-blue);
+    background: var(--light-blue);
+    color: var(--main-blue);
+}
+
+.media-type-radio {
+    margin-right: 8px;
+}
+</style>
 {% endblock content %}

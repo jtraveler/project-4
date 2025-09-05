@@ -400,6 +400,67 @@ main {
   margin-right: 4px;
 }
 
+
+/* ===== VIDEO STYLES ===== */
+/* Video card styling */
+.video-card .image-wrapper {
+  position: relative;
+  background: #000;
+}
+
+.gallery-video {
+  width: 100%;
+  height: auto;
+  display: none;
+  object-fit: cover;
+}
+
+.video-thumbnail {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: opacity 0.3s ease;
+}
+
+.video-play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.video-card:hover .video-play-icon {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* Video in detail page */
+.hero-video {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 0 auto;
+  display: block;
+}
+
+/* Video loading state */
+.video-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 24px;
+}
+
+
+
 /* ===== LOAD MORE BUTTON STYLING ===== */
 .load-more-container {
   margin: 60px auto;

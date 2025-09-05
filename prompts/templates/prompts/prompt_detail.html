@@ -8,11 +8,16 @@
 <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 
-<!-- Preload the hero image for LCP optimization with proper sizing -->
-{% if not "placeholder" in prompt.featured_image.url %}
-    <!-- FIXED: Remove height constraint, only limit width to preserve aspect ratio -->
-    <link rel="preload" as="image" 
-      href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" />
+<!-- Preload media based on type -->
+{% if prompt.is_video %}
+    <!-- Preload video poster/thumbnail -->
+    <link rel="preload" as="image" href="{{ prompt.get_thumbnail_url }}" />
+{% else %}
+    <!-- Preload the hero image for LCP optimization -->
+    {% if not "placeholder" in prompt.featured_image.url %}
+        <link rel="preload" as="image" 
+          href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" />
+    {% endif %}
 {% endif %}
 
 <!-- Critical CSS inline for faster rendering -->
@@ -22,7 +27,6 @@
     width: 100%;
     max-width: 824px;
 }
-
 
 .hero-image {
   width: auto;
@@ -36,6 +40,16 @@
   object-fit: cover;
 }
 
+.hero-video {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 0 auto;
+  display: block;
+}
+
 .action-buttons {
     margin-bottom: 1.5rem;
 }
@@ -43,6 +57,19 @@
 .sidebar-title {
     font-weight: 600;
     margin-bottom: 1rem;
+}
+
+.media-type-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--light-blue);
+    color: var(--main-blue);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-left: 1rem;
 }
 </style>
 {% endblock %}
@@ -56,7 +83,15 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-8">
-                    <h2 class="hero-title">{{ prompt.title }}</h2>
+                    <h2 class="hero-title">
+                        {{ prompt.title }}
+                        {% if prompt.is_video %}
+                        <span class="media-type-indicator">
+                            <i class="fas fa-video"></i>
+                            Video
+                        </span>
+                        {% endif %}
+                    </h2>
                     <p class="hero-meta">
                         <span class="author-badge">By @{{ prompt.author }}</span>
                     </p>
@@ -115,20 +150,30 @@
 <!-- Main Content Area -->
 <div class="container mt-5">
     <div class="row">
-        <!-- Optimized Image Area that preserves aspect ratios -->
+        <!-- Media Display Area -->
         <div class="col-lg-8 pb-5">
             <div class="hero-image-shell">
-                {% if "placeholder" in prompt.featured_image.url %}
-                    <img src="{% static 'images/default.jpg' %}" 
-                         class="hero-image" 
-                         alt="{{ prompt.title }}"
-                         loading="eager">
+                {% if prompt.is_video %}
+                    <!-- Video Display -->
+                    <video controls class="hero-video" 
+                           poster="{{ prompt.get_thumbnail_url }}"
+                           preload="metadata">
+                        <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
                 {% else %}
-                    <!-- Remove height constraint from Cloudinary transform and HTML attributes -->
-                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" 
-                         class="hero-image" 
-                         alt="{{ prompt.title }}"
-                         loading="eager">
+                    <!-- Image Display -->
+                    {% if "placeholder" in prompt.featured_image.url %}
+                        <img src="{% static 'images/default.jpg' %}" 
+                             class="hero-image" 
+                             alt="{{ prompt.title }}"
+                             loading="eager">
+                    {% else %}
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" 
+                             class="hero-image" 
+                             alt="{{ prompt.title }}"
+                             loading="eager">
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -164,12 +209,18 @@
                 <div class="prompt-metadata mb-5">
                     <div class="metadata-item">
                         <i class="fas fa-robot me-2"></i>
-                        <span>{{ prompt.get_ai_generator_display|default:"Not specified" }}</span>
+                        <span>{{ prompt.get_ai_generator_display_name|default:"Not specified" }}</span>
                     </div>
                     <div class="metadata-item">
                         <i class="fas fa-calendar-alt me-2"></i>
                         <span>Created <span class="date-text">{{ prompt.created_on|date:"F d, Y" }}</span></span>
                     </div>
+                    {% if prompt.is_video %}
+                    <div class="metadata-item">
+                        <i class="fas fa-video me-2"></i>
+                        <span>Video Content</span>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div class="mb-5">
@@ -185,7 +236,7 @@
             </div>
         </div>
 
-        <!-- Comments -->
+        <!-- Comments Section - Rest remains the same -->
         <div class="col-lg-8">
             <!-- Comments Section -->
             <div class="comments-section">
@@ -301,6 +352,7 @@
 
 {% block extras %}
 <script>
+// All your existing JavaScript remains the same
 document.addEventListener('DOMContentLoaded', function() {
     window.scrollToComments = function() {
         const commentsSection = document.querySelector('.comments-section');

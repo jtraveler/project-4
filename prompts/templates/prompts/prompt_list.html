@@ -213,22 +213,50 @@
     <!-- Store items in a hidden container for JavaScript to process -->
     <div id="items-container" style="display: none;">
         {% for prompt in prompt_list %}
-        <div class="masonry-item" data-item>
-            <div class="prompt-card">
+        <div class="masonry-item" data-item {% if prompt.is_video %}data-video="true"{% endif %}>
+            <div class="prompt-card {% if prompt.is_video %}video-card{% endif %}">
                 <div class="image-wrapper">
-                    {% if "placeholder" in prompt.featured_image.url %}
-                        <img src="{% static 'images/default.jpg' %}"
+                    {% if prompt.is_video %}
+                        <!-- Video element (hidden initially) -->
+                        <video class="gallery-video"
+                               muted
+                               loop
+                               playsinline
+                               preload="none"
+                               width="440"
+                               height="auto">
+                            <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                        </video>
+                        
+                        <!-- Video thumbnail -->
+                        <img class="video-thumbnail"
+                             src="{{ prompt.get_thumbnail_url }}"
                              alt="{{ prompt.title }}"
                              width="440"
-                             height="584"
-                             loading="lazy">
-                    {% else %}
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
-                             alt="{{ prompt.title }}"
-                             width="440"
-                             height="584"
+                             height="auto"
                              {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %}
                              decoding="async">
+                        
+                        <!-- Play icon overlay -->
+                        <div class="video-play-icon">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                    {% else %}
+                        <!-- Regular image -->
+                        {% if "placeholder" in prompt.featured_image.url %}
+                            <img src="{% static 'images/default.jpg' %}"
+                                 alt="{{ prompt.title }}"
+                                 width="440"
+                                 height="584"
+                                 loading="lazy">
+                        {% else %}
+                            <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
+                                 alt="{{ prompt.title }}"
+                                 width="440"
+                                 height="584"
+                                 {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %}
+                                 decoding="async">
+                        {% endif %}
                     {% endif %}
                     
                     <!-- Overlay with user info, platform, and heart -->
@@ -327,6 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Masonry column management
     let columns = [];
     let columnCount = 4;
+    let videoObserver = null;
     
     function getColumnCount() {
         const width = window.innerWidth;
@@ -415,6 +444,65 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             targetColumn.appendChild(item);
+        });
+        
+        // Initialize video observer after items are distributed
+        initVideoObserver();
+    }
+    
+    // Video auto-play functionality
+    function initVideoObserver() {
+        if (videoObserver) {
+            videoObserver.disconnect();
+        }
+        
+        const videoCards = document.querySelectorAll('[data-video="true"]');
+        
+        if (videoCards.length === 0) return;
+        
+        videoObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const video = entry.target.querySelector('video');
+                const thumbnail = entry.target.querySelector('.video-thumbnail');
+                const playIcon = entry.target.querySelector('.video-play-icon');
+                
+                if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                    // In view - play video
+                    if (video && thumbnail) {
+                        thumbnail.style.opacity = '0';
+                        if (playIcon) playIcon.style.opacity = '0';
+                        video.style.display = 'block';
+                        
+                        // Attempt to play video
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                console.log('Auto-play prevented:', error);
+                                // Revert to thumbnail if auto-play fails
+                                video.style.display = 'none';
+                                thumbnail.style.opacity = '1';
+                                if (playIcon) playIcon.style.opacity = '1';
+                            });
+                        }
+                    }
+                } else {
+                    // Out of view - pause video
+                    if (video) {
+                        video.pause();
+                        video.currentTime = 0;
+                        video.style.display = 'none';
+                        if (thumbnail) thumbnail.style.opacity = '1';
+                        if (playIcon) playIcon.style.opacity = '1';
+                    }
+                }
+            });
+        }, {
+            threshold: 0.5,
+            rootMargin: '0px'
+        });
+        
+        videoCards.forEach(card => {
+            videoObserver.observe(card);
         });
     }
     

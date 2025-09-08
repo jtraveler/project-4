@@ -32,6 +32,7 @@ class PromptList(generic.ListView):
         - Performance: Uses select_related and prefetch_related for
           optimization
         - Caching: 5-minute cache for non-search results
+        - Custom ordering: Respects manual order field, then creation date
 
     Context variables:
         object_list: Paginated list of Prompt objects
@@ -67,7 +68,7 @@ class PromptList(generic.ListView):
                 'comments',
                 queryset=Comment.objects.filter(approved=True)
             )
-        ).filter(status=1).order_by('-created_on')
+        ).filter(status=1).order_by('order', '-created_on')  # Updated ordering
 
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name)
@@ -97,6 +98,11 @@ class PromptList(generic.ListView):
         context = super().get_context_data(**kwargs)
         context['current_tag'] = self.request.GET.get('tag')
         context['search_query'] = self.request.GET.get('search')
+        
+        # Add admin ordering controls context
+        if self.request.user.is_staff:
+            context['show_admin_controls'] = True
+        
         return context
 
 
@@ -402,9 +408,9 @@ def prompt_create(request):
     """
     Allow logged-in users to create new AI prompts.
 
-    Users can upload an AI-generated image along with the prompt text used to
+    Users can upload an AI-generated image or video along with the prompt text used to
     create it. Includes form for title, description, tags, AI generator type,
-    and image upload. Automatically publishes the prompt upon creation.
+    and media upload. Automatically publishes the prompt upon creation.
 
     Variables:
         prompt_form: Form for creating new prompts
@@ -414,12 +420,30 @@ def prompt_create(request):
     Template: prompts/prompt_create.html
     URL: /create-prompt/
     """
+    def get_next_order():
+        """Get the next order number for new prompts (should be at the top)"""
+        min_order = Prompt.objects.aggregate(models.Min('order'))['order__min'] or 2.0
+        return min_order - 2.0
+
     if request.method == 'POST':
         prompt_form = PromptForm(request.POST, request.FILES)
         if prompt_form.is_valid():
+            # Get the media type from the form
+            media_type = prompt_form.cleaned_data.get('media_type', 'image')
+            
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
             prompt.status = 1
+            
+            # Set auto-incrementing order number
+            prompt.order = get_next_order()
+            
+            # Ensure only one media field is set based on media_type
+            if media_type == 'video':
+                prompt.featured_image = None
+            else:
+                prompt.featured_video = None
+                
             prompt.save()
             prompt_form.save_m2m()
 
@@ -432,6 +456,8 @@ def prompt_create(request):
             )
             return redirect('prompts:prompt_detail', slug=prompt.slug)
         else:
+            # Log form errors for debugging
+            logger.error(f"Form errors: {prompt_form.errors}")
             messages.error(request, 'Please correct the errors below.')
     else:
         prompt_form = PromptForm()
@@ -448,7 +474,6 @@ def prompt_create(request):
     }
 
     return render(request, 'prompts/prompt_create.html', context)
-
 
 def prompt_delete(request, slug):
     """
@@ -579,3 +604,103 @@ def prompt_like(request, slug):
     return HttpResponseRedirect(
         reverse('prompts:prompt_detail', args=[str(slug)])
     )
+
+
+# New views for frontend admin ordering
+@login_required
+def prompt_move_up(request, slug):
+    """
+    Move a prompt up in the ordering (decrease order number).
+    Only available to staff users.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'Permission denied.')
+        return redirect('prompts:home')
+    
+    prompt = get_object_or_404(Prompt, slug=slug)
+    
+    # Find the prompt with the next lower order number
+    previous_prompt = Prompt.objects.filter(
+        order__lt=prompt.order
+    ).order_by('-order').first()
+    
+    if previous_prompt:
+        # Swap the order values
+        prompt.order, previous_prompt.order = previous_prompt.order, prompt.order
+        prompt.save(update_fields=['order'])
+        previous_prompt.save(update_fields=['order'])
+        
+        # Clear caches
+        for page in range(1, 5):
+            cache.delete(f"prompt_list_None_None_{page}")
+        
+        messages.success(request, f'Moved "{prompt.title}" up.')
+    else:
+        messages.warning(request, f'"{prompt.title}" is already at the top.')
+    
+    return redirect('prompts:home')
+
+
+@login_required
+def prompt_move_down(request, slug):
+    """
+    Move a prompt down in the ordering (increase order number).
+    Only available to staff users.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'Permission denied.')
+        return redirect('prompts:home')
+    
+    prompt = get_object_or_404(Prompt, slug=slug)
+    
+    # Find the prompt with the next higher order number
+    next_prompt = Prompt.objects.filter(
+        order__gt=prompt.order
+    ).order_by('order').first()
+    
+    if next_prompt:
+        # Swap the order values
+        prompt.order, next_prompt.order = next_prompt.order, prompt.order
+        prompt.save(update_fields=['order'])
+        next_prompt.save(update_fields=['order'])
+        
+        # Clear caches
+        for page in range(1, 5):
+            cache.delete(f"prompt_list_None_None_{page}")
+        
+        messages.success(request, f'Moved "{prompt.title}" down.')
+    else:
+        messages.warning(request, f'"{prompt.title}" is already at the bottom.')
+    
+    return redirect('prompts:home')
+
+
+@login_required
+def prompt_set_order(request, slug):
+    """
+    Set a specific order number for a prompt via AJAX.
+    Only available to staff users.
+    """
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        new_order = int(request.POST.get('order', 0))
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid order value'}, status=400)
+    
+    prompt = get_object_or_404(Prompt, slug=slug)
+    prompt.order = new_order
+    prompt.save(update_fields=['order'])
+    
+    # Clear caches
+    for page in range(1, 5):
+        cache.delete(f"prompt_list_None_None_{page}")
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'Updated order for "{prompt.title}" to {new_order}'
+    })

@@ -114,30 +114,6 @@ main {
   opacity: 0.9;
 }
 
-/* ===== MAIN CONTENT STYLES ===== */
-.hero-image-shell {
-  background: var(--light-blue);
-  height: 100%;
-  border-radius: 1.5rem;
-  padding: 1rem;
-}
-
-/* FIXED: Hero image styles - preserve aspect ratio */
-.hero-image {
-  width: 100% /* Full width of container */
-  max-width: 100%;
-  max-height: none /* Remove height constraint */
-  height: auto /* Maintain aspect ratio */
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin: 0 auto;
-  display: block;
-  object-fit: cover; /* Ensure proper scaling */
-}
-
-
-
-
 
 /* ===== SIDEBAR STYLES ===== */
 .sidebar-card {
@@ -401,65 +377,32 @@ main {
 }
 
 
-/* ===== VIDEO STYLES ===== */
-/* Video card styling */
-.video-card .image-wrapper {
-  position: relative;
-  background: #000;
+
+/* Mobile video optimizations */
+@media (max-width: 768px) {
+    /* Disable video autoplay on mobile to save data */
+    
+    .video-thumbnail {
+        opacity: 1 !important;
+    }
+    
+    .video-play-icon {
+        opacity: 1 !important;
+    }
+    
+    /* Add click-to-play on mobile */
+    .video-card {
+        cursor: pointer;
+    }
 }
 
-.gallery-video {
-  width: 100%;
-  height: auto;
-  display: none;
-  object-fit: cover;
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    
+    .video-thumbnail {
+        opacity: 1 !important;
+    }
 }
-
-.video-thumbnail {
-  width: 100%;
-  height: auto;
-  display: block;
-  transition: opacity 0.3s ease;
-}
-
-.video-play-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 48px;
-  color: rgba(255, 255, 255, 0.9);
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.video-card:hover .video-play-icon {
-  transform: translate(-50%, -50%) scale(1.1);
-}
-
-/* Video in detail page */
-.hero-video {
-  width: 100%;
-  max-width: 100%;
-  height: auto;
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin: 0 auto;
-  display: block;
-}
-
-/* Video loading state */
-.video-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 24px;
-}
-
-
 
 /* ===== LOAD MORE BUTTON STYLING ===== */
 .load-more-container {

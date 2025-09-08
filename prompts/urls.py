@@ -24,4 +24,21 @@ urlpatterns = [
         name='comment_delete'
     ),
     path('prompt/<slug:slug>/like/', views.prompt_like, name='prompt_like'),
+    
+    # New ordering URLs
+    path(
+        'prompt/<slug:slug>/move-up/',
+        views.prompt_move_up,
+        name='prompt_move_up'
+    ),
+    path(
+        'prompt/<slug:slug>/move-down/',
+        views.prompt_move_down,
+        name='prompt_move_down'
+    ),
+    path(
+        'prompt/<slug:slug>/set-order/',
+        views.prompt_set_order,
+        name='prompt_set_order'
+    ),
 ]

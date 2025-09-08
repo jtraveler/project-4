@@ -78,7 +78,160 @@
         height: auto !important;
         display: block;
     }
-    
+
+    /* Admin Controls Styling */
+    .admin-controls {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        margin: 20px 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .admin-controls h4 {
+        margin: 0 0 10px 0;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .admin-controls p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 14px;
+    }
+
+    .admin-controls .btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        font-size: 13px;
+        padding: 5px 12px;
+        margin-right: 8px;
+        margin-top: 8px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+
+    .admin-controls .btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    /* Admin overlay on cards */
+    .admin-overlay {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 5px;
+        padding: 5px;
+        z-index: 10;
+        display: flex;
+        gap: 3px;
+    }
+
+    .admin-overlay .btn {
+        padding: 3px 6px;
+        font-size: 11px;
+        line-height: 1;
+        min-width: auto;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+    }
+
+    .admin-overlay .btn:hover {
+        background: rgba(255, 255, 255, 0.4);
+        color: white;
+    }
+
+    .order-display {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        z-index: 10;
+    }
+
+    /* Video card styling */
+    .video-card .image-wrapper {
+    position: relative;
+    background: transparent;
+    }
+
+    .gallery-video {
+    width: 100%;
+    height: auto;
+    display: none;
+    visibility: hidden;
+    object-fit: contain;
+    border-radius: 12px;
+    position: relative;
+    z-index: 2;
+    }
+
+    .video-thumbnail {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: opacity 0.3s ease;
+    object-fit: contain;
+    border-radius: 12px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    }
+
+    .video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    color: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 3;
+    }
+
+    .video-card:hover .video-play-icon {
+    transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    /* Video in detail page */
+    .hero-video {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    display: block;
+    }
+
+    /* Video loading state */
+    .video-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+    }
+
+
     /* Responsive */
     @media (max-width: 1100px) {
         .masonry-grid[data-columns="3"] .masonry-column:nth-child(4) {
@@ -90,6 +243,46 @@
         .masonry-grid[data-columns="2"] .masonry-column:nth-child(3),
         .masonry-grid[data-columns="2"] .masonry-column:nth-child(4) {
             display: none !important;
+        }
+    }
+
+    /* Mobile-specific fix for video containers */
+    @media (max-width: 768px) {
+        .video-card .image-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        
+        .video-thumbnail {
+            position: relative !important; /* Changed from absolute */
+            width: 100%;
+            height: auto;
+            display: block;
+            opacity: 1 !important;
+        }
+        
+        .gallery-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none !important;
+        }
+
+        .video-play-icon {
+            z-index: 10;
+            opacity: 1 !important;
+        }
+
+        .admin-controls {
+            margin: 20px 20px;
+            padding: 12px 15px;
+        }
+
+        .masonry-container {
+            padding: 20px 20px;
         }
     }
     
@@ -152,6 +345,29 @@
     {% csrf_token %}
 </div>
 
+<!-- Admin Controls Panel (only visible to staff) -->
+{% if user.is_staff and show_admin_controls %}
+<div class="admin-controls">
+    <h4>
+        <i class="fas fa-cog"></i>
+        Admin Ordering Controls
+    </h4>
+    <p>
+        You can reorder prompts using the up/down arrows on each card, or edit order numbers directly in the 
+        <a href="/admin/prompts/prompt/" target="_blank" style="color: #fff; text-decoration: underline;">Django Admin</a>.
+        New prompts default to order 0 (top position).
+    </p>
+    <div>
+        <a href="/admin/prompts/prompt/" target="_blank" class="btn btn-sm">
+            <i class="fas fa-external-link-alt"></i> Open Admin Panel
+        </a>
+        <button onclick="toggleOrderDisplay()" class="btn btn-sm" id="toggle-order-btn">
+            <i class="fas fa-eye"></i> Show Order Numbers
+        </button>
+    </div>
+</div>
+{% endif %}
+
 <!-- Tag Filter Header -->
 {% if current_tag %}
 <div class="tag-filter-header">
@@ -213,8 +429,25 @@
     <!-- Store items in a hidden container for JavaScript to process -->
     <div id="items-container" style="display: none;">
         {% for prompt in prompt_list %}
-        <div class="masonry-item" data-item {% if prompt.is_video %}data-video="true"{% endif %}>
+        <div class="masonry-item" data-item {% if prompt.is_video %}data-video="true"{% endif %} data-order="{{ prompt.order }}" data-slug="{{ prompt.slug }}">
             <div class="prompt-card {% if prompt.is_video %}video-card{% endif %}">
+                
+                <!-- Admin Controls Overlay (only visible to staff) -->
+                {% if user.is_staff %}
+                <div class="admin-overlay">
+                    <a href="{% url 'prompts:prompt_move_up' prompt.slug %}" class="btn btn-sm" title="Move Up">
+                        <i class="fas fa-arrow-up"></i>
+                    </a>
+                    <a href="{% url 'prompts:prompt_move_down' prompt.slug %}" class="btn btn-sm" title="Move Down">
+                        <i class="fas fa-arrow-down"></i>
+                    </a>
+                </div>
+                <!-- Order Number Display (hidden by default) -->
+                <div class="order-display" style="display: none;">
+                    {{ prompt.order }}
+                </div>
+                {% endif %}
+                
                 <div class="image-wrapper">
                     {% if prompt.is_video %}
                         <!-- Video element (hidden initially) -->
@@ -224,8 +457,9 @@
                                playsinline
                                preload="none"
                                width="440"
-                               height="auto">
-                            <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                               height="auto"
+                               data-src="{{ prompt.get_video_url }}">
+                            <source data-src="{{ prompt.get_video_url }}" type="video/mp4">
                         </video>
                         
                         <!-- Video thumbnail -->
@@ -449,62 +683,199 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize video observer after items are distributed
         initVideoObserver();
     }
+
     
-    // Video auto-play functionality
-    function initVideoObserver() {
-        if (videoObserver) {
-            videoObserver.disconnect();
+     /**
+     * Lazy-loads video content by setting the source URL only when needed.
+     * This improves page load performance by deferring video loading until
+     * the video enters the viewport.
+     * 
+     * @param {HTMLVideoElement} video - The video element to load
+     * @returns {void} Early returns if video is already loaded
+     */
+    function loadVideoSource(video) {
+        if (video.dataset.loaded === 'true') return;
+        
+        const source = video.querySelector('source');
+        if (source && source.dataset.src) {
+            source.src = source.dataset.src;
+            video.load();
+            video.dataset.loaded = 'true';
         }
-        
-        const videoCards = document.querySelectorAll('[data-video="true"]');
-        
-        if (videoCards.length === 0) return;
-        
-        videoObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                const video = entry.target.querySelector('video');
-                const thumbnail = entry.target.querySelector('.video-thumbnail');
-                const playIcon = entry.target.querySelector('.video-play-icon');
+    }
+
+
+
+// Video auto-play functionality with lazy loading
+
+
+function initVideoObserver() {
+    if (videoObserver) {
+        videoObserver.disconnect();
+    }
+    
+    const videoCards = document.querySelectorAll('[data-video="true"]');
+    
+    if (videoCards.length === 0) return;
+    
+    // Check if mobile or prefers reduced motion
+    const isMobile = window.innerWidth <= 768;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
+    if (isMobile || prefersReducedMotion) {
+        return; // Skip video autoplay on mobile or reduced motion preference
+    }
+    
+    // Percentage-based offsets
+    const PAUSE_OFFSET_PERCENT = 0.5; // 50% of video height must be visible
+    const PLAY_OFFSET_PERCENT = 0.3;  // 30% of video height
+    
+    // Store play promises to handle them properly
+    const playPromises = new WeakMap();
+    
+    videoObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target.querySelector('video');
+            const thumbnail = entry.target.querySelector('.video-thumbnail');
+            const playIcon = entry.target.querySelector('.video-play-icon');
+            
+            if (!video) return;
+            
+            // Get the element's position relative to viewport
+            const rect = entry.boundingClientRect;
+            const viewportHeight = window.innerHeight;
+            const elementHeight = rect.height;
+            
+            // Calculate dynamic offsets based on element height
+            const playOffset = elementHeight * PLAY_OFFSET_PERCENT;
+            
+            // Check if video is already initialized
+            const isInitialized = video.dataset.initialized === 'true';
+            
+            if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                // Check if we should play based on percentage offsets
+                const topInView = rect.top < viewportHeight - playOffset;
+                const bottomInView = rect.bottom > playOffset;
+                const shouldPlay = topInView && bottomInView;
                 
-                if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-                    // In view - play video
-                    if (video && thumbnail) {
-                        thumbnail.style.opacity = '0';
-                        if (playIcon) playIcon.style.opacity = '0';
+                if (shouldPlay || !isInitialized) {
+                    // Load video source if not already loaded
+                    loadVideoSource(video);
+                    
+                    // First time setup - show video once
+                    if (!isInitialized) {
                         video.style.display = 'block';
+                        video.style.visibility = 'visible';
+                        video.dataset.initialized = 'true';
+                    }
+                    
+                    // Only play if not already playing
+                    if (video.paused) {
+                        if (thumbnail) thumbnail.style.opacity = '0';
+                        if (playIcon) playIcon.style.opacity = '0';
                         
-                        // Attempt to play video
+                        // Store and handle the play promise properly
                         const playPromise = video.play();
+                        
                         if (playPromise !== undefined) {
-                            playPromise.catch(error => {
-                                console.log('Auto-play prevented:', error);
-                                // Revert to thumbnail if auto-play fails
-                                video.style.display = 'none';
-                                thumbnail.style.opacity = '1';
-                                if (playIcon) playIcon.style.opacity = '1';
-                            });
+                            playPromises.set(video, playPromise);
+                            
+                            playPromise
+                                .then(() => {
+                                    // Playback started successfully
+                                    playPromises.delete(video);
+                                })
+                                .catch(error => {
+                                    // Only log if it's not an AbortError
+                                    if (error.name !== 'AbortError') {
+                                        console.log('Auto-play prevented:', error);
+                                        if (thumbnail) thumbnail.style.opacity = '1';
+                                        if (playIcon) playIcon.style.opacity = '1';
+                                    }
+                                    playPromises.delete(video);
+                                });
                         }
                     }
-                } else {
-                    // Out of view - pause video
-                    if (video) {
+                }
+            }
+            
+            // Always check pause conditions for initialized videos
+            if (isInitialized) {
+                // Calculate how much is visible when scrolling out
+                const topVisible = rect.top >= 0 && rect.top < viewportHeight;
+                const bottomVisible = rect.bottom > 0 && rect.bottom <= viewportHeight;
+                
+                let shouldPause = false;
+                
+                if (!entry.isIntersecting) {
+                    shouldPause = true;
+                } else if (topVisible && !bottomVisible) {
+                    // Scrolling up, video going out bottom
+                    const visiblePortion = (viewportHeight - rect.top) / elementHeight;
+                    shouldPause = visiblePortion < PAUSE_OFFSET_PERCENT;
+                } else if (!topVisible && bottomVisible) {
+                    // Scrolling down, video going out top
+                    const visiblePortion = rect.bottom / elementHeight;
+                    shouldPause = visiblePortion < PAUSE_OFFSET_PERCENT;
+                }
+                
+                if (shouldPause && !video.paused) {
+                    // Wait for any pending play promise before pausing
+                    const currentPlayPromise = playPromises.get(video);
+                    
+                    if (currentPlayPromise) {
+                        currentPlayPromise.then(() => {
+                            video.pause();
+                        }).catch(() => {
+                            // Ignore the error, video wasn't playing anyway
+                        });
+                    } else {
                         video.pause();
-                        video.currentTime = 0;
-                        video.style.display = 'none';
-                        if (thumbnail) thumbnail.style.opacity = '1';
-                        if (playIcon) playIcon.style.opacity = '1';
                     }
                 }
-            });
-        }, {
-            threshold: 0.5,
-            rootMargin: '0px'
+            }
         });
-        
+    }, {
+        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+        rootMargin: '0px'
+    });
+    
+    videoCards.forEach(card => {
+        videoObserver.observe(card);
+    });
+    
+    // Force initial check for videos already in view
+    setTimeout(() => {
         videoCards.forEach(card => {
-            videoObserver.observe(card);
+            const rect = card.getBoundingClientRect();
+            const video = card.querySelector('video');
+            const thumbnail = card.querySelector('.video-thumbnail');
+            const playIcon = card.querySelector('.video-play-icon');
+            
+            if (rect.top < window.innerHeight && rect.bottom > 0 && video) {
+                // Video is in view on load
+                loadVideoSource(video);
+                video.style.display = 'block';
+                video.style.visibility = 'visible';
+                video.dataset.initialized = 'true';
+                
+                if (thumbnail) thumbnail.style.opacity = '0';
+                if (playIcon) playIcon.style.opacity = '0';
+                
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        if (error.name !== 'AbortError') {
+                            console.log('Initial auto-play prevented:', error);
+                            if (thumbnail) thumbnail.style.opacity = '1';
+                            if (playIcon) playIcon.style.opacity = '1';
+                        }
+                    });
+                }
+            }
         });
-    }
+    }, 500);
+}
     
     // Initialize columns
     createColumns();
@@ -571,6 +942,15 @@ document.addEventListener('DOMContentLoaded', function() {
             loadMoreBtn.style.display = 'none';
             loadingSpinner.style.display = 'block';
             
+            // Hide all order numbers temporarily if they're currently visible
+            const wasOrderVisible = orderDisplayVisible;
+            if (wasOrderVisible) {
+                // Just hide numbers, don't toggle the state
+                document.querySelectorAll('.order-display').forEach(display => {
+                    display.style.display = 'none';
+                });
+            }
+            
             fetch(`${currentUrl}?${currentParams.toString()}`)
                 .then(response => response.text())
                 .then(html => {
@@ -583,6 +963,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Attach heart functionality to new items
                     attachHeartFunctionality();
+                    
+                    // Show order numbers again if they were visible before
+                    if (wasOrderVisible) {
+                        setTimeout(() => {
+                            // Force show all order displays including new ones
+                            document.querySelectorAll('.order-display').forEach(display => {
+                                display.style.display = 'block';
+                            });
+                            orderDisplayVisible = true;
+                            
+                            // Update button text
+                            const toggleBtn = document.getElementById('toggle-order-btn');
+                            if (toggleBtn) {
+                                toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Order Numbers';
+                            }
+                        }, 300);
+                    }
                     
                     // Update load more button
                     const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
@@ -646,5 +1043,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 250);
     });
 });
+
+// Admin control functions (only available to staff)
+let orderDisplayVisible = false;
+
+function toggleOrderDisplay() {
+    const orderDisplays = document.querySelectorAll('.order-display');
+    const toggleBtn = document.getElementById('toggle-order-btn');
+    orderDisplayVisible = orderDisplays[0]?.style.display !== 'none';
+    
+    orderDisplays.forEach(display => {
+        display.style.display = orderDisplayVisible ? 'none' : 'block';
+    });
+    
+    // Update global state
+    orderDisplayVisible = !orderDisplayVisible;
+    
+    if (toggleBtn) {
+        const icon = toggleBtn.querySelector('i');
+        const text = orderDisplayVisible ? 'Hide Order Numbers' : 'Show Order Numbers';
+        toggleBtn.innerHTML = `<i class="fas fa-eye${orderDisplayVisible ? '-slash' : ''}"></i> ${text}`;
+    }
+}
+
+function applyOrderDisplayState() {
+    // Apply current visibility state to all order displays (including newly loaded ones)
+    const orderDisplays = document.querySelectorAll('.order-display');
+    orderDisplays.forEach(display => {
+        display.style.display = orderDisplayVisible ? 'block' : 'none';
+    });
+}
 </script>
 {% endblock %}

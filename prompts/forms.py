@@ -49,8 +49,7 @@ class PromptForm(forms.ModelForm):
         choices=[('image', 'Image'), ('video', 'Video')],
         initial='image',
         widget=forms.RadioSelect(attrs={
-            'class': 'media-type-radio',
-            'onchange': 'toggleMediaFields()'
+            'class': 'media-type-radio'
         }),
         help_text='Choose whether to upload an image or video'
     )
@@ -69,15 +68,13 @@ class PromptForm(forms.ModelForm):
             'ai_generator': forms.Select(attrs={
                 'class': 'form-control modern-select modern-select-dropdown'
             }),
-            'featured_image': forms.FileInput(attrs={
+            'featured_image': forms.ClearableFileInput(attrs={
                 'accept': 'image/*',
-                'class': 'form-control-file',
-                'style': 'display: none;'
+                'class': 'form-control-file'
             }),
-            'featured_video': forms.FileInput(attrs={
+            'featured_video': forms.ClearableFileInput(attrs={
                 'accept': 'video/*',
-                'class': 'form-control-file',
-                'style': 'display: none;'
+                'class': 'form-control-file'
             })
         }
 

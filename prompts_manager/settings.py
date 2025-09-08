@@ -348,6 +348,12 @@ CSP_CONNECT_SRC = (
     "https://res.cloudinary.com",  # For AJAX requests to Cloudinary
 )
 
+CSP_MEDIA_SRC = (
+    "'self'",
+    "https://res.cloudinary.com",  # Cloudinary videos
+    "https://*.cloudinary.com",  # All Cloudinary subdomains
+)
+
 CSP_FRAME_SRC = ("'none'",)  # Prevent embedding in frames for security
 
 # CSP Enforcement

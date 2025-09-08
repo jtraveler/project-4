@@ -41,6 +41,7 @@ class Prompt(models.Model):
             Cloudinary
         featured_video (CloudinaryField): The AI-generated video stored on
             Cloudinary (optional)
+        video_duration (IntegerField): Video duration in seconds
         author (ForeignKey): User who created the prompt
         status (IntegerField): Publication status (Draft=0, Published=1)
         created_on (DateTimeField): When the prompt was first created
@@ -62,6 +63,7 @@ class Prompt(models.Model):
         is_video(): Returns True if this prompt has a video instead of image
         get_media_url(): Returns the appropriate media URL (video or image)
         get_thumbnail_url(): Returns thumbnail URL for videos or image URL
+        get_video_url(): Returns optimized video URL with adaptive quality
 
     Example:
         prompt = Prompt.objects.create(
@@ -75,7 +77,15 @@ class Prompt(models.Model):
     slug = models.SlugField(max_length=200, unique=True, blank=False)
     content = models.TextField()
     excerpt = models.TextField(blank=True)
-    featured_image = CloudinaryField('image', default='placeholder', blank=True)
+    featured_image = CloudinaryField(
+        'image', 
+        blank=True, 
+        null=True,
+        transformation={
+            'quality': 'auto',
+            'fetch_format': 'auto'
+        }
+    )
     featured_video = CloudinaryField(
         'video',
         resource_type='video',
@@ -85,6 +95,11 @@ class Prompt(models.Model):
             'quality': 'auto',
             'fetch_format': 'auto'
         }
+    )
+    video_duration = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Video duration in seconds'
     )
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="prompts"
@@ -149,7 +164,7 @@ class Prompt(models.Model):
         Returns:
             bool: True if this prompt has a video, False otherwise
         """
-        return bool(self.featured_video) and not str(self.featured_video).startswith('placeholder')
+        return bool(self.featured_video)
     
     def get_media_url(self):
         """
@@ -160,9 +175,9 @@ class Prompt(models.Model):
         """
         if self.is_video():
             return self.featured_video.url
-        return self.featured_image.url
+        return self.featured_image.url if self.featured_image else None
     
-    def get_thumbnail_url(self, width=440):
+    def get_thumbnail_url(self, width=824, quality='auto'):
         """
         Get thumbnail URL for the prompt.
         
@@ -171,26 +186,48 @@ class Prompt(models.Model):
         
         Args:
             width (int): Desired width of the thumbnail
+            quality (str): Quality setting (auto, 80, 90, etc.)
             
         Returns:
             str: Cloudinary URL for the thumbnail
         """
-        if self.is_video():
-            # Generate thumbnail from video at 0 seconds
-            return f"{self.featured_video.url.split('.')[0]}.jpg?w={width}&so_0"
-        return self.featured_image.build_url(width=width, format='jpg')
-    
-    def clean(self):
+        if self.is_video() and self.featured_video:
+            # Generate thumbnail from video at 0 seconds with quality optimization
+            return self.featured_video.build_url(
+                width=width,
+                crop='limit',  # Changed from 'fill' to 'limit'
+                quality=quality,
+                format='jpg',
+                resource_type='video',
+                start_offset='0'
+            )
+        elif self.featured_image:
+            return self.featured_image.build_url(
+                width=width,
+                quality=quality,
+                format='webp'
+            )
+        return None
+
+    def get_video_url(self, quality='auto'):
         """
-        Validate that either featured_image or featured_video is provided.
+        Get optimized video URL with adaptive quality.
+        
+        Args:
+            quality (str): Quality setting (auto adapts based on connection)
+            
+        Returns:
+            str: Cloudinary URL for the optimized video
         """
-        from django.core.exceptions import ValidationError
-        
-        if not self.featured_image and not self.featured_video:
-            raise ValidationError('Either featured image or featured video must be provided.')
-        
-        if self.featured_image and self.featured_video:
-            raise ValidationError('Please provide either an image or a video, not both.')
+        if self.is_video() and self.featured_video:
+            return self.featured_video.build_url(
+                quality=quality,
+                format='mp4',
+                video_codec='h264',
+                audio_codec='aac',
+                flags='streaming_attachment'
+            )
+        return None
 
 
 class Comment(models.Model):

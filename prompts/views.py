@@ -402,9 +402,9 @@ def prompt_create(request):
     """
     Allow logged-in users to create new AI prompts.
 
-    Users can upload an AI-generated image along with the prompt text used to
+    Users can upload an AI-generated image or video along with the prompt text used to
     create it. Includes form for title, description, tags, AI generator type,
-    and image upload. Automatically publishes the prompt upon creation.
+    and media upload. Automatically publishes the prompt upon creation.
 
     Variables:
         prompt_form: Form for creating new prompts
@@ -417,9 +417,19 @@ def prompt_create(request):
     if request.method == 'POST':
         prompt_form = PromptForm(request.POST, request.FILES)
         if prompt_form.is_valid():
+            # Get the media type from the form
+            media_type = prompt_form.cleaned_data.get('media_type', 'image')
+            
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
             prompt.status = 1
+            
+            # Ensure only one media field is set based on media_type
+            if media_type == 'video':
+                prompt.featured_image = None
+            else:
+                prompt.featured_video = None
+                
             prompt.save()
             prompt_form.save_m2m()
 
@@ -432,6 +442,8 @@ def prompt_create(request):
             )
             return redirect('prompts:prompt_detail', slug=prompt.slug)
         else:
+            # Log form errors for debugging
+            logger.error(f"Form errors: {prompt_form.errors}")
             messages.error(request, 'Please correct the errors below.')
     else:
         prompt_form = PromptForm()
@@ -448,7 +460,6 @@ def prompt_create(request):
     }
 
     return render(request, 'prompts/prompt_create.html', context)
-
 
 def prompt_delete(request, slug):
     """

@@ -117,11 +117,14 @@
                 
                 <!-- File Upload -->
                 <div class="file-upload-area">
-                    <div class="mt-2 field-label mb-3">Upload Your AI-Generated Image:</div>
+                    <label for="id_featured_image" class="file-upload-label">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Choose an image file or drag it here</span>
+                    </label>
+                    {{ prompt_form.featured_image }}
                     
-                    <!-- Django file input -->
-                    <div class="custom-file-input-only mb-4">
-                        {{ prompt_form.featured_image }}
+                    <div id="image-preview" class="mt-3" style="display: none;">
+                        <img src="" alt="Preview" style="max-width: 300px; max-height: 300px; border-radius: 8px;">
                     </div>
                     
                     {% if prompt_form.featured_image.errors %}
@@ -131,7 +134,7 @@
                         </div>
                     {% endif %}
                     
-                    <div class="field-help">
+                    <div class="field-help mt-2">
                         Upload the image that was created using your prompt
                     </div>
                 </div>
@@ -143,11 +146,16 @@
                 
                 <!-- File Upload -->
                 <div class="file-upload-area">
-                    <div class="mt-2 field-label mb-3">Upload Your AI-Generated Video:</div>
+                    <label for="id_featured_video" class="file-upload-label">
+                        <i class="fas fa-video"></i>
+                        <span>Choose a video file or drag it here</span>
+                    </label>
+                    {{ prompt_form.featured_video }}
                     
-                    <!-- Django file input -->
-                    <div class="custom-file-input-only mb-4">
-                        {{ prompt_form.featured_video }}
+                    <div id="video-preview" class="mt-3" style="display: none;">
+                        <video controls style="max-width: 300px; max-height: 300px; border-radius: 8px;">
+                            <source src="" type="video/mp4">
+                        </video>
                     </div>
                     
                     {% if prompt_form.featured_video.errors %}
@@ -157,7 +165,7 @@
                         </div>
                     {% endif %}
                     
-                    <div class="field-help">
+                    <div class="field-help mt-2">
                         {{ prompt_form.featured_video.help_text }}
                     </div>
                 </div>
@@ -184,7 +192,7 @@
                     <i class="fas fa-times me-2"></i> Cancel
                 </a>
                 <button type="submit" class="btn-primary">
-                    <i class="fas fa-sign-out-alt me-2"></i> Create Prompt
+                    <i class="fas fa-upload me-2"></i> Create Prompt
                 </button>
             </div>
         </form>
@@ -222,6 +230,33 @@ function toggleMediaFields() {
     }
 }
 
+// File preview functionality
+function handleFilePreview(input, previewType) {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewType === 'image') {
+                const preview = document.querySelector('#image-preview');
+                const img = preview.querySelector('img');
+                img.src = e.target.result;
+                preview.style.display = 'block';
+            } else if (previewType === 'video') {
+                const preview = document.querySelector('#video-preview');
+                const video = preview.querySelector('video');
+                video.src = e.target.result;
+                preview.style.display = 'block';
+            }
+        };
+        reader.readAsDataURL(file);
+        
+        // Update label to show file name
+        const label = input.closest('.file-upload-area').querySelector('.file-upload-label');
+        const fileName = file.name.length > 30 ? file.name.substring(0, 30) + '...' : file.name;
+        label.innerHTML = `<i class="fas fa-check-circle" style="color: #10b981;"></i> <span>${fileName}</span>`;
+    }
+}
+
 // Form validation and submit button feedback
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('.edit-form');
@@ -236,16 +271,33 @@ document.addEventListener('DOMContentLoaded', function() {
         radio.addEventListener('change', toggleMediaFields);
     });
     
+    // File input change handlers for preview
+    const imageInput = document.getElementById('id_featured_image');
+    const videoInput = document.getElementById('id_featured_video');
+    
+    if (imageInput) {
+        imageInput.addEventListener('change', function() {
+            handleFilePreview(this, 'image');
+        });
+    }
+    
+    if (videoInput) {
+        videoInput.addEventListener('change', function() {
+            handleFilePreview(this, 'video');
+        });
+    }
+    
     form.addEventListener('submit', function(e) {
         // Let Django handle validation, just provide user feedback
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Creating...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
     });
 });
 </script>
 
-<!-- Add custom styles for radio buttons -->
+<!-- Add custom styles for radio buttons and file uploads -->
 <style>
+/* Media type selection styles */
 .media-type-selection {
     display: flex;
     gap: 20px;
@@ -274,6 +326,58 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .media-type-radio {
     margin-right: 8px;
+}
+
+/* File upload area styling */
+.file-upload-area {
+    position: relative;
+}
+
+.file-upload-area input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.file-upload-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    background: #f9fafb;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    color: #6b7280;
+    font-weight: 500;
+    min-height: 80px;
+}
+
+.file-upload-label:hover {
+    border-color: var(--main-blue);
+    background: var(--light-blue);
+    color: var(--main-blue);
+}
+
+.file-upload-label i {
+    font-size: 24px;
+    margin-right: 12px;
+    color: #9ca3af;
+}
+
+.file-upload-label:hover i {
+    color: var(--main-blue);
+}
+
+/* Preview styling */
+#image-preview img,
+#video-preview video {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 </style>
 {% endblock content %}

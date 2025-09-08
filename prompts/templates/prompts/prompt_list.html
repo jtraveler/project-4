@@ -78,7 +78,77 @@
         height: auto !important;
         display: block;
     }
-    
+
+
+    /* Video card styling */
+    .video-card .image-wrapper {
+    position: relative;
+    background: transparent;
+    }
+
+    .gallery-video {
+    width: 100%;
+    height: auto;
+    display: none;
+    visibility: hidden;
+    object-fit: contain;
+    border-radius: 12px;
+    position: relative;
+    z-index: 2;
+    }
+
+    .video-thumbnail {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: opacity 0.3s ease;
+    object-fit: contain;
+    border-radius: 12px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    }
+
+    .video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    color: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 3;
+    }
+
+    .video-card:hover .video-play-icon {
+    transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    /* Video in detail page */
+    .hero-video {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    display: block;
+    }
+
+    /* Video loading state */
+    .video-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+    }
+
+
     /* Responsive */
     @media (max-width: 1100px) {
         .masonry-grid[data-columns="3"] .masonry-column:nth-child(4) {
@@ -90,6 +160,37 @@
         .masonry-grid[data-columns="2"] .masonry-column:nth-child(3),
         .masonry-grid[data-columns="2"] .masonry-column:nth-child(4) {
             display: none !important;
+        }
+    }
+
+    /* Mobile-specific fix for video containers */
+    @media (max-width: 768px) {
+        .video-card .image-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        
+        .video-thumbnail {
+            position: relative !important; /* Changed from absolute */
+            width: 100%;
+            height: auto;
+            display: block;
+            opacity: 1 !important;
+        }
+        
+        .gallery-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none !important;
+        }
+
+        .video-play-icon {
+            z-index: 10;
+            opacity: 1 !important;
         }
     }
     
@@ -224,8 +325,9 @@
                                playsinline
                                preload="none"
                                width="440"
-                               height="auto">
-                            <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                               height="auto"
+                               data-src="{{ prompt.get_video_url }}">
+                            <source data-src="{{ prompt.get_video_url }}" type="video/mp4">
                         </video>
                         
                         <!-- Video thumbnail -->
@@ -449,62 +551,199 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize video observer after items are distributed
         initVideoObserver();
     }
+
     
-    // Video auto-play functionality
-    function initVideoObserver() {
-        if (videoObserver) {
-            videoObserver.disconnect();
+     /**
+     * Lazy-loads video content by setting the source URL only when needed.
+     * This improves page load performance by deferring video loading until
+     * the video enters the viewport.
+     * 
+     * @param {HTMLVideoElement} video - The video element to load
+     * @returns {void} Early returns if video is already loaded
+     */
+    function loadVideoSource(video) {
+        if (video.dataset.loaded === 'true') return;
+        
+        const source = video.querySelector('source');
+        if (source && source.dataset.src) {
+            source.src = source.dataset.src;
+            video.load();
+            video.dataset.loaded = 'true';
         }
-        
-        const videoCards = document.querySelectorAll('[data-video="true"]');
-        
-        if (videoCards.length === 0) return;
-        
-        videoObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                const video = entry.target.querySelector('video');
-                const thumbnail = entry.target.querySelector('.video-thumbnail');
-                const playIcon = entry.target.querySelector('.video-play-icon');
+    }
+
+
+
+// Video auto-play functionality with lazy loading
+
+
+function initVideoObserver() {
+    if (videoObserver) {
+        videoObserver.disconnect();
+    }
+    
+    const videoCards = document.querySelectorAll('[data-video="true"]');
+    
+    if (videoCards.length === 0) return;
+    
+    // Check if mobile or prefers reduced motion
+    const isMobile = window.innerWidth <= 768;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
+    if (isMobile || prefersReducedMotion) {
+        return; // Skip video autoplay on mobile or reduced motion preference
+    }
+    
+    // Percentage-based offsets
+    const PAUSE_OFFSET_PERCENT = 0.5; // 50% of video height must be visible
+    const PLAY_OFFSET_PERCENT = 0.3;  // 30% of video height
+    
+    // Store play promises to handle them properly
+    const playPromises = new WeakMap();
+    
+    videoObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target.querySelector('video');
+            const thumbnail = entry.target.querySelector('.video-thumbnail');
+            const playIcon = entry.target.querySelector('.video-play-icon');
+            
+            if (!video) return;
+            
+            // Get the element's position relative to viewport
+            const rect = entry.boundingClientRect;
+            const viewportHeight = window.innerHeight;
+            const elementHeight = rect.height;
+            
+            // Calculate dynamic offsets based on element height
+            const playOffset = elementHeight * PLAY_OFFSET_PERCENT;
+            
+            // Check if video is already initialized
+            const isInitialized = video.dataset.initialized === 'true';
+            
+            if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                // Check if we should play based on percentage offsets
+                const topInView = rect.top < viewportHeight - playOffset;
+                const bottomInView = rect.bottom > playOffset;
+                const shouldPlay = topInView && bottomInView;
                 
-                if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-                    // In view - play video
-                    if (video && thumbnail) {
-                        thumbnail.style.opacity = '0';
-                        if (playIcon) playIcon.style.opacity = '0';
+                if (shouldPlay || !isInitialized) {
+                    // Load video source if not already loaded
+                    loadVideoSource(video);
+                    
+                    // First time setup - show video once
+                    if (!isInitialized) {
                         video.style.display = 'block';
+                        video.style.visibility = 'visible';
+                        video.dataset.initialized = 'true';
+                    }
+                    
+                    // Only play if not already playing
+                    if (video.paused) {
+                        if (thumbnail) thumbnail.style.opacity = '0';
+                        if (playIcon) playIcon.style.opacity = '0';
                         
-                        // Attempt to play video
+                        // Store and handle the play promise properly
                         const playPromise = video.play();
+                        
                         if (playPromise !== undefined) {
-                            playPromise.catch(error => {
-                                console.log('Auto-play prevented:', error);
-                                // Revert to thumbnail if auto-play fails
-                                video.style.display = 'none';
-                                thumbnail.style.opacity = '1';
-                                if (playIcon) playIcon.style.opacity = '1';
-                            });
+                            playPromises.set(video, playPromise);
+                            
+                            playPromise
+                                .then(() => {
+                                    // Playback started successfully
+                                    playPromises.delete(video);
+                                })
+                                .catch(error => {
+                                    // Only log if it's not an AbortError
+                                    if (error.name !== 'AbortError') {
+                                        console.log('Auto-play prevented:', error);
+                                        if (thumbnail) thumbnail.style.opacity = '1';
+                                        if (playIcon) playIcon.style.opacity = '1';
+                                    }
+                                    playPromises.delete(video);
+                                });
                         }
                     }
-                } else {
-                    // Out of view - pause video
-                    if (video) {
+                }
+            }
+            
+            // Always check pause conditions for initialized videos
+            if (isInitialized) {
+                // Calculate how much is visible when scrolling out
+                const topVisible = rect.top >= 0 && rect.top < viewportHeight;
+                const bottomVisible = rect.bottom > 0 && rect.bottom <= viewportHeight;
+                
+                let shouldPause = false;
+                
+                if (!entry.isIntersecting) {
+                    shouldPause = true;
+                } else if (topVisible && !bottomVisible) {
+                    // Scrolling up, video going out bottom
+                    const visiblePortion = (viewportHeight - rect.top) / elementHeight;
+                    shouldPause = visiblePortion < PAUSE_OFFSET_PERCENT;
+                } else if (!topVisible && bottomVisible) {
+                    // Scrolling down, video going out top
+                    const visiblePortion = rect.bottom / elementHeight;
+                    shouldPause = visiblePortion < PAUSE_OFFSET_PERCENT;
+                }
+                
+                if (shouldPause && !video.paused) {
+                    // Wait for any pending play promise before pausing
+                    const currentPlayPromise = playPromises.get(video);
+                    
+                    if (currentPlayPromise) {
+                        currentPlayPromise.then(() => {
+                            video.pause();
+                        }).catch(() => {
+                            // Ignore the error, video wasn't playing anyway
+                        });
+                    } else {
                         video.pause();
-                        video.currentTime = 0;
-                        video.style.display = 'none';
-                        if (thumbnail) thumbnail.style.opacity = '1';
-                        if (playIcon) playIcon.style.opacity = '1';
                     }
                 }
-            });
-        }, {
-            threshold: 0.5,
-            rootMargin: '0px'
+            }
         });
-        
+    }, {
+        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+        rootMargin: '0px'
+    });
+    
+    videoCards.forEach(card => {
+        videoObserver.observe(card);
+    });
+    
+    // Force initial check for videos already in view
+    setTimeout(() => {
         videoCards.forEach(card => {
-            videoObserver.observe(card);
+            const rect = card.getBoundingClientRect();
+            const video = card.querySelector('video');
+            const thumbnail = card.querySelector('.video-thumbnail');
+            const playIcon = card.querySelector('.video-play-icon');
+            
+            if (rect.top < window.innerHeight && rect.bottom > 0 && video) {
+                // Video is in view on load
+                loadVideoSource(video);
+                video.style.display = 'block';
+                video.style.visibility = 'visible';
+                video.dataset.initialized = 'true';
+                
+                if (thumbnail) thumbnail.style.opacity = '0';
+                if (playIcon) playIcon.style.opacity = '0';
+                
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        if (error.name !== 'AbortError') {
+                            console.log('Initial auto-play prevented:', error);
+                            if (thumbnail) thumbnail.style.opacity = '1';
+                            if (playIcon) playIcon.style.opacity = '1';
+                        }
+                    });
+                }
+            }
         });
-    }
+    }, 500);
+}
     
     // Initialize columns
     createColumns();

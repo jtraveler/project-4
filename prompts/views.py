@@ -13,6 +13,7 @@ from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
 import time
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -688,7 +689,7 @@ def prompt_set_order(request, slug):
         return JsonResponse({'error': 'POST required'}, status=405)
     
     try:
-        new_order = int(request.POST.get('order', 0))
+        new_order = float(request.POST.get('order', 0))
     except (ValueError, TypeError):
         return JsonResponse({'error': 'Invalid order value'}, status=400)
     
@@ -704,3 +705,72 @@ def prompt_set_order(request, slug):
         'success': True,
         'message': f'Updated order for "{prompt.title}" to {new_order}'
     })
+
+
+@login_required
+def bulk_reorder_prompts(request):
+    """
+    Handle bulk reordering of prompts via drag-and-drop.
+    Only available to staff users.
+    """
+    print(f"DEBUG: bulk_reorder_prompts called - Method: {request.method}")
+    print(f"DEBUG: User is staff: {request.user.is_staff}")
+    print(f"DEBUG: Request body: {request.body}")
+    
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        changes = data.get('changes', [])
+        
+        print(f"DEBUG: Parsed changes: {changes}")
+        
+        if not changes:
+            return JsonResponse({'error': 'No changes provided'}, status=400)
+        
+        # Update all prompts in a single transaction
+        from django.db import transaction
+        with transaction.atomic():
+            updated_count = 0
+            for change in changes:
+                slug = change.get('slug')
+                new_order = float(change.get('order'))
+                
+                print(f"DEBUG: Updating {slug} to order {new_order}")
+                
+                try:
+                    prompt = Prompt.objects.get(slug=slug)
+                    prompt.order = new_order
+                    prompt.save(update_fields=['order'])
+                    updated_count += 1
+                    print(f"DEBUG: Successfully updated {slug}")
+                except Prompt.DoesNotExist:
+                    print(f"DEBUG: Prompt {slug} not found")
+                    continue
+        
+        # Clear caches after bulk update
+        for page in range(1, 10):
+            cache.delete(f"prompt_list_None_None_{page}")
+            # Clear tag-filtered caches too
+            for tag in ['art', 'portrait', 'landscape', 'photography']:
+                cache.delete(f"prompt_list_{tag}_None_{page}")
+        
+        response_data = {
+            'success': True,
+            'updated_count': updated_count,
+            'message': f'Successfully updated {updated_count} prompts'
+        }
+        print(f"DEBUG: Sending response: {response_data}")
+        
+        return JsonResponse(response_data)
+        
+    except (ValueError, json.JSONDecodeError) as e:
+        print(f"DEBUG: JSON decode error: {e}")
+        return JsonResponse({'error': 'Invalid data format'}, status=400)
+    except Exception as e:
+        print(f"DEBUG: Unexpected error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)

@@ -150,6 +150,168 @@
         color: white;
     }
 
+    /* Enhanced drag handle styling for better visibility */
+    .drag-handle {
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        cursor: grab;
+        z-index: 15;
+        display: none;
+        user-select: none;
+    }
+
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+
+    .drag-handle.visible {
+        display: block;
+    }
+
+    /* Enhanced dragging states with more prominent visual feedback */
+    .masonry-item.dragging {
+        opacity: 0.3;
+        transform: rotate(5deg) scale(1.05);
+        z-index: 1000;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .masonry-item.drag-over {
+        transform: scale(1.05);
+        border: 4px solid #667eea;
+        border-radius: 12px;
+        box-shadow: 0 0 30px rgba(102, 126, 234, 0.8);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        position: relative;
+        animation: pulseGlow 0.8s ease-in-out infinite alternate;
+    }
+
+    /* Add "DROP HERE" text overlay */
+    .masonry-item.drag-over::before {
+        content: "DROP HERE";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(102, 126, 234, 0.9);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 1000;
+        pointer-events: none;
+        animation: dropTextPulse 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+        0% {
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+        100% {
+            box-shadow: 0 0 40px rgba(102, 126, 234, 1);
+        }
+    }
+
+    @keyframes dropTextPulse {
+        0% {
+            transform: translate(-50%, -50%) scale(1);
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+    }
+
+    .drop-indicator {
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 2px;
+        margin: 8px 0;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .drop-indicator.active {
+        opacity: 1;
+    }
+
+    /* Sticky save button */
+    .sticky-save-panel {
+        position: fixed;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        z-index: 1000;
+        display: none;
+        min-width: 180px;
+        text-align: center;
+    }
+
+    .sticky-save-panel.visible {
+        display: block;
+        animation: slideInRight 0.3s ease;
+    }
+
+    .sticky-save-panel h5 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .sticky-save-panel .changes-count {
+        font-size: 12px;
+        opacity: 0.9;
+        margin-bottom: 15px;
+    }
+
+    .sticky-save-panel .btn {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        font-weight: 600;
+        margin: 2px;
+        transition: all 0.2s ease;
+    }
+
+    .sticky-save-panel .btn:hover {
+        background: white;
+        transform: translateY(-1px);
+    }
+
+    .sticky-save-panel .btn-save {
+        background: #28a745;
+        color: white;
+    }
+
+    .sticky-save-panel .btn-save:hover {
+        background: #218838;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateY(-50%) translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(-50%) translateX(0);
+            opacity: 1;
+        }
+    }
+
     .order-display {
         position: absolute;
         top: 8px;
@@ -353,9 +515,9 @@
         Admin Ordering Controls
     </h4>
     <p>
-        You can reorder prompts using the up/down arrows on each card, or edit order numbers directly in the 
+        You can reorder prompts using the up/down arrows on each card, drag & drop mode, or edit order numbers directly in the 
         <a href="/admin/prompts/prompt/" target="_blank" style="color: #fff; text-decoration: underline;">Django Admin</a>.
-        New prompts default to order 0 (top position).
+        New prompts appear at the top by default.
     </p>
     <div>
         <a href="/admin/prompts/prompt/" target="_blank" class="btn btn-sm">
@@ -363,6 +525,9 @@
         </a>
         <button onclick="toggleOrderDisplay()" class="btn btn-sm" id="toggle-order-btn">
             <i class="fas fa-eye"></i> Show Order Numbers
+        </button>
+        <button onclick="toggleDragMode()" class="btn btn-sm" id="toggle-drag-btn">
+            <i class="fas fa-arrows-alt"></i> Drag Mode
         </button>
     </div>
 </div>
@@ -434,6 +599,9 @@
                 
                 <!-- Admin Controls Overlay (only visible to staff) -->
                 {% if user.is_staff %}
+                <div class="drag-handle" title="Drag to reorder">
+                    <i class="fas fa-grip-horizontal"></i>
+                </div>
                 <div class="admin-overlay">
                     <a href="{% url 'prompts:prompt_move_up' prompt.slug %}" class="btn btn-sm" title="Move Up">
                         <i class="fas fa-arrow-up"></i>
@@ -581,6 +749,22 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Sticky Save Panel (only visible to staff when changes are made) -->
+{% if user.is_staff %}
+<div class="sticky-save-panel" id="sticky-save-panel">
+    <h5><i class="fas fa-save me-2"></i>Unsaved Changes</h5>
+    <div class="changes-count" id="changes-count">0 items reordered</div>
+    <div>
+        <button onclick="saveOrderChanges()" class="btn btn-save">
+            <i class="fas fa-check me-1"></i>Save Changes
+        </button>
+        <button onclick="cancelOrderChanges()" class="btn">
+            <i class="fas fa-times me-1"></i>Cancel
+        </button>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extras %}
@@ -655,37 +839,160 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return columns[shortestIndex];
     }
-    
-    // Distribute items with left-to-right preference
-    function distributeItems(items, animate = false, preferLeftToRight = false) {
-        let lastColumnIndex = 0;
+
+    /**
+     * FORCED EQUAL DISTRIBUTION - For initial page load only
+     * Distributes items as evenly as possible across columns
+     */
+    function forceEqualDistribution(items) {
+        const currentColumns = Array.from(document.querySelectorAll('.masonry-column'));
+        
+        if (currentColumns.length === 0) {
+            console.error('No columns found for redistribution');
+            return;
+        }
+        
+        // Clear all columns
+        currentColumns.forEach(column => column.innerHTML = '');
+        
+        const activeColumns = currentColumns.slice(0, columnCount);
+        const itemsPerColumn = Math.ceil(items.length / columnCount);
+        
+        console.log(`Equal distribution: ${items.length} items across ${columnCount} columns (max ${itemsPerColumn} items per column)`);
+        
+        // Distribute items evenly - each column gets roughly the same number
+        let currentColumnIndex = 0;
+        let itemsInCurrentColumn = 0;
         
         items.forEach((item, index) => {
-            let targetColumn;
-            
-            if (preferLeftToRight) {
-                // For new items, find shortest column but prefer left-to-right order
-                targetColumn = getShortestColumnFrom(lastColumnIndex);
-                lastColumnIndex = (columns.indexOf(targetColumn) + 1) % columnCount;
-            } else {
-                // For initial load, use pure shortest column
-                targetColumn = getShortestColumn();
+            // If current column is full, move to next column
+            if (itemsInCurrentColumn >= itemsPerColumn && currentColumnIndex < columnCount - 1) {
+                currentColumnIndex++;
+                itemsInCurrentColumn = 0;
             }
             
-            if (animate) {
-                item.classList.add('new-item');
-                item.style.animationDelay = `${index * 0.1}s`;
-            }
+            activeColumns[currentColumnIndex].appendChild(item);
+            itemsInCurrentColumn++;
             
-            targetColumn.appendChild(item);
+            console.log(`Item ${index + 1} -> Column ${currentColumnIndex + 1} (${itemsInCurrentColumn}/${itemsPerColumn})`);
         });
+        
+        // Log final distribution
+        activeColumns.forEach((column, index) => {
+            console.log(`Column ${index + 1}: ${column.children.length} items`);
+        });
+    }
+
+    /**
+     * HYBRID REDISTRIBUTION - For drag operations
+     * Provides immediate visual feedback while maintaining reasonable balance
+     */
+    function hybridRedistribution(items) {
+        const currentColumns = Array.from(document.querySelectorAll('.masonry-column'));
+        
+        if (currentColumns.length === 0) {
+            console.error('No columns found for redistribution');
+            return;
+        }
+        
+        // Clear all columns
+        currentColumns.forEach(column => column.innerHTML = '');
+        const activeColumns = currentColumns.slice(0, columnCount);
+        
+        console.log('Hybrid redistribution: respects drag order with balance limits');
+        
+        // Track column stats
+        const columnStats = activeColumns.map((column, index) => ({
+            element: column,
+            itemCount: 0,
+            index: index
+        }));
+        
+        const maxItemsPerColumn = Math.ceil(items.length / columnCount) + 1; // Allow some flexibility
+        
+        items.forEach((item, index) => {
+            // First preference: shortest column (for visual balance)
+            let targetColumnIndex = 0;
+            let minItems = columnStats[0].itemCount;
+            
+            for (let i = 0; i < columnCount; i++) {
+                if (columnStats[i].itemCount < minItems) {
+                    minItems = columnStats[i].itemCount;
+                    targetColumnIndex = i;
+                }
+            }
+            
+            // If shortest column is getting too full, use round-robin
+            if (columnStats[targetColumnIndex].itemCount >= maxItemsPerColumn) {
+                targetColumnIndex = index % columnCount;
+            }
+            
+            // Add item to selected column
+            const targetColumn = columnStats[targetColumnIndex];
+            targetColumn.element.appendChild(item);
+            targetColumn.itemCount++;
+            
+            console.log(`Item ${index + 1} -> Column ${targetColumnIndex + 1} (${targetColumn.itemCount} items)`);
+        });
+        
+        // Log final distribution
+        columnStats.forEach((stat) => {
+            console.log(`Column ${stat.index + 1}: ${stat.itemCount} items`);
+        });
+        
+        // Re-enable dragging if drag mode is active
+        if (typeof dragModeEnabled !== 'undefined' && dragModeEnabled) {
+            items.forEach(item => enableDragging(item));
+        }
+        
+        // Reinitialize video observer
+        initVideoObserver();
+    }
+
+    // FIXED distribute items function - hybrid approach for different scenarios
+    function distributeItems(items, animate = false, preferLeftToRight = false) {
+        console.log(`distributeItems called with ${items.length} items, animate: ${animate}, preferLeftToRight: ${preferLeftToRight}`);
+        
+        if (preferLeftToRight) {
+            // For "Load More" items, use the original left-to-right logic to append naturally
+            // This preserves the smooth load more UX without rebuilding the entire grid
+            console.log('Using original append logic for load more items');
+            
+            // Simple left-to-right distribution for load more
+            let currentColumnIndex = 0;
+            
+            items.forEach((item, index) => {
+                if (animate) {
+                    item.classList.add('new-item');
+                    item.style.animationDelay = `${index * 0.1}s`;
+                }
+                
+                // Add to current column and move to next
+                columns[currentColumnIndex].appendChild(item);
+                currentColumnIndex = (currentColumnIndex + 1) % columnCount;
+                
+                console.log(`Load more item ${index + 1} -> Column ${currentColumnIndex}`);
+            });
+        } else {
+            // For initial load only, use equal distribution for better balance
+            console.log('Using equal distribution for initial load');
+            forceEqualDistribution(items);
+            
+            // Apply animations if requested
+            if (animate) {
+                items.forEach((item, index) => {
+                    item.classList.add('new-item');
+                    item.style.animationDelay = `${index * 0.1}s`;
+                });
+            }
+        }
         
         // Initialize video observer after items are distributed
         initVideoObserver();
     }
 
-    
-     /**
+
+    /**
      * Lazy-loads video content by setting the source URL only when needed.
      * This improves page load performance by deferring video loading until
      * the video enters the viewport.
@@ -704,10 +1011,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-
-
 // Video auto-play functionality with lazy loading
-
 
 function initVideoObserver() {
     if (videoObserver) {
@@ -964,6 +1268,18 @@ function initVideoObserver() {
                     // Attach heart functionality to new items
                     attachHeartFunctionality();
                     
+                    // Apply drag functionality to new items if drag mode is enabled
+                    if (dragModeEnabled) {
+                        newItems.forEach(item => {
+                            enableDragging(item);
+                            // Show drag handles for new items
+                            const dragHandle = item.querySelector('.drag-handle');
+                            if (dragHandle) {
+                                dragHandle.classList.add('visible');
+                            }
+                        });
+                    }
+                    
                     // Show order numbers again if they were visible before
                     if (wasOrderVisible) {
                         setTimeout(() => {
@@ -1044,8 +1360,50 @@ function initVideoObserver() {
     });
 });
 
+
+    /**
+     * Redistribution for drag operations - provides immediate visual feedback
+     */
+     function redistributeItems() {
+        // Collect all items and sort by order (this maintains drag order)
+        const allItems = Array.from(document.querySelectorAll('.masonry-item'))
+            .sort((a, b) => parseFloat(a.dataset.order) - parseFloat(b.dataset.order));
+        
+        console.log('Redistributing items after drag operation for immediate visual feedback...');
+        
+        // Get current column setup
+        const currentColumns = Array.from(document.querySelectorAll('.masonry-column'));
+        const activeColumnCount = currentColumns.filter(col => col.offsetParent !== null).length;
+        
+        console.log(`Total items: ${allItems.length}, Active columns: ${activeColumnCount}`);
+        
+        // Clear all columns first
+        currentColumns.forEach(column => column.innerHTML = '');
+        const activeColumns = currentColumns.slice(0, activeColumnCount);
+        
+        // Use simple round-robin distribution that respects the new order
+        allItems.forEach((item, index) => {
+            const targetColumnIndex = index % activeColumnCount;
+            activeColumns[targetColumnIndex].appendChild(item);
+            
+            console.log(`Item ${index + 1} (order: ${item.dataset.order}) -> Column ${targetColumnIndex + 1}`);
+        });
+        
+        // Re-enable dragging if drag mode is active
+        if (typeof dragModeEnabled !== 'undefined' && dragModeEnabled) {
+            allItems.forEach(item => enableDragging(item));
+        }
+        
+        console.log('Drag redistribution complete - items should be in new visual positions');
+    }
+
+
 // Admin control functions (only available to staff)
+{% if user.is_staff %}
 let orderDisplayVisible = false;
+let dragModeEnabled = false;
+let pendingChanges = new Map(); // Map to store slug -> new order
+let originalOrder = new Map(); // Map to store original order values
 
 function toggleOrderDisplay() {
     const orderDisplays = document.querySelectorAll('.order-display');
@@ -1065,6 +1423,341 @@ function toggleOrderDisplay() {
         toggleBtn.innerHTML = `<i class="fas fa-eye${orderDisplayVisible ? '-slash' : ''}"></i> ${text}`;
     }
 }
+
+function toggleDragMode() {
+    dragModeEnabled = !dragModeEnabled;
+    const toggleBtn = document.getElementById('toggle-drag-btn');
+    const dragHandles = document.querySelectorAll('.drag-handle');
+    
+    dragHandles.forEach(handle => {
+        handle.classList.toggle('visible', dragModeEnabled);
+    });
+    
+    if (toggleBtn) {
+        const icon = toggleBtn.querySelector('i');
+        const text = dragModeEnabled ? 'Exit Drag Mode' : 'Drag Mode';
+        const iconClass = dragModeEnabled ? 'fa-times' : 'fa-arrows-alt';
+        toggleBtn.innerHTML = `<i class="fas ${iconClass}"></i> ${text}`;
+        toggleBtn.style.background = dragModeEnabled ? 'rgba(220, 53, 69, 0.3)' : 'rgba(255, 255, 255, 0.2)';
+    }
+    
+    // Enable/disable dragging
+    const masonryItems = document.querySelectorAll('.masonry-item');
+    masonryItems.forEach(item => {
+        if (dragModeEnabled) {
+            enableDragging(item);
+        } else {
+            disableDragging(item);
+        }
+    });
+    
+    // Show/hide order numbers automatically in drag mode
+    if (dragModeEnabled && !orderDisplayVisible) {
+        toggleOrderDisplay();
+    }
+}
+
+// ENHANCED DRAG FUNCTIONALITY WITH BETTER VISUAL FEEDBACK
+function enableDragging(item) {
+    item.setAttribute('draggable', 'true');
+    
+    // Add event listeners to the item itself, not just the handle
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('drop', handleDrop);
+    item.addEventListener('dragend', handleDragEnd);
+    item.addEventListener('dragenter', handleDragEnter);
+    item.addEventListener('dragleave', handleDragLeave);
+}
+
+function disableDragging(item) {
+    item.setAttribute('draggable', 'false');
+    item.removeEventListener('dragstart', handleDragStart);
+    item.removeEventListener('dragover', handleDragOver);
+    item.removeEventListener('drop', handleDrop);
+    item.removeEventListener('dragend', handleDragEnd);
+    item.removeEventListener('dragenter', handleDragEnter);
+    item.removeEventListener('dragleave', handleDragLeave);
+}
+
+function handleDragStart(e) {
+    if (!dragModeEnabled) return;
+    
+    const item = e.currentTarget;
+    item.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', item.dataset.slug);
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Store original order if not already stored
+    if (!originalOrder.has(item.dataset.slug)) {
+        originalOrder.set(item.dataset.slug, parseFloat(item.dataset.order));
+    }
+    
+    console.log('Drag started for:', item.dataset.slug);
+}
+
+function handleDragEnter(e) {
+    if (!dragModeEnabled) return;
+    e.preventDefault();
+}
+
+function handleDragOver(e) {
+    if (!dragModeEnabled) return;
+    
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    const item = e.currentTarget;
+    if (item && !item.classList.contains('dragging')) {
+        item.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    if (!dragModeEnabled) return;
+    
+    const item = e.currentTarget;
+    if (item) {
+        item.classList.remove('drag-over');
+    }
+}
+
+function handleDrop(e) {
+    if (!dragModeEnabled) return;
+    
+    e.preventDefault();
+    const draggedSlug = e.dataTransfer.getData('text/plain');
+    const targetItem = e.currentTarget;
+    const draggedItem = document.querySelector(`[data-slug="${draggedSlug}"]`);
+    
+    console.log('Drop event:', { draggedSlug, targetItem: targetItem.dataset.slug });
+    
+    if (targetItem && draggedItem && targetItem !== draggedItem) {
+        // Calculate new order number
+        const targetOrder = parseFloat(targetItem.dataset.order);
+        
+        // Determine if dropping above or below
+        const rect = targetItem.getBoundingClientRect();
+        const dropY = e.clientY;
+        const targetCenter = rect.top + rect.height / 2;
+        const isDroppedBelow = dropY > targetCenter;
+        
+        let newOrder;
+        if (isDroppedBelow) {
+            // Find next item's order to calculate between
+            const nextOrder = getNextOrderAfter(targetOrder);
+            newOrder = nextOrder ? (targetOrder + nextOrder) / 2 : targetOrder + 1;
+        } else {
+            // Find previous item's order to calculate between
+            const prevOrder = getPreviousOrderBefore(targetOrder);
+            newOrder = prevOrder ? (prevOrder + targetOrder) / 2 : targetOrder - 1;
+        }
+        
+        console.log('New order calculated:', newOrder);
+        
+        // Update the order
+        updateItemOrder(draggedSlug, newOrder);
+        
+        // Visual update
+        draggedItem.dataset.order = newOrder;
+        const orderDisplay = draggedItem.querySelector('.order-display');
+        if (orderDisplay) {
+            orderDisplay.textContent = newOrder.toFixed(1);
+        }
+        
+        // Use the redistributeItems function from the correct scope
+        if (typeof redistributeItems === 'function') {
+            redistributeItems();
+        } else {
+            console.error('redistributeItems function not found in scope');
+            // Fallback: force a page refresh to show changes
+            location.reload();
+        }
+    }
+    
+    // Clean up
+    document.querySelectorAll('.drag-over').forEach(item => {
+        item.classList.remove('drag-over');
+    });
+}
+
+function handleDragEnd(e) {
+    const item = e.currentTarget;
+    if (item) {
+        item.classList.remove('dragging');
+    }
+    
+    document.querySelectorAll('.drag-over').forEach(item => {
+        item.classList.remove('drag-over');
+    });
+}
+
+function getNextOrderAfter(order) {
+    const items = Array.from(document.querySelectorAll('.masonry-item'))
+        .map(item => parseFloat(item.dataset.order))
+        .filter(o => o > order)
+        .sort((a, b) => a - b);
+    return items[0] || null;
+}
+
+function getPreviousOrderBefore(order) {
+    const items = Array.from(document.querySelectorAll('.masonry-item'))
+        .map(item => parseFloat(item.dataset.order))
+        .filter(o => o < order)
+        .sort((a, b) => b - a);
+    return items[0] || null;
+}
+
+function updateItemOrder(slug, newOrder) {
+    pendingChanges.set(slug, newOrder);
+    updateSavePanel();
+    console.log('Pending changes:', Array.from(pendingChanges.entries()));
+}
+
+function updateSavePanel() {
+    const savePanel = document.getElementById('sticky-save-panel');
+    const changesCount = document.getElementById('changes-count');
+    
+    if (pendingChanges.size > 0) {
+        savePanel.classList.add('visible');
+        changesCount.textContent = `${pendingChanges.size} item${pendingChanges.size !== 1 ? 's' : ''} reordered`;
+    } else {
+        savePanel.classList.remove('visible');
+    }
+}
+
+function saveOrderChanges() {
+    if (pendingChanges.size === 0) return;
+    
+    const saveBtn = document.querySelector('.btn-save');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+    saveBtn.disabled = true;
+    
+    // Convert Map to array for AJAX
+    const changes = Array.from(pendingChanges.entries()).map(([slug, order]) => ({
+        slug: slug,
+        order: order
+    }));
+    
+    console.log('Saving changes:', changes);
+    console.log('CSRF Token:', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch('/prompts-admin/bulk-reorder/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: JSON.stringify({ changes: changes })
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('Response text:', text);
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            });
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('Save response:', data);
+        if (data.success) {
+            // Clear pending changes
+            pendingChanges.clear();
+            originalOrder.clear();
+            updateSavePanel();
+            
+            // Show success message
+            showMessage('Order saved successfully!', 'success');
+        } else {
+            throw new Error(data.error || 'Failed to save order');
+        }
+    })
+    .catch(error => {
+        console.error('Full error details:', error);
+        showMessage('Failed to save order. Check console for details.', 'error');
+    })
+    .finally(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
+}
+
+function cancelOrderChanges() {
+    // Restore original orders
+    pendingChanges.forEach((newOrder, slug) => {
+        const item = document.querySelector(`[data-slug="${slug}"]`);
+        const originalOrderValue = originalOrder.get(slug);
+        
+        if (item && originalOrderValue !== undefined) {
+            item.dataset.order = originalOrderValue;
+            const orderDisplay = item.querySelector('.order-display');
+            if (orderDisplay) {
+                orderDisplay.textContent = originalOrderValue;
+            }
+        }
+    });
+    
+    // Clear changes
+    pendingChanges.clear();
+    originalOrder.clear();
+    updateSavePanel();
+    
+    // Redistribute items with hybrid algorithm
+    redistributeItems();
+    
+    showMessage('Changes cancelled', 'info');
+}
+
+function showMessage(text, type) {
+    // Simple message display
+    const message = document.createElement('div');
+    message.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+        color: white;
+        border-radius: 5px;
+        z-index: 10000;
+        font-weight: 500;
+    `;
+    message.textContent = text;
+    document.body.appendChild(message);
+    
+    setTimeout(() => {
+        message.remove();
+    }, 3000);
+}
+
+{% else %}
+let orderDisplayVisible = false;
+
+function toggleOrderDisplay() {
+    // Simplified version for non-staff users
+    const orderDisplays = document.querySelectorAll('.order-display');
+    const toggleBtn = document.getElementById('toggle-order-btn');
+    orderDisplayVisible = orderDisplays[0]?.style.display !== 'none';
+    
+    orderDisplays.forEach(display => {
+        display.style.display = orderDisplayVisible ? 'none' : 'block';
+    });
+    
+    orderDisplayVisible = !orderDisplayVisible;
+    
+    if (toggleBtn) {
+        const icon = toggleBtn.querySelector('i');
+        const text = orderDisplayVisible ? 'Hide Order Numbers' : 'Show Order Numbers';
+        toggleBtn.innerHTML = `<i class="fas fa-eye${orderDisplayVisible ? '-slash' : ''}"></i> ${text}`;
+    }
+}
+{% endif %}
 
 function applyOrderDisplayState() {
     // Apply current visibility state to all order displays (including newly loaded ones)

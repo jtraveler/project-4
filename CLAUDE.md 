@@ -1,0 +1,2058 @@
+# CLAUDE.md - PromptFinder Project Documentation
+
+**Last Updated:** January 2025  
+**Project Status:** Pre-Launch Development  
+**Owner:** [Your Name]
+
+---
+
+## 📋 Table of Contents
+
+1. [Project Overview](#project-overview)
+2. [Technical Stack](#technical-stack)
+3. [Infrastructure & Costs](#infrastructure--costs)
+4. [Development Phases](#development-phases)
+5. [Known Issues & Technical Debt](#known-issues--technical-debt)
+6. [Decisions Made](#decisions-made)
+7. [Monetization Strategy](#monetization-strategy)
+8. [Content Moderation](#content-moderation)
+9. [SEO Strategy](#seo-strategy)
+10. [User Management](#user-management)
+11. [Feature Specifications](#feature-specifications)
+12. [Unanswered Questions](#unanswered-questions)
+
+---
+
+## 🎯 Project Overview
+
+### What is PromptFinder?
+
+**PromptFinder** is an AI prompt sharing and discovery platform where users can:
+- Find high-quality AI prompts with preview images
+- Share their successful prompt-image pairs
+- Browse prompts by AI generator (Midjourney, DALL-E, Stable Diffusion, etc.)
+- Engage with the community through likes, comments, and follows
+- Organize and manage their prompt collections
+
+**Target Audience:**
+- AI artists and creators
+- Content creators needing prompt inspiration
+- Professionals building prompt libraries
+- Hobbyists exploring AI image generation
+
+**Current Status:**
+- Transitioning from student project to mainstream monetization platform
+- Building content library for public launch
+- Implementing comprehensive moderation and SEO systems
+
+**URLs:**
+- **Domain:** promptfinder.net
+- **Live Site:** https://mj-project-4.herokuapp.com (current)
+- **Repository:** [Add GitHub URL]
+
+**Brand Identity:**
+- Users are called "Prompt Finders"
+- Community = "Finder Community"
+- Tagline: "Find. Create. Share."
+- Mission: "Make every prompt finder successful"
+
+---
+
+## 🛠️ Technical Stack
+
+### Frontend
+- Django Templates (4.2.13)
+- Bootstrap 5
+- Custom CSS
+- Vanilla JavaScript
+
+### Backend
+- Django 4.2.13
+- Python 3.12
+- Django Allauth (authentication)
+- Django Taggit (tagging system)
+
+### Database
+- **Current:** PostgreSQL (Code Institute trial - expires 2026-2027)
+- **Migration Target:** Heroku PostgreSQL Mini
+- **Migration Priority:** Phase 1 (Immediate)
+
+### Media Storage
+- **Cloudinary** (permanent solution)
+- Free tier: 25GB storage, 25 credits/month
+- Handles: Image optimization, transformations, delivery
+- **Decision:** Stick with Cloudinary long-term (not migrating to Supabase)
+
+### Hosting
+- **Heroku** (Eco Dyno)
+- Credits: $248 remaining (covers costs until late 2026)
+- Infrastructure: AWS-backed, 99.9% uptime SLA
+
+### Payment Processing
+- **Stripe** (Phase 2)
+- Subscriptions, trial management, webhooks
+
+### AI Services
+- **OpenAI GPT-4:** Text moderation, comment moderation, chatbot
+- **Cloudinary AI Vision:** Custom image moderation (minors, gore, satanic content)
+- **AWS Rekognition (via Cloudinary):** Standard content moderation
+
+---
+
+## 💰 Infrastructure & Costs
+
+### Current Costs (Phase 1)
+| Service | Cost | Status |
+|---------|------|--------|
+| Heroku Eco Dyno | $5/month | Covered by credits |
+| PostgreSQL Mini | $5/month | Covered by credits |
+| Cloudinary Free | $0 | Free tier (25GB) |
+| **Total** | **$0/month** | Credits until late 2026 |
+
+### Projected Costs at 1,000 Users
+| Service | Cost | Notes |
+|---------|------|-------|
+| Heroku Eco Dyno | $10/month | Scaled up |
+| PostgreSQL Mini | $5/month | Adequate for 1K users |
+| Cloudinary Plus | $89/month | 25GB → 125GB, more transformations |
+| AI Moderation | $5-10/month | OpenAI + AI Vision |
+| **Total** | **$99-109/month** | Out of pocket: $89 (credits cover $10) |
+
+### Projected Costs at 10,000 Users
+| Service | Cost | Notes |
+|---------|------|-------|
+| Heroku | $50-100/month | Performance tier |
+| PostgreSQL | $50/month | Standard tier |
+| Cloudinary Advanced | $549/month | High volume |
+| AI Services | $50-100/month | Scaled moderation |
+| **Total** | **$699-799/month** | 5% of projected revenue |
+
+### Revenue Projections
+| Users | 10% Premium Conversion @ $7/month | Affiliate Income | Total Revenue | Profit Margin |
+|-------|-----------------------------------|------------------|---------------|---------------|
+| 1,000 | $700/month | $100-200/month | $800-900/month | 88% ($700-800) |
+| 5,000 | $3,500/month | $500-800/month | $4,000-4,300/month | 85% ($3,600) |
+| 10,000 | $7,000/month | $1,000-1,500/month | $8,000-8,500/month | 90% ($7,300) |
+
+**Key Insight:** Cloudinary costs scale with success but remain 5-7% of revenue - sustainable long-term.
+
+---
+
+## 📅 Development Phases
+
+## PHASE 1: PRE-LAUNCH (2-3 Weeks) 🚨
+
+**Goal:** Safe, functional, SEO-optimized platform ready for soft launch
+
+### Infrastructure (2 hours)
+- [ ] Migrate PostgreSQL from Code Institute to Heroku PostgreSQL Mini
+- [ ] Custom domain setup (promptfinder.net)
+- [ ] SSL/HTTPS configuration
+- [ ] Update all references to new domain
+
+### Content Moderation System (3-4 days) **CRITICAL**
+- [ ] **AI Moderation Implementation:**
+  - [ ] AWS Rekognition via Cloudinary (images/videos)
+  - [ ] Cloudinary AI Vision for custom checks
+  - [ ] OpenAI Moderation API for text
+- [ ] **Banned Content Detection:**
+  - [ ] Explicit nudity/sexual content
+  - [ ] Violence, gore, blood, vomit
+  - [ ] Minors/children (anyone under 18) - ZERO TOLERANCE
+  - [ ] Satanic/occult imagery
+  - [ ] Hate symbols
+  - [ ] Medical/graphic content (childbirth, surgery, corpses)
+  - [ ] Visually disturbing content
+- [ ] **Appeal System:**
+  - [ ] User can contest rejected uploads
+  - [ ] Temporary Cloudinary storage for appeals (7 days)
+  - [ ] Admin review dashboard
+  - [ ] Email notifications on appeal status
+- [ ] **Report Feature:**
+  - [ ] "Report" button on each prompt
+  - [ ] Report reasons dropdown
+  - [ ] Auto-hide prompts after 3+ reports
+  - [ ] Admin review panel
+  - [ ] IP tracking for anonymous reports
+
+### SEO Implementation (2-3 days)
+- [ ] **Image Filename Optimization:**
+  - [ ] Extract keywords from prompt text
+  - [ ] AI fallback for short prompts (<5 words)
+  - [ ] Format: `keyword1-keyword2-[ai-generator]-prompt-[timestamp].jpg`
+  - [ ] Example: `cyberpunk-neon-cityscape-midjourney-prompt-1234567890.jpg`
+- [ ] **Alt Tag Strategy:**
+  - [ ] Format: `"[Title] - [AI Generator] Prompt - AI-generated image"`
+  - [ ] Context-specific for thumbnails vs full images
+  - [ ] Max 125 characters
+- [ ] **H1 Tag Structure:**
+  - [ ] Format: `"[Title] - [AI Generator] Prompt"`
+  - [ ] One H1 per page
+- [ ] **Meta Descriptions:**
+  - [ ] 155-160 characters
+  - [ ] Include keywords + CTA
+  - [ ] Generate from prompt excerpt
+- [ ] **Structured Data (Schema.org):**
+  - [ ] Article schema
+  - [ ] HowTo schema (how to use prompt)
+  - [ ] ImageObject schema
+  - [ ] BreadcrumbList schema
+  - [ ] Person schema (author)
+- [ ] **Additional SEO:**
+  - [ ] Sitemap.xml generation
+  - [ ] Robots.txt configuration
+  - [ ] Canonical URLs
+  - [ ] Open Graph tags
+  - [ ] Twitter Card tags
+  - [ ] Last modified dates
+
+### Upload Page Improvements (1 day)
+- [ ] **Tag Selection System:**
+  - [ ] 27 preset tags (user selects up to 3)
+  - [ ] AI pre-populates suggested tags
+  - [ ] Autocomplete for tag search
+  - [ ] Tag validation (flags mismatches for admin review)
+- [ ] **File Limits Enforcement:**
+  - [ ] Images: 10MB max
+  - [ ] Videos: 100MB max, 20 seconds duration
+  - [ ] Instant feedback on violations
+- [ ] **Upload Counter Display:**
+  - [ ] Pexels-style banner: "You have X uploads left"
+  - [ ] Progress bar in dashboard
+  - [ ] Warning when approaching limit
+
+### Prompt Page Fixes (1-2 days)
+- [ ] Fix image display issues
+- [ ] Reorganize content layout (prompt description as focus)
+- [ ] Improve mobile responsiveness
+- [ ] Add breadcrumb navigation
+
+### Basic Filtering (2 days)
+- [ ] Filter by type (image/video)
+- [ ] Filter by category (27 preset tags)
+- [ ] Filter by date (any, 24h, week, month, year)
+- [ ] Filter by AI generator
+
+### Legal Pages (2-3 days) **CRITICAL**
+- [ ] Privacy Policy (GDPR-compliant)
+- [ ] Terms of Service / User Agreement
+- [ ] Community Guidelines / Rules
+- [ ] Cookie Policy
+- [ ] Copyright / DMCA Policy
+- [ ] Age verification statement (13+)
+
+### Cloudinary Cleanup (4 hours)
+- [ ] Implement Django signal to delete Cloudinary assets when prompts deleted
+- [ ] Prevent orphaned files
+
+### Social Login (End of Phase 1) (1 day)
+- [ ] Google OAuth integration
+- [ ] Apple Sign In integration
+- [ ] Update signup/login pages
+- [ ] Test authentication flow
+
+**Phase 1 Total Estimate:** 15-18 days
+
+---
+
+## PHASE 2: LAUNCH (First Month) 💰
+
+**Goal:** Monetization, user management, community growth
+
+### Soft Launch Strategy (1 week)
+- [ ] **Invite Code System:**
+  - [ ] Generate unique codes per user (5 codes each, admin configurable)
+  - [ ] Signup requires invite code
+  - [ ] "Request Invite" waitlist page
+  - [ ] PromptCoin rewards: 500 coins per successful invite
+  - [ ] Track referral chains
+- [ ] **Beta Tester Recruitment:**
+  - [ ] Personal network (50-100 invites)
+  - [ ] Reddit/Discord communities (controlled rollout)
+  - [ ] Track engagement metrics
+
+### Upload Limits (Launch Phase) (1 day)
+- [ ] **Free Users:** 10 uploads per WEEK (first 3-6 months)
+- [ ] **Trial Users:** Unlimited (14 days)
+- [ ] **Premium Users:** Unlimited
+- [ ] Admin toggle: Switch to monthly limits after launch phase
+- [ ] Configurable in admin: upload count, period (day/week/month)
+
+### Stripe Integration (3-4 days)
+- [ ] Stripe account setup
+- [ ] Subscription creation (monthly $7, annual $70)
+- [ ] **14-day free trial with card required**
+- [ ] Webhook handlers (payment success, failure, cancellation)
+- [ ] Customer portal integration
+- [ ] Receipt generation
+
+### Premium Features Implementation (1 week)
+- [ ] **Private Prompts:**
+  - [ ] Toggle on upload: public/private
+  - [ ] Only owner can view private prompts
+  - [ ] Selective sharing capabilities
+- [ ] **Unlimited Uploads:**
+  - [ ] Remove weekly limit for premium users
+- [ ] **Ad-Free Experience:**
+  - [ ] Conditional template rendering (hide ads for premium)
+  - [ ] Faster page loads
+- [ ] **Basic Analytics Dashboard:**
+  - [ ] View count per prompt
+  - [ ] Like count over time
+  - [ ] Comment engagement
+  - [ ] Top performing prompts
+- [ ] **Collections (Simple Version):**
+  - [ ] Create custom folders
+  - [ ] Add prompts to collections
+  - [ ] Public/private collections
+- [ ] **Verified Badge:**
+  - [ ] Display next to username
+  - [ ] Show in search results
+
+### Trial & Billing Management (1 week)
+- [ ] **Trial System:**
+  - [ ] 14-day countdown timer
+  - [ ] Email reminders (Day 11, Day 13)
+  - [ ] Auto-charge after trial
+  - [ ] 24-hour refund grace period
+- [ ] **Billing Page:**
+  - [ ] View current plan
+  - [ ] Update payment method
+  - [ ] Switch to annual plan
+  - [ ] Cancel subscription
+  - [ ] Billing history with receipts
+  - [ ] Usage stats (uploads, storage)
+- [ ] **Cancellation Flow:**
+  - [ ] Retention offers (pause, discount, annual switch)
+  - [ ] Exit survey (why leaving?)
+  - [ ] Graceful downgrade to free tier
+
+### Marketing Pages (2 days)
+- [ ] **Pricing Page:**
+  - [ ] Free vs Premium comparison table
+  - [ ] Feature breakdown
+  - [ ] Annual savings highlight
+  - [ ] FAQ section
+  - [ ] Testimonials (after collecting)
+- [ ] **FAQ Page:**
+  - [ ] Account questions
+  - [ ] Billing questions
+  - [ ] Content policy questions
+  - [ ] Technical support
+  - [ ] Premium features explained
+
+### Affiliate Links (1 day)
+- [ ] "Created in [AI Generator]" badges on prompts
+- [ ] Link to AI generator with affiliate parameters
+- [ ] Track clicks/conversions
+- [ ] Admin dashboard for affiliate stats
+
+### User Dashboard (2-3 days)
+- [ ] **Overview:**
+  - [ ] Upload counter with progress bar
+  - [ ] Total prompts, likes, views, comments
+  - [ ] PromptCoin balance
+  - [ ] Invite codes remaining
+- [ ] **My Prompts:**
+  - [ ] Grid view of uploaded prompts
+  - [ ] Filter: public/private, by date, by AI generator
+  - [ ] Quick actions: edit, delete, make private/public
+- [ ] **My Collections:**
+  - [ ] View/manage collections
+  - [ ] Add/remove prompts
+- [ ] **Analytics (Premium):**
+  - [ ] Detailed stats per prompt
+  - [ ] Engagement over time
+  - [ ] Export data
+
+### Notifications System (2-3 days)
+- [ ] **Bell Icon Implementation:**
+  - [ ] Navbar notification bell
+  - [ ] Unread count badge
+  - [ ] Dropdown preview (recent 5 notifications)
+  - [ ] 30-second polling for updates
+- [ ] **Notification Types:**
+  - [ ] Like: Someone liked your prompt
+  - [ ] Comment: New comment on your prompt
+  - [ ] Follow: New follower
+  - [ ] Warning: Issued by admin
+  - [ ] Restriction: Account restriction
+  - [ ] Appeal: Appeal status update
+  - [ ] Trial: Trial ending soon, trial ended
+  - [ ] Upload limit: Approaching/reached limit
+- [ ] **Notification Center Page:**
+  - [ ] List all notifications
+  - [ ] Filter by type
+  - [ ] Mark as read/unread
+  - [ ] Mark all read
+  - [ ] Pagination
+- [ ] **Special Notifications:**
+  - [ ] Requires acknowledgement (warnings, restrictions)
+  - [ ] Priority levels (low, normal, high, urgent)
+  - [ ] @ mentions from users
+
+### Warning & Restriction System (2 days)
+- [ ] **Warning Model:**
+  - [ ] Types: inappropriate content, spam, harassment, copyright, false reports
+  - [ ] Severity: minor, moderate, severe, final
+  - [ ] Requires user acknowledgement
+  - [ ] Notification on issue
+- [ ] **Restriction Model:**
+  - [ ] Types: probation, upload ban, comment ban, temporary ban, permanent ban
+  - [ ] Duration: temporary (expires) or permanent
+  - [ ] Appeal system
+  - [ ] Admin review dashboard
+- [ ] **User Profile Tracking:**
+  - [ ] Total warnings count
+  - [ ] Total violations count
+  - [ ] Strikes (3 strikes = auto-ban)
+  - [ ] Account status: good standing, probation, restricted, banned
+- [ ] **Admin Actions:**
+  - [ ] Issue warning
+  - [ ] Apply restriction
+  - [ ] Lift restriction
+  - [ ] Review appeals
+  - [ ] View user violation history
+
+### Persistent Join Modal (1 day)
+- [ ] **Trigger Configuration (Admin Configurable):**
+  - [ ] After 2 pages viewed → show modal
+  - [ ] Then every 2 pages
+  - [ ] After scrolling 60 prompts → show modal
+  - [ ] Then after 30 prompts
+  - [ ] Then after 15 prompts
+  - [ ] Then every 15 prompts
+- [ ] **Modal Content:**
+  - [ ] Compelling value proposition
+  - [ ] Premium features highlight
+  - [ ] CTA: Sign up / Start free trial
+  - [ ] Dismissible (cookie-based, returns on next trigger)
+
+### Content Expansion (3-4 days)
+- [ ] **Prompt Page Enhancements:**
+  - [ ] Expand to 800-1500 words
+  - [ ] Add "About This Prompt" section
+  - [ ] Add "How to Use" section
+  - [ ] Add "Tips for Best Results" section
+  - [ ] Add "What Makes This Effective" section
+  - [ ] Add FAQ section (FAQPage schema)
+- [ ] **Related Content:**
+  - [ ] Related prompts section (same tags)
+  - [ ] More from author section
+  - [ ] Similar AI generator prompts
+- [ ] **Trust Signals:**
+  - [ ] Author info box (bio, stats, prompts count)
+  - [ ] View count, like count, comment count
+  - [ ] Verified badge if applicable
+  - [ ] Copy count (how many times copied)
+
+**Phase 2 Total Estimate:** 20-25 days
+
+---
+
+## PHASE 3: GROWTH (Months 2-3) 📈
+
+**Goal:** Advanced features, gamification, social engagement
+
+### PromptCoins System (1 week)
+- [ ] **Earning Mechanisms:**
+  - [ ] Upload prompt: 50 coins
+  - [ ] Get a like: 5 coins
+  - [ ] Leave comment: 10 coins
+  - [ ] Daily login: 20 coins
+  - [ ] Complete profile: 100 coins (one-time)
+  - [ ] Successful referral: 500 coins
+  - [ ] Premium users: 2x earning rate
+  - [ ] Premium monthly allowance: 500 coins/month
+- [ ] **Spending Options:**
+  - [ ] 1 week ad-free: 100 coins
+  - [ ] Featured prompt (24h): 200 coins
+  - [ ] Extra upload slot: 50 coins
+  - [ ] Unlock premium template: 150 coins
+  - [ ] Premium users: 50% discount on spending
+- [ ] **Purchase Coins (Stripe Integration):**
+  - [ ] 500 coins = $2.99
+  - [ ] 1500 coins = $7.99 (save 12%)
+  - [ ] 5000 coins = $19.99 (save 33%)
+- [ ] **Admin Dashboard:**
+  - [ ] Coin economy balance monitoring
+  - [ ] Adjust earning/spending rates
+  - [ ] View top earners/spenders
+  - [ ] Coin transaction logs
+
+### Advanced AI Auto-Tagging (1 week)
+- [ ] **Technical Metadata Detection (AI-powered):**
+  - [ ] Orientation: portrait, landscape, square
+  - [ ] People count: 0, 1, 2, 3+
+  - [ ] Age range: teenager, adult, senior (for moderation)
+  - [ ] Store as hidden metadata (not public tags)
+- [ ] **Tag Validation System:**
+  - [ ] User selects up to 3 tags from presets
+  - [ ] AI validates tag accuracy
+  - [ ] If mismatch (confidence >0.8):
+    - [ ] Approve prompt anyway (no delay)
+    - [ ] Flag for admin review
+    - [ ] Admin has 2-4 days to review (configurable)
+    - [ ] If not reviewed: auto-apply AI suggested tags
+  - [ ] Admin can toggle validation on/off
+  - [ ] User never knows about flagging (seamless UX)
+- [ ] **Sensitive Attributes (Private Filtering Only):**
+  - [ ] DO NOT auto-tag ethnicity publicly
+  - [ ] Store as private metadata for filtering only
+  - [ ] Never display on prompt pages
+  - [ ] Legal review recommended for GDPR compliance
+
+### Advanced Filtering (3-4 days)
+- [ ] **All Filter Types:**
+  - [ ] Type: image, video
+  - [ ] Orientation: portrait, landscape, square
+  - [ ] Category: 27 preset tags
+  - [ ] AI Generator: all supported generators
+  - [ ] Age range: teenager, adult, senior (content rating)
+  - [ ] People count: 0, 1, 2, 3+
+  - [ ] Date: any, 24h, week, month, year
+  - [ ] Sort: top (day/month/all-time), recent, trending
+- [ ] **Filter Combinations:**
+  - [ ] Multiple filters active simultaneously
+  - [ ] Clear filters button
+  - [ ] Save filter preferences (premium)
+- [ ] **Search Integration:**
+  - [ ] Keyword search + filters
+  - [ ] Filter results in real-time
+
+### Daily Leaderboard (2-3 days)
+- [ ] **Leaderboard Categories:**
+  - [ ] Top uploaders today
+  - [ ] Top liked prompts today
+  - [ ] Top commented prompts today
+  - [ ] Top coin earners today
+- [ ] **Display:**
+  - [ ] Top 10 in each category
+  - [ ] User profile links
+  - [ ] Stats displayed
+  - [ ] Coin rewards for top 3 (e.g., 100/50/25 coins)
+- [ ] **Reset:** Daily at midnight (configurable timezone)
+- [ ] **Historical:** View past days' leaderboards
+
+### Follow System (3-4 days)
+- [ ] **Follow/Unfollow:**
+  - [ ] Follow button on user profiles
+  - [ ] Follower/following counts
+  - [ ] Notification when followed
+- [ ] **Following Page:**
+  - [ ] List of users you follow
+  - [ ] Unfollow button
+  - [ ] View their prompts
+- [ ] **Followers Page:**
+  - [ ] List of your followers
+  - [ ] View their profiles
+
+### User Feeds (2-3 days)
+- [ ] **Personalized Feed:**
+  - [ ] Show prompts from followed users
+  - [ ] Chronological + algorithmic mix
+  - [ ] "New prompts from people you follow"
+- [ ] **Discover Feed:**
+  - [ ] Trending prompts
+  - [ ] Recommended based on likes/views
+  - [ ] Prompts in tags you engage with
+
+### Enhanced User Profiles (2 days)
+- [ ] **Profile Page Improvements:**
+  - [ ] Cover image upload
+  - [ ] Bio (max 500 characters)
+  - [ ] Social media links
+  - [ ] Location (optional)
+  - [ ] Joined date
+  - [ ] Stats: total prompts, likes received, followers
+  - [ ] Badges: verified, master finder, top contributor
+- [ ] **Public Profile:**
+  - [ ] Grid of user's prompts
+  - [ ] Filter: public only, by date, by AI generator
+  - [ ] Follow button
+  - [ ] Activity feed (recent uploads)
+
+### Premium Analytics (Advanced) (3-4 days)
+- [ ] **Detailed Metrics:**
+  - [ ] Views over time (graph)
+  - [ ] Engagement rate (likes/views ratio)
+  - [ ] Comment sentiment analysis
+  - [ ] Best performing tags
+  - [ ] Traffic sources (where views come from)
+  - [ ] Peak engagement times
+- [ ] **Export Data:**
+  - [ ] CSV export of all prompts
+  - [ ] CSV export of analytics
+  - [ ] Backup feature
+
+### API Access (Premium) (1 week)
+- [ ] **REST API:**
+  - [ ] Authentication: API key per user
+  - [ ] Endpoints: list prompts, get prompt, create prompt, update prompt, delete prompt
+  - [ ] Rate limiting: free (100/day), premium (unlimited)
+  - [ ] Documentation page
+- [ ] **Use Cases:**
+  - [ ] Integrate prompts into apps
+  - [ ] Bulk operations
+  - [ ] Automation workflows
+
+### Bulk Upload (Premium) (1-2 days)
+- [ ] **Upload Multiple Prompts:**
+  - [ ] CSV import (title, content, tags, AI generator)
+  - [ ] ZIP upload (images + metadata JSON)
+  - [ ] Preview before publishing
+  - [ ] Batch processing
+
+**Phase 3 Total Estimate:** 25-30 days
+
+---
+
+## PHASE 4: POLISH & SCALE (Month 3+) ✨
+
+**Goal:** Optimization, advanced monetization, community features
+
+### Prompt Courses/Guidebook Monetization (1 week)
+- [ ] **Digital Products:**
+  - [ ] "The Ultimate Prompt Guide" eBook ($19)
+  - [ ] "Midjourney Mastery" video course ($49)
+  - [ ] "DALL-E Secrets" tutorial pack ($29)
+- [ ] **Marketing:**
+  - [ ] Banner ads on site (premium users exempt)
+  - [ ] Email campaign to free users
+  - [ ] Affiliate partnerships with course creators
+- [ ] **Delivery:**
+  - [ ] Gumroad/Teachable integration
+  - [ ] Or host on PromptFinder (premium CMS)
+
+### AI Comment Bot (1 week) **NICE-TO-HAVE**
+- [ ] **PromptFinder Assistant Bot:**
+  - [ ] Special AI user account
+  - [ ] Posts helpful comments publicly
+  - [ ] @ mentions users (triggers notifications)
+- [ ] **Comment Types (Start Simple):**
+  - [ ] Milestone celebrations: "🎉 @username hit 100 uploads!"
+  - [ ] Helpful answers: "💡 @username here's how to..."
+  - [ ] Trend alerts: "🔥 This prompt is trending!"
+- [ ] **Safety Features:**
+  - [ ] Rate limiting: max 50 comments/day
+  - [ ] Max 1 comment per user/day
+  - [ ] Max 1 comment per prompt
+  - [ ] Confidence threshold: >0.85 to comment
+  - [ ] Admin can delete/edit any AI comment
+  - [ ] Admin can toggle comment types on/off
+  - [ ] User opt-out in settings
+- [ ] **Admin Log Dashboard:**
+  - [ ] View all AI comments
+  - [ ] Edit templates
+  - [ ] View reactions/replies
+  - [ ] Analytics (helpful rate, engagement)
+  - [ ] Export logs
+
+### Chatbot + Anti-Abuse System (3-4 days)
+- [ ] **Bottom-Right Chatbot Widget:**
+  - [ ] Always visible chat bubble
+  - [ ] Opens chat window on click
+  - [ ] Unread message badge
+- [ ] **PromptFinder Assistant (Chatbot Scope):**
+  - [ ] Account & billing questions
+  - [ ] How to use PromptFinder features
+  - [ ] Policies & guidelines explanations
+  - [ ] Prompt creation tips
+  - [ ] Deflects off-topic questions politely
+- [ ] **Anti-Abuse for Comments:**
+  - [ ] Detects off-topic bot mentions in comments
+  - [ ] Auto-removes comment
+  - [ ] Redirects to chatbot
+  - [ ] Educates user on guidelines
+  - [ ] Escalates after 3 offenses (warning → restriction)
+  - [ ] Admin logs all redirections
+- [ ] **Education Flow:**
+  - [ ] First offense: gentle reminder
+  - [ ] Second offense: firmer guidelines link
+  - [ ] Third offense: warning + admin notification
+
+### Marketplace (Sell Prompts) (2 weeks)
+- [ ] **Prompt Sales:**
+  - [ ] Users can price their prompts ($1-50)
+  - [ ] PromptFinder takes 20-30% commission
+  - [ ] Premium users: 10-15% commission
+- [ ] **Licensing Options:**
+  - [ ] Personal license (free to use personally)
+  - [ ] Commercial license ($5-50)
+  - [ ] Exclusive license (one buyer, higher price)
+- [ ] **Payment:**
+  - [ ] Stripe Connect integration
+  - [ ] Payout to seller bank account
+  - [ ] Transaction history
+- [ ] **Discovery:**
+  - [ ] "For Sale" filter
+  - [ ] Price range filter
+  - [ ] Best selling prompts
+
+### Team Accounts (1 week)
+- [ ] **Team Plan Pricing:** $20/month for 5 users
+- [ ] **Features:**
+  - [ ] Shared workspace
+  - [ ] Team prompt library
+  - [ ] Role-based permissions (admin, editor, viewer)
+  - [ ] Collaboration tools (comment on drafts)
+  - [ ] Team analytics
+
+### Video Optimization (3-4 days)
+- [ ] **Adaptive Streaming:**
+  - [ ] Generate multiple quality versions (480p, 720p, 1080p)
+  - [ ] Serve appropriate version based on device/connection
+  - [ ] Mobile vs desktop optimization
+- [ ] **Cloudinary Video Transformations:**
+  - [ ] Auto-format (MP4, WebM)
+  - [ ] Compression
+  - [ ] Thumbnail generation
+
+### Performance Optimization (1 week)
+- [ ] **Lazy Loading:**
+  - [ ] Images below fold
+  - [ ] Infinite scroll for prompt lists
+- [ ] **WebP Conversion:**
+  - [ ] Cloudinary auto-format
+  - [ ] Fallback to JPEG for unsupported browsers
+- [ ] **CDN:**
+  - [ ] Cloudinary CDN (already in use)
+  - [ ] Static files CDN (Cloudfront/Cloudflare)
+- [ ] **Database Optimization:**
+  - [ ] Query optimization (select_related, prefetch_related)
+  - [ ] Database indexing
+  - [ ] Caching (Redis/Memcached)
+- [ ] **Code Splitting:**
+  - [ ] Lazy load JavaScript
+  - [ ] Defer non-critical CSS
+
+### A/B Testing System (1 week)
+- [ ] **Test Variants:**
+  - [ ] Trial length (7 vs 14 days)
+  - [ ] Pricing ($7 vs $10)
+  - [ ] Join modal timing
+  - [ ] CTA button text
+- [ ] **Metrics Tracking:**
+  - [ ] Conversion rates
+  - [ ] User engagement
+  - [ ] Revenue per cohort
+- [ ] **Admin Dashboard:**
+  - [ ] View test results
+  - [ ] Declare winner
+  - [ ] Roll out winning variant
+
+### Prompt Version History (3-4 days)
+- [ ] **Version Control:**
+  - [ ] Save prompt edits as versions
+  - [ ] View edit history
+  - [ ] Restore previous version
+  - [ ] Compare versions side-by-side
+- [ ] **Premium Feature:**
+  - [ ] Free users: view-only history
+  - [ ] Premium: full restore capabilities
+
+**Phase 4 Total Estimate:** Ongoing (features added as needed)
+
+---
+
+## 🚨 Known Issues & Technical Debt
+
+### Critical Issues (Fix in Phase 1)
+1. **Orphaned Cloudinary Assets**
+   - **Problem:** When prompts deleted, Cloudinary files not removed
+   - **Impact:** Wasted storage, costs increase over time
+   - **Solution:** Django signal to call `cloudinary.uploader.destroy()` on delete
+   - **Effort:** 4 hours
+
+2. **Code Institute PostgreSQL Dependency**
+   - **Problem:** Database expires 2026-2027, not independent
+   - **Impact:** Platform unusable after expiration
+   - **Solution:** Migrate to Heroku PostgreSQL Mini
+   - **Effort:** 2 hours (data export/import)
+
+3. **No Content Moderation**
+   - **Problem:** No safeguards against inappropriate content
+   - **Impact:** Legal liability, brand damage, user safety
+   - **Solution:** Multi-layer AI moderation system
+   - **Effort:** 3-4 days
+
+### UI/UX Issues (Fix in Phase 1-2)
+1. **Prompt Detail Page:**
+   - [ ] Preview image displaying incorrectly (sizing/alignment)
+   - [ ] Content layout needs reorganization (description not prominent enough)
+   - [ ] Mobile responsiveness issues
+   
+2. **General UI:**
+   - [ ] Inconsistent styling across pages
+   - [ ] Form validation display problems
+   - [ ] Button hover states missing
+   - [ ] (Add specific issues as discovered)
+
+### Future Considerations (Phase 3+)
+- Video optimization for different devices/connections
+- Advanced caching strategy
+- Database query optimization at scale
+- Real-time features (WebSockets for live notifications)
+
+---
+
+## ✅ Decisions Made
+
+### Infrastructure Decisions
+
+**1. Database: Heroku PostgreSQL (NOT Supabase)**
+- **Reasoning:** 
+  - Easy migration from Code Institute
+  - Integrated with Heroku hosting
+  - Adequate for projected scale
+  - Covered by Heroku credits
+- **Alternative Considered:** Supabase
+- **Why Rejected:** No significant benefit, migration effort not justified
+
+**2. Media Storage: Cloudinary (PERMANENT - NOT Supabase)**
+- **Reasoning:**
+  - Automatic image optimization (thumbnails, WebP, compression)
+  - Built-in AI moderation and tagging
+  - CDN included
+  - Transformations on-the-fly
+  - Cost scales with success (5-7% of revenue)
+- **Alternative Considered:** Supabase Storage + custom image processing
+- **Why Rejected:**
+  - Would require 2 weeks development (Pillow, FFmpeg)
+  - Ongoing maintenance burden
+  - Lose automatic optimization features
+  - Only saves $500/month at 10K users (not worth effort)
+  - Break-even: 7.5 years
+- **Migration Decision:** Stick with Cloudinary indefinitely
+- **Rationale:** "If Cloudinary costs are a problem, business is good. At that point, we can afford Cloudinary."
+
+**3. Hosting: Heroku**
+- **Reasoning:**
+  - $248 credits (covers costs until late 2026)
+  - Easy deployment
+  - AWS infrastructure (reliable, fast)
+  - Custom domain support
+  - 99.9% uptime SLA
+- **Cost:** $10/month (covered by credits currently)
+
+### Monetization Decisions
+
+**4. Trial Period: 14 Days with Card Required**
+- **Reasoning:**
+  - Higher conversion (60-70% vs 10-20% without card)
+  - Filters serious users
+  - Industry standard for SaaS
+  - Allows "forgot to cancel" revenue (ethical gray area but standard)
+  - Two weeks gives users time to see value
+- **Alternative Considered:** 7 days, no card required
+- **Why 14 Days:** Product needs time to show value (users upload, get engagement, see results)
+- **Why Card Required:** Conversion rate 3-4x higher
+- **Implementation:**
+  - Clear messaging: "Free for 14 days, then $7/month. Cancel anytime."
+  - Email reminders: Day 11, Day 13
+  - 24-hour refund grace period (no questions asked)
+  - One-click cancellation in dashboard
+
+**5. Pricing: $7/month (Monthly), $70/year (Annual)**
+- **Free Tier:** 10 uploads/week (launch phase) → 5-10/month (growth phase)
+- **Premium Tier:** Unlimited uploads + all features
+- **Annual Discount:** Save $14/year (2 months free)
+- **Target Conversion:** 10% free → premium
+
+**6. Upload Limits Strategy**
+- **Launch Phase (Months 1-6):** 10 uploads/week for free users
+  - **Goal:** Build content library quickly
+  - **Rationale:** Empty platform = no value = no retention
+- **Growth Phase (Month 6+):** 5-10 uploads/month for free users
+  - **Goal:** Create upgrade pressure
+  - **Announcement:** 30 days advance notice with upgrade CTA
+  - **Admin Config:** Easily switchable via settings
+
+**7. PromptCoins Gamification**
+- **Purpose:** Engage free users, create multiple monetization paths
+- **Earning:** Uploads, likes, comments, daily login, referrals
+- **Spending:** Temporary premium features, featured slots, extra uploads
+- **Premium Benefit:** 2x earning rate + monthly allowance
+- **Purchase Option:** Buy coins via Stripe ($2.99 - $19.99)
+- **Rationale:** "Earning is slow, but premium members get 2x..." (conversion funnel)
+
+### SEO Decisions
+
+**8. SEO Filename Strategy: Prompt Text + AI Fallback**
+- **Primary:** Extract keywords from user's prompt text (FREE)
+- **Fallback:** AI tagging if prompt < 5 words (costs ~$0.50/1000)
+- **Format:** `keyword1-keyword2-[ai-generator]-prompt-[timestamp].jpg`
+- **Reasoning:** User prompts are already keyword-rich, saves AI costs
+- **Example:** `cyberpunk-neon-cityscape-midjourney-prompt-1234567890.jpg`
+
+**9. Thumbnails: Cloudinary Transformations (NOT Separate Files)**
+- **Strategy:** One master image, generate thumbnails via URL transformations
+- **Benefits:** Saves storage, automatic caching, no duplication
+- **Alt Tags:** Context-specific (different alt for thumbnail vs full image)
+- **Example Transformation:** `/c_fill,w_300,h_200,g_auto,q_auto,f_auto/`
+
+**10. SEO Consistency: Include "[AI Generator] Prompt" Everywhere**
+- **H1:** `"[Title] - [AI Generator] Prompt"`
+- **Alt Tag:** `"[Title] - [AI Generator] Prompt - AI-generated image"`
+- **Filename:** `"[keywords]-[ai-generator]-prompt-[timestamp].jpg"`
+- **Reasoning:** Captures searches like "midjourney prompt [topic]"
+
+### Content Moderation Decisions
+
+**11. AI Moderation: Multi-Layer Approach**
+- **Layer 1:** AWS Rekognition (via Cloudinary) - standard moderation
+- **Layer 2:** Cloudinary AI Vision - custom checks (minors, gore, satanic)
+- **Layer 3:** OpenAI Moderation API - text moderation (FREE)
+- **Cost:** ~$6-11 per 1000 images (extremely affordable)
+- **Custom Rules:**
+  - ZERO TOLERANCE: Minors, gore, satanic imagery, hate symbols
+  - STRICT: Explicit nudity (0.2 threshold), violence (0.3)
+  - MODERATE: Drugs (0.6), gambling (0.7)
+
+**12. Comments: Keep with AI Moderation (NOT Disable)**
+- **Reasoning:**
+  - SEO critical (fresh content, engagement signals)
+  - AI catches 90%+ of issues
+  - Very cheap ($1-5/month)
+  - Scalable (works at any volume)
+- **Alternative Considered:** Disable comments entirely
+- **Why Rejected:** SEO impact too severe
+- **Implementation:**
+  - Auto-approve (>0.8 confidence, safe)
+  - Auto-remove (>0.8 confidence, violation)
+  - Flag for review (0.5-0.8 confidence)
+  - Admin reviews flagged comments (~30 min/day)
+
+**13. AI Bot Personality: Helpful, NOT Snarky**
+- **Decision:** AI bot is supportive, encouraging, educational
+- **Rejected:** Snarky/sassy responses to users
+- **Reasoning:**
+  - Legal liability (defamation, discrimination)
+  - Brand damage (unprofessional)
+  - Escalation risk (toxicity spiral)
+  - AI mistakes (misreads sarcasm)
+  - Professional platform for monetization
+- **Use Cases:**
+  - Celebrate achievements
+  - Answer questions
+  - Provide tips
+  - Never engages in drama/snark
+
+### Social & Growth Decisions
+
+**14. Soft Launch: Invite-Only (First 2-4 Weeks)**
+- **Strategy:** Closed beta with invite codes
+- **Benefits:**
+  - Controlled scaling (manage server load)
+  - Bug fixes before public launch
+  - FOMO marketing ("Request invite")
+  - Viral growth (users invite friends)
+  - Quality control (invited users = engaged users)
+- **Gamification:** 500 PromptCoins per successful invite
+
+**15. Social Login: Google + Apple (Phase 1 End)**
+- **Priority:** Google (70% users), Apple (15% users)
+- **Skip:** Yahoo (dying), Microsoft (overkill), LinkedIn (not relevant)
+- **Phase 2:** Facebook (if data shows demand)
+- **Reasoning:** Critical for conversion, reduces signup friction 20-40%
+
+**16. Tag Strategy: Hybrid User + AI**
+- **User Action:** Selects up to 3 tags from 27 presets
+- **AI Action:** Pre-populates suggested tags, validates selection
+- **If Mismatch:** Approve anyway, flag for admin, auto-correct if not reviewed in 2-4 days
+- **User Never Knows:** Seamless UX, no delays
+- **Admin Control:** Toggle on/off, configure review deadline
+
+### Brand & Marketing Decisions
+
+**17. Brand Name: PromptFinder (NOT PromptFlow)**
+- **Domain:** promptfinder.net
+- **Reasoning:**
+  - Search intent aligned ("find prompts")
+  - Clear purpose
+  - Marketing goldmine ("prompt finders" = user identity)
+  - Better SEO (matches search behavior)
+- **User Identity:** "Prompt Finders" (not "users")
+- **Tagline:** "Find. Create. Share."
+- **Mission:** "Make every prompt finder successful"
+
+---
+
+## 💰 Monetization Strategy
+
+### Revenue Streams
+
+**1. Premium Subscriptions (Primary)**
+- Monthly: $7/month (14-day free trial)
+- Annual: $70/year (save $14 = 2 months free)
+- Target conversion: 10% of free users
+- Premium features detailed below
+
+**2. PromptCoins (Secondary)**
+- Users buy coins: $2.99 (500) / $7.99 (1500) / $19.99 (5000)
+- Spend on temporary perks: ad-free, featured slots, extra uploads
+- Premium users earn 2x faster (conversion incentive)
+
+**3. Affiliate Links (Passive)**
+- "Created in [AI Generator]" badges link with affiliate codes
+- Revenue: $100-200/month (1K users) → $1,000-1,500/month (10K users)
+- Zero maintenance once implemented
+
+**4. Marketplace (Future - Phase 4)**
+- Users sell prompts, PromptFinder takes 20-30% commission
+- Premium users: reduced commission (10-15%)
+
+**5. Digital Products (Future - Phase 4)**
+- Prompt courses ($49)
+- Guidebook ebooks ($19-29)
+- Template packs ($15-25)
+- Affiliate partnerships with course creators
+
+**6. Ads (Free Tier Only)**
+- Subtle, non-intrusive ads for free users
+- Premium removes all ads
+- Revenue: ~$50-200/month depending on traffic
+
+### Premium Features (Complete List)
+
+**Free Tier:**
+- Browse all prompts
+- Like prompts
+- Comment on prompts
+- Upload prompts (10/week → 5-10/month after launch)
+- Public prompts only
+- See ads
+- 5 invite codes
+- Basic profile
+
+**Premium Tier ($7/month or $70/year):**
+- ✅ **Unlimited uploads** - No monthly limit
+- ✅ **Private prompts** - Keep prompt library private, selective sharing
+- ✅ **Ad-free experience** - Cleaner browsing, faster page loads
+- ✅ **Advanced analytics** - Views, engagement, performance metrics, export data
+- ✅ **Collections** - Organize prompts into custom folders/boards
+- ✅ **Verified badge** - Trust signal, status symbol
+- ✅ **Priority support** - Faster response times
+- ✅ **Early access** - New features before public release
+- ✅ **Prompt templates** - Access to premium prompt templates
+- ✅ **Bulk upload** - Upload multiple prompts at once (CSV/ZIP)
+- ✅ **API access** - Integrate prompts into apps, unlimited rate limit
+- ✅ **Priority in search** - Better visibility, higher ranking
+- ✅ **Export data** - Download all prompts, analytics
+- ✅ **PromptCoins 2x** - Earn coins twice as fast
+- ✅ **Monthly coin allowance** - 500 free coins/month
+- ✅ **Marketplace discount** - 10-15% commission vs 20-30%
+- ✅ **Custom profile URL** - promptfinder.net/username (optional)
+- ✅ **No upload limit alerts** - Never see "X uploads left" warnings
+
+### Conversion Strategy
+
+**Free → Trial:**
+- Persistent join modal (configurable triggers)
+- Upload limit warnings ("Only 2 uploads left!")
+- Feature discovery (hover over premium-only features)
+- Dashboard upgrade prompts
+- Success stories/testimonials
+
+**Trial → Paid:**
+- Email sequence (welcome, tips, reminder, last chance)
+- Showcase premium features during trial
+- Highlight achievements ("You uploaded 20 prompts - keep it going!")
+- 24-hour refund guarantee (reduces commitment anxiety)
+
+**Retention:**
+- Cancellation flow with offers (pause, discount, annual)
+- Exit survey (understand why leaving)
+- Win-back campaigns (6 months after cancellation)
+
+---
+
+## 🛡️ Content Moderation
+
+### Comprehensive Moderation Strategy
+
+**Philosophy:** Multi-layer defense with AI + human oversight
+
+### Banned Content (Complete List)
+
+**ZERO TOLERANCE (Auto-reject):**
+1. Minors/children (anyone appearing under 18 years old)
+2. Explicit nudity or sexual content
+3. Violence, gore, blood, graphic injuries
+4. Vomit or bodily fluids
+5. Satanic, occult, or demonic imagery
+6. Hate symbols or extremist content
+7. Medical/graphic content (childbirth, surgery, corpses, wounds)
+8. Visually disturbing content (emaciated bodies, hanging, self-harm)
+
+**STRICT MODERATION:**
+9. Suggestive content (swimwear, underwear, revealing clothes)
+10. Weapons or weapon violence
+11. Drug use or paraphernalia
+12. Rude gestures (middle finger, etc.)
+
+**ALLOWED (with guidelines):**
+13. Alcohol (in context)
+14. Tobacco (in context)
+15. Artistic nudity (classical art style, educational)
+
+### AI Moderation Implementation
+
+**Layer 1: AWS Rekognition (via Cloudinary)**
+- **Confidence Thresholds:**
+  - Explicit nudity: 0.2 (VERY STRICT)
+  - Suggestive: 0.3
+  - Violence/Gore: 0.3
+  - Hate symbols: 0.2 (VERY STRICT)
+  - Visually disturbing: 0.2
+  - Drugs: 0.6
+  - Rude gestures: 0.3
+- **Cost:** ~$1 per 1000 images
+
+**Layer 2: Cloudinary AI Vision (Custom Checks)**
+- **Custom Questions:**
+  1. "Does this image contain children or people under 18?"
+  2. "Does this image contain satanic, occult, or demonic symbols?"
+  3. "Does this image contain gore, blood, vomit, or bodily fluids?"
+  4. "Does this image show childbirth, medical procedures, or graphic bodily content?"
+  5. "Does this image contain extreme violence, injuries, or wounds?"
+  6. "Does this image show death, corpses, or dead bodies?"
+- **Rejection:** Any "yes" answer = auto-reject
+- **Cost:** ~$5-10 per 1000 images
+
+**Layer 3: OpenAI Moderation API (Text)**
+- **Checks prompt text for:**
+  - Hate speech
+  - Sexual content
+  - Violence
+  - Self-harm
+  - Harassment
+- **Cost:** FREE
+
+**Total Moderation Cost:** ~$6-11 per 1000 images
+
+### Moderation Workflow
+
+```
+User uploads image/video
+    ↓
+1. OpenAI checks prompt text → Reject if flagged
+    ↓
+2. Cloudinary AWS Rekognition → Reject if confidence > threshold
+    ↓
+3. Cloudinary AI Vision custom checks → Reject if any "yes"
+    ↓
+4. All checks passed → APPROVED
+    ↓
+5. Post-publish: User reports, AI comment moderation
+```
+
+### User Report System
+
+**Report Button:**
+- Visible on every prompt page (subtle, not prominent)
+- Modal with reason selection
+- Optional description field
+
+**Report Reasons:**
+- Explicit/Adult Content
+- Violence or Gore
+- Hate Speech or Symbols
+- Spam or Misleading
+- Copyright Violation
+- Inappropriate Content Involving Minors
+- Other (please specify)
+
+**Auto-Actions:**
+- 3+ reports → Auto-hide prompt, notify admin
+- Admin review required
+- Reporter anonymity protected
+
+**Admin Dashboard:**
+- View all reports
+- Filter by status (pending, reviewed, dismissed, action taken)
+- Take action: approve, remove prompt, warn user, ban user
+- Track reporter abuse (false reports)
+
+### Appeal System
+
+**When Upload Rejected:**
+1. User sees rejection reason
+2. Option to appeal decision
+3. Image temporarily stored in Cloudinary (7 days)
+4. User provides explanation
+5. Admin reviews within 24-48 hours
+6. Notification on decision (approved/rejected)
+7. If approved: prompt published
+8. If rejected: explanation provided, image deleted
+
+**Appeal Dashboard:**
+- User can view appeal status
+- Admin can review appeals with image preview
+- One-click approve/reject with notes
+
+### Comment Moderation
+
+**AI Comment Moderation (OpenAI GPT-4):**
+- **Auto-Approve:** Confidence >0.8, safe content
+- **Auto-Remove:** Confidence >0.8, violates guidelines
+- **Flag for Review:** Confidence 0.5-0.8 (admin decides)
+- **Cost:** ~$1-5/month
+
+**Detected Issues:**
+- Harassment, bullying, personal attacks
+- Passive aggression, condescending tone
+- Unwanted flirting or romantic advances
+- Contact info sharing (email, phone, social media)
+- Spam or promotional content
+- Off-topic discussions
+
+**User Notifications:**
+- Comment removed: "Your comment violated guidelines. Reason: [X]"
+- Option to appeal (same process as content appeals)
+
+**Admin Time:** ~30 minutes/day reviewing flagged comments
+
+### Trust & Safety Features
+
+**User Reputation System:**
+- Good standing: Normal user
+- Probation: Monitored activity, slower moderation approval
+- Restricted: Limited features (upload ban, comment ban)
+- Banned: No access
+
+**Warning System:**
+- Minor → Moderate → Severe → Final Warning → Ban
+- Each warning requires user acknowledgement
+- Visible in user's account (private)
+- Admin can issue/lift warnings
+
+**3-Strike System:**
+- Strike 1: Warning + email
+- Strike 2: Temporary restriction (upload ban 7 days)
+- Strike 3: Permanent ban (with appeal option)
+
+**Admin Tools:**
+- Ban user (temporary/permanent)
+- Restrict features (upload, comment, like)
+- Review user's full history
+- Bulk actions (remove all prompts from user)
+- IP tracking for ban evasion
+
+---
+
+## 🔍 SEO Strategy (Complete)
+
+### On-Page SEO Checklist
+
+**Every Prompt Page Must Have:**
+
+1. **Title Tag** (50-60 characters)
+   - Format: `"[Prompt Title] - [AI Generator] Prompt | PromptFinder"`
+   - Example: `"Cyberpunk Neon Cityscape - Midjourney Prompt | PromptFinder"`
+
+2. **Meta Description** (155-160 characters)
+   - Include keywords, AI generator, CTA
+   - Example: `"Create stunning cyberpunk cityscapes with this Midjourney prompt. Features neon lights, rain, flying cars. Free to use on PromptFinder."`
+
+3. **H1 Tag** (one per page)
+   - Format: `"[Title] - [AI Generator] Prompt"`
+   - Example: `"Cyberpunk Neon Cityscape - Midjourney Prompt"`
+
+4. **H2-H6 Hierarchy**
+   - H2: About This Prompt
+   - H2: The AI Prompt
+   - H2: How to Use This Prompt
+   - H2: Tips for Best Results
+   - H2: Related Prompts
+   - H2: Comments
+
+5. **Image SEO:**
+   - **Filename:** `keyword1-keyword2-[ai-gen]-prompt-[timestamp].jpg`
+   - **Alt Tag:** `"[Title] - [AI Generator] Prompt - AI-generated image"`
+   - **Thumbnails:** Different alt tags per context
+   - **Lazy loading:** Below-fold images
+
+6. **Structured Data (Schema.org JSON-LD):**
+   - Article schema (main content)
+   - HowTo schema (how to use prompt)
+   - ImageObject schema (featured image)
+   - BreadcrumbList schema (navigation)
+   - Person schema (author)
+   - WebPage schema
+   - FAQPage schema (if FAQ section exists)
+   - AggregateRating schema (from likes/comments)
+
+7. **Internal Linking:**
+   - Related prompts (same tags)
+   - More from author
+   - Tag pages
+   - AI generator category pages
+   - Breadcrumb navigation
+
+8. **URL Structure:**
+   - Format: `/prompts/[slug]/`
+   - Example: `/prompts/cyberpunk-neon-cityscape-midjourney/`
+   - Clean, descriptive, keyword-rich
+
+9. **Canonical URL:**
+   - `<link rel="canonical" href="https://promptfinder.net/prompts/[slug]/">`
+
+10. **Open Graph Tags:**
+    - og:title, og:description, og:image, og:url, og:type
+
+11. **Twitter Card Tags:**
+    - twitter:card, twitter:title, twitter:description, twitter:image
+
+12. **Last Modified Date:**
+    - Display on page
+    - Include in schema (dateModified)
+    - Meta tag: article:modified_time
+
+13. **Content Quality:**
+    - 800-1500 words per page
+    - Unique, valuable content
+    - User-generated (comments add freshness)
+
+### Technical SEO
+
+**Site-Wide:**
+- [ ] Sitemap.xml (auto-generated, updated daily)
+- [ ] Robots.txt (allow crawling, block admin)
+- [ ] HTTPS/SSL (required)
+- [ ] Mobile-responsive (Bootstrap handles this)
+- [ ] Page speed optimization (Lighthouse >90)
+- [ ] Security headers (CSP, HSTS, X-Frame-Options)
+- [ ] GDPR compliance (cookie consent, privacy policy)
+
+**Performance:**
+- [ ] Lazy loading images
+- [ ] WebP image format (Cloudinary auto)
+- [ ] Minified CSS/JS
+- [ ] CDN (Cloudinary for images, consider Cloudflare for static)
+- [ ] Database query optimization
+- [ ] Caching strategy (browser + server)
+
+### SEO Monitoring (Phase 3+)
+
+- [ ] Google Search Console (track rankings, errors)
+- [ ] Google Analytics (traffic, engagement)
+- [ ] Track keyword rankings
+- [ ] Monitor backlinks
+- [ ] Competitor analysis
+
+---
+
+## 👤 User Management
+
+### User Roles & Permissions
+
+**1. Free User (Prompt Finder)**
+- Default role on signup
+- 10 uploads/week (launch) → 5-10/month (growth)
+- Public prompts only
+- Can like, comment, follow
+- Sees ads
+
+**2. Trial User (14 Days)**
+- All premium features unlocked
+- Card required upfront
+- Email reminders (Day 11, 13)
+- Auto-converts to premium or downgrades to free
+
+**3. Premium User (Pro Finder)**
+- $7/month or $70/year
+- All premium features (see Monetization section)
+- Verified badge
+- 2x PromptCoin earning
+
+**4. Verified User (Verified Finder)**
+- Manual verification by admin
+- Badge displayed on profile/comments
+- Higher trust score
+- Prompts skip some moderation checks (if trusted)
+
+**5. Admin/Staff**
+- Full Django admin access
+- Moderation dashboard
+- Can issue warnings, bans, restrictions
+- View all reports, appeals
+- Analytics dashboard
+
+### User Profile Fields
+
+**Required:**
+- Username (unique)
+- Email (verified)
+- Password (hashed)
+
+**Optional:**
+- Display name
+- Bio (500 chars max)
+- Avatar image
+- Cover image (Phase 3)
+- Location
+- Website URL
+- Social media links (Twitter, Instagram, etc.)
+
+**System Fields:**
+- Date joined
+- Last login
+- Account status (good standing, probation, restricted, banned)
+- Is verified (boolean)
+- Is premium (boolean)
+- Trial end date
+- Subscription status
+- PromptCoin balance
+- Total uploads count
+- Total likes received
+- Follower count
+- Following count
+- Invite codes remaining
+- Was invited by (referral tracking)
+
+**Moderation Fields:**
+- Total warnings
+- Total violations
+- Strikes (0-3)
+- Is trusted (skips moderation)
+
+### Notification Types (Complete List)
+
+**Engagement:**
+- Someone liked your prompt
+- New comment on your prompt
+- Someone replied to your comment
+- New follower
+- Someone mentioned you (@username)
+
+**System:**
+- Welcome to PromptFinder
+- Email verification
+- Password reset
+- Profile updated
+
+**Moderation:**
+- Content flagged/removed
+- Warning issued
+- Restriction applied
+- Restriction lifted
+- Appeal submitted
+- Appeal approved/rejected
+- Comment removed
+
+**Monetization:**
+- Trial starting
+- Trial ending (3 days, 1 day)
+- Payment successful
+- Payment failed
+- Subscription cancelled
+- Upgrade successful
+- PromptCoins purchased
+- PromptCoin reward earned
+
+**Upload Limits:**
+- Approaching limit (2 uploads left)
+- Limit reached
+- Limit reset (new week/month)
+
+**Social:**
+- Invite code used successfully (+ coin reward)
+- Leaderboard achievement (top 3)
+- Milestone reached (100 uploads, 1000 likes, etc.)
+
+### Notification Settings (User Configurable)
+
+Users can toggle on/off:
+- Email notifications (all, important only, none)
+- Push notifications (browser)
+- @ mention notifications
+- Like notifications (all, milestones only, off)
+- Comment notifications
+- Follow notifications
+- Trial/billing reminders
+- Marketing emails
+
+---
+
+## 📋 Feature Specifications
+
+### Tag System
+
+**27 Preset Tags:**
+1. Portraits
+2. Men
+3. Women
+4. Nature
+5. Landscapes
+6. Architecture
+7. Interiors & Design
+8. Fashion & Beauty
+9. Animals
+10. Action
+11. Poster
+12. Graphics
+13. Sci-fi & Fantasy
+14. Mythology & Legends
+15. Concept Art
+16. Abstract
+17. Emotions & Expressions
+18. Lighting & Color
+19. Mood & Atmosphere
+20. Minimalism
+21. Still Life
+22. Dreamscapes
+23. Seasons & Events
+24. Texture & Detail
+25. Magic & Wonder
+26. Luxury
+27. Humor
+
+**Tag Selection:**
+- User selects up to 3 tags from dropdown
+- AI pre-populates suggested tags (user can change)
+- Autocomplete as user types
+- AI validates tags silently (flags mismatches)
+
+**AI Tag Validation:**
+- If user tags don't match AI analysis (confidence >0.8):
+  - Approve prompt immediately (no delay)
+  - Flag for admin review
+  - Admin has 2-4 days to review (configurable)
+  - If not reviewed: auto-apply AI suggested tags
+- Admin can toggle validation on/off
+- Admin logs all flagged tags
+
+### File Limits
+
+**Images:**
+- Max size: 10MB
+- Formats: JPEG, PNG, WebP, GIF
+- Min dimensions: 400x400px (recommended 1200x630+)
+- Instant feedback if exceeded
+
+**Videos:**
+- Max size: 100MB
+- Max duration: 20 seconds
+- Formats: MP4, MOV, WebM
+- Min dimensions: 400x400px
+- Instant feedback if exceeded
+
+### AI Generators Supported
+
+- Midjourney
+- DALL-E 3
+- DALL-E 2
+- Stable Diffusion
+- Leonardo AI
+- Flux
+- Adobe Firefly
+- Bing Image Creator
+- Other (user can specify)
+
+### Filtering Options (Complete)
+
+**Phase 1 (Basic):**
+- Type: image, video
+- Category: 27 preset tags
+- Date: any, 24h, week, month, year
+- AI Generator: all supported
+
+**Phase 3 (Advanced):**
+- Orientation: portrait, landscape, square (AI auto-detected)
+- People count: 0, 1, 2, 3+ (AI auto-detected)
+- Age range: teenager, adult, senior (for content rating, AI auto-detected)
+- Sort: top (day/month/all-time), recent, trending, most liked, most viewed
+- Combine multiple filters
+- Save filter preferences (premium)
+
+**Sensitive Filters (Private Only - Phase 3):**
+- Ethnicity detection (AI) stored as private metadata
+- NEVER displayed publicly
+- Only used for user's private filtering
+- Legal review recommended for GDPR
+- Consider removing if legal concerns
+
+### Persistent Join Modal Configuration
+
+**Triggers (Admin Configurable):**
+
+**Page View Triggers:**
+- Show after: 2 pages viewed
+- Then every: 2 pages
+
+**Scroll Triggers (Progressive):**
+- First trigger: After scrolling 60 prompts
+- Second trigger: After scrolling 30 more prompts
+- Third trigger: After scrolling 15 more prompts
+- Subsequent: Every 15 prompts scrolled
+
+**Cookie Behavior:**
+- Dismissed modal: Don't show again for 24 hours
+- Signed up: Never show again
+- Configurable in admin: hours/days before reshowing
+
+**Modal Content:**
+- Compelling value proposition
+- Premium features highlight
+- CTA: "Sign Up Free" / "Start Free Trial"
+- Dismissible X button
+- Subtle animation (slide up, fade in)
+
+---
+
+## ❓ Unanswered Questions (To Address)
+
+### Premium Features - Prioritization
+
+**Question:** Which premium features should be in Phase 2 vs Phase 3?
+
+**Current Plan:**
+- Phase 2: Unlimited uploads, private prompts, ad-free, basic analytics, collections, verified badge
+- Phase 3: Advanced analytics, API access, bulk upload, version history
+
+**Need to Decide:**
+- Is this prioritization correct?
+- Any features to swap between phases?
+- Any features to cut entirely?
+
+### Design & Branding
+
+**Questions:**
+1. Logo design - need to create
+2. Color scheme - primary/secondary colors
+3. Font choices - headings vs body
+4. Icon set - which library? (Font Awesome, Lucide, custom?)
+5. Illustration style - for empty states, errors, onboarding
+
+### Marketing & Launch
+
+**Questions:**
+1. Beta tester count target? (50? 100? 500?)
+2. Public launch date target?
+3. Pre-launch landing page? (collect emails)
+4. Launch channels? (Product Hunt, Reddit, Twitter, etc.)
+5. Press kit / media outreach?
+6. Influencer partnerships?
+
+### Analytics & Metrics
+
+**Questions:**
+1. Which metrics to track? (DAU, MAU, conversion rate, churn, etc.)
+2. Analytics tool? (Google Analytics, Mixpanel, Plausible?)
+3. Dashboards needed? (admin, user, public stats page?)
+4. A/B testing tool? (Built-in, Optimizely, VWO?)
+
+### Customer Support
+
+**Questions:**
+1. Support channels? (Email only, live chat, Discord?)
+2. Help center/knowledge base? (Intercom, Zendesk, custom?)
+3. Support hours? (24/7, business hours, async only?)
+4. SLA for premium users? (respond within X hours?)
+
+### Compliance & Legal
+
+**Questions:**
+1. Legal review needed for terms/privacy policy?
+2. DMCA agent registration required?
+3. Tax handling for sales? (Stripe Tax, manual?)
+4. International compliance? (GDPR, CCPA, etc.)
+5. Age verification method? (checkbox, ID verification?)
+
+### Community Guidelines
+
+**Questions:**
+1. Detailed community guidelines document needed?
+2. Public examples of acceptable/unacceptable content?
+3. Strike system details published to users?
+4. Community moderators (volunteers)?
+5. Transparency reports (bans/removals per month)?
+
+### Future Considerations
+
+**Questions:**
+1. Mobile app? (iOS/Android) - When?
+2. Browser extension? (Chrome/Firefox) - For what purpose?
+3. Internationalization? (Multiple languages) - Priority languages?
+4. White-label solution? (For agencies/companies)
+5. Enterprise tier? (Custom features for teams)
+
+---
+
+## 🎯 Success Metrics
+
+### Phase 1 Success Criteria (Pre-Launch)
+
+**Technical:**
+- [ ] Zero critical bugs in production
+- [ ] Lighthouse score >90 (mobile & desktop)
+- [ ] Page load time <2 seconds
+- [ ] Zero security vulnerabilities
+- [ ] 100% uptime during beta
+
+**Content:**
+- [ ] 500+ prompts uploaded (from beta testers)
+- [ ] 50+ active beta users
+- [ ] All 27 tags used at least 5 times each
+- [ ] AI moderation accuracy >95%
+
+**Readiness:**
+- [ ] All legal pages complete
+- [ ] All Phase 1 features tested
+- [ ] Payment system tested (test mode)
+- [ ] Email flows tested
+- [ ] Mobile responsiveness verified
+
+### Phase 2 Success Criteria (Launch Month)
+
+**User Acquisition:**
+- [ ] 1,000 total signups
+- [ ] 300+ active users (posted/liked/commented)
+- [ ] Referral rate >20% (users inviting friends)
+- [ ] Retention: 40%+ return after 7 days
+
+**Monetization:**
+- [ ] 50+ trial starts
+- [ ] 30+ paying customers (60% trial conversion)
+- [ ] $210+ MRR (Monthly Recurring Revenue)
+- [ ] <5% churn rate
+
+**Content:**
+- [ ] 2,000+ total prompts
+- [ ] 50+ prompts uploaded daily
+- [ ] 500+ comments across platform
+- [ ] 5,000+ likes total
+
+**Engagement:**
+- [ ] Average session: 5+ minutes
+- [ ] Average pages per session: 8+
+- [ ] 100+ daily active users
+- [ ] Comment rate: 10% of viewers
+
+### Phase 3 Success Criteria (Growth)
+
+**Scale:**
+- [ ] 5,000+ total users
+- [ ] 500+ active users daily
+- [ ] 10,000+ total prompts
+- [ ] 250+ paying customers
+- [ ] $1,750+ MRR
+
+**Community:**
+- [ ] 500+ follow relationships
+- [ ] 50+ users with 100+ followers
+- [ ] 1,000+ daily prompt views
+- [ ] Leaderboard competition (20+ users trying for top 3)
+
+**Product:**
+- [ ] PromptCoin economy balanced (earn/spend ratio healthy)
+- [ ] API: 10+ developers using
+- [ ] Collections: 100+ created
+- [ ] <2% content moderation false positive rate
+
+### Phase 4 Success Criteria (Scale)
+
+**Revenue:**
+- [ ] $5,000+ MRR
+- [ ] 500+ paying customers
+- [ ] Course/guidebook sales: $500+/month
+- [ ] Affiliate revenue: $500+/month
+- [ ] Marketplace GMV: $1,000+/month
+
+**Scale:**
+- [ ] 10,000+ total users
+- [ ] 1,000+ daily active users
+- [ ] 25,000+ total prompts
+- [ ] 50,000+ monthly prompt views
+
+**Platform Maturity:**
+- [ ] AI bot helpful rate >80%
+- [ ] Chatbot resolution rate >60% (without human support)
+- [ ] Support response time <4 hours
+- [ ] Feature request backlog prioritized
+- [ ] A/B test results actionable
+
+---
+
+## 🔧 Development Best Practices
+
+### Code Style
+
+**Python/Django:**
+- Follow PEP 8 style guide
+- Type hints where helpful
+- Docstrings for complex functions
+- Meaningful variable names (not overly verbose)
+- Keep views thin (logic in models/services)
+- Use Django ORM (avoid raw SQL unless necessary)
+
+**JavaScript:**
+- ES6+ syntax
+- Const/let (not var)
+- Arrow functions
+- Template literals
+- Descriptive function names
+- Comments for complex logic
+
+**Templates:**
+- Consistent indentation (2 spaces)
+- Semantic HTML5 tags
+- Accessibility attributes (ARIA labels, alt tags)
+- DRY principle (use includes/extends)
+
+**CSS:**
+- Mobile-first approach
+- Use Bootstrap utilities when possible
+- Custom CSS in separate file
+- BEM naming convention for custom classes
+- Avoid !important
+
+### Git Workflow
+
+**Branches:**
+- `main` - Production-ready code
+- `develop` - Integration branch
+- `feature/feature-name` - New features
+- `bugfix/bug-description` - Bug fixes
+- `hotfix/critical-issue` - Urgent production fixes
+
+**Commit Messages:**
+Format: `[TYPE] Brief description`
+
+**Types:**
+- `[FEATURE]` - New feature
+- `[FIX]` - Bug fix
+- `[REFACTOR]` - Code refactoring
+- `[STYLE]` - CSS/UI changes
+- `[DOCS]` - Documentation updates
+- `[TEST]` - Test additions/changes
+- `[CHORE]` - Maintenance tasks
+
+**Examples:**
+- `[FEATURE] Add AI comment moderation system`
+- `[FIX] Resolve image upload validation error`
+- `[REFACTOR] Optimize database queries for prompt list`
+- `[STYLE] Update navbar responsive breakpoints`
+
+### Testing Strategy
+
+**Phase 1-2 (Manual Testing Priority):**
+- [ ] Test all user flows manually
+- [ ] Cross-browser testing (Chrome, Firefox, Safari, Edge)
+- [ ] Mobile testing (iOS Safari, Android Chrome)
+- [ ] Edge cases (empty states, errors, limits)
+
+**Phase 3+ (Automated Testing):**
+- [ ] Unit tests for critical functions
+- [ ] Integration tests for API endpoints
+- [ ] End-to-end tests for key user flows
+- [ ] Performance testing (load testing)
+- [ ] Security testing (penetration testing)
+
+**Test Coverage Goal:** 70%+ by Phase 4
+
+### Deployment Process
+
+**Phase 1-2 (Manual Deployment):**
+1. Test locally
+2. Test in Heroku staging environment (if created)
+3. Merge to `main`
+4. Deploy to Heroku production
+5. Smoke test production (verify key features)
+6. Monitor error logs (Sentry, Heroku logs)
+
+**Phase 3+ (CI/CD Pipeline):**
+1. GitHub Actions on push to `develop`
+2. Run tests automatically
+3. Deploy to staging if tests pass
+4. Manual approval for production deploy
+5. Automated rollback if errors spike
+
+### Security Best Practices
+
+**Always:**
+- [ ] Never commit secrets (.env files, API keys)
+- [ ] Use Django's built-in CSRF protection
+- [ ] Sanitize user input
+- [ ] Validate file uploads (type, size)
+- [ ] Rate limit API endpoints
+- [ ] HTTPS only (redirect HTTP)
+- [ ] Secure cookies (httponly, secure, samesite)
+- [ ] Regular dependency updates (security patches)
+- [ ] Content Security Policy headers
+- [ ] SQL injection prevention (use ORM)
+- [ ] XSS prevention (template auto-escaping)
+
+---
+
+## 📞 Contact & Resources
+
+### Project Owner
+- **Name:** [Your Name]
+- **Email:** [Your Email]
+- **Role:** Founder/Developer
+
+### Key URLs
+- **Domain:** promptfinder.net
+- **Production:** https://promptfinder.net (after launch)
+- **Current Staging:** https://mj-project-4.herokuapp.com
+- **GitHub:** [Repository URL]
+- **Heroku:** [Heroku Dashboard URL]
+- **Cloudinary:** [Cloudinary Dashboard URL]
+
+### Third-Party Services
+
+**Essential:**
+- Heroku (hosting)
+- Cloudinary (media storage)
+- Heroku PostgreSQL (database)
+- OpenAI API (AI moderation, chatbot)
+- Stripe (payments)
+- Django Allauth (authentication)
+
+**Email:**
+- SendGrid / Mailgun (transactional emails)
+- MailChimp / ConvertKit (marketing emails) - Phase 2+
+
+**Analytics (Phase 2+):**
+- Google Analytics or Plausible
+- Google Search Console
+- Mixpanel or Amplitude (product analytics)
+
+**Monitoring (Phase 3+):**
+- Sentry (error tracking)
+- UptimeRobot (uptime monitoring)
+- Cloudflare (DDoS protection, CDN)
+
+### Documentation Resources
+
+**Django:**
+- Official docs: https://docs.djangoproject.com
+- Django Allauth: https://django-allauth.readthedocs.io
+- Django Taggit: https://django-taggit.readthedocs.io
+
+**Cloudinary:**
+- Docs: https://cloudinary.com/documentation
+- Python SDK: https://cloudinary.com/documentation/django_integration
+- AI Vision: https://cloudinary.com/documentation/cloudinary_ai_vision_addon
+
+**Stripe:**
+- Docs: https://stripe.com/docs
+- Subscriptions: https://stripe.com/docs/billing/subscriptions/overview
+- Testing: https://stripe.com/docs/testing
+
+**OpenAI:**
+- API docs: https://platform.openai.com/docs
+- Moderation: https://platform.openai.com/docs/guides/moderation
+- GPT-4: https://platform.openai.com/docs/models/gpt-4
+
+---
+
+## 🎬 Getting Started (For Future Claude Instances)
+
+### When Starting a New Chat About PromptFinder:
+
+**Read this document first**, then:
+
+1. **Check current phase:** Are we in Phase 1, 2, 3, or 4?
+2. **Review decisions made:** Don't revisit settled decisions unless explicitly asked
+3. **Check unanswered questions:** Prioritize addressing these if relevant
+4. **Understand context:** This is a real project transitioning to monetization
+5. **Be specific:** Provide actionable advice, code examples, timelines
+6. **Prioritize:** Always consider what's critical vs nice-to-have
+7. **Remember the brand:** Users are "Prompt Finders," domain is promptfinder.net
+
+### Quick Reference Commands
+
+**"Where are we?"**
+→ Check Phase status, recent progress
+
+**"What's next?"**
+→ Review current phase priorities, upcoming tasks
+
+**"Why did we decide X?"**
+→ Check Decisions Made section
+
+**"How much will Y cost?"**
+→ Check Infrastructure & Costs section
+
+**"When do we implement Z?"**
+→ Check Development Phases section
+
+**"What's the SEO strategy for X?"**
+→ Check SEO Strategy section
+
+**"How does moderation work?"**
+→ Check Content Moderation section
+
+### Project Philosophy
+
+**Core Principles:**
+1. **Users first:** Every decision prioritizes user experience
+2. **Monetization matters:** We're building a sustainable business
+3. **SEO is critical:** Discovery-focused platform needs great SEO
+4. **Safety always:** Zero tolerance for harmful content
+5. **Start simple:** MVP features first, polish later
+6. **Data-driven:** A/B test, measure, iterate
+7. **Professional:** Build for paying customers, not hobby project
+
+**What We're Building:**
+A professional, safe, profitable platform where prompt finders discover perfect AI prompts. We're competing with generic Google searches and scattered Discord servers by offering curated, organized, SEO-optimized prompt discovery.
+
+**What We're NOT Building:**
+- Social media platform (light social features only)
+- NSFW content site (strict moderation)
+- Free-forever charity (we need revenue)
+- Feature-bloated complexity (focused simplicity)
+
+---
+
+## 📝 Changelog
+
+### January 2025 - Initial CLAUDE.md Creation
+- Documented entire project scope
+- Defined all 4 development phases
+- Established decisions and priorities
+- Created comprehensive feature specifications
+- Outlined monetization strategy
+- Detailed SEO and moderation approaches
+
+### Future Updates
+*This section will track major changes to project direction, tech stack, or strategy*
+
+---
+
+## ✅ Next Steps
+
+### Immediate Actions (This Week)
+1. [ ] Review and approve this CLAUDE.md document
+2. [ ] Answer unanswered questions in dedicated session
+3. [ ] Create GitHub repository (if not exists)
+4. [ ] Set up project management (Trello/Notion/GitHub Projects)
+5. [ ] Start Phase 1: PostgreSQL migration
+
+### This Month (Phase 1 Completion)
+1. [ ] Complete all Phase 1 infrastructure tasks
+2. [ ] Implement full content moderation system
+3. [ ] Deploy complete SEO strategy
+4. [ ] Launch soft beta with invite codes
+5. [ ] Gather initial user feedback
+
+### Next 3 Months (Phases 2-3)
+1. [ ] Complete monetization implementation
+2. [ ] Launch publicly
+3. [ ] Reach 1,000 users
+4. [ ] Achieve first $1,000 MRR
+5. [ ] Build gamification and social features
+
+---
+
+**END OF CLAUDE.md**
+
+*This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
+
+**Version:** 1.0  
+**Last Updated:** January 2025  
+**Document Owner:** [Your Name]  
+**Project Status:** Pre-Launch (Phase 1)

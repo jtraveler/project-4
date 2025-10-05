@@ -417,9 +417,10 @@ class ProfanityWordAdmin(admin.ModelAdmin):
     list_editable = []
     actions = [
         "activate_words", "deactivate_words",
-        "set_severity_critical", "set_severity_high",
-        "bulk_import_words"
+        "set_severity_critical", "set_severity_high"
     ]
+
+    change_list_template = "admin/profanity_word_changelist.html"
 
     fieldsets = (
         ("Word Information", {
@@ -497,12 +498,23 @@ class ProfanityWordAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} words set to high severity.")
     set_severity_high.short_description = "Set severity to High"
 
-    def bulk_import_words(self, request, queryset):
+    def get_urls(self):
+        """Add custom URL for bulk import"""
+        urls = super().get_urls()
+        custom_urls = [
+            path('bulk-import/', self.admin_site.admin_view(self.bulk_import_view), name='prompts_profanityword_bulk_import'),
+        ]
+        return custom_urls + urls
+
+    def bulk_import_view(self, request):
         """Bulk import words from comma-separated input"""
         from django import forms
-        from django.shortcuts import render
+        from django.shortcuts import render, redirect
         from django.contrib import messages
         import re
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         class BulkImportForm(forms.Form):
             words = forms.CharField(
@@ -527,83 +539,102 @@ class ProfanityWordAdmin(admin.ModelAdmin):
                 help_text="Mark all imported words as active"
             )
 
-        if 'apply' in request.POST:
+        if request.method == 'POST':
+            logger.info(f"POST request received: {request.POST}")
             form = BulkImportForm(request.POST)
+            logger.info(f"Form valid: {form.is_valid()}")
+            if form.errors:
+                logger.error(f"Form errors: {form.errors}")
+
             if form.is_valid():
-                words_input = form.cleaned_data['words']
-                severity = form.cleaned_data['severity']
-                is_active = form.cleaned_data['is_active']
+                try:
+                    words_input = form.cleaned_data['words']
+                    severity = form.cleaned_data['severity']
+                    is_active = form.cleaned_data['is_active']
 
-                # Split by comma, newline, or semicolon and clean up
-                # This handles various input formats users might paste
-                raw_words = re.split(r'[,;\n\r]+', words_input)
-                words = [w.strip().lower() for w in raw_words if w.strip()]
+                    logger.info(f"Input: {words_input}, Severity: {severity}, Active: {is_active}")
 
-                created_count = 0
-                skipped_count = 0
-                existing_words = []
-                created_words = []
+                    # Split by comma, newline, or semicolon and clean up
+                    # This handles various input formats users might paste
+                    raw_words = re.split(r'[,;\n\r]+', words_input)
+                    words = [w.strip().lower() for w in raw_words if w.strip()]
 
-                for word in words:
-                    # Skip empty words
-                    if not word:
-                        continue
+                    logger.info(f"Parsed words: {words}")
 
-                    # Check if word already exists
-                    if ProfanityWord.objects.filter(word=word).exists():
-                        skipped_count += 1
-                        existing_words.append(word)
-                    else:
-                        ProfanityWord.objects.create(
-                            word=word,
-                            severity=severity,
-                            is_active=is_active
+                    created_count = 0
+                    skipped_count = 0
+                    existing_words = []
+                    created_words = []
+
+                    for word in words:
+                        # Skip empty words
+                        if not word:
+                            continue
+
+                        # Check if word already exists
+                        if ProfanityWord.objects.filter(word=word).exists():
+                            skipped_count += 1
+                            existing_words.append(word)
+                            logger.info(f"Skipped duplicate: {word}")
+                        else:
+                            obj = ProfanityWord.objects.create(
+                                word=word,
+                                severity=severity,
+                                is_active=is_active
+                            )
+                            created_count += 1
+                            created_words.append(word)
+                            logger.info(f"Created: {word} (ID: {obj.id})")
+
+                    # Show detailed success message
+                    if created_count > 0:
+                        word_preview = ', '.join(created_words[:5])
+                        if len(created_words) > 5:
+                            word_preview += f' (and {len(created_words) - 5} more)'
+                        self.message_user(
+                            request,
+                            f"Successfully imported {created_count} words: {word_preview}",
+                            messages.SUCCESS
                         )
-                        created_count += 1
-                        created_words.append(word)
 
-                # Show detailed success message
-                if created_count > 0:
-                    word_preview = ', '.join(created_words[:5])
-                    if len(created_words) > 5:
-                        word_preview += f' (and {len(created_words) - 5} more)'
+                    # Show warning for skipped words
+                    if skipped_count > 0:
+                        self.message_user(
+                            request,
+                            f"Skipped {skipped_count} duplicate words: {', '.join(existing_words[:10])}{'...' if len(existing_words) > 10 else ''}",
+                            messages.WARNING
+                        )
+
+                    # Show info if no words were processed
+                    if created_count == 0 and skipped_count == 0:
+                        self.message_user(
+                            request,
+                            "No words found in input. Please enter comma-separated words.",
+                            messages.WARNING
+                        )
+
+                    logger.info(f"Import complete: {created_count} created, {skipped_count} skipped")
+                    # Redirect back to changelist after processing
+                    return redirect('admin:prompts_profanityword_changelist')
+
+                except Exception as e:
+                    logger.exception(f"Error during bulk import: {e}")
                     self.message_user(
                         request,
-                        f"Successfully imported {created_count} words: {word_preview}",
-                        messages.SUCCESS
+                        f"Error during import: {str(e)}",
+                        messages.ERROR
                     )
-
-                # Show warning for skipped words
-                if skipped_count > 0:
-                    self.message_user(
-                        request,
-                        f"Skipped {skipped_count} duplicate words: {', '.join(existing_words[:10])}{'...' if len(existing_words) > 10 else ''}",
-                        messages.WARNING
-                    )
-
-                # Show info if no words were processed
-                if created_count == 0 and skipped_count == 0:
-                    self.message_user(
-                        request,
-                        "No words found in input. Please enter comma-separated words.",
-                        messages.WARNING
-                    )
-
-                # Redirect back to changelist after processing
-                return redirect('admin:prompts_profanityword_changelist')
+                    return redirect('admin:prompts_profanityword_changelist')
 
         else:
             form = BulkImportForm()
 
-        return render(
-            request,
-            'admin/profanity_bulk_import.html',
-            {
-                'form': form,
-                'title': 'Bulk Import Profanity Words',
-                'opts': self.model._meta,
-                'site_header': 'Bulk Import',
-            }
-        )
-
-    bulk_import_words.short_description = "Bulk import words (comma-separated)"
+        context = {
+            'form': form,
+            'title': 'Bulk Import Profanity Words',
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+            'site_title': self.admin_site.site_title,
+            'site_header': self.admin_site.site_header,
+        }
+        return render(request, 'admin/profanity_bulk_import.html', context)

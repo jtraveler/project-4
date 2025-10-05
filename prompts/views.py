@@ -390,7 +390,7 @@ def prompt_edit(request, slug):
             prompt.save()
             prompt_form.save_m2m()
 
-            # Re-run moderation if media or text changed
+            # Re-run moderation if media or text changed (orchestrator handles status updates)
             try:
                 orchestrator = ModerationOrchestrator()
                 moderation_result = orchestrator.moderate_prompt(prompt, force=True)
@@ -400,16 +400,16 @@ def prompt_edit(request, slug):
                     f"{moderation_result['overall_status']}"
                 )
 
-                # Auto-publish clean posts, keep flagged/rejected as drafts
+                # Refresh prompt to get status set by orchestrator
+                prompt.refresh_from_db()
+
+                # Show appropriate message based on moderation result
                 if moderation_result['overall_status'] == 'approved':
-                    prompt.status = 1  # Auto-publish approved content
-                    prompt.save(update_fields=['status'])
                     messages.success(
                         request,
                         'Prompt updated and published successfully! It is now live.'
                     )
                 elif moderation_result['overall_status'] == 'rejected':
-                    # Keep as draft
                     messages.error(
                         request,
                         'Your updated prompt contains content that violates our guidelines. '
@@ -417,17 +417,13 @@ def prompt_edit(request, slug):
                         'An admin will review it shortly.'
                     )
                 elif moderation_result['requires_review']:
-                    # Keep as draft for manual review
                     messages.warning(
                         request,
                         'Prompt updated and pending review. '
                         'It has been saved as a draft and will be published once approved by our team.'
                     )
                 else:
-                    # Default to published if moderation passed
-                    prompt.status = 1
-                    prompt.save(update_fields=['status'])
-                    messages.success(request, 'Prompt updated and published successfully!')
+                    messages.success(request, 'Prompt updated successfully!')
 
             except Exception as e:
                 logger.error(f"Moderation error for prompt {prompt.id}: {str(e)}", exc_info=True)
@@ -447,9 +443,8 @@ def prompt_edit(request, slug):
                 reverse('prompts:prompt_detail', args=[slug])
             )
         else:
-            messages.add_message(
-                request, messages.ERROR, 'Error updating prompt!'
-            )
+            # Log error but don't show generic message (form will show specific errors)
+            logger.error(f"Form validation failed: {prompt_form.errors}")
     else:
         prompt_form = PromptForm(instance=prompt)
 
@@ -512,7 +507,7 @@ def prompt_create(request):
             prompt.save()
             prompt_form.save_m2m()
 
-            # Run moderation checks
+            # Run moderation checks (orchestrator handles status updates)
             try:
                 orchestrator = ModerationOrchestrator()
                 moderation_result = orchestrator.moderate_prompt(prompt)
@@ -523,16 +518,16 @@ def prompt_create(request):
                     f"{moderation_result['overall_status']}"
                 )
 
-                # Auto-publish clean posts, keep flagged/rejected as drafts
+                # Refresh prompt to get status set by orchestrator
+                prompt.refresh_from_db()
+
+                # Show appropriate message based on moderation result
                 if moderation_result['overall_status'] == 'approved':
-                    prompt.status = 1  # Auto-publish approved content
-                    prompt.save(update_fields=['status'])
                     messages.success(
                         request,
                         'Your prompt has been created and published successfully! It is now live.'
                     )
                 elif moderation_result['overall_status'] == 'rejected':
-                    # Keep as draft
                     messages.error(
                         request,
                         'Your prompt was created but contains content that violates our guidelines. '
@@ -540,19 +535,15 @@ def prompt_create(request):
                         'An admin will review it shortly.'
                     )
                 elif moderation_result['requires_review']:
-                    # Keep as draft for manual review
                     messages.warning(
                         request,
                         'Your prompt has been created and is pending review. '
                         'It has been saved as a draft and will be published once approved by our team.'
                     )
                 else:
-                    # Default to published if moderation passed
-                    prompt.status = 1
-                    prompt.save(update_fields=['status'])
                     messages.success(
                         request,
-                        'Your prompt has been created and published successfully!'
+                        'Your prompt has been created successfully!'
                     )
 
             except Exception as e:
@@ -569,9 +560,8 @@ def prompt_create(request):
 
             return redirect('prompts:prompt_detail', slug=prompt.slug)
         else:
-            # Log form errors for debugging
+            # Log form errors for debugging (don't show generic message, form will show specific errors)
             logger.error(f"Form errors: {prompt_form.errors}")
-            messages.error(request, 'Please correct the errors below.')
     else:
         prompt_form = PromptForm()
 

@@ -1949,6 +1949,11 @@ Format: `<type>: <description>`
 
 ---
 
+**Terminology:**
+- CC = Claude Code (VS Code extension for AI-assisted coding)
+
+---
+
 ## 🎬 Getting Started (For Future Claude Instances)
 
 ### When Starting a New Chat About PromptFinder:

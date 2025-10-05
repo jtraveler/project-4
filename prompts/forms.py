@@ -58,6 +58,12 @@ class PromptForm(forms.ModelForm):
         })
     )
 
+    # Hidden field to track if existing media should be preserved
+    _preserve_media = forms.BooleanField(
+        required=False,
+        widget=forms.HiddenInput()
+    )
+
     class Meta:
         model = Prompt
         fields = (

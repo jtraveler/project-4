@@ -22,7 +22,7 @@ class PromptAdmin(SummernoteModelAdmin):
     prepopulated_fields = {'slug': ('title',)}
     summernote_fields = ('content',)
     ordering = ['order', '-created_on']
-    actions = ['make_published', 'reset_order_to_date']
+    actions = ['make_published', 'approve_and_publish', 'reset_order_to_date']
     list_editable = ('order',)
 
     # Updated fieldsets to include order and moderation fields
@@ -113,6 +113,19 @@ class PromptAdmin(SummernoteModelAdmin):
             request, f'{queryset.count()} prompts marked as published.'
         )
     make_published.short_description = 'Mark selected prompts as published'
+
+    def approve_and_publish(self, request, queryset):
+        """Approve moderation and publish prompts"""
+        updated = queryset.update(
+            status=1,
+            moderation_status='approved',
+            requires_manual_review=False
+        )
+        self.message_user(
+            request,
+            f'{updated} prompts approved and published successfully.'
+        )
+    approve_and_publish.short_description = 'Approve moderation & publish selected prompts'
 
     def reset_order_to_date(self, request, queryset):
         """Reset order based on creation date (newest first)"""

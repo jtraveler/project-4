@@ -372,7 +372,8 @@ def prompt_edit(request, slug):
         if prompt_form.is_valid():
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
-            prompt.status = 1
+            # Set as draft initially - moderation will publish if approved
+            prompt.status = 0
             prompt.save()
             prompt_form.save_m2m()
 
@@ -390,19 +391,20 @@ def prompt_edit(request, slug):
                 if moderation_result['overall_status'] == 'approved':
                     messages.success(
                         request,
-                        'Prompt updated and approved!'
+                        'Prompt updated and approved! It is now live.'
                     )
                 elif moderation_result['overall_status'] == 'rejected':
                     messages.error(
                         request,
-                        'Your updated prompt was rejected during moderation. '
-                        'It contains content that violates our guidelines.'
+                        'Your updated prompt contains content that violates our guidelines. '
+                        'It has been saved as a draft and will not be published. '
+                        'An admin will review it shortly.'
                     )
                 elif moderation_result['requires_review']:
                     messages.warning(
                         request,
                         'Prompt updated and pending review. '
-                        'Our team will review the changes shortly.'
+                        'It has been saved as a draft and will be published once approved by our team.'
                     )
                 else:
                     messages.success(request, 'Prompt updated successfully!')
@@ -472,17 +474,18 @@ def prompt_create(request):
             
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
-            prompt.status = 1
-            
+            # Start as draft - moderation will publish if approved
+            prompt.status = 0
+
             # Set auto-incrementing order number
             prompt.order = get_next_order()
-            
+
             # Ensure only one media field is set based on media_type
             if media_type == 'video':
                 prompt.featured_image = None
             else:
                 prompt.featured_video = None
-                
+
             prompt.save()
             prompt_form.save_m2m()
 
@@ -506,15 +509,15 @@ def prompt_create(request):
                 elif moderation_result['overall_status'] == 'rejected':
                     messages.error(
                         request,
-                        'Your prompt was created but rejected during moderation. '
-                        'It contains content that violates our guidelines. '
-                        'Please review our content policy.'
+                        'Your prompt was created but contains content that violates our guidelines. '
+                        'It has been saved as a draft and will not be published. '
+                        'An admin will review it shortly.'
                     )
                 elif moderation_result['requires_review']:
                     messages.warning(
                         request,
                         'Your prompt has been created and is pending review. '
-                        'Our team will review it shortly and you will be notified.'
+                        'It has been saved as a draft and will be published once approved by our team.'
                     )
                 else:
                     messages.success(

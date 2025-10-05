@@ -110,14 +110,24 @@ class ModerationOrchestrator:
             # Save moderation logs
             self._save_moderation_logs(prompt, results)
 
-            # Update prompt status
+            # Update prompt moderation status
             prompt.moderation_status = overall_result['status']
             prompt.requires_manual_review = overall_result['requires_review']
             prompt.moderation_completed_at = timezone.now()
+
+            # Set prompt publication status based on moderation result
+            # Only publish if approved, otherwise keep as draft
+            if overall_result['status'] == 'approved':
+                prompt.status = 1  # Published
+            else:
+                # Flagged or rejected content should remain as draft
+                prompt.status = 0  # Draft
+
             prompt.save(update_fields=[
                 'moderation_status',
                 'requires_manual_review',
-                'moderation_completed_at'
+                'moderation_completed_at',
+                'status'
             ])
 
         logger.info(

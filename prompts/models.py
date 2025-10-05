@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 from cloudinary.models import CloudinaryField
-from cloudinary import uploader
+from cloudinary import uploader, CloudinaryResource
 from taggit.managers import TaggableManager
 
 
@@ -201,7 +201,15 @@ class Prompt(models.Model):
                 moderation='aws_rek',
                 resource_type='image'
             )
-            self.featured_image = upload_result['public_id']
+            # Create CloudinaryResource object and convert to proper format
+            cloudinary_resource = CloudinaryResource(
+                public_id=upload_result['public_id'],
+                type=upload_result.get('type', 'upload'),
+                resource_type=upload_result['resource_type'],
+                version=upload_result.get('version'),
+                format=upload_result.get('format')
+            )
+            self.featured_image = cloudinary_resource.get_prep_value()
             delattr(self, '_featured_image_file')
 
         if hasattr(self, '_featured_video_file'):
@@ -212,7 +220,15 @@ class Prompt(models.Model):
                 moderation='aws_rek',
                 resource_type='video'
             )
-            self.featured_video = upload_result['public_id']
+            # Create CloudinaryResource object and convert to proper format
+            cloudinary_resource = CloudinaryResource(
+                public_id=upload_result['public_id'],
+                type=upload_result.get('type', 'upload'),
+                resource_type=upload_result['resource_type'],
+                version=upload_result.get('version'),
+                format=upload_result.get('format')
+            )
+            self.featured_video = cloudinary_resource.get_prep_value()
             delattr(self, '_featured_video_file')
 
         super().save(*args, **kwargs)

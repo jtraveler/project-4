@@ -630,11 +630,15 @@ class ProfanityWordAdmin(admin.ModelAdmin):
             form = BulkImportForm()
 
         context = {
+            **self.admin_site.each_context(request),
             'form': form,
             'title': 'Bulk Import Profanity Words',
             'opts': self.model._meta,
             'has_view_permission': self.has_view_permission(request),
-            'site_title': self.admin_site.site_title,
-            'site_header': self.admin_site.site_header,
+            'has_change_permission': self.has_change_permission(request),
+            'has_add_permission': self.has_add_permission(request),
+            'has_delete_permission': self.has_delete_permission(request),
+            'is_nav_sidebar_enabled': True,
+            'available_apps': self.admin_site.get_app_list(request),
         }
         return render(request, 'admin/profanity_bulk_import.html', context)

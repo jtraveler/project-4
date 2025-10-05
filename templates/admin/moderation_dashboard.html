@@ -1,0 +1,318 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Moderation System Dashboard{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .dashboard-container {
+        padding: 20px;
+    }
+
+    .status-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .status-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .status-badge {
+        padding: 5px 12px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: bold;
+        color: white;
+    }
+
+    .status-working {
+        background-color: #28a745;
+    }
+
+    .status-error {
+        background-color: #dc3545;
+    }
+
+    .status-warning {
+        background-color: #ffc107;
+        color: #333;
+    }
+
+    .status-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .info-item {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .info-label {
+        font-size: 12px;
+        color: #6c757d;
+        margin-bottom: 5px;
+    }
+
+    .info-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 32px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        opacity: 0.9;
+    }
+
+    .recent-logs {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .log-item {
+        padding: 12px;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .log-item:last-child {
+        border-bottom: none;
+    }
+
+    .log-prompt {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .log-service {
+        padding: 3px 8px;
+        background: #e9ecef;
+        border-radius: 3px;
+        font-size: 12px;
+        margin: 0 10px;
+    }
+
+    .log-status {
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        color: white;
+    }
+
+    .test-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+
+    .test-button:hover {
+        background: #0056b3;
+    }
+
+    .error-message {
+        color: #dc3545;
+        padding: 10px;
+        background: #f8d7da;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h1>Content Moderation System Dashboard</h1>
+    <p style="color: #6c757d; margin-bottom: 30px;">Monitor the health and status of all moderation services</p>
+
+    <!-- Statistics Overview -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_logs }}</div>
+            <div class="stat-label">Total Checks</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="stat-value">{{ stats.last_24h }}</div>
+            <div class="stat-label">Last 24 Hours</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="stat-value">{{ stats.last_7d }}</div>
+            <div class="stat-label">Last 7 Days</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <div class="stat-value">{{ stats.flagged_count }}</div>
+            <div class="stat-label">Flagged Content</div>
+        </div>
+    </div>
+
+    <!-- Profanity Filter Status -->
+    <div class="status-card">
+        <div class="status-header">
+            <span class="status-title">{{ profanity_status.name }}</span>
+            {% if profanity_status.working %}
+                <span class="status-badge status-working">✓ Working</span>
+            {% else %}
+                <span class="status-badge status-error">✗ Error</span>
+            {% endif %}
+        </div>
+
+        <div class="status-info">
+            <div class="info-item">
+                <div class="info-label">Active Words</div>
+                <div class="info-value">{{ profanity_status.active_words }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Total Words</div>
+                <div class="info-value">{{ profanity_status.total_words }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Status</div>
+                <div class="info-value">{{ profanity_status.enabled|yesno:"Enabled,Disabled" }}</div>
+            </div>
+        </div>
+
+        {% if profanity_status.error %}
+            <div class="error-message">{{ profanity_status.error }}</div>
+        {% endif %}
+
+        <a href="{% url 'admin:prompts_profanityword_changelist' %}" class="test-button">
+            Manage Profanity Words
+        </a>
+    </div>
+
+    <!-- OpenAI Status -->
+    <div class="status-card">
+        <div class="status-header">
+            <span class="status-title">{{ openai_status.name }}</span>
+            {% if openai_status.working %}
+                <span class="status-badge status-working">✓ Working</span>
+            {% elif openai_status.enabled %}
+                <span class="status-badge status-warning">⚠ Enabled but not working</span>
+            {% else %}
+                <span class="status-badge status-error">✗ Disabled</span>
+            {% endif %}
+        </div>
+
+        <div class="status-info">
+            <div class="info-item">
+                <div class="info-label">API Key</div>
+                <div class="info-value">{{ openai_status.api_key_set|yesno:"Configured,Not Set" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Connection</div>
+                <div class="info-value">{{ openai_status.working|yesno:"Connected,Disconnected" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Credits</div>
+                <div class="info-value">{{ openai_status.credits|default:"N/A" }}</div>
+            </div>
+        </div>
+
+        {% if openai_status.error %}
+            <div class="error-message">{{ openai_status.error }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Cloudinary Status -->
+    <div class="status-card">
+        <div class="status-header">
+            <span class="status-title">{{ cloudinary_status.name }}</span>
+            {% if cloudinary_status.working %}
+                <span class="status-badge status-working">✓ Working</span>
+            {% elif cloudinary_status.enabled %}
+                <span class="status-badge status-warning">⚠ Enabled but not working</span>
+            {% else %}
+                <span class="status-badge status-error">✗ Disabled</span>
+            {% endif %}
+        </div>
+
+        <div class="status-info">
+            <div class="info-item">
+                <div class="info-label">Configuration</div>
+                <div class="info-value">{{ cloudinary_status.config_set|yesno:"Set,Not Set" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Status</div>
+                <div class="info-value">{{ cloudinary_status.enabled|yesno:"Enabled,Disabled" }}</div>
+            </div>
+        </div>
+
+        {% if cloudinary_status.error %}
+            <div class="error-message">{{ cloudinary_status.error }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Moderation Activity -->
+    <div class="recent-logs">
+        <h2 style="margin-bottom: 20px;">Recent Moderation Activity</h2>
+
+        {% if recent_logs %}
+            {% for log in recent_logs %}
+                <div class="log-item">
+                    <span class="log-prompt">{{ log.prompt.title }}</span>
+                    <span class="log-service">{{ log.get_service_display }}</span>
+                    <span class="log-status" style="background-color:
+                        {% if log.status == 'approved' %}#28a745
+                        {% elif log.status == 'rejected' %}#dc3545
+                        {% elif log.status == 'flagged' %}#ffc107
+                        {% else %}#6c757d{% endif %};">
+                        {{ log.get_status_display }}
+                    </span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #6c757d;">No moderation logs yet</p>
+        {% endif %}
+
+        <a href="{% url 'admin:prompts_moderationlog_changelist' %}" class="test-button">
+            View All Logs
+        </a>
+    </div>
+</div>
+{% endblock %}

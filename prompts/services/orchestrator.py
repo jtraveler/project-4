@@ -17,6 +17,7 @@ from django.db import transaction
 from ..models import Prompt, ModerationLog, ContentFlag
 from .openai_moderation import OpenAIModerationService
 from .cloudinary_moderation import CloudinaryModerationService
+from .profanity_filter import ProfanityFilterService
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class ModerationOrchestrator:
             self.openai_enabled = False
 
         self.cloudinary_service = CloudinaryModerationService()
+        self.profanity_service = ProfanityFilterService()
         logger.info("Moderation Orchestrator initialized")
 
     def moderate_prompt(self, prompt: Prompt, force: bool = False) -> Dict:
@@ -79,10 +81,18 @@ class ModerationOrchestrator:
         logger.info(f"Starting moderation for Prompt {prompt.id}: {prompt.title}")
 
         results = {
+            'profanity': None,
             'openai': None,
             'rekognition': None,
             'cloudinary_ai': None,
         }
+
+        # Layer 0: Custom profanity filter (runs first, cheapest)
+        try:
+            results['profanity'] = self._run_profanity_check(prompt)
+        except Exception as e:
+            logger.error(f"Profanity filter failed: {str(e)}", exc_info=True)
+            results['profanity'] = {'status': 'flagged', 'error': str(e)}
 
         # Layer 3: OpenAI text moderation
         if self.openai_enabled:
@@ -145,6 +155,20 @@ class ModerationOrchestrator:
             ),
             'summary': results,
         }
+
+    def _run_profanity_check(self, prompt: Prompt) -> Dict:
+        """
+        Run custom profanity filter and return results.
+
+        Args:
+            prompt: Prompt instance
+
+        Returns:
+            Dict with profanity check results
+        """
+        logger.info(f"Running profanity check for Prompt {prompt.id}")
+        result = self.profanity_service.check_prompt(prompt)
+        return result
 
     def _run_openai_moderation(self, prompt: Prompt) -> Dict:
         """
@@ -218,6 +242,7 @@ class ModerationOrchestrator:
         """
         # Map service names to model choices
         service_map = {
+            'profanity': 'profanity',
             'openai': 'openai',
             'rekognition': 'rekognition',
             'cloudinary_ai': 'cloudinary_ai',

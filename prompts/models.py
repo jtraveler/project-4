@@ -18,9 +18,10 @@ MODERATION_STATUS = (
 
 # Moderation service types
 MODERATION_SERVICE = (
-    ('rekognition', 'AWS Rekognition'),
-    ('cloudinary_ai', 'Cloudinary AI Vision'),
+    ('profanity', 'Custom Profanity Filter'),
     ('openai', 'OpenAI Moderation API'),
+    ('cloudinary_ai', 'Cloudinary AI Vision'),
+    ('rekognition', 'AWS Rekognition'),
 )
 
 # AI Generator choices
@@ -516,6 +517,72 @@ class ModerationLog(models.Model):
     def requires_review(self):
         """Check if this moderation result needs manual review"""
         return self.status in ['flagged', 'rejected']
+
+
+class ProfanityWord(models.Model):
+    """
+    Model for custom profanity word filtering.
+
+    Allows admins to maintain a custom list of banned words/phrases
+    that will be checked during content moderation.
+
+    Attributes:
+        word (CharField): The banned word or phrase (case-insensitive)
+        severity (CharField): Severity level (low/medium/high/critical)
+        is_active (BooleanField): Whether this word is actively filtered
+        created_at (DateTimeField): When this word was added
+        updated_at (DateTimeField): When this word was last updated
+        notes (TextField): Admin notes about this word
+
+    Severity Levels:
+        - low: Minor profanity (damn, hell)
+        - medium: Standard profanity
+        - high: Offensive slurs or explicit content
+        - critical: Severe violations that auto-reject content
+    """
+    SEVERITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    )
+
+    word = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text='Banned word or phrase (case-insensitive)'
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=SEVERITY_CHOICES,
+        default='medium',
+        help_text='How severe this word is'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Whether to actively filter this word'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    notes = models.TextField(
+        blank=True,
+        help_text='Optional notes about this word'
+    )
+
+    class Meta:
+        ordering = ['severity', 'word']
+        indexes = [
+            models.Index(fields=['is_active', 'severity']),
+        ]
+
+    def __str__(self):
+        active_status = '✓' if self.is_active else '✗'
+        return f"{active_status} {self.word} ({self.get_severity_display()})"
+
+    def save(self, *args, **kwargs):
+        """Ensure word is stored in lowercase for case-insensitive matching"""
+        self.word = self.word.lower().strip()
+        super().save(*args, **kwargs)
 
 
 class ContentFlag(models.Model):

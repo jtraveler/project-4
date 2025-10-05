@@ -1,0 +1,19 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block content %}
+{{ block.super }}
+
+<div style="margin-top: 30px;">
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px;">
+        <h2 style="color: white; margin-bottom: 15px;">🛡️ Content Moderation System</h2>
+        <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
+            Monitor the health and status of all moderation services including OpenAI, Cloudinary, and custom profanity filtering.
+        </p>
+        <a href="{% url 'prompts:moderation_dashboard' %}"
+           style="background: white; color: #667eea; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold; display: inline-block;">
+            View Moderation Dashboard →
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,9 +1,10 @@
 # prompts/admin.py
 from django.contrib import admin
 from django_summernote.admin import SummernoteModelAdmin
-from django.urls import reverse
+from django.urls import reverse, path
 from django.utils.html import format_html
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag
+from django.shortcuts import redirect
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord
 
 
 @admin.register(Prompt)
@@ -402,3 +403,100 @@ class ContentFlagAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Allow deletion for cleanup"""
         return True
+
+
+@admin.register(ProfanityWord)
+class ProfanityWordAdmin(admin.ModelAdmin):
+    """Admin interface for managing profanity word list"""
+    list_display = [
+        "word_display", "severity_badge", "is_active_display",
+        "created_at", "updated_at"
+    ]
+    list_filter = ["severity", "is_active", "created_at"]
+    search_fields = ["word", "notes"]
+    list_editable = []
+    actions = ["activate_words", "deactivate_words", "set_severity_critical", "set_severity_high"]
+
+    fieldsets = (
+        ("Word Information", {
+            "fields": ("word", "severity", "is_active")
+        }),
+        ("Notes", {
+            "fields": ("notes",),
+            "classes": ("collapse",),
+        }),
+        ("Timestamps", {
+            "fields": ("created_at", "updated_at"),
+            "classes": ("collapse",),
+        }),
+    )
+
+    readonly_fields = ("created_at", "updated_at")
+
+    def word_display(self, obj):
+        """Display word with censoring for privacy"""
+        if len(obj.word) <= 3:
+            censored = obj.word[0] + "*" * (len(obj.word) - 1)
+        else:
+            censored = obj.word[:2] + "*" * (len(obj.word) - 3) + obj.word[-1]
+        return format_html(
+            "<span title=\"{}\">{}</span>",
+            obj.word, censored
+        )
+    word_display.short_description = "Word"
+    word_display.admin_order_field = "word"
+
+    def severity_badge(self, obj):
+        """Display severity with color"""
+        colors = {
+            "critical": "#dc3545",
+            "high": "#fd7e14",
+            "medium": "#ffc107",
+            "low": "#28a745",
+        }
+        color = colors.get(obj.severity, "#6c757d")
+        return format_html(
+            "<span style=\"background-color: {}; color: white; padding: 3px 8px; "
+            "border-radius: 3px;\">{}</span>",
+            color, obj.get_severity_display()
+        )
+    severity_badge.short_description = "Severity"
+    severity_badge.admin_order_field = "severity"
+
+    def is_active_display(self, obj):
+        """Display active status with icon"""
+        if obj.is_active:
+            return format_html(
+                "<span style=\"color: green; font-size: 16px;\">✓ Active</span>"
+            )
+        return format_html(
+            "<span style=\"color: red; font-size: 16px;\">✗ Inactive</span>"
+        )
+    is_active_display.short_description = "Status"
+    is_active_display.admin_order_field = "is_active"
+
+    # Admin actions
+    def activate_words(self, request, queryset):
+        """Activate selected words"""
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f"{updated} words activated.")
+    activate_words.short_description = "Activate selected words"
+
+    def deactivate_words(self, request, queryset):
+        """Deactivate selected words"""
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f"{updated} words deactivated.")
+    deactivate_words.short_description = "Deactivate selected words"
+
+    def set_severity_critical(self, request, queryset):
+        """Set severity to critical"""
+        updated = queryset.update(severity="critical")
+        self.message_user(request, f"{updated} words set to critical severity.")
+    set_severity_critical.short_description = "Set severity to Critical"
+
+    def set_severity_high(self, request, queryset):
+        """Set severity to high"""
+        updated = queryset.update(severity="high")
+        self.message_user(request, f"{updated} words set to high severity.")
+    set_severity_high.short_description = "Set severity to High"
+

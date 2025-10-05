@@ -9,10 +9,12 @@ This package contains all AI moderation integrations:
 
 from .openai_moderation import OpenAIModerationService
 from .cloudinary_moderation import CloudinaryModerationService
+from .profanity_filter import ProfanityFilterService
 from .orchestrator import ModerationOrchestrator
 
 __all__ = [
     'OpenAIModerationService',
     'CloudinaryModerationService',
+    'ProfanityFilterService',
     'ModerationOrchestrator',
 ]

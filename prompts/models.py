@@ -8,6 +8,21 @@ from taggit.managers import TaggableManager
 # Add status choices
 STATUS = ((0, "Draft"), (1, "Published"))
 
+# Moderation status choices
+MODERATION_STATUS = (
+    ('pending', 'Pending Review'),
+    ('approved', 'Approved'),
+    ('rejected', 'Rejected'),
+    ('flagged', 'Flagged for Manual Review'),
+)
+
+# Moderation service types
+MODERATION_SERVICE = (
+    ('rekognition', 'AWS Rekognition'),
+    ('cloudinary_ai', 'Cloudinary AI Vision'),
+    ('openai', 'OpenAI Moderation API'),
+)
+
 # AI Generator choices
 AI_GENERATOR_CHOICES = [
     ('midjourney', 'Midjourney'),
@@ -123,8 +138,41 @@ class Prompt(models.Model):
         help_text='Select the AI tool used to generate this image/video'
     )
 
+    # Moderation fields
+    moderation_status = models.CharField(
+        max_length=20,
+        choices=MODERATION_STATUS,
+        default='pending',
+        help_text='Overall moderation status for this prompt'
+    )
+    moderation_completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When all moderation checks were completed'
+    )
+    requires_manual_review = models.BooleanField(
+        default=False,
+        help_text='Flagged for admin manual review'
+    )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_prompts',
+        help_text='Admin who manually reviewed this prompt'
+    )
+    review_notes = models.TextField(
+        blank=True,
+        help_text='Admin notes from manual review'
+    )
+
     class Meta:
         ordering = ['order', '-created_on']
+        indexes = [
+            models.Index(fields=['moderation_status']),
+            models.Index(fields=['requires_manual_review']),
+        ]
 
     def __str__(self):
         return self.title
@@ -217,10 +265,10 @@ class Prompt(models.Model):
     def get_video_url(self, quality='auto'):
         """
         Get optimized video URL with adaptive quality.
-        
+
         Args:
             quality (str): Quality setting (auto adapts based on connection)
-            
+
         Returns:
             str: Cloudinary URL for the optimized video
         """
@@ -233,6 +281,53 @@ class Prompt(models.Model):
                 flags='streaming_attachment'
             )
         return None
+
+    # Moderation helper methods
+    def is_moderation_approved(self):
+        """Check if all moderation checks have been approved"""
+        return self.moderation_status == 'approved'
+
+    def is_moderation_pending(self):
+        """Check if moderation is still pending"""
+        return self.moderation_status == 'pending'
+
+    def is_moderation_rejected(self):
+        """Check if moderation was rejected"""
+        return self.moderation_status == 'rejected'
+
+    def get_moderation_summary(self):
+        """
+        Get a summary of all moderation checks for this prompt.
+
+        Returns:
+            dict: Summary with service results and overall status
+        """
+        logs = self.moderation_logs.all()
+        return {
+            'overall_status': self.moderation_status,
+            'requires_review': self.requires_manual_review,
+            'total_checks': logs.count(),
+            'rekognition': logs.filter(service='rekognition').first(),
+            'cloudinary_ai': logs.filter(service='cloudinary_ai').first(),
+            'openai': logs.filter(service='openai').first(),
+            'flagged_count': logs.filter(
+                status__in=['flagged', 'rejected']
+            ).count(),
+        }
+
+    def get_critical_flags(self):
+        """Get all critical severity flags across all moderation logs"""
+        from django.db.models import Prefetch
+        critical_flags = []
+        logs = self.moderation_logs.prefetch_related(
+            Prefetch(
+                'flags',
+                queryset=ContentFlag.objects.filter(severity='critical')
+            )
+        )
+        for log in logs:
+            critical_flags.extend(log.flags.all())
+        return critical_flags
 
 
 class Comment(models.Model):
@@ -331,3 +426,167 @@ class CollaborateRequest(models.Model):
 
     def __str__(self):
         return f"Collaboration request from {self.name}"
+
+
+class ModerationLog(models.Model):
+    """
+    Model for tracking all moderation checks on prompts.
+
+    Records every moderation attempt across all three layers:
+    - Layer 1: AWS Rekognition (via Cloudinary)
+    - Layer 2: Cloudinary AI Vision (custom checks)
+    - Layer 3: OpenAI Moderation API (text content)
+
+    Attributes:
+        prompt (ForeignKey): The prompt being moderated
+        service (CharField): Which moderation service was used
+        status (CharField): Result status (pending/approved/rejected/flagged)
+        confidence_score (FloatField): AI confidence level (0.0-1.0)
+        flagged_categories (JSONField): List of flagged categories/labels
+        raw_response (JSONField): Full API response for debugging
+        moderated_at (DateTimeField): When moderation was performed
+        notes (TextField): Additional notes or admin comments
+
+    Related Models:
+        - Prompt (via prompt foreign key)
+
+    Example:
+        log = ModerationLog.objects.create(
+            prompt=prompt,
+            service='rekognition',
+            status='approved',
+            confidence_score=0.98,
+            flagged_categories=['safe', 'general']
+        )
+    """
+    prompt = models.ForeignKey(
+        Prompt,
+        on_delete=models.CASCADE,
+        related_name='moderation_logs'
+    )
+    service = models.CharField(
+        max_length=50,
+        choices=MODERATION_SERVICE,
+        help_text='Which AI moderation service was used'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=MODERATION_STATUS,
+        default='pending'
+    )
+    confidence_score = models.FloatField(
+        null=True,
+        blank=True,
+        help_text='AI confidence score (0.0 to 1.0)'
+    )
+    flagged_categories = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Categories or labels flagged by the AI'
+    )
+    raw_response = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Full API response for debugging'
+    )
+    moderated_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(
+        blank=True,
+        help_text='Admin notes or additional context'
+    )
+
+    class Meta:
+        ordering = ['-moderated_at']
+        indexes = [
+            models.Index(fields=['prompt', 'service']),
+            models.Index(fields=['status']),
+            models.Index(fields=['moderated_at']),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.get_service_display()} - "
+            f"{self.prompt.title} - {self.status}"
+        )
+
+    def is_safe(self):
+        """Check if this moderation check passed (approved)"""
+        return self.status == 'approved'
+
+    def requires_review(self):
+        """Check if this moderation result needs manual review"""
+        return self.status in ['flagged', 'rejected']
+
+
+class ContentFlag(models.Model):
+    """
+    Model for specific content flags detected during moderation.
+
+    Stores detailed information about each type of inappropriate
+    content detected by the AI moderation services.
+
+    Attributes:
+        moderation_log (ForeignKey): Parent moderation log
+        category (CharField): Type of inappropriate content
+        confidence (FloatField): Confidence score for this specific flag
+        details (JSONField): Additional metadata about the flag
+        severity (CharField): How severe the flag is (low/medium/high/critical)
+
+    Severity Levels:
+        - low: Minor concerns, usually auto-approved
+        - medium: Requires attention, may need review
+        - high: Serious violation, likely rejected
+        - critical: Severe violation, auto-rejected
+
+    Example:
+        flag = ContentFlag.objects.create(
+            moderation_log=log,
+            category='explicit_nudity',
+            confidence=0.95,
+            severity='critical',
+            details={'location': 'center', 'percentage': 45}
+        )
+    """
+    SEVERITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    )
+
+    moderation_log = models.ForeignKey(
+        ModerationLog,
+        on_delete=models.CASCADE,
+        related_name='flags'
+    )
+    category = models.CharField(
+        max_length=100,
+        help_text='Type of inappropriate content detected'
+    )
+    confidence = models.FloatField(
+        help_text='Confidence score for this specific detection'
+    )
+    details = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Additional metadata about this flag'
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=SEVERITY_CHOICES,
+        default='medium'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-confidence', '-created_at']
+        indexes = [
+            models.Index(fields=['category', 'severity']),
+        ]
+
+    def __str__(self):
+        return f"{self.category} ({self.confidence:.2f}) - {self.severity}"
+
+    def is_critical(self):
+        """Check if this flag is critical severity"""
+        return self.severity == 'critical'

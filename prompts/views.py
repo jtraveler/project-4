@@ -18,6 +18,7 @@ import logging
 import json
 import hmac
 import hashlib
+import cloudinary.api
 
 # Import moderation services
 from .services import ModerationOrchestrator
@@ -980,14 +981,10 @@ def cloudinary_moderation_webhook(request):
 
     Expected payload from Cloudinary:
     {
-        "notification_type": "moderation",
+        "notification_type": "upload",
         "public_id": "prompts/xyz123",
-        "moderation_status": "approved|rejected",
-        "moderation": [{
-            "kind": "aws_rek",
-            "status": "approved|rejected",
-            "response": {...}
-        }]
+        "resource_type": "image",
+        ...
     }
     """
     try:
@@ -998,16 +995,42 @@ def cloudinary_moderation_webhook(request):
         # Validate webhook signature (if configured)
         # TODO: Add signature validation when webhook is set up in Cloudinary
 
-        # Extract moderation details
+        # Extract details
         notification_type = payload.get('notification_type')
         public_id = payload.get('public_id', '')
-        moderation_status = payload.get('moderation_status')
-        moderation_data = payload.get('moderation', [])
+        resource_type = payload.get('resource_type', 'image')
 
-        # Only process moderation notifications
-        if notification_type != 'moderation':
-            logger.warning(f"Ignoring non-moderation webhook: {notification_type}")
-            return JsonResponse({'status': 'ignored', 'reason': 'not a moderation notification'})
+        # Process upload and moderation notifications
+        if notification_type not in ['upload', 'moderation']:
+            logger.warning(f"Ignoring webhook type: {notification_type}")
+            return JsonResponse({'status': 'ignored', 'reason': f'not an upload/moderation notification: {notification_type}'})
+
+        # For upload notifications, fetch moderation data from Cloudinary API
+        moderation_status = None
+        moderation_data = []
+
+        if notification_type == 'upload':
+            logger.info(f"Upload notification received for {public_id}, fetching moderation data...")
+            try:
+                # Fetch resource with moderation data
+                resource = cloudinary.api.resource(
+                    public_id,
+                    resource_type=resource_type,
+                    moderation=True
+                )
+                logger.info(f"Fetched resource data: {resource}")
+
+                moderation_status = resource.get('moderation_status')
+                moderation_data = resource.get('moderation', [])
+
+                logger.info(f"Moderation status from API: {moderation_status}, data: {moderation_data}")
+            except Exception as e:
+                logger.error(f"Error fetching moderation data for {public_id}: {e}")
+                return JsonResponse({'status': 'error', 'message': f'Could not fetch moderation data: {str(e)}'}, status=500)
+        else:
+            # moderation notification - data is in payload
+            moderation_status = payload.get('moderation_status')
+            moderation_data = payload.get('moderation', [])
 
         # Find the prompt by public_id in either featured_image or featured_video
         # The public_id from Cloudinary might be like "prompts/xyz123" or just "xyz123"
@@ -1029,6 +1052,15 @@ def cloudinary_moderation_webhook(request):
             return JsonResponse({'status': 'error', 'message': 'Prompt not found'}, status=404)
 
         logger.info(f"Processing moderation for Prompt {prompt.id} ({media_type}): {moderation_status}")
+
+        # Check if moderation data is available yet
+        if not moderation_status or moderation_status == 'pending':
+            logger.info(f"Moderation still pending for {public_id}, will wait for next webhook")
+            return JsonResponse({
+                'status': 'pending',
+                'message': 'Moderation not complete yet, waiting for results',
+                'prompt_id': prompt.id
+            })
 
         # Update prompt based on moderation result
         if moderation_status == 'approved':

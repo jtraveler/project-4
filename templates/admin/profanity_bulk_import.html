@@ -1,8 +1,18 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='prompts' %}">Prompts</a>
+    &rsaquo; <a href="{% url 'admin:prompts_profanityword_changelist' %}">Profanity words</a>
+    &rsaquo; Bulk Import
+</div>
+{% endblock %}
 
 {% block content %}
-<div id="content-main" style="max-width: 800px; margin: 20px auto;">
+<div id="content-main">
     <h1>{{ title }}</h1>
 
     <form method="post" style="margin-top: 20px;">
@@ -10,33 +20,39 @@
 
         <div style="margin-bottom: 20px;">
             <div class="form-row">
-                <label for="id_words">{{ form.words.label }}:</label>
-                {{ form.words }}
-                {% if form.words.help_text %}
-                    <p class="help">{{ form.words.help_text }}</p>
-                {% endif %}
-                {% if form.words.errors %}
-                    <p class="errornote">{{ form.words.errors }}</p>
-                {% endif %}
+                <div>
+                    <label for="id_words">{{ form.words.label }}:</label>
+                    {{ form.words }}
+                    {% if form.words.help_text %}
+                        <p class="help">{{ form.words.help_text }}</p>
+                    {% endif %}
+                    {% if form.words.errors %}
+                        <p class="errornote">{{ form.words.errors }}</p>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="form-row">
-                <label for="id_severity">{{ form.severity.label }}:</label>
-                {{ form.severity }}
-                {% if form.severity.help_text %}
-                    <p class="help">{{ form.severity.help_text }}</p>
-                {% endif %}
+                <div>
+                    <label for="id_severity">{{ form.severity.label }}:</label>
+                    {{ form.severity }}
+                    {% if form.severity.help_text %}
+                        <p class="help">{{ form.severity.help_text }}</p>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="form-row">
-                {{ form.is_active }} <label for="id_is_active">{{ form.is_active.label }}</label>
-                {% if form.is_active.help_text %}
-                    <p class="help">{{ form.is_active.help_text }}</p>
-                {% endif %}
+                <div>
+                    {{ form.is_active }} <label for="id_is_active">{{ form.is_active.label }}</label>
+                    {% if form.is_active.help_text %}
+                        <p class="help">{{ form.is_active.help_text }}</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
-        <div class="submit-row" style="margin-top: 20px;">
+        <div class="submit-row">
             <input type="submit" value="Import Words" class="default"
                    style="background-color: #417690; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">
             <a href="{% url 'admin:prompts_profanityword_changelist' %}"

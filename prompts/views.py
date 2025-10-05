@@ -443,23 +443,42 @@ def prompt_edit(request, slug):
                 reverse('prompts:prompt_detail', args=[slug])
             )
         else:
-            # Log form errors and show them as Django messages at top of page
+            # Log form errors and show them as styled Django messages at top of page
             logger.error(f"Form validation failed: {prompt_form.errors}")
 
-            # Show non-field errors (like profanity) as messages
+            # Check if profanity violation (non-field errors)
+            has_profanity_error = False
             if prompt_form.non_field_errors():
                 for error in prompt_form.non_field_errors():
-                    messages.error(request, error)
+                    # Profanity errors = RED danger alert (serious/blocking)
+                    messages.error(request, f'🚫 {error}')
+                    has_profanity_error = True
+
+                # Add re-upload note only for profanity violations
+                if has_profanity_error:
+                    messages.warning(
+                        request,
+                        '📝 Note: Please review your text and re-upload your media file after making corrections.'
+                    )
+
+            # Show field-specific errors as YELLOW warning alerts (friendly corrections)
+            for field, field_errors in prompt_form.errors.items():
+                if field != '__all__':  # Skip non-field errors (already handled)
+                    for error in field_errors:
+                        # Skip the generic "required" message for media upload
+                        if field == 'featured_media' and 'required' in error.lower():
+                            continue  # Will be replaced with friendly message below
+
+                        # Format field name nicely
+                        field_label = field.replace('_', ' ').title()
+                        messages.warning(request, f'⚠️ {field_label}: {error}')
+
+            # Add friendly media upload reminder if that's the issue
+            if 'featured_media' in prompt_form.errors:
                 messages.warning(
                     request,
-                    'Please review your content and re-upload your media file after making corrections.'
+                    '📷 Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM) to continue.'
                 )
-
-            # Show field-specific errors as messages
-            for field, errors in prompt_form.errors.items():
-                if field != '__all__':  # Skip non-field errors (already handled)
-                    for error in errors:
-                        messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
     else:
         prompt_form = PromptForm(instance=prompt)
 
@@ -579,23 +598,42 @@ def prompt_create(request):
 
             return redirect('prompts:prompt_detail', slug=prompt.slug)
         else:
-            # Log form errors and show them as Django messages at top of page
+            # Log form errors and show them as styled Django messages at top of page
             logger.error(f"Form errors: {prompt_form.errors}")
 
-            # Show non-field errors (like profanity) as messages
+            # Check if profanity violation (non-field errors)
+            has_profanity_error = False
             if prompt_form.non_field_errors():
                 for error in prompt_form.non_field_errors():
-                    messages.error(request, error)
+                    # Profanity errors = RED danger alert (serious/blocking)
+                    messages.error(request, f'🚫 {error}')
+                    has_profanity_error = True
+
+                # Add re-upload note only for profanity violations
+                if has_profanity_error:
+                    messages.warning(
+                        request,
+                        '📝 Note: Please review your text and re-upload your media file after making corrections.'
+                    )
+
+            # Show field-specific errors as YELLOW warning alerts (friendly corrections)
+            for field, field_errors in prompt_form.errors.items():
+                if field != '__all__':  # Skip non-field errors (already handled)
+                    for error in field_errors:
+                        # Skip the generic "required" message for media upload
+                        if field == 'featured_media' and 'required' in error.lower():
+                            continue  # Will be replaced with friendly message below
+
+                        # Format field name nicely
+                        field_label = field.replace('_', ' ').title()
+                        messages.warning(request, f'⚠️ {field_label}: {error}')
+
+            # Add friendly media upload reminder if that's the issue
+            if 'featured_media' in prompt_form.errors:
                 messages.warning(
                     request,
-                    'Please review your content and re-upload your media file after making corrections.'
+                    '📷 Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM) to continue.'
                 )
-
-            # Show field-specific errors as messages
-            for field, errors in prompt_form.errors.items():
-                if field != '__all__':  # Skip non-field errors (already handled)
-                    for error in errors:
-                        messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
     else:
         prompt_form = PromptForm()
 

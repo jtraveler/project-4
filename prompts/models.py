@@ -95,12 +95,16 @@ class Prompt(models.Model):
     content = models.TextField()
     excerpt = models.TextField(blank=True)
     featured_image = CloudinaryField(
-        'image', 
-        blank=True, 
+        'image',
+        blank=True,
         null=True,
         transformation={
             'quality': 'auto',
             'fetch_format': 'auto'
+        },
+        options={
+            'moderation': 'aws_rek',
+            'folder': 'prompts'
         }
     )
     featured_video = CloudinaryField(
@@ -111,6 +115,10 @@ class Prompt(models.Model):
         transformation={
             'quality': 'auto',
             'fetch_format': 'auto'
+        },
+        options={
+            'moderation': 'aws_rek',
+            'folder': 'prompts'
         }
     )
     video_duration = models.IntegerField(

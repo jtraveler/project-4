@@ -1,9 +1,20 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
-from cloudinary.models import CloudinaryField
-from cloudinary import uploader, CloudinaryResource
+from cloudinary.models import CloudinaryField as BaseCloudinaryField
 from taggit.managers import TaggableManager
+
+
+# Custom CloudinaryField with AWS Rekognition moderation
+class CloudinaryField(BaseCloudinaryField):
+    """
+    Custom CloudinaryField that automatically applies AWS Rekognition moderation
+    to all uploads by overriding upload_options.
+    """
+    def upload_options(self, model_instance):
+        options = super().upload_options(model_instance)
+        options['moderation'] = 'aws_rek'
+        return options
 
 
 # Add status choices
@@ -181,55 +192,13 @@ class Prompt(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Override save method to:
-        1. Auto-generate slug from title
-        2. Upload media to Cloudinary with AWS Rekognition moderation enabled
+        Override save method to auto-generate slug from title.
 
         If no slug is provided, creates a URL-friendly slug from the title.
-        For file uploads, sets moderation='aws_rek' to enable Rekognition analysis.
+        CloudinaryField handles uploads automatically with moderation='aws_rek'.
         """
         if not self.slug:
             self.slug = slugify(self.title)
-
-        # Handle file uploads with Rekognition moderation
-        # Check if there are new files being uploaded (not just updating existing records)
-        if hasattr(self, '_featured_image_file'):
-            # Upload image with moderation
-            upload_result = uploader.upload(
-                self._featured_image_file,
-                folder='prompts',
-                moderation='aws_rek',
-                resource_type='image'
-            )
-            # Create CloudinaryResource object and convert to proper format
-            cloudinary_resource = CloudinaryResource(
-                public_id=upload_result['public_id'],
-                type=upload_result.get('type', 'upload'),
-                resource_type=upload_result['resource_type'],
-                version=upload_result.get('version'),
-                format=upload_result.get('format')
-            )
-            self.featured_image = cloudinary_resource.get_prep_value()
-            delattr(self, '_featured_image_file')
-
-        if hasattr(self, '_featured_video_file'):
-            # Upload video with moderation
-            upload_result = uploader.upload(
-                self._featured_video_file,
-                folder='prompts',
-                moderation='aws_rek',
-                resource_type='video'
-            )
-            # Create CloudinaryResource object and convert to proper format
-            cloudinary_resource = CloudinaryResource(
-                public_id=upload_result['public_id'],
-                type=upload_result.get('type', 'upload'),
-                resource_type=upload_result['resource_type'],
-                version=upload_result.get('version'),
-                format=upload_result.get('format')
-            )
-            self.featured_video = cloudinary_resource.get_prep_value()
-            delattr(self, '_featured_video_file')
 
         super().save(*args, **kwargs)
 

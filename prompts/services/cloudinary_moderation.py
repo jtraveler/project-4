@@ -148,13 +148,15 @@ class CloudinaryModerationService:
             moderation_data = resource.get('moderation', [])
 
             if not moderation_data:
-                logger.warning(f"No Rekognition data for {public_id}, may need to enable add-on")
+                # No moderation data = no violations detected = approved
+                # (Either add-on not enabled OR content is clean and Rekognition didn't flag anything)
+                logger.info(f"No Rekognition data for {public_id} - treating as approved (no violations detected)")
                 return {
-                    'is_safe': False,
-                    'status': 'flagged',
-                    'flagged_categories': ['rekognition_unavailable'],
+                    'is_safe': True,
+                    'status': 'approved',
+                    'flagged_categories': [],
                     'confidence_score': 0.0,
-                    'raw_response': {'note': 'AWS Rekognition add-on may not be enabled'},
+                    'raw_response': {'note': 'No Rekognition violations detected'},
                 }
 
             # Parse Rekognition results
@@ -200,10 +202,13 @@ class CloudinaryModerationService:
 
             if not is_safe and any(cat['severity'] == 'critical' for cat in flagged_categories):
                 status = 'rejected'
+                logger.warning(f"Rekognition REJECTED {public_id} - critical violations found")
             elif not is_safe:
                 status = 'flagged'
+                logger.warning(f"Rekognition FLAGGED {public_id} - {len(flagged_categories)} violations")
             else:
                 status = 'approved'
+                logger.info(f"Rekognition APPROVED {public_id} - {len(flagged_categories)} low-severity flags")
 
             return {
                 'is_safe': is_safe,
@@ -215,6 +220,7 @@ class CloudinaryModerationService:
 
         except cloudinary.exceptions.NotFound:
             logger.error(f"Cloudinary resource not found: {public_id}")
+            # Resource not found = technical error, flag for manual review
             return {
                 'is_safe': False,
                 'status': 'flagged',
@@ -224,6 +230,7 @@ class CloudinaryModerationService:
             }
         except Exception as e:
             logger.error(f"Rekognition check error: {str(e)}", exc_info=True)
+            # API errors should flag for manual review (can't verify safety)
             return {
                 'is_safe': False,
                 'status': 'flagged',

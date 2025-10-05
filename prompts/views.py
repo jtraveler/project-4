@@ -450,18 +450,18 @@ def prompt_edit(request, slug):
             has_profanity_error = False
             if prompt_form.non_field_errors():
                 for error in prompt_form.non_field_errors():
-                    # Profanity errors = RED danger alert (serious/blocking)
+                    # Profanity errors = RED danger alert with emoji (serious/blocking)
                     messages.error(request, f'🚫 {error}')
                     has_profanity_error = True
 
-                # Add re-upload note only for profanity violations
+                # Add re-upload note only for profanity violations (NO emoji)
                 if has_profanity_error:
                     messages.warning(
                         request,
-                        '📝 Note: Please review your text and re-upload your media file after making corrections.'
+                        'Note: Please review your text and re-upload your media file after making corrections.'
                     )
 
-            # Show field-specific errors as YELLOW warning alerts (friendly corrections)
+            # Show field-specific errors as YELLOW warning alerts (NO emojis)
             for field, field_errors in prompt_form.errors.items():
                 if field != '__all__':  # Skip non-field errors (already handled)
                     for error in field_errors:
@@ -471,13 +471,13 @@ def prompt_edit(request, slug):
 
                         # Format field name nicely
                         field_label = field.replace('_', ' ').title()
-                        messages.warning(request, f'⚠️ {field_label}: {error}')
+                        messages.warning(request, f'{field_label}: {error}')
 
-            # Add friendly media upload reminder if that's the issue
+            # Add friendly media upload reminder if that's the issue (NO emoji)
             if 'featured_media' in prompt_form.errors:
                 messages.warning(
                     request,
-                    '📷 Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM) to continue.'
+                    'Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM) to continue.'
                 )
     else:
         prompt_form = PromptForm(instance=prompt)
@@ -605,18 +605,18 @@ def prompt_create(request):
             has_profanity_error = False
             if prompt_form.non_field_errors():
                 for error in prompt_form.non_field_errors():
-                    # Profanity errors = RED danger alert (serious/blocking)
+                    # Profanity errors = RED danger alert with emoji (serious/blocking)
                     messages.error(request, f'🚫 {error}')
                     has_profanity_error = True
 
-                # Add re-upload note only for profanity violations
+                # Add re-upload note only for profanity violations (NO emoji)
                 if has_profanity_error:
                     messages.warning(
                         request,
-                        '📝 Note: Please review your text and re-upload your media file after making corrections.'
+                        'Note: Please review your text and re-upload your media file after making corrections.'
                     )
 
-            # Show field-specific errors as YELLOW warning alerts (friendly corrections)
+            # Show field-specific errors as YELLOW warning alerts (NO emojis)
             for field, field_errors in prompt_form.errors.items():
                 if field != '__all__':  # Skip non-field errors (already handled)
                     for error in field_errors:
@@ -626,13 +626,13 @@ def prompt_create(request):
 
                         # Format field name nicely
                         field_label = field.replace('_', ' ').title()
-                        messages.warning(request, f'⚠️ {field_label}: {error}')
+                        messages.warning(request, f'{field_label}: {error}')
 
-            # Add friendly media upload reminder if that's the issue
+            # Add friendly media upload reminder if that's the issue (NO emoji)
             if 'featured_media' in prompt_form.errors:
                 messages.warning(
                     request,
-                    '📷 Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM) to continue.'
+                    'Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM) to continue.'
                 )
     else:
         prompt_form = PromptForm()

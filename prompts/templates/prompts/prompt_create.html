@@ -17,7 +17,20 @@
             <i class="fas fa-info-circle me-2"></i>
             <strong>Getting Started:</strong> Fill out the details below to share your amazing AI-generated content.
         </div>
-        
+
+        <!-- Form Errors (Non-field errors) -->
+        {% if prompt_form.non_field_errors %}
+            <div class="alert alert-danger mb-4" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Please correct the errors below:</strong>
+                <ul class="mb-0 mt-2">
+                    {% for error in prompt_form.non_field_errors %}
+                        <li>{{ error|safe }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
         <!-- Form -->
         <form method="post" enctype="multipart/form-data" class="edit-form">
             {% csrf_token %}
@@ -94,79 +107,35 @@
                 </div>
             </div>
 
-            <!-- Media Type Selection -->
+            <!-- Featured Media Field (Unified Upload) -->
             <div class="field-group mb-4">
-                <label class="field-label">Media Type*</label>
-                <div class="media-type-selection">
-                    {{ prompt_form.media_type }}
-                </div>
-                {% if prompt_form.media_type.errors %}
-                    <div class="text-danger mt-1" style="font-weight: 600;">
-                        <i class="fas fa-exclamation-circle me-1"></i>
-                        {{ prompt_form.media_type.errors|first }}
-                    </div>
-                {% endif %}
-                <div class="field-help">
-                    Choose whether to upload an image or video
-                </div>
-            </div>
+                <label class="field-label">Upload Media (Image or Video)*</label>
 
-            <!-- Featured Image Field -->
-            <div class="field-group" id="image-upload-section">
-                <label class="field-label">Featured Image*</label>
-                
-                <!-- File Upload -->
+                <!-- File Upload Dropzone -->
                 <div class="file-upload-area">
-                    <label for="id_featured_image" class="file-upload-label">
+                    <label for="id_featured_media" class="file-upload-label">
                         <i class="fas fa-cloud-upload-alt"></i>
-                        <span>Choose an image file or drag it here</span>
+                        <span>Choose a file or drag it here</span>
+                        <small style="display: block; margin-top: 8px; font-size: 0.9em;">Images: JPG, PNG, WebP (max 10MB) | Videos: MP4, MOV, WebM (max 100MB)</small>
                     </label>
-                    {{ prompt_form.featured_image }}
-                    
-                    <div id="image-preview" class="mt-3" style="display: none;">
-                        <img src="" alt="Preview" style="max-width: 300px; max-height: 300px; border-radius: 8px;">
-                    </div>
-                    
-                    {% if prompt_form.featured_image.errors %}
-                        <div class="text-danger mt-1" style="font-weight: 600;">
-                            <i class="fas fa-exclamation-circle me-1"></i>
-                            {{ prompt_form.featured_image.errors|first }}
-                        </div>
-                    {% endif %}
-                    
-                    <div class="field-help mt-2">
-                        Upload the image that was created using your prompt
-                    </div>
-                </div>
-            </div>
+                    {{ prompt_form.featured_media }}
 
-            <!-- Featured Video Field -->
-            <div class="field-group" id="video-upload-section" style="display: none;">
-                <label class="field-label">Featured Video*</label>
-                
-                <!-- File Upload -->
-                <div class="file-upload-area">
-                    <label for="id_featured_video" class="file-upload-label">
-                        <i class="fas fa-video"></i>
-                        <span>Choose a video file or drag it here</span>
-                    </label>
-                    {{ prompt_form.featured_video }}
-                    
-                    <div id="video-preview" class="mt-3" style="display: none;">
-                        <video controls style="max-width: 300px; max-height: 300px; border-radius: 8px;">
+                    <div id="media-preview" class="mt-3" style="display: none;">
+                        <img id="preview-image" src="" alt="Preview" style="max-width: 300px; max-height: 300px; border-radius: 8px; display: none;">
+                        <video id="preview-video" controls style="max-width: 300px; max-height: 300px; border-radius: 8px; display: none;">
                             <source src="" type="video/mp4">
                         </video>
                     </div>
-                    
-                    {% if prompt_form.featured_video.errors %}
+
+                    {% if prompt_form.featured_media.errors %}
                         <div class="text-danger mt-1" style="font-weight: 600;">
                             <i class="fas fa-exclamation-circle me-1"></i>
-                            {{ prompt_form.featured_video.errors|first }}
+                            {{ prompt_form.featured_media.errors|first }}
                         </div>
                     {% endif %}
-                    
+
                     <div class="field-help mt-2">
-                        {{ prompt_form.featured_video.help_text }}
+                        {{ prompt_form.featured_media.help_text }}
                     </div>
                 </div>
             </div>
@@ -204,7 +173,7 @@
 function addTag(tagName) {
     const tagsInput = document.querySelector('input[name="tags"]');
     const currentTags = tagsInput.value;
-    
+
     if (currentTags) {
         const tagArray = currentTags.split(',').map(tag => tag.trim().toLowerCase());
         if (!tagArray.includes(tagName.toLowerCase())) {
@@ -215,45 +184,47 @@ function addTag(tagName) {
     }
 }
 
-// Toggle between image and video upload
-function toggleMediaFields() {
-    const mediaType = document.querySelector('input[name="media_type"]:checked').value;
-    const imageSection = document.getElementById('image-upload-section');
-    const videoSection = document.getElementById('video-upload-section');
-    
-    if (mediaType === 'video') {
-        imageSection.style.display = 'none';
-        videoSection.style.display = 'block';
-    } else {
-        imageSection.style.display = 'block';
-        videoSection.style.display = 'none';
-    }
-}
-
-// File preview functionality
-function handleFilePreview(input, previewType) {
+// Auto-detect and preview media (image or video)
+function handleMediaPreview(input) {
     const file = input.files[0];
-    if (file) {
+    if (!file) return;
+
+    const previewContainer = document.getElementById('media-preview');
+    const previewImage = document.getElementById('preview-image');
+    const previewVideo = document.getElementById('preview-video');
+    const label = input.closest('.file-upload-area').querySelector('.file-upload-label');
+
+    // Reset previews
+    previewImage.style.display = 'none';
+    previewVideo.style.display = 'none';
+    previewContainer.style.display = 'none';
+
+    // Auto-detect file type
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+
+    if (isImage || isVideo) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            if (previewType === 'image') {
-                const preview = document.querySelector('#image-preview');
-                const img = preview.querySelector('img');
-                img.src = e.target.result;
-                preview.style.display = 'block';
-            } else if (previewType === 'video') {
-                const preview = document.querySelector('#video-preview');
-                const video = preview.querySelector('video');
-                video.src = e.target.result;
-                preview.style.display = 'block';
+            if (isImage) {
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+                previewContainer.style.display = 'block';
+            } else if (isVideo) {
+                previewVideo.src = e.target.result;
+                previewVideo.style.display = 'block';
+                previewContainer.style.display = 'block';
             }
         };
         reader.readAsDataURL(file);
-        
-        // Update label to show file name
-        const label = input.closest('.file-upload-area').querySelector('.file-upload-label');
-        const fileName = file.name.length > 30 ? file.name.substring(0, 30) + '...' : file.name;
-        label.innerHTML = `<i class="fas fa-check-circle" style="color: #10b981;"></i> <span>${fileName}</span>`;
+
+        // Update label to show file name with success icon
+        const fileName = file.name.length > 35 ? file.name.substring(0, 35) + '...' : file.name;
+        const fileType = isImage ? 'Image' : 'Video';
+        label.innerHTML = `<i class="fas fa-check-circle" style="color: #10b981;"></i> <span>${fileType}: ${fileName}</span>`;
+    } else {
+        // Invalid file type
+        label.innerHTML = `<i class="fas fa-exclamation-circle" style="color: #dc3545;"></i> <span>Invalid file type. Please upload an image or video.</span>`;
     }
 }
 
@@ -261,32 +232,15 @@ function handleFilePreview(input, previewType) {
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('.edit-form');
     const submitBtn = document.querySelector('.btn-primary');
-    
-    // Initial media field toggle
-    toggleMediaFields();
-    
-    // Add event listeners to radio buttons
-    const radioButtons = document.querySelectorAll('input[name="media_type"]');
-    radioButtons.forEach(radio => {
-        radio.addEventListener('change', toggleMediaFields);
-    });
-    
-    // File input change handlers for preview
-    const imageInput = document.getElementById('id_featured_image');
-    const videoInput = document.getElementById('id_featured_video');
-    
-    if (imageInput) {
-        imageInput.addEventListener('change', function() {
-            handleFilePreview(this, 'image');
+    const mediaInput = document.getElementById('id_featured_media');
+
+    // File input change handler for unified media upload
+    if (mediaInput) {
+        mediaInput.addEventListener('change', function() {
+            handleMediaPreview(this);
         });
     }
-    
-    if (videoInput) {
-        videoInput.addEventListener('change', function() {
-            handleFilePreview(this, 'video');
-        });
-    }
-    
+
     form.addEventListener('submit', function(e) {
         // Let Django handle validation, just provide user feedback
         submitBtn.disabled = true;
@@ -295,39 +249,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Add custom styles for radio buttons and file uploads -->
+<!-- Add custom styles for file uploads -->
 <style>
-/* Media type selection styles */
-.media-type-selection {
-    display: flex;
-    gap: 20px;
-}
-
-.media-type-selection label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    padding: 10px 20px;
-    border: 2px solid var(--main-border-color);
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.media-type-selection input[type="radio"] {
-    margin-right: 8px;
-}
-
-.media-type-selection input[type="radio"]:checked + label,
-.media-type-selection label:has(input:checked) {
-    border-color: var(--main-blue);
-    background: var(--light-blue);
-    color: var(--main-blue);
-}
-
-.media-type-radio {
-    margin-right: 8px;
-}
-
 /* File upload area styling */
 .file-upload-area {
     position: relative;
@@ -344,29 +267,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .file-upload-label {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24px 20px;
-    border: 2px dashed #d1d5db;
+    padding: 32px 20px;
+    border: 3px dashed #d1d5db;
     border-radius: 12px;
     background: #f9fafb;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     text-align: center;
     color: #6b7280;
     font-weight: 500;
-    min-height: 80px;
+    min-height: 120px;
 }
 
 .file-upload-label:hover {
     border-color: var(--main-blue);
     background: var(--light-blue);
     color: var(--main-blue);
+    transform: translateY(-2px);
 }
 
 .file-upload-label i {
-    font-size: 24px;
-    margin-right: 12px;
+    font-size: 48px;
+    margin-bottom: 12px;
     color: #9ca3af;
 }
 
@@ -374,10 +299,32 @@ document.addEventListener('DOMContentLoaded', function() {
     color: var(--main-blue);
 }
 
+.file-upload-label small {
+    color: #9ca3af;
+    font-weight: normal;
+}
+
 /* Preview styling */
-#image-preview img,
-#video-preview video {
+#media-preview img,
+#media-preview video {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Error message styling */
+.alert-danger {
+    background-color: #fee;
+    border: 1px solid #fcc;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+.alert-danger ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.alert-danger ul li {
+    padding: 4px 0;
 }
 </style>
 {% endblock content %}

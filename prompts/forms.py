@@ -46,21 +46,23 @@ class CollaborateForm(forms.ModelForm):
 
 
 class PromptForm(forms.ModelForm):
-    # Add media type choice field
-    media_type = forms.ChoiceField(
-        choices=[('image', 'Image'), ('video', 'Video')],
-        initial='image',
-        widget=forms.RadioSelect(attrs={
-            'class': 'media-type-radio'
-        }),
-        help_text='Choose whether to upload an image or video'
+    # Single unified media upload field
+    featured_media = forms.FileField(
+        required=False,
+        label='Upload Media',
+        help_text='Upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM) - Max 100MB',
+        widget=forms.ClearableFileInput(attrs={
+            'accept': 'image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm',
+            'class': 'form-control-file media-upload-input',
+            'id': 'id_featured_media'
+        })
     )
-    
+
     class Meta:
         model = Prompt
         fields = (
-            'title', 'content', 'excerpt', 'media_type', 
-            'featured_image', 'featured_video', 'tags', 'ai_generator'
+            'title', 'content', 'excerpt', 'featured_media',
+            'tags', 'ai_generator'
         )
         widgets = {
             'tags': TagWidget(attrs={
@@ -69,27 +71,12 @@ class PromptForm(forms.ModelForm):
             }),
             'ai_generator': forms.Select(attrs={
                 'class': 'form-control modern-select modern-select-dropdown'
-            }),
-            'featured_image': forms.ClearableFileInput(attrs={
-                'accept': 'image/*',
-                'class': 'form-control-file'
-            }),
-            'featured_video': forms.ClearableFileInput(attrs={
-                'accept': 'video/*',
-                'class': 'form-control-file'
             })
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # Set initial media_type based on existing data
-        if self.instance and self.instance.pk:
-            if self.instance.is_video():
-                self.fields['media_type'].initial = 'video'
-            else:
-                self.fields['media_type'].initial = 'image'
-        
+
         self.fields['title'].widget.attrs.update({
             'class': 'form-control modern-input',
             'placeholder': 'Enter a catchy title for your prompt',
@@ -110,50 +97,77 @@ class PromptForm(forms.ModelForm):
             ),
             'rows': 3
         })
-        
-        # Make both fields not required at form level (we'll validate in clean)
-        self.fields['featured_image'].required = False
-        self.fields['featured_video'].required = False
-        
+
         self.fields['ai_generator'].label = 'AI Generator'
         self.fields['ai_generator'].help_text = (
             'Select the AI tool used to create this image/video'
         )
-        
-        # Add help text for video field
-        self.fields['featured_video'].help_text = (
-            'Upload videos up to 100MB. Supported formats: MP4, MOV, AVI'
-        )
     
     def clean(self):
         cleaned_data = super().clean()
-        media_type = cleaned_data.get('media_type')
-        featured_image = cleaned_data.get('featured_image')
-        featured_video = cleaned_data.get('featured_video')
+        featured_media = cleaned_data.get('featured_media')
 
-        # For existing objects, check current values
+        # Check if media is required
         if self.instance and self.instance.pk:
-            if media_type == 'image' and not featured_image and not self.instance.featured_image:
-                raise ValidationError('Please upload an image.')
-            elif media_type == 'video' and not featured_video and not self.instance.featured_video:
-                raise ValidationError('Please upload a video.')
+            # Editing existing - media optional if already has one
+            has_existing_media = self.instance.featured_image or self.instance.featured_video
+            if not featured_media and not has_existing_media:
+                raise ValidationError('Please upload an image or video.')
         else:
-            # For new objects
-            if media_type == 'image' and not featured_image:
-                raise ValidationError('Please upload an image.')
-            elif media_type == 'video' and not featured_video:
-                raise ValidationError('Please upload a video.')
+            # Creating new - media required
+            if not featured_media:
+                raise ValidationError('Please upload an image or video.')
 
-        # Clear the field that's not being used
-        if media_type == 'image':
-            cleaned_data['featured_video'] = None
-        else:
-            cleaned_data['featured_image'] = None
+        # Auto-detect media type and validate if new media uploaded
+        if featured_media:
+            media_type = self._detect_media_type(featured_media)
+            cleaned_data['_detected_media_type'] = media_type  # Store for view to use
 
         # Check for profanity BEFORE saving (instant feedback)
         self._check_profanity(cleaned_data)
 
         return cleaned_data
+
+    def _detect_media_type(self, file):
+        """
+        Auto-detect if uploaded file is image or video.
+        Validates file type and blocks unsupported formats.
+        """
+        if not file or not hasattr(file, 'name'):
+            raise ValidationError('Invalid file upload.')
+
+        filename = file.name.lower()
+
+        # Define allowed extensions
+        image_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+        video_extensions = ['.mp4', '.mov', '.webm']
+
+        # Block GIFs explicitly
+        if filename.endswith('.gif'):
+            raise ValidationError(
+                'GIF files are not supported. Please upload JPG, PNG, WebP (images) '
+                'or MP4, MOV, WebM (videos).'
+            )
+
+        # Check if it's an image
+        if any(filename.endswith(ext) for ext in image_extensions):
+            # Validate image file size (10MB limit for images)
+            if hasattr(file, 'size') and file.size > 10 * 1024 * 1024:
+                raise ValidationError('Image file size must be under 10MB.')
+            return 'image'
+
+        # Check if it's a video
+        elif any(filename.endswith(ext) for ext in video_extensions):
+            # Validate video file size (100MB limit)
+            if hasattr(file, 'size') and file.size > 100 * 1024 * 1024:
+                raise ValidationError('Video file size must be under 100MB.')
+            return 'video'
+
+        else:
+            raise ValidationError(
+                'Unsupported file format. Please upload: '
+                'Images (JPG, PNG, WebP) or Videos (MP4, MOV, WebM).'
+            )
 
     def _check_profanity(self, cleaned_data):
         """
@@ -193,20 +207,3 @@ class PromptForm(forms.ModelForm):
                 )
 
                 raise ValidationError(error_message)
-    
-    def clean_featured_video(self):
-        video = self.cleaned_data.get('featured_video')
-        if video:
-            # Check file size (100MB limit)
-            if hasattr(video, 'size') and video.size > 100 * 1024 * 1024:
-                raise ValidationError('Video file size must be under 100MB.')
-            
-            # Check file extension
-            if hasattr(video, 'name'):
-                allowed_extensions = ['.mp4', '.mov', '.avi', '.webm']
-                if not any(video.name.lower().endswith(ext) for ext in allowed_extensions):
-                    raise ValidationError(
-                        'Unsupported video format. Please use MP4, MOV, AVI, or WebM.'
-                    )
-        
-        return video

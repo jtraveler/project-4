@@ -374,6 +374,19 @@ def prompt_edit(request, slug):
             prompt.author = request.user
             # Set as draft initially - moderation will publish if approved
             prompt.status = 0
+
+            # Handle media upload if new media provided
+            featured_media = prompt_form.cleaned_data.get('featured_media')
+            detected_media_type = prompt_form.cleaned_data.get('_detected_media_type')
+
+            if featured_media and detected_media_type:
+                if detected_media_type == 'video':
+                    prompt.featured_video = featured_media
+                    prompt.featured_image = None
+                else:  # image
+                    prompt.featured_image = featured_media
+                    prompt.featured_video = None
+
             prompt.save()
             prompt_form.save_m2m()
 
@@ -387,13 +400,16 @@ def prompt_edit(request, slug):
                     f"{moderation_result['overall_status']}"
                 )
 
-                # Inform user about moderation status
+                # Auto-publish clean posts, keep flagged/rejected as drafts
                 if moderation_result['overall_status'] == 'approved':
+                    prompt.status = 1  # Auto-publish approved content
+                    prompt.save(update_fields=['status'])
                     messages.success(
                         request,
-                        'Prompt updated and approved! It is now live.'
+                        'Prompt updated and published successfully! It is now live.'
                     )
                 elif moderation_result['overall_status'] == 'rejected':
+                    # Keep as draft
                     messages.error(
                         request,
                         'Your updated prompt contains content that violates our guidelines. '
@@ -401,13 +417,17 @@ def prompt_edit(request, slug):
                         'An admin will review it shortly.'
                     )
                 elif moderation_result['requires_review']:
+                    # Keep as draft for manual review
                     messages.warning(
                         request,
                         'Prompt updated and pending review. '
                         'It has been saved as a draft and will be published once approved by our team.'
                     )
                 else:
-                    messages.success(request, 'Prompt updated successfully!')
+                    # Default to published if moderation passed
+                    prompt.status = 1
+                    prompt.save(update_fields=['status'])
+                    messages.success(request, 'Prompt updated and published successfully!')
 
             except Exception as e:
                 logger.error(f"Moderation error for prompt {prompt.id}: {str(e)}", exc_info=True)
@@ -469,22 +489,25 @@ def prompt_create(request):
     if request.method == 'POST':
         prompt_form = PromptForm(request.POST, request.FILES)
         if prompt_form.is_valid():
-            # Get the media type from the form
-            media_type = prompt_form.cleaned_data.get('media_type', 'image')
-            
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
-            # Start as draft - moderation will publish if approved
+            # Start as draft - will be published based on moderation result
             prompt.status = 0
 
             # Set auto-incrementing order number
             prompt.order = get_next_order()
 
-            # Ensure only one media field is set based on media_type
-            if media_type == 'video':
-                prompt.featured_image = None
-            else:
-                prompt.featured_video = None
+            # Handle media upload - auto-detect and save to correct field
+            featured_media = prompt_form.cleaned_data.get('featured_media')
+            detected_media_type = prompt_form.cleaned_data.get('_detected_media_type')
+
+            if featured_media and detected_media_type:
+                if detected_media_type == 'video':
+                    prompt.featured_video = featured_media
+                    prompt.featured_image = None
+                else:  # image
+                    prompt.featured_image = featured_media
+                    prompt.featured_video = None
 
             prompt.save()
             prompt_form.save_m2m()
@@ -500,13 +523,16 @@ def prompt_create(request):
                     f"{moderation_result['overall_status']}"
                 )
 
-                # Inform user about moderation status
+                # Auto-publish clean posts, keep flagged/rejected as drafts
                 if moderation_result['overall_status'] == 'approved':
+                    prompt.status = 1  # Auto-publish approved content
+                    prompt.save(update_fields=['status'])
                     messages.success(
                         request,
-                        'Your prompt has been created and approved! It is now live.'
+                        'Your prompt has been created and published successfully! It is now live.'
                     )
                 elif moderation_result['overall_status'] == 'rejected':
+                    # Keep as draft
                     messages.error(
                         request,
                         'Your prompt was created but contains content that violates our guidelines. '
@@ -514,15 +540,19 @@ def prompt_create(request):
                         'An admin will review it shortly.'
                     )
                 elif moderation_result['requires_review']:
+                    # Keep as draft for manual review
                     messages.warning(
                         request,
                         'Your prompt has been created and is pending review. '
                         'It has been saved as a draft and will be published once approved by our team.'
                     )
                 else:
+                    # Default to published if moderation passed
+                    prompt.status = 1
+                    prompt.save(update_fields=['status'])
                     messages.success(
                         request,
-                        'Your prompt has been created successfully!'
+                        'Your prompt has been created and published successfully!'
                     )
 
             except Exception as e:

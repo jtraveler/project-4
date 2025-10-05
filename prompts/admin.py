@@ -502,6 +502,7 @@ class ProfanityWordAdmin(admin.ModelAdmin):
         from django import forms
         from django.shortcuts import render
         from django.contrib import messages
+        import re
 
         class BulkImportForm(forms.Form):
             words = forms.CharField(
@@ -533,14 +534,21 @@ class ProfanityWordAdmin(admin.ModelAdmin):
                 severity = form.cleaned_data['severity']
                 is_active = form.cleaned_data['is_active']
 
-                # Split by comma and clean up whitespace
-                words = [w.strip().lower() for w in words_input.split(',') if w.strip()]
+                # Split by comma, newline, or semicolon and clean up
+                # This handles various input formats users might paste
+                raw_words = re.split(r'[,;\n\r]+', words_input)
+                words = [w.strip().lower() for w in raw_words if w.strip()]
 
                 created_count = 0
                 skipped_count = 0
                 existing_words = []
+                created_words = []
 
                 for word in words:
+                    # Skip empty words
+                    if not word:
+                        continue
+
                     # Check if word already exists
                     if ProfanityWord.objects.filter(word=word).exists():
                         skipped_count += 1
@@ -552,12 +560,16 @@ class ProfanityWordAdmin(admin.ModelAdmin):
                             is_active=is_active
                         )
                         created_count += 1
+                        created_words.append(word)
 
-                # Show success message
+                # Show detailed success message
                 if created_count > 0:
+                    word_preview = ', '.join(created_words[:5])
+                    if len(created_words) > 5:
+                        word_preview += f' (and {len(created_words) - 5} more)'
                     self.message_user(
                         request,
-                        f"Successfully imported {created_count} words.",
+                        f"Successfully imported {created_count} words: {word_preview}",
                         messages.SUCCESS
                     )
 
@@ -569,7 +581,16 @@ class ProfanityWordAdmin(admin.ModelAdmin):
                         messages.WARNING
                     )
 
-                return None
+                # Show info if no words were processed
+                if created_count == 0 and skipped_count == 0:
+                    self.message_user(
+                        request,
+                        "No words found in input. Please enter comma-separated words.",
+                        messages.WARNING
+                    )
+
+                # Redirect back to changelist after processing
+                return redirect('admin:prompts_profanityword_changelist')
 
         else:
             form = BulkImportForm()

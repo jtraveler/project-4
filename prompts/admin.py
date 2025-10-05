@@ -415,7 +415,11 @@ class ProfanityWordAdmin(admin.ModelAdmin):
     list_filter = ["severity", "is_active", "created_at"]
     search_fields = ["word", "notes"]
     list_editable = []
-    actions = ["activate_words", "deactivate_words", "set_severity_critical", "set_severity_high"]
+    actions = [
+        "activate_words", "deactivate_words",
+        "set_severity_critical", "set_severity_high",
+        "bulk_import_words"
+    ]
 
     fieldsets = (
         ("Word Information", {
@@ -434,15 +438,8 @@ class ProfanityWordAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
 
     def word_display(self, obj):
-        """Display word with censoring for privacy"""
-        if len(obj.word) <= 3:
-            censored = obj.word[0] + "*" * (len(obj.word) - 1)
-        else:
-            censored = obj.word[:2] + "*" * (len(obj.word) - 3) + obj.word[-1]
-        return format_html(
-            "<span title=\"{}\">{}</span>",
-            obj.word, censored
-        )
+        """Display uncensored word for admin management"""
+        return obj.word
     word_display.short_description = "Word"
     word_display.admin_order_field = "word"
 
@@ -500,3 +497,92 @@ class ProfanityWordAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} words set to high severity.")
     set_severity_high.short_description = "Set severity to High"
 
+    def bulk_import_words(self, request, queryset):
+        """Bulk import words from comma-separated input"""
+        from django import forms
+        from django.shortcuts import render
+        from django.contrib import messages
+
+        class BulkImportForm(forms.Form):
+            words = forms.CharField(
+                widget=forms.Textarea(attrs={
+                    'rows': 10,
+                    'cols': 60,
+                    'placeholder': 'Enter comma-separated words, e.g.: fuck, shit, ass, bitch'
+                }),
+                label="Words to Import",
+                help_text="Enter words separated by commas. Duplicates will be skipped."
+            )
+            severity = forms.ChoiceField(
+                choices=ProfanityWord.SEVERITY_CHOICES,
+                initial="high",
+                label="Severity Level",
+                help_text="Severity level for all imported words"
+            )
+            is_active = forms.BooleanField(
+                initial=True,
+                required=False,
+                label="Active",
+                help_text="Mark all imported words as active"
+            )
+
+        if 'apply' in request.POST:
+            form = BulkImportForm(request.POST)
+            if form.is_valid():
+                words_input = form.cleaned_data['words']
+                severity = form.cleaned_data['severity']
+                is_active = form.cleaned_data['is_active']
+
+                # Split by comma and clean up whitespace
+                words = [w.strip().lower() for w in words_input.split(',') if w.strip()]
+
+                created_count = 0
+                skipped_count = 0
+                existing_words = []
+
+                for word in words:
+                    # Check if word already exists
+                    if ProfanityWord.objects.filter(word=word).exists():
+                        skipped_count += 1
+                        existing_words.append(word)
+                    else:
+                        ProfanityWord.objects.create(
+                            word=word,
+                            severity=severity,
+                            is_active=is_active
+                        )
+                        created_count += 1
+
+                # Show success message
+                if created_count > 0:
+                    self.message_user(
+                        request,
+                        f"Successfully imported {created_count} words.",
+                        messages.SUCCESS
+                    )
+
+                # Show warning for skipped words
+                if skipped_count > 0:
+                    self.message_user(
+                        request,
+                        f"Skipped {skipped_count} duplicate words: {', '.join(existing_words[:10])}{'...' if len(existing_words) > 10 else ''}",
+                        messages.WARNING
+                    )
+
+                return None
+
+        else:
+            form = BulkImportForm()
+
+        return render(
+            request,
+            'admin/profanity_bulk_import.html',
+            {
+                'form': form,
+                'title': 'Bulk Import Profanity Words',
+                'opts': self.model._meta,
+                'site_header': 'Bulk Import',
+            }
+        )
+
+    bulk_import_words.short_description = "Bulk import words (comma-separated)"

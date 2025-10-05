@@ -142,10 +142,37 @@ class CloudinaryModerationService:
             resource = cloudinary.api.resource(
                 public_id,
                 resource_type=resource_type,
-                moderation='aws_rek'
+                moderation=True  # Request all moderation data
             )
 
+            # Log full resource response to debug
+            logger.info(f"Full Cloudinary resource response for {public_id}: {resource}")
+
+            # Check for moderation status in the response
+            moderation_status = resource.get('moderation_status')
             moderation_data = resource.get('moderation', [])
+
+            logger.info(f"Moderation status: {moderation_status}, Moderation data: {moderation_data}")
+
+            # Check if directly rejected/approved by moderation_status
+            if moderation_status == 'approved':
+                logger.info(f"Rekognition APPROVED {public_id} via moderation_status")
+                return {
+                    'is_safe': True,
+                    'status': 'approved',
+                    'flagged_categories': [],
+                    'confidence_score': 0.0,
+                    'raw_response': resource,
+                }
+            elif moderation_status == 'rejected':
+                logger.warning(f"Rekognition REJECTED {public_id} via moderation_status")
+                return {
+                    'is_safe': False,
+                    'status': 'rejected',
+                    'flagged_categories': [{'category': 'rejected_by_rekognition', 'severity': 'critical'}],
+                    'confidence_score': 1.0,
+                    'raw_response': resource,
+                }
 
             if not moderation_data:
                 # No moderation data = no violations detected = approved

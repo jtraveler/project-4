@@ -127,11 +127,14 @@ class ModerationOrchestrator:
 
             # Set prompt publication status based on moderation result
             # Only publish if approved, otherwise keep as draft
+            old_status = prompt.status
             if overall_result['status'] == 'approved':
                 prompt.status = 1  # Published
+                logger.info(f"Setting prompt {prompt.id} status to PUBLISHED (1) - was {old_status}")
             else:
                 # Flagged or rejected content should remain as draft
                 prompt.status = 0  # Draft
+                logger.info(f"Keeping prompt {prompt.id} as DRAFT (0) - moderation status: {overall_result['status']}")
 
             prompt.save(update_fields=[
                 'moderation_status',
@@ -139,6 +142,8 @@ class ModerationOrchestrator:
                 'moderation_completed_at',
                 'status'
             ])
+
+            logger.info(f"Prompt {prompt.id} saved - status in DB: {prompt.status}, moderation_status: {prompt.moderation_status}")
 
         logger.info(
             f"Moderation complete for Prompt {prompt.id}: "
@@ -214,18 +219,27 @@ class ModerationOrchestrator:
                 has_errors = True
 
         # Determine overall status
+        logger.info(f"Determining overall status from: {statuses}")
+        logger.info(f"Has errors: {has_errors}")
+
         if 'rejected' in statuses:
             overall_status = 'rejected'
             requires_review = True
+            logger.info("Overall status: REJECTED (at least one service rejected)")
         elif 'flagged' in statuses or has_errors:
             overall_status = 'flagged'
             requires_review = True
+            logger.info(f"Overall status: FLAGGED (flagged services or errors)")
         elif all(s == 'approved' for s in statuses) and len(statuses) > 0:
             overall_status = 'approved'
             requires_review = False
+            logger.info(f"Overall status: APPROVED (all {len(statuses)} services approved)")
         else:
             overall_status = 'pending'
             requires_review = True
+            logger.info(f"Overall status: PENDING (default fallback, statuses: {statuses})")
+
+        logger.info(f"Final determination: status={overall_status}, requires_review={requires_review}")
 
         return {
             'status': overall_status,

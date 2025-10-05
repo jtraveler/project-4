@@ -180,12 +180,18 @@ class ProfanityFilterService:
         is_clean, found_words, max_severity = self.check_text(combined_text)
 
         # Determine status based on severity
+        # High/Critical are blocked at form level, so we only see Medium/Low here
         if is_clean:
             status = 'approved'
         elif max_severity == 'critical':
+            # Critical severity - reject
             status = 'rejected'
-        else:
+        elif max_severity == 'high':
+            # High severity - flag for review (shouldn't reach here if form validation works)
             status = 'flagged'
+        else:
+            # Medium/Low severity - approve but log the words found
+            status = 'approved'
 
         # Prepare word list for response (without positions for brevity)
         word_summary = [

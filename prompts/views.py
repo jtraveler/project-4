@@ -443,8 +443,23 @@ def prompt_edit(request, slug):
                 reverse('prompts:prompt_detail', args=[slug])
             )
         else:
-            # Log error but don't show generic message (form will show specific errors)
+            # Log form errors and show them as Django messages at top of page
             logger.error(f"Form validation failed: {prompt_form.errors}")
+
+            # Show non-field errors (like profanity) as messages
+            if prompt_form.non_field_errors():
+                for error in prompt_form.non_field_errors():
+                    messages.error(request, error)
+                messages.warning(
+                    request,
+                    'Please review your content and re-upload your media file after making corrections.'
+                )
+
+            # Show field-specific errors as messages
+            for field, errors in prompt_form.errors.items():
+                if field != '__all__':  # Skip non-field errors (already handled)
+                    for error in errors:
+                        messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
     else:
         prompt_form = PromptForm(instance=prompt)
 
@@ -509,20 +524,24 @@ def prompt_create(request):
 
             # Run moderation checks (orchestrator handles status updates)
             try:
+                logger.info(f"Starting moderation for new prompt {prompt.id}")
                 orchestrator = ModerationOrchestrator()
                 moderation_result = orchestrator.moderate_prompt(prompt)
 
                 # Log moderation result
                 logger.info(
                     f"Moderation complete for new prompt {prompt.id}: "
-                    f"{moderation_result['overall_status']}"
+                    f"overall_status={moderation_result['overall_status']}, "
+                    f"requires_review={moderation_result['requires_review']}"
                 )
 
                 # Refresh prompt to get status set by orchestrator
                 prompt.refresh_from_db()
+                logger.info(f"After refresh - Prompt {prompt.id} status: {prompt.status} (0=draft, 1=published)")
 
                 # Show appropriate message based on moderation result
                 if moderation_result['overall_status'] == 'approved':
+                    logger.info(f"Showing SUCCESS message - prompt {prompt.id} is published")
                     messages.success(
                         request,
                         'Your prompt has been created and published successfully! It is now live.'
@@ -560,8 +579,23 @@ def prompt_create(request):
 
             return redirect('prompts:prompt_detail', slug=prompt.slug)
         else:
-            # Log form errors for debugging (don't show generic message, form will show specific errors)
+            # Log form errors and show them as Django messages at top of page
             logger.error(f"Form errors: {prompt_form.errors}")
+
+            # Show non-field errors (like profanity) as messages
+            if prompt_form.non_field_errors():
+                for error in prompt_form.non_field_errors():
+                    messages.error(request, error)
+                messages.warning(
+                    request,
+                    'Please review your content and re-upload your media file after making corrections.'
+                )
+
+            # Show field-specific errors as messages
+            for field, errors in prompt_form.errors.items():
+                if field != '__all__':  # Skip non-field errors (already handled)
+                    for error in errors:
+                        messages.error(request, f"{field.replace('_', ' ').title()}: {error}")
     else:
         prompt_form = PromptForm()
 

@@ -8,12 +8,16 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Prefetch
 from django.core.cache import cache  # Import cache for performance
 from taggit.models import Tag
-from .models import Prompt, Comment
+from .models import Prompt, Comment, ContentFlag
 from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 import time
 import logging
 import json
+import hmac
+import hashlib
 
 # Import moderation services
 from .services import ModerationOrchestrator
@@ -948,3 +952,144 @@ def bulk_reorder_prompts(request):
     except Exception as e:
         print(f"DEBUG: Unexpected error: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def cloudinary_moderation_webhook(request):
+    """
+    Webhook endpoint for receiving Cloudinary moderation results.
+
+    Cloudinary calls this endpoint when AWS Rekognition moderation completes.
+    Updates the Prompt status based on moderation results:
+    - approved: Set status=1 (published)
+    - rejected/flagged: Keep status=0 (draft), create ContentFlag
+
+    Expected payload from Cloudinary:
+    {
+        "notification_type": "moderation",
+        "public_id": "prompts/xyz123",
+        "moderation_status": "approved|rejected",
+        "moderation": [{
+            "kind": "aws_rek",
+            "status": "approved|rejected",
+            "response": {...}
+        }]
+    }
+    """
+    try:
+        # Parse webhook payload
+        payload = json.loads(request.body.decode('utf-8'))
+        logger.info(f"Received Cloudinary webhook: {payload}")
+
+        # Validate webhook signature (if configured)
+        # TODO: Add signature validation when webhook is set up in Cloudinary
+
+        # Extract moderation details
+        notification_type = payload.get('notification_type')
+        public_id = payload.get('public_id', '')
+        moderation_status = payload.get('moderation_status')
+        moderation_data = payload.get('moderation', [])
+
+        # Only process moderation notifications
+        if notification_type != 'moderation':
+            logger.warning(f"Ignoring non-moderation webhook: {notification_type}")
+            return JsonResponse({'status': 'ignored', 'reason': 'not a moderation notification'})
+
+        # Find the prompt by public_id in either featured_image or featured_video
+        # The public_id from Cloudinary might be like "prompts/xyz123" or just "xyz123"
+        prompt = None
+
+        # Try to find prompt with this public_id
+        for p in Prompt.objects.all():
+            if p.featured_image and public_id in str(p.featured_image):
+                prompt = p
+                media_type = 'image'
+                break
+            if p.featured_video and public_id in str(p.featured_video):
+                prompt = p
+                media_type = 'video'
+                break
+
+        if not prompt:
+            logger.error(f"Could not find prompt with public_id: {public_id}")
+            return JsonResponse({'status': 'error', 'message': 'Prompt not found'}, status=404)
+
+        logger.info(f"Processing moderation for Prompt {prompt.id} ({media_type}): {moderation_status}")
+
+        # Update prompt based on moderation result
+        if moderation_status == 'approved':
+            # Approved - publish the prompt
+            prompt.status = 1  # Published
+            prompt.moderation_status = 'approved'
+            prompt.requires_manual_review = False
+            prompt.save()
+
+            logger.info(f"Prompt {prompt.id} APPROVED and PUBLISHED by Rekognition webhook")
+
+            return JsonResponse({
+                'status': 'success',
+                'action': 'published',
+                'prompt_id': prompt.id,
+                'moderation_status': 'approved'
+            })
+
+        elif moderation_status == 'rejected':
+            # Rejected - keep as draft and flag
+            prompt.status = 0  # Draft
+            prompt.moderation_status = 'rejected'
+            prompt.requires_manual_review = True
+            prompt.save()
+
+            # Create ContentFlag record
+            flag_details = []
+            for mod in moderation_data:
+                if mod.get('kind') == 'aws_rek':
+                    response = mod.get('response', {})
+                    labels = response.get('moderation_labels', [])
+                    for label in labels:
+                        flag_details.append(f"{label.get('Name')} ({label.get('Confidence', 0):.1f}%)")
+
+            ContentFlag.objects.create(
+                prompt=prompt,
+                service_type='cloudinary',
+                flag_type='aws_rekognition',
+                severity='high',
+                details={
+                    'moderation_status': moderation_status,
+                    'flagged_categories': flag_details,
+                    'raw_response': moderation_data
+                }
+            )
+
+            logger.warning(f"Prompt {prompt.id} REJECTED by Rekognition webhook: {flag_details}")
+
+            return JsonResponse({
+                'status': 'success',
+                'action': 'flagged',
+                'prompt_id': prompt.id,
+                'moderation_status': 'rejected',
+                'flags': flag_details
+            })
+
+        else:
+            # Unknown status - flag for manual review
+            prompt.requires_manual_review = True
+            prompt.save()
+
+            logger.warning(f"Unknown moderation status '{moderation_status}' for Prompt {prompt.id}")
+
+            return JsonResponse({
+                'status': 'success',
+                'action': 'flagged_for_review',
+                'prompt_id': prompt.id,
+                'moderation_status': moderation_status
+            })
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in webhook payload: {e}")
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+
+    except Exception as e:
+        logger.error(f"Error processing Cloudinary webhook: {e}", exc_info=True)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

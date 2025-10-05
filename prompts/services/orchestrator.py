@@ -103,14 +103,25 @@ class ModerationOrchestrator:
                 results['openai'] = {'status': 'flagged', 'error': str(e)}
 
         # Layers 1 & 2: Cloudinary (Rekognition + AI Vision)
-        try:
-            cloudinary_result = self.cloudinary_service.moderate_image(prompt)
-            # Note: Cloudinary service combines both Rekognition and AI Vision
-            # We'll log it as 'cloudinary_ai' for now but it includes both layers
-            results['cloudinary_ai'] = cloudinary_result
-        except Exception as e:
-            logger.error(f"Cloudinary moderation failed: {str(e)}", exc_info=True)
-            results['cloudinary_ai'] = {'status': 'flagged', 'error': str(e)}
+        # SKIP during initial creation - results will come via webhook
+        # Only run if force=True (e.g., manual re-moderation from admin)
+        if force and (prompt.featured_image or prompt.featured_video):
+            try:
+                cloudinary_result = self.cloudinary_service.moderate_image(prompt)
+                # Note: Cloudinary service combines both Rekognition and AI Vision
+                # We'll log it as 'cloudinary_ai' for now but it includes both layers
+                results['cloudinary_ai'] = cloudinary_result
+            except Exception as e:
+                logger.error(f"Cloudinary moderation failed: {str(e)}", exc_info=True)
+                results['cloudinary_ai'] = {'status': 'flagged', 'error': str(e)}
+        else:
+            # Cloudinary moderation happens asynchronously via webhook
+            logger.info(f"Skipping Cloudinary check for Prompt {prompt.id} - will be handled by webhook")
+            results['cloudinary_ai'] = {
+                'status': 'pending',
+                'message': 'AWS Rekognition moderation pending (webhook)',
+                'is_safe': True  # Assume safe for now, webhook will update
+            }
 
         # Determine overall status
         overall_result = self._determine_overall_status(results)
@@ -196,8 +207,9 @@ class ModerationOrchestrator:
         Logic:
         - If ANY service rejects -> overall = 'rejected'
         - If ANY service flags (and none reject) -> overall = 'flagged'
-        - If ALL services approve -> overall = 'approved'
+        - If ALL completed services approve -> overall = 'approved'
         - If ANY service has error -> flag for manual review
+        - 'pending' statuses are ignored (webhook-based async checks)
 
         Args:
             results: Dict of service results
@@ -213,13 +225,16 @@ class ModerationOrchestrator:
                 continue
 
             status = result.get('status', 'pending')
-            statuses.append(status)
+
+            # Skip 'pending' statuses - they're async webhook-based checks
+            if status != 'pending':
+                statuses.append(status)
 
             if 'error' in result:
                 has_errors = True
 
         # Determine overall status
-        logger.info(f"Determining overall status from: {statuses}")
+        logger.info(f"Determining overall status from completed checks: {statuses}")
         logger.info(f"Has errors: {has_errors}")
 
         if 'rejected' in statuses:
@@ -233,11 +248,11 @@ class ModerationOrchestrator:
         elif all(s == 'approved' for s in statuses) and len(statuses) > 0:
             overall_status = 'approved'
             requires_review = False
-            logger.info(f"Overall status: APPROVED (all {len(statuses)} services approved)")
+            logger.info(f"Overall status: APPROVED (all {len(statuses)} completed services approved)")
         else:
             overall_status = 'pending'
             requires_review = True
-            logger.info(f"Overall status: PENDING (default fallback, statuses: {statuses})")
+            logger.info(f"Overall status: PENDING (no completed checks or default fallback, statuses: {statuses})")
 
         logger.info(f"Final determination: status={overall_status}, requires_review={requires_review}")
 

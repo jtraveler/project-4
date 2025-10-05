@@ -1,7 +1,9 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils.safestring import mark_safe
 from taggit.forms import TagWidget
 from .models import Comment, CollaborateRequest, Prompt
+from .services import ProfanityFilterService
 
 
 class CommentForm(forms.ModelForm):
@@ -128,7 +130,7 @@ class PromptForm(forms.ModelForm):
         media_type = cleaned_data.get('media_type')
         featured_image = cleaned_data.get('featured_image')
         featured_video = cleaned_data.get('featured_video')
-        
+
         # For existing objects, check current values
         if self.instance and self.instance.pk:
             if media_type == 'image' and not featured_image and not self.instance.featured_image:
@@ -141,14 +143,56 @@ class PromptForm(forms.ModelForm):
                 raise ValidationError('Please upload an image.')
             elif media_type == 'video' and not featured_video:
                 raise ValidationError('Please upload a video.')
-        
+
         # Clear the field that's not being used
         if media_type == 'image':
             cleaned_data['featured_video'] = None
         else:
             cleaned_data['featured_image'] = None
-            
+
+        # Check for profanity BEFORE saving (instant feedback)
+        self._check_profanity(cleaned_data)
+
         return cleaned_data
+
+    def _check_profanity(self, cleaned_data):
+        """
+        Check text content for High/Critical severity profanity.
+        Raises ValidationError with specific words if found.
+        """
+        title = cleaned_data.get('title', '')
+        content = cleaned_data.get('content', '')
+        excerpt = cleaned_data.get('excerpt', '')
+
+        # Combine all text fields
+        combined_text = f"{title} {content} {excerpt}".strip()
+
+        if not combined_text:
+            return
+
+        # Run profanity check
+        profanity_service = ProfanityFilterService()
+        is_clean, found_words, max_severity = profanity_service.check_text(combined_text)
+
+        # Only reject for High or Critical severity
+        if not is_clean and max_severity in ['high', 'critical']:
+            # Get the specific words that triggered the filter
+            flagged_words = [w['word'] for w in found_words if w['severity'] in ['high', 'critical']]
+
+            if flagged_words:
+                # Create a user-friendly error message
+                words_display = ', '.join(f'"{word}"' for word in flagged_words[:5])
+                if len(flagged_words) > 5:
+                    words_display += f' (and {len(flagged_words) - 5} more)'
+
+                error_message = mark_safe(
+                    f'Your content contains words that violate our community guidelines: {words_display}. '
+                    f'Please revise your content and try again. '
+                    f'If you believe this was a mistake, <a href="/collaborate/">contact us</a>. '
+                    f'Learn more about our <a href="/collaborate/">content policies</a>.'
+                )
+
+                raise ValidationError(error_message)
     
     def clean_featured_video(self):
         video = self.cleaned_data.get('featured_video')

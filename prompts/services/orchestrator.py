@@ -137,11 +137,15 @@ class ModerationOrchestrator:
             prompt.moderation_completed_at = timezone.now()
 
             # Set prompt publication status based on moderation result
-            # Only publish if approved, otherwise keep as draft
+            # Only publish if fully approved (no pending checks)
             old_status = prompt.status
             if overall_result['status'] == 'approved':
                 prompt.status = 1  # Published
                 logger.info(f"Setting prompt {prompt.id} status to PUBLISHED (1) - was {old_status}")
+            elif overall_result['status'] == 'pending':
+                # Keep as draft while waiting for async moderation (webhook)
+                prompt.status = 0  # Draft
+                logger.info(f"Keeping prompt {prompt.id} as DRAFT (0) - waiting for webhook moderation results")
             else:
                 # Flagged or rejected content should remain as draft
                 prompt.status = 0  # Draft
@@ -205,11 +209,11 @@ class ModerationOrchestrator:
         Determine overall moderation status from all service results.
 
         Logic:
+        - If ANY service is 'pending' -> overall = 'pending' (wait for webhook)
         - If ANY service rejects -> overall = 'rejected'
         - If ANY service flags (and none reject) -> overall = 'flagged'
-        - If ALL completed services approve -> overall = 'approved'
+        - If ALL services approve -> overall = 'approved'
         - If ANY service has error -> flag for manual review
-        - 'pending' statuses are ignored (webhook-based async checks)
 
         Args:
             results: Dict of service results
@@ -218,6 +222,7 @@ class ModerationOrchestrator:
             Dict with 'status' and 'requires_review'
         """
         statuses = []
+        has_pending = False
         has_errors = False
 
         for service_name, result in results.items():
@@ -225,19 +230,24 @@ class ModerationOrchestrator:
                 continue
 
             status = result.get('status', 'pending')
+            statuses.append(status)
 
-            # Skip 'pending' statuses - they're async webhook-based checks
-            if status != 'pending':
-                statuses.append(status)
+            if status == 'pending':
+                has_pending = True
 
             if 'error' in result:
                 has_errors = True
 
         # Determine overall status
-        logger.info(f"Determining overall status from completed checks: {statuses}")
-        logger.info(f"Has errors: {has_errors}")
+        logger.info(f"Determining overall status from all checks: {statuses}")
+        logger.info(f"Has pending: {has_pending}, Has errors: {has_errors}")
 
-        if 'rejected' in statuses:
+        # CRITICAL: If ANY service is pending, overall must be pending
+        if has_pending:
+            overall_status = 'pending'
+            requires_review = False  # No review needed, just waiting for webhook
+            logger.info("Overall status: PENDING (waiting for async webhook results)")
+        elif 'rejected' in statuses:
             overall_status = 'rejected'
             requires_review = True
             logger.info("Overall status: REJECTED (at least one service rejected)")
@@ -248,11 +258,11 @@ class ModerationOrchestrator:
         elif all(s == 'approved' for s in statuses) and len(statuses) > 0:
             overall_status = 'approved'
             requires_review = False
-            logger.info(f"Overall status: APPROVED (all {len(statuses)} completed services approved)")
+            logger.info(f"Overall status: APPROVED (all {len(statuses)} services approved)")
         else:
             overall_status = 'pending'
             requires_review = True
-            logger.info(f"Overall status: PENDING (no completed checks or default fallback, statuses: {statuses})")
+            logger.info(f"Overall status: PENDING (default fallback, statuses: {statuses})")
 
         logger.info(f"Final determination: status={overall_status}, requires_review={requires_review}")
 

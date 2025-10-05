@@ -413,6 +413,12 @@ def prompt_edit(request, slug):
                         request,
                         'Prompt updated and published successfully! It is now live.'
                     )
+                elif moderation_result['overall_status'] == 'pending':
+                    messages.info(
+                        request,
+                        'Prompt updated and is being reviewed. '
+                        'It will be published automatically once the review is complete (usually within a few seconds).'
+                    )
                 elif moderation_result['overall_status'] == 'rejected':
                     messages.error(
                         request,
@@ -568,6 +574,13 @@ def prompt_create(request):
                     messages.success(
                         request,
                         'Your prompt has been created and published successfully! It is now live.'
+                    )
+                elif moderation_result['overall_status'] == 'pending':
+                    logger.info(f"Showing PENDING message - prompt {prompt.id} awaiting moderation")
+                    messages.info(
+                        request,
+                        'Your prompt has been created and is being reviewed. '
+                        'It will be published automatically once the review is complete (usually within a few seconds).'
                     )
                 elif moderation_result['overall_status'] == 'rejected':
                     messages.error(

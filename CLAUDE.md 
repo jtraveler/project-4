@@ -1818,22 +1818,22 @@ Users can toggle on/off:
 - `hotfix/critical-issue` - Urgent production fixes
 
 **Commit Messages:**
-Format: `[TYPE] Brief description`
+Format: `<type>: <description>`
 
 **Types:**
-- `[FEATURE]` - New feature
-- `[FIX]` - Bug fix
-- `[REFACTOR]` - Code refactoring
-- `[STYLE]` - CSS/UI changes
-- `[DOCS]` - Documentation updates
-- `[TEST]` - Test additions/changes
-- `[CHORE]` - Maintenance tasks
+- `feat` - New feature
+- `fix` - Bug fix
+- `refactor` - Code refactoring
+- `style` - CSS/UI changes
+- `docs` - Documentation updates
+- `test` - Test additions/changes
+- `chore` - Maintenance tasks
 
 **Examples:**
-- `[FEATURE] Add AI comment moderation system`
-- `[FIX] Resolve image upload validation error`
-- `[REFACTOR] Optimize database queries for prompt list`
-- `[STYLE] Update navbar responsive breakpoints`
+- `feat: Add AI comment moderation system`
+- `fix: Resolve image upload validation error`
+- `refactor: Optimize database queries for prompt list`
+- `style: Update navbar responsive breakpoints`
 
 ### Testing Strategy
 

@@ -15,6 +15,9 @@ import time
 import logging
 import json
 
+# Import moderation services
+from .services import ModerationOrchestrator
+
 logger = logging.getLogger(__name__)
 
 
@@ -373,6 +376,44 @@ def prompt_edit(request, slug):
             prompt.save()
             prompt_form.save_m2m()
 
+            # Re-run moderation if media or text changed
+            try:
+                orchestrator = ModerationOrchestrator()
+                moderation_result = orchestrator.moderate_prompt(prompt, force=True)
+
+                logger.info(
+                    f"Moderation complete for edited prompt {prompt.id}: "
+                    f"{moderation_result['overall_status']}"
+                )
+
+                # Inform user about moderation status
+                if moderation_result['overall_status'] == 'approved':
+                    messages.success(
+                        request,
+                        'Prompt updated and approved!'
+                    )
+                elif moderation_result['overall_status'] == 'rejected':
+                    messages.error(
+                        request,
+                        'Your updated prompt was rejected during moderation. '
+                        'It contains content that violates our guidelines.'
+                    )
+                elif moderation_result['requires_review']:
+                    messages.warning(
+                        request,
+                        'Prompt updated and pending review. '
+                        'Our team will review the changes shortly.'
+                    )
+                else:
+                    messages.success(request, 'Prompt updated successfully!')
+
+            except Exception as e:
+                logger.error(f"Moderation error for prompt {prompt.id}: {str(e)}", exc_info=True)
+                messages.warning(
+                    request,
+                    'Prompt updated but requires manual review due to a technical issue.'
+                )
+
             # Clear relevant caches when prompt is updated
             cache.delete(f"prompt_detail_{slug}_{request.user.id}")
             cache.delete(f"prompt_detail_{slug}_anonymous")
@@ -380,9 +421,6 @@ def prompt_edit(request, slug):
             for page in range(1, 5):
                 cache.delete(f"prompt_list_None_None_{page}")
 
-            messages.add_message(
-                request, messages.SUCCESS, 'Prompt updated successfully!'
-            )
             return HttpResponseRedirect(
                 reverse('prompts:prompt_detail', args=[slug])
             )
@@ -448,13 +486,54 @@ def prompt_create(request):
             prompt.save()
             prompt_form.save_m2m()
 
+            # Run moderation checks
+            try:
+                orchestrator = ModerationOrchestrator()
+                moderation_result = orchestrator.moderate_prompt(prompt)
+
+                # Log moderation result
+                logger.info(
+                    f"Moderation complete for new prompt {prompt.id}: "
+                    f"{moderation_result['overall_status']}"
+                )
+
+                # Inform user about moderation status
+                if moderation_result['overall_status'] == 'approved':
+                    messages.success(
+                        request,
+                        'Your prompt has been created and approved! It is now live.'
+                    )
+                elif moderation_result['overall_status'] == 'rejected':
+                    messages.error(
+                        request,
+                        'Your prompt was created but rejected during moderation. '
+                        'It contains content that violates our guidelines. '
+                        'Please review our content policy.'
+                    )
+                elif moderation_result['requires_review']:
+                    messages.warning(
+                        request,
+                        'Your prompt has been created and is pending review. '
+                        'Our team will review it shortly and you will be notified.'
+                    )
+                else:
+                    messages.success(
+                        request,
+                        'Your prompt has been created successfully!'
+                    )
+
+            except Exception as e:
+                logger.error(f"Moderation error for prompt {prompt.id}: {str(e)}", exc_info=True)
+                messages.warning(
+                    request,
+                    'Your prompt has been created but requires manual review '
+                    'due to a technical issue.'
+                )
+
             # Clear list caches when new prompt is created
             for page in range(1, 5):
                 cache.delete(f"prompt_list_None_None_{page}")
 
-            messages.success(
-                request, 'Your prompt has been created successfully!'
-            )
             return redirect('prompts:prompt_detail', slug=prompt.slug)
         else:
             # Log form errors for debugging

@@ -3,19 +3,21 @@ from django.contrib import admin
 from django_summernote.admin import SummernoteModelAdmin
 from django.urls import reverse
 from django.utils.html import format_html
-from .models import Prompt, Comment, CollaborateRequest
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag
 
 
 @admin.register(Prompt)
 class PromptAdmin(SummernoteModelAdmin):
     list_display = (
-        'title', 'order', 'slug', 'status', 'created_on', 'author', 
-        'tag_list', 'number_of_likes', 'ai_generator', 'media_type', 'reorder_links'
+        'title', 'order', 'slug', 'status', 'moderation_badge', 'created_on',
+        'author', 'tag_list', 'number_of_likes', 'ai_generator', 'media_type',
+        'reorder_links'
     )
     list_display_links = ('title',)
     search_fields = ['title', 'content', 'tags__name']
     list_filter = (
-        'status', 'created_on', 'author', 'tags', 'ai_generator'
+        'status', 'moderation_status', 'requires_manual_review',
+        'created_on', 'author', 'tags', 'ai_generator'
     )
     prepopulated_fields = {'slug': ('title',)}
     summernote_fields = ('content',)
@@ -23,7 +25,7 @@ class PromptAdmin(SummernoteModelAdmin):
     actions = ['make_published', 'reset_order_to_date']
     list_editable = ('order',)
 
-    # Updated fieldsets to include order field
+    # Updated fieldsets to include order and moderation fields
     fieldsets = (
         ('Basic Information', {
             'fields': ('title', 'slug', 'author', 'status', 'order')
@@ -38,18 +40,52 @@ class PromptAdmin(SummernoteModelAdmin):
         ('Metadata', {
             'fields': ('tags', 'ai_generator')
         }),
+        ('Moderation', {
+            'fields': (
+                'moderation_status', 'requires_manual_review',
+                'moderation_completed_at', 'reviewed_by', 'review_notes'
+            ),
+            'classes': ('collapse',),
+            'description': 'AI moderation status and manual review'
+        }),
         ('Timestamps', {
             'fields': ('created_on', 'updated_on'),
             'classes': ('collapse',),
             'description': 'Automatically managed timestamps'
         }),
     )
-    
-    readonly_fields = ('created_on', 'updated_on')
+
+    readonly_fields = ('created_on', 'updated_on', 'moderation_completed_at')
 
     def tag_list(self, obj):
         return ", ".join(o.name for o in obj.tags.all())
     tag_list.short_description = 'Tags'
+
+    def moderation_badge(self, obj):
+        """Display moderation status with color-coded badge"""
+        colors = {
+            'approved': '#28a745',  # green
+            'rejected': '#dc3545',  # red
+            'flagged': '#ffc107',   # yellow
+            'pending': '#6c757d',   # grey
+        }
+        icons = {
+            'approved': '✓',
+            'rejected': '✗',
+            'flagged': '⚠',
+            'pending': '⏳',
+        }
+        color = colors.get(obj.moderation_status, '#6c757d')
+        icon = icons.get(obj.moderation_status, '?')
+        review_flag = ' 🔍' if obj.requires_manual_review else ''
+
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 3px; font-weight: bold;">{} {}</span>{}',
+            color, icon, obj.get_moderation_status_display(), review_flag
+        )
+    moderation_badge.short_description = 'Moderation'
+    moderation_badge.admin_order_field = 'moderation_status'
 
     def media_type(self, obj):
         """Display whether the prompt contains an image or video"""
@@ -208,3 +244,148 @@ class CollaborateRequestAdmin(admin.ModelAdmin):
     list_display = ['name', 'email', 'message', 'read', 'created_on']
     list_filter = ['read', 'created_on']
     search_fields = ['name', 'email']
+
+
+class ContentFlagInline(admin.TabularInline):
+    """Inline display of content flags within ModerationLog"""
+    model = ContentFlag
+    extra = 0
+    readonly_fields = ('category', 'confidence', 'severity', 'details', 'created_at')
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ModerationLog)
+class ModerationLogAdmin(admin.ModelAdmin):
+    """Admin interface for viewing moderation logs"""
+    list_display = [
+        'prompt_link', 'service', 'status_badge', 'confidence_score',
+        'flag_count', 'moderated_at'
+    ]
+    list_filter = ['service', 'status', 'moderated_at']
+    search_fields = ['prompt__title', 'notes']
+    readonly_fields = [
+        'prompt', 'service', 'status', 'confidence_score',
+        'flagged_categories', 'raw_response', 'moderated_at', 'notes'
+    ]
+    inlines = [ContentFlagInline]
+    date_hierarchy = 'moderated_at'
+
+    fieldsets = (
+        ('Prompt Information', {
+            'fields': ('prompt', 'service', 'moderated_at')
+        }),
+        ('Moderation Results', {
+            'fields': ('status', 'confidence_score', 'flagged_categories')
+        }),
+        ('Details', {
+            'fields': ('notes', 'raw_response'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def prompt_link(self, obj):
+        """Link to the prompt being moderated"""
+        url = reverse('admin:prompts_prompt_change', args=[obj.prompt.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.prompt.title)
+    prompt_link.short_description = 'Prompt'
+
+    def status_badge(self, obj):
+        """Display status with color-coded badge"""
+        colors = {
+            'approved': '#28a745',
+            'rejected': '#dc3545',
+            'flagged': '#ffc107',
+            'pending': '#6c757d',
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 3px;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    status_badge.admin_order_field = 'status'
+
+    def flag_count(self, obj):
+        """Number of content flags detected"""
+        count = obj.flags.count()
+        if count > 0:
+            return format_html('<strong style="color: red;">{}</strong>', count)
+        return count
+    flag_count.short_description = 'Flags'
+
+    def has_add_permission(self, request):
+        """Prevent manual creation of moderation logs"""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Allow deletion for cleanup"""
+        return True
+
+
+@admin.register(ContentFlag)
+class ContentFlagAdmin(admin.ModelAdmin):
+    """Admin interface for viewing content flags"""
+    list_display = [
+        'moderation_log_link', 'category', 'confidence_display',
+        'severity_badge', 'created_at'
+    ]
+    list_filter = ['severity', 'category', 'created_at']
+    search_fields = ['category', 'moderation_log__prompt__title']
+    readonly_fields = [
+        'moderation_log', 'category', 'confidence', 'severity',
+        'details', 'created_at'
+    ]
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        ('Flag Information', {
+            'fields': ('moderation_log', 'category', 'severity')
+        }),
+        ('Detection Details', {
+            'fields': ('confidence', 'details', 'created_at')
+        }),
+    )
+
+    def moderation_log_link(self, obj):
+        """Link to parent moderation log"""
+        url = reverse('admin:prompts_moderationlog_change', args=[obj.moderation_log.pk])
+        return format_html(
+            '<a href="{}">{} - {}</a>',
+            url, obj.moderation_log.prompt.title, obj.moderation_log.get_service_display()
+        )
+    moderation_log_link.short_description = 'Moderation Log'
+
+    def confidence_display(self, obj):
+        """Display confidence as percentage"""
+        return f"{obj.confidence * 100:.1f}%"
+    confidence_display.short_description = 'Confidence'
+    confidence_display.admin_order_field = 'confidence'
+
+    def severity_badge(self, obj):
+        """Display severity with color"""
+        colors = {
+            'critical': '#dc3545',
+            'high': '#fd7e14',
+            'medium': '#ffc107',
+            'low': '#28a745',
+        }
+        color = colors.get(obj.severity, '#6c757d')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 3px;">{}</span>',
+            color, obj.get_severity_display()
+        )
+    severity_badge.short_description = 'Severity'
+    severity_badge.admin_order_field = 'severity'
+
+    def has_add_permission(self, request):
+        """Prevent manual creation of flags"""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Allow deletion for cleanup"""
+        return True

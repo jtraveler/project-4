@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 from cloudinary.models import CloudinaryField
+from cloudinary import uploader
 from taggit.managers import TaggableManager
 
 
@@ -101,10 +102,6 @@ class Prompt(models.Model):
         transformation={
             'quality': 'auto',
             'fetch_format': 'auto'
-        },
-        options={
-            'moderation': 'aws_rek',
-            'folder': 'prompts'
         }
     )
     featured_video = CloudinaryField(
@@ -115,10 +112,6 @@ class Prompt(models.Model):
         transformation={
             'quality': 'auto',
             'fetch_format': 'auto'
-        },
-        options={
-            'moderation': 'aws_rek',
-            'folder': 'prompts'
         }
     )
     video_duration = models.IntegerField(
@@ -188,13 +181,40 @@ class Prompt(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Override save method to auto-generate slug from title.
+        Override save method to:
+        1. Auto-generate slug from title
+        2. Upload media to Cloudinary with AWS Rekognition moderation enabled
 
-        If no slug is provided, creates a URL-friendly slug from the title
-        using Django's slugify function.
+        If no slug is provided, creates a URL-friendly slug from the title.
+        For file uploads, sets moderation='aws_rek' to enable Rekognition analysis.
         """
         if not self.slug:
             self.slug = slugify(self.title)
+
+        # Handle file uploads with Rekognition moderation
+        # Check if there are new files being uploaded (not just updating existing records)
+        if hasattr(self, '_featured_image_file'):
+            # Upload image with moderation
+            upload_result = uploader.upload(
+                self._featured_image_file,
+                folder='prompts',
+                moderation='aws_rek',
+                resource_type='image'
+            )
+            self.featured_image = upload_result['public_id']
+            delattr(self, '_featured_image_file')
+
+        if hasattr(self, '_featured_video_file'):
+            # Upload video with moderation
+            upload_result = uploader.upload(
+                self._featured_video_file,
+                folder='prompts',
+                moderation='aws_rek',
+                resource_type='video'
+            )
+            self.featured_video = upload_result['public_id']
+            delattr(self, '_featured_video_file')
+
         super().save(*args, **kwargs)
 
     def number_of_likes(self):

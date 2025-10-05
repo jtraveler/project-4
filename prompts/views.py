@@ -375,16 +375,18 @@ def prompt_edit(request, slug):
             # Set as draft initially - moderation will publish if approved
             prompt.status = 0
 
-            # Handle media upload if new media provided
+            # Handle media upload if new media provided - attach for manual upload with moderation
             featured_media = prompt_form.cleaned_data.get('featured_media')
             detected_media_type = prompt_form.cleaned_data.get('_detected_media_type')
 
             if featured_media and detected_media_type:
                 if detected_media_type == 'video':
-                    prompt.featured_video = featured_media
+                    # Attach file for manual upload in save() method
+                    prompt._featured_video_file = featured_media
                     prompt.featured_image = None
                 else:  # image
-                    prompt.featured_image = featured_media
+                    # Attach file for manual upload in save() method
+                    prompt._featured_image_file = featured_media
                     prompt.featured_video = None
 
             prompt.save()
@@ -526,16 +528,18 @@ def prompt_create(request):
             # Set auto-incrementing order number
             prompt.order = get_next_order()
 
-            # Handle media upload - auto-detect and save to correct field
+            # Handle media upload - auto-detect and attach for manual upload with moderation
             featured_media = prompt_form.cleaned_data.get('featured_media')
             detected_media_type = prompt_form.cleaned_data.get('_detected_media_type')
 
             if featured_media and detected_media_type:
                 if detected_media_type == 'video':
-                    prompt.featured_video = featured_media
+                    # Attach file for manual upload in save() method
+                    prompt._featured_video_file = featured_media
                     prompt.featured_image = None
                 else:  # image
-                    prompt.featured_image = featured_media
+                    # Attach file for manual upload in save() method
+                    prompt._featured_image_file = featured_media
                     prompt.featured_video = None
 
             prompt.save()

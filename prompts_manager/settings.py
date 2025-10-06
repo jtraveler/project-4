@@ -318,6 +318,7 @@ CSP_DEFAULT_SRC = ("'self'",)
 CSP_SCRIPT_SRC = (
     "'self'",
     "'unsafe-inline'",  # Required for inline scripts in templates
+    "'unsafe-eval'",  # Required for Summernote WYSIWYG editor
     "https://cdn.jsdelivr.net",  # Bootstrap JS
     "https://cdnjs.cloudflare.com",  # Font Awesome and other CDN resources
 )
@@ -358,3 +359,35 @@ CSP_FRAME_SRC = ("'none'",)  # Prevent embedding in frames for security
 
 # CSP Enforcement
 CSP_REPORT_ONLY = False  # Always enforce CSP for security
+
+# Django Summernote Configuration
+SUMMERNOTE_CONFIG = {
+    # Disable external CDN, use local files
+    'summernote': {
+        'airMode': False,
+        'width': '100%',
+        'height': '480',
+        'toolbar': [
+            ['style', ['style']],
+            ['font', ['bold', 'underline', 'clear']],
+            ['fontname', ['fontname']],
+            ['color', ['color']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['table', ['table']],
+            ['insert', ['link', 'picture', 'video']],
+            ['view', ['fullscreen', 'codeview', 'help']],
+        ],
+        'codemirror': {
+            'mode': 'htmlmixed',
+            'lineNumbers': True,
+            'theme': 'monokai',
+        },
+    },
+    # Disable iframe for better CSP compatibility
+    'iframe': False,
+    # Use Django's static file system
+    'lazy': True,
+    # Attachment settings
+    'attachment_require_authentication': True,
+    'attachment_filesize_limit': 1024 * 1024 * 10,  # 10MB
+}

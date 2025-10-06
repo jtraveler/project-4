@@ -11,6 +11,46 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class TagCategory(models.Model):
+    """Categories for organizing tags (e.g., 'people-portraits', 'nature-landscapes')"""
+
+    CATEGORY_CHOICES = [
+        ('people-portraits', 'People & Portraits'),
+        ('nature-landscapes', 'Nature & Landscapes'),
+        ('architecture-structures', 'Architecture & Structures'),
+        ('interiors-design', 'Interiors & Design'),
+        ('fashion-beauty', 'Fashion & Beauty'),
+        ('animals-wildlife', 'Animals & Wildlife'),
+        ('action-movement', 'Action & Movement'),
+        ('art-design', 'Art & Design'),
+        ('scifi-fantasy', 'Sci-Fi & Fantasy'),
+        ('mythology-legends', 'Mythology & Legends'),
+        ('concept-art', 'Concept Art'),
+        ('abstract-artistic', 'Abstract & Artistic'),
+        ('emotions-expressions', 'Emotions & Expressions'),
+        ('lighting-atmosphere', 'Lighting & Atmosphere'),
+        ('seasons-events', 'Seasons & Events'),
+        ('holidays', 'Holidays'),
+        ('texture-detail', 'Texture & Detail'),
+        ('magic-wonder', 'Magic & Wonder'),
+        ('luxury-elegance', 'Luxury & Elegance'),
+        ('humor-playful', 'Humor & Playful'),
+        ('culture-history', 'Culture & History'),
+    ]
+
+    tag = models.OneToOneField(
+        'taggit.Tag',
+        on_delete=models.CASCADE,
+        related_name='category_info'
+    )
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+
+    class Meta:
+        verbose_name_plural = 'Tag Categories'
+        ordering = ['category', 'tag__name']
+
+    def __str__(self):
+        return f"{self.tag.name} ({self.get_category_display()})"
 
 
 # Add status choices

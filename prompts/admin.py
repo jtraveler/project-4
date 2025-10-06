@@ -5,7 +5,8 @@ from django.urls import reverse, path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.shortcuts import redirect
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord
+from taggit.models import Tag
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory
 
 
 @admin.register(Prompt)
@@ -676,3 +677,45 @@ class ProfanityWordAdmin(admin.ModelAdmin):
             'available_apps': self.admin_site.get_app_list(request),
         }
         return render(request, 'admin/profanity_bulk_import.html', context)
+
+
+# Unregister default Tag admin if it exists
+try:
+    admin.site.unregister(Tag)
+except admin.sites.NotRegistered:
+    pass
+
+
+@admin.register(TagCategory)
+class TagCategoryAdmin(admin.ModelAdmin):
+    """Admin interface for managing tags organized by categories"""
+    list_display = ['tag_name', 'category_display', 'prompt_count']
+    list_filter = ['category']
+    search_fields = ['tag__name', 'tag__slug']
+    ordering = ['category', 'tag__name']
+    readonly_fields = ['tag', 'category']
+
+    def tag_name(self, obj):
+        """Display the tag name"""
+        return obj.tag.name
+    tag_name.short_description = 'Tag'
+    tag_name.admin_order_field = 'tag__name'
+
+    def category_display(self, obj):
+        """Display the human-readable category name"""
+        return obj.get_category_display()
+    category_display.short_description = 'Category'
+    category_display.admin_order_field = 'category'
+
+    def prompt_count(self, obj):
+        """Display how many prompts use this tag"""
+        return obj.tag.taggit_taggeditem_items.count()
+    prompt_count.short_description = 'Used in Prompts'
+
+    def has_add_permission(self, request):
+        """Prevent manual addition - tags should be added via data migrations"""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Allow deletion for cleanup"""
+        return True

@@ -11,7 +11,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.conf import settings
 from prompts.services import (
     OpenAIModerationService,
-    CloudinaryModerationService,
+    VisionModerationService,
     ProfanityFilterService,
     ModerationOrchestrator
 )
@@ -29,14 +29,14 @@ def moderation_dashboard(request):
 
     Displays:
     - System health checks for all moderation services
-    - OpenAI API connection status and credit balance
-    - Cloudinary connection status
+    - OpenAI API connection status (text & vision)
+    - Cloudinary connection status (media hosting)
     - Profanity filter statistics
     - Recent moderation activity
     """
     context = {
         'openai_status': _check_openai_status(),
-        'cloudinary_status': _check_cloudinary_status(),
+        'vision_status': _check_vision_status(),
         'profanity_status': _check_profanity_status(),
         'recent_logs': _get_recent_logs(),
         'stats': _get_moderation_stats(),
@@ -86,10 +86,10 @@ def _check_openai_status() -> dict:
     return status
 
 
-def _check_cloudinary_status() -> dict:
-    """Check Cloudinary service status"""
+def _check_vision_status() -> dict:
+    """Check OpenAI Vision service status"""
     status = {
-        'name': 'Cloudinary Media Moderation',
+        'name': 'OpenAI Vision API',
         'enabled': False,
         'working': False,
         'config_set': False,
@@ -97,25 +97,24 @@ def _check_cloudinary_status() -> dict:
     }
 
     try:
-        import cloudinary
-
-        # Check if configured
-        if cloudinary.config().cloud_name:
+        # Check if OpenAI API key is set
+        api_key = os.getenv('OPENAI_API_KEY')
+        if api_key:
             status['config_set'] = True
             status['enabled'] = True
 
             # Try to initialize service
-            service = CloudinaryModerationService()
+            service = VisionModerationService()
             status['working'] = True
 
         else:
-            status['error'] = 'Cloudinary not configured'
+            status['error'] = 'OPENAI_API_KEY not configured'
 
     except ImportError:
-        status['error'] = 'Cloudinary library not installed'
+        status['error'] = 'OpenAI library not installed'
     except Exception as e:
         status['error'] = f'Error: {str(e)}'
-        logger.error(f"Cloudinary status check failed: {str(e)}", exc_info=True)
+        logger.error(f"Vision API status check failed: {str(e)}", exc_info=True)
 
     return status
 

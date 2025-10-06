@@ -10,7 +10,7 @@ Usage:
 from django.core.management.base import BaseCommand
 from prompts.services import (
     OpenAIModerationService,
-    CloudinaryModerationService,
+    VisionModerationService,
     ModerationOrchestrator
 )
 
@@ -89,13 +89,13 @@ class Command(BaseCommand):
             )
 
     def test_cloudinary_service(self):
-        """Test Cloudinary moderation service"""
-        self.stdout.write(self.style.WARNING('\n[Test 2] Cloudinary Image/Video Moderation'))
+        """Test OpenAI Vision moderation service"""
+        self.stdout.write(self.style.WARNING('\n[Test 2] OpenAI Vision Image/Video Moderation'))
         self.stdout.write('-' * 60)
 
         try:
-            service = CloudinaryModerationService()
-            self.stdout.write(self.style.SUCCESS('✓ Cloudinary service initialized'))
+            service = VisionModerationService()
+            self.stdout.write(self.style.SUCCESS('✓ Vision moderation service initialized'))
 
             self.stdout.write(
                 '\nNote: Image/video tests require actual uploaded assets.'
@@ -104,11 +104,11 @@ class Command(BaseCommand):
                 'To test fully, upload a prompt through the web interface.'
             )
 
-            self.stdout.write(self.style.SUCCESS('\n✓ Cloudinary service test passed'))
+            self.stdout.write(self.style.SUCCESS('\n✓ Vision service test passed'))
 
         except Exception as e:
             self.stdout.write(
-                self.style.ERROR(f'\n✗ Cloudinary service failed: {e}')
+                self.style.ERROR(f'\n✗ Vision service failed: {e}')
             )
 
     def test_orchestrator(self):
@@ -130,9 +130,15 @@ class Command(BaseCommand):
                     self.style.WARNING('  ⚠ OpenAI service: DISABLED')
                 )
 
-            self.stdout.write(
-                self.style.SUCCESS('  ✓ Cloudinary service: ENABLED')
-            )
+            # Check if Vision is enabled
+            if orchestrator.vision_enabled:
+                self.stdout.write(
+                    self.style.SUCCESS('  ✓ Vision service: ENABLED')
+                )
+            else:
+                self.stdout.write(
+                    self.style.WARNING('  ⚠ Vision service: DISABLED')
+                )
 
             self.stdout.write(
                 '\nOrchestrator is ready to moderate prompts.'

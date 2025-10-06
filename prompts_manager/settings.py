@@ -355,39 +355,33 @@ CSP_MEDIA_SRC = (
     "https://*.cloudinary.com",  # All Cloudinary subdomains
 )
 
-CSP_FRAME_SRC = ("'none'",)  # Prevent embedding in frames for security
+CSP_FRAME_SRC = (
+    "'self'",  # Allow same-origin iframes for Summernote
+)  # Summernote requires iframe support
 
 # CSP Enforcement
 CSP_REPORT_ONLY = False  # Always enforce CSP for security
 
 # Django Summernote Configuration
 SUMMERNOTE_CONFIG = {
-    # Disable external CDN, use local files
+    # Use iframe for editor (required for Summernote to work properly)
+    'iframe': True,
+
+    # Summernote options
     'summernote': {
-        'airMode': False,
         'width': '100%',
-        'height': '480',
+        'height': '400',
         'toolbar': [
             ['style', ['style']],
-            ['font', ['bold', 'underline', 'clear']],
-            ['fontname', ['fontname']],
-            ['color', ['color']],
+            ['font', ['bold', 'underline', 'italic', 'clear']],
             ['para', ['ul', 'ol', 'paragraph']],
-            ['table', ['table']],
-            ['insert', ['link', 'picture', 'video']],
-            ['view', ['fullscreen', 'codeview', 'help']],
+            ['insert', ['link']],
+            ['view', ['fullscreen', 'codeview']],
         ],
-        'codemirror': {
-            'mode': 'htmlmixed',
-            'lineNumbers': True,
-            'theme': 'monokai',
-        },
     },
-    # Disable iframe for better CSP compatibility
-    'iframe': False,
-    # Use Django's static file system
-    'lazy': True,
+
     # Attachment settings
+    'disable_attachment': False,
     'attachment_require_authentication': True,
     'attachment_filesize_limit': 1024 * 1024 * 10,  # 10MB
 }

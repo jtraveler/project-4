@@ -107,7 +107,8 @@
 | Heroku Eco Dyno | $5/month | Covered by credits |
 | PostgreSQL Mini | $5/month | Covered by credits |
 | Cloudinary Free | $0 | Free tier (25GB) |
-| **Total** | **$0/month** | Credits until late 2026 |
+| OpenAI API | ~$0.50/1000 uploads | Pay-as-you-go |
+| **Total** | **~$10/month** | Credits cover hosting |
 
 ### Projected Costs at 1,000 Users
 | Service | Cost | Notes |
@@ -115,7 +116,7 @@
 | Heroku Eco Dyno | $10/month | Scaled up |
 | PostgreSQL Mini | $5/month | Adequate for 1K users |
 | Cloudinary Plus | $89/month | 25GB → 125GB, more transformations |
-| AI Moderation | $5-10/month | OpenAI + AI Vision |
+| AI Moderation | $10-15/month | OpenAI Vision + text |
 | **Total** | **$99-109/month** | Out of pocket: $89 (credits cover $10) |
 
 ### Projected Costs at 10,000 Users
@@ -150,7 +151,7 @@
 - [ ] SSL/HTTPS configuration
 - [ ] Update all references to new domain
 
-### Content Moderation System (3-4 days) **CRITICAL**
+### Content Moderation System (3-4 days) **CRITICAL** ✅ COMPLETED
 - [ ] **AI Moderation Implementation:**
   - [ ] AWS Rekognition via Cloudinary (images/videos)
   - [ ] Cloudinary AI Vision for custom checks
@@ -241,7 +242,7 @@
 - [ ] Copyright / DMCA Policy
 - [ ] Age verification statement (13+)
 
-### Cloudinary Cleanup (4 hours)
+### Cloudinary Cleanup (4 hours)✅ COMPLETED
 - [ ] Implement Django signal to delete Cloudinary assets when prompts deleted
 - [ ] Prevent orphaned files
 
@@ -506,7 +507,7 @@
 - [ ] **All Filter Types:**
   - [ ] Type: image, video
   - [ ] Orientation: portrait, landscape, square
-  - [ ] Category: 27 preset tags
+  - [ ] Category: 209 preset tags
   - [ ] AI Generator: all supported generators
   - [ ] Age range: teenager, adult, senior (content rating)
   - [ ] People count: 0, 1, 2, 3+
@@ -1000,6 +1001,79 @@
 - **Tagline:** "Find. Create. Share."
 - **Mission:** "Make every prompt finder successful"
 
+
+### Recent Decisions (January 2025)
+
+**18. Tag Strategy: Expanded from 27 to 209 Tags**
+- **Reasoning:**
+  - More specific tags = better SEO (e.g., "Abandoned Buildings" vs generic "Architecture")
+  - Richer vocabulary for AI suggestions
+  - Better discoverability for users
+  - Still manageable in admin dashboard
+- **Implementation:** 19 categories with 5-15 tags each
+- **User Experience:** Transparent autocomplete, no hidden sub-tag mapping
+- **Dynamic Tags:** AI can suggest new tags → admin review queue → potentially added to master list
+- **Alternative Considered:** 27 core tags with hidden sub-tags mapping
+- **Why Rejected:** Misleading to users, loses specificity for SEO
+
+**19. Combined AI Analysis: Vision + Text**
+- **Decision:** Analyze both image AND prompt text for tag suggestions
+- **Reasoning:**
+  - Vision alone misses context (e.g., "mysterious explorer" mood from text)
+  - Text alone misses visual details (e.g., silhouette, dramatic lighting)
+  - Combined analysis gives most accurate, contextually relevant tags
+- **Cost:** Same ~$0.00255 per upload (single API call)
+- **Implementation:** One Vision API call analyzes visual + reads prompt text
+
+**20. Prompt-Visual Relevance Checking**
+- **Decision:** Verify uploaded images match their prompt descriptions
+- **Status Logic:**
+  - Score >0.8: Auto-publish (status=1)
+  - Score 0.5-0.8: Pending admin review (status=0)
+  - Score <0.5: Block upload with message
+- **User Messaging:** "Your upload is under review. Our team will verify within 24-48 hours."
+- **Reasoning:**
+  - Prevents spam/mismatched content from day one
+  - SEO benefit (Google penalizes mismatched alt text)
+  - User trust (ensures prompts actually match images)
+- **Cost:** Included in single combined API call
+
+**21. SEO Automation in Python (Not AI)**
+- **Decision:** Python handles filename/alt-tag generation after AI returns title
+- **Reasoning:**
+  - Separation of concerns (AI analyzes content, Python formats for web)
+  - Cost efficiency (don't pay AI for string manipulation)
+  - Flexibility (easy to adjust formats without changing AI prompts)
+  - Reliability (deterministic vs AI potentially formatting inconsistently)
+
+**22. Two-Step Upload Flow (Pexels-Inspired)**
+- **Decision:** Progressive disclosure - upload first, then details form
+- **Step 1:** Drag-and-drop with upload counter
+- **Step 2:** Large preview + form (title, prompt, tags, AI generator)
+- **Reasoning:**
+  - Reduces cognitive load (one thing at a time)
+  - Shows progress clearly
+  - Industry-standard UX (Pexels, Unsplash, etc.)
+  - Mobile-friendly
+
+**23. Upload Counter: Weekly Limit for Free Users**
+- **Decision:** "You have X uploads left this week" (10/week during launch)
+- **Reasoning:**
+  - Aligns with Phase 2 monetization strategy
+  - Builds content library quickly during launch
+  - Clear reset cadence (every Monday)
+- **Later:** Switch to monthly limits after 3-6 months
+
+**24. Tag Count: 5 Suggested Tags (Not 3)**
+- **Decision:** AI suggests 5 tags, user can reduce to 3 or expand to 7 max
+- **Reasoning:**
+  - SEO best practices: 3-7 tags optimal
+  - 5 gives good coverage without keyword stuffing
+  - User has flexibility to adjust
+- **Alternative Considered:** 3 tags only
+- **Why 5:** Balances discoverability with quality
+
+---
 ---
 
 ## 💰 Monetization Strategy
@@ -1503,49 +1577,100 @@ Users can toggle on/off:
 
 ### Tag System
 
-**27 Preset Tags:**
-1. Portraits
-2. Men
-3. Women
-4. Nature
-5. Landscapes
-6. Architecture
-7. Interiors & Design
-8. Fashion & Beauty
-9. Animals
-10. Action
-11. Poster
-12. Graphics
-13. Sci-fi & Fantasy
-14. Mythology & Legends
-15. Concept Art
-16. Abstract
-17. Emotions & Expressions
-18. Lighting & Color
-19. Mood & Atmosphere
-20. Minimalism
-21. Still Life
-22. Dreamscapes
-23. Seasons & Events
-24. Texture & Detail
-25. Magic & Wonder
-26. Luxury
-27. Humor
+**209 Tags Organized in 21 Categories:**
+
+**1. People & Portraits (15 tags)**
+Portraits, Men, Women, Children, Families, Couples, Groups, Close-ups, Profiles, Silhouettes, Body Parts, Hands, Eyes, Fashion Models, Senior Citizens
+
+**2. Nature & Landscapes (18 tags)**
+Mountains, Forests, Beaches, Deserts, Oceans, Lakes, Rivers, Waterfalls, Caves, Cliffs, Valleys, Meadows, Jungles, Islands, Horizons, Seascapes, Wilderness, Rolling Hills
+
+**3. Architecture & Structures (12 tags)**
+Modern Architecture, Historic Buildings, Skyscrapers, Bridges, Castles, Ruins, Urban Landscapes, Abandoned Buildings, Minimalist Architecture, Gothic Architecture, Brutalist Architecture, Cathedrals
+
+**4. Interiors & Design (10 tags)**
+Interior Design, Living Rooms, Bedrooms, Kitchens, Offices, Cafes, Restaurants, Hotels, Minimalist Interiors, Industrial Design
+
+**5. Fashion & Beauty (9 tags)**
+Fashion Photography, Street Fashion, Editorial Fashion, Makeup, Hair Styling, Jewelry, Accessories, Beauty Portraits, Magazine Covers
+
+**6. Animals & Wildlife (12 tags)**
+Wild Animals, Domestic Animals, Birds, Marine Life, Insects, Reptiles, Cats, Dogs, Horses, Exotic Animals, Animal Close-ups, Animal Behavior
+
+**7. Action & Movement (10 tags)**
+Sports, Dancing, Running, Jumping, Flying, Extreme Sports, Water Sports, Winter Sports, Action Shots, Dynamic Movement
+
+**8. Art & Design (12 tags)**
+Poster Design, Graphic Design, Typography, Illustrations, Digital Art, 3D Renders, Logos, Patterns, Textures, Collages, Mixed Media, Album Covers
+
+**9. Sci-Fi & Fantasy (12 tags)**
+Science Fiction, Space, Aliens, Robots, Cyberpunk, Futuristic Cities, Fantasy Worlds, Dragons, Magic, Spaceships, Dystopian, Post-Apocalyptic
+
+**10. Mythology & Legends (8 tags)**
+Greek Mythology, Norse Mythology, Egyptian Mythology, Mythical Creatures, Gods and Goddesses, Ancient Civilizations, Folklore, Legendary Heroes
+
+**11. Concept Art (8 tags)**
+Character Design, Environment Design, Vehicle Design, Creature Design, Prop Design, Storyboards, Visual Development, Game Art
+
+**12. Abstract & Artistic (10 tags)**
+Abstract Art, Surrealism, Geometric Patterns, Color Studies, Fractal Art, Psychedelic, Optical Illusions, Experimental, Avant-Garde, Minimalism
+
+**13. Emotions & Expressions (10 tags)**
+Joy, Sadness, Anger, Fear, Surprise, Contemplation, Serenity, Tension, Love, Melancholy
+
+**14. Lighting & Atmosphere (12 tags)**
+Golden Hour, Blue Hour, Dramatic Lighting, Soft Lighting, Neon Lights, Candlelight, Backlit, Silhouettes, High Contrast, Low Key, Atmospheric, Moody
+
+**15. Seasons & Events (8 tags)**
+Spring, Summer, Autumn, Winter, Celebrations, Festivals, Ceremonies, Weddings
+
+**16. Holidays (6 tags)**
+Christmas, Halloween, Thanksgiving, New Year, Valentine's Day, Easter
+
+**17. Texture & Detail (8 tags)**
+Close-up Details, Macro Photography, Textures, Surfaces, Materials, Patterns, Weathered, Organic Textures
+
+**18. Magic & Wonder (6 tags)**
+Magical Realism, Enchanted, Whimsical, Dreamlike, Ethereal, Mystical
+
+**19. Luxury & Elegance (6 tags)**
+Luxury Lifestyle, Elegance, Opulence, High Fashion, Fine Dining, Premium Products
+
+**20. Humor & Playful (5 tags)**
+Humorous, Playful, Quirky, Satirical, Cartoon Style
+
+**21. Culture & History (12 tags)**
+Black History, Civil Rights, Indigenous Cultures, Asian Cultures, Latin American Cultures, Middle Eastern Cultures, African Cultures, European History, Cultural Heritage, Traditional Costumes, Cultural Celebrations, Historical Events
+
+**Total: 209 tags**
 
 **Tag Selection:**
-- User selects up to 3 tags from dropdown
-- AI pre-populates suggested tags (user can change)
-- Autocomplete as user types
-- AI validates tags silently (flags mismatches)
+- AI suggests 5 tags from 209 options (based on image + prompt text analysis)
+- User can remove, add, or type custom tags via autocomplete
+- Max 7 tags per prompt (SEO best practice: 3-7 tags)
+- User messaging: "Suggested tags (you can edit or add your own)"
 
-**AI Tag Validation:**
-- If user tags don't match AI analysis (confidence >0.8):
-  - Approve prompt immediately (no delay)
-  - Flag for admin review
-  - Admin has 2-4 days to review (configurable)
-  - If not reviewed: auto-apply AI suggested tags
-- Admin can toggle validation on/off
-- Admin logs all flagged tags
+**Dynamic Tag Creation:**
+- If AI confidence < 0.7 on all 209 tags: AI can suggest 1 NEW custom tag
+- New tag goes to "Pending Tags" admin review queue
+- Admin approves/rejects within 2-4 days
+- If approved: added to master 209 list
+- User's prompt still publishes with best-match existing tags (no delay)
+
+**Tag Validation:**
+- AI silently validates if user's tags match image (confidence >0.8)
+- If mismatch: Flag for admin review, publish anyway
+- Admin reviews within 2-4 days, corrects if needed
+- User never knows validation happened
+
+**Admin Management:**
+- All tags manageable via Django admin dashboard
+- View by category
+- Add/edit/delete tags
+- Search tags by name
+- See which prompts use each tag
+- Bulk operations (merge duplicates, delete unused)
+- Review pending custom tags
 
 ### File Limits
 

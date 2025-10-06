@@ -208,6 +208,100 @@ Be strict but fair. Flag content that violates these policies."""
                 'explanation': f'Error during moderation: {str(e)}',
             }
 
+    def moderate_with_content_generation(self, prompt_obj) -> Dict:
+        """
+        Combined moderation + content generation in one API call.
+
+        This method extends moderate_visual_content() to also generate:
+        - Title and description
+        - Tag suggestions
+        - Relevance score
+        - SEO metadata
+
+        Args:
+            prompt_obj: Prompt model instance with featured_image or featured_video
+
+        Returns:
+            Dict with moderation results PLUS:
+            - title: Generated title
+            - description: SEO description
+            - suggested_tags: List of tag names
+            - relevance_score: 0.0-1.0
+            - seo_filename: Filename for SEO
+            - alt_tag: Alt text
+        """
+        from .content_generation import ContentGenerationService
+
+        if not prompt_obj.featured_image and not prompt_obj.featured_video:
+            logger.warning(f"Prompt {prompt_obj.id} has no media to analyze")
+            return {
+                'is_safe': True,
+                'status': 'approved',
+                'flagged_categories': [],
+                'severity': 'low',
+                'confidence_score': 0.0,
+                'explanation': 'No visual content present',
+            }
+
+        try:
+            # Get image URL
+            if prompt_obj.is_video():
+                image_url = self._get_video_frame_url(prompt_obj)
+            else:
+                image_url = prompt_obj.featured_image.url
+
+            # Use content generation service with moderation enabled
+            content_service = ContentGenerationService()
+            result = content_service.generate_content(
+                image_url=image_url,
+                prompt_text=prompt_obj.content,
+                ai_generator=prompt_obj.ai_generator,
+                include_moderation=True
+            )
+
+            # Map content generation response to moderation format
+            if result.get('violations'):
+                # Content was flagged
+                return {
+                    'is_safe': False,
+                    'status': 'rejected',
+                    'flagged_categories': result['violations'],
+                    'severity': result.get('violation_severity', 'critical'),
+                    'confidence_score': 1.0,
+                    'explanation': f"Content violates policies: {', '.join(result['violations'])}",
+                    'raw_response': result,
+                }
+            else:
+                # Content is clean, include generated metadata
+                return {
+                    'is_safe': True,
+                    'status': 'approved',
+                    'flagged_categories': [],
+                    'severity': 'low',
+                    'confidence_score': result.get('relevance_score', 0.0),
+                    'explanation': result.get('relevance_explanation', ''),
+                    'raw_response': result,
+                    # Content generation fields
+                    'title': result.get('title'),
+                    'description': result.get('description'),
+                    'suggested_tags': result.get('suggested_tags', []),
+                    'relevance_score': result.get('relevance_score', 0.0),
+                    'seo_filename': result.get('seo_filename'),
+                    'alt_tag': result.get('alt_tag'),
+                }
+
+        except Exception as e:
+            logger.error(f"Combined moderation+generation error: {str(e)}", exc_info=True)
+            return {
+                'is_safe': False,
+                'status': 'flagged',
+                'flagged_categories': ['api_error'],
+                'severity': 'medium',
+                'confidence_score': 0.0,
+                'explanation': f'Error during analysis: {str(e)}',
+                'raw_response': {'error': str(e)},
+            }
+
     def _get_video_frame_url(self, prompt_obj) -> str:
         """
         Extract middle frame from video for analysis.

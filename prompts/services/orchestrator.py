@@ -403,3 +403,142 @@ class ModerationOrchestrator:
 
         logger.info(f"Bulk moderation complete: {stats}")
         return stats
+
+    def moderate_with_ai_generation(self, prompt: Prompt) -> Dict:
+        """
+        Moderate prompt with AI-powered content generation.
+
+        This is an enhanced version of moderate_prompt() that:
+        1. Runs moderation checks
+        2. Generates AI-powered metadata (title, description, tags, SEO)
+        3. Scores relevance between prompt text and image
+
+        Use this during the upload flow when you want AI assistance.
+
+        Args:
+            prompt: Prompt instance to moderate and enhance
+
+        Returns:
+            Dict with:
+            - overall_status: 'approved', 'rejected', 'flagged'
+            - requires_review: bool
+            - ai_generated_content: dict with title, description, tags, etc.
+            - suggested_tags: list of tag names
+            - relevance_score: 0.0-1.0
+            - message: User-facing message
+        """
+        logger.info(f"Starting AI-enhanced moderation for Prompt {prompt.id}")
+
+        results = {
+            'profanity': None,
+            'openai': None,
+            'openai_vision': None,
+        }
+
+        # Layer 1: Profanity filter
+        try:
+            results['profanity'] = self._run_profanity_check(prompt)
+        except Exception as e:
+            logger.error(f"Profanity filter failed: {str(e)}", exc_info=True)
+            results['profanity'] = {'status': 'flagged', 'error': str(e)}
+
+        # Layer 2: OpenAI text moderation
+        if self.openai_enabled:
+            try:
+                results['openai'] = self._run_openai_moderation(prompt)
+            except Exception as e:
+                logger.error(f"OpenAI moderation failed: {str(e)}", exc_info=True)
+                results['openai'] = {'status': 'flagged', 'error': str(e)}
+
+        # Layer 3: Vision moderation WITH content generation
+        if self.vision_enabled and (prompt.featured_image or prompt.featured_video):
+            try:
+                # Use the extended method with content generation
+                results['openai_vision'] = self.vision_service.moderate_with_content_generation(prompt)
+            except Exception as e:
+                logger.error(f"Vision+generation failed: {str(e)}", exc_info=True)
+                results['openai_vision'] = {'status': 'flagged', 'error': str(e)}
+        else:
+            results['openai_vision'] = {
+                'status': 'approved',
+                'message': 'No visual content',
+                'is_safe': True
+            }
+
+        # Determine overall status
+        overall_result = self._determine_overall_status(results)
+
+        # Extract AI-generated content from vision results
+        vision_result = results.get('openai_vision', {})
+        ai_content = {
+            'title': vision_result.get('title'),
+            'description': vision_result.get('description'),
+            'suggested_tags': vision_result.get('suggested_tags', []),
+            'relevance_score': vision_result.get('relevance_score', 0.0),
+            'relevance_explanation': vision_result.get('explanation', ''),
+            'seo_filename': vision_result.get('seo_filename'),
+            'alt_tag': vision_result.get('alt_tag'),
+        }
+
+        # Determine publication status based on moderation + relevance
+        relevance_score = ai_content['relevance_score']
+
+        if overall_result['status'] == 'rejected':
+            final_status = 'blocked'
+            prompt_status = 0  # Draft
+            user_message = f"Content violates our guidelines. Please review and resubmit."
+            requires_review = True
+        elif overall_result['status'] == 'flagged':
+            final_status = 'flagged'
+            prompt_status = 0  # Draft
+            user_message = "Your upload is under review. Our team will verify it within 24-48 hours."
+            requires_review = True
+        elif relevance_score >= 0.8:
+            final_status = 'approved'
+            prompt_status = 1  # Published
+            user_message = "Your prompt has been created and published successfully!"
+            requires_review = False
+        elif relevance_score >= 0.5:
+            final_status = 'pending'
+            prompt_status = 0  # Draft
+            user_message = "Your upload is under review. We'll verify the prompt matches your image within 24-48 hours."
+            requires_review = True
+        else:
+            final_status = 'blocked'
+            prompt_status = 0  # Draft
+            user_message = "Your prompt doesn't accurately describe the image. Please provide a description that matches what's shown."
+            requires_review = True
+
+        # Update prompt with results
+        with transaction.atomic():
+            # Save moderation logs
+            self._save_moderation_logs(prompt, results)
+
+            # Update prompt
+            prompt.moderation_status = overall_result['status']
+            prompt.requires_manual_review = requires_review
+            prompt.moderation_completed_at = timezone.now()
+            prompt.status = prompt_status
+
+            prompt.save(update_fields=[
+                'moderation_status',
+                'requires_manual_review',
+                'moderation_completed_at',
+                'status'
+            ])
+
+        logger.info(
+            f"AI-enhanced moderation complete for Prompt {prompt.id}: "
+            f"{final_status} (relevance: {relevance_score:.2f})"
+        )
+
+        return {
+            'overall_status': final_status,
+            'requires_review': requires_review,
+            'ai_generated_content': ai_content,
+            'suggested_tags': ai_content['suggested_tags'],
+            'relevance_score': relevance_score,
+            'message': user_message,
+            'checks_completed': sum(1 for r in results.values() if r is not None),
+            'summary': results,
+        }

@@ -8,6 +8,9 @@ urlpatterns = [
     path('', views.PromptList.as_view(), name='home'),
     path('create-prompt/', views.prompt_create, name='prompt_create'),
     path('collaborate/', views.collaborate_request, name='collaborate'),
+    # Upload flow (Phase C & D)
+    path('upload/', views.upload_step1, name='upload_step1'),
+    # Step 2 will be added in Phase D
     path('prompt/<slug:slug>/', views.prompt_detail, name='prompt_detail'),
     path('prompt/<slug:slug>/edit/', views.prompt_edit, name='prompt_edit'),
     path('prompt/<slug:slug>/delete/', views.prompt_delete, name='prompt_delete'),

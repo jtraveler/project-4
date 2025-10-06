@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import re
 import dj_database_url
 import cloudinary
 
@@ -235,9 +236,31 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # CLOUDINARY HTTPS CONFIGURATION - Force HTTPS for all Cloudinary URLs
-CLOUDINARY_STORAGE = {
-    'CLOUDINARY_URL': os.environ.get('CLOUDINARY_URL'),
-}
+# Parse CLOUDINARY_URL to extract individual components
+cloudinary_url = os.environ.get('CLOUDINARY_URL', '')
+if cloudinary_url:
+    # Format: cloudinary://api_key:api_secret@cloud_name
+    match = re.match(r'cloudinary://(\d+):([^@]+)@(.+)', cloudinary_url)
+    if match:
+        CLOUDINARY_STORAGE = {
+            'CLOUDINARY_URL': cloudinary_url,
+            'CLOUD_NAME': match.group(3),
+            'API_KEY': match.group(1),
+            'API_SECRET': match.group(2),
+        }
+    else:
+        CLOUDINARY_STORAGE = {
+            'CLOUDINARY_URL': cloudinary_url,
+            'CLOUD_NAME': '',
+            'API_KEY': '',
+            'API_SECRET': '',
+        }
+else:
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': '',
+        'API_KEY': '',
+        'API_SECRET': '',
+    }
 
 # Force Cloudinary to use HTTPS
 cloudinary.config(secure=True)
@@ -347,6 +370,7 @@ CSP_IMG_SRC = (
 CSP_CONNECT_SRC = (
     "'self'",
     "https://res.cloudinary.com",  # For AJAX requests to Cloudinary
+    "https://api.cloudinary.com",
 )
 
 CSP_MEDIA_SRC = (

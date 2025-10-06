@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h1 class="h3 mb-3" style="font-weight: 400; color: #1f2937;">
+            Share your prompts and let the world discover them
+        </h1>
+        <p class="text-muted mb-5" style="font-size: 16px; color: #6b7280;">
+            Share your first 10 prompts to introduce yourself to millions of Prompt Finders.
+        </p>
+    </div>
+
+    <!-- Spacing -->
+    <div class="mb-5"></div>
+
+    <!-- Drag-drop upload area -->
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div id="drop-zone"
+                 class="border border-2 rounded-3 p-5 text-center"
+                 style="
+                     min-height: 400px;
+                     cursor: pointer;
+                     transition: all 0.3s;
+                     border-style: dashed !important;
+                     border-color: #d1d5db !important;
+                     background-color: #fafafa;
+                     position: relative;
+                 ">
+                <!-- Upload counter in top-right -->
+                <div style="position: absolute; top: 20px; right: 20px;">
+                    <span style="color: #9ca3af; font-size: 14px;">({{ uploads_this_week }}/{{ weekly_limit }})</span>
+                </div>
+
+                <div class="my-5">
+                    <!-- Font Awesome icon -->
+                    <div class="mb-4">
+                        <i class="fas fa-images" style="font-size: 80px; color: #05a081;"></i>
+                    </div>
+
+                    <h3 class="mb-3" style="font-weight: 400; color: #1f2937; font-size: 24px;">
+                        Drag and drop to upload, or
+                    </h3>
+                    <button type="button" class="btn btn-lg" id="browse-btn"
+                            style="
+                                background-color: #05a081;
+                                color: white;
+                                border: none;
+                                padding: 12px 32px;
+                                border-radius: 8px;
+                                font-weight: 500;
+                            ">
+                        Browse
+                    </button>
+                    <input type="file" id="file-input" accept="image/*,video/*" style="display:none;">
+
+                    <p class="text-muted mt-3 small" style="color: #6b7280;">
+                        (You have <strong>{{ uploads_remaining }}</strong> upload{{ uploads_remaining|pluralize }} left for the day)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress indicator (hidden initially) -->
+    <div id="upload-progress" class="mt-4" style="display:none;">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="progress" style="height: 30px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width: 0%; background-color: #05a081;"
+                         id="progress-bar">
+                    </div>
+                </div>
+                <p class="text-center mt-2">
+                    Uploading... <span id="progress-percent">0%</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spacing -->
+    <div class="mb-5"></div>
+
+    <!-- Guidelines in 3 columns -->
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-10">
+            <div class="row">
+                <!-- Column 1 -->
+                <div class="col-md-4">
+                    <ul class="list-unstyled">
+                        <li class="mb-3" style="color: #6b7280; font-size: 15px;">
+                            <i class="fas fa-check-circle me-2" style="color: #05a081;"></i>
+                            Original content you created or have rights to
+                        </li>
+                        <li class="mb-3" style="color: #6b7280; font-size: 15px;">
+                            <i class="fas fa-check-circle me-2" style="color: #05a081;"></i>
+                            Excludes nudity, violence, or hate
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Column 2 -->
+                <div class="col-md-4">
+                    <ul class="list-unstyled">
+                        <li class="mb-3" style="color: #6b7280; font-size: 15px;">
+                            <i class="fas fa-check-circle me-2" style="color: #05a081;"></i>
+                            Mindful of the rights of others
+                        </li>
+                        <li class="mb-3" style="color: #6b7280; font-size: 15px;">
+                            <i class="fas fa-check-circle me-2" style="color: #05a081;"></i>
+                            Free to use for the community
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Column 3 -->
+                <div class="col-md-4">
+                    <ul class="list-unstyled">
+                        <li class="mb-3" style="color: #6b7280; font-size: 15px;">
+                            <i class="fas fa-check-circle me-2" style="color: #05a081;"></i>
+                            High quality images and videos
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skip upload link -->
+    <div class="text-center mt-4">
+        <a href="/"
+           style="color: #6b7280; text-decoration: none; font-size: 15px;">
+            Skip upload
+        </a>
+    </div>
+</div>
+
+<script>
+// Drag-and-drop functionality
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const browseBtn = document.getElementById('browse-btn');
+const uploadProgress = document.getElementById('upload-progress');
+const progressBar = document.getElementById('progress-bar');
+const progressPercent = document.getElementById('progress-percent');
+
+// Click to browse
+browseBtn.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('click', (e) => {
+    if (e.target !== browseBtn) {
+        fileInput.click();
+    }
+});
+
+// Drag over effect
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#05a081';
+    dropZone.style.backgroundColor = '#f0fdf4';
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = '#d1d5db';
+    dropZone.style.backgroundColor = '#fafafa';
+});
+
+// Handle drop
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#d1d5db';
+    dropZone.style.backgroundColor = '#fafafa';
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+        handleFileUpload(file);
+    }
+});
+
+// Handle file input change
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        handleFileUpload(file);
+    }
+});
+
+// File upload handler
+function handleFileUpload(file) {
+    // Validate file
+    if (!validateFile(file)) return;
+
+    // Show progress
+    uploadProgress.style.display = 'block';
+    dropZone.style.display = 'none';
+
+    // Upload to Cloudinary
+    uploadToCloudinary(file);
+}
+
+// Validate file size and type
+function validateFile(file) {
+    const maxImageSize = 10 * 1024 * 1024;  // 10MB
+    const maxVideoSize = 100 * 1024 * 1024;  // 100MB
+
+    if (file.type.startsWith('image/')) {
+        if (file.size > maxImageSize) {
+            alert('Image must be under 10MB. Your file is ' + (file.size / 1024 / 1024).toFixed(1) + 'MB');
+            return false;
+        }
+    } else if (file.type.startsWith('video/')) {
+        if (file.size > maxVideoSize) {
+            alert('Video must be under 100MB. Your file is ' + (file.size / 1024 / 1024).toFixed(1) + 'MB');
+            return false;
+        }
+        // Note: Duration check happens after upload (can't check before)
+    } else {
+        alert('Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM)');
+        return false;
+    }
+
+    return true;
+}
+
+// Upload to Cloudinary
+function uploadToCloudinary(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', '{{ cloudinary_upload_preset }}');
+
+    // Determine resource type
+    const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+    const uploadUrl = `https://api.cloudinary.com/v1_1/{{ cloudinary_cloud_name }}/${resourceType}/upload`;
+
+    // Create XMLHttpRequest for progress tracking
+    const xhr = new XMLHttpRequest();
+
+    // Progress handler
+    xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = percent + '%';
+            progressPercent.textContent = percent + '%';
+        }
+    });
+
+    // Success handler
+    xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+
+            // Redirect to Step 2 with Cloudinary data
+            const params = new URLSearchParams({
+                cloudinary_id: response.public_id,
+                resource_type: response.resource_type,
+                secure_url: response.secure_url,
+                format: response.format
+            });
+
+            window.location.href = `/upload/details?${params.toString()}`;
+        } else {
+            alert('Upload failed. Please try again.');
+            uploadProgress.style.display = 'none';
+            dropZone.style.display = 'block';
+        }
+    });
+
+    // Error handler
+    xhr.addEventListener('error', () => {
+        alert('Upload failed. Please check your connection and try again.');
+        uploadProgress.style.display = 'none';
+        dropZone.style.display = 'block';
+    });
+
+    // Send request
+    xhr.open('POST', uploadUrl);
+    xhr.send(formData);
+}
+</script>
+{% endblock %}

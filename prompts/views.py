@@ -13,6 +13,9 @@ from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.utils import timezone
+from datetime import timedelta
+from django.conf import settings
 import time
 import logging
 import json
@@ -967,3 +970,47 @@ def bulk_reorder_prompts(request):
         print(f"DEBUG: Unexpected error: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@login_required
+def upload_step1(request):
+    """
+    Upload screen - Step 1: Drag-and-drop file upload.
+
+    Displays upload counter and handles initial file validation.
+    After Cloudinary upload completes, redirects to Step 2 (details form).
+    """
+    user = request.user
+
+    # Calculate uploads this week
+    week_start = timezone.now() - timedelta(days=7)
+    uploads_this_week = Prompt.objects.filter(
+        author=user,
+        created_on__gte=week_start
+    ).count()
+
+    # Weekly upload limit (10 for free users, unlimited for premium)
+    if hasattr(user, 'is_premium') and user.is_premium:
+        weekly_limit = 999  # Effectively unlimited
+        uploads_remaining = 999
+    else:
+        weekly_limit = 10
+        uploads_remaining = weekly_limit - uploads_this_week
+
+    # Check if limit reached
+    if uploads_remaining <= 0:
+        messages.error(
+            request,
+            'You have reached your weekly upload limit (10). '
+            'Upgrade to Premium for unlimited uploads.'
+        )
+        return redirect('prompts:home')
+
+    context = {
+        'uploads_this_week': uploads_this_week,
+        'weekly_limit': weekly_limit,
+        'uploads_remaining': uploads_remaining,
+        'cloudinary_cloud_name': settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
+        'cloudinary_upload_preset': 'ml_default',
+    }
+
+    return render(request, 'prompts/upload_step1.html', context)

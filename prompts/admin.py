@@ -3,6 +3,7 @@ from django.contrib import admin
 from django_summernote.admin import SummernoteModelAdmin
 from django.urls import reverse, path
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.shortcuts import redirect
 from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord
 
@@ -32,7 +33,7 @@ class PromptAdmin(SummernoteModelAdmin):
             'fields': ('title', 'slug', 'author', 'status', 'order')
         }),
         ('Content', {
-            'fields': ('excerpt', 'content')
+            'fields': ('excerpt', 'content', 'image_preview')
         }),
         ('Media', {
             'fields': ('featured_image', 'featured_video'),
@@ -56,11 +57,40 @@ class PromptAdmin(SummernoteModelAdmin):
         }),
     )
 
-    readonly_fields = ('created_on', 'updated_on', 'moderation_completed_at')
+    readonly_fields = ('created_on', 'updated_on', 'moderation_completed_at', 'image_preview')
 
     def tag_list(self, obj):
         return ", ".join(o.name for o in obj.tags.all())
     tag_list.short_description = 'Tags'
+
+    def image_preview(self, obj):
+        """Display image/video preview in admin"""
+        if obj.is_video() and obj.featured_video:
+            # For videos, show thumbnail from middle frame
+            thumbnail_url = obj.get_thumbnail_url(width=400)
+            if thumbnail_url:
+                return mark_safe(
+                    f'<div style="margin: 10px 0;">'
+                    f'<p><strong>Video Preview (middle frame):</strong></p>'
+                    f'<img src="{thumbnail_url}" style="max-width: 400px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
+                    f'<p style="margin-top: 5px; color: #666; font-size: 12px;">Duration: {obj.video_duration or "Unknown"} seconds</p>'
+                    f'</div>'
+                )
+        elif obj.featured_image:
+            # For images, show the actual image
+            image_url = obj.featured_image.url
+            if image_url:
+                return mark_safe(
+                    f'<div style="margin: 10px 0;">'
+                    f'<p><strong>Image Preview:</strong></p>'
+                    f'<img src="{image_url}" style="max-width: 400px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
+                    f'</div>'
+                )
+
+        return mark_safe(
+            '<p style="color: #999; font-style: italic;">No image or video</p>'
+        )
+    image_preview.short_description = 'Media Preview'
 
     def moderation_badge(self, obj):
         """Display moderation status with color-coded badge"""

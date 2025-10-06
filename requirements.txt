@@ -25,3 +25,4 @@ sqlparse==0.5.3
 urllib3==1.26.20
 webencodings==0.5.1
 whitenoise==6.9.0
+Pillow==10.4.0

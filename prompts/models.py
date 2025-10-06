@@ -1,8 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from cloudinary.models import CloudinaryField
 from taggit.managers import TaggableManager
+import cloudinary.uploader
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -676,3 +682,56 @@ class ContentFlag(models.Model):
     def is_critical(self):
         """Check if this flag is critical severity"""
         return self.severity == 'critical'
+
+
+# Signal handlers for Cloudinary cleanup
+@receiver(post_delete, sender=Prompt)
+def delete_cloudinary_assets(sender, instance, **kwargs):
+    """
+    Delete associated Cloudinary assets when a Prompt is deleted.
+
+    This prevents orphaned files from accumulating in Cloudinary storage.
+    Handles both images and videos.
+
+    Args:
+        sender: The model class (Prompt)
+        instance: The actual instance being deleted
+        **kwargs: Additional keyword arguments
+    """
+    # Delete featured image if it exists
+    if instance.featured_image:
+        try:
+            # Extract public_id from the CloudinaryField
+            public_id = instance.featured_image.public_id
+            if public_id:
+                # Delete the image from Cloudinary
+                result = cloudinary.uploader.destroy(public_id, resource_type='image')
+                logger.info(
+                    f"Deleted Cloudinary image for Prompt '{instance.title}' "
+                    f"(public_id: {public_id}): {result}"
+                )
+        except Exception as e:
+            # Log error but don't block the prompt deletion
+            logger.error(
+                f"Failed to delete Cloudinary image for Prompt '{instance.title}': {e}",
+                exc_info=True
+            )
+
+    # Delete featured video if it exists
+    if instance.featured_video:
+        try:
+            # Extract public_id from the CloudinaryField
+            public_id = instance.featured_video.public_id
+            if public_id:
+                # Delete the video from Cloudinary
+                result = cloudinary.uploader.destroy(public_id, resource_type='video')
+                logger.info(
+                    f"Deleted Cloudinary video for Prompt '{instance.title}' "
+                    f"(public_id: {public_id}): {result}"
+                )
+        except Exception as e:
+            # Log error but don't block the prompt deletion
+            logger.error(
+                f"Failed to delete Cloudinary video for Prompt '{instance.title}': {e}",
+                exc_info=True
+            )

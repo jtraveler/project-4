@@ -33,11 +33,15 @@ class PromptAdmin(SummernoteModelAdmin):
             'fields': ('title', 'slug', 'author', 'status', 'order')
         }),
         ('Content', {
-            'fields': ('excerpt', 'content', 'image_preview')
+            'fields': ('excerpt', 'content')
         }),
         ('Media', {
             'fields': ('featured_image', 'featured_video'),
             'description': 'Upload either an image OR a video, not both.'
+        }),
+        ('Media Preview', {
+            'fields': ('image_preview',),
+            'description': 'Preview of uploaded image or video'
         }),
         ('Metadata', {
             'fields': ('tags', 'ai_generator')
@@ -67,12 +71,12 @@ class PromptAdmin(SummernoteModelAdmin):
         """Display image/video preview in admin"""
         if obj.is_video() and obj.featured_video:
             # For videos, show thumbnail from middle frame
-            thumbnail_url = obj.get_thumbnail_url(width=400)
+            thumbnail_url = obj.get_thumbnail_url(width=950)
             if thumbnail_url:
                 return mark_safe(
                     f'<div style="margin: 10px 0;">'
                     f'<p><strong>Video Preview (middle frame):</strong></p>'
-                    f'<img src="{thumbnail_url}" style="max-width: 400px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
+                    f'<img src="{thumbnail_url}" style="max-width: 950px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
                     f'<p style="margin-top: 5px; color: #666; font-size: 12px;">Duration: {obj.video_duration or "Unknown"} seconds</p>'
                     f'</div>'
                 )
@@ -83,7 +87,7 @@ class PromptAdmin(SummernoteModelAdmin):
                 return mark_safe(
                     f'<div style="margin: 10px 0;">'
                     f'<p><strong>Image Preview:</strong></p>'
-                    f'<img src="{image_url}" style="max-width: 400px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
+                    f'<img src="{image_url}" style="max-width: 950px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
                     f'</div>'
                 )
 

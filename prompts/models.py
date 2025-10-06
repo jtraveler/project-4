@@ -1,20 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
-from cloudinary.models import CloudinaryField as BaseCloudinaryField
+from cloudinary.models import CloudinaryField
 from taggit.managers import TaggableManager
 
 
-# Custom CloudinaryField with AWS Rekognition moderation
-class CloudinaryField(BaseCloudinaryField):
-    """
-    Custom CloudinaryField that automatically applies AWS Rekognition moderation
-    to all uploads by overriding upload_options.
-    """
-    def upload_options(self, model_instance):
-        options = super().upload_options(model_instance)
-        options['moderation'] = 'aws_rek'
-        return options
 
 
 # Add status choices
@@ -32,8 +22,7 @@ MODERATION_STATUS = (
 MODERATION_SERVICE = (
     ('profanity', 'Custom Profanity Filter'),
     ('openai', 'OpenAI Moderation API'),
-    ('cloudinary_ai', 'Cloudinary AI Vision'),
-    ('rekognition', 'AWS Rekognition'),
+    ('openai_vision', 'OpenAI Vision API'),
 )
 
 # AI Generator choices
@@ -321,9 +310,9 @@ class Prompt(models.Model):
             'overall_status': self.moderation_status,
             'requires_review': self.requires_manual_review,
             'total_checks': logs.count(),
-            'rekognition': logs.filter(service='rekognition').first(),
-            'cloudinary_ai': logs.filter(service='cloudinary_ai').first(),
+            'openai_vision': logs.filter(service='openai_vision').first(),
             'openai': logs.filter(service='openai').first(),
+            'profanity': logs.filter(service='profanity').first(),
             'flagged_count': logs.filter(
                 status__in=['flagged', 'rejected']
             ).count(),
@@ -446,10 +435,10 @@ class ModerationLog(models.Model):
     """
     Model for tracking all moderation checks on prompts.
 
-    Records every moderation attempt across all three layers:
-    - Layer 1: AWS Rekognition (via Cloudinary)
-    - Layer 2: Cloudinary AI Vision (custom checks)
-    - Layer 3: OpenAI Moderation API (text content)
+    Records every moderation attempt:
+    - Profanity filter (text)
+    - OpenAI Moderation API (text)
+    - OpenAI Vision API (images/videos)
 
     Attributes:
         prompt (ForeignKey): The prompt being moderated
@@ -457,6 +446,8 @@ class ModerationLog(models.Model):
         status (CharField): Result status (pending/approved/rejected/flagged)
         confidence_score (FloatField): AI confidence level (0.0-1.0)
         flagged_categories (JSONField): List of flagged categories/labels
+        severity (CharField): Severity of violations (low/medium/high/critical)
+        explanation (TextField): AI explanation of moderation decision
         raw_response (JSONField): Full API response for debugging
         moderated_at (DateTimeField): When moderation was performed
         notes (TextField): Additional notes or admin comments
@@ -467,10 +458,10 @@ class ModerationLog(models.Model):
     Example:
         log = ModerationLog.objects.create(
             prompt=prompt,
-            service='rekognition',
+            service='openai_vision',
             status='approved',
             confidence_score=0.98,
-            flagged_categories=['safe', 'general']
+            flagged_categories=['safe']
         )
     """
     prompt = models.ForeignKey(
@@ -502,6 +493,21 @@ class ModerationLog(models.Model):
         default=dict,
         blank=True,
         help_text='Full API response for debugging'
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=(
+            ('low', 'Low'),
+            ('medium', 'Medium'),
+            ('high', 'High'),
+            ('critical', 'Critical'),
+        ),
+        default='medium',
+        help_text='Severity of violations detected'
+    )
+    explanation = models.TextField(
+        blank=True,
+        help_text='AI explanation of moderation decision'
     )
     moderated_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(

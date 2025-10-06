@@ -16,7 +16,7 @@ from django.db import transaction
 
 from ..models import Prompt, ModerationLog, ContentFlag
 from .openai_moderation import OpenAIModerationService
-from .cloudinary_moderation import CloudinaryModerationService
+from .cloudinary_moderation import VisionModerationService
 from .profanity_filter import ProfanityFilterService
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,13 @@ class ModerationOrchestrator:
             logger.warning(f"OpenAI service disabled: {str(e)}")
             self.openai_enabled = False
 
-        self.cloudinary_service = CloudinaryModerationService()
+        try:
+            self.vision_service = VisionModerationService()
+            self.vision_enabled = True
+        except (ValueError, Exception) as e:
+            logger.warning(f"Vision service disabled: {str(e)}")
+            self.vision_enabled = False
+
         self.profanity_service = ProfanityFilterService()
         logger.info("Moderation Orchestrator initialized")
 
@@ -83,18 +89,17 @@ class ModerationOrchestrator:
         results = {
             'profanity': None,
             'openai': None,
-            'rekognition': None,
-            'cloudinary_ai': None,
+            'openai_vision': None,
         }
 
-        # Layer 0: Custom profanity filter (runs first, cheapest)
+        # Layer 1: Custom profanity filter (runs first, cheapest)
         try:
             results['profanity'] = self._run_profanity_check(prompt)
         except Exception as e:
             logger.error(f"Profanity filter failed: {str(e)}", exc_info=True)
             results['profanity'] = {'status': 'flagged', 'error': str(e)}
 
-        # Layer 3: OpenAI text moderation
+        # Layer 2: OpenAI text moderation
         if self.openai_enabled:
             try:
                 results['openai'] = self._run_openai_moderation(prompt)
@@ -102,26 +107,21 @@ class ModerationOrchestrator:
                 logger.error(f"OpenAI moderation failed: {str(e)}", exc_info=True)
                 results['openai'] = {'status': 'flagged', 'error': str(e)}
 
-        # Layers 1 & 2: Cloudinary (Rekognition + AI Vision)
-        # SKIP during initial creation - results will come via webhook
-        # Only run if force=True (e.g., manual re-moderation from admin)
-        if force and (prompt.featured_image or prompt.featured_video):
+        # Layer 3: OpenAI Vision moderation (synchronous, runs immediately)
+        if self.vision_enabled and (prompt.featured_image or prompt.featured_video):
             try:
-                cloudinary_result = self.cloudinary_service.moderate_image(prompt)
-                # Note: Cloudinary service combines both Rekognition and AI Vision
-                # We'll log it as 'cloudinary_ai' for now but it includes both layers
-                results['cloudinary_ai'] = cloudinary_result
+                results['openai_vision'] = self._run_vision_moderation(prompt)
             except Exception as e:
-                logger.error(f"Cloudinary moderation failed: {str(e)}", exc_info=True)
-                results['cloudinary_ai'] = {'status': 'flagged', 'error': str(e)}
+                logger.error(f"Vision moderation failed: {str(e)}", exc_info=True)
+                results['openai_vision'] = {'status': 'flagged', 'error': str(e)}
         else:
-            # Cloudinary moderation happens asynchronously via webhook
-            logger.info(f"Skipping Cloudinary check for Prompt {prompt.id} - will be handled by webhook")
-            results['cloudinary_ai'] = {
-                'status': 'pending',
-                'message': 'AWS Rekognition moderation pending (webhook)',
-                'is_safe': True  # Assume safe for now, webhook will update
-            }
+            if not (prompt.featured_image or prompt.featured_video):
+                # No visual content to moderate
+                results['openai_vision'] = {
+                    'status': 'approved',
+                    'message': 'No visual content to moderate',
+                    'is_safe': True
+                }
 
         # Determine overall status
         overall_result = self._determine_overall_status(results)
@@ -137,15 +137,11 @@ class ModerationOrchestrator:
             prompt.moderation_completed_at = timezone.now()
 
             # Set prompt publication status based on moderation result
-            # Only publish if fully approved (no pending checks)
+            # Publish immediately if approved, keep as draft otherwise
             old_status = prompt.status
             if overall_result['status'] == 'approved':
                 prompt.status = 1  # Published
                 logger.info(f"Setting prompt {prompt.id} status to PUBLISHED (1) - was {old_status}")
-            elif overall_result['status'] == 'pending':
-                # Keep as draft while waiting for async moderation (webhook)
-                prompt.status = 0  # Draft
-                logger.info(f"Keeping prompt {prompt.id} as DRAFT (0) - waiting for webhook moderation results")
             else:
                 # Flagged or rejected content should remain as draft
                 prompt.status = 0  # Draft
@@ -204,12 +200,25 @@ class ModerationOrchestrator:
         result = self.openai_service.moderate_prompt(prompt)
         return result
 
+    def _run_vision_moderation(self, prompt: Prompt) -> Dict:
+        """
+        Run OpenAI Vision moderation and return results.
+
+        Args:
+            prompt: Prompt instance
+
+        Returns:
+            Dict with Vision moderation results
+        """
+        logger.info(f"Running Vision moderation for Prompt {prompt.id}")
+        result = self.vision_service.moderate_visual_content(prompt)
+        return result
+
     def _determine_overall_status(self, results: Dict) -> Dict:
         """
         Determine overall moderation status from all service results.
 
-        Logic:
-        - If ANY service is 'pending' -> overall = 'pending' (wait for webhook)
+        Logic (all checks are synchronous now):
         - If ANY service rejects -> overall = 'rejected'
         - If ANY service flags (and none reject) -> overall = 'flagged'
         - If ALL services approve -> overall = 'approved'
@@ -222,32 +231,23 @@ class ModerationOrchestrator:
             Dict with 'status' and 'requires_review'
         """
         statuses = []
-        has_pending = False
         has_errors = False
 
         for service_name, result in results.items():
             if result is None:
                 continue
 
-            status = result.get('status', 'pending')
+            status = result.get('status', 'flagged')
             statuses.append(status)
-
-            if status == 'pending':
-                has_pending = True
 
             if 'error' in result:
                 has_errors = True
 
         # Determine overall status
         logger.info(f"Determining overall status from all checks: {statuses}")
-        logger.info(f"Has pending: {has_pending}, Has errors: {has_errors}")
+        logger.info(f"Has errors: {has_errors}")
 
-        # CRITICAL: If ANY service is pending, overall must be pending
-        if has_pending:
-            overall_status = 'pending'
-            requires_review = False  # No review needed, just waiting for webhook
-            logger.info("Overall status: PENDING (waiting for async webhook results)")
-        elif 'rejected' in statuses:
+        if 'rejected' in statuses:
             overall_status = 'rejected'
             requires_review = True
             logger.info("Overall status: REJECTED (at least one service rejected)")
@@ -260,9 +260,9 @@ class ModerationOrchestrator:
             requires_review = False
             logger.info(f"Overall status: APPROVED (all {len(statuses)} services approved)")
         else:
-            overall_status = 'pending'
+            overall_status = 'flagged'
             requires_review = True
-            logger.info(f"Overall status: PENDING (default fallback, statuses: {statuses})")
+            logger.info(f"Overall status: FLAGGED (default fallback, statuses: {statuses})")
 
         logger.info(f"Final determination: status={overall_status}, requires_review={requires_review}")
 
@@ -283,8 +283,7 @@ class ModerationOrchestrator:
         service_map = {
             'profanity': 'profanity',
             'openai': 'openai',
-            'rekognition': 'rekognition',
-            'cloudinary_ai': 'cloudinary_ai',
+            'openai_vision': 'openai_vision',
         }
 
         for service_key, result in results.items():
@@ -295,13 +294,15 @@ class ModerationOrchestrator:
             if not service_name:
                 continue
 
-            # Create ModerationLog
+            # Create ModerationLog with new fields
             log = ModerationLog.objects.create(
                 prompt=prompt,
                 service=service_name,
                 status=result.get('status', 'pending'),
                 confidence_score=result.get('confidence_score', 0.0),
                 flagged_categories=result.get('flagged_categories', []),
+                severity=result.get('severity', 'medium'),
+                explanation=result.get('explanation', ''),
                 raw_response=result.get('raw_response', {}),
                 notes=result.get('error', '') if 'error' in result else ''
             )
@@ -320,8 +321,10 @@ class ModerationOrchestrator:
             result: Service result dict
         """
         raw_response = result.get('raw_response', {})
+        severity = result.get('severity', 'medium')
+        confidence = result.get('confidence_score', 0.0)
 
-        # Handle OpenAI format
+        # Handle OpenAI text moderation format
         if 'flagged_details' in raw_response:
             for detail in raw_response['flagged_details']:
                 ContentFlag.objects.create(
@@ -332,21 +335,21 @@ class ModerationOrchestrator:
                     details={'source': 'openai'}
                 )
 
-        # Handle Cloudinary format
-        elif 'combined_flags' in raw_response:
-            for flag in raw_response['combined_flags']:
-                if isinstance(flag, dict):
-                    ContentFlag.objects.create(
-                        moderation_log=log,
-                        category=flag.get('category', 'unknown'),
-                        confidence=flag.get('confidence', 0.0),
-                        severity=flag.get('severity', 'medium'),
-                        details={
-                            'source': 'cloudinary',
-                            'parent': flag.get('parent'),
-                            'matching_tags': flag.get('matching_tags', []),
-                        }
-                    )
+        # Handle OpenAI Vision format
+        elif 'result' in raw_response and raw_response.get('result', {}).get('flagged'):
+            categories = result.get('flagged_categories', [])
+            for category in categories:
+                ContentFlag.objects.create(
+                    moderation_log=log,
+                    category=category,
+                    confidence=confidence,
+                    severity=severity,
+                    details={
+                        'source': 'openai_vision',
+                        'explanation': result.get('explanation', ''),
+                        'media_type': raw_response.get('media_type', 'unknown')
+                    }
+                )
 
     def bulk_moderate_prompts(
         self,

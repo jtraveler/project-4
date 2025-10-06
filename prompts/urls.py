@@ -23,6 +23,4 @@ urlpatterns = [
     path('prompts-admin/bulk-reorder/', views.bulk_reorder_prompts, name='bulk_reorder_prompts'),
     # Admin moderation dashboard
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),
-    # Cloudinary webhook for moderation results
-    path('webhooks/cloudinary-moderation/', views.cloudinary_moderation_webhook, name='cloudinary_webhook'),
 ]

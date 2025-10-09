@@ -65,6 +65,107 @@ Be strict but fair. Flag content that violates these policies."""
         self.client = OpenAI(api_key=api_key)
         logger.info("Vision Moderation Service initialized")
 
+    def moderate_image_url(self, image_url: str) -> Dict:
+        """
+        Moderate an image URL directly (without a Prompt object).
+
+        Args:
+            image_url: Direct URL to the image to moderate
+
+        Returns:
+            Dict with moderation results
+        """
+        try:
+            logger.info(f"Moderating image URL: {image_url}")
+
+            # Call OpenAI Vision API
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": self.MODERATION_PROMPT
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": image_url,
+                                    "detail": "low"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=300,
+                temperature=0.0,
+            )
+
+            # Parse response
+            content = response.choices[0].message.content
+            logger.info(f"Vision API response: {content}")
+
+            # Parse JSON response
+            import json
+            try:
+                result = json.loads(content)
+            except json.JSONDecodeError:
+                logger.error(f"Failed to parse Vision API response as JSON: {content}")
+                result = {
+                    'flagged': False,
+                    'categories': [],
+                    'severity': 'low',
+                    'explanation': content
+                }
+
+            # Map to our response format
+            flagged = result.get('flagged', False)
+            categories = result.get('categories', [])
+            severity = result.get('severity', 'medium')
+            explanation = result.get('explanation', '')
+
+            # Determine status
+            if not flagged:
+                status = 'approved'
+                is_safe = True
+            elif severity in ['critical', 'high']:
+                status = 'rejected'
+                is_safe = False
+            else:
+                status = 'flagged'
+                is_safe = False
+
+            # Assign confidence score based on severity
+            confidence_map = {
+                'critical': 1.0,
+                'high': 0.85,
+                'medium': 0.65,
+                'low': 0.4
+            }
+            confidence = confidence_map.get(severity, 0.5)
+
+            return {
+                'is_safe': is_safe,
+                'status': status,
+                'flagged_categories': categories,
+                'severity': severity,
+                'confidence_score': confidence,
+                'explanation': explanation,
+            }
+
+        except Exception as e:
+            logger.error(f"Vision moderation error: {str(e)}", exc_info=True)
+            return {
+                'is_safe': False,
+                'status': 'flagged',
+                'flagged_categories': ['api_error'],
+                'severity': 'medium',
+                'confidence_score': 0.0,
+                'explanation': f'Error during moderation: {str(e)}',
+            }
+
     def moderate_visual_content(self, prompt_obj) -> Dict:
         """
         Moderate image or video content synchronously using OpenAI Vision.
@@ -102,7 +203,14 @@ Be strict but fair. Flag content that violates these policies."""
                 media_type = 'video'
             else:
                 # Use image URL directly
-                image_url = prompt_obj.featured_image.url
+                # Handle both CloudinaryResource objects and string URLs
+                if hasattr(prompt_obj.featured_image, 'url'):
+                    image_url = prompt_obj.featured_image.url
+                elif hasattr(prompt_obj.featured_image, 'build_url'):
+                    image_url = prompt_obj.featured_image.build_url()
+                else:
+                    # If it's just a string, use get_media_url() helper
+                    image_url = prompt_obj.get_media_url()
                 media_type = 'image'
 
             logger.info(f"Moderating {media_type} for Prompt {prompt_obj.id}: {image_url}")
@@ -248,7 +356,14 @@ Be strict but fair. Flag content that violates these policies."""
             if prompt_obj.is_video():
                 image_url = self._get_video_frame_url(prompt_obj)
             else:
-                image_url = prompt_obj.featured_image.url
+                # Handle both CloudinaryResource objects and string URLs
+                if hasattr(prompt_obj.featured_image, 'url'):
+                    image_url = prompt_obj.featured_image.url
+                elif hasattr(prompt_obj.featured_image, 'build_url'):
+                    image_url = prompt_obj.featured_image.build_url()
+                else:
+                    # If it's just a string, use get_media_url() helper
+                    image_url = prompt_obj.get_media_url()
 
             # Use content generation service with moderation enabled
             content_service = ContentGenerationService()
@@ -318,7 +433,44 @@ Be strict but fair. Flag content that violates these policies."""
         middle_time = video_duration / 2
 
         # Build URL for middle frame
-        frame_url = prompt_obj.featured_video.build_url(
+        # Handle both CloudinaryResource objects and string public IDs
+        if hasattr(prompt_obj.featured_video, 'build_url'):
+            frame_url = prompt_obj.featured_video.build_url(
+                resource_type='video',
+                start_offset=f'{middle_time}',
+                format='jpg',
+                quality='auto',
+                width=800,
+            )
+        else:
+            # If it's a string, build URL manually using cloudinary
+            import cloudinary
+            frame_url = cloudinary.CloudinaryImage(str(prompt_obj.featured_video)).build_url(
+                resource_type='video',
+                start_offset=f'{middle_time}',
+                format='jpg',
+                quality='auto',
+                width=800,
+            )
+
+        logger.info(f"Extracted video frame URL: {frame_url}")
+        return frame_url
+
+    def get_video_frame_from_id(self, cloudinary_id: str, duration: int = 5) -> str:
+        """
+        Get video frame URL from a Cloudinary public ID.
+
+        Args:
+            cloudinary_id: Cloudinary public ID of the video
+            duration: Estimated video duration in seconds (default 5)
+
+        Returns:
+            URL of extracted frame image
+        """
+        import cloudinary
+        middle_time = duration / 2
+
+        frame_url = cloudinary.CloudinaryImage(cloudinary_id).build_url(
             resource_type='video',
             start_offset=f'{middle_time}',
             format='jpg',
@@ -326,5 +478,5 @@ Be strict but fair. Flag content that violates these policies."""
             width=800,
         )
 
-        logger.info(f"Extracted video frame URL: {frame_url}")
+        logger.info(f"Extracted video frame URL from ID: {frame_url}")
         return frame_url

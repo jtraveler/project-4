@@ -10,7 +10,11 @@ urlpatterns = [
     path('collaborate/', views.collaborate_request, name='collaborate'),
     # Upload flow (Phase C & D)
     path('upload/', views.upload_step1, name='upload_step1'),
-    # Step 2 will be added in Phase D
+    path('upload/details', views.upload_step2, name='upload_step2'),
+    path('upload/submit', views.upload_submit, name='upload_submit'),
+    # Upload idle detection endpoints
+    path('upload/cancel/', views.cancel_upload, name='cancel_upload'),
+    path('upload/extend/', views.extend_upload_time, name='extend_upload_time'),
     path('prompt/<slug:slug>/', views.prompt_detail, name='prompt_detail'),
     path('prompt/<slug:slug>/edit/', views.prompt_edit, name='prompt_edit'),
     path('prompt/<slug:slug>/delete/', views.prompt_delete, name='prompt_delete'),

@@ -233,15 +233,27 @@ class ModerationOrchestrator:
         statuses = []
         has_errors = False
 
+        print("=" * 80)
+        print("DEBUG: _determine_overall_status - Processing results:")
         for service_name, result in results.items():
+            print(f"  Service: {service_name}")
+            print(f"    Result: {result}")
+
             if result is None:
+                print(f"    -> SKIPPED (result is None)")
                 continue
 
             status = result.get('status', 'flagged')
+            print(f"    -> Status extracted: '{status}'")
             statuses.append(status)
 
             if 'error' in result:
                 has_errors = True
+                print(f"    -> Has ERROR: {result.get('error')}")
+
+        print(f"DEBUG: Collected statuses: {statuses}")
+        print(f"DEBUG: Has errors: {has_errors}")
+        print("=" * 80)
 
         # Determine overall status
         logger.info(f"Determining overall status from all checks: {statuses}")

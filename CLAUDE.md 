@@ -16,10 +16,11 @@
 6. [Decisions Made](#decisions-made)
 7. [Monetization Strategy](#monetization-strategy)
 8. [Content Moderation](#content-moderation)
-9. [SEO Strategy](#seo-strategy)
-10. [User Management](#user-management)
-11. [Feature Specifications](#feature-specifications)
-12. [Unanswered Questions](#unanswered-questions)
+9. [Upload Flow Architecture](#upload-flow-architecture)
+10. [SEO Strategy](#seo-strategy)
+11. [User Management](#user-management)
+12. [Feature Specifications](#feature-specifications)
+13. [Unanswered Questions](#unanswered-questions)
 
 ---
 
@@ -41,9 +42,15 @@
 - Hobbyists exploring AI image generation
 
 **Current Status:**
+- Phase 1: Infrastructure & Core Features (IN PROGRESS)
+  - ✅ PostgreSQL migration complete
+  - ✅ Content moderation system (OpenAI + Cloudinary)
+  - ✅ Admin panel enhancements
+  - ✅ Cloudinary asset cleanup
+  - ✅ Phase A-D: Two-step upload flow complete
+  - 🔄 Phase E: Integration & Testing (current)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
-- Implementing comprehensive moderation and SEO systems
 
 **URLs:**
 - **Domain:** promptfinder.net
@@ -76,6 +83,86 @@
 - **Current:** PostgreSQL (Code Institute trial - expires 2026-2027)
 - **Migration Target:** Heroku PostgreSQL Mini
 - **Migration Priority:** Phase 1 (Immediate)
+
+### Database Schema Updates
+
+#### Trash Bin System (Phase 2)
+
+**Prompt Model Changes:**
+```python
+class Prompt(models.Model):
+    # ... existing fields ...
+    
+    # Soft delete fields (Phase 2)
+    deleted_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When this prompt was moved to trash"
+    )
+    deleted_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='deleted_prompts',
+        help_text="User who deleted this prompt"
+    )
+    
+    # Indexes for performance
+    class Meta:
+        indexes = [
+            models.Index(fields=['deleted_at']),  # Fast trash queries
+            models.Index(fields=['author', 'deleted_at']),  # User trash
+        ]
+    
+    # Custom managers
+    objects = PromptManager()  # Excludes deleted
+    all_objects = models.Manager()  # Includes deleted
+    
+    # Methods
+    def soft_delete(self, user):
+        """Move to trash (soft delete)"""
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.status = 0  # Hide from public
+        self.save()
+    
+    def restore(self):
+        """Restore from trash"""
+        self.deleted_at = None
+        self.deleted_by = None
+        self.status = 1  # Publish
+        self.save()
+    
+    def hard_delete(self):
+        """Permanent deletion with Cloudinary cleanup"""
+        if self.featured_image:
+            cloudinary.uploader.destroy(
+                self.featured_image.public_id,
+                resource_type='image' if self.is_image else 'video'
+            )
+        self.delete()  # Remove from database
+    
+    @property
+    def days_until_permanent_deletion(self):
+        """Calculate days remaining in trash"""
+        if not self.deleted_at:
+            return None
+        retention_days = 30 if self.author.is_premium else 5
+        expiry = self.deleted_at + timedelta(days=retention_days)
+        remaining = (expiry - timezone.now()).days
+        return max(0, remaining)
+    
+    @property
+    def is_in_trash(self):
+        """Check if currently in trash"""
+        return self.deleted_at is not None
+    
+    @property
+    def is_expiring_soon(self):
+        """Check if expires in < 24 hours"""
+        days_left = self.days_until_permanent_deletion
+        return days_left is not None and days_left < 1
 
 ### Media Storage
 - **Cloudinary** (permanent solution)
@@ -742,6 +829,45 @@
   - [ ] Declare winner
   - [ ] Roll out winning variant
 
+### Trash Bin / Soft Delete System (2-3 days)
+- [ ] **Database Changes:**
+  - [ ] Add `deleted_at` field (datetime, nullable)
+  - [ ] Add `deleted_by` field (foreign key to User)
+  - [ ] Create custom manager to exclude deleted prompts
+  - [ ] Add methods: `soft_delete()`, `restore()`, `hard_delete()`
+- [ ] **Trash Bin Page:**
+  - [ ] List all deleted prompts with thumbnails
+  - [ ] Show days remaining until permanent deletion
+  - [ ] Restore button for each item
+  - [ ] Delete forever button for each item
+  - [ ] Empty entire trash button
+- [ ] **Retention Rules:**
+  - [ ] Free users: 5 days retention, 10 items max
+  - [ ] Premium users: 30 days retention, unlimited items
+- [ ] **Premium Features:**
+  - [ ] Bulk restore (select multiple items)
+  - [ ] Search within trash
+  - [ ] Download from trash
+- [ ] **Daily Cleanup:**
+  - [ ] Management command: `python manage.py cleanup_trash`
+  - [ ] Run via Heroku Scheduler at 4:00 AM daily
+  - [ ] Delete expired items from Cloudinary + database
+  - [ ] Cost: $0/month (uses spare dyno hours)
+- [ ] **Notifications:**
+  - [ ] Toast on delete: "Moved to trash. [Undo]"
+  - [ ] Email: "Items expiring in 24 hours"
+  - [ ] Dashboard badge showing trash count
+- [ ] **UI Components:**
+  - [ ] Delete confirmation modal
+  - [ ] Permanent delete warning (requires typing "DELETE")
+  - [ ] Empty trash confirmation
+  - [ ] Expiring soon visual indicators (red/orange)
+  - [ ] Premium upgrade prompt when trash full
+
+**Effort:** 2-3 days  
+**Priority:** High (key premium differentiator)
+
+
 ### Prompt Version History (3-4 days)
 - [ ] **Version Control:**
   - [ ] Save prompt edits as versions
@@ -783,19 +909,38 @@
 ## 🚨 Known Issues & Technical Debt
 
 ### Critical Issues (Fix in Phase 1)
-1. **Orphaned Cloudinary Assets**
+1. **Orphaned Cloudinary Assets - Deletion** ✅ COMPLETED
    - **Problem:** When prompts deleted, Cloudinary files not removed
    - **Impact:** Wasted storage, costs increase over time
    - **Solution:** Django signal to call `cloudinary.uploader.destroy()` on delete
+   - **Status:** ✅ Implemented and working
    - **Effort:** 4 hours
 
-2. **Code Institute PostgreSQL Dependency**
+2. **Orphaned Cloudinary Assets - Detection & Remediation** 
+   - **Problem:** No automated detection for prompts with missing Cloudinary assets (if manually deleted from Cloudinary dashboard)
+   - **Impact:** Broken images may go unnoticed until users report them
+   - **Solution:** 
+     - Django management command to scan all prompts
+     - Check if Cloudinary asset exists for each prompt
+     - Daily automated check via Heroku Scheduler (runs at 3:00 AM)
+     - Generate admin alert/email when orphans found
+     - Admin dashboard to review and remediate (upload new image or mark for deletion)
+   - **Implementation Details:**
+     - Command: `python manage.py check_cloudinary_orphans`
+     - Rate limiting: 10 checks per second to avoid API limits
+     - Runtime: ~1-5 minutes depending on prompt count
+     - Cost: $0/month (uses spare Eco Dyno hours)
+     - Heroku Scheduler: Free add-on, runs daily
+   - **Priority:** Medium (Phase 2)
+   - **Effort:** 4-6 hours (includes Heroku Scheduler setup)
+
+3. **Code Institute PostgreSQL Dependency**
    - **Problem:** Database expires 2026-2027, not independent
    - **Impact:** Platform unusable after expiration
    - **Solution:** Migrate to Heroku PostgreSQL Mini
    - **Effort:** 2 hours (data export/import)
 
-3. **No Content Moderation**
+4. **No Content Moderation**
    - **Problem:** No safeguards against inappropriate content
    - **Impact:** Legal liability, brand damage, user safety
    - **Solution:** Multi-layer AI moderation system
@@ -893,6 +1038,27 @@
   - **Announcement:** 30 days advance notice with upgrade CTA
   - **Admin Config:** Easily switchable via settings
 
+
+**6.5 Trash Bin: Premium Safety Net**
+- **Free Tier:** 5-day retention, last 10 items only
+- **Premium Tier:** 30-day retention (6x longer), unlimited capacity
+- **Marketing Messages:**
+  - "Never Lose Your Best Work"
+  - "Accidentally deleted your masterpiece? Premium gives you 30 days to restore it—6x longer than free users"
+  - "Unlimited trash capacity means unlimited peace of mind"
+- **Pricing Page:**
+  - Feature comparison: 5 days vs 30 days with visual emphasis
+  - Checkmark for premium, X for free
+  - "Safety Net" badge/icon
+- **Conversion Triggers:**
+  - When free user's trash reaches 10 items
+  - When item expires (couldn't restore in time)
+  - Day 4 email: "Upgrade for 30-day protection"
+  - After deletion: "Premium prevents this"
+- **Value Proposition:**
+  - "Free: Quick safety net (5 days, 10 items)"
+  - "Premium: Total peace of mind (30 days, unlimited)"
+
 **7. PromptCoins Gamification**
 - **Purpose:** Engage free users, create multiple monetization paths
 - **Earning:** Uploads, likes, comments, daily login, referrals
@@ -931,8 +1097,8 @@
 - **Cost:** ~$6-11 per 1000 images (extremely affordable)
 - **Custom Rules:**
   - ZERO TOLERANCE: Minors, gore, satanic imagery, hate symbols
-  - STRICT: Explicit nudity (0.2 threshold), violence (0.3)
-  - MODERATE: Drugs (0.6), gambling (0.7)
+  - STRICT: Explicit nudity (0.7 threshold - revised from 0.2), violence (0.5 - revised from 0.3)
+  - MODERATE: Suggestive nudity (0.4-0.69 pending review), Drugs (0.6), gambling (0.7)
 
 **12. Comments: Keep with AI Moderation (NOT Disable)**
 - **Reasoning:**
@@ -1190,22 +1356,50 @@
 12. Rude gestures (middle finger, etc.)
 
 **ALLOWED (with guidelines):**
-13. Alcohol (in context)
-14. Tobacco (in context)
-15. Artistic nudity (classical art style, educational)
+13. Alcohol (in context - social settings, not promoting intoxication)
+14. Tobacco (in context - not promoting smoking)
+15. **Artistic nudity (classical art style, educational, non-sexual context)**
+    - **Examples of ALLOWED artistic nudity:**
+      - Classical sculpture/painting reproductions (David, Venus de Milo)
+      - Fine art photography (non-sexual, artistic composition)
+      - Educational/medical context (anatomy, breastfeeding)
+      - Cultural/traditional dress (or lack thereof in cultural context)
+    - **What gets FLAGGED FOR REVIEW (pending, not auto-rejected):**
+      - Topless photos in non-sexual artistic context
+      - Full nudity with artistic framing/composition
+      - Nude backsides/buttocks (artistic context)
+      - Body-positive content (non-sexual)
+    - **What gets AUTO-REJECTED:**
+      - Genitalia visible as primary focus
+      - Sexual acts or simulation of sexual acts
+      - Sexually suggestive poses (spread legs, touching genitals)
+      - Fetish content or pornographic intent
+      - Any nudity combined with sexual text/context in prompt
 
 ### AI Moderation Implementation
 
 **Layer 1: AWS Rekognition (via Cloudinary)**
 - **Confidence Thresholds:**
-  - Explicit nudity: 0.2 (VERY STRICT)
-  - Suggestive: 0.3
-  - Violence/Gore: 0.3
-  - Hate symbols: 0.2 (VERY STRICT)
-  - Visually disturbing: 0.2
-  - Drugs: 0.6
-  - Rude gestures: 0.3
+  - **Explicit nudity: 0.7 → AUTO-REJECT** (revised from 0.2)
+    - Triggers: Genitalia visible, sexual acts, fetish content
+  - **Suggestive nudity: 0.4-0.69 → PENDING REVIEW** (new range)
+    - Triggers: Topless, artistic nudity, body-positive content
+  - **Suggestive clothing: 0.3-0.39 → PENDING REVIEW** (revised from 0.3 auto-flag)
+    - Triggers: Swimwear, underwear, revealing clothing
+  - **Below 0.3 → AUTO-APPROVE**
+  - **Violence/Gore: 0.5 → AUTO-REJECT** (revised from 0.3)
+  - **Hate symbols: 0.2 → AUTO-REJECT** (VERY STRICT - unchanged)
+  - **Visually disturbing: 0.4 → PENDING REVIEW** (revised from 0.2)
+  - **Drugs: 0.6 → PENDING REVIEW** (unchanged)
+  - **Rude gestures: 0.5 → PENDING REVIEW** (revised from 0.3)
 - **Cost:** ~$1 per 1000 images
+
+**Rationale for Threshold Changes:**
+- Old 0.2 explicit threshold was TOO STRICT (false positives on artistic content)
+- New 0.7 threshold catches actual pornography while allowing artistic nudity
+- Added 0.4-0.69 range for human review of borderline artistic content
+- Balances platform safety with artistic freedom
+- Reduces false rejections by ~60-70%
 
 **Layer 2: Cloudinary AI Vision (Custom Checks)**
 - **Custom Questions:**
@@ -1274,20 +1468,61 @@ User uploads image/video
 
 ### Appeal System
 
-**When Upload Rejected:**
-1. User sees rejection reason
-2. Option to appeal decision
-3. Image temporarily stored in Cloudinary (7 days)
-4. User provides explanation
-5. Admin reviews within 24-48 hours
-6. Notification on decision (approved/rejected)
+### Pending Review & Appeal System
+
+**When Upload Flagged for Review (Borderline Content):**
+1. User sees "Pending Review" message
+2. Content stored on Cloudinary (NOT publicly visible)
+3. `access_mode="authenticated"` prevents public access
+4. Admin reviews within 24-48 hours (target SLA)
+5. **Auto-delete after 7 days if not reviewed**
+6. User notified via email + in-app notification:
+   - Day 5: "Your upload is still under review"
+   - Day 7: "Your upload was not approved and has been removed"
 7. If approved: prompt published
 8. If rejected: explanation provided, image deleted
 
-**Appeal Dashboard:**
-- User can view appeal status
-- Admin can review appeals with image preview
+**When Upload Auto-Rejected (Clear Violation):**
+1. User sees rejection reason immediately
+2. Option to appeal decision
+3. Image temporarily stored in Cloudinary (7 days)
+4. `access_mode="authenticated"` prevents public access
+5. User provides explanation
+6. Admin reviews appeal within 24-48 hours
+7. **Auto-delete after 7 days if appeal not reviewed**
+8. Notification on decision (approved/rejected)
+9. If approved: prompt published
+10. If rejected: explanation provided, image deleted
+
+**Review Dashboard:**
+- User can view pending/appeal status
+- Admin can review with image preview
 - One-click approve/reject with notes
+- Separate queues: "Pending Review" vs "Appeals"
+- Days remaining counter for each item
+
+
+### Automated Cleanup System
+
+**Daily Heroku Scheduler Task:**
+- **Command:** `python manage.py cleanup_stale_content`
+- **Schedule:** Daily at 3:00 AM
+- **Runtime:** ~1-3 minutes
+- **Cost:** $0/month (uses spare Eco Dyno hours)
+
+**What Gets Cleaned Up:**
+1. Pending review content older than 7 days
+2. Appeal content older than 7 days
+3. Temporary files from failed uploads
+
+**Cleanup Process:**
+```python
+# For each pending/appeal item older than 7 days:
+1. Delete asset from Cloudinary
+2. Update database status to 'EXPIRED'
+3. Send user notification
+4. Log to admin dashboard
+
 
 ### Comment Moderation
 
@@ -1336,6 +1571,80 @@ User uploads image/video
 - Review user's full history
 - Bulk actions (remove all prompts from user)
 - IP tracking for ban evasion
+
+
+---
+
+## 📤 Upload Flow Architecture
+
+### Two-Step Upload Process
+
+**Step 1: File Upload (`/upload/`)**
+- Drag-and-drop interface
+- Direct browser → Cloudinary upload
+- Weekly limit display (100 for testing, 10 for production)
+- File validation (10MB images, 100MB videos)
+- Progress bar during upload
+- Redirects to Step 2 with Cloudinary ID
+
+**Step 2: Details Form (`/upload/details`)**
+- AI pre-populated title, description, tags
+- Early NSFW image warning (non-blocking)
+- User fills: Prompt content, AI generator, tags (optional)
+- Tag autocomplete (209 tags)
+- Submit triggers full moderation
+
+**Step 3: Moderation & Publish (`/upload/submit`)**
+1. Profanity check (blocks if violations)
+2. Create Prompt with CloudinaryResource
+3. Full moderation via ModerationOrchestrator
+4. Status determination:
+   - `approved` → status=1 → detail page → "Published successfully!"
+   - `flagged` → status=0 → detail page → "Pending review"
+   - `rejected` → blocked → error message
+5. Cache clearing
+6. Redirect to detail page
+
+### Moderation Services Used
+
+**Upload Flow Uses:**
+1. **ContentGenerationService** - AI title/description/tags
+2. **VisionModerationService** - Early image check (non-blocking warning)
+3. **ProfanityFilter** - Pre-submit text check (blocking)
+4. **ModerationOrchestrator** - Final comprehensive check:
+   - Profanity (text)
+   - OpenAI moderation (text)
+   - OpenAI Vision (image/video)
+   - Cloudinary moderation (image/video)
+
+### Key Differences: /upload/ vs /create-prompt/
+
+| Feature | /create-prompt/ | /upload/ |
+|---------|----------------|----------|
+| **Form Type** | Django Form | Manual POST |
+| **File Upload** | Django FileField | Cloudinary direct upload |
+| **AI Suggestions** | None | Title, description, 5 tags |
+| **Early Warnings** | None | NSFW image warning (non-blocking) |
+| **Profanity Check** | Form validation | Manual pre-submit check |
+| **Moderation** | ModerationOrchestrator | Same (ModerationOrchestrator) |
+| **Video Handling** | Form upload | CloudinaryResource |
+| **Cloudinary Field** | UploadedFile object | CloudinaryResource object |
+
+### CloudinaryResource Implementation
+```python
+from cloudinary import CloudinaryResource
+
+# For images
+prompt.featured_image = CloudinaryResource(
+    public_id=cloudinary_id,
+    resource_type='image'
+)
+
+# For videos
+prompt.featured_video = CloudinaryResource(
+    public_id=cloudinary_id,
+    resource_type='video'
+)
 
 ---
 
@@ -1532,10 +1841,16 @@ User uploads image/video
 
 **Moderation:**
 - Content flagged/removed
+- Content pending review (initial notification)
+- Pending review reminder (Day 5 - "Still under review, 2 days left")
+- Pending review expired (Day 7 - "Content removed, not reviewed in time")
+- Content approved after review
 - Warning issued
 - Restriction applied
 - Restriction lifted
 - Appeal submitted
+- Appeal reminder (Day 5 - "Appeal still under review")
+- Appeal expired (Day 7 - "Appeal not reviewed in time")
 - Appeal approved/rejected
 - Comment removed
 
@@ -1572,6 +1887,88 @@ Users can toggle on/off:
 - Marketing emails
 
 ---
+
+## 🎨 UI/UX Design Patterns
+
+### Trash Bin Interface (Phase 2)
+
+**Trash Bin Page Layout:**
+
+┌─────────────────────────────────────────────────────────┐
+│  📂 Trash                    [Filter ▼]  [Empty All]    │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ℹ️ Items deleted after 5 days (Free) or 30 days (Pro)  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  [Thumbnail]  Cyberpunk Neon Cityscape           │  │
+│  │               Deleted 2 days ago • 3 days left   │  │
+│  │               [Restore] [Delete Forever]         │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  [Thumbnail]  Fantasy Dragon                     │  │
+│  │               Deleted 4 days ago • ⚠️ 18 hrs left │  │
+│  │               [Restore] [Delete Forever]         │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ────────── FREE TIER LIMIT (10/10 items) ─────────────│
+│                                                          │
+│  💎 Upgrade to Premium for:                             │
+│     • 30-day protection (6x longer)                     │
+│     • Unlimited trash capacity                          │
+│     • Bulk restore                                      │
+│                                                          │
+│                   [Upgrade to Premium →]                │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+
+**Delete Confirmation Modal:**
+┌──────────────────────────────────┐
+│  Move to Trash?                  │
+├──────────────────────────────────┤
+│  "Cyberpunk Neon Cityscape"     │
+│                                  │
+│  Will be permanently deleted in: │
+│  ⏱️  5 days (Free tier)           │
+│                                  │
+│  💎 Premium: 30-day protection   │
+│                                  │
+│  [Cancel]  [Move to Trash]      │
+└──────────────────────────────────┘
+
+**Toast Notification (After Delete):**
+┌────────────────────────────────────┐
+│ ✅ Moved to trash • Expires in 5d  │
+│    [Undo] [View Trash]             │
+└────────────────────────────────────┘
+(Shows for 8 seconds, undo available for 5 seconds)
+
+**Permanent Delete Warning:**
+┌──────────────────────────────────┐
+│  ⚠️ Permanent Deletion            │
+├──────────────────────────────────┤
+│  "Cyberpunk Neon Cityscape"     │
+│                                  │
+│  ❌ CANNOT be undone             │
+│  ❌ Cloudinary image deleted     │
+│  ❌ All likes/comments removed   │
+│                                  │
+│  Type "DELETE" to confirm:       │
+│  [_______________]               │
+│                                  │
+│  [Cancel]  [Delete Forever]     │
+└──────────────────────────────────┘
+
+**Dashboard Badge:**
+[Home] [Prompts] [Trash 🗑️ (3)] [Profile]
+
+**Visual Indicators:**
+- Normal (>2 days): Default colors
+- Warning (1-2 days): Orange highlight
+- Critical (<24h): Red highlight with pulse animation
+- Empty state: Friendly "Your trash is empty" message
+
 
 ## 📋 Feature Specifications
 
@@ -2096,10 +2493,478 @@ Format: `<type>: <description>`
 - Moderation: https://platform.openai.com/docs/guides/moderation
 - GPT-4: https://platform.openai.com/docs/models/gpt-4
 
----
+
 
 **Terminology:**
 - CC = Claude Code (VS Code extension for AI-assisted coding)
+
+
+---
+
+## 💻 Implementation Reference
+
+### Trash Bin System Code Examples (Phase 2)
+
+**Purpose:** This section provides complete code examples for implementing the soft delete / trash bin system. Use this as a reference when building the feature in Phase 2.
+
+#### Database Model Changes
+
+**File:** `prompts/models.py`
+
+```python
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
+import cloudinary
+
+class PromptManager(models.Manager):
+    """Custom manager that excludes deleted prompts by default"""
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
+
+class Prompt(models.Model):
+    # ... your existing fields (title, slug, content, etc.) ...
+    
+    # Soft delete fields (Phase 2)
+    deleted_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When this prompt was moved to trash"
+    )
+    deleted_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='deleted_prompts',
+        help_text="User who deleted this prompt"
+    )
+    
+    # Custom managers
+    objects = PromptManager()  # Default: excludes deleted
+    all_objects = models.Manager()  # Includes deleted items
+    
+    class Meta:
+        # Add indexes for performance
+        indexes = [
+            models.Index(fields=['deleted_at']),
+            models.Index(fields=['author', 'deleted_at']),
+        ]
+    
+    def soft_delete(self, user):
+        """Move prompt to trash (soft delete)"""
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.status = 0  # Hide from public view
+        self.save()
+    
+    def restore(self):
+        """Restore prompt from trash"""
+        self.deleted_at = None
+        self.deleted_by = None
+        self.status = 1  # Make public again
+        self.save()
+    
+    def hard_delete(self):
+        """Permanent deletion with Cloudinary cleanup"""
+        # Delete image from Cloudinary first
+        if self.featured_image:
+            try:
+                cloudinary.uploader.destroy(
+                    self.featured_image.public_id,
+                    resource_type='image' if self.is_image else 'video'
+                )
+            except Exception as e:
+                print(f"Error deleting from Cloudinary: {e}")
+        
+        # Then delete from database
+        self.delete()
+    
+    @property
+    def days_until_permanent_deletion(self):
+        """Calculate how many days until permanent deletion"""
+        if not self.deleted_at:
+            return None
+        
+        # Check user's tier for retention period
+        retention_days = 30 if self.author.is_premium else 5
+        expiry_date = self.deleted_at + timedelta(days=retention_days)
+        days_remaining = (expiry_date - timezone.now()).days
+        
+        return max(0, days_remaining)
+    
+    @property
+    def is_in_trash(self):
+        """Check if prompt is currently in trash"""
+        return self.deleted_at is not None
+    
+    @property
+    def is_expiring_soon(self):
+        """Check if expires in less than 24 hours"""
+        days_left = self.days_until_permanent_deletion
+        return days_left is not None and days_left < 1
+```
+
+#### URL Patterns
+
+**File:** `prompts/urls.py`
+
+```python
+from django.urls import path
+from . import views
+
+app_name = 'prompts'
+
+urlpatterns = [
+    # ... your existing URL patterns ...
+    
+    # Trash bin URLs (Phase 2)
+    path('trash/', views.trash_bin, name='trash_bin'),
+    path('trash/<slug:slug>/restore/', views.prompt_restore, name='prompt_restore'),
+    path('trash/<slug:slug>/delete/', views.prompt_permanent_delete, name='prompt_permanent_delete'),
+    path('trash/empty/', views.empty_trash, name='empty_trash'),
+]
+```
+
+#### View Functions
+
+**File:** `prompts/views.py`
+
+```python
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.urls import reverse
+from .models import Prompt
+
+@login_required
+def prompt_delete(request, slug):
+    """Soft delete - move prompt to trash"""
+    prompt = get_object_or_404(Prompt, slug=slug, author=request.user)
+    
+    if request.method == 'POST':
+        prompt.soft_delete(request.user)
+        
+        retention_days = 30 if request.user.is_premium else 5
+        messages.success(
+            request, 
+            f'"{prompt.title}" moved to trash. It will be permanently deleted in {retention_days} days. '
+            f'<a href="{reverse("prompts:trash_bin")}">View Trash</a>',
+            extra_tags='safe'
+        )
+        return redirect('prompts:prompt_list')
+    
+    context = {
+        'prompt': prompt,
+        'retention_days': 30 if request.user.is_premium else 5
+    }
+    return render(request, 'prompts/confirm_delete.html', context)
+
+
+@login_required
+def trash_bin(request):
+    """Display user's trash bin"""
+    user = request.user
+    retention_days = 30 if user.is_premium else 5
+    
+    # Query deleted prompts
+    if user.is_premium:
+        # Premium: show all deleted items
+        trashed = Prompt.all_objects.filter(
+            author=user,
+            deleted_at__isnull=False
+        ).order_by('-deleted_at')
+    else:
+        # Free: limit to last 10 items only
+        trashed = Prompt.all_objects.filter(
+            author=user,
+            deleted_at__isnull=False
+        ).order_by('-deleted_at')[:10]
+    
+    # Add computed properties for each item
+    for prompt in trashed:
+        prompt.days_left = prompt.days_until_permanent_deletion
+        prompt.is_expiring = prompt.is_expiring_soon
+    
+    trash_count = trashed.count()
+    
+    context = {
+        'trashed_prompts': trashed,
+        'trash_count': trash_count,
+        'retention_days': retention_days,
+        'is_premium': user.is_premium,
+        'capacity_reached': trash_count >= 10 and not user.is_premium,
+    }
+    return render(request, 'prompts/trash_bin.html', context)
+
+
+@login_required
+def prompt_restore(request, slug):
+    """Restore a prompt from trash"""
+    prompt = get_object_or_404(
+        Prompt.all_objects,  # Use all_objects to include deleted
+        slug=slug, 
+        author=request.user,
+        deleted_at__isnull=False
+    )
+    
+    if request.method == 'POST':
+        prompt.restore()
+        messages.success(
+            request, 
+            f'"{prompt.title}" restored successfully! '
+            f'<a href="{reverse("prompts:prompt_detail", args=[slug])}">View prompt</a>',
+            extra_tags='safe'
+        )
+        return redirect('prompts:trash_bin')
+    
+    return render(request, 'prompts/confirm_restore.html', {'prompt': prompt})
+
+
+@login_required
+def prompt_permanent_delete(request, slug):
+    """Permanently delete a prompt (cannot be undone)"""
+    prompt = get_object_or_404(
+        Prompt.all_objects,
+        slug=slug,
+        author=request.user,
+        deleted_at__isnull=False
+    )
+    
+    if request.method == 'POST':
+        title = prompt.title
+        prompt.hard_delete()  # Deletes from Cloudinary + database
+        
+        messages.warning(
+            request, 
+            f'"{title}" permanently deleted. This cannot be undone.'
+        )
+        return redirect('prompts:trash_bin')
+    
+    return render(request, 'prompts/confirm_permanent_delete.html', {
+        'prompt': prompt
+    })
+
+
+@login_required
+def empty_trash(request):
+    """Empty entire trash bin (delete all trashed items)"""
+    if request.method == 'POST':
+        trashed = Prompt.all_objects.filter(
+            author=request.user,
+            deleted_at__isnull=False
+        )
+        count = trashed.count()
+        
+        # Permanently delete all trashed items
+        for prompt in trashed:
+            prompt.hard_delete()
+        
+        messages.warning(
+            request, 
+            f'{count} items permanently deleted. This cannot be undone.'
+        )
+        return redirect('prompts:trash_bin')
+    
+    # Count for confirmation message
+    trash_count = Prompt.all_objects.filter(
+        author=request.user,
+        deleted_at__isnull=False
+    ).count()
+    
+    return render(request, 'prompts/confirm_empty_trash.html', {
+        'trash_count': trash_count
+    })
+```
+
+#### Daily Cleanup Management Command
+
+**File:** `prompts/management/commands/cleanup_trash.py`
+
+```python
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import timedelta
+from prompts.models import Prompt
+
+class Command(BaseCommand):
+    help = 'Permanently delete expired trashed prompts'
+    
+    def handle(self, *args, **options):
+        now = timezone.now()
+        deleted_count = 0
+        deleted_items = []
+        
+        # Get all trashed prompts
+        trashed_prompts = Prompt.all_objects.filter(deleted_at__isnull=False)
+        
+        self.stdout.write(f'Checking {trashed_prompts.count()} trashed items...')
+        
+        for prompt in trashed_prompts:
+            # Determine retention period based on user tier
+            retention_days = 30 if prompt.author.is_premium else 5
+            expiry_date = prompt.deleted_at + timedelta(days=retention_days)
+            
+            # Check if expired
+            if now >= expiry_date:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'Deleting: {prompt.title} '
+                        f'(expired {(now - expiry_date).days} days ago)'
+                    )
+                )
+                
+                deleted_items.append({
+                    'title': prompt.title,
+                    'author': prompt.author.username,
+                    'deleted_at': prompt.deleted_at,
+                })
+                
+                prompt.hard_delete()
+                deleted_count += 1
+        
+        # Summary output
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'✓ Cleanup complete: {deleted_count} items permanently deleted'
+            )
+        )
+        
+        # Send admin notification if items were deleted
+        if deleted_count > 0:
+            try:
+                send_mail(
+                    subject=f'PromptFinder: {deleted_count} items cleaned from trash',
+                    message=f'Daily cleanup completed:\n\n'
+                            f'Items deleted: {deleted_count}\n\n'
+                            f'Details:\n' + 
+                            '\n'.join([f"- {item['title']} by {item['author']}" 
+                                      for item in deleted_items]),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[settings.ADMIN_EMAIL],
+                    fail_silently=False,
+                )
+                self.stdout.write(
+                    self.style.SUCCESS('Admin notification sent')
+                )
+            except Exception as e:
+                self.stdout.write(
+                    self.style.WARNING(f'Could not send admin email: {e}')
+                )
+```
+
+#### Heroku Scheduler Setup
+
+Steps to add the daily cleanup task:
+
+1. **Add Heroku Scheduler (free add-on):**
+   ```bash
+   heroku addons:create scheduler:standard --app mj-project-4
+   ```
+
+2. **Open scheduler dashboard:**
+   ```bash
+   heroku addons:open scheduler --app mj-project-4
+   ```
+
+3. **In the dashboard, add a new job:**
+   - **Command:** `python manage.py cleanup_trash`
+   - **Frequency:** Daily at 4:00 AM (or your preferred time)
+   - **Dyno size:** Standard-1X (uses Eco Dyno hours)
+
+**Cost:** $0/month (uses spare Eco Dyno hours)  
+**Runtime:** ~1-5 minutes depending on number of trashed items
+
+#### Database Migration Example
+
+**File:** Generated by Django when you run `python manage.py makemigrations`
+
+```python
+# This is an example of what Django will generate
+# prompts/migrations/0XXX_add_trash_bin_fields.py
+
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('prompts', '0XXX_previous_migration'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='prompt',
+            name='deleted_at',
+            field=models.DateTimeField(
+                blank=True, 
+                help_text='When this prompt was moved to trash', 
+                null=True
+            ),
+        ),
+        migrations.AddField(
+            model_name='prompt',
+            name='deleted_by',
+            field=models.ForeignKey(
+                blank=True,
+                help_text='User who deleted this prompt',
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name='deleted_prompts',
+                to=settings.AUTH_USER_MODEL
+            ),
+        ),
+        migrations.AddIndex(
+            model_name='prompt',
+            index=models.Index(
+                fields=['deleted_at'], 
+                name='prompts_deleted_at_idx'
+            ),
+        ),
+        migrations.AddIndex(
+            model_name='prompt',
+            index=models.Index(
+                fields=['author', 'deleted_at'],
+                name='prompts_author_deleted_idx'
+            ),
+        ),
+    ]
+```
+
+**To apply migration:**
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+#### Notes for Implementation
+
+**When implementing in Phase 2:**
+
+1. Create the database fields and migration first
+2. Update existing delete views to use `soft_delete()` instead of `.delete()`
+3. Build the trash bin page UI
+4. Add the management command
+5. Set up Heroku Scheduler
+6. Test thoroughly before deploying
+
+**Testing Checklist:**
+
+- [ ] Soft delete moves item to trash (doesn't actually delete)
+- [ ] Trash bin shows correct retention days per user tier
+- [ ] Restore works correctly
+- [ ] Permanent delete removes from Cloudinary
+- [ ] Free users see only 10 items
+- [ ] Premium users see unlimited items
+- [ ] Daily cleanup script runs successfully
+- [ ] Notifications work correctly
 
 ---
 

@@ -54,10 +54,12 @@ class ContentGenerationService:
         try:
             from taggit.models import Tag
             self.all_tags = list(Tag.objects.values_list('name', flat=True))
+            self.AVAILABLE_TAGS = self.all_tags  # Alias for use in generate_from_text
             logger.info(f"Loaded {len(self.all_tags)} tags for AI suggestions")
         except Exception as e:
             logger.warning(f"Could not load tags: {str(e)}")
             self.all_tags = []
+            self.AVAILABLE_TAGS = []
 
     def generate_content(
         self,
@@ -317,3 +319,84 @@ Tag options (choose 5): {tags_list}
         except Exception as e:
             logger.error(f"Error extracting video frame: {str(e)}")
             raise
+
+    def generate_from_text(self, prompt_text: str) -> dict:
+        """Generate title, description, tags from prompt text only (for videos)."""
+        try:
+            word_count = len(prompt_text.split())
+
+            # SHORT PROMPTS (< 10 words): Simple extraction
+            if word_count < 10:
+                main_subject = prompt_text.strip().title()
+                title = f"{main_subject} - AI Video Prompt"
+
+                if len(title) > 60:
+                    title = f"{main_subject[:50]}... - AI Prompt"
+
+                keywords = prompt_text.lower().split()
+                matched_tags = self._match_tags_from_keywords(keywords)
+
+                return {
+                    'title': title,
+                    'description': f"AI-generated prompt: {prompt_text}",
+                    'tags': matched_tags[:5]
+                }
+
+            # LONGER PROMPTS: AI analysis
+            else:
+                response = self.client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{
+                        "role": "user",
+                        "content": f"""Analyze this AI prompt and generate:
+1. A catchy, SEO-friendly title (max 60 characters)
+2. A brief description (max 150 characters)
+3. 5 relevant tags from this list ONLY: {', '.join(self.AVAILABLE_TAGS[:100])}
+
+Prompt: "{prompt_text}"
+
+Return ONLY valid JSON:
+{{
+    "title": "...",
+    "description": "...",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+}}"""
+                    }],
+                    response_format={"type": "json_object"}
+                )
+
+                result = json.loads(response.choices[0].message.content)
+                return {
+                    'title': result.get('title', f"{prompt_text[:50]} - AI Prompt"),
+                    'description': result.get('description', f"AI prompt: {prompt_text[:150]}"),
+                    'tags': result.get('tags', [])
+                }
+
+        except Exception as e:
+            logger.error(f"Text-based generation failed: {e}")
+            return {
+                'title': f"{prompt_text[:50]} - AI Video Prompt",
+                'description': f"Video prompt: {prompt_text[:150]}",
+                'tags': []
+            }
+
+    def _match_tags_from_keywords(self, keywords: list) -> list:
+        """Match keywords from prompt to available tags."""
+        matched_tags = []
+        keyword_set = set(keywords)
+
+        for tag in self.AVAILABLE_TAGS:
+            tag_lower = tag.lower()
+
+            if tag_lower in keyword_set:
+                matched_tags.append(tag)
+            elif any(keyword in tag_lower for keyword in keyword_set):
+                matched_tags.append(tag)
+
+            if len(matched_tags) >= 10:
+                break
+
+        if not matched_tags:
+            matched_tags = ['Art', 'Digital Art', 'Creative', 'AI Generated']
+
+        return matched_tags

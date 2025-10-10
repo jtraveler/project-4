@@ -185,6 +185,14 @@
 
 {% block content %}
 <div class="upload-container fade-in">
+    <!-- Error Alert (profanity detection) -->
+    {% if error_message %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="margin-bottom: 30px;">
+        {{ error_message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
     <!-- Warning Banner (before header) -->
     {% if image_warning %}
     <div class="alert alert-warning alert-dismissible fade show" role="alert" style="margin-bottom: 30px;">
@@ -205,14 +213,6 @@
             Add keywords that describe your prompt
         </p>
     </div>
-
-    <!-- Video Upload Info -->
-    {% if resource_type == 'video' %}
-    <div class="alert alert-info mb-4" role="alert">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>Video Upload:</strong> Please manually enter your prompt content and select relevant tags from the 209 available options.
-    </div>
-    {% endif %}
 
     <!-- Image Preview + Form Wrapper -->
     <div class="preview-and-form">
@@ -241,7 +241,7 @@
                 <p class="helper-text mb-2">
                     {% if resource_type == 'video' %}Add relevant tags to describe your video{% else %}Suggested tags (you can edit or add your own){% endif %}
                 </p>
-                <div id="tags-container" class="mb-3">
+                <div id="tags-container" class="mb-3" data-preserved-tags="{{ tags_input|default:'' }}">
                     {% for tag in ai_tags %}
                     <span class="tag-pill" data-tag="{{ tag }}">
                         {{ tag }}
@@ -274,7 +274,7 @@
                     rows="8"
                     required
                     placeholder="{% if resource_type == 'video' %}Enter the prompt you used to generate this video...{% else %}Enter the prompt you used to generate this image...{% endif %}"
-                ></textarea>
+                >{{ prompt_content|default:'' }}</textarea>
                 <p class="helper-text">Required - Enter the exact prompt you used</p>
             </div>
 
@@ -285,15 +285,15 @@
                 </label>
                 <select class="form-select" id="ai_generator" name="ai_generator" required>
                     <option value="">Select AI generator...</option>
-                    <option value="Midjourney">Midjourney</option>
-                    <option value="DALL-E 3">DALL-E 3</option>
-                    <option value="DALL-E 2">DALL-E 2</option>
-                    <option value="Stable Diffusion">Stable Diffusion</option>
-                    <option value="Leonardo AI">Leonardo AI</option>
-                    <option value="Flux">Flux</option>
-                    <option value="Adobe Firefly">Adobe Firefly</option>
-                    <option value="Bing Image Creator">Bing Image Creator</option>
-                    <option value="Other">Other</option>
+                    <option value="Midjourney" {% if ai_generator == 'Midjourney' %}selected{% endif %}>Midjourney</option>
+                    <option value="DALL-E 3" {% if ai_generator == 'DALL-E 3' %}selected{% endif %}>DALL-E 3</option>
+                    <option value="DALL-E 2" {% if ai_generator == 'DALL-E 2' %}selected{% endif %}>DALL-E 2</option>
+                    <option value="Stable Diffusion" {% if ai_generator == 'Stable Diffusion' %}selected{% endif %}>Stable Diffusion</option>
+                    <option value="Leonardo AI" {% if ai_generator == 'Leonardo AI' %}selected{% endif %}>Leonardo AI</option>
+                    <option value="Flux" {% if ai_generator == 'Flux' %}selected{% endif %}>Flux</option>
+                    <option value="Adobe Firefly" {% if ai_generator == 'Adobe Firefly' %}selected{% endif %}>Adobe Firefly</option>
+                    <option value="Bing Image Creator" {% if ai_generator == 'Bing Image Creator' %}selected{% endif %}>Bing Image Creator</option>
+                    <option value="Other" {% if ai_generator == 'Other' %}selected{% endif %}>Other</option>
                 </select>
             </div>
 
@@ -322,7 +322,7 @@
                 </div>
                 <div class="modal-body text-center">
                     <p class="lead">Your upload session will expire in</p>
-                    <h1 class="display-4 text-danger"><strong id="countdown">60</strong></h1>
+                    <h1 class="display-4 text-danger"><strong id="countdown">30</strong></h1>
                     <p class="text-muted">seconds</p>
                     <p>Click below to continue editing or cancel this upload.</p>
                 </div>
@@ -362,23 +362,56 @@
             </div>
         </div>
     </div>
+
+    <!-- Confirm Leave Modal -->
+    <div class="modal fade" id="confirmLeaveModal" tabindex="-1" aria-labelledby="confirmLeaveModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="confirmLeaveModalLabel">
+                        <i class="bi bi-exclamation-triangle"></i> Leave this page?
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>You have an upload in progress. If you leave now:</p>
+                    <ul>
+                        <li>Your uploaded image/video will be deleted</li>
+                        <li>Any information you entered will be lost</li>
+                    </ul>
+                    <p class="mb-0"><strong>Are you sure you want to leave?</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="stayOnPage()">
+                        <i class="bi bi-arrow-left"></i> Stay and continue editing
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="leaveAndDelete()">
+                        <i class="bi bi-trash"></i> Yes, leave and delete upload
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 const ALL_TAGS = {{ all_tags|safe }};
 let hasUnsavedChanges = false;
 
-// Track form changes
-document.getElementById('upload-form').addEventListener('input', () => {
-    hasUnsavedChanges = true;
-});
+// Restore preserved tags on error
+const preservedTags = document.getElementById('tags-container').dataset.preservedTags;
+if (preservedTags && preservedTags.trim() !== '') {
+    document.getElementById('tags-container').innerHTML = '';
+    preservedTags.split(',').forEach(tag => {
+        const trimmedTag = tag.trim();
+        if (trimmedTag) {
+            addTag(trimmedTag);
+        }
+    });
+}
 
-// Prevent navigation with unsaved changes
-window.addEventListener('beforeunload', (e) => {
-    if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-    }
+// Track form changes (kept for future use if needed)
+document.getElementById('upload-form').addEventListener('input', () => {
+    // Form tracking can be added here if needed
 });
 
 // Tag autocomplete
@@ -485,50 +518,122 @@ document.addEventListener('click', (e) => {
 });
 
 // ==========================================
+// NAVIGATION GUARD - Confirm before leaving
+// ==========================================
+
+let hasUnsavedUpload = true;  // User has uploaded but not submitted
+
+// Warn on browser close/refresh/back button
+window.addEventListener('beforeunload', function(e) {
+    if (hasUnsavedUpload) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+});
+
+// Clear flag when form is submitted
+document.querySelector('form').addEventListener('submit', function() {
+    hasUnsavedUpload = false;
+});
+
+// Intercept internal navigation (navbar links, etc.)
+document.addEventListener('click', function(e) {
+    if (hasUnsavedUpload) {
+        const link = e.target.closest('a');
+        if (link && !link.hasAttribute('data-bs-toggle')) {
+            e.preventDefault();
+
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmLeaveModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+            confirmModal.show();
+
+            window.pendingNavigation = link.href;
+        }
+    }
+});
+
+function stayOnPage() {
+    bootstrap.Modal.getInstance(document.getElementById('confirmLeaveModal')).hide();
+    window.pendingNavigation = null;
+}
+
+function leaveAndDelete() {
+    hasUnsavedUpload = false;
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+    fetch('/upload/cancel/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('✅ Upload deleted on exit:', data);
+        window.location.href = window.pendingNavigation || '/';
+    })
+    .catch(error => {
+        console.error('❌ Error deleting on exit:', error);
+        window.location.href = window.pendingNavigation || '/';
+    });
+}
+</script>
+
+<script>
+// ==========================================
 // IDLE DETECTION SYSTEM (Netflix-style)
 // ==========================================
 
-const IDLE_TIME = 45 * 60 * 1000;  // 45 minutes
-const WARNING_TIME = 60 * 1000;     // 60 seconds countdown
+console.log('🚀 Idle detection script initializing...');
+
+// TESTING VALUES - 1 minute idle, 30 second warning
+const IDLE_TIME = 1 * 60 * 1000;
+const WARNING_TIME = 30 * 1000;
+let countdownSeconds = 30;
 
 let idleTimer = null;
 let countdownInterval = null;
-let countdownSeconds = 60;
 
-// Get CSRF token
-const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+// Safe CSRF token retrieval
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+console.log('CSRF token found:', csrfToken ? 'Yes ✅' : 'No ❌');
 
-// Start idle timer when page loads
 function startIdleTimer() {
-    // Clear any existing timer
     if (idleTimer) clearTimeout(idleTimer);
 
-    // Set new timer for 45 minutes
     idleTimer = setTimeout(() => {
+        console.log('⏰ Idle time reached - showing warning modal');
         showWarningModal();
     }, IDLE_TIME);
 
-    console.log('Idle timer started: 45 minutes');
+    console.log(`✅ Idle timer started: ${IDLE_TIME / 60000} minute(s)`);
 }
 
-// Reset timer on user activity
 function resetIdleTimer() {
     startIdleTimer();
 }
 
-// Show Modal 1: "Still working on this?"
 function showWarningModal() {
-    console.log('Idle time reached - showing warning modal');
+    console.log('📢 Showing warning modal');
 
-    // Show the modal
-    const warningModal = new bootstrap.Modal(document.getElementById('warningModal'), {
+    const warningModalEl = document.getElementById('warningModal');
+    if (!warningModalEl) {
+        console.error('❌ Warning modal element not found!');
+        return;
+    }
+
+    const warningModal = new bootstrap.Modal(warningModalEl, {
         backdrop: 'static',
         keyboard: false
     });
     warningModal.show();
 
-    // Start 60-second countdown
-    countdownSeconds = 60;
+    countdownSeconds = 30;
     updateCountdown();
 
     countdownInterval = setInterval(() => {
@@ -537,27 +642,26 @@ function showWarningModal() {
 
         if (countdownSeconds <= 0) {
             clearInterval(countdownInterval);
+            console.log('⏰ Countdown finished');
             handleTimeout();
         }
     }, 1000);
 }
 
-// Update countdown display
 function updateCountdown() {
-    document.getElementById('countdown').textContent = countdownSeconds;
+    const countdownEl = document.getElementById('countdown');
+    if (countdownEl) {
+        countdownEl.textContent = countdownSeconds;
+    }
 }
 
-// User clicked "Yes, I need more time"
 function extendTime() {
-    console.log('User clicked: Yes, need more time');
-
-    // Clear countdown
+    console.log('✅ User clicked: Yes, I need more time');
     clearInterval(countdownInterval);
 
-    // Hide modal
-    bootstrap.Modal.getInstance(document.getElementById('warningModal')).hide();
+    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('warningModal'));
+    if (modalInstance) modalInstance.hide();
 
-    // Call backend to extend session
     fetch('/upload/extend/', {
         method: 'POST',
         headers: {
@@ -567,23 +671,18 @@ function extendTime() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('Session extended:', data);
-        // Restart idle timer for another 30 minutes
+        console.log('✅ Session extended:', data);
         startIdleTimer();
     })
     .catch(error => {
-        console.error('Error extending session:', error);
+        console.error('❌ Error extending session:', error);
     });
 }
 
-// User clicked "Cancel Upload"
 function cancelUpload() {
-    console.log('User clicked: Cancel Upload');
-
-    // Clear countdown
+    console.log('🗑️ User clicked: Cancel Upload');
     clearInterval(countdownInterval);
 
-    // Call backend to delete file
     fetch('/upload/cancel/', {
         method: 'POST',
         headers: {
@@ -593,24 +692,21 @@ function cancelUpload() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('Upload canceled:', data);
-        // Redirect to homepage
+        console.log('✅ Upload canceled:', data);
         window.location.href = '/';
     })
     .catch(error => {
-        console.error('Error canceling upload:', error);
+        console.error('❌ Error canceling:', error);
         window.location.href = '/';
     });
 }
 
-// No response from user - timeout occurred
 function handleTimeout() {
-    console.log('No response - showing expired modal');
+    console.log('⏰ Timeout - no response');
 
-    // Hide warning modal
-    bootstrap.Modal.getInstance(document.getElementById('warningModal')).hide();
+    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('warningModal'));
+    if (modalInstance) modalInstance.hide();
 
-    // Delete file from Cloudinary
     fetch('/upload/cancel/', {
         method: 'POST',
         headers: {
@@ -620,38 +716,44 @@ function handleTimeout() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('Upload auto-canceled:', data);
-        // Show expired modal
+        console.log('✅ Auto-canceled:', data);
         showExpiredModal();
     })
     .catch(error => {
-        console.error('Error auto-canceling:', error);
+        console.error('❌ Error:', error);
         showExpiredModal();
     });
 }
 
-// Show Modal 2: "Upload Session Expired"
 function showExpiredModal() {
-    const expiredModal = new bootstrap.Modal(document.getElementById('expiredModal'), {
+    console.log('📢 Showing expired modal');
+
+    const expiredModalEl = document.getElementById('expiredModal');
+    if (!expiredModalEl) {
+        console.error('❌ Expired modal not found!');
+        setTimeout(() => window.location.href = '/', 2000);
+        return;
+    }
+
+    const expiredModal = new bootstrap.Modal(expiredModalEl, {
         backdrop: 'static',
         keyboard: false
     });
     expiredModal.show();
 }
 
-// User clicked "Got it, take me home"
 function goHome() {
+    console.log('🏠 Redirecting to homepage');
     window.location.href = '/';
 }
 
-// Listen for user activity to reset timer
+// Activity listeners (no mousemove/scroll to prevent false positives)
 document.addEventListener('input', resetIdleTimer);
 document.addEventListener('click', resetIdleTimer);
 document.addEventListener('keypress', resetIdleTimer);
-document.addEventListener('mousemove', resetIdleTimer);
-document.addEventListener('scroll', resetIdleTimer);
 
-// Start the timer when page loads
+console.log('🚀 Starting idle timer...');
 startIdleTimer();
+console.log('✅ Idle detection initialized');
 </script>
 {% endblock %}

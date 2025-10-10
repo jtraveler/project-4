@@ -336,55 +336,53 @@ LOGGING = {
 # CONTENT SECURITY POLICY CONFIGURATION
 # Protects against XSS attacks by controlling resource loading
 
+# Content Security Policy Configuration
 CSP_DEFAULT_SRC = ("'self'",)
 
 CSP_SCRIPT_SRC = (
     "'self'",
-    "'unsafe-inline'",  # Required for inline scripts in templates
-    "'unsafe-eval'",  # Required for Summernote WYSIWYG editor
-    "https://cdn.jsdelivr.net",  # Bootstrap JS
-    "https://cdnjs.cloudflare.com",  # Font Awesome and other CDN resources
+    "'unsafe-inline'",
+    "'unsafe-eval'",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    "https://res.cloudinary.com",
+    "https://api.cloudinary.com",
 )
 
 CSP_STYLE_SRC = (
     "'self'",
-    "'unsafe-inline'",  # Required for inline styles and dynamic CSS
-    "https://fonts.googleapis.com",  # Google Fonts CSS
-    "https://cdn.jsdelivr.net",  # Bootstrap CSS
-    "https://cdnjs.cloudflare.com",  # Font Awesome CSS
-)
-
-CSP_FONT_SRC = (
-    "'self'",
-    "https://fonts.gstatic.com",  # Google Fonts
-    "https://cdnjs.cloudflare.com",  # Font Awesome fonts
+    "'unsafe-inline'",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    "https://res.cloudinary.com",
 )
 
 CSP_IMG_SRC = (
     "'self'",
-    "data:",  # For inline images/icons
-    "https://res.cloudinary.com",  # Cloudinary images - HTTPS only
-    "https://*.cloudinary.com",  # All Cloudinary subdomains - HTTPS only
+    "data:",
+    "blob:",
+    "https://res.cloudinary.com",
+    "https://api.cloudinary.com",
 )
 
 CSP_CONNECT_SRC = (
     "'self'",
-    "https://res.cloudinary.com",  # For AJAX requests to Cloudinary
+    "https://res.cloudinary.com",
     "https://api.cloudinary.com",
+)
+
+CSP_FONT_SRC = (
+    "'self'",
+    "data:",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
 )
 
 CSP_MEDIA_SRC = (
     "'self'",
-    "https://res.cloudinary.com",  # Cloudinary videos
-    "https://*.cloudinary.com",  # All Cloudinary subdomains
+    "https://res.cloudinary.com",
+    "blob:",
 )
-
-CSP_FRAME_SRC = (
-    "'self'",  # Allow same-origin iframes for Summernote
-)  # Summernote requires iframe support
-
-# CSP Enforcement
-CSP_REPORT_ONLY = False  # Always enforce CSP for security
 
 # Django Summernote Configuration
 SUMMERNOTE_CONFIG = {

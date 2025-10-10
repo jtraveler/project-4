@@ -1089,6 +1089,7 @@ def upload_step2(request):
     # Store AI-generated title and description in session for later use
     request.session['ai_title'] = ai_suggestions.get('title', '')
     request.session['ai_description'] = ai_suggestions.get('description', '')
+    request.session['ai_tags'] = ai_suggestions.get('suggested_tags', [])
 
     # Store upload session data for idle detection
     from datetime import datetime
@@ -1149,6 +1150,21 @@ def upload_submit(request):
     except json.JSONDecodeError:
         tags = []
 
+    # For videos, generate title/tags from prompt text if not provided
+    if resource_type == 'video':
+        from .services.content_generation import ContentGenerationService
+        content_gen = ContentGenerationService()
+
+        # Check if we need to generate title (session might not have it for videos)
+        if not ai_title or ai_title == 'Untitled Prompt':
+            ai_result = content_gen.generate_from_text(content)
+            ai_title = ai_result.get('title', 'Untitled Video Prompt')
+
+            # Also generate tags if not provided
+            if not tags or len(tags) == 0:
+                suggested_tags = ai_result.get('tags', [])
+                tags = suggested_tags
+
     # Check for profanity BEFORE creating prompt (now that we have user's content)
     from .services.profanity_filter import ProfanityFilterService
     profanity_service = ProfanityFilterService()
@@ -1162,14 +1178,33 @@ def upload_submit(request):
         flagged_words = [w['word'] for w in found_words if w['severity'] in ['high', 'critical']]
         words_str = ', '.join([f'"{w}"' for w in flagged_words[:3]])
 
-        messages.error(
-            request,
-            f'🚫 Your content contains words that violate our community guidelines: {words_str}. '
-            'Please revise your content and try again. '
-            'If you believe this was a mistake, contact us.'
+        error_message = (
+            f"🚫 Your content contains words that violate our community guidelines: {words_str}. "
+            "Please revise your content and try again. If you believe this was a mistake, contact us."
         )
-        # Redirect back to Step 2 with cloudinary_id to preserve form data
-        return redirect(f'/upload/details?cloudinary_id={cloudinary_id}&resource_type={resource_type}')
+
+        # Re-render same page with error (NO REDIRECT)
+        import cloudinary
+        if resource_type == 'video':
+            image_url = cloudinary.CloudinaryVideo(cloudinary_id).build_url()
+        else:
+            image_url = cloudinary.CloudinaryImage(cloudinary_id).build_url()
+
+        all_tags = list(Tag.objects.values_list('name', flat=True))
+
+        context = {
+            'cloudinary_id': cloudinary_id,
+            'resource_type': resource_type,
+            'image_url': image_url,
+            'secure_url': image_url,
+            'error_message': error_message,
+            'prompt_content': content,
+            'ai_generator': ai_generator,
+            'tags_input': ','.join(tags) if tags else ', '.join(request.session.get('ai_tags', [])),
+            'all_tags': json.dumps(all_tags),
+        }
+
+        return render(request, 'prompts/upload_step2.html', context)
 
     # Generate unique title to avoid IntegrityError
     # Ensure we always have a title

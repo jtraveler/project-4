@@ -1,19 +1,19 @@
 ---
 
-<h1 align="center"><strong>PromptFlow</strong>
+<h1 align="center"><strong>PromptFinder</strong>
 
 ---
 
 ![Image](static/images/for-readme/mockup-from-techsini-dot-com.jpg)
 
 
-## Welcome to PromptFlow – Your Creative AI Community!
+## Welcome to PromptFinder – Your Creative AI Community!
 
 Developed for Project 4 of the Code Institute Full-Stack Development Program, this prompt sharing project is a full-stack Django project hosted on Heroku.
 
-**PromptFlow** is a community platform built for creators who work with AI image generation. Each prompt is paired with a preview image, allowing users to browse, share, and search through a growing collection of visual references and the exact text that generated them. The result is a practical resource for creative development, experimentation, and learning.
+**PromptFinder** is a community platform built for creators who work with AI image generation. Each prompt is paired with a preview image, allowing users to browse, share, and search through a growing collection of visual references and the exact text that generated them. The result is a practical resource for creative development, experimentation, and learning.
 
-The platform supports both beginners and experienced users by making the prompt-writing process transparent and easy to explore. By allowing members to comment on and like prompts, PromptFlow encourages ongoing participation and shared learning within the community.
+The platform supports both beginners and experienced users by making the prompt-writing process transparent and easy to explore. By allowing members to comment on and like prompts, PromptFinder encourages ongoing participation and shared learning within the community.
 
 The homepage is designed to highlight the most recent prompts first, encouraging frequent visits and steady user engagement. This content flow not only keeps the experience fresh but also contributes to long-term SEO performance by increasing time on site and activity across the platform.
 
@@ -25,7 +25,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 
 
 # Content
-* [PromptFlow](#promptflow)
+* [PromptFinder](#promptfinder)
 * [Goal & UX](#goal--ux)
   * [Project Overview](#project-overview)
   * [Project Goals](#project-goals)
@@ -55,7 +55,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 
 ## Project Overview  
 
-**PromptFlow** is designed to provide an engaging and interactive space for gardeners to share their prompts and learn from one another. Users can explore and submit their own AI image prompts, and participate in discussions through comments.  
+**PromptFinder** is designed to provide an engaging and interactive space for AI creators to share their prompts and learn from one another. Users can explore and submit their own AI image prompts, and participate in discussions through comments.  
 
 ##  Project Goals  
 
@@ -73,7 +73,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 - **Search by Style or Topic:** Easily discover specific types of prompts using tags, keywords, or visual themes relevant to their creative projects.  
 - **Learn Prompt Techniques:** Study successful prompt structures and understand how different text approaches create varying visual results.  
 - **Engage with Community:** Like prompts they find inspiring and leave comments to ask questions or share insights with other creators.  
-- **Understand the Platform:** Learn about PromptFlow's mission to make AI prompt creation transparent and accessible to all skill levels.  
+- **Understand the Platform:** Learn about PromptFinder's mission to make AI prompt creation transparent and accessible to all skill levels.  
 
 ##  Returning Visitors' Experience  
 
@@ -122,7 +122,7 @@ The homepage is designed to highlight the most recent prompts first, encouraging
 
 
 ### Home Page (`index.html`)
-- Features a hero section with PromptFlow branding and call-to-action buttons for new users. Also included in the hero section are supportive images that move upon hover for fun interaction.
+- Features a hero section with PromptFinder branding and call-to-action buttons for new users. Also included in the hero section are supportive images that move upon hover for fun interaction.
 - Displays masonry grid layout showcasing the latest AI preview images for prompts
 - Shows like counts and author username on each prompt preview image. Users can like/unlike image with the like count button.
 - Implements "Load More" button to show more preview images
@@ -170,7 +170,7 @@ Comments
 
 
 ### About Page (`about.html`)
-- Explains PromptFlow's mission and platform purpose
+- Explains PromptFinder's mission and platform purpose
 - Highlights community benefits
 
 ![Image](static/images/for-readme/responsive/02-about.png)
@@ -242,7 +242,7 @@ Comments
 - **Navigation Bar**  
   The main navigation stays at the top of every page and includes all important site features.  
   The navigation contains:
-  - **PromptFlow Logo** - Click to return to the homepage
+  - **PromptFinder Logo** - Click to return to the homepage
   - **About** - Learn about the platform and its purpose
   - **Contact** - Page to get in touch with the team
   - **Search Bar** - Find prompts by typing keywords
@@ -275,7 +275,7 @@ Comments
 - **Footer**  
   The footer appears at the bottom of all pages and includes:
   - **Social Media Links** - Connect on Facebook, Twitter, Instagram, LinkedIn, GitHub
-  - **Platform Info** - About PromptFlow and copyright information
+  - **Platform Info** - About PromptFinder and copyright information
   - **Quick Links** - Fast navigation to key pages
   - **Contact Details** - Ways to reach support
 
@@ -317,7 +317,7 @@ Comments
 
 ## Core Platform Pages
 
-**PromptFlow** features a fully responsive design with masonry grid layout for the prompt feed and search, mobile-optimized navigation, and touch-friendly interactions. Built with Bootstrap and custom CSS, ensuring seamless experience across all devices with adaptive content layouts and optimized image loading with using Cloudinary.
+**PromptFinder** features a fully responsive design with masonry grid layout for the prompt feed and search, mobile-optimized navigation, and touch-friendly interactions. Built with Bootstrap and custom CSS, ensuring seamless experience across all devices with adaptive content layouts and optimized image loading with using Cloudinary.
 
 - **Homepage/Landing Page**: Dynamic masonry grids with responsive column counts (4 columns desktop → 2 tablet → 1 mobile).
 
@@ -369,7 +369,7 @@ Comments
 
 ## User Authentication & Management Pages
 
-**PromptFlow** includes comprehensive authentication flows, search functionality, and error handling pages, all designed with modern responsive principles and accessibility standards. Features mobile-first design with touch-optimized forms and adaptive layouts.
+**PromptFinder** includes comprehensive authentication flows, search functionality, and error handling pages, all designed with modern responsive principles and accessibility standards. Features mobile-first design with touch-optimized forms and adaptive layouts.
 
 - **Sign-Up Page**: Streamlined registration with mobile-optimized form validation.
 
@@ -565,7 +565,7 @@ Enhanced 500 error page and other HTTP error responses with helpful navigation a
 
 # Agile Methodology
 
-This project was built using the [Project 4 - Prompts Kanban Board](https://github.com/users/jtraveler/projects/4/views/1). This approach helped me build PromptFlow step by step and make changes as needed during development.
+This project was built using the [Project 4 - Prompts Kanban Board](https://github.com/users/jtraveler/projects/4/views/1). This approach helped me build PromptFinder step by step and make changes as needed during development.
 
 I used GitHub Issues and Projects to organize my work. The platform's features were grouped into Epics, with each Epic containing smaller User Stories. An Epic covers a major feature area, while User Stories focus on what users need to do. I used a simple board with three columns: To Do, In Progress, and Done to track my progress.
 

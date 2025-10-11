@@ -1613,6 +1613,63 @@ def upload_submit(request):
 
 ---
 
+### Phase D.5: Trash Bin + Orphaned File Management 🗑️
+
+**Status:** 🔄 In Progress
+**Duration:** 2.5-3 days
+**Priority:** High
+
+#### Overview
+Combined system for asset lifecycle management and admin quality control. Implements soft delete with trash bin functionality for users and comprehensive orphaned file management for admins.
+
+#### Key Components
+
+**1. Database Foundation**
+- Soft delete fields: `deleted_at`, `deleted_by`, `deletion_reason`
+- Custom model managers: `objects` (excludes deleted) and `all_objects` (includes deleted)
+- Methods: `soft_delete()`, `restore()`, `hard_delete()`
+
+**2. User Trash Bin**
+- Personal trash bin in user dashboard
+- Restore deleted prompts within retention period
+- Retention rules:
+  - Free users: 5 days, last 10 items only
+  - Premium users: 30 days, unlimited capacity
+- Premium upsell opportunity
+
+**3. Orphaned File Detection**
+- Daily management command: `check_and_cleanup.py`
+- Scans Cloudinary for orphaned files
+- Identifies prompts with missing images
+- Excludes admin-owned patterns
+- Automated cleanup via Heroku Scheduler (3:00 AM daily)
+
+**4. Admin Trash Dashboard**
+Four tabs:
+1. **All Trash** - Complete oversight of deleted content
+2. **Orphaned Files** - Cloudinary files without prompts (150x150px thumbnails)
+3. **Missing Images** - Prompts with broken/missing Cloudinary assets
+4. **Admin-Owned Assets** - Legitimate admin uploads (hero, about, etc.)
+
+#### Technical Implementation
+- Cloudinary API batching: 100 files/request, 1-second delays
+- Thumbnail optimization: Cloudinary transformations (`c_thumb,w_150,h_150`)
+- Admin exclusion patterns: Configurable (default: `admin/*`, `hero/*`, `about/*`, `site/*`)
+- Multiple admin support with attribution tracking
+
+#### Why Before Phase E?
+- Phase E involves extensive upload testing
+- Trash bin serves as QA tool for Phase D cleanup verification
+- Prevents accumulation of test data orphans
+- Establishes quality control foundation before launch
+
+#### Related Documentation
+- See CLAUDE.md for complete Phase D.5 specifications
+- Database schema details in CLAUDE.md > Database Schema section
+- Monetization impact in CLAUDE.md > Monetization Strategy
+
+---
+
 ### Phase E: Integration & Testing (3-4 hours)
 
 **Goal:** Connect all pieces, test end-to-end, fix bugs

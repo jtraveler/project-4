@@ -20,7 +20,8 @@
 10. [SEO Strategy](#seo-strategy)
 11. [User Management](#user-management)
 12. [Feature Specifications](#feature-specifications)
-13. [Unanswered Questions](#unanswered-questions)
+13. [Trash Bin & Orphaned File Management](#phase-d5-trash-bin--orphaned-file-management-)
+14. [Unanswered Questions](#unanswered-questions)
 
 ---
 
@@ -51,7 +52,8 @@
   - ✅ **Phase B:** AI content generation service (GPT-4o-mini)
   - ✅ **Phase C:** Pexels-style upload UI (Step 1 drag-and-drop)
   - ✅ **Phase D:** Two-step upload flow WITH AI generation + idle detection ⭐ **COMPLETE**
-  - 🔄 Phase E: Integration & Testing (next)
+  - 🔄 **Phase D.5:** Trash Bin + Orphaned File Management (in progress)
+  - 📋 Phase E: Integration & Testing (next)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
@@ -109,6 +111,19 @@ class Prompt(models.Model):
         blank=True,
         related_name='deleted_prompts',
         help_text="User who deleted this prompt"
+    )
+    deletion_reason = models.CharField(
+        max_length=50,
+        choices=[
+            ('user', 'User Deleted'),
+            ('orphaned_image', 'Orphaned Cloudinary File'),
+            ('missing_image', 'Prompt Missing Image'),
+            ('moderation', 'Content Moderation'),
+            ('admin_manual', 'Admin Manual Delete'),
+            ('expired_upload', 'Abandoned Upload Session'),
+        ],
+        default='user',
+        help_text="Why was this prompt deleted?"
     )
     
     # Indexes for performance
@@ -935,26 +950,36 @@ class Prompt(models.Model):
    - **Solution:** Multi-layer AI moderation system (Profanity + OpenAI + Vision)
    - **Status:** ✅ Fully implemented and tested
 
+### Phase D.5: Trash Bin + Orphaned File Management (In Progress)
+
+**Combined System for Asset Lifecycle Management**
+
+**Problem:** 
+- No unified system for deleted content recovery
+- Orphaned Cloudinary files waste storage
+- Prompts with missing images break feed experience
+- No admin oversight of deletion patterns
+
+**Solution:** Unified trash bin system with:
+- User trash bins (5-day free / 30-day premium retention)
+- Admin trash dashboard with orphaned file detection
+- Automatic detection via daily management command
+- Multiple admin support with admin-owned asset tracking
+
+**Architecture:**
+- Soft delete system (deleted_at, deleted_by, deletion_reason fields)
+- Detection logic: Daily scan identifies orphaned Cloudinary files and prompts with missing images
+- Admin dashboard: 4 tabs (All Trash, Orphaned Files, Missing Images, Admin-Owned Assets)
+- User dashboard: Personal trash bin with restore/permanent delete
+- Automation: Heroku Scheduler runs cleanup at 3:00 AM daily
+
+**Status:** 🔄 Phase D.5 (2.5-3 days estimated)
+**Priority:** High (affects quality, costs, premium feature)
+**Effort:** 2.5-3 days
+
 ### Current Known Issues (Phase E)
 
-1. **Orphaned Cloudinary Assets - Detection & Remediation**
-   - **Problem:** No automated detection for prompts with missing Cloudinary assets (if manually deleted from Cloudinary dashboard)
-   - **Impact:** Broken images may go unnoticed until users report them
-   - **Solution:**
-     - Django management command to scan all prompts
-     - Check if Cloudinary asset exists for each prompt
-     - Daily automated check via Heroku Scheduler (runs at 3:00 AM)
-     - Generate admin alert/email when orphans found
-     - Admin dashboard to review and remediate
-   - **Implementation Details:**
-     - Command: `python manage.py check_cloudinary_orphans`
-     - Rate limiting: 10 checks per second to avoid API limits
-     - Runtime: ~1-5 minutes depending on prompt count
-     - Cost: $0/month (uses spare Eco Dyno hours)
-   - **Priority:** Medium (Phase 2)
-   - **Effort:** 4-6 hours (includes Heroku Scheduler setup)
-
-2. **Code Institute PostgreSQL Dependency**
+1. **Code Institute PostgreSQL Dependency**
    - **Problem:** Database expires 2026-2027, not independent
    - **Impact:** Platform unusable after expiration
    - **Solution:** Migrate to Heroku PostgreSQL Mini
@@ -1836,6 +1861,129 @@ Production Values (Final Implementation):
 - Error handling edge cases
 - User acceptance testing
 - Documentation updates
+
+---
+
+## PHASE D.5: TRASH BIN + ORPHANED FILE MANAGEMENT 🗑️
+
+**Goal:** Unified asset lifecycle management and admin quality control
+
+**Duration:** 2.5-3 days
+**Status:** 🔄 In Progress
+**Priority:** High (quality control + cost optimization + premium feature)
+
+### Trash Bin Foundation (Day 1)
+- [ ] **Database Migration:**
+  - [ ] Add `deleted_at` field (datetime, nullable)
+  - [ ] Add `deleted_by` field (foreign key to User)
+  - [ ] Add `deletion_reason` field (CharField with choices)
+  - [ ] Create indexes on deleted_at and (author, deleted_at)
+- [ ] **Model Updates:**
+  - [ ] Create custom manager to exclude deleted prompts (objects)
+  - [ ] Keep all_objects manager to include deleted prompts
+  - [ ] Add methods: `soft_delete()`, `restore()`, `hard_delete()`
+- [ ] **Update Existing Delete Views:**
+  - [ ] Replace `.delete()` calls with `.soft_delete()`
+  - [ ] Maintain Cloudinary cleanup in hard_delete() only
+
+### User Trash Bin UI (Day 1.5)
+- [ ] **Trash Bin Page (User Dashboard):**
+  - [ ] List view with thumbnails
+  - [ ] Show days remaining until permanent deletion
+  - [ ] Restore button for each item
+  - [ ] Delete forever button (requires confirmation)
+  - [ ] Empty entire trash button
+  - [ ] Display retention rules based on user tier
+- [ ] **Retention Rules:**
+  - [ ] Free users: 5 days retention, last 10 items only
+  - [ ] Premium users: 30 days retention, unlimited capacity
+- [ ] **UI Components:**
+  - [ ] Delete confirmation modal
+  - [ ] Permanent delete warning (type "DELETE" to confirm)
+  - [ ] Empty trash confirmation
+  - [ ] Expiring soon indicators (red/orange badges)
+  - [ ] Premium upgrade prompt when trash full
+
+### Orphaned File Detection (Day 2)
+- [ ] **Management Command:** `check_and_cleanup.py`
+  - [ ] Scan Cloudinary for all files
+  - [ ] Compare against Prompt.featured_image and .featured_video
+  - [ ] Identify orphaned Cloudinary files
+  - [ ] Identify prompts with missing/broken images
+  - [ ] Exclude admin-owned patterns (admin/*, hero/*, about/*)
+  - [ ] Move orphaned/missing to trash with appropriate deletion_reason
+  - [ ] Clean up expired trash items
+  - [ ] Rate limiting: 100 files per batch, 1-second delays
+- [ ] **Heroku Scheduler Integration:**
+  - [ ] Set up daily run at 3:00 AM
+  - [ ] Configure environment variables
+  - [ ] Test command execution
+- [ ] **Admin Notification System:**
+  - [ ] Send digest email to admins when orphans detected
+  - [ ] Include counts and direct links to admin dashboard
+
+### Admin Trash Dashboard (Day 2.5)
+- [ ] **Tab 1: All Trash**
+  - [ ] Show all deleted items across all users
+  - [ ] Filters: By reason, by user, by date, by status
+  - [ ] Bulk actions: Restore, extend retention, permanent delete
+  - [ ] Pagination (50 items per page)
+- [ ] **Tab 2: Orphaned Files**
+  - [ ] Large thumbnail grid (150x150px)
+  - [ ] User attribution (uploaded by, when)
+  - [ ] Cloudinary metadata (size, public_id, age)
+  - [ ] Bulk actions: Mark as admin-owned, notify users, delete
+  - [ ] Age filter dropdown (All, >7 days, >30 days, >90 days)
+- [ ] **Tab 3: Missing Images**
+  - [ ] List view with prompt details
+  - [ ] User who created it
+  - [ ] Broken image URL display
+  - [ ] Quick actions: Edit prompt, contact user, delete
+- [ ] **Tab 4: Admin-Owned Assets**
+  - [ ] Separate tracking for legitimate admin uploads
+  - [ ] Pattern-based exclusion list (configurable)
+  - [ ] Tagged with purpose/location
+  - [ ] Manual "Mark as Admin-Owned" functionality
+
+### Notifications & Polish (Day 3)
+- [ ] **User Notifications:**
+  - [ ] In-app badge showing trash count
+  - [ ] Toast on delete: "Moved to trash. [Undo]"
+  - [ ] Email: "Items expiring in 24 hours" (batch, max 1/week)
+  - [ ] Premium upgrade prompts when appropriate
+- [ ] **Admin Notifications:**
+  - [ ] Daily digest if orphans detected
+  - [ ] Weekly summary of trash statistics
+  - [ ] Alert when trash storage exceeds thresholds
+- [ ] **Performance Optimization:**
+  - [ ] Lazy load thumbnails in admin dashboard
+  - [ ] Use Cloudinary transformations (c_thumb,w_150,h_150)
+  - [ ] Cache admin dashboard queries (5-minute TTL)
+  - [ ] Paginate all list views
+- [ ] **Testing:**
+  - [ ] Test soft delete flow
+  - [ ] Test restore functionality
+  - [ ] Test permanent delete with Cloudinary cleanup
+  - [ ] Test retention rules (free vs premium)
+  - [ ] Test orphaned file detection
+  - [ ] Test missing image detection
+  - [ ] Test admin dashboard filters
+  - [ ] Test notification system
+
+**Technical Implementation Notes:**
+- Cloudinary API batching: 100 files per request, 1-second delays between batches
+- Thumbnail optimization: Use Cloudinary transformations to minimize load time
+- Admin exclusion patterns: Configurable via Admin Settings (default: admin/*, hero/*, about/*, site/*)
+- Multiple admin support: Track which admin performed actions, separate visual treatment for admin-uploaded orphans
+
+**Why Phase D.5 Before Phase E:**
+- Phase E involves extensive upload flow testing
+- Trash bin serves as QA tool to verify Phase D cleanup works
+- Early implementation prevents accumulation of test data orphans
+- Provides foundation for quality control before launch
+
+**Effort:** 2.5-3 days  
+**Priority:** High (quality control + cost optimization + premium differentiator)
 
 ---
 

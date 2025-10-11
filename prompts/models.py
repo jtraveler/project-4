@@ -223,6 +223,11 @@ class Prompt(models.Model):
         blank=True,
         help_text='Why was this prompt deleted?'
     )
+    original_status = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Original status before soft delete (for restoration)'
+    )
 
     # Moderation fields
     moderation_status = models.CharField(
@@ -264,6 +269,7 @@ class Prompt(models.Model):
             models.Index(fields=['requires_manual_review']),
             models.Index(fields=['deleted_at']),
             models.Index(fields=['author', 'deleted_at']),
+            models.Index(fields=['original_status']),
         ]
 
     def __str__(self):
@@ -285,6 +291,10 @@ class Prompt(models.Model):
     def soft_delete(self, user):
         """Move prompt to trash (soft delete)"""
         from django.utils import timezone
+
+        # Save original status for restoration
+        self.original_status = self.status
+
         self.deleted_at = timezone.now()
         self.deleted_by = user
         self.deletion_reason = 'user'
@@ -293,10 +303,15 @@ class Prompt(models.Model):
 
     def restore(self):
         """Restore prompt from trash"""
+        # Restore to original status (or default to published if unknown)
+        self.status = (
+            self.original_status if self.original_status is not None else 1
+        )
+
         self.deleted_at = None
         self.deleted_by = None
         self.deletion_reason = ''
-        self.status = 1  # Make public again
+        self.original_status = None  # Clear after restoration
         self.save()
 
     def hard_delete(self):

@@ -857,6 +857,17 @@ def delete_cloudinary_assets(sender, instance, **kwargs):
     """
     Delete associated Cloudinary assets when a Prompt is deleted.
 
+    IMPORTANT: This signal only fires on HARD DELETE (permanent deletion).
+    Soft deletes (moving to trash via soft_delete()) do NOT trigger this signal.
+
+    This behavior is intentional:
+    - Soft delete: Files retained in Cloudinary for potential restore
+    - Hard delete: Files removed from Cloudinary (via hard_delete() method)
+
+    Hard deletes occur via:
+    - Prompt.hard_delete() method (manual/admin action)
+    - Daily cleanup management command (expired trash items)
+
     This prevents orphaned files from accumulating in Cloudinary storage.
     Handles both images and videos.
 

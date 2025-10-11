@@ -676,13 +676,16 @@ def prompt_delete(request, slug):
     """
     Allow users to delete their own AI prompts.
 
-    Users can only delete prompts they created. Permanently removes the prompt
-    and all associated comments from the database. Clears relevant caches and
-    redirects to homepage.
+    Uses soft delete - prompt moved to trash, not permanently deleted.
+    Users can restore from trash within retention period:
+    - Free users: 5 days
+    - Premium users: 30 days
+
+    Hard delete only happens via cleanup command or manual admin action.
 
     Variables:
         slug: URL slug of the prompt being deleted
-        prompt: The Prompt object being deleted
+        prompt: The Prompt object being soft deleted
 
     URL: /prompt/<slug>/delete/
     """
@@ -691,7 +694,13 @@ def prompt_delete(request, slug):
     )
 
     if prompt.author == request.user:
-        prompt.delete()
+        # Use soft delete instead of hard delete
+        prompt.soft_delete(request.user)
+
+        # Calculate retention period based on user tier
+        retention_days = 30 if (
+            hasattr(request.user, 'is_premium') and request.user.is_premium
+        ) else 5
 
         # Clear relevant caches when prompt is deleted
         cache.delete(f"prompt_detail_{slug}_{request.user.id}")
@@ -700,7 +709,9 @@ def prompt_delete(request, slug):
             cache.delete(f"prompt_list_None_None_{page}")
 
         messages.add_message(
-            request, messages.SUCCESS, 'Prompt deleted successfully!'
+            request, messages.SUCCESS,
+            f'"{prompt.title}" moved to trash. It will be permanently deleted '
+            f'in {retention_days} days.'
         )
         return HttpResponseRedirect(reverse('prompts:home'))
     else:

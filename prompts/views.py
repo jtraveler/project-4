@@ -785,16 +785,16 @@ def trash_bin(request):
 @login_required
 def prompt_restore(request, slug):
     """
-    Restore a prompt from trash.
+    Restore a prompt from trash (immediate, no confirmation).
 
     Only the author can restore their own prompts. Moves prompt back to
-    published status and clears deletion metadata.
+    original status and clears deletion metadata.
 
     Variables:
         slug: URL slug of the prompt being restored
         prompt: The Prompt object being restored
 
-    Template: prompts/confirm_restore.html (GET) or redirect (POST)
+    Template: None (immediate redirect)
     URL: /trash/<slug>/restore/
     """
     prompt = get_object_or_404(
@@ -806,14 +806,11 @@ def prompt_restore(request, slug):
 
     if request.method == 'POST':
         prompt.restore()
-        messages.success(
-            request,
-            f'"{prompt.title}" has been restored successfully!'
-        )
+        messages.success(request, f'"{prompt.title}" has been restored successfully!')
         return redirect('prompts:trash_bin')
 
-    context = {'prompt': prompt}
-    return render(request, 'prompts/confirm_restore.html', context)
+    # If GET request, redirect to trash bin
+    return redirect('prompts:trash_bin')
 
 
 @login_required

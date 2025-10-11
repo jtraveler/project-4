@@ -1,0 +1,218 @@
+{# prompts/templates/prompts/partials/_prompt_card.html #}
+{# Shared template for prompt cards site-wide #}
+{# Usage: {% include 'prompts/partials/_prompt_card.html' with prompt=prompt show_trash_actions=False %} #}
+{% load cloudinary %}
+
+{% if show_trash_actions %}
+    {# === TRASH BIN CARD === #}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 {% if prompt.is_expiring_soon %}border-danger{% endif %}">
+            {# Thumbnail with video handling #}
+            <div class="position-relative">
+                {% if prompt.featured_video %}
+                    <img src="{{ prompt.get_thumbnail_url }}"
+                         alt="{{ prompt.title }}"
+                         class="card-img-top"
+                         style="height: 300px; object-fit: cover;">
+                    <div class="position-absolute top-50 start-50 translate-middle">
+                        <i class="fas fa-play-circle fa-3x text-white" style="opacity: 0.8;"></i>
+                    </div>
+                {% elif prompt.featured_image %}
+                    {% cloudinary prompt.featured_image.public_id format="jpg" width=400 height=300 crop="fill" class="card-img-top" style="height: 300px; object-fit: cover;" %}
+                {% else %}
+                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <i class="fas fa-image fa-3x text-white"></i>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="card-body">
+                <h5 class="card-title">{{ prompt.title|truncatewords:10 }}</h5>
+
+                <p class="text-muted small mb-2">
+                    <i class="far fa-clock"></i> Deleted {{ prompt.deleted_at|timesince }} ago
+                </p>
+
+                {% if prompt.is_expiring_soon %}
+                    <div class="alert alert-danger py-1 px-2 small mb-2">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Expires in {{ prompt.days_until_permanent_deletion }} day(s)!</strong>
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-hourglass-half"></i>
+                        {{ prompt.days_until_permanent_deletion }} days remaining
+                    </p>
+                {% endif %}
+
+                <div class="d-flex gap-2">
+                    <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}" class="flex-grow-1">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-sm w-100">
+                            <i class="fas fa-undo"></i> Restore
+                        </button>
+                    </form>
+                    <button
+                        type="button"
+                        class="btn btn-danger btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteModal{{ prompt.id }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Delete Forever Modal #}
+    <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ prompt.id }}">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header border-danger">
+                    <h5 class="modal-title text-danger" id="deleteModalLabel{{ prompt.id }}">
+                        <i class="fas fa-exclamation-triangle"></i> Delete Forever?
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Permanently delete <strong>"{{ prompt.title }}"</strong>?</p>
+                    <div class="alert alert-danger mb-0">
+                        <strong>Warning:</strong> This action cannot be undone. The image/video will be permanently removed from Cloudinary.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="post" action="{% url 'prompts:prompt_permanent_delete' prompt.slug %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Delete Forever
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    {# === HOMEPAGE MASONRY ITEM (Keep exact structure) === #}
+    <div class="masonry-item"
+         data-item
+         {% if prompt.is_video %}data-video="true"{% endif %}
+         data-order="{{ prompt.order }}"
+         data-slug="{{ prompt.slug }}">
+        <div class="prompt-card {% if prompt.is_video %}video-card{% endif %}">
+
+            {# Admin Controls (only for staff) #}
+            {% if user.is_staff %}
+            <div class="drag-handle" title="Drag to reorder">
+                <i class="fas fa-grip-horizontal"></i>
+            </div>
+            <div class="admin-overlay">
+                <a href="{% url 'prompts:prompt_move_up' prompt.slug %}" class="btn btn-sm" title="Move Up">
+                    <i class="fas fa-arrow-up"></i>
+                </a>
+                <a href="{% url 'prompts:prompt_move_down' prompt.slug %}" class="btn btn-sm" title="Move Down">
+                    <i class="fas fa-arrow-down"></i>
+                </a>
+            </div>
+            <div class="order-display" style="display: none;">
+                {{ prompt.order }}
+            </div>
+            {% endif %}
+
+            <div class="image-wrapper">
+                {% if prompt.is_video %}
+                    <!-- Video element (hidden initially) -->
+                    <video class="gallery-video"
+                           muted
+                           loop
+                           playsinline
+                           preload="none"
+                           width="440"
+                           height="auto"
+                           data-src="{{ prompt.get_video_url }}">
+                        <source data-src="{{ prompt.get_video_url }}" type="video/mp4">
+                    </video>
+
+                    <!-- Video thumbnail -->
+                    <img class="video-thumbnail"
+                         src="{{ prompt.get_thumbnail_url }}"
+                         alt="{{ prompt.title }}"
+                         width="440"
+                         height="auto"
+                         {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %}
+                         decoding="async">
+
+                    <!-- Play icon overlay -->
+                    <div class="video-play-icon">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                {% else %}
+                    <!-- Regular image -->
+                    {% load static %}
+                    {% if "placeholder" in prompt.featured_image.url %}
+                        <img src="{% static 'images/default.jpg' %}"
+                             alt="{{ prompt.title }}"
+                             width="440"
+                             height="584"
+                             loading="lazy">
+                    {% else %}
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
+                             alt="{{ prompt.title }}"
+                             width="440"
+                             height="584"
+                             {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %}
+                             decoding="async">
+                    {% endif %}
+                {% endif %}
+
+                <!-- Overlay with user info, platform, and heart -->
+                <div class="card-overlay">
+                    <div class="overlay-top">
+                        <span class="user-info">@{{ prompt.author }}</span>
+                    </div>
+                    <div class="overlay-bottom">
+                        <span class="platform-info">
+                            <i class="fas fa-user"></i> {{ prompt.author }}
+                        </span>
+                        <span class="heart-counter">
+                            {% if user.is_authenticated %}
+                                <small class="like-section"
+                                       data-prompt-slug="{{ prompt.slug }}"
+                                       style="cursor: pointer; user-select: none;">
+                                    {% if user in prompt.likes.all %}
+                                        <i class="fas fa-heart me-1" style="color: white;"></i>
+                                    {% else %}
+                                        <i class="far fa-heart me-1" style="color: white;"></i>
+                                    {% endif %}
+                                    <span class="like-count">{{ prompt.number_of_likes }}</span>
+                                    like<span class="like-plural">{% if prompt.number_of_likes != 1 %}s{% endif %}</span>
+                                </small>
+                            {% else %}
+                                <a href="{% url 'account_login' %}?next={{ request.path }}"
+                                   class="text-decoration-none"
+                                   style="color: white;">
+                                    <small>
+                                        <i class="far fa-heart me-1"></i>
+                                        <span>{{ prompt.number_of_likes }}</span>
+                                        like{% if prompt.number_of_likes != 1 %}s{% endif %}
+                                    </small>
+                                </a>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clickable link overlay -->
+            <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="card-link" aria-label="View {{ prompt.title }} details"></a>
+
+            <!-- Hidden tags for filtering -->
+            <div class="hidden-tags" style="display: none;">
+                {% for tag in prompt.tags.all %}
+                    <span class="tag-clickable" data-tag="{{ tag.name }}">{{ tag.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endif %}

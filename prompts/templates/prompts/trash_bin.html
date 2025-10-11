@@ -50,57 +50,7 @@
     {% if trashed_prompts %}
         <div class="row">
             {% for prompt in trashed_prompts %}
-            <div class="col-md-4 mb-4">
-                <div class="card {% if prompt.is_expiring_soon %}border-danger{% endif %}">
-                    {% if prompt.featured_image %}
-                        {% cloudinary prompt.featured_image.public_id format="jpg" width=400 height=300 crop="fill" class="card-img-top" %}
-                    {% elif prompt.featured_video %}
-                        <!-- Show video thumbnail instead of raw video -->
-                        <div class="position-relative">
-                            <img src="{{ prompt.get_thumbnail_url }}" alt="{{ prompt.title }}" class="card-img-top" style="height: 300px; object-fit: cover;">
-                            <div class="position-absolute top-50 start-50 translate-middle">
-                                <i class="fas fa-play-circle fa-3x text-white" style="opacity: 0.8;"></i>
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 300px;">
-                            <i class="fas fa-image fa-3x text-white"></i>
-                        </div>
-                    {% endif %}
-
-                    <div class="card-body">
-                        <h5 class="card-title">{{ prompt.title }}</h5>
-                        <p class="card-text text-muted small">
-                            Deleted {{ prompt.deleted_at|timesince }} ago
-                        </p>
-
-                        {% if prompt.is_expiring_soon %}
-                            <div class="alert alert-danger py-2 px-3 mb-2">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <strong>Expires in {{ prompt.days_until_permanent_deletion }} day(s)!</strong>
-                            </div>
-                        {% else %}
-                            <p class="text-muted small mb-2">
-                                <i class="fas fa-clock"></i>
-                                {{ prompt.days_until_permanent_deletion }} days remaining
-                            </p>
-                        {% endif %}
-
-                        <div class="d-flex gap-2">
-                            <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}" class="flex-grow-1">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn-sm w-100">
-                                    <i class="fas fa-undo"></i> Restore
-                                </button>
-                            </form>
-                            <a href="{% url 'prompts:prompt_permanent_delete' prompt.slug %}"
-                               class="btn btn-danger btn-sm">
-                                <i class="fas fa-trash"></i> Delete Forever
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                {% include 'prompts/partials/_prompt_card.html' with prompt=prompt show_trash_actions=True %}
             {% endfor %}
         </div>
     {% else %}

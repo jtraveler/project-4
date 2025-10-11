@@ -14,7 +14,7 @@ class PromptAdmin(SummernoteModelAdmin):
     list_display = (
         'title', 'order', 'slug', 'status', 'moderation_badge', 'created_on',
         'author', 'tag_list', 'number_of_likes', 'ai_generator', 'media_type',
-        'deleted_at', 'reorder_links'
+        'deleted_at', 'image_validation', 'reorder_links'
     )
     list_display_links = ('title',)
     search_fields = ['title', 'content', 'tags__name', 'author__username']
@@ -105,6 +105,40 @@ class PromptAdmin(SummernoteModelAdmin):
             '<p style="color: #999; font-style: italic;">No image or video</p>'
         )
     image_preview.short_description = 'Media Preview'
+
+    def image_validation(self, obj):
+        """Check if Cloudinary image/video is valid and accessible"""
+        if not obj.featured_image and not obj.featured_video:
+            return format_html(
+                '<span style="color: #999;">No media</span>'
+            )
+
+        try:
+            # Try to get the URL - if Cloudinary resource is broken, this will fail
+            if obj.featured_image:
+                url = obj.featured_image.url
+                public_id = obj.featured_image.public_id
+                icon = '✓'
+                color = '#28a745'  # green
+                title = f'Valid image: {public_id}'
+            elif obj.featured_video:
+                url = obj.featured_video.url
+                public_id = obj.featured_video.public_id
+                icon = '✓'
+                color = '#28a745'  # green
+                title = f'Valid video: {public_id}'
+
+            return format_html(
+                '<span style="color: {}; font-weight: bold;" title="{}">{}</span>',
+                color, title, icon
+            )
+        except Exception as e:
+            # If we can't access the URL, the Cloudinary resource is broken
+            return format_html(
+                '<span style="color: #dc3545; font-weight: bold;" title="Error: {}">✗ BROKEN</span>',
+                str(e)
+            )
+    image_validation.short_description = 'Media Valid?'
 
     def moderation_badge(self, obj):
         """Display moderation status with color-coded badge"""

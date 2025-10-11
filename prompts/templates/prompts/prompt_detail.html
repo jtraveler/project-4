@@ -346,10 +346,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p id="deleteModalMessage">Are you sure you want to delete this item? This action cannot be undone.</p>
-                <div class="alert alert-warning mt-3" role="alert">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Warning:</strong> This action is permanent and cannot be reversed.
+                <p id="deleteModalMessage">Are you sure you want to move this prompt to trash?</p>
+                <div class="alert alert-info mt-3" role="alert">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Note:</strong> This prompt will be moved to your trash bin and kept for 5 days (free) or 30 days (premium) before permanent deletion. You can restore it anytime from your trash.
                 </div>
             </div>
             <div class="modal-footer">
@@ -434,13 +434,13 @@ document.addEventListener('DOMContentLoaded', function() {
             modalMessage.textContent = 'Are you sure you want to delete this comment? This action cannot be undone.';
             confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete Comment';
         } else if (deleteUrl.includes('/delete/')) {
-            modalTitle.textContent = 'Delete Prompt?';
-            modalMessage.textContent = 'Are you sure you want to delete this prompt? This will also delete all associated comments and cannot be undone.';
-            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete Prompt';
+            modalTitle.textContent = 'Move to Trash?';
+            modalMessage.textContent = 'This prompt will be moved to your trash bin and kept for 5 days (free) or 30 days (premium) before permanent deletion. You can restore it anytime from your trash.';
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Move to Trash';
         } else {
-            modalTitle.textContent = 'Confirm Deletion';
-            modalMessage.textContent = 'Are you sure you want to delete this item? This action cannot be undone.';
-            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Delete';
+            modalTitle.textContent = 'Move to Trash?';
+            modalMessage.textContent = 'This item will be moved to your trash bin. You can restore it later.';
+            confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Move to Trash';
         }
         
         confirmBtn.href = deleteUrl;

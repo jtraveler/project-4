@@ -708,10 +708,17 @@ def prompt_delete(request, slug):
         for page in range(1, 5):
             cache.delete(f"prompt_list_None_None_{page}")
 
+        # Create undo links for quick restoration
+        trash_url = reverse('prompts:trash_bin')
+        restore_url = reverse('prompts:prompt_restore', args=[slug])
+
         messages.add_message(
             request, messages.SUCCESS,
             f'"{prompt.title}" moved to trash. It will be permanently deleted '
-            f'in {retention_days} days.'
+            f'in {retention_days} days. '
+            f'<a href="{trash_url}" class="alert-link">View Trash</a> | '
+            f'<a href="{restore_url}" class="alert-link">Undo</a>',
+            extra_tags='safe'
         )
         return HttpResponseRedirect(reverse('prompts:home'))
     else:
@@ -1334,6 +1341,13 @@ def upload_submit(request):
     except json.JSONDecodeError:
         tags = []
 
+    # BUGFIX: If no tags provided in POST, fallback to AI-generated tags from session
+    if not tags or len(tags) == 0:
+        ai_tags = request.session.get('ai_tags', [])
+        if ai_tags:
+            tags = ai_tags
+            logger.info(f"Using AI-generated tags from session: {tags}")
+
     # For videos, generate title/tags from prompt text if not provided
     if resource_type == 'video':
         from .services.content_generation import ContentGenerationService
@@ -1344,7 +1358,7 @@ def upload_submit(request):
             ai_result = content_gen.generate_from_text(content)
             ai_title = ai_result.get('title', 'Untitled Video Prompt')
 
-            # Also generate tags if not provided
+            # Also generate tags if not provided (overrides session tags)
             if not tags or len(tags) == 0:
                 suggested_tags = ai_result.get('tags', [])
                 tags = suggested_tags

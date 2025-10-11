@@ -971,6 +971,16 @@ class Prompt(models.Model):
    - **Priority:** Medium (after Phase E testing)
    - **Effort:** 2-3 days
 
+4. **Testing Timer Values in Production**
+   - **Problem:** Current idle detection uses 1-minute testing values instead of 45-minute production values
+   - **Impact:** Users may experience overly aggressive timeout warnings
+   - **Solution:** 
+     - Immediate: Change JavaScript constants to production values (45min/60sec)
+     - Long-term: Admin panel configuration for dynamic timer adjustment
+   - **Location:** prompts/templates/prompts/upload_step2.html lines ~410-412
+   - **Priority:** High (affects user experience)
+   - **Effort:** 5 minutes (constant change) + 4 hours (admin panel integration)
+
 ### UI/UX Issues (Fix in Phase 1-2)
 
 1. **Upload Flow:**
@@ -993,6 +1003,15 @@ class Prompt(models.Model):
 - Advanced caching strategy
 - Database query optimization at scale
 - Real-time features (WebSockets for live notifications)
+
+**Admin Configurable Settings:**
+- Idle timer values (initial timeout, warning duration, extension period)
+- Upload limits per user tier (weekly/monthly quotas)
+- Moderation sensitivity thresholds
+- AI generation cost controls and rate limiting
+- Cloudinary cleanup schedules and retention policies
+
+**Benefits:** Real-time adjustments without code deployments, A/B testing capabilities, responsive user feedback implementation
 
 ---
 
@@ -1097,22 +1116,37 @@ class Prompt(models.Model):
 - **Purchase Option:** Buy coins via Stripe ($2.99 - $19.99)
 - **Rationale:** "Earning is slow, but premium members get 2x..." (conversion funnel)
 
+**8. CSP Exemption for Upload Pages**
+- **Decision:** Applied @csp_exempt decorator to upload views (upload_step1, upload_step2, upload_submit)
+- **Rationale:** Cloudinary upload widget requires dynamic resource loading that conflicts with strict CSP
+- **Alternative Considered:** Selective CSP rules, but widget loads unpredictable resources
+- **Trade-off:** Security vs functionality - upload pages have reduced CSP protection
+- **Status:** Temporary solution until Cloudinary provides CSP-compatible widget
+
+**9. Dual Upload System Maintenance**
+- **Current State:** Two parallel upload flows (/upload/ vs /create-prompt/)
+- **Strategy:** 
+  - Phase E: Integration testing to ensure consistency
+  - Phase 2: Deprecate /create-prompt/ in favor of enhanced /upload/ flow
+  - Migration path: Add AI generation to /create-prompt/ or sunset entirely
+- **Justification:** /upload/ provides superior UX with AI assistance and session management
+
 ### SEO Decisions
 
-**8. SEO Filename Strategy: Prompt Text + AI Fallback**
+**10. SEO Filename Strategy: Prompt Text + AI Fallback**
 - **Primary:** Extract keywords from user's prompt text (FREE)
 - **Fallback:** AI tagging if prompt < 5 words (costs ~$0.50/1000)
 - **Format:** `keyword1-keyword2-[ai-generator]-prompt-[timestamp].jpg`
 - **Reasoning:** User prompts are already keyword-rich, saves AI costs
 - **Example:** `cyberpunk-neon-cityscape-midjourney-prompt-1234567890.jpg`
 
-**9. Thumbnails: Cloudinary Transformations (NOT Separate Files)**
+**11. Thumbnails: Cloudinary Transformations (NOT Separate Files)**
 - **Strategy:** One master image, generate thumbnails via URL transformations
 - **Benefits:** Saves storage, automatic caching, no duplication
 - **Alt Tags:** Context-specific (different alt for thumbnail vs full image)
 - **Example Transformation:** `/c_fill,w_300,h_200,g_auto,q_auto,f_auto/`
 
-**10. SEO Consistency: Include "[AI Generator] Prompt" Everywhere**
+**12. SEO Consistency: Include "[AI Generator] Prompt" Everywhere**
 - **H1:** `"[Title] - [AI Generator] Prompt"`
 - **Alt Tag:** `"[Title] - [AI Generator] Prompt - AI-generated image"`
 - **Filename:** `"[keywords]-[ai-generator]-prompt-[timestamp].jpg"`
@@ -1120,7 +1154,7 @@ class Prompt(models.Model):
 
 ### Content Moderation Decisions
 
-**11. AI Moderation: Multi-Layer Approach**
+**13. AI Moderation: Multi-Layer Approach**
 - **Layer 1:** AWS Rekognition (via Cloudinary) - standard moderation
 - **Layer 2:** Cloudinary AI Vision - custom checks (minors, gore, satanic)
 - **Layer 3:** OpenAI Moderation API - text moderation (FREE)
@@ -1130,7 +1164,7 @@ class Prompt(models.Model):
   - STRICT: Explicit nudity (0.7 threshold - revised from 0.2), violence (0.5 - revised from 0.3)
   - MODERATE: Suggestive nudity (0.4-0.69 pending review), Drugs (0.6), gambling (0.7)
 
-**12. Comments: Keep with AI Moderation (NOT Disable)**
+**14. Comments: Keep with AI Moderation (NOT Disable)**
 - **Reasoning:**
   - SEO critical (fresh content, engagement signals)
   - AI catches 90%+ of issues
@@ -1144,7 +1178,7 @@ class Prompt(models.Model):
   - Flag for review (0.5-0.8 confidence)
   - Admin reviews flagged comments (~30 min/day)
 
-**13. AI Bot Personality: Helpful, NOT Snarky**
+**15. AI Bot Personality: Helpful, NOT Snarky**
 - **Decision:** AI bot is supportive, encouraging, educational
 - **Rejected:** Snarky/sassy responses to users
 - **Reasoning:**
@@ -1161,7 +1195,7 @@ class Prompt(models.Model):
 
 ### Social & Growth Decisions
 
-**14. Soft Launch: Invite-Only (First 2-4 Weeks)**
+**16. Soft Launch: Invite-Only (First 2-4 Weeks)**
 - **Strategy:** Closed beta with invite codes
 - **Benefits:**
   - Controlled scaling (manage server load)
@@ -1171,13 +1205,13 @@ class Prompt(models.Model):
   - Quality control (invited users = engaged users)
 - **Gamification:** 500 PromptCoins per successful invite
 
-**15. Social Login: Google + Apple (Phase 1 End)**
+**17. Social Login: Google + Apple (Phase 1 End)**
 - **Priority:** Google (70% users), Apple (15% users)
 - **Skip:** Yahoo (dying), Microsoft (overkill), LinkedIn (not relevant)
 - **Phase 2:** Facebook (if data shows demand)
 - **Reasoning:** Critical for conversion, reduces signup friction 20-40%
 
-**16. Tag Strategy: Hybrid User + AI**
+**18. Tag Strategy: Hybrid User + AI**
 - **User Action:** Selects up to 3 tags from 27 presets
 - **AI Action:** Pre-populates suggested tags, validates selection
 - **If Mismatch:** Approve anyway, flag for admin, auto-correct if not reviewed in 2-4 days
@@ -1186,7 +1220,7 @@ class Prompt(models.Model):
 
 ### Brand & Marketing Decisions
 
-**17. Brand Name: PromptFinder (NOT PromptFlow)**
+**19. Brand Name: PromptFinder (NOT PromptFlow)**
 - **Domain:** promptfinder.net
 - **Reasoning:**
   - Search intent aligned ("find prompts")
@@ -1200,7 +1234,7 @@ class Prompt(models.Model):
 
 ### Recent Decisions (January 2025)
 
-**18. Tag Strategy: Expanded from 27 to 209 Tags**
+**20. Tag Strategy: Expanded from 27 to 209 Tags**
 - **Reasoning:**
   - More specific tags = better SEO (e.g., "Abandoned Buildings" vs generic "Architecture")
   - Richer vocabulary for AI suggestions
@@ -1212,7 +1246,7 @@ class Prompt(models.Model):
 - **Alternative Considered:** 27 core tags with hidden sub-tags mapping
 - **Why Rejected:** Misleading to users, loses specificity for SEO
 
-**19. Combined AI Analysis: Vision + Text**
+**21. Combined AI Analysis: Vision + Text**
 - **Decision:** Analyze both image AND prompt text for tag suggestions
 - **Reasoning:**
   - Vision alone misses context (e.g., "mysterious explorer" mood from text)
@@ -1221,7 +1255,7 @@ class Prompt(models.Model):
 - **Cost:** Same ~$0.00255 per upload (single API call)
 - **Implementation:** One Vision API call analyzes visual + reads prompt text
 
-**20. Prompt-Visual Relevance Checking**
+**22. Prompt-Visual Relevance Checking**
 - **Decision:** Verify uploaded images match their prompt descriptions
 - **Status Logic:**
   - Score >0.8: Auto-publish (status=1)
@@ -1234,7 +1268,7 @@ class Prompt(models.Model):
   - User trust (ensures prompts actually match images)
 - **Cost:** Included in single combined API call
 
-**21. SEO Automation in Python (Not AI)**
+**23. SEO Automation in Python (Not AI)**
 - **Decision:** Python handles filename/alt-tag generation after AI returns title
 - **Reasoning:**
   - Separation of concerns (AI analyzes content, Python formats for web)
@@ -1242,7 +1276,7 @@ class Prompt(models.Model):
   - Flexibility (easy to adjust formats without changing AI prompts)
   - Reliability (deterministic vs AI potentially formatting inconsistently)
 
-**22. Two-Step Upload Flow (Pexels-Inspired)**
+**24. Two-Step Upload Flow (Pexels-Inspired)**
 - **Decision:** Progressive disclosure - upload first, then details form
 - **Step 1:** Drag-and-drop with upload counter
 - **Step 2:** Large preview + form (title, prompt, tags, AI generator)
@@ -1252,7 +1286,7 @@ class Prompt(models.Model):
   - Industry-standard UX (Pexels, Unsplash, etc.)
   - Mobile-friendly
 
-**23. Upload Counter: Weekly Limit for Free Users**
+**25. Upload Counter: Weekly Limit for Free Users**
 - **Decision:** "You have X uploads left this week" (10/week during launch)
 - **Reasoning:**
   - Aligns with Phase 2 monetization strategy
@@ -1260,7 +1294,7 @@ class Prompt(models.Model):
   - Clear reset cadence (every Monday)
 - **Later:** Switch to monthly limits after 3-6 months
 
-**24. Tag Count: 5 Suggested Tags (Not 3)**
+**26. Tag Count: 5 Suggested Tags (Not 3)**
 - **Decision:** AI suggests 5 tags, user can reduce to 3 or expand to 7 max
 - **Reasoning:**
   - SEO best practices: 3-7 tags optimal
@@ -1775,6 +1809,20 @@ prompt.featured_video = CloudinaryResource(
    - 45-minute session prevents abandoned files
    - Reduces wasted Cloudinary storage
    - User-friendly with extension option
+
+**Current Timer Configuration (Testing vs Production):**
+
+Testing Values (Currently Active):
+- Initial idle timer: 1 minute 
+- Warning countdown: 30 seconds
+- Extension period: 30 minutes
+
+Production Values (Final Implementation):
+- Initial idle timer: 45 minutes (generous for thoughtful users)
+- Warning countdown: 60 seconds (enough time to notice) 
+- Extension period: 30 minutes (per "Yes" click)
+
+**Future Enhancement:** Admin-configurable timer values through Django admin panel to allow real-time adjustment based on user feedback without code deployments.
 
 **Cost Analysis:**
 - AI Content Generation: ~$0.00255 per upload (GPT-4o-mini)

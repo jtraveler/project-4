@@ -5,6 +5,47 @@
 
 {% block title %}Trash Bin - PromptFinder{% endblock %}
 
+{% block extra_head %}
+<style>
+.masonry-grid {
+    display: flex !important;
+    gap: 15px;
+    width: 100%;
+}
+
+.masonry-column {
+    flex: 1;
+    display: flex !important;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.masonry-item {
+    width: 100% !important;
+    display: block !important;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.prompt-card {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.prompt-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+</style>
+{% endblock %}
+
 {% block content %}
 {# Header section with fixed container #}
 <div class="container mt-5">
@@ -50,24 +91,26 @@
     </div>
 </div>
 
-{# Grid section with same width/padding as homepage masonry-container #}
+{# Masonry grid section - same structure as homepage #}
 {% if trashed_prompts %}
-<div style="max-width: 100%; margin: 0; padding: 20px 40px; width: 100%;">
-    <div class="row g-3">
+<div class="masonry-container" style="max-width: 100%; margin: 0; padding: 20px 40px; width: 100%;">
+    <div class="masonry-wrapper">
+        <div class="masonry-grid" id="trash-masonry-grid">
+            <!-- Columns will be created by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Store items in hidden container for JavaScript -->
+    <div id="trash-items-container" style="display: none;">
         {% for prompt in trashed_prompts %}
-        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12">
-            <div class="card prompt-card {% if prompt.is_expiring_soon %}border-danger{% endif %}" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); transition: transform 0.3s ease, box-shadow 0.3s ease;">
-                {# Thumbnail - Videos autoplay like homepage #}
-                <div class="position-relative" style="overflow: hidden;">
+        <div class="masonry-item" data-item data-order="{{ forloop.counter }}" data-slug="{{ prompt.slug }}">
+            <div class="card prompt-card {% if prompt.is_expiring_soon %}border-danger{% endif %}">
+                {# Thumbnail #}
+                <div class="position-relative">
                     {% if prompt.featured_video %}
-                        {# Video - Autoplay and loop like homepage #}
                         <video class="w-100"
                                style="display: block; border-radius: 12px 12px 0 0;"
-                               autoplay
-                               loop
-                               muted
-                               playsinline
-                               preload="metadata">
+                               autoplay loop muted playsinline preload="metadata">
                             <source src="{{ prompt.featured_video.url }}" type="video/mp4">
                         </video>
                     {% elif prompt.featured_image %}
@@ -82,10 +125,9 @@
                     {% endif %}
                 </div>
 
-                {# Card Body - Trash-specific content #}
+                {# Card Body #}
                 <div class="card-body">
                     <h5 class="card-title">{{ prompt.title|truncatewords:10 }}</h5>
-
                     <p class="text-muted small mb-2">
                         <i class="far fa-clock"></i> Deleted {{ prompt.deleted_at|timesince }} ago
                     </p>
@@ -93,16 +135,14 @@
                     {% if prompt.is_expiring_soon %}
                         <div class="alert alert-danger py-1 px-2 small mb-2">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <strong>Expires in {{ prompt.days_until_permanent_deletion }} day(s)!</strong>
+                            Expires in {{ prompt.days_until_permanent_deletion }} day(s)!
                         </div>
                     {% else %}
                         <p class="text-muted small mb-2">
-                            <i class="fas fa-hourglass-half"></i>
                             {{ prompt.days_until_permanent_deletion }} days remaining
                         </p>
                     {% endif %}
 
-                    {# Action Buttons #}
                     <div class="d-flex gap-2">
                         <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}" class="flex-grow-1">
                             {% csrf_token %}
@@ -110,8 +150,7 @@
                                 <i class="fas fa-undo"></i> Restore
                             </button>
                         </form>
-                        <button type="button"
-                                class="btn btn-danger btn-sm"
+                        <button type="button" class="btn btn-danger btn-sm"
                                 data-bs-toggle="modal"
                                 data-bs-target="#deleteModal{{ prompt.id }}">
                             <i class="fas fa-trash"></i>
@@ -121,29 +160,27 @@
             </div>
         </div>
 
-        {# Delete Forever Modal #}
-        <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ prompt.id }}">
+        {# Modal outside masonry-item #}
+        <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header border-danger">
-                        <h5 class="modal-title text-danger" id="deleteModalLabel{{ prompt.id }}">
+                        <h5 class="modal-title text-danger">
                             <i class="fas fa-exclamation-triangle"></i> Delete Forever?
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <p>Permanently delete <strong>"{{ prompt.title }}"</strong>?</p>
                         <div class="alert alert-danger mb-0">
-                            <strong>Warning:</strong> This action cannot be undone. The image/video will be permanently removed from Cloudinary.
+                            <strong>Warning:</strong> Cannot be undone.
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <form method="post" action="{% url 'prompts:prompt_permanent_delete' prompt.slug %}" class="d-inline">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> Delete Forever
-                            </button>
+                            <button type="submit" class="btn btn-danger">Delete Forever</button>
                         </form>
                     </div>
                 </div>
@@ -163,4 +200,83 @@
     </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extras %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Masonry logic for trash bin
+    let columns = [];
+    let columnCount = 4;
+
+    function getColumnCount() {
+        const width = window.innerWidth;
+        if (width < 500) return 1;
+        if (width < 800) return 2;
+        if (width < 1100) return 3;
+        return 4;
+    }
+
+    function createColumns() {
+        const grid = document.getElementById('trash-masonry-grid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        columns = [];
+        columnCount = getColumnCount();
+
+        for (let i = 0; i < 4; i++) {
+            const column = document.createElement('div');
+            column.className = 'masonry-column';
+            grid.appendChild(column);
+            columns.push(column);
+        }
+    }
+
+    function distributeItems() {
+        const container = document.getElementById('trash-items-container');
+        if (!container) return;
+
+        const items = Array.from(container.querySelectorAll('[data-item]'));
+
+        // Round-robin distribution for simple even spread
+        items.forEach((item, index) => {
+            const targetColumn = index % columnCount;
+            if (columns[targetColumn]) {
+                columns[targetColumn].appendChild(item);
+                // Stagger animation
+                item.style.animationDelay = `${index * 0.05}s`;
+            }
+        });
+    }
+
+    // Initialize
+    createColumns();
+    distributeItems();
+
+    // Handle resize
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            const newColumnCount = getColumnCount();
+            if (newColumnCount !== columnCount) {
+                // Collect all items before recreating columns
+                const allItems = [];
+                columns.forEach(col => {
+                    allItems.push(...Array.from(col.querySelectorAll('.masonry-item')));
+                });
+
+                // Put items back in hidden container
+                const container = document.getElementById('trash-items-container');
+                allItems.forEach(item => container.appendChild(item));
+
+                // Recreate and redistribute
+                createColumns();
+                distributeItems();
+            }
+        }, 250);
+    });
+});
+</script>
 {% endblock %}

@@ -713,7 +713,8 @@ def prompt_delete(request, slug):
         trash_url = reverse('prompts:trash_bin')
         restore_url = reverse('prompts:prompt_restore', args=[slug])
         csrf_token = get_token(request)
-        current_url = request.path  # Store current page for redirect after restore
+        # Store the referer (page where delete button was clicked)
+        current_url = request.META.get('HTTP_REFERER', request.path)
 
         messages.add_message(
             request, messages.SUCCESS,
@@ -722,6 +723,7 @@ def prompt_delete(request, slug):
             f'<a href="{trash_url}" class="alert-link">View Trash</a> | '
             f'<form method="post" action="{restore_url}" style="display:inline;" class="d-inline" onsubmit="this.querySelector(\'button\').disabled=true;">'
             f'  <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">'
+            f'  <input type="hidden" name="return_to" value="{current_url}">'
             f'  <button type="submit" class="btn btn-link alert-link p-0 border-0" style="vertical-align:baseline;">'
             f'    Undo'
             f'  </button>'
@@ -816,14 +818,20 @@ def prompt_restore(request, slug):
         prompt.restore()
         messages.success(request, f'"{prompt.title}" has been restored successfully!')
 
-        # Check if user came from trash page
-        referer = request.META.get('HTTP_REFERER', '')
+        # Check if return_to URL was provided (from Undo button)
+        return_to = request.POST.get('return_to', '')
 
+        if return_to:
+            # Undo button was clicked - go back to original page
+            return redirect(return_to)
+
+        # Check referer for Restore button behavior
+        referer = request.META.get('HTTP_REFERER', '')
         if 'trash' in referer:
-            # User clicked Restore button from trash page - stay on trash
+            # Restore from trash page - stay on trash
             return redirect('prompts:trash_bin')
         else:
-            # User clicked Undo from homepage - go back to homepage
+            # Fallback - go to homepage
             return redirect('prompts:home')
 
     # If GET request, redirect to trash bin

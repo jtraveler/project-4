@@ -709,16 +709,23 @@ def prompt_delete(request, slug):
             cache.delete(f"prompt_list_None_None_{page}")
 
         # Create undo links for quick restoration
+        from django.middleware.csrf import get_token
         trash_url = reverse('prompts:trash_bin')
         restore_url = reverse('prompts:prompt_restore', args=[slug])
+        csrf_token = get_token(request)
 
         messages.add_message(
             request, messages.SUCCESS,
             f'"{prompt.title}" moved to trash. It will be permanently deleted '
             f'in {retention_days} days. '
             f'<a href="{trash_url}" class="alert-link">View Trash</a> | '
-            f'<a href="{restore_url}" class="alert-link">Undo</a>',
-            extra_tags='safe'
+            f'<form method="post" action="{restore_url}" style="display:inline;" class="d-inline">'
+            f'  <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">'
+            f'  <button type="submit" class="btn btn-link alert-link p-0 border-0" style="vertical-align:baseline;">'
+            f'    Undo'
+            f'  </button>'
+            f'</form>',
+            extra_tags='success safe'
         )
         return HttpResponseRedirect(reverse('prompts:home'))
     else:

@@ -1216,3 +1216,25 @@ footer {
       min-height: 450px;
   }
 }
+/* ===== ALERT UNDO BUTTON STYLING ===== */
+.alert form button.btn-link {
+    text-decoration: none;
+    padding: 0;
+    margin: 0;
+    vertical-align: baseline;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.alert form button.btn-link:hover {
+    text-decoration: underline;
+}
+
+.alert form button.btn-link:focus {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}

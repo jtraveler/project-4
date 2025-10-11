@@ -724,6 +724,171 @@ def prompt_delete(request, slug):
         )
 
 
+@login_required
+def trash_bin(request):
+    """
+    Display user's trash bin with deleted prompts.
+
+    Free users: Last 10 items, 5-day retention
+    Premium users: Unlimited items, 30-day retention
+
+    Variables:
+        trashed_prompts: QuerySet of deleted prompts
+        trash_count: Total number of items in trash
+        retention_days: Days before permanent deletion
+        is_premium: Whether user has premium account
+        capacity_reached: Whether free user hit 10-item limit
+
+    Template: prompts/trash_bin.html
+    URL: /trash/
+    """
+    user = request.user
+    retention_days = 30 if (
+        hasattr(user, 'is_premium') and user.is_premium
+    ) else 5
+
+    # Query deleted prompts
+    if hasattr(user, 'is_premium') and user.is_premium:
+        # Premium: show all deleted items
+        trashed = Prompt.all_objects.filter(
+            author=user,
+            deleted_at__isnull=False
+        ).order_by('-deleted_at')
+    else:
+        # Free: limit to last 10 items only
+        trashed = Prompt.all_objects.filter(
+            author=user,
+            deleted_at__isnull=False
+        ).order_by('-deleted_at')[:10]
+
+    trash_count = trashed.count()
+
+    context = {
+        'trashed_prompts': trashed,
+        'trash_count': trash_count,
+        'retention_days': retention_days,
+        'is_premium': hasattr(user, 'is_premium') and user.is_premium,
+        'capacity_reached': trash_count >= 10 and not (
+            hasattr(user, 'is_premium') and user.is_premium
+        ),
+    }
+    return render(request, 'prompts/trash_bin.html', context)
+
+
+@login_required
+def prompt_restore(request, slug):
+    """
+    Restore a prompt from trash.
+
+    Only the author can restore their own prompts. Moves prompt back to
+    published status and clears deletion metadata.
+
+    Variables:
+        slug: URL slug of the prompt being restored
+        prompt: The Prompt object being restored
+
+    Template: prompts/confirm_restore.html (GET) or redirect (POST)
+    URL: /trash/<slug>/restore/
+    """
+    prompt = get_object_or_404(
+        Prompt.all_objects,
+        slug=slug,
+        author=request.user,
+        deleted_at__isnull=False
+    )
+
+    if request.method == 'POST':
+        prompt.restore()
+        messages.success(
+            request,
+            f'"{prompt.title}" has been restored successfully!'
+        )
+        return redirect('prompts:trash_bin')
+
+    context = {'prompt': prompt}
+    return render(request, 'prompts/confirm_restore.html', context)
+
+
+@login_required
+def prompt_permanent_delete(request, slug):
+    """
+    Permanently delete a prompt from trash.
+
+    This action cannot be undone - removes prompt from database and deletes
+    associated Cloudinary assets. Only the author can permanently delete
+    their own prompts.
+
+    Variables:
+        slug: URL slug of the prompt being deleted
+        prompt: The Prompt object being permanently deleted
+
+    Template: prompts/confirm_permanent_delete.html (GET) or redirect (POST)
+    URL: /trash/<slug>/delete-forever/
+    """
+    prompt = get_object_or_404(
+        Prompt.all_objects,
+        slug=slug,
+        author=request.user,
+        deleted_at__isnull=False
+    )
+
+    if request.method == 'POST':
+        title = prompt.title
+        prompt.hard_delete()
+
+        messages.warning(
+            request,
+            f'"{title}" has been permanently deleted. '
+            f'This action cannot be undone.'
+        )
+        return redirect('prompts:trash_bin')
+
+    context = {'prompt': prompt}
+    return render(request, 'prompts/confirm_permanent_delete.html', context)
+
+
+@login_required
+def empty_trash(request):
+    """
+    Permanently delete all items in user's trash bin.
+
+    This action cannot be undone. Removes all deleted prompts from database
+    and deletes all associated Cloudinary assets.
+
+    Variables:
+        trash_count: Number of items to be deleted
+
+    Template: prompts/confirm_empty_trash.html (GET) or redirect (POST)
+    URL: /trash/empty/
+    """
+    if request.method == 'POST':
+        trashed = Prompt.all_objects.filter(
+            author=request.user,
+            deleted_at__isnull=False
+        )
+        count = trashed.count()
+
+        # Permanently delete all trashed items
+        for prompt in trashed:
+            prompt.hard_delete()
+
+        messages.warning(
+            request,
+            f'{count} item(s) permanently deleted. '
+            f'This action cannot be undone.'
+        )
+        return redirect('prompts:trash_bin')
+
+    # Count for confirmation message
+    trash_count = Prompt.all_objects.filter(
+        author=request.user,
+        deleted_at__isnull=False
+    ).count()
+
+    context = {'trash_count': trash_count}
+    return render(request, 'prompts/confirm_empty_trash.html', context)
+
+
 def collaborate_request(request):
     """
     Handle the contact/collaboration form submissions.

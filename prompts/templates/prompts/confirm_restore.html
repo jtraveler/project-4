@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Restore Prompt - PromptFinder{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title">
+                        <i class="fas fa-undo text-success"></i> Restore Prompt?
+                    </h3>
+                    <p class="card-text">
+                        Are you sure you want to restore <strong>"{{ prompt.title }}"</strong>?
+                    </p>
+                    <p class="text-muted small">
+                        This prompt will be restored to your active prompts and will be visible again.
+                    </p>
+
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-undo"></i> Yes, Restore
+                        </button>
+                        <a href="{% url 'prompts:trash_bin' %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

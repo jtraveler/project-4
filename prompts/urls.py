@@ -19,6 +19,11 @@ urlpatterns = [
     path('prompt/<slug:slug>/edit/', views.prompt_edit, name='prompt_edit'),
     path('prompt/<slug:slug>/delete/', views.prompt_delete, name='prompt_delete'),
     path('prompt/<slug:slug>/like/', views.prompt_like, name='prompt_like'),
+    # Trash bin URLs (Phase D.5)
+    path('trash/', views.trash_bin, name='trash_bin'),
+    path('trash/<slug:slug>/restore/', views.prompt_restore, name='prompt_restore'),
+    path('trash/<slug:slug>/delete-forever/', views.prompt_permanent_delete, name='prompt_permanent_delete'),
+    path('trash/empty/', views.empty_trash, name='empty_trash'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',
          views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',

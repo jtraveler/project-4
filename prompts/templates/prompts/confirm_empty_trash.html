@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Empty Trash - PromptFinder{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h3 class="card-title text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Empty Entire Trash?
+                    </h3>
+                    <p class="card-text">
+                        Are you sure you want to permanently delete <strong>{{ trash_count }} item(s)</strong>?
+                    </p>
+                    <div class="alert alert-danger">
+                        <strong>Warning:</strong> This action cannot be undone.
+                        All items and their associated images/videos will be permanently removed.
+                    </div>
+
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt"></i> Yes, Empty Trash
+                        </button>
+                        <a href="{% url 'prompts:trash_bin' %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

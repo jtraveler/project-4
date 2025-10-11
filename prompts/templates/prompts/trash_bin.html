@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+{% load cloudinary %}
+
+{% block title %}Trash Bin - PromptFinder{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-trash"></i> Trash Bin
+                {% if trash_count > 0 %}
+                    <span class="badge bg-secondary">{{ trash_count }}</span>
+                {% endif %}
+            </h1>
+
+            {% if not is_premium and capacity_reached %}
+            <div class="alert alert-warning">
+                <strong>Free Tier Limit Reached (10/10 items)</strong><br>
+                Upgrade to Premium for:
+                <ul class="mb-0 mt-2">
+                    <li>30-day protection (6x longer)</li>
+                    <li>Unlimited trash capacity</li>
+                    <li>Bulk restore features</li>
+                </ul>
+                <a href="#" class="btn btn-sm btn-primary mt-2">Upgrade to Premium →</a>
+            </div>
+            {% endif %}
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                {% if is_premium %}
+                    <strong>Premium:</strong> Items are kept for 30 days before permanent deletion.
+                {% else %}
+                    <strong>Free:</strong> Items are kept for 5 days before permanent deletion. Last 10 items shown.
+                {% endif %}
+            </div>
+
+            {% if trash_count > 0 %}
+                <div class="mb-3">
+                    <a href="{% url 'prompts:empty_trash' %}" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Empty Trash ({{ trash_count }})
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if trashed_prompts %}
+        <div class="row">
+            {% for prompt in trashed_prompts %}
+            <div class="col-md-4 mb-4">
+                <div class="card {% if prompt.is_expiring_soon %}border-danger{% endif %}">
+                    {% if prompt.featured_image %}
+                        {% cloudinary prompt.featured_image.public_id format="jpg" width=400 height=300 crop="fill" class="card-img-top" %}
+                    {% elif prompt.featured_video %}
+                        <video class="card-img-top" style="max-height: 300px; object-fit: cover;">
+                            <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                        </video>
+                    {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 300px;">
+                            <i class="fas fa-image fa-3x text-white"></i>
+                        </div>
+                    {% endif %}
+
+                    <div class="card-body">
+                        <h5 class="card-title">{{ prompt.title }}</h5>
+                        <p class="card-text text-muted small">
+                            Deleted {{ prompt.deleted_at|timesince }} ago
+                        </p>
+
+                        {% if prompt.is_expiring_soon %}
+                            <div class="alert alert-danger py-2 px-3 mb-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Expires in {{ prompt.days_until_permanent_deletion }} day(s)!</strong>
+                            </div>
+                        {% else %}
+                            <p class="text-muted small mb-2">
+                                <i class="fas fa-clock"></i>
+                                {{ prompt.days_until_permanent_deletion }} days remaining
+                            </p>
+                        {% endif %}
+
+                        <div class="d-flex gap-2">
+                            <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}" class="flex-grow-1">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                    <i class="fas fa-undo"></i> Restore
+                                </button>
+                            </form>
+                            <a href="{% url 'prompts:prompt_permanent_delete' prompt.slug %}"
+                               class="btn btn-danger btn-sm">
+                                <i class="fas fa-trash"></i> Delete Forever
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-trash fa-4x text-muted mb-3"></i>
+                <h3 class="text-muted">Trash is Empty</h3>
+                <p class="text-muted">Deleted items will appear here</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

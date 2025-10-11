@@ -713,6 +713,7 @@ def prompt_delete(request, slug):
         trash_url = reverse('prompts:trash_bin')
         restore_url = reverse('prompts:prompt_restore', args=[slug])
         csrf_token = get_token(request)
+        current_url = request.path  # Store current page for redirect after restore
 
         messages.add_message(
             request, messages.SUCCESS,
@@ -721,6 +722,7 @@ def prompt_delete(request, slug):
             f'<a href="{trash_url}" class="alert-link">View Trash</a> | '
             f'<form method="post" action="{restore_url}" style="display:inline;" class="d-inline">'
             f'  <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">'
+            f'  <input type="hidden" name="return_to" value="{current_url}">'
             f'  <button type="submit" class="btn btn-link alert-link p-0 border-0" style="vertical-align:baseline;">'
             f'    Undo'
             f'  </button>'
@@ -814,7 +816,10 @@ def prompt_restore(request, slug):
     if request.method == 'POST':
         prompt.restore()
         messages.success(request, f'"{prompt.title}" has been restored successfully!')
-        return redirect('prompts:trash_bin')
+
+        # Redirect to return_to URL if provided (from Undo button), otherwise go to homepage
+        return_to = request.POST.get('return_to', reverse('prompts:home'))
+        return redirect(return_to)
 
     # If GET request, redirect to trash bin
     return redirect('prompts:trash_bin')

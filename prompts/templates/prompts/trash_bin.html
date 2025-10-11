@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 {% load static %}
 {% load cloudinary %}
+{% load cloudinary_tags %}
 
 {% block title %}Trash Bin - PromptFinder{% endblock %}
 
 {% block content %}
+{# Header section with fixed container #}
 <div class="container mt-5">
     <div class="row">
         <div class="col-12">
@@ -46,21 +48,119 @@
             {% endif %}
         </div>
     </div>
+</div>
 
-    {% if trashed_prompts %}
-        <div class="row">
-            {% for prompt in trashed_prompts %}
-                {% include 'prompts/partials/_prompt_card.html' with prompt=prompt show_trash_actions=True %}
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="row">
-            <div class="col-12 text-center py-5">
-                <i class="fas fa-trash fa-4x text-muted mb-3"></i>
-                <h3 class="text-muted">Trash is Empty</h3>
-                <p class="text-muted">Deleted items will appear here</p>
+{# Grid section with same width/padding as homepage masonry-container #}
+{% if trashed_prompts %}
+<div style="max-width: 100%; margin: 0; padding: 20px 40px; width: 100%;">
+    <div class="row g-3">
+        {% for prompt in trashed_prompts %}
+        <div class="col-lg-4 col-md-6 col-sm-12">
+            <div class="card h-100 prompt-card {% if prompt.is_expiring_soon %}border-danger{% endif %}" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
+                {# Thumbnail - EXACT same styling as homepage #}
+                <div class="card-img-top position-relative" style="height: 300px; overflow: hidden;">
+                    {% if prompt.featured_video %}
+                        {# Video thumbnail with play icon #}
+                        <div class="position-relative w-100 h-100">
+                            <img src="{{ prompt.get_thumbnail_url }}"
+                                 class="w-100 h-100"
+                                 style="object-fit: cover;"
+                                 alt="{{ prompt.title }}">
+                            <div class="position-absolute top-50 start-50 translate-middle">
+                                <i class="fas fa-play-circle fa-4x text-white opacity-75"></i>
+                            </div>
+                        </div>
+                    {% elif prompt.featured_image %}
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
+                             class="w-100 h-100"
+                             style="object-fit: cover;"
+                             alt="{{ prompt.title }}">
+                    {% else %}
+                        <div class="w-100 h-100 bg-secondary d-flex align-items-center justify-content-center">
+                            <i class="fas fa-image fa-3x text-white"></i>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Card Body - Trash-specific content #}
+                <div class="card-body">
+                    <h5 class="card-title">{{ prompt.title|truncatewords:10 }}</h5>
+
+                    <p class="text-muted small mb-2">
+                        <i class="far fa-clock"></i> Deleted {{ prompt.deleted_at|timesince }} ago
+                    </p>
+
+                    {% if prompt.is_expiring_soon %}
+                        <div class="alert alert-danger py-1 px-2 small mb-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Expires in {{ prompt.days_until_permanent_deletion }} day(s)!</strong>
+                        </div>
+                    {% else %}
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-hourglass-half"></i>
+                            {{ prompt.days_until_permanent_deletion }} days remaining
+                        </p>
+                    {% endif %}
+
+                    {# Action Buttons #}
+                    <div class="d-flex gap-2">
+                        <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}" class="flex-grow-1">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="fas fa-undo"></i> Restore
+                            </button>
+                        </form>
+                        <button type="button"
+                                class="btn btn-danger btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#deleteModal{{ prompt.id }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    {% endif %}
+
+        {# Delete Forever Modal #}
+        <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ prompt.id }}">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header border-danger">
+                        <h5 class="modal-title text-danger" id="deleteModalLabel{{ prompt.id }}">
+                            <i class="fas fa-exclamation-triangle"></i> Delete Forever?
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Permanently delete <strong>"{{ prompt.title }}"</strong>?</p>
+                        <div class="alert alert-danger mb-0">
+                            <strong>Warning:</strong> This action cannot be undone. The image/video will be permanently removed from Cloudinary.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form method="post" action="{% url 'prompts:prompt_permanent_delete' prompt.slug %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Delete Forever
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
+{% else %}
+<div class="container">
+    <div class="row">
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-trash fa-4x text-muted mb-3"></i>
+            <h3 class="text-muted">Trash is Empty</h3>
+            <p class="text-muted">Deleted items will appear here</p>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

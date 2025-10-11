@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** October 11, 2025
-**Project Status:** Pre-Launch Development - Phase D Complete
+**Last Updated:** January 2025  
+**Project Status:** Pre-Launch Development  
 **Owner:** [Your Name]
 
 ---
@@ -47,11 +47,8 @@
   - ✅ Content moderation system (OpenAI + Cloudinary)
   - ✅ Admin panel enhancements
   - ✅ Cloudinary asset cleanup
-  - ✅ **Phase A:** Tag infrastructure (209 tags across 21 categories)
-  - ✅ **Phase B:** AI content generation service (GPT-4o-mini)
-  - ✅ **Phase C:** Pexels-style upload UI (Step 1 drag-and-drop)
-  - ✅ **Phase D:** Two-step upload flow WITH AI generation + idle detection ⭐ **COMPLETE**
-  - 🔄 Phase E: Integration & Testing (next)
+  - ✅ Phase A-D: Two-step upload flow complete
+  - 🔄 Phase E: Integration & Testing (current)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
@@ -911,82 +908,55 @@ class Prompt(models.Model):
 
 ## 🚨 Known Issues & Technical Debt
 
-### ✅ Resolved Issues (Phase D Complete)
-
+### Critical Issues (Fix in Phase 1)
 1. **Orphaned Cloudinary Assets - Deletion** ✅ COMPLETED
    - **Problem:** When prompts deleted, Cloudinary files not removed
    - **Impact:** Wasted storage, costs increase over time
    - **Solution:** Django signal to call `cloudinary.uploader.destroy()` on delete
    - **Status:** ✅ Implemented and working
+   - **Effort:** 4 hours
 
-2. **Orphaned Cloudinary Assets - Upload Abandonment** ✅ COMPLETED (Phase D)
-   - **Problem:** Users upload to Cloudinary but abandon Step 2 form
-   - **Impact:** Wasted Cloudinary storage from incomplete uploads
-   - **Solution:**
-     - Idle detection system (45-minute timeout)
-     - Automatic Cloudinary cleanup on expiration
-     - User extension option (30 additional minutes)
-     - Manual cancel with asset deletion
-   - **Status:** ✅ Implemented in Phase D
-
-3. **Content Moderation** ✅ COMPLETED
-   - **Problem:** No safeguards against inappropriate content
-   - **Impact:** Legal liability, brand damage, user safety
-   - **Solution:** Multi-layer AI moderation system (Profanity + OpenAI + Vision)
-   - **Status:** ✅ Fully implemented and tested
-
-### Current Known Issues (Phase E)
-
-1. **Orphaned Cloudinary Assets - Detection & Remediation**
+2. **Orphaned Cloudinary Assets - Detection & Remediation** 
    - **Problem:** No automated detection for prompts with missing Cloudinary assets (if manually deleted from Cloudinary dashboard)
    - **Impact:** Broken images may go unnoticed until users report them
-   - **Solution:**
+   - **Solution:** 
      - Django management command to scan all prompts
      - Check if Cloudinary asset exists for each prompt
      - Daily automated check via Heroku Scheduler (runs at 3:00 AM)
      - Generate admin alert/email when orphans found
-     - Admin dashboard to review and remediate
+     - Admin dashboard to review and remediate (upload new image or mark for deletion)
    - **Implementation Details:**
      - Command: `python manage.py check_cloudinary_orphans`
      - Rate limiting: 10 checks per second to avoid API limits
      - Runtime: ~1-5 minutes depending on prompt count
      - Cost: $0/month (uses spare Eco Dyno hours)
+     - Heroku Scheduler: Free add-on, runs daily
    - **Priority:** Medium (Phase 2)
    - **Effort:** 4-6 hours (includes Heroku Scheduler setup)
 
-2. **Code Institute PostgreSQL Dependency**
+3. **Code Institute PostgreSQL Dependency**
    - **Problem:** Database expires 2026-2027, not independent
    - **Impact:** Platform unusable after expiration
    - **Solution:** Migrate to Heroku PostgreSQL Mini
-   - **Priority:** High (before 2026)
    - **Effort:** 2 hours (data export/import)
 
-3. **Dual Upload Systems Complexity**
-   - **Problem:** Two parallel upload flows (`/upload/` vs `/create-prompt/`)
-   - **Impact:** Maintenance overhead, potential inconsistencies
-   - **Solution:**
-     - Phase E: Full integration testing
-     - Phase 2: Deprecate `/create-prompt/` in favor of `/upload/`
-     - Or: Migrate `/create-prompt/` to use same AI generation service
-   - **Priority:** Medium (after Phase E testing)
-   - **Effort:** 2-3 days
+4. **No Content Moderation**
+   - **Problem:** No safeguards against inappropriate content
+   - **Impact:** Legal liability, brand damage, user safety
+   - **Solution:** Multi-layer AI moderation system
+   - **Effort:** 3-4 days
 
 ### UI/UX Issues (Fix in Phase 1-2)
-
-1. **Upload Flow:**
-   - [ ] Mobile responsiveness testing for Step 2 form
-   - [ ] Tag autocomplete performance with large lists
-   - [ ] Upload progress bar animation smoothness
-
-2. **Prompt Detail Page:**
+1. **Prompt Detail Page:**
    - [ ] Preview image displaying incorrectly (sizing/alignment)
    - [ ] Content layout needs reorganization (description not prominent enough)
    - [ ] Mobile responsiveness issues
-
-3. **General UI:**
-   - [ ] Inconsistent styling between `/upload/` and `/create-prompt/`
-   - [ ] Form validation display improvements
-   - [ ] Button hover states missing in some areas
+   
+2. **General UI:**
+   - [ ] Inconsistent styling across pages
+   - [ ] Form validation display problems
+   - [ ] Button hover states missing
+   - [ ] (Add specific issues as discovered)
 
 ### Future Considerations (Phase 3+)
 - Video optimization for different devices/connections
@@ -1607,62 +1577,33 @@ User uploads image/video
 
 ## 📤 Upload Flow Architecture
 
-### ✅ Phase D Complete - Two-Step Upload Process (Pexels-Style)
+### Two-Step Upload Process
 
-**Step 1: File Upload (`/upload/`) ✅ IMPLEMENTED**
-- Pexels-inspired drag-and-drop interface with visual feedback
-- Direct browser → Cloudinary upload (client-side)
-- Weekly limit display: "You have X uploads left" banner
-- File validation (10MB images, 100MB videos, 20 sec video duration)
-- Progress bar during upload with percentage
-- Upload guidelines checklist displayed
-- Redirects to Step 2 with Cloudinary ID + secure_url
+**Step 1: File Upload (`/upload/`)**
+- Drag-and-drop interface
+- Direct browser → Cloudinary upload
+- Weekly limit display (100 for testing, 10 for production)
+- File validation (10MB images, 100MB videos)
+- Progress bar during upload
+- Redirects to Step 2 with Cloudinary ID
 
-**Step 2: Details Form (`/upload/details`) ✅ IMPLEMENTED**
-- **AI-Generated (automatic, background):**
-  - Title (GPT-4o-mini analyzing image)
-  - Description/Excerpt (50-100 words, SEO-optimized)
-  - 5 suggested tags from 209-tag system
-  - Stored in session for later use
-- **User-Provided (required):**
-  - Prompt Content: Their actual AI prompt text
-  - AI Generator: Dropdown selection (Midjourney, DALL-E, etc.)
-  - Tags: Can edit AI suggestions or add custom (max 7)
-- **Features:**
-  - Early NSFW image warning (non-blocking, allows submit)
-  - Tag autocomplete from 209 preset tags
-  - Two-column layout: Image preview (60%) | Form (40%)
-  - Navigation-away modal: "You have unsubmitted uploads..."
-  - **Idle Detection System:** 45-minute timeout with modal
-    - Modal at 40 minutes: "Still there? 5 minutes left"
-    - Options: "Yes, extend 30 mins" | "Cancel upload"
-    - Auto-cleanup: Deletes Cloudinary asset if abandoned
-  - Session storage for upload timer tracking
+**Step 2: Details Form (`/upload/details`)**
+- AI pre-populated title, description, tags
+- Early NSFW image warning (non-blocking)
+- User fills: Prompt content, AI generator, tags (optional)
+- Tag autocomplete (209 tags)
+- Submit triggers full moderation
 
-**Step 3: Moderation & Publish (`/upload/submit`) ✅ IMPLEMENTED**
-1. **Pre-submit validation:**
-   - Profanity check on ALL text (title, content, description)
-   - Blocks if violations found (high/critical severity)
-   - Re-renders form with error (no redirect)
-   - Preserves user input for correction
-2. **Prompt creation:**
-   - Uses CloudinaryResource (no re-upload)
-   - AI-generated title + user's prompt content
-   - Unique title handling (appends counter if duplicate)
-3. **Full moderation via ModerationOrchestrator:**
-   - Profanity (text) ← already checked pre-submit
-   - OpenAI moderation (text)
-   - OpenAI Vision (image/video)
-4. **Status determination:**
-   - `approved` → status=1 (Published) → detail page → "Published successfully!"
-   - `pending` → status=0 (Draft) → detail page → "Being reviewed, usually within seconds"
-   - `flagged` → status=0 (Draft) → detail page → "Pending review by team"
-   - `rejected` → blocked → error message → no database save
-5. **Cleanup:**
-   - Clear upload timer session
-   - Clear AI-generated session data
-   - Cache clearing (list views)
-6. **Redirect:** Always to detail page (handles draft visibility)
+**Step 3: Moderation & Publish (`/upload/submit`)**
+1. Profanity check (blocks if violations)
+2. Create Prompt with CloudinaryResource
+3. Full moderation via ModerationOrchestrator
+4. Status determination:
+   - `approved` → status=1 → detail page → "Published successfully!"
+   - `flagged` → status=0 → detail page → "Pending review"
+   - `rejected` → blocked → error message
+5. Cache clearing
+6. Redirect to detail page
 
 ### Moderation Services Used
 
@@ -1704,90 +1645,6 @@ prompt.featured_video = CloudinaryResource(
     public_id=cloudinary_id,
     resource_type='video'
 )
-```
-
-### 🎯 Phase D Achievements (October 2025)
-
-**What Was Accomplished:**
-
-1. **Two-Step Upload Flow (Complete)**
-   - Pexels-inspired drag-and-drop UI
-   - Client-side Cloudinary upload (no Django form submission)
-   - AI-powered content generation (GPT-4o-mini)
-   - Idle detection with 45-minute timeout
-   - Navigation-away protection modal
-
-2. **AI Content Generation Service**
-   - Title generation from image analysis
-   - SEO-optimized descriptions (50-100 words)
-   - Intelligent tag suggestions (5 from 209 tags)
-   - Video handling with frame extraction
-   - Cost-efficient: ~$0.00255 per upload
-
-3. **Upload Session Management**
-   - Session-based upload tracking
-   - Timer system with expiration
-   - Automatic Cloudinary cleanup for abandoned uploads
-   - Extension mechanism (30-minute extensions)
-   - Cancel upload with asset deletion
-
-4. **Enhanced Moderation Integration**
-   - Early NSFW warnings (non-blocking)
-   - Pre-submit profanity checks (blocking)
-   - Full ModerationOrchestrator integration
-   - Profanity error handling with form preservation
-   - Clear user messaging based on moderation status
-
-5. **User Experience Improvements**
-   - Upload counter display ("X uploads left")
-   - Real-time file validation
-   - Tag autocomplete from 209 preset tags
-   - Two-column responsive layout (60/40 split)
-   - Progress indicators and loading states
-   - Error recovery without data loss
-
-**Technical Implementation:**
-
-- **Views:** `upload_step1`, `upload_step2`, `upload_submit`, `cancel_upload`, `extend_upload_time`
-- **Services:** ContentGenerationService (GPT-4o-mini), VisionModerationService (early check)
-- **Session Management:** Upload timer tracking, AI data storage
-- **JavaScript:** Idle detection, Cloudinary upload widget, navigation guards
-- **Templates:** `upload_step1.html`, `upload_step2.html` with Bootstrap 5
-
-**Key Technical Decisions:**
-
-1. **CloudinaryResource vs File Upload:**
-   - Chose CloudinaryResource to avoid double upload
-   - Files stay in Cloudinary after initial upload
-   - Saved bandwidth and processing time
-
-2. **Session-Based AI Data:**
-   - AI generates title/description once in Step 2
-   - Stored in session for use in Step 3
-   - Prevents duplicate AI API calls
-
-3. **Non-Blocking NSFW Warnings:**
-   - Early warning doesn't block submission
-   - Allows user to proceed (will require manual review)
-   - Better UX than hard rejection
-
-4. **Idle Detection Timer:**
-   - 45-minute session prevents abandoned files
-   - Reduces wasted Cloudinary storage
-   - User-friendly with extension option
-
-**Cost Analysis:**
-- AI Content Generation: ~$0.00255 per upload (GPT-4o-mini)
-- Vision Moderation: Included in ModerationOrchestrator cost
-- Cloudinary: Free tier (25GB, 25 credits/month)
-- **Total per upload:** ~$0.01 (moderation + AI generation)
-
-**What's Next (Phase E):**
-- Integration testing across both flows (`/upload/` vs `/create-prompt/`)
-- Performance optimization and caching
-- Error handling edge cases
-- User acceptance testing
-- Documentation updates
 
 ---
 

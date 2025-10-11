@@ -14,19 +14,21 @@ class PromptAdmin(SummernoteModelAdmin):
     list_display = (
         'title', 'order', 'slug', 'status', 'moderation_badge', 'created_on',
         'author', 'tag_list', 'number_of_likes', 'ai_generator', 'media_type',
-        'reorder_links'
+        'deleted_at', 'reorder_links'
     )
     list_display_links = ('title',)
-    search_fields = ['title', 'content', 'tags__name']
+    search_fields = ['title', 'content', 'tags__name', 'author__username']
     list_filter = (
         'status', 'moderation_status', 'requires_manual_review',
-        'created_on', 'author', 'tags', 'ai_generator'
+        'deleted_at', 'created_on', 'ai_generator'
     )
     prepopulated_fields = {'slug': ('title',)}
     summernote_fields = ('content',)
     ordering = ['order', '-created_on']
     actions = ['make_published', 'approve_and_publish', 'reset_order_to_date']
     list_editable = ('order',)
+    list_per_page = 50  # Pagination for performance
+    date_hierarchy = 'created_on'
 
     # Updated fieldsets to include order and moderation fields
     fieldsets = (
@@ -63,6 +65,13 @@ class PromptAdmin(SummernoteModelAdmin):
     )
 
     readonly_fields = ('created_on', 'updated_on', 'moderation_completed_at', 'image_preview')
+
+    def get_queryset(self, request):
+        """Optimize queries with select_related and prefetch_related"""
+        qs = super().get_queryset(request)
+        return qs.select_related(
+            'author', 'deleted_by', 'reviewed_by'
+        ).prefetch_related('tags', 'likes')
 
     def tag_list(self, obj):
         return ", ".join(o.name for o in obj.tags.all())

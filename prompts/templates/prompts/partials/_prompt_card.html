@@ -2,6 +2,8 @@
 {# Shared template for prompt cards site-wide #}
 {# Usage: {% include 'prompts/partials/_prompt_card.html' with prompt=prompt show_trash_actions=False %} #}
 {% load cloudinary %}
+{% load cloudinary_tags %}
+{% load static %}
 
 {% if show_trash_actions %}
     {# === TRASH BIN CARD === #}
@@ -149,7 +151,6 @@
                     </div>
                 {% else %}
                     <!-- Regular image -->
-                    {% load static %}
                     {% if "placeholder" in prompt.featured_image.url %}
                         <img src="{% static 'images/default.jpg' %}"
                              alt="{{ prompt.title }}"

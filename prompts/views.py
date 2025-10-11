@@ -720,9 +720,8 @@ def prompt_delete(request, slug):
             f'"{prompt.title}" moved to trash. It will be permanently deleted '
             f'in {retention_days} days. '
             f'<a href="{trash_url}" class="alert-link">View Trash</a> | '
-            f'<form method="post" action="{restore_url}" style="display:inline;" class="d-inline">'
+            f'<form method="post" action="{restore_url}" style="display:inline;" class="d-inline" onsubmit="this.querySelector(\'button\').disabled=true;">'
             f'  <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">'
-            f'  <input type="hidden" name="return_to" value="{current_url}">'
             f'  <button type="submit" class="btn btn-link alert-link p-0 border-0" style="vertical-align:baseline;">'
             f'    Undo'
             f'  </button>'
@@ -817,9 +816,15 @@ def prompt_restore(request, slug):
         prompt.restore()
         messages.success(request, f'"{prompt.title}" has been restored successfully!')
 
-        # Redirect to return_to URL if provided (from Undo button), otherwise go to homepage
-        return_to = request.POST.get('return_to', reverse('prompts:home'))
-        return redirect(return_to)
+        # Check if user came from trash page
+        referer = request.META.get('HTTP_REFERER', '')
+
+        if 'trash' in referer:
+            # User clicked Restore button from trash page - stay on trash
+            return redirect('prompts:trash_bin')
+        else:
+            # User clicked Undo from homepage - go back to homepage
+            return redirect('prompts:home')
 
     # If GET request, redirect to trash bin
     return redirect('prompts:trash_bin')

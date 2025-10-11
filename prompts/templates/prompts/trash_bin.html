@@ -55,28 +55,28 @@
 <div style="max-width: 100%; margin: 0; padding: 20px 40px; width: 100%;">
     <div class="row g-3">
         {% for prompt in trashed_prompts %}
-        <div class="col-lg-4 col-md-6 col-sm-12">
-            <div class="card h-100 prompt-card {% if prompt.is_expiring_soon %}border-danger{% endif %}" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
-                {# Thumbnail - EXACT same styling as homepage #}
-                <div class="card-img-top position-relative" style="height: 300px; overflow: hidden;">
+        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12">
+            <div class="card h-100 prompt-card {% if prompt.is_expiring_soon %}border-danger{% endif %}" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); transition: transform 0.3s ease, box-shadow 0.3s ease;">
+                {# Thumbnail - Videos autoplay like homepage #}
+                <div class="position-relative" style="overflow: hidden;">
                     {% if prompt.featured_video %}
-                        {# Video thumbnail with play icon #}
-                        <div class="position-relative w-100 h-100">
-                            <img src="{{ prompt.get_thumbnail_url }}"
-                                 class="w-100 h-100"
-                                 style="object-fit: cover;"
-                                 alt="{{ prompt.title }}">
-                            <div class="position-absolute top-50 start-50 translate-middle">
-                                <i class="fas fa-play-circle fa-4x text-white opacity-75"></i>
-                            </div>
-                        </div>
+                        {# Video - Autoplay and loop like homepage #}
+                        <video class="w-100"
+                               style="display: block; border-radius: 12px 12px 0 0;"
+                               autoplay
+                               loop
+                               muted
+                               playsinline
+                               preload="metadata">
+                            <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                        </video>
                     {% elif prompt.featured_image %}
                         <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
-                             class="w-100 h-100"
-                             style="object-fit: cover;"
+                             class="w-100"
+                             style="display: block; border-radius: 12px 12px 0 0;"
                              alt="{{ prompt.title }}">
                     {% else %}
-                        <div class="w-100 h-100 bg-secondary d-flex align-items-center justify-content-center">
+                        <div class="w-100 bg-secondary d-flex align-items-center justify-content-center" style="height: 300px; border-radius: 12px 12px 0 0;">
                             <i class="fas fa-image fa-3x text-white"></i>
                         </div>
                     {% endif %}

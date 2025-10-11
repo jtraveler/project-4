@@ -336,7 +336,7 @@ LOGGING = {
 # CONTENT SECURITY POLICY CONFIGURATION
 # Protects against XSS attacks by controlling resource loading
 
-# Content Security Policy Configuration
+# Content Security Policy - Comprehensive Configuration
 CSP_DEFAULT_SRC = ("'self'",)
 
 CSP_SCRIPT_SRC = (
@@ -347,11 +347,13 @@ CSP_SCRIPT_SRC = (
     "https://cdnjs.cloudflare.com",
     "https://res.cloudinary.com",
     "https://api.cloudinary.com",
+    "https://widget.cloudinary.com",
 )
 
 CSP_STYLE_SRC = (
     "'self'",
     "'unsafe-inline'",
+    "https://fonts.googleapis.com",
     "https://cdn.jsdelivr.net",
     "https://cdnjs.cloudflare.com",
     "https://res.cloudinary.com",
@@ -369,11 +371,14 @@ CSP_CONNECT_SRC = (
     "'self'",
     "https://res.cloudinary.com",
     "https://api.cloudinary.com",
+    "https://widget.cloudinary.com",
 )
 
 CSP_FONT_SRC = (
     "'self'",
     "data:",
+    "https://fonts.googleapis.com",
+    "https://fonts.gstatic.com",
     "https://cdn.jsdelivr.net",
     "https://cdnjs.cloudflare.com",
 )
@@ -382,6 +387,11 @@ CSP_MEDIA_SRC = (
     "'self'",
     "https://res.cloudinary.com",
     "blob:",
+)
+
+CSP_FRAME_SRC = (
+    "'self'",
+    "https://widget.cloudinary.com",
 )
 
 # Django Summernote Configuration

@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import timedelta
 from django.conf import settings
+from csp.decorators import csp_exempt
 import time
 import logging
 import json
@@ -972,6 +973,7 @@ def bulk_reorder_prompts(request):
 
 
 @login_required
+@csp_exempt
 def upload_step1(request):
     """
     Upload screen - Step 1: Drag-and-drop file upload.
@@ -1018,6 +1020,7 @@ def upload_step1(request):
 
 
 @login_required
+@csp_exempt
 def upload_step2(request):
     """
     Upload Step 2: Details form.
@@ -1089,7 +1092,11 @@ def upload_step2(request):
     # Store AI-generated title and description in session for later use
     request.session['ai_title'] = ai_suggestions.get('title', '')
     request.session['ai_description'] = ai_suggestions.get('description', '')
-    request.session['ai_tags'] = ai_suggestions.get('suggested_tags', [])
+
+    # Store AI tags in session for profanity error recovery
+    if ai_suggestions and ai_suggestions.get('suggested_tags'):
+        request.session['ai_tags'] = ai_suggestions.get('suggested_tags', [])
+        request.session.modified = True
 
     # Store upload session data for idle detection
     from datetime import datetime
@@ -1115,6 +1122,7 @@ def upload_step2(request):
 
 
 @login_required
+@csp_exempt
 def upload_submit(request):
     """Handle form submission - saves AI title/description automatically."""
     if request.method != 'POST':
@@ -1192,6 +1200,11 @@ def upload_submit(request):
 
         all_tags = list(Tag.objects.values_list('name', flat=True))
 
+        # Preserve original AI tags or user-entered tags
+        original_ai_tags = request.POST.get('original_ai_tags', '')
+        tags_input = ','.join(tags) if tags else ''
+        preserved_tags = tags_input if tags_input.strip() else original_ai_tags
+
         context = {
             'cloudinary_id': cloudinary_id,
             'resource_type': resource_type,
@@ -1200,7 +1213,8 @@ def upload_submit(request):
             'error_message': error_message,
             'prompt_content': content,
             'ai_generator': ai_generator,
-            'tags_input': ','.join(tags) if tags else ', '.join(request.session.get('ai_tags', [])),
+            'tags_input': preserved_tags,
+            'ai_tags': original_ai_tags.split(', ') if original_ai_tags else [],
             'all_tags': json.dumps(all_tags),
         }
 

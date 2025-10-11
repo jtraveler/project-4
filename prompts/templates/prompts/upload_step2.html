@@ -232,6 +232,7 @@
             <input type="hidden" name="cloudinary_id" value="{{ cloudinary_id }}">
             <input type="hidden" name="resource_type" value="{{ resource_type }}">
             <input type="hidden" name="tags" id="tags-hidden">
+            <input type="hidden" name="original_ai_tags" value="{% for tag in ai_tags %}{{ tag }}{% if not forloop.last %}, {% endif %}{% endfor %}">
 
             <!-- Tags -->
             <div class="mb-4">
@@ -394,8 +395,32 @@
 </div>
 
 <script>
+console.log('=== NAVIGATION GUARD DIAGNOSTIC ===');
+console.log('Document ready state:', document.readyState);
+console.log('Bootstrap available:', typeof bootstrap);
+
+// Tag autocomplete data
 const ALL_TAGS = {{ all_tags|safe }};
-let hasUnsavedChanges = false;
+
+// SINGLE DECLARATION BLOCK - No duplicates
+let hasUnsavedChanges = true;
+let isSubmitting = false;
+let sessionExpired = false;
+let idleTimer = null;
+let countdownInterval = null;
+let countdownSeconds = 30;
+let navigationWarningActive = false;
+let pausedCountdownSeconds = 0;
+
+const IDLE_TIME = 1 * 60 * 1000;  // 1 minute for testing
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+console.log('Variables initialized:', {
+    hasUnsavedChanges,
+    isSubmitting,
+    sessionExpired
+});
+console.log('=== END DIAGNOSTIC ===');
 
 // Restore preserved tags on error
 const preservedTags = document.getElementById('tags-container').dataset.preservedTags;
@@ -518,90 +543,133 @@ document.addEventListener('click', (e) => {
 });
 
 // ==========================================
-// NAVIGATION GUARD - Confirm before leaving
+// NAVIGATION GUARD
 // ==========================================
 
-let hasUnsavedUpload = true;  // User has uploaded but not submitted
-
-// Warn on browser close/refresh/back button
+// Browser warning for external navigation - Enhanced debugging
 window.addEventListener('beforeunload', function(e) {
-    if (hasUnsavedUpload) {
+    console.log('BEFOREUNLOAD: Event triggered');
+    console.log('BEFOREUNLOAD: hasUnsavedChanges =', hasUnsavedChanges);
+    console.log('BEFOREUNLOAD: isSubmitting =', isSubmitting);
+    console.log('BEFOREUNLOAD: sessionExpired =', sessionExpired);
+
+    // Also check if variables exist
+    console.log('BEFOREUNLOAD: Variables exist:', {
+        hasUnsavedChanges: typeof hasUnsavedChanges,
+        isSubmitting: typeof isSubmitting,
+        sessionExpired: typeof sessionExpired
+    });
+
+    if (hasUnsavedChanges && !isSubmitting && !sessionExpired) {
+        console.log('BEFOREUNLOAD: Should show warning');
+        const message = 'You have unsaved changes. Are you sure you want to leave?';
         e.preventDefault();
-        e.returnValue = '';
-        return '';
+        e.returnValue = message;
+        return message;
+    } else {
+        console.log('BEFOREUNLOAD: Not showing warning - state check failed');
     }
 });
 
-// Clear flag when form is submitted
-document.querySelector('form').addEventListener('submit', function() {
-    hasUnsavedUpload = false;
+// Form submission handler
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded');
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            console.log('Form submitting - disabling guards');
+            isSubmitting = true;
+            hasUnsavedChanges = false;
+        });
+    }
 });
 
-// Intercept internal navigation (navbar links, etc.)
+// Internal navigation handler
 document.addEventListener('click', function(e) {
-    if (hasUnsavedUpload) {
+    if (hasUnsavedChanges && !isSubmitting && !sessionExpired) {
         const link = e.target.closest('a');
-        if (link && !link.hasAttribute('data-bs-toggle')) {
+
+        if (link &&
+            !link.hasAttribute('data-bs-toggle') &&
+            !link.hasAttribute('data-bs-dismiss') &&
+            link.href &&
+            link.href !== '#' &&
+            !link.href.startsWith('javascript:') &&
+            link.href.includes(window.location.hostname)) {
+
+            console.log('Internal navigation detected - pausing countdown');
             e.preventDefault();
+            e.stopPropagation();
 
-            const confirmModal = new bootstrap.Modal(document.getElementById('confirmLeaveModal'), {
-                backdrop: 'static',
-                keyboard: false
-            });
-            confirmModal.show();
+            // PAUSE the countdown timer if running
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                pausedCountdownSeconds = countdownSeconds;
+                navigationWarningActive = true;
+                console.log('Countdown paused at:', pausedCountdownSeconds, 'seconds');
+            }
 
-            window.pendingNavigation = link.href;
+            const modalEl = document.getElementById('confirmLeaveModal');
+            if (modalEl) {
+                const confirmModal = new bootstrap.Modal(modalEl, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                confirmModal.show();
+                window.pendingNavigation = link.href;
+            }
         }
     }
 });
 
+// Modal functions
 function stayOnPage() {
-    bootstrap.Modal.getInstance(document.getElementById('confirmLeaveModal')).hide();
+    console.log('User chose to stay - resuming countdown');
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('confirmLeaveModal'));
+    if (modal) {
+        modal.hide();
+    }
+
+    // RESUME countdown if it was paused
+    if (navigationWarningActive && pausedCountdownSeconds > 0) {
+        navigationWarningActive = false;
+        countdownSeconds = pausedCountdownSeconds;
+
+        console.log('Resuming countdown from:', countdownSeconds, 'seconds');
+        updateCountdown();
+
+        // Restart the countdown interval
+        countdownInterval = setInterval(() => {
+            countdownSeconds--;
+            updateCountdown();
+
+            if (countdownSeconds <= 0) {
+                clearInterval(countdownInterval);
+                handleTimeout();
+            }
+        }, 1000);
+    }
+
     window.pendingNavigation = null;
 }
 
 function leaveAndDelete() {
-    hasUnsavedUpload = false;
+    console.log('Instant leave - bypassing all delays');
 
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+    // Disable guards immediately
+    hasUnsavedChanges = false;
+    isSubmitting = true;
 
-    fetch('/upload/cancel/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('✅ Upload deleted on exit:', data);
-        window.location.href = window.pendingNavigation || '/';
-    })
-    .catch(error => {
-        console.error('❌ Error deleting on exit:', error);
-        window.location.href = window.pendingNavigation || '/';
-    });
+    // Immediate redirect to pending navigation
+    window.location.replace(window.pendingNavigation || '/');
 }
-</script>
 
-<script>
 // ==========================================
-// IDLE DETECTION SYSTEM (Netflix-style)
+// IDLE DETECTION SYSTEM
 // ==========================================
 
-console.log('🚀 Idle detection script initializing...');
-
-// TESTING VALUES - 1 minute idle, 30 second warning
-const IDLE_TIME = 1 * 60 * 1000;
-const WARNING_TIME = 30 * 1000;
-let countdownSeconds = 30;
-
-let idleTimer = null;
-let countdownInterval = null;
-
-// Safe CSRF token retrieval
-const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
-console.log('CSRF token found:', csrfToken ? 'Yes ✅' : 'No ❌');
+console.log('Idle detection initializing...');
 
 function startIdleTimer() {
     if (idleTimer) clearTimeout(idleTimer);
@@ -619,33 +687,34 @@ function resetIdleTimer() {
 }
 
 function showWarningModal() {
-    console.log('📢 Showing warning modal');
+    console.log('Showing idle warning modal');
 
-    const warningModalEl = document.getElementById('warningModal');
-    if (!warningModalEl) {
-        console.error('❌ Warning modal element not found!');
+    // Don't show if navigation warning is active
+    if (navigationWarningActive) {
+        console.log('Navigation warning active - skipping idle modal');
         return;
     }
 
-    const warningModal = new bootstrap.Modal(warningModalEl, {
-        backdrop: 'static',
-        keyboard: false
-    });
-    warningModal.show();
+    const modalEl = document.getElementById('warningModal');
+    if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl, {
+            backdrop: 'static',
+            keyboard: false
+        });
+        modal.show();
 
-    countdownSeconds = 30;
-    updateCountdown();
-
-    countdownInterval = setInterval(() => {
-        countdownSeconds--;
+        countdownSeconds = 30;
         updateCountdown();
 
-        if (countdownSeconds <= 0) {
-            clearInterval(countdownInterval);
-            console.log('⏰ Countdown finished');
-            handleTimeout();
-        }
-    }, 1000);
+        countdownInterval = setInterval(() => {
+            countdownSeconds--;
+            updateCountdown();
+            if (countdownSeconds <= 0) {
+                clearInterval(countdownInterval);
+                handleTimeout();
+            }
+        }, 1000);
+    }
 }
 
 function updateCountdown() {
@@ -656,11 +725,11 @@ function updateCountdown() {
 }
 
 function extendTime() {
-    console.log('✅ User clicked: Yes, I need more time');
+    console.log('Extending time');
     clearInterval(countdownInterval);
 
-    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('warningModal'));
-    if (modalInstance) modalInstance.hide();
+    const modal = bootstrap.Modal.getInstance(document.getElementById('warningModal'));
+    if (modal) modal.hide();
 
     fetch('/upload/extend/', {
         method: 'POST',
@@ -669,43 +738,42 @@ function extendTime() {
             'X-CSRFToken': csrfToken
         }
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log('✅ Session extended:', data);
+    .then(() => {
+        console.log('Time extended');
         startIdleTimer();
     })
-    .catch(error => {
-        console.error('❌ Error extending session:', error);
-    });
+    .catch(console.error);
 }
 
 function cancelUpload() {
-    console.log('🗑️ User clicked: Cancel Upload');
-    clearInterval(countdownInterval);
+    console.log('Instant cancel - bypassing all delays');
 
-    fetch('/upload/cancel/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('✅ Upload canceled:', data);
-        window.location.href = '/';
-    })
-    .catch(error => {
-        console.error('❌ Error canceling:', error);
-        window.location.href = '/';
-    });
+    // Disable guards immediately
+    hasUnsavedChanges = false;
+    isSubmitting = true;
+    sessionExpired = true;
+
+    // Stop all timers
+    if (countdownInterval) clearInterval(countdownInterval);
+    if (idleTimer) clearTimeout(idleTimer);
+
+    // Immediate redirect - no modal animations, no API calls
+    window.location.replace('/');
 }
 
 function handleTimeout() {
-    console.log('⏰ Timeout - no response');
+    console.log('Session timed out');
 
-    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('warningModal'));
-    if (modalInstance) modalInstance.hide();
+    // CRITICAL: Disable all navigation guards when session expires
+    hasUnsavedChanges = false;
+    isSubmitting = true;
+    sessionExpired = true;
+
+    clearInterval(countdownInterval);
+    clearTimeout(idleTimer);
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('warningModal'));
+    if (modal) modal.hide();
 
     fetch('/upload/cancel/', {
         method: 'POST',
@@ -714,46 +782,47 @@ function handleTimeout() {
             'X-CSRFToken': csrfToken
         }
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log('✅ Auto-canceled:', data);
-        showExpiredModal();
-    })
-    .catch(error => {
-        console.error('❌ Error:', error);
-        showExpiredModal();
-    });
+    .then(() => showExpiredModal())
+    .catch(() => showExpiredModal());
 }
 
 function showExpiredModal() {
-    console.log('📢 Showing expired modal');
-
-    const expiredModalEl = document.getElementById('expiredModal');
-    if (!expiredModalEl) {
-        console.error('❌ Expired modal not found!');
-        setTimeout(() => window.location.href = '/', 2000);
-        return;
+    const modalEl = document.getElementById('expiredModal');
+    if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
     }
-
-    const expiredModal = new bootstrap.Modal(expiredModalEl, {
-        backdrop: 'static',
-        keyboard: false
-    });
-    expiredModal.show();
 }
 
 function goHome() {
-    console.log('🏠 Redirecting to homepage');
-    window.location.href = '/';
+    hasUnsavedChanges = false;
+    isSubmitting = true;
+    sessionExpired = true;
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('expiredModal'));
+    if (modal) modal.hide();
+
+    setTimeout(() => window.location.href = '/', 100);
 }
 
-// Activity listeners (no mousemove/scroll to prevent false positives)
-document.addEventListener('input', resetIdleTimer);
-document.addEventListener('click', resetIdleTimer);
-document.addEventListener('keypress', resetIdleTimer);
+// Test function for browser warning
+window.testBrowserWarning = function() {
+    console.log('Testing browser warning...');
+    console.log('hasUnsavedChanges:', hasUnsavedChanges);
+    hasUnsavedChanges = true;
+    isSubmitting = false;
+    sessionExpired = false;
+    console.log('Browser warning should now work. Try closing tab.');
+};
 
-console.log('🚀 Starting idle timer...');
+// Activity listeners
+document.addEventListener('input', startIdleTimer);
+document.addEventListener('click', startIdleTimer);
+document.addEventListener('keypress', startIdleTimer);
+
+// Initialize
 startIdleTimer();
-console.log('✅ Idle detection initialized');
+console.log('Navigation guard loaded successfully');
+console.log('To test browser warning, run: testBrowserWarning()');
 </script>
 {% endblock %}

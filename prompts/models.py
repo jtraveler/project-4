@@ -85,6 +85,22 @@ AI_GENERATOR_CHOICES = [
     ('other', 'Other'),
 ]
 
+# Deletion reason choices
+DELETION_REASONS = [
+    ('user', 'User Deleted'),
+    ('orphaned_image', 'Orphaned Cloudinary File'),
+    ('missing_image', 'Prompt Missing Image'),
+    ('moderation', 'Content Moderation'),
+    ('admin_manual', 'Admin Manual Delete'),
+    ('expired_upload', 'Abandoned Upload Session'),
+]
+
+
+class PromptManager(models.Manager):
+    """Custom manager that excludes soft-deleted prompts by default"""
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+
 
 class Prompt(models.Model):
     """
@@ -186,6 +202,28 @@ class Prompt(models.Model):
         help_text='Select the AI tool used to generate this image/video'
     )
 
+    # Soft delete fields (Phase D.5)
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this prompt was moved to trash'
+    )
+    deleted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deleted_prompts',
+        help_text='User who deleted this prompt'
+    )
+    deletion_reason = models.CharField(
+        max_length=50,
+        choices=DELETION_REASONS,
+        default='user',
+        blank=True,
+        help_text='Why was this prompt deleted?'
+    )
+
     # Moderation fields
     moderation_status = models.CharField(
         max_length=20,
@@ -215,11 +253,17 @@ class Prompt(models.Model):
         help_text='Admin notes from manual review'
     )
 
+    # Custom managers
+    objects = PromptManager()  # Default: excludes soft-deleted prompts
+    all_objects = models.Manager()  # Include deleted prompts
+
     class Meta:
         ordering = ['order', '-created_on']
         indexes = [
             models.Index(fields=['moderation_status']),
             models.Index(fields=['requires_manual_review']),
+            models.Index(fields=['deleted_at']),
+            models.Index(fields=['author', 'deleted_at']),
         ]
 
     def __str__(self):
@@ -236,6 +280,89 @@ class Prompt(models.Model):
             self.slug = slugify(self.title)
 
         super().save(*args, **kwargs)
+
+    # Soft delete methods (Phase D.5)
+    def soft_delete(self, user):
+        """Move prompt to trash (soft delete)"""
+        from django.utils import timezone
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.deletion_reason = 'user'
+        self.status = 0  # Hide from public
+        self.save()
+
+    def restore(self):
+        """Restore prompt from trash"""
+        self.deleted_at = None
+        self.deleted_by = None
+        self.deletion_reason = ''
+        self.status = 1  # Make public again
+        self.save()
+
+    def hard_delete(self):
+        """Permanently delete prompt and Cloudinary assets"""
+        # Delete from Cloudinary first
+        if self.featured_image:
+            try:
+                cloudinary.uploader.destroy(
+                    self.featured_image.public_id,
+                    invalidate=True
+                )
+                logger.info(
+                    f"Deleted image from Cloudinary: "
+                    f"{self.featured_image.public_id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Error deleting image from Cloudinary: {e}",
+                    exc_info=True
+                )
+
+        if self.featured_video:
+            try:
+                cloudinary.uploader.destroy(
+                    self.featured_video.public_id,
+                    resource_type='video',
+                    invalidate=True
+                )
+                logger.info(
+                    f"Deleted video from Cloudinary: "
+                    f"{self.featured_video.public_id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Error deleting video from Cloudinary: {e}",
+                    exc_info=True
+                )
+
+        # Then delete from database
+        super().delete()
+
+    @property
+    def days_until_permanent_deletion(self):
+        """Calculate days remaining before permanent deletion"""
+        if not self.deleted_at:
+            return None
+        from django.utils import timezone
+        from datetime import timedelta
+        # Check if user has is_premium attribute
+        retention_days = 30 if hasattr(
+            self.author, 'is_premium'
+        ) and self.author.is_premium else 5
+        expiry_date = self.deleted_at + timedelta(days=retention_days)
+        days_left = (expiry_date - timezone.now()).days
+        return max(0, days_left)
+
+    @property
+    def is_expiring_soon(self):
+        """Check if prompt expires within 24 hours"""
+        days_left = self.days_until_permanent_deletion
+        return days_left is not None and days_left <= 1
+
+    @property
+    def is_in_trash(self):
+        """Check if prompt is currently in trash"""
+        return self.deleted_at is not None
 
     def number_of_likes(self):
         """

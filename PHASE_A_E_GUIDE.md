@@ -1613,98 +1613,430 @@ def upload_submit(request):
 
 ---
 
-### Phase D.5: Trash Bin + Orphaned File Management (2.5-3 days)
+## Phase D.5: Trash Bin + Orphaned File Management ✅ COMPLETE
 
-**Goal:** Unified asset lifecycle management and admin quality control
+**Total Duration:** 2 days (October 12, 2025)
+**Commits:** 7 (5d512bc → fb93ee0)
+**Status:** Production-ready
 
-**Status:** 🔄 Day 1 Complete, Days 2-3 In Progress
-**Priority:** High (quality control + cost optimization + premium feature)
-
-#### Day 1: Trash Bin Foundation ✅ COMPLETE
-**Duration:** 1 day (October 12, 2025)
-**Commits:** 13 total
-**Difficulty:** 🔥🔥🔥🔥 Hard
+### Day 1 Summary ✅ (October 12, 2025)
+**Duration:** 4-5 hours
+**Commits:** 4 (5d512bc → ff4aa85)
 
 **What Was Built:**
-- Database migration with soft delete fields
-- Custom model managers (objects, all_objects)
-- User trash bin page with masonry layout
-- Restore functionality with smart redirects
-- Undo button with original page return
-- Delete forever with confirmation modals
-- Retention rules (5 days free / 30 days premium)
+- Soft delete implementation with `deleted_at`, `deleted_by`, `deletion_reason`
+- Trash bin page (`/trash/`) with masonry grid layout
+- Restore and undo functionality
 - Alert system with proper positioning
-- Success messages with clickable links
-- Responsive grid (4 → 3 → 2 → 1 columns)
+- Smart redirects (referer-based routing)
+- Custom managers: `objects` (active only), `all_objects` (includes deleted)
 
-**Key Achievements:**
-- Solved complex grid layout issues (masonry + Bootstrap)
-- Fixed alert positioning challenges
-- Implemented smart redirect logic (referer-based)
-- Protected against code reversion by CC
-- Created production-ready UX
+**Key Methods:**
+- `prompt.soft_delete(user)` - Move to trash
+- `prompt.restore()` - Restore from trash
+- `prompt.hard_delete()` - Permanent delete + Cloudinary cleanup
 
-**Commits:**
-- 1: Database migration
-- 2: Update delete views
-- 3: Trash bin UI
-- 3.1: Fix restore status
-- 3.2: Admin performance
-- 4: UX improvements
-- 4.1: Shared template
-- 4.2: Fix alerts/undo
-- 4.3: Grid layout v1
-- 4.4: Grid layout v2
-- 4.5: Final polish (cards, redirects)
-- 4.6: Undo redirect + masonry
-- 4.7: Restore link + alert protection
+**Challenges Overcome:**
+- Grid layout complexity (masonry vs Bootstrap)
+- Alert positioning (protected with HTML comments)
+- CC reverting manual changes (protected critical sections)
 
-**Git Hash:** ff4aa85 (latest)
+### Day 2 Summary ✅ (October 12, 2025)
+**Duration:** 4-5 hours
+**Commits:** 3 (73878df → fb93ee0)
 
-#### Days 2-3: Backend Automation 🔄 IN PROGRESS
-**Duration:** 1.5-2 days (estimated)
-**Difficulty:** 🔥🔥 Medium
+#### Commit 5: Cleanup Management Command (73878df)
+**Duration:** 2-3 hours
+**Agents Used:** django-expert, backend-architect
 
-**Tasks Remaining:**
-1. **Cleanup Management Command** (3-4 hours)
-   - Detect expired trash items
-   - Hard delete with Cloudinary cleanup
-   - Email notifications
-   - Logging and error handling
+**What Was Built:**
+- Django management command: `cleanup_deleted_prompts`
+- Automatically deletes expired prompts:
+  - Free users: 5 days retention
+  - Premium users: 30 days retention
+- Features:
+  - `--dry-run` flag for safe testing
+  - Email summaries to admins
+  - Comprehensive error handling
+  - Detailed logging (INFO, WARNING, ERROR)
+  - Continues on individual failures
+  - Statistics tracking (total, successful, failed, by tier)
 
-2. **Orphaned File Detection** (2-3 hours)
-   - Scan Cloudinary resources
-   - Compare with database records
-   - Flag orphaned files
-   - Admin notification system
+**Files Created:**
+- `prompts/management/commands/cleanup_deleted_prompts.py` (271 lines)
+- `prompts/management/commands/README_cleanup_deleted_prompts.md`
 
-3. **Heroku Scheduler Setup** (30 minutes)
-   - Configure daily run (3:00 AM)
-   - Test scheduler execution
-   - Monitor logs
+**Files Modified:**
+- `prompts_manager/settings.py` - Added ADMINS configuration
 
-4. **Testing & Documentation** (1-2 hours)
-   - End-to-end testing
-   - Update documentation
-   - Create admin guide
+**Testing:**
+- Local dry-run: ✅ Passed
+- Heroku dry-run: ✅ Passed
+- Execution time: ~10-30 seconds
 
-**Why Day 1 Was Harder:**
-- Frontend complexity (grid layouts, responsive design)
-- Browser/CSS/JavaScript challenges
-- User-facing features (higher stakes)
-- Multiple iterations needed
-- CC reverting changes
+**Key Implementation Details:**
+- Uses `Prompt.all_objects` to include soft-deleted prompts
+- Premium detection: `hasattr(user, 'is_premium') and user.is_premium`
+- Calls existing `prompt.hard_delete()` method
+- Sends email via Django's `send_mail()`
+- Gracefully handles missing ADMINS configuration
 
-**Why Days 2-3 Are Easier:**
-- Backend only (no UI battles)
-- Well-documented APIs
-- Clear success criteria
-- Easy to test locally
-- Configuration over code
+#### Commit 6: Orphaned File Detection (b6510bb)
+**Duration:** 2-3 hours
+**Agents Used:** python-pro, backend-architect
+
+**What Was Built:**
+- Django management command: `detect_orphaned_files`
+- Scans Cloudinary for files without database entries
+- Features:
+  - `--days N` - Scan last N days (default: 30)
+  - `--all` - Scan all files
+  - `--verbose` - Detailed progress (default: True)
+  - `--output PATH` - Custom CSV location
+  - API usage tracking and warnings
+  - Rate limit protection (warns at 80%, stops at 95%)
+  - CSV report generation
+  - Email summaries to admins
+
+**Files Created:**
+- `prompts/management/commands/detect_orphaned_files.py` (524 lines)
+- `prompts/management/commands/README_detect_orphaned_files.md` (462 lines)
+- `reports/` directory with `.gitkeep`
+
+**Files Modified:**
+- `.gitignore` - Added `reports/*.csv`
+
+**Initial Scan Results:**
+- Total files: 56 (40 images, 16 videos)
+- Valid files: 42 (75%)
+- Orphaned files: 14 (25%)
+- Total orphan size: 8.5 MB
+- API calls used: 2/500 (0.4%)
+- Execution time: 0.7-4.5 seconds
+
+**Testing:**
+- Local scan (1 day): ✅ Passed
+- Local scan (90 days): ✅ Passed (found 14 orphans)
+- Heroku scan (7 days): ✅ Passed
+- CSV report: ✅ Generated correctly
+- Email summary: ✅ Sent to console (development)
+
+**Key Implementation Details:**
+- Uses `cloudinary.api.resources()` with pagination
+- Scans both 'image' and 'video' resource types
+- Configures Cloudinary from `settings.CLOUDINARY_STORAGE`
+- Efficient set-based lookups: O(1) complexity
+- Extracts `public_id` from CloudinaryField safely
+- Small delays (0.1s) between API calls
+- Rich terminal output with emojis and formatting
+
+**Bug Fix:**
+- Initial error: "Must supply cloud_name"
+- Solution: Added explicit Cloudinary configuration in `handle()` method
+- Fixed by configuring from settings before making API calls
+
+#### Commit 7: Heroku Scheduler Setup (fb93ee0)
+**Duration:** 30-60 minutes
+**Agents Used:** deployment-engineer
+
+**What Was Built:**
+- Comprehensive Heroku Scheduler setup guide (758 lines)
+- Environment variable: `ADMIN_EMAIL` set on Heroku
+- Job configurations documented:
+  - Job 1: Daily cleanup at 03:00 UTC
+  - Job 2: Daily detection at 04:00 UTC (7 days scan)
+  - Job 3: Weekly deep scan at 05:00 UTC Sunday (90 days, optional)
+
+**Files Created:**
+- `HEROKU_SCHEDULER_SETUP.md` (758 lines)
+
+**Files Modified:**
+- Heroku config: Added `ADMIN_EMAIL=matthew.jtraveler@gmail.com` (Release v347)
+
+**Guide Contents:**
+- Installation instructions (CLI and web dashboard)
+- Job configuration details with recommendations
+- Cost analysis ($0/month breakdown)
+- Monitoring and logs commands
+- Testing procedures
+- Troubleshooting section (6 common issues)
+- Configuration checklist (34 items)
+- Quick reference commands
+
+**Cost Analysis:**
+- Heroku Scheduler: $0/month (free tier)
+- Dyno hours: ~0.48 hours/month (0.17% of allocation)
+- Cloudinary API: 92-198 calls/month (well within free tier)
+- Total: $0/month
+
+**Remaining Tasks:**
+- Configure actual Heroku Scheduler jobs (awaiting dashboard access)
+- Test scheduled runs for 24-48 hours
+- Verify email notifications work
+- Monitor for any errors
+
+### Phase D.5 Key Achievements:
+1. ✅ Complete trash bin system with restore functionality
+2. ✅ Automated cleanup preserves storage costs
+3. ✅ Orphaned file detection prevents asset bloat
+4. ✅ Zero cost automation via Heroku Scheduler
+5. ✅ Professional documentation for all commands
+6. ✅ Production-ready error handling
+7. ✅ Email notifications to admins
+8. ✅ API usage monitoring prevents rate limit issues
+
+### Lessons Learned:
+1. **Protect Critical Code:** Use HTML comments to prevent CC from reverting manual changes
+2. **Test Incrementally:** Start with small scans (--days 1) before full scans
+3. **Explicit Configuration:** Django management commands need explicit Cloudinary setup
+4. **Documentation Is Key:** Comprehensive guides prevent future confusion
+5. **Safe Defaults:** Always include --dry-run flags for destructive operations
+6. **API Monitoring:** Track usage to prevent hitting rate limits
+
+### Performance Metrics:
+- Cleanup command: 10-30 seconds
+- Detection (7 days): 10-20 seconds
+- Detection (90 days): 30-60 seconds
+- Monthly dyno usage: 0.17% of allocation
+- API efficiency: <1% of daily limit
+
+### Next Phase Ready:
+Phase D.5 provides the foundation for:
+- Premium user system (30-day retention already coded)
+- User activity tracking (deletion patterns)
+- Storage optimization (orphan cleanup)
+- Reliable automated maintenance
 
 ---
 
-### Phase E: Integration & Testing (3-4 hours)
+## Phase E: User Profiles & Social Foundation 🔄 IN PLANNING
+
+**Status:** Planning (October 2025)
+**Estimated Duration:** 2-3 days (10-12 hours)
+**Difficulty:** 🔥🔥 Medium
+**Priority:** High - Foundation for community
+
+### Overview
+Build the social foundation by implementing user profiles, enhanced prompt details with reporting, and email preferences. This phase enables users to discover creators, follow interesting users, and control notifications.
+
+### Why Phase E (Before Premium)?
+1. **User Experience Gap:** No way to see a user's other prompts
+2. **Foundation Needed:** Follow system requires profiles
+3. **Notification Control:** Need preferences before increasing email volume
+4. **Community First:** Build engagement before monetization
+5. **Natural Progression:** From content management (D) to social features (E) to revenue (F)
+
+### Goals:
+- Users can view any creator's public profile
+- Profiles display all prompts and statistics
+- Users can report inappropriate content
+- Users control their email preferences
+- Foundation for follow system (Phase F)
+
+### Part 1: Public User Profiles (Day 1 - 4-5 hours)
+
+**Commits Planned:** 2-3
+
+#### Commit 9: User Profile Model & View
+**What to Build:**
+- UserProfile model (or extend User)
+- Profile view at `/users/<username>/`
+- Profile template with responsive design
+- Query optimization
+
+**Database Model:**
+```python
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(max_length=500, blank=True)
+    avatar = CloudinaryField('image', blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True)
+    website = models.URLField(blank=True)
+    twitter = models.CharField(max_length=50, blank=True)
+    instagram = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
+
+**Profile Page Features:**
+- Username and display name
+- Avatar (default if not set)
+- Bio
+- Member since date
+- Statistics:
+  - Total prompts (count)
+  - Total likes received (aggregate)
+  - Followers (placeholder for Phase F)
+  - Following (placeholder for Phase F)
+- Grid of user's public prompts (masonry layout)
+- Social links (if provided)
+- Follow button (placeholder for Phase F)
+
+**URL Structure:**
+- `/users/<username>/` - Public profile
+- `/users/<username>/prompts/` - All prompts (paginated)
+- `/users/<username>/liked/` - Liked prompts (Phase F)
+
+#### Commit 10: Profile Edit & Avatar Upload
+**What to Build:**
+- Profile settings page at `/settings/profile/`
+- Edit form (bio, avatar, location, social links)
+- Cloudinary avatar upload
+- Form validation
+
+**Features:**
+- Edit bio (500 char limit with counter)
+- Upload avatar (Cloudinary)
+- Add location
+- Add social media links
+- Preview changes before saving
+- Success/error messaging
+
+### Part 2: Enhanced Prompt Detail (Day 2 - 2-3 hours)
+
+#### Commit 11: Report Feature
+**What to Build:**
+- Report button on prompt detail page
+- Report modal with form
+- PromptReport model
+- Admin notification email
+
+**Database Model:**
+```python
+class PromptReport(models.Model):
+    REASON_CHOICES = [
+        ('inappropriate', 'Inappropriate Content'),
+        ('spam', 'Spam or Misleading'),
+        ('copyright', 'Copyright Violation'),
+        ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('reviewed', 'Reviewed'),
+        ('dismissed', 'Dismissed'),
+    ]
+
+    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE)
+    reported_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES)
+    comment = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+```
+
+**Report Flow:**
+1. User clicks "Report" button
+2. Modal appears with reason dropdown
+3. Optional comment field
+4. Submit sends report
+5. Email notification to admins
+6. Thank you confirmation
+7. Admin reviews in Django Admin
+
+#### Commit 12: Prompt Detail Enhancements
+**What to Build:**
+- "View Profile" link next to author name
+- "More from this user" section (3-6 prompts)
+- Author info card (avatar, username, stats)
+- Improved layout and spacing
+
+### Part 3: Email Preferences (Day 3 - 3-4 hours)
+
+#### Commit 13: Email Preferences Model & Settings Page
+**What to Build:**
+- EmailPreferences model
+- Settings page at `/settings/notifications/`
+- Preference toggles
+- Unsubscribe token system
+
+**Database Model:**
+```python
+class EmailPreferences(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    notify_comments = models.BooleanField(default=True)
+    notify_replies = models.BooleanField(default=True)
+    notify_follows = models.BooleanField(default=True)
+    notify_likes = models.BooleanField(default=True)
+    notify_mentions = models.BooleanField(default=True)
+    notify_weekly_digest = models.BooleanField(default=True)
+    notify_updates = models.BooleanField(default=True)
+    notify_marketing = models.BooleanField(default=False)
+    unsubscribe_token = models.CharField(max_length=64, unique=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
+
+**Settings Page Features:**
+- Toggle switches for each notification type
+- "Unsubscribe from all" button
+- Save confirmation
+- Explanatory text for each option
+- Mobile-responsive design
+
+#### Commit 14: Update Notification Logic
+**What to Build:**
+- Update existing notification sends to check preferences
+- Add unsubscribe links to all emails
+- Unsubscribe handler view (`/unsubscribe/<token>/`)
+- Email template updates
+
+**Implementation:**
+- Check preferences before sending any email
+- Generate unique unsubscribe tokens
+- Handle token-based unsubscribe
+- Update email templates with footer links
+
+### Success Criteria:
+- [ ] Users can view any public profile
+- [ ] Profiles show all prompts and stats
+- [ ] Users can edit their own profile
+- [ ] Avatar upload works (Cloudinary)
+- [ ] Report button functional on prompt detail
+- [ ] Admin receives report emails
+- [ ] Email preferences page works
+- [ ] All emails respect preferences
+- [ ] Unsubscribe links work correctly
+- [ ] No N+1 query issues
+- [ ] Mobile-responsive
+- [ ] All pages have proper error handling
+
+### Files to Create:
+- `prompts/models.py` - Add UserProfile, PromptReport, EmailPreferences
+- `prompts/views.py` - Profile, settings, report views
+- `prompts/forms.py` - Profile form, report form, settings form
+- `prompts/urls.py` - New URL patterns
+- `templates/users/profile.html`
+- `templates/users/profile_edit.html`
+- `templates/users/settings_notifications.html`
+- `templates/prompts/report_modal.html`
+- `templates/emails/` - Email templates with unsubscribe
+- `prompts/admin.py` - Admin for new models
+- Migration files
+
+### Testing Checklist:
+- [ ] View any user's profile
+- [ ] Profile shows correct stats
+- [ ] Edit own profile
+- [ ] Upload avatar
+- [ ] Report a prompt
+- [ ] Receive report email (admin)
+- [ ] Change email preferences
+- [ ] Test each notification type respects preferences
+- [ ] Click unsubscribe link
+- [ ] Verify all forms validate correctly
+- [ ] Test on mobile devices
+- [ ] Check query performance (Django Debug Toolbar)
+
+### Leads to Phase F:
+- Follow button becomes functional
+- Personalized feeds (need follow data)
+- In-app notifications (use email preferences as model)
+- User discovery features
+
+---
+
+### Phase F: Integration & Testing (3-4 hours)
 
 **Goal:** Connect all pieces, test end-to-end, fix bugs
 

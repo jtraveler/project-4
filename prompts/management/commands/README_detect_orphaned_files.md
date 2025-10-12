@@ -1,8 +1,11 @@
-# Detect Orphaned Files Management Command
+# Cloudinary Asset Detection Management Command
 
 ## Overview
 
-The `detect_orphaned_files` management command scans Cloudinary for files that don't have corresponding database entries. These "orphaned" files waste storage space and increase costs.
+The `detect_orphaned_files` management command performs two critical checks:
+
+1. **Orphaned Files**: Scans Cloudinary for files without database entries (waste storage)
+2. **Missing Images**: Scans database for prompts with broken Cloudinary links (break UX)
 
 ## What Are Orphaned Files?
 
@@ -12,24 +15,38 @@ Orphaned files occur when:
 - **Development testing**: Test uploads that were never properly cleaned up
 - **Code errors**: Exceptions during prompt creation after Cloudinary upload
 
+## What Are Missing Images?
+
+Missing images occur when:
+- **Manual Cloudinary deletion**: Admin manually deleted files from Cloudinary dashboard
+- **Cloudinary issues**: Files removed by Cloudinary (policy violation, error, etc.)
+- **Data sync issues**: Database references assets that never made it to Cloudinary
+- **Broken references**: Database has invalid public_ids
+
+**Critical**: Missing images show as broken icon on homepage feed - bad UX!
+
 ## Features
 
 - ✅ Scans all Cloudinary resources (images and videos)
+- ✅ Scans database prompts for missing/broken Cloudinary references
 - ✅ Compares against database records (including soft-deleted prompts)
 - ✅ Supports date filtering (scan last N days or all files)
-- ✅ Generates detailed CSV reports
-- ✅ Sends email summaries to admins
+- ✅ Generates detailed two-section CSV reports
+- ✅ Sends email summaries to admins with action items
 - ✅ Monitors API rate limits
 - ✅ Handles pagination automatically
-- ✅ Detection only (does NOT delete files)
+- ✅ Detection only (does NOT delete files or prompts)
+- ✅ Separate flags for targeted scans (--missing-only, --orphans-only)
 
 ## Usage
 
-### Basic Scan (Last 30 Days)
+### Basic Scan (Both Checks, Last 30 Days)
 
 ```bash
 python manage.py detect_orphaned_files
 ```
+
+Runs both orphaned files check AND missing images check for last 30 days.
 
 ### Scan Last 7 Days
 
@@ -49,10 +66,27 @@ python manage.py detect_orphaned_files --days 90
 python manage.py detect_orphaned_files --all
 ```
 
+### Check Only Missing Images (Skip Orphaned Files)
+
+```bash
+python manage.py detect_orphaned_files --missing-only
+```
+
+**Use Case**: Quick check if any ACTIVE prompts have broken images on site.
+**Performance**: Faster than full scan (no Cloudinary API calls for file listing).
+
+### Check Only Orphaned Files (Skip Missing Images)
+
+```bash
+python manage.py detect_orphaned_files --orphans-only --days 7
+```
+
+**Use Case**: Weekly storage cleanup check without checking all prompt images.
+
 ### Custom Output Location
 
 ```bash
-python manage.py detect_orphaned_files --output /tmp/orphans_report.csv
+python manage.py detect_orphaned_files --output /tmp/asset_report.csv
 ```
 
 ### Less Verbose Output
@@ -64,13 +98,14 @@ python manage.py detect_orphaned_files --verbose=False
 ## Output Example
 
 ```
-🔍 Starting Cloudinary Orphaned File Detection
+🔍 Starting Cloudinary Asset Detection
 ============================================================
 
 Configuration:
 - Scanning: Last 30 days
 - Resource types: image, video
-- Started: 2025-10-12 22:00:00 UTC
+- Checks: Orphaned Files + Missing Images
+- Started: 2025-10-13 01:00:00 UTC
 
 Fetching Cloudinary files...
   Scanning images... ✓ 245 files found
@@ -82,18 +117,29 @@ Checking database for matches...
   ✓ Found 255 prompts in database
   Query time: 0.8s
 
-Analyzing files...
+Analyzing orphaned files...
   ✓ Valid files: 255
-  ⚠️  Orphaned files: 2
+  ⚠️  Orphaned: 2 files found
+
+🔍 Checking for prompts with missing images...
+  Checking 257 prompts with media...
+  - Prompt #123: 'Beautiful Sunset' by user1 [ACTIVE]
+  - Prompt #456: 'Mountain View' by user2 [DELETED]
+  ⚠️  Found 2 prompts with missing images!
+  🚨 1 are ACTIVE (showing broken images on site!)
 
 Results Summary:
 ============================================================
 ✅ Valid files: 255 (99.2%)
 ⚠️  Orphaned files: 2 (0.8%)
 📊 Total size of orphans: 4.1 MB
+
+🚨 CRITICAL: 2 prompts with missing images!
+   ⚠️  1 are ACTIVE (showing broken images on site!)
+
 📞 API calls used: 5/500 (1.0%)
 💾 Rate limit remaining: 495/500 (99%)
-⏱️  Execution time: 12.3 seconds
+⏱️  Execution time: 18.5 seconds
 
 Orphaned Files Detected:
 ------------------------------------------------------------
@@ -109,7 +155,7 @@ Orphaned Files Detected:
    - Size: 1.8 MB
    - Format: mp4
 
-📄 Report saved: /path/to/reports/orphaned_files_2025-10-12_220000.csv
+📄 Report saved: /path/to/reports/asset_detection_2025-10-13_010000.csv
 📧 Email summary sent to 1 admin(s)
 
 ✅ Scan complete!
@@ -117,7 +163,9 @@ Orphaned Files Detected:
 
 ## CSV Report Format
 
-The generated CSV contains the following columns:
+The generated CSV contains **two sections**:
+
+### Section 1: Orphaned Cloudinary Files
 
 | Column | Description |
 |--------|-------------|
@@ -129,11 +177,30 @@ The generated CSV contains the following columns:
 | `uploaded_at` | Upload timestamp (ISO format) |
 | `cloudinary_url` | Full Cloudinary URL |
 
+### Section 2: Prompts with Missing Images
+
+| Column | Description |
+|--------|-------------|
+| `prompt_id` | Database prompt ID |
+| `prompt_title` | Prompt title |
+| `author` | Username of prompt author |
+| `media_type` | 'image' or 'video' |
+| `public_id` | Broken Cloudinary public ID |
+| `created_at` | When prompt was created |
+| `status` | 'ACTIVE' (live on site) or 'DELETED' (in trash) |
+| `prompt_url` | Direct link to prompt detail page |
+
 **Example:**
 ```csv
+ORPHANED CLOUDINARY FILES
 public_id,resource_type,size_bytes,size_mb,format,uploaded_at,cloudinary_url
 prompts/sunset_abc123,image,2411520,2.30,jpg,2025-09-15T14:30:00Z,https://res.cloudinary.com/...
-prompts/mountain_def456,video,1887436,1.80,mp4,2025-09-20T09:15:00Z,https://res.cloudinary.com/...
+
+
+PROMPTS WITH MISSING IMAGES
+prompt_id,prompt_title,author,media_type,public_id,created_at,status,prompt_url
+123,Beautiful Sunset,user1,image,prompts/missing_abc,2025-10-01 14:30:00,ACTIVE,https://mj-project-4.herokuapp.com/prompt/beautiful-sunset/
+456,Mountain View,user2,image,prompts/gone_def,2025-09-28 10:15:00,DELETED,https://mj-project-4.herokuapp.com/prompt/mountain-view/
 ```
 
 ## Email Notifications
@@ -141,58 +208,81 @@ prompts/mountain_def456,video,1887436,1.80,mp4,2025-09-20T09:15:00Z,https://res.
 ### When Are Emails Sent?
 
 - `settings.ADMINS` is configured
-- At least 1 orphaned file is found
+- At least 1 orphaned file OR 1 missing image is found
 - Email sending succeeds
 
 ### Email Contents
 
 - Scan date and range
 - Total files scanned
-- Valid vs orphaned counts
-- List of orphaned files (first 20)
+- **Orphaned files section** (if any found):
+  - Valid vs orphaned counts
+  - List of orphaned files (first 20)
+  - Storage wasted
+- **Missing images section** (if any found):
+  - Total missing count
+  - ACTIVE vs DELETED breakdown
+  - List with prompt details (first 20)
+  - Critical UX warning
+  - Recommended actions
 - API usage statistics
 - Path to CSV report
-- Recommended actions
 
 ### Sample Email
 
 ```
-Subject: PromptFlow: Orphaned Files Detection Report
+Subject: PromptFlow: Cloudinary Asset Detection Report
 
-Orphaned Cloudinary Files Report
+Cloudinary Asset Detection Report
 ============================================================
 
-Scan Date: 2025-10-12 22:00:00 UTC
+Scan Date: 2025-10-13 01:00:00 UTC
 Scan Range: Last 30 days
 
 Summary:
 --------
-Total Cloudinary Files: 257
+Total Cloudinary Files Scanned: 257
+Orphaned Files Found: 2
+Missing Images Found: 2
+
+Orphaned Files:
+---------------
 Valid Files: 255 (99.2%)
 Orphaned Files: 2 (0.8%)
 Total Orphan Size: 4.1 MB
 
-Orphaned Files:
----------------
-1. prompts/sunset_abc123 (image, 2.3 MB)
-2. prompts/mountain_def456 (video, 1.8 MB)
+  1. prompts/sunset_abc123 (image, 2.3 MB)
+  2. prompts/mountain_def456 (video, 1.8 MB)
+
+Prompts with Missing Images:
+-----------------------------
+Total Missing: 2
+ACTIVE (showing broken images): 1 🚨
+DELETED (in trash): 1
+
+  • Prompt #123: 'Beautiful Sunset'
+    Author: user1 | Type: image | [ACTIVE]
+
+  • Prompt #456: 'Mountain View'
+    Author: user2 | Type: image | [DELETED]
+
+⚠️  CRITICAL: These prompts show broken images on the site!
+
+Recommended Actions:
+1. Review prompts - are they in trash already?
+2. For ACTIVE prompts: Contact users or soft-delete
+3. For DELETED prompts: Hard delete to remove from feed
+4. Check why images are missing (manual deletion? Cloudinary issue?)
 
 API Usage:
 ----------
 Calls Used: 5/500 (1.0%)
-Execution Time: 12.3 seconds
+Execution Time: 18.5 seconds
 
-Action Required:
-----------------
-Review the CSV report and decide whether to:
-1. Delete orphaned files manually from Cloudinary
-2. Investigate why files are orphaned
-3. Keep files if they're needed for other purposes
-
-Full report: /path/to/reports/orphaned_files_2025-10-12_220000.csv
+Full report: /path/to/reports/asset_detection_2025-10-13_010000.csv
 
 --
-Automated report from PromptFlow orphaned file detection
+Automated report from PromptFlow asset detection
 ```
 
 ## Cloudinary API Usage
@@ -263,6 +353,58 @@ python manage.py delete_orphaned_files --input orphaned_files_2025-10-12.csv --c
 - Orphaned files from recent dates (< 7 days) might indicate bugs
 - Review application logs around upload timestamp
 - Fix underlying issues before deleting
+
+## What to Do with Missing Images
+
+### Critical: ACTIVE Prompts with Broken Images
+
+**These show broken image icons on the homepage - immediate action required!**
+
+1. **Check the CSV Report** - Filter to `status = ACTIVE`
+2. **Review Each Prompt:**
+   - Visit the prompt URL (provided in CSV)
+   - Confirm image is actually broken
+3. **Take Action:**
+   - **Option A**: Soft-delete the prompt (moves to trash)
+   - **Option B**: Contact user to reupload image
+   - **Option C**: If prompt has value, assign a placeholder image
+
+**Quick Soft-Delete:**
+```bash
+# Access Django shell
+python manage.py shell
+
+# Soft-delete specific prompt
+from prompts.models import Prompt
+prompt = Prompt.objects.get(id=123)
+prompt.soft_delete(user=None)  # Or pass admin user
+```
+
+### Low Priority: DELETED Prompts with Missing Images
+
+**These are already in trash, lower priority:**
+
+1. **If Expiring Soon**: Let automatic cleanup handle it
+2. **If Want to Clean Now**: Hard delete via admin panel or shell:
+
+```bash
+# Hard delete (permanent)
+from prompts.models import Prompt
+prompt = Prompt.all_objects.get(id=456)  # Use all_objects to include deleted
+prompt.hard_delete()  # Removes from database
+```
+
+### Investigation
+
+**Common Causes:**
+- Admin manually deleted from Cloudinary dashboard
+- Cloudinary removed for policy violation
+- Prompt created during Cloudinary outage
+
+**Prevention:**
+- Always use `prompt.hard_delete()` instead of manual Cloudinary deletion
+- Never delete files directly from Cloudinary dashboard
+- Use this command to catch issues early
 
 ## Scheduling Recommendations
 

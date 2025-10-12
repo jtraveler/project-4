@@ -25,3 +25,6 @@ Thumbs.db
 
 # Static files (will be collected by Heroku)
 staticfiles/
+
+# Reports (CSV files from management commands)
+reports/*.csv

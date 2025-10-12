@@ -202,6 +202,11 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 # Email backend (for development)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+# Admin email notifications
+ADMINS = [
+    ('Admin Name', os.environ.get('ADMIN_EMAIL', 'admin@example.com')),
+]
+
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'

@@ -57,20 +57,25 @@
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
-## 📊 Phase D.5 Complete - October 12, 2025
+## 📊 Phase D.5 Complete - October 12-13, 2025
 
 **Trash Bin System + Orphaned File Management** ✅
 
 **Day 1:** Soft delete system with trash bin UI (4-5 hours)
 **Day 2:** Automated cleanup + orphan detection (4-5 hours)
+**Day 3:** Missing image detection + documentation (2 hours)
 
 **Key Achievements:**
 - ✅ Soft delete with 5-30 day retention (free/premium)
 - ✅ Automated daily cleanup via Heroku Scheduler
 - ✅ Orphaned Cloudinary file detection (found 14 orphans, 8.5 MB)
+- ✅ Missing image detection (prompts without valid Cloudinary files)
+- ✅ Two-section reporting (orphaned files + missing images)
+- ✅ ACTIVE vs DELETED prompt differentiation
 - ✅ Email notifications to admins
 - ✅ Comprehensive documentation (2,000+ lines)
 - ✅ $0/month operational cost
+- ✅ Critical UX fix (prevents broken images on homepage)
 
 **Next Phase: Phase E - User Profiles & Social Foundation**
 - Public user profile pages with stats
@@ -1908,9 +1913,9 @@ Production Values (Final Implementation):
 
 ## PHASE D.5: TRASH BIN + ORPHANED FILE MANAGEMENT ✅ COMPLETE
 
-**Status:** Production-ready (October 12, 2025)
-**Total Time:** 2 days (8-10 hours)
-**Commits:** 7 (5d512bc → fb93ee0)
+**Status:** Production-ready (October 12-13, 2025)
+**Total Time:** 3 days (10-12 hours)
+**Commits:** 10 (5d512bc → 48725a8)
 
 ### Day 1: Trash Bin UI ✅ (October 12, 2025)
 **Duration:** 4-5 hours
@@ -1975,6 +1980,35 @@ Day 1 focused on user-facing trash bin functionality and UX polish. The primary 
   - Weekly deep scan at 05:00 UTC (90 days, optional)
 - Cost analysis: $0/month (uses spare Eco dyno hours)
 
+### Day 3: Missing Image Detection ✅ (October 13, 2025)
+**Duration:** 2 hours
+**Commits:** 3 (d730b19, 27aacf0, 48725a8)
+
+**Commit 8: Documentation Update** (d730b19)
+- Updated CLAUDE.md and PHASE_A_E_GUIDE.md with Phase D.5 completion
+- Added comprehensive Day 2 summary for all 3 commits
+- Added Phase E planning and specifications
+- Reorganized future phases (F: Social, G: Premium, H: Admin, I: Performance)
+
+**Commit 9: Missing Image Detection** (27aacf0)
+- Enhanced `detect_orphaned_files` command with missing image detection
+- Detects prompts where Cloudinary image/video doesn't exist
+- Critical UX fix: prevents broken images on homepage feed
+- New flags: `--missing-only`, `--orphans-only` for targeted scans
+- Two-section CSV report (orphaned files + missing images)
+- Enhanced email alerts highlighting ACTIVE prompts with broken images
+- Found 3 broken prompts in initial scan (all ACTIVE, admin-owned)
+- Files: detect_orphaned_files.py (+375 lines, -148 lines)
+
+**Commit 10: Documentation Update** (48725a8)
+- Updated README_detect_orphaned_files.md with missing image detection
+- Renamed to "Cloudinary Asset Detection" to reflect dual functionality
+- Added usage examples for new flags
+- Documented two-section CSV format
+- Added "What to Do with Missing Images" troubleshooting guide
+- Prevention best practices and quick reference commands
+- Files: README_detect_orphaned_files.md (+179 lines, -37 lines)
+
 ### Key Features Delivered:
 - ✅ Soft delete with `deleted_at`, `deleted_by`, `deletion_reason`, `original_status`
 - ✅ Retention periods: 5 days (free), 30 days (premium)
@@ -1983,7 +2017,10 @@ Day 1 focused on user-facing trash bin functionality and UX polish. The primary 
 - ✅ Cloudinary asset cleanup on hard delete
 - ✅ Automated daily cleanup via Heroku Scheduler
 - ✅ Orphaned file detection with CSV reports
-- ✅ Email notifications to admins
+- ✅ Missing image detection (prompts without valid Cloudinary files)
+- ✅ Two-section reporting (orphaned files + missing images)
+- ✅ ACTIVE vs DELETED prompt differentiation
+- ✅ Email notifications to admins with action items
 - ✅ API usage monitoring (2 calls per scan, 0.4% of limit)
 
 ### Files Created/Modified:
@@ -1991,17 +2028,22 @@ Day 1 focused on user-facing trash bin functionality and UX polish. The primary 
 - `prompts/views.py` - Trash bin, restore, delete views
 - `prompts/templates/prompts/trash_bin.html` - Trash UI
 - `prompts/management/commands/cleanup_deleted_prompts.py` (271 lines)
-- `prompts/management/commands/detect_orphaned_files.py` (524 lines)
+- `prompts/management/commands/detect_orphaned_files.py` (524 lines → 899 lines with missing detection)
 - `prompts/management/commands/README_cleanup_deleted_prompts.md` (248 lines)
-- `prompts/management/commands/README_detect_orphaned_files.md` (462 lines)
+- `prompts/management/commands/README_detect_orphaned_files.md` (462 lines → 641 lines)
 - `HEROKU_SCHEDULER_SETUP.md` (758 lines)
+- `CLAUDE.md` - Updated with Phase D.5 completion and Phase E planning
+- `PHASE_A_E_GUIDE.md` - Updated with comprehensive implementation guide
+- `PHASE_E_SPEC.md` - Created detailed Phase E specification (NEW)
 - `prompts_manager/settings.py` - Added ADMINS configuration
 - `.gitignore` - Added reports/*.csv
 - `reports/` directory created
 
 ### Performance Metrics:
 - Cleanup command: ~10-30 seconds execution
-- Detection command: ~10-20 seconds (7 days), ~30-60 seconds (90 days)
+- Detection command (orphans): ~10-20 seconds (7 days), ~30-60 seconds (90 days)
+- Detection command (missing images): ~10-30 seconds (checks 40-50 prompts)
+- Initial missing image scan: Found 3 broken prompts (all ACTIVE, admin-owned)
 - API usage: 2-4 calls per day
 - Monthly cost: $0
 - Dyno hours: ~0.48 hours/month (0.17% of allocation)
@@ -2013,12 +2055,16 @@ Day 1 focused on user-facing trash bin functionality and UX polish. The primary 
 4. **Documentation Is Key:** Comprehensive guides prevent future confusion
 5. **Safe Defaults:** Always include --dry-run flags for destructive operations
 6. **API Monitoring:** Track usage to prevent hitting rate limits
+7. **Reverse Checks Matter:** Detecting both directions (orphans + missing) provides complete asset health
+8. **Prioritize by Impact:** ACTIVE broken prompts need immediate action vs DELETED ones in trash
+9. **Combined Reporting:** Single command for multiple checks reduces complexity and improves maintainability
 
 ### Next Steps:
-- Configure Heroku Scheduler jobs (awaiting dashboard access)
+- ✅ Configure Heroku Scheduler jobs (3 jobs: cleanup daily, orphan detection daily, deep scan weekly)
+- Review CSV reports and fix 3 broken prompts found (all admin-owned, need image restoration)
 - Monitor automated runs for 24-48 hours
-- Review and delete confirmed orphaned files from Cloudinary
-- Phase E: User Profiles & Social Foundation
+- Review and delete confirmed orphaned files from Cloudinary (14 files, 8.5 MB)
+- **Phase E: User Profiles & Social Foundation** (next phase, 10-12 hours estimated)
 
 ## Phase E: User Profiles & Social Foundation 🔄 IN PLANNING
 

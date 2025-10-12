@@ -1615,8 +1615,8 @@ def upload_submit(request):
 
 ## Phase D.5: Trash Bin + Orphaned File Management ✅ COMPLETE
 
-**Total Duration:** 2 days (October 12, 2025)
-**Commits:** 7 (5d512bc → fb93ee0)
+**Total Duration:** 3 days (October 12-13, 2025)
+**Commits:** 10 (5d512bc → 48725a8)
 **Status:** Production-ready
 
 ### Day 1 Summary ✅ (October 12, 2025)
@@ -1775,15 +1775,119 @@ def upload_submit(request):
 - Verify email notifications work
 - Monitor for any errors
 
+### Day 3: Missing Image Detection ✅ (October 13, 2025)
+**Duration:** 2 hours
+**Commits:** 3 (d730b19, 27aacf0, 48725a8)
+
+#### Commit 8: Documentation Update (d730b19)
+**Duration:** 30 minutes
+
+**What Was Updated:**
+- `CLAUDE.md` - Updated with Phase D.5 completion summary
+- `PHASE_A_E_GUIDE.md` - Added comprehensive Day 2 implementation details
+- `PHASE_E_SPEC.md` - Created detailed Phase E specification (NEW, 256 lines)
+
+**Documentation Changes:**
+- Marked Phase D.5 as complete with all 7 commits
+- Added Day 2 summary with detailed commit descriptions
+- Added Phase E planning (User Profiles & Social Foundation)
+- Reorganized future phases (F: Social, G: Premium, H: Admin, I: Performance)
+- Updated technology stack sections
+- Added lessons learned and performance metrics
+
+#### Commit 9: Missing Image Detection (27aacf0)
+**Duration:** 1-2 hours
+**Agents Used:** Auto-selected by Claude Code
+
+**What Was Built:**
+- Enhanced `detect_orphaned_files` command to also detect missing images
+- **Reverse check:** Prompts in database → Check if Cloudinary file exists
+- **Critical UX fix** for broken images on homepage feed
+
+**Features Added:**
+- `_detect_missing_images()` method (95 lines)
+- Checks both `featured_image` and `featured_video` fields
+- Uses `cloudinary.api.resource()` to verify file existence (NotFound exception = missing)
+- Differentiates ACTIVE vs DELETED prompts
+- Flags ACTIVE prompts as critical (showing broken icons on site)
+- Two new command flags:
+  - `--missing-only` - Quick check for broken images (skip orphan detection)
+  - `--orphans-only` - Storage cleanup without checking all prompts
+- Enhanced CSV report with two sections (orphaned files + missing images)
+- Enhanced email summary with missing images alert section
+
+**Files Modified:**
+- `prompts/management/commands/detect_orphaned_files.py` (+375 lines, -148 lines)
+
+**Initial Scan Results:**
+- Total prompts checked: 45
+- Missing images found: 3
+- Status: All 3 are ACTIVE (showing broken icons on site)
+- Prompt IDs: #149, #146, #145
+- All are admin-owned prompts (test uploads with manually deleted Cloudinary files)
+
+**Testing:**
+- Local scan: ✅ Passed (found 3 broken prompts)
+- CSV report: ✅ Two-section format working correctly
+- Email summary: ✅ Includes missing images section with action items
+- Console output: ✅ Shows ACTIVE vs DELETED breakdown
+
+**Key Implementation Details:**
+- Uses `Prompt.all_objects` to check soft-deleted prompts too
+- Progress indicators every 50 prompts
+- 0.05s delay between Cloudinary API checks (avoid rate limits)
+- Graceful `cloudinary.exceptions.NotFound` exception handling
+- Continues on individual check failures (robust error handling)
+- No additional API rate limit impact (uses same Cloudinary calls)
+- Console highlights ACTIVE prompts in red (critical UX issue)
+
+**Output Enhancement:**
+```
+🔍 Checking for prompts with missing images...
+  - Prompt #149: 'Test Upload 1' by admin [ACTIVE]
+  - Prompt #146: 'Test Upload 2' by admin [ACTIVE]
+  - Prompt #145: 'Test Upload 3' by admin [ACTIVE]
+  ⚠️  Found 3 prompts with missing images!
+  🚨 3 are ACTIVE (showing broken images on site!)
+
+Results Summary:
+============================================================
+🚨 CRITICAL: 3 prompts with missing images!
+   ⚠️  3 are ACTIVE (showing broken images on site!)
+```
+
+#### Commit 10: Documentation Update (48725a8)
+**Duration:** 30 minutes
+
+**What Was Updated:**
+- `README_detect_orphaned_files.md` - Comprehensive update (+179 lines, -37 lines)
+
+**Documentation Changes:**
+- Renamed title to "Cloudinary Asset Detection" (reflects dual functionality)
+- Added "What Are Missing Images?" section (causes and impact)
+- Added usage examples for `--missing-only` and `--orphans-only` flags
+- Updated CSV format documentation with two-section structure
+- Updated email template example with both sections
+- Added "What to Do with Missing Images" troubleshooting guide:
+  - **Critical:** ACTIVE prompts (immediate action required)
+  - **Low Priority:** DELETED prompts (already in trash)
+  - Investigation tips for common causes
+  - Prevention best practices
+  - Quick reference for soft-delete and hard-delete commands
+- Updated Heroku Scheduler recommendations
+
 ### Phase D.5 Key Achievements:
 1. ✅ Complete trash bin system with restore functionality
 2. ✅ Automated cleanup preserves storage costs
 3. ✅ Orphaned file detection prevents asset bloat
-4. ✅ Zero cost automation via Heroku Scheduler
-5. ✅ Professional documentation for all commands
-6. ✅ Production-ready error handling
-7. ✅ Email notifications to admins
-8. ✅ API usage monitoring prevents rate limit issues
+4. ✅ Missing image detection prevents broken images on homepage
+5. ✅ Two-section reporting (orphaned files + missing images)
+6. ✅ ACTIVE vs DELETED prompt differentiation
+7. ✅ Zero cost automation via Heroku Scheduler
+8. ✅ Professional documentation for all commands
+9. ✅ Production-ready error handling
+10. ✅ Email notifications to admins
+11. ✅ API usage monitoring prevents rate limit issues
 
 ### Lessons Learned:
 1. **Protect Critical Code:** Use HTML comments to prevent CC from reverting manual changes
@@ -1792,11 +1896,16 @@ def upload_submit(request):
 4. **Documentation Is Key:** Comprehensive guides prevent future confusion
 5. **Safe Defaults:** Always include --dry-run flags for destructive operations
 6. **API Monitoring:** Track usage to prevent hitting rate limits
+7. **Reverse Checks Matter:** Detecting both directions (orphans + missing) provides complete asset health
+8. **Prioritize by Impact:** ACTIVE broken prompts need immediate action vs DELETED ones in trash
+9. **Combined Reporting:** Single command for multiple checks reduces complexity and improves maintainability
 
 ### Performance Metrics:
 - Cleanup command: 10-30 seconds
-- Detection (7 days): 10-20 seconds
-- Detection (90 days): 30-60 seconds
+- Detection command (orphans, 7 days): 10-20 seconds
+- Detection command (orphans, 90 days): 30-60 seconds
+- Detection command (missing images): 10-30 seconds (checks 40-50 prompts)
+- Initial missing image scan: Found 3 broken prompts (all ACTIVE, admin-owned)
 - Monthly dyno usage: 0.17% of allocation
 - API efficiency: <1% of daily limit
 

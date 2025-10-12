@@ -1613,60 +1613,94 @@ def upload_submit(request):
 
 ---
 
-### Phase D.5: Trash Bin + Orphaned File Management 🗑️
+### Phase D.5: Trash Bin + Orphaned File Management (2.5-3 days)
 
-**Status:** 🔄 In Progress
-**Duration:** 2.5-3 days
-**Priority:** High
+**Goal:** Unified asset lifecycle management and admin quality control
 
-#### Overview
-Combined system for asset lifecycle management and admin quality control. Implements soft delete with trash bin functionality for users and comprehensive orphaned file management for admins.
+**Status:** 🔄 Day 1 Complete, Days 2-3 In Progress
+**Priority:** High (quality control + cost optimization + premium feature)
 
-#### Key Components
+#### Day 1: Trash Bin Foundation ✅ COMPLETE
+**Duration:** 1 day (October 12, 2025)
+**Commits:** 13 total
+**Difficulty:** 🔥🔥🔥🔥 Hard
 
-**1. Database Foundation**
-- Soft delete fields: `deleted_at`, `deleted_by`, `deletion_reason`
-- Custom model managers: `objects` (excludes deleted) and `all_objects` (includes deleted)
-- Methods: `soft_delete()`, `restore()`, `hard_delete()`
+**What Was Built:**
+- Database migration with soft delete fields
+- Custom model managers (objects, all_objects)
+- User trash bin page with masonry layout
+- Restore functionality with smart redirects
+- Undo button with original page return
+- Delete forever with confirmation modals
+- Retention rules (5 days free / 30 days premium)
+- Alert system with proper positioning
+- Success messages with clickable links
+- Responsive grid (4 → 3 → 2 → 1 columns)
 
-**2. User Trash Bin**
-- Personal trash bin in user dashboard
-- Restore deleted prompts within retention period
-- Retention rules:
-  - Free users: 5 days, last 10 items only
-  - Premium users: 30 days, unlimited capacity
-- Premium upsell opportunity
+**Key Achievements:**
+- Solved complex grid layout issues (masonry + Bootstrap)
+- Fixed alert positioning challenges
+- Implemented smart redirect logic (referer-based)
+- Protected against code reversion by CC
+- Created production-ready UX
 
-**3. Orphaned File Detection**
-- Daily management command: `check_and_cleanup.py`
-- Scans Cloudinary for orphaned files
-- Identifies prompts with missing images
-- Excludes admin-owned patterns
-- Automated cleanup via Heroku Scheduler (3:00 AM daily)
+**Commits:**
+- 1: Database migration
+- 2: Update delete views
+- 3: Trash bin UI
+- 3.1: Fix restore status
+- 3.2: Admin performance
+- 4: UX improvements
+- 4.1: Shared template
+- 4.2: Fix alerts/undo
+- 4.3: Grid layout v1
+- 4.4: Grid layout v2
+- 4.5: Final polish (cards, redirects)
+- 4.6: Undo redirect + masonry
+- 4.7: Restore link + alert protection
 
-**4. Admin Trash Dashboard**
-Four tabs:
-1. **All Trash** - Complete oversight of deleted content
-2. **Orphaned Files** - Cloudinary files without prompts (150x150px thumbnails)
-3. **Missing Images** - Prompts with broken/missing Cloudinary assets
-4. **Admin-Owned Assets** - Legitimate admin uploads (hero, about, etc.)
+**Git Hash:** ff4aa85 (latest)
 
-#### Technical Implementation
-- Cloudinary API batching: 100 files/request, 1-second delays
-- Thumbnail optimization: Cloudinary transformations (`c_thumb,w_150,h_150`)
-- Admin exclusion patterns: Configurable (default: `admin/*`, `hero/*`, `about/*`, `site/*`)
-- Multiple admin support with attribution tracking
+#### Days 2-3: Backend Automation 🔄 IN PROGRESS
+**Duration:** 1.5-2 days (estimated)
+**Difficulty:** 🔥🔥 Medium
 
-#### Why Before Phase E?
-- Phase E involves extensive upload testing
-- Trash bin serves as QA tool for Phase D cleanup verification
-- Prevents accumulation of test data orphans
-- Establishes quality control foundation before launch
+**Tasks Remaining:**
+1. **Cleanup Management Command** (3-4 hours)
+   - Detect expired trash items
+   - Hard delete with Cloudinary cleanup
+   - Email notifications
+   - Logging and error handling
 
-#### Related Documentation
-- See CLAUDE.md for complete Phase D.5 specifications
-- Database schema details in CLAUDE.md > Database Schema section
-- Monetization impact in CLAUDE.md > Monetization Strategy
+2. **Orphaned File Detection** (2-3 hours)
+   - Scan Cloudinary resources
+   - Compare with database records
+   - Flag orphaned files
+   - Admin notification system
+
+3. **Heroku Scheduler Setup** (30 minutes)
+   - Configure daily run (3:00 AM)
+   - Test scheduler execution
+   - Monitor logs
+
+4. **Testing & Documentation** (1-2 hours)
+   - End-to-end testing
+   - Update documentation
+   - Create admin guide
+
+**Why Day 1 Was Harder:**
+- Frontend complexity (grid layouts, responsive design)
+- Browser/CSS/JavaScript challenges
+- User-facing features (higher stakes)
+- Multiple iterations needed
+- CC reverting changes
+
+**Why Days 2-3 Are Easier:**
+- Backend only (no UI battles)
+- Well-documented APIs
+- Clear success criteria
+- Easy to test locally
+- Configuration over code
 
 ---
 

@@ -816,7 +816,15 @@ def prompt_restore(request, slug):
 
     if request.method == 'POST':
         prompt.restore()
-        messages.success(request, f'"{prompt.title}" has been restored successfully!')
+
+        # Create link to restored prompt
+        prompt_url = reverse('prompts:prompt_detail', args=[prompt.slug])
+        messages.success(
+            request,
+            f'"{prompt.title}" has been restored successfully! '
+            f'<a href="{prompt_url}" class="alert-link">View Prompt</a>',
+            extra_tags='success safe'
+        )
 
         # Check if return_to URL was provided (from Undo button)
         return_to = request.POST.get('return_to', '')

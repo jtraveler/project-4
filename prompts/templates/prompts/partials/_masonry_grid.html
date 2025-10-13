@@ -15,6 +15,107 @@ Parameters:
 
 {% load static %}
 
+<style>
+/* ============================================
+   MASONRY GRID CSS - Video Cards & Column Widths
+   ============================================ */
+
+/* Masonry grid - flexbox for equal column distribution */
+.masonry-grid {
+    display: flex !important;
+    gap: 15px;
+    width: 100%;
+    align-items: flex-start;
+}
+
+/* Individual columns - CRITICAL: flex: 1 ensures equal width */
+.masonry-column {
+    flex: 1; /* Equal distribution across columns */
+    display: flex !important;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 0; /* Prevents flex items from overflowing */
+}
+
+/* Masonry items - fill column width */
+.masonry-item {
+    width: 100% !important;
+    margin-bottom: 0 !important;
+    display: block !important;
+    position: relative !important;
+}
+
+/* ============================================
+   VIDEO CARD CSS - Thumbnail Overlay Fix
+   ============================================ */
+
+/* Video card wrapper */
+.video-card {
+    position: relative;
+    width: 100%;
+}
+
+.video-card .image-wrapper {
+    position: relative;
+    width: 100%;
+    background: transparent;
+}
+
+/* Video element - hidden by default */
+.gallery-video {
+    width: 100%;
+    height: auto;
+    display: none;
+    visibility: hidden;
+    object-fit: contain;
+    border-radius: 12px;
+    position: relative;
+    z-index: 2;
+}
+
+/* Thumbnail - CRITICAL: position absolute overlays video */
+.video-thumbnail {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: opacity 0.3s ease;
+    object-fit: contain;
+    border-radius: 12px;
+    position: absolute; /* KEY: Absolute positioning overlays video */
+    top: 0;
+    left: 0;
+    z-index: 3; /* Above video */
+    pointer-events: none;
+}
+
+/* Play icon - centered overlay */
+.video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    color: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    z-index: 4; /* Above thumbnail */
+}
+
+/* When video is playing (initialized) */
+.gallery-video[data-initialized="true"] {
+    display: block;
+    visibility: visible;
+}
+
+/* Fade out thumbnail when video plays */
+.video-thumbnail[style*="opacity: 0"] {
+    opacity: 0 !important;
+}
+
+.video-play-icon[style*="opacity: 0"] {
+    opacity: 0 !important;
+}
+</style>
+
 {% if items %}
 {# Masonry Grid Container #}
 <div class="masonry-container" style="max-width: 100%; margin: 0; padding: 20px 40px; width: 100%;">

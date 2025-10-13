@@ -5,7 +5,9 @@
 
 {% block content %}
 <style>
-/* Avatar System - 8 Hash-Based Gradient Colors */
+/* ============================================
+   AVATAR SYSTEM - 8 Hash-Based Gradient Colors
+   ============================================ */
 .profile-avatar {
     width: 120px;
     height: 120px;
@@ -38,20 +40,24 @@
 .avatar-color-7 { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
 .avatar-color-8 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
 
-/* Profile Header */
+/* ============================================
+   PROFILE HEADER - CENTERED CONTAINER
+   ============================================ */
 .profile-header {
     background: white;
     border-bottom: 1px solid #e5e7eb;
     padding: 40px 0 0;
-    margin-bottom: 24px;
+    margin-bottom: 0;
 }
 
 .profile-info {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
     display: flex;
     align-items: flex-start;
     gap: 24px;
     margin-bottom: 24px;
-    padding: 0 40px;
 }
 
 .profile-details {
@@ -65,62 +71,125 @@
     color: #1f2937;
 }
 
+/* BIO DISPLAY */
 .profile-bio {
+    max-width: 600px;
     font-size: 16px;
     color: #6b7280;
+    line-height: 1.6;
     margin: 0 0 16px;
-    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
+.profile-bio:empty {
+    display: none;
+}
+
+/* SOCIAL LINKS - Pexels Style Circular Icon Buttons */
 .profile-social-links {
     display: flex;
     gap: 16px;
     margin-bottom: 16px;
+    align-items: center;
 }
 
 .social-link {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    color: #3b82f6;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    color: #6b7280;
     text-decoration: none;
-    font-size: 14px;
+    font-size: 18px;
+    transition: all 0.3s ease;
 }
 
 .social-link:hover {
-    color: #2563eb;
-    text-decoration: underline;
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
+.social-link:active {
+    transform: translateY(0);
+}
+
+/* EDIT PROFILE BUTTON - Pexels Green */
+.btn-edit-profile {
+    background: #05A081;
+    color: white;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-edit-profile:hover:not(:disabled) {
+    background: #048c70;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(5, 160, 129, 0.3);
+}
+
+.btn-edit-profile:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #9ca3af;
+}
+
+/* STATS ROW */
 .profile-stats {
-    display: flex;
-    gap: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 0 40px 20px;
     border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    gap: 32px;
 }
 
 .stat-item {
     display: flex;
     flex-direction: column;
+    gap: 4px;
 }
 
 .stat-value {
     font-size: 24px;
     font-weight: 700;
     color: #1f2937;
+    line-height: 1;
 }
 
 .stat-label {
     font-size: 14px;
     color: #6b7280;
+    font-weight: 400;
 }
 
-/* Media Filter Tabs */
+/* MEDIA FILTER TABS */
+.media-filter-container {
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0;
+    margin-bottom: 24px;
+}
+
 .media-filter-tabs {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
     display: flex;
     gap: 0;
-    padding: 0 40px;
-    background: white;
 }
 
 .media-tab {
@@ -146,7 +215,7 @@
     border-bottom-color: #3b82f6;
 }
 
-/* Empty State */
+/* EMPTY STATE */
 .empty-profile {
     text-align: center;
     padding: 80px 20px;
@@ -169,7 +238,9 @@
     color: #9ca3af;
 }
 
-/* Responsive Breakpoints */
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
 @media (max-width: 768px) {
     .profile-info {
         flex-direction: column;
@@ -181,6 +252,11 @@
         margin: 0 auto;
     }
 
+    .profile-bio {
+        text-align: center;
+        margin: 0 auto 16px;
+    }
+
     .profile-social-links {
         justify-content: center;
     }
@@ -188,6 +264,7 @@
     .profile-stats {
         padding: 0 20px 20px;
         gap: 16px;
+        justify-content: space-around;
     }
 
     .stat-item {
@@ -203,6 +280,7 @@
         flex: 1;
         padding: 12px 8px;
         font-size: 14px;
+        text-align: center;
     }
 }
 
@@ -223,6 +301,7 @@
 
 <!-- Profile Header -->
 <div class="profile-header">
+    <!-- Profile Info - Centered Container -->
     <div class="profile-info">
         <!-- Avatar -->
         {% if profile.avatar %}
@@ -245,26 +324,33 @@
             {% if profile.twitter_url or profile.instagram_url or profile.website_url %}
                 <div class="profile-social-links">
                     {% if profile.twitter_url %}
-                        <a href="{{ profile.twitter_url }}" class="social-link" target="_blank" rel="noopener noreferrer">
-                            <i class="fab fa-twitter"></i> Twitter
+                        <a href="{{ profile.twitter_url }}" class="social-link" target="_blank" rel="noopener noreferrer" title="Twitter">
+                            <i class="fab fa-twitter"></i>
                         </a>
                     {% endif %}
                     {% if profile.instagram_url %}
-                        <a href="{{ profile.instagram_url }}" class="social-link" target="_blank" rel="noopener noreferrer">
-                            <i class="fab fa-instagram"></i> Instagram
+                        <a href="{{ profile.instagram_url }}" class="social-link" target="_blank" rel="noopener noreferrer" title="Instagram">
+                            <i class="fab fa-instagram"></i>
                         </a>
                     {% endif %}
                     {% if profile.website_url %}
-                        <a href="{{ profile.website_url }}" class="social-link" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-link"></i> Website
+                        <a href="{{ profile.website_url }}" class="social-link" target="_blank" rel="noopener noreferrer" title="Website">
+                            <i class="fas fa-link"></i>
                         </a>
                     {% endif %}
                 </div>
             {% endif %}
+
+            <!-- Edit Profile Button (Owner Only) -->
+            {% if is_owner %}
+                <button class="btn-edit-profile" disabled title="Coming soon in Phase F">
+                    <i class="fas fa-edit"></i> Edit profile
+                </button>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Stats Row -->
+    <!-- Stats Row - Centered Container -->
     <div class="profile-stats">
         <div class="stat-item">
             <span class="stat-value">{{ total_prompts }}</span>
@@ -275,8 +361,10 @@
             <span class="stat-label">Likes</span>
         </div>
     </div>
+</div>
 
-    <!-- Media Filter Tabs -->
+<!-- Media Filter Tabs - Centered Container -->
+<div class="media-filter-container">
     <div class="media-filter-tabs" role="tablist" aria-label="Filter prompts by media type">
         <a href="{% url 'prompts:user_profile' profile_user.username %}?media=all"
            class="media-tab {% if media_filter == 'all' %}active{% endif %}"
@@ -299,7 +387,7 @@
     </div>
 </div>
 
-<!-- Masonry Grid (Reusable Partial) -->
+<!-- Masonry Grid (Reusable Partial) - FULL WIDTH -->
 {% if prompts %}
     {% include 'prompts/partials/_masonry_grid.html' with items=prompts grid_id='profile-grid' show_load_more=True page_obj=page_obj %}
 {% else %}

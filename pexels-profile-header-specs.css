@@ -1,0 +1,460 @@
+/* ============================================
+   PEXELS PROFILE HEADER - EXACT SPECIFICATIONS
+   ============================================
+
+   Reference: Pexels "Urban Avenue" profile page
+   Last analyzed: 2025-10-13
+
+   Key measurements:
+   - Avatar: 120px circle
+   - Username: 32px bold
+   - Button: #05a081 green
+   - Stats gaps: 48px between items
+   - Tab active: black bg, white text
+   ============================================ */
+
+/* ============================================
+   1. PROFILE HEADER CONTAINER
+   ============================================ */
+
+.profile-header {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 0;
+  background: #ffffff;
+}
+
+/* Top section with avatar + name + button */
+.profile-header__top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+/* ============================================
+   2. AVATAR SECTION
+   ============================================ */
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ============================================
+   3. USERNAME TYPOGRAPHY
+   ============================================ */
+
+.profile-username {
+  font-size: 32px;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1.2;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.5px;
+}
+
+/* ============================================
+   4. EDIT PROFILE BUTTON
+   ============================================ */
+
+.btn-edit-profile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Pexels green */
+  background-color: #05a081;
+  color: #ffffff;
+
+  /* Typography */
+  font-size: 15px;
+  font-weight: 600;
+
+  /* Spacing */
+  padding: 10px 24px;
+  border-radius: 6px;
+
+  /* Interaction */
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+
+  /* Shadows */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.btn-edit-profile:hover {
+  background-color: #048f73;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-edit-profile:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-edit-profile:focus {
+  outline: 2px solid #05a081;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   5. STATS ROW LAYOUT
+   ============================================ */
+
+.profile-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48px; /* CRITICAL: 48px between stat items */
+  margin: 32px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-stats__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Stat value (number) */
+.profile-stats__value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1;
+}
+
+/* Stat label (text below number) */
+.profile-stats__label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* ============================================
+   6. TAB NAVIGATION
+   ============================================ */
+
+.profile-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 32px 0 24px;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.profile-tabs__item {
+  margin: 0;
+  padding: 0;
+}
+
+.profile-tabs__link {
+  display: inline-block;
+  padding: 12px 20px;
+
+  /* Typography */
+  font-size: 15px;
+  font-weight: 500;
+  color: #6b7280;
+  text-decoration: none;
+
+  /* Visual */
+  border-radius: 6px 6px 0 0;
+  transition: all 0.2s ease;
+  position: relative;
+
+  /* Bottom border indicator */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* Overlap with container border */
+}
+
+.profile-tabs__link:hover {
+  color: #000000;
+  background-color: #f9fafb;
+}
+
+/* ACTIVE STATE: Black background, white text */
+.profile-tabs__link--active {
+  background-color: #000000;
+  color: #ffffff;
+  border-bottom-color: #000000;
+}
+
+.profile-tabs__link--active:hover {
+  background-color: #1f2937;
+}
+
+/* ============================================
+   7. FILTER DROPDOWNS (Right-aligned)
+   ============================================ */
+
+.profile-filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 0 24px;
+}
+
+.profile-filter {
+  position: relative;
+}
+
+.profile-filter__select {
+  appearance: none;
+
+  /* Typography */
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+
+  /* Spacing */
+  padding: 8px 36px 8px 12px;
+
+  /* Visual */
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+
+  /* Interaction */
+  transition: all 0.2s ease;
+
+  /* Background icon (dropdown arrow) */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23374151' d='M4.427 6.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 6H4.604a.25.25 0 00-.177.427z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.profile-filter__select:hover {
+  border-color: #d1d5db;
+  background-color: #ffffff;
+}
+
+.profile-filter__select:focus {
+  outline: 2px solid #05a081;
+  outline-offset: 0;
+  border-color: #05a081;
+}
+
+/* ============================================
+   8. RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Tablet: 768px and below */
+@media (max-width: 768px) {
+  .profile-header {
+    padding: 32px 16px 0;
+  }
+
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 12px;
+  }
+
+  .profile-username {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .btn-edit-profile {
+    padding: 9px 20px;
+    font-size: 14px;
+  }
+
+  /* Stats: reduce gap from 48px to 32px */
+  .profile-stats {
+    gap: 32px;
+    margin: 24px 0;
+  }
+
+  .profile-stats__value {
+    font-size: 20px;
+  }
+
+  .profile-stats__label {
+    font-size: 13px;
+  }
+
+  /* Tabs: allow horizontal scroll if needed */
+  .profile-tabs {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+    padding: 0 16px;
+  }
+
+  .profile-tabs__link {
+    padding: 10px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .profile-filters {
+    padding: 0 16px;
+    gap: 8px;
+  }
+
+  .profile-filter__select {
+    font-size: 13px;
+    padding: 7px 32px 7px 10px;
+  }
+}
+
+/* Mobile: 480px and below */
+@media (max-width: 480px) {
+  .profile-header {
+    padding: 24px 12px 0;
+  }
+
+  .profile-avatar {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 10px;
+  }
+
+  .profile-username {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .btn-edit-profile {
+    padding: 8px 16px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 240px;
+  }
+
+  /* Stats: stack vertically or reduce gap further */
+  .profile-stats {
+    gap: 24px;
+    margin: 20px 0;
+  }
+
+  .profile-stats__value {
+    font-size: 18px;
+  }
+
+  .profile-stats__label {
+    font-size: 12px;
+  }
+
+  .profile-tabs {
+    gap: 4px;
+    padding: 0 12px;
+  }
+
+  .profile-tabs__link {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .profile-filters {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 12px;
+  }
+
+  .profile-filter__select {
+    width: 100%;
+  }
+}
+
+/* ============================================
+   9. OPTIONAL: VERIFIED BADGE
+   ============================================ */
+
+.profile-username__verified {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  color: #05a081;
+  font-size: 24px; /* Scale with username */
+}
+
+.profile-username__verified svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+/* ============================================
+   10. UTILITY CLASSES
+   ============================================ */
+
+/* For loading states */
+.profile-stats__value--loading,
+.profile-stats__label--loading {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+  color: transparent;
+  display: inline-block;
+  min-width: 40px;
+  min-height: 20px;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* For empty states */
+.profile-stats__value--empty {
+  color: #d1d5db;
+}
+
+/* ============================================
+   11. ACCESSIBILITY IMPROVEMENTS
+   ============================================ */
+
+/* Focus visible for keyboard navigation */
+.profile-tabs__link:focus-visible {
+  outline: 2px solid #05a081;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ============================================
+   END OF SPECIFICATIONS
+   ============================================ */

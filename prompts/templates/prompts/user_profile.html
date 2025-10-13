@@ -154,7 +154,8 @@
     padding: 0 40px 20px;
     border-bottom: 1px solid #e5e7eb;
     display: flex;
-    gap: 32px;
+    gap: 48px; /* CRITICAL: 48px for Pexels spacing (was 32px) */
+    justify-content: center; /* Center stats horizontally */
 }
 
 .stat-item {
@@ -193,26 +194,29 @@
 }
 
 .media-tab {
-    padding: 12px 24px;
+    padding: 12px 20px; /* Pexels spacing */
     background: none;
     border: none;
     border-bottom: 3px solid transparent;
     color: #6b7280;
-    font-size: 16px;
+    font-size: 15px; /* Pexels size */
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     text-decoration: none;
+    border-radius: 6px 6px 0 0; /* Rounded top corners */
 }
 
 .media-tab:hover {
-    color: #1f2937;
-    background: #f9fafb;
+    color: #000000; /* Darker on hover */
+    background: #f9fafb; /* Light gray background */
 }
 
+/* ACTIVE STATE: Black background, white text (Pexels style) */
 .media-tab.active {
-    color: #3b82f6;
-    border-bottom-color: #3b82f6;
+    background-color: #000000; /* CRITICAL: Black bg */
+    color: #ffffff; /* CRITICAL: White text */
+    border-bottom-color: transparent; /* Remove underline */
 }
 
 /* EMPTY STATE */
@@ -263,8 +267,8 @@
 
     .profile-stats {
         padding: 0 20px 20px;
-        gap: 16px;
-        justify-content: space-around;
+        gap: 32px; /* Tablet: 32px gap (Pexels spec) */
+        justify-content: center;
     }
 
     .stat-item {
@@ -285,8 +289,18 @@
 }
 
 @media (max-width: 480px) {
+    .profile-avatar {
+        width: 80px; /* Mobile: smaller avatar */
+        height: 80px;
+        font-size: 32px;
+    }
+
     .profile-username {
         font-size: 24px;
+    }
+
+    .profile-stats {
+        gap: 24px; /* Mobile: compact spacing (Pexels spec) */
     }
 
     .stat-value {
@@ -295,6 +309,11 @@
 
     .stat-label {
         font-size: 12px;
+    }
+
+    .btn-edit-profile {
+        width: 100%; /* Full width on mobile */
+        max-width: 240px;
     }
 }
 </style>
@@ -322,20 +341,35 @@
 
             <!-- Social Links -->
             {% if profile.twitter_url or profile.instagram_url or profile.website_url %}
-                <div class="profile-social-links">
+                <div class="profile-social-links" role="list" aria-label="Social media links">
                     {% if profile.twitter_url %}
-                        <a href="{{ profile.twitter_url }}" class="social-link" target="_blank" rel="noopener noreferrer" title="Twitter">
-                            <i class="fab fa-twitter"></i>
+                        <a href="{{ profile.twitter_url }}"
+                           class="social-link"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           aria-label="Visit {{ profile_user.username }}'s Twitter profile"
+                           title="Twitter">
+                            <i class="fab fa-twitter" aria-hidden="true"></i>
                         </a>
                     {% endif %}
                     {% if profile.instagram_url %}
-                        <a href="{{ profile.instagram_url }}" class="social-link" target="_blank" rel="noopener noreferrer" title="Instagram">
-                            <i class="fab fa-instagram"></i>
+                        <a href="{{ profile.instagram_url }}"
+                           class="social-link"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           aria-label="Visit {{ profile_user.username }}'s Instagram profile"
+                           title="Instagram">
+                            <i class="fab fa-instagram" aria-hidden="true"></i>
                         </a>
                     {% endif %}
                     {% if profile.website_url %}
-                        <a href="{{ profile.website_url }}" class="social-link" target="_blank" rel="noopener noreferrer" title="Website">
-                            <i class="fas fa-link"></i>
+                        <a href="{{ profile.website_url }}"
+                           class="social-link"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           aria-label="Visit {{ profile_user.username }}'s website"
+                           title="Website">
+                            <i class="fas fa-link" aria-hidden="true"></i>
                         </a>
                     {% endif %}
                 </div>
@@ -389,7 +423,7 @@
 
 <!-- Masonry Grid (Reusable Partial) - FULL WIDTH -->
 {% if prompts %}
-    {% include 'prompts/partials/_masonry_grid.html' with items=prompts grid_id='profile-grid' show_load_more=True page_obj=page_obj %}
+    {% include 'prompts/partials/_masonry_grid.html' with items=prompts grid_id='profile-grid' show_load_more=True page_obj=page_obj show_admin_controls=False %}
 {% else %}
     <!-- Empty State -->
     <div class="empty-profile">

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pexels Profile Header - Example</title>
+  <link rel="stylesheet" href="pexels-profile-header-specs.css">
+</head>
+<body>
+
+<!-- ============================================
+     PROFILE HEADER STRUCTURE
+     ============================================ -->
+
+<div class="profile-header">
+
+  <!-- Top Section: Avatar + Username + Button -->
+  <div class="profile-header__top">
+
+    <!-- Avatar (120px circle) -->
+    <div class="profile-avatar">
+      <img src="https://via.placeholder.com/120" alt="Urban Avenue's avatar">
+    </div>
+
+    <!-- Username (32px bold) -->
+    <h1 class="profile-username">
+      Urban Avenue
+      <!-- Optional verified badge -->
+      <span class="profile-username__verified" aria-label="Verified user">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+        </svg>
+      </span>
+    </h1>
+
+    <!-- Edit Profile Button (#05a081 green) -->
+    <a href="/profile/edit" class="btn-edit-profile">
+      Edit profile
+    </a>
+
+  </div>
+
+  <!-- Stats Row (48px gaps) -->
+  <ul class="profile-stats">
+
+    <li class="profile-stats__item">
+      <span class="profile-stats__value">1.2M</span>
+      <span class="profile-stats__label">Total Views</span>
+    </li>
+
+    <li class="profile-stats__item">
+      <span class="profile-stats__value">#245</span>
+      <span class="profile-stats__label">All-time rank</span>
+    </li>
+
+    <li class="profile-stats__item">
+      <span class="profile-stats__value">#18</span>
+      <span class="profile-stats__label">30-day rank</span>
+    </li>
+
+  </ul>
+
+  <!-- Tab Navigation (black bg when active) -->
+  <ul class="profile-tabs">
+
+    <li class="profile-tabs__item">
+      <a href="#highlights" class="profile-tabs__link">
+        Highlights
+      </a>
+    </li>
+
+    <li class="profile-tabs__item">
+      <a href="#gallery" class="profile-tabs__link profile-tabs__link--active">
+        Gallery
+      </a>
+    </li>
+
+    <li class="profile-tabs__item">
+      <a href="#collections" class="profile-tabs__link">
+        Collections
+      </a>
+    </li>
+
+    <li class="profile-tabs__item">
+      <a href="#statistics" class="profile-tabs__link">
+        Statistics
+      </a>
+    </li>
+
+    <li class="profile-tabs__item">
+      <a href="#followers" class="profile-tabs__link">
+        Followers
+      </a>
+    </li>
+
+    <li class="profile-tabs__item">
+      <a href="#following" class="profile-tabs__link">
+        Following
+      </a>
+    </li>
+
+  </ul>
+
+  <!-- Filter Dropdowns (right-aligned) -->
+  <div class="profile-filters">
+
+    <div class="profile-filter">
+      <label for="media-type" class="sr-only">Filter by media type</label>
+      <select id="media-type" class="profile-filter__select">
+        <option value="all">Photos and videos</option>
+        <option value="photos">Photos only</option>
+        <option value="videos">Videos only</option>
+      </select>
+    </div>
+
+    <div class="profile-filter">
+      <label for="recency" class="sr-only">Sort by recency</label>
+      <select id="recency" class="profile-filter__select">
+        <option value="recent">Most recent</option>
+        <option value="popular">Most popular</option>
+        <option value="oldest">Oldest first</option>
+      </select>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ============================================
+     EXAMPLE: Loading State for Stats
+     ============================================ -->
+
+<!--
+<ul class="profile-stats">
+  <li class="profile-stats__item">
+    <span class="profile-stats__value profile-stats__value--loading">Loading</span>
+    <span class="profile-stats__label">Total Views</span>
+  </li>
+  <li class="profile-stats__item">
+    <span class="profile-stats__value profile-stats__value--loading">Loading</span>
+    <span class="profile-stats__label">All-time rank</span>
+  </li>
+  <li class="profile-stats__item">
+    <span class="profile-stats__value profile-stats__value--loading">Loading</span>
+    <span class="profile-stats__label">30-day rank</span>
+  </li>
+</ul>
+-->
+
+<!-- ============================================
+     EXAMPLE: Empty State for Stats
+     ============================================ -->
+
+<!--
+<ul class="profile-stats">
+  <li class="profile-stats__item">
+    <span class="profile-stats__value profile-stats__value--empty">--</span>
+    <span class="profile-stats__label">Total Views</span>
+  </li>
+  <li class="profile-stats__item">
+    <span class="profile-stats__value profile-stats__value--empty">--</span>
+    <span class="profile-stats__label">All-time rank</span>
+  </li>
+  <li class="profile-stats__item">
+    <span class="profile-stats__value profile-stats__value--empty">--</span>
+    <span class="profile-stats__label">30-day rank</span>
+  </li>
+</ul>
+-->
+
+</body>
+</html>

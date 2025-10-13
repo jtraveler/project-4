@@ -104,8 +104,8 @@
          data-slug="{{ prompt.slug }}">
         <div class="prompt-card {% if prompt.is_video %}video-card{% endif %}">
 
-            {# Admin Controls (only for staff) #}
-            {% if user.is_staff %}
+            {# Admin Controls (only for staff AND when show_admin_controls=True) #}
+            {% if user.is_staff and show_admin_controls %}
             <div class="drag-handle" title="Drag to reorder">
                 <i class="fas fa-grip-horizontal"></i>
             </div>

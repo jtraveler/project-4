@@ -128,7 +128,7 @@ Parameters:
     {# Hidden container for items - JavaScript will distribute to columns #}
     <div id="{{ grid_id|default:'masonry-grid' }}-items-container" style="display: none;">
         {% for item in items %}
-            {% include 'prompts/partials/_prompt_card.html' with prompt=item show_trash_actions=False %}
+            {% include 'prompts/partials/_prompt_card.html' with prompt=item show_trash_actions=False show_admin_controls=show_admin_controls|default:False %}
         {% endfor %}
     </div>
 

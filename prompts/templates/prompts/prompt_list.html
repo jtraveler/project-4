@@ -668,7 +668,7 @@
     <!-- Store items in a hidden container for JavaScript to process -->
     <div id="items-container" style="display: none;">
         {% for prompt in prompt_list %}
-            {% include 'prompts/partials/_prompt_card.html' with prompt=prompt show_trash_actions=False %}
+            {% include 'prompts/partials/_prompt_card.html' with prompt=prompt show_trash_actions=False show_admin_controls=True %}
         {% endfor %}
     </div>
     

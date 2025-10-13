@@ -66,8 +66,9 @@ class PromptList(generic.ListView):
         # Create cache key based on request parameters
         tag_name = self.request.GET.get('tag')
         search_query = self.request.GET.get('search')
+        media_filter = self.request.GET.get('media', 'all')
         cache_key = (
-            f"prompt_list_{tag_name}_{search_query}_"
+            f"prompt_list_{tag_name}_{search_query}_{media_filter}_"
             f"{self.request.GET.get('page', 1)}"
         )
 
@@ -83,7 +84,7 @@ class PromptList(generic.ListView):
                 'comments',
                 queryset=Comment.objects.filter(approved=True)
             )
-        ).filter(status=1).order_by('order', '-created_on')  # Updated ordering
+        ).filter(status=1, deleted_at__isnull=True).order_by('order', '-created_on')
 
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name)
@@ -96,6 +97,13 @@ class PromptList(generic.ListView):
                 Q(author__username__icontains=search_query) |
                 Q(tags__name__icontains=search_query)
             ).distinct()
+
+        # Apply media filtering (Phase E)
+        if media_filter == 'photos':
+            queryset = queryset.filter(featured_image__isnull=False)
+        elif media_filter == 'videos':
+            queryset = queryset.filter(featured_video__isnull=False)
+        # 'all' shows everything (no additional filtering)
 
         # Cache the result for 5 minutes (only if not a search query)
         if not search_query:
@@ -113,11 +121,12 @@ class PromptList(generic.ListView):
         context = super().get_context_data(**kwargs)
         context['current_tag'] = self.request.GET.get('tag')
         context['search_query'] = self.request.GET.get('search')
-        
+        context['media_filter'] = self.request.GET.get('media', 'all')
+
         # Add admin ordering controls context
         if self.request.user.is_staff:
             context['show_admin_controls'] = True
-        
+
         return context
 
 

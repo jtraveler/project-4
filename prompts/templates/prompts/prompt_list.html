@@ -533,6 +533,80 @@
 </div>
 {% endif %}
 
+<!-- Media Filter Tabs (Phase E) -->
+<style>
+.media-filter-container {
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0 40px;
+    margin-bottom: 0;
+}
+
+.media-filter-tabs {
+    display: flex;
+    gap: 0;
+}
+
+.media-tab {
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6b7280;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.media-tab:hover {
+    color: #1f2937;
+    background: #f9fafb;
+}
+
+.media-tab.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+}
+
+@media (max-width: 768px) {
+    .media-filter-container {
+        padding: 0 20px;
+    }
+
+    .media-tab {
+        flex: 1;
+        padding: 12px 8px;
+        font-size: 14px;
+        text-align: center;
+    }
+}
+</style>
+
+<div class="media-filter-container">
+    <div class="media-filter-tabs" role="tablist" aria-label="Filter prompts by media type">
+        <a href="{% url 'prompts:home' %}?media=all{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="media-tab {% if media_filter == 'all' %}active{% endif %}"
+           role="tab"
+           aria-selected="{% if media_filter == 'all' %}true{% else %}false{% endif %}">
+            All
+        </a>
+        <a href="{% url 'prompts:home' %}?media=photos{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="media-tab {% if media_filter == 'photos' %}active{% endif %}"
+           role="tab"
+           aria-selected="{% if media_filter == 'photos' %}true{% else %}false{% endif %}">
+            <i class="fas fa-image"></i> Photos
+        </a>
+        <a href="{% url 'prompts:home' %}?media=videos{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="media-tab {% if media_filter == 'videos' %}active{% endif %}"
+           role="tab"
+           aria-selected="{% if media_filter == 'videos' %}true{% else %}false{% endif %}">
+            <i class="fas fa-video"></i> Videos
+        </a>
+    </div>
+</div>
+
 <!-- Tag Filter Header -->
 {% if current_tag %}
 <div class="tag-filter-header">

@@ -7,8 +7,10 @@ from django.db import models
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Prefetch
 from django.core.cache import cache  # Import cache for performance
+from django.core.paginator import Paginator
 from taggit.models import Tag
-from .models import Prompt, Comment, ContentFlag
+from .models import Prompt, Comment, ContentFlag, UserProfile
+from django.contrib.auth.models import User
 from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -1655,3 +1657,101 @@ def extend_upload_time(request):
             'success': False,
             'error': str(e)
         })
+
+
+def user_profile(request, username):
+    """
+    Display public user profile page with user's prompts.
+
+    Shows user information, stats, and a paginated masonry grid of their
+    published prompts. Supports media filtering (all/photos/videos).
+
+    Args:
+        request: HTTP request object
+        username (str): Username of the profile to display
+
+    URL:
+        /users/<username>/ - Public profile page
+        /users/<username>/?media=photos - Show only images
+        /users/<username>/?media=videos - Show only videos
+
+    Template:
+        prompts/user_profile.html
+
+    Context:
+        profile_user (User): The user whose profile is being viewed
+        profile (UserProfile): The user's profile model instance
+        prompts (QuerySet): Published prompts by this user (filtered by media type)
+        page_obj (Page): Paginated prompts for current page
+        total_prompts (int): Total count of user's published prompts
+        total_likes (int): Sum of likes across all user's prompts
+        media_filter (str): Current media filter ('all', 'photos', or 'videos')
+        is_owner (bool): True if viewing user is the profile owner
+
+    Example:
+        # View john's profile
+        /users/john/
+
+        # View john's photos only
+        /users/john/?media=photos
+
+        # View john's videos only
+        /users/john/?media=videos
+
+    Raises:
+        Http404: If user with given username doesn't exist
+    """
+    # Get the user (404 if not found)
+    profile_user = get_object_or_404(User, username=username)
+
+    # Get user's profile (should always exist due to signals)
+    profile = profile_user.userprofile
+
+    # Get media filter from query params (default: 'all')
+    media_filter = request.GET.get('media', 'all')
+
+    # Base queryset: published prompts by this user (exclude deleted)
+    prompts = Prompt.objects.filter(
+        author=profile_user,
+        status=1,  # Published only
+        deleted_at__isnull=True  # Not in trash
+    ).order_by('-created_on')
+
+    # Apply media filtering
+    if media_filter == 'photos':
+        # Filter for items with featured_image only
+        prompts = prompts.filter(featured_image__isnull=False)
+    elif media_filter == 'videos':
+        # Filter for items with featured_video only
+        prompts = prompts.filter(featured_video__isnull=False)
+    # 'all' shows everything (no additional filtering)
+
+    # Calculate stats
+    total_prompts = Prompt.objects.filter(
+        author=profile_user,
+        status=1,
+        deleted_at__isnull=True
+    ).count()
+
+    total_likes = profile.get_total_likes()
+
+    # Pagination (18 prompts per page, same as homepage)
+    paginator = Paginator(prompts, 18)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    # Check if viewing user is the profile owner
+    is_owner = request.user.is_authenticated and request.user == profile_user
+
+    context = {
+        'profile_user': profile_user,
+        'profile': profile,
+        'prompts': page_obj.object_list,  # Prompts for current page
+        'page_obj': page_obj,  # Paginator object for load more
+        'total_prompts': total_prompts,
+        'total_likes': total_likes,
+        'media_filter': media_filter,
+        'is_owner': is_owner,
+    }
+
+    return render(request, 'prompts/user_profile.html', context)

@@ -24,6 +24,8 @@ urlpatterns = [
     path('trash/<slug:slug>/restore/', views.prompt_restore, name='prompt_restore'),
     path('trash/<slug:slug>/delete-forever/', views.prompt_permanent_delete, name='prompt_permanent_delete'),
     path('trash/empty/', views.empty_trash, name='empty_trash'),
+    # User profile URLs (Phase E)
+    path('users/<str:username>/', views.user_profile, name='user_profile'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',
          views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',

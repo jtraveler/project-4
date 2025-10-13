@@ -1,0 +1,402 @@
+{% comment %}
+Reusable Masonry Grid Component
+
+Usage:
+{% include 'prompts/partials/_masonry_grid.html' with items=prompt_list grid_id='main-grid' show_load_more=True %}
+
+Parameters:
+- items: QuerySet or list of prompt objects
+- grid_id: Unique ID for this grid instance (default: 'masonry-grid')
+- show_load_more: Boolean, whether to show load more button (default: False)
+- page_obj: Paginator page object (required if show_load_more=True)
+- empty_message: Custom empty state message (optional)
+- empty_icon: Custom empty state icon class (optional, default: 'fa-image')
+{% endcomment %}
+
+{% load static %}
+
+{% if items %}
+{# Masonry Grid Container #}
+<div class="masonry-container" style="max-width: 100%; margin: 0; padding: 20px 40px; width: 100%;">
+    <div class="masonry-wrapper">
+        <div class="masonry-grid" id="{{ grid_id|default:'masonry-grid' }}">
+            {# Columns will be created by JavaScript #}
+        </div>
+    </div>
+
+    {# Hidden container for items - JavaScript will distribute to columns #}
+    <div id="{{ grid_id|default:'masonry-grid' }}-items-container" style="display: none;">
+        {% for item in items %}
+            {% include 'prompts/partials/_prompt_card.html' with prompt=item show_trash_actions=False %}
+        {% endfor %}
+    </div>
+
+    {# Load More Button (optional) #}
+    {% if show_load_more and page_obj.has_next %}
+    <div class="load-more-container text-center mt-5">
+        <button id="load-more-btn-{{ grid_id|default:'masonry-grid' }}"
+                class="btn btn-primary btn-lg load-more-btn"
+                data-next-page="{{ page_obj.next_page_number }}"
+                data-grid-id="{{ grid_id|default:'masonry-grid' }}"
+                aria-label="Load more prompts">
+            <i class="fas fa-plus-circle me-2"></i>
+            Load More Prompts
+        </button>
+        <div id="loading-spinner-{{ grid_id|default:'masonry-grid' }}" class="mt-3 loading-spinner" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i> Loading more prompts...
+        </div>
+    </div>
+    {% elif show_load_more %}
+    {# End of results message #}
+    <div class="end-of-results text-center mt-5">
+        <div class="end-message">
+            <i class="fas fa-check-circle text-muted mb-3" style="font-size: 3rem;"></i>
+            <h3 class="text-muted">You have reached the end.</h3>
+            <p class="text-muted">No more prompts to load</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+{# Empty State #}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center py-5">
+            <i class="fas {{ empty_icon|default:'fa-image' }} fa-4x text-muted mb-3"></i>
+            <h2 class="text-muted mb-3">{{ empty_message|default:'No prompts found' }}</h2>
+            <p class="text-muted">{% if empty_submessage %}{{ empty_submessage }}{% else %}Try adjusting your search or browse all prompts{% endif %}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+(function() {
+    const gridId = '{{ grid_id|default:"masonry-grid" }}';
+    const grid = document.getElementById(gridId);
+    const itemsContainer = document.getElementById(gridId + '-items-container');
+
+    if (!grid || !itemsContainer) return;
+
+    let columns = [];
+    let columnCount = 4;
+    let videoObserver = null;
+
+    function getColumnCount() {
+        const width = window.innerWidth;
+        if (width < 500) return 1;
+        if (width < 800) return 2;
+        if (width < 1100) return 3;
+        return 4;
+    }
+
+    function createColumns() {
+        grid.innerHTML = '';
+        columns = [];
+
+        const newColumnCount = getColumnCount();
+        grid.setAttribute('data-columns', newColumnCount);
+
+        for (let i = 0; i < newColumnCount; i++) {
+            const column = document.createElement('div');
+            column.className = 'masonry-column';
+            column.id = gridId + '-column-' + i;
+            grid.appendChild(column);
+            columns.push(column);
+        }
+
+        columnCount = newColumnCount;
+    }
+
+    function forceEqualDistribution(items) {
+        const currentColumns = Array.from(document.querySelectorAll('#' + gridId + ' .masonry-column'));
+
+        if (currentColumns.length === 0) return;
+
+        currentColumns.forEach(column => column.innerHTML = '');
+
+        const activeColumns = currentColumns.slice(0, columnCount);
+        const itemsPerColumn = Math.ceil(items.length / columnCount);
+
+        let currentColumnIndex = 0;
+        let itemsInCurrentColumn = 0;
+
+        items.forEach((item, index) => {
+            if (itemsInCurrentColumn >= itemsPerColumn && currentColumnIndex < columnCount - 1) {
+                currentColumnIndex++;
+                itemsInCurrentColumn = 0;
+            }
+
+            activeColumns[currentColumnIndex].appendChild(item);
+            itemsInCurrentColumn++;
+        });
+    }
+
+    function distributeItems(items, animate = false, preferLeftToRight = false) {
+        if (preferLeftToRight) {
+            let currentColumnIndex = 0;
+
+            items.forEach((item, index) => {
+                if (animate) {
+                    item.classList.add('new-item');
+                    item.style.animationDelay = (index * 0.1) + 's';
+                }
+
+                columns[currentColumnIndex].appendChild(item);
+                currentColumnIndex = (currentColumnIndex + 1) % columnCount;
+            });
+        } else {
+            forceEqualDistribution(items);
+
+            if (animate) {
+                items.forEach((item, index) => {
+                    item.classList.add('new-item');
+                    item.style.animationDelay = (index * 0.1) + 's';
+                });
+            }
+        }
+
+        initVideoObserver();
+    }
+
+    function loadVideoSource(video) {
+        if (video.dataset.loaded === 'true') return;
+
+        const source = video.querySelector('source');
+        if (source && source.dataset.src) {
+            source.src = source.dataset.src;
+            video.load();
+            video.dataset.loaded = 'true';
+        }
+    }
+
+    function initVideoObserver() {
+        if (videoObserver) {
+            videoObserver.disconnect();
+        }
+
+        const videoCards = grid.querySelectorAll('[data-video="true"]');
+
+        if (videoCards.length === 0) return;
+
+        const isMobile = window.innerWidth <= 768;
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (isMobile || prefersReducedMotion) {
+            return;
+        }
+
+        const PAUSE_OFFSET_PERCENT = 0.5;
+        const PLAY_OFFSET_PERCENT = 0.3;
+        const playPromises = new WeakMap();
+
+        videoObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const video = entry.target.querySelector('video');
+                const thumbnail = entry.target.querySelector('.video-thumbnail');
+                const playIcon = entry.target.querySelector('.video-play-icon');
+
+                if (!video) return;
+
+                const rect = entry.boundingClientRect;
+                const viewportHeight = window.innerHeight;
+                const elementHeight = rect.height;
+                const playOffset = elementHeight * PLAY_OFFSET_PERCENT;
+                const isInitialized = video.dataset.initialized === 'true';
+
+                if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                    const topInView = rect.top < viewportHeight - playOffset;
+                    const bottomInView = rect.bottom > playOffset;
+                    const shouldPlay = topInView && bottomInView;
+
+                    if (shouldPlay || !isInitialized) {
+                        loadVideoSource(video);
+
+                        if (!isInitialized) {
+                            video.style.display = 'block';
+                            video.style.visibility = 'visible';
+                            video.dataset.initialized = 'true';
+                        }
+
+                        if (video.paused) {
+                            if (thumbnail) thumbnail.style.opacity = '0';
+                            if (playIcon) playIcon.style.opacity = '0';
+
+                            const playPromise = video.play();
+
+                            if (playPromise !== undefined) {
+                                playPromises.set(video, playPromise);
+
+                                playPromise
+                                    .then(() => playPromises.delete(video))
+                                    .catch(error => {
+                                        if (error.name !== 'AbortError') {
+                                            if (thumbnail) thumbnail.style.opacity = '1';
+                                            if (playIcon) playIcon.style.opacity = '1';
+                                        }
+                                        playPromises.delete(video);
+                                    });
+                            }
+                        }
+                    }
+                }
+
+                if (isInitialized) {
+                    const topVisible = rect.top >= 0 && rect.top < viewportHeight;
+                    const bottomVisible = rect.bottom > 0 && rect.bottom <= viewportHeight;
+                    let shouldPause = false;
+
+                    if (!entry.isIntersecting) {
+                        shouldPause = true;
+                    } else if (topVisible && !bottomVisible) {
+                        const visiblePortion = (viewportHeight - rect.top) / elementHeight;
+                        shouldPause = visiblePortion < PAUSE_OFFSET_PERCENT;
+                    } else if (!topVisible && bottomVisible) {
+                        const visiblePortion = rect.bottom / elementHeight;
+                        shouldPause = visiblePortion < PAUSE_OFFSET_PERCENT;
+                    }
+
+                    if (shouldPause && !video.paused) {
+                        const currentPlayPromise = playPromises.get(video);
+
+                        if (currentPlayPromise) {
+                            currentPlayPromise.then(() => video.pause()).catch(() => {});
+                        } else {
+                            video.pause();
+                        }
+                    }
+                }
+            });
+        }, {
+            threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            rootMargin: '0px'
+        });
+
+        videoCards.forEach(card => videoObserver.observe(card));
+
+        setTimeout(() => {
+            videoCards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const video = card.querySelector('video');
+                const thumbnail = card.querySelector('.video-thumbnail');
+                const playIcon = card.querySelector('.video-play-icon');
+
+                if (rect.top < window.innerHeight && rect.bottom > 0 && video) {
+                    loadVideoSource(video);
+                    video.style.display = 'block';
+                    video.style.visibility = 'visible';
+                    video.dataset.initialized = 'true';
+
+                    if (thumbnail) thumbnail.style.opacity = '0';
+                    if (playIcon) playIcon.style.opacity = '0';
+
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            if (error.name !== 'AbortError') {
+                                if (thumbnail) thumbnail.style.opacity = '1';
+                                if (playIcon) playIcon.style.opacity = '1';
+                            }
+                        });
+                    }
+                }
+            });
+        }, 500);
+    }
+
+    // Initialize
+    createColumns();
+    const initialItems = Array.from(itemsContainer.querySelectorAll('[data-item]'));
+    distributeItems(initialItems, false, false);
+
+    // Handle resize
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (getColumnCount() !== columnCount) {
+                const allItems = [];
+                columns.forEach(column => {
+                    const items = Array.from(column.querySelectorAll('.masonry-item'));
+                    allItems.push(...items);
+                });
+
+                createColumns();
+                distributeItems(allItems, false, false);
+            }
+        }, 250);
+    });
+
+    {% if show_load_more %}
+    // Load More functionality
+    const loadMoreBtn = document.getElementById('load-more-btn-' + gridId);
+    const loadingSpinner = document.getElementById('loading-spinner-' + gridId);
+
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function() {
+            const nextPage = this.getAttribute('data-next-page');
+            const currentUrl = window.location.pathname;
+            const currentParams = new URLSearchParams(window.location.search);
+            currentParams.set('page', nextPage);
+
+            loadMoreBtn.style.display = 'none';
+            loadingSpinner.style.display = 'block';
+
+            fetch(currentUrl + '?' + currentParams.toString())
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const newDoc = parser.parseFromString(html, 'text/html');
+                    const newItems = Array.from(newDoc.querySelectorAll('[data-item]'));
+
+                    distributeItems(newItems, true, true);
+
+                    const newLoadMoreBtn = newDoc.getElementById('load-more-btn-' + gridId);
+                    if (newLoadMoreBtn) {
+                        loadMoreBtn.setAttribute('data-next-page',
+                            newLoadMoreBtn.getAttribute('data-next-page'));
+                        loadMoreBtn.style.display = 'block';
+                    } else {
+                        const loadMoreContainer = loadMoreBtn.closest('.load-more-container');
+                        if (loadMoreContainer) {
+                            // Create elements using DOM methods (security fix)
+                            loadMoreContainer.textContent = ''; // Clear safely
+
+                            const endResults = document.createElement('div');
+                            endResults.className = 'end-of-results text-center';
+
+                            const endMessage = document.createElement('div');
+                            endMessage.className = 'end-message';
+
+                            const icon = document.createElement('i');
+                            icon.className = 'fas fa-check-circle text-muted mb-3';
+                            icon.style.fontSize = '3rem';
+
+                            const heading = document.createElement('h3');
+                            heading.className = 'text-muted';
+                            heading.textContent = 'You have reached the end.';
+
+                            const paragraph = document.createElement('p');
+                            paragraph.className = 'text-muted';
+                            paragraph.textContent = 'No more prompts to load';
+
+                            endMessage.appendChild(icon);
+                            endMessage.appendChild(heading);
+                            endMessage.appendChild(paragraph);
+                            endResults.appendChild(endMessage);
+                            loadMoreContainer.appendChild(endResults);
+                        }
+                    }
+
+                    loadingSpinner.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading more prompts:', error);
+                    loadingSpinner.style.display = 'none';
+                    loadMoreBtn.style.display = 'block';
+                });
+        });
+    }
+    {% endif %}
+})();
+</script>

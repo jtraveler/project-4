@@ -7,8 +7,138 @@ from cloudinary.models import CloudinaryField
 from taggit.managers import TaggableManager
 import cloudinary.uploader
 import logging
+import hashlib
 
 logger = logging.getLogger(__name__)
+
+
+class UserProfile(models.Model):
+    """
+    Extended user profile model for additional user information.
+
+    One-to-one relationship with Django's User model. Created automatically
+    for all users via signal handlers.
+
+    Attributes:
+        user (OneToOneField): Link to Django User model
+        bio (TextField): User's biography (max 500 characters, optional)
+        avatar (CloudinaryField): Profile avatar image (optional)
+        twitter_url (URLField): Twitter profile URL (optional)
+        instagram_url (URLField): Instagram profile URL (optional)
+        website_url (URLField): Personal website URL (optional)
+        created_at (DateTimeField): When profile was created
+        updated_at (DateTimeField): When profile was last updated
+
+    Related Models:
+        - User (via user OneToOneField)
+
+    Methods:
+        get_avatar_color_index(): Returns consistent color index (1-8) for
+            default avatar based on username hash
+
+    Example:
+        profile = user.userprofile
+        profile.bio = "AI artist and prompt engineer"
+        profile.twitter_url = "https://twitter.com/username"
+        profile.save()
+    """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='userprofile'
+    )
+    bio = models.TextField(
+        max_length=500,
+        blank=True,
+        help_text='Short biography (max 500 characters)'
+    )
+    avatar = CloudinaryField(
+        'avatar',
+        blank=True,
+        null=True,
+        transformation={
+            'width': 300,
+            'height': 300,
+            'crop': 'fill',
+            'gravity': 'face',
+            'quality': 'auto',
+            'fetch_format': 'auto'
+        },
+        help_text='Profile avatar image'
+    )
+    twitter_url = models.URLField(
+        max_length=200,
+        blank=True,
+        help_text='Twitter profile URL'
+    )
+    instagram_url = models.URLField(
+        max_length=200,
+        blank=True,
+        help_text='Instagram profile URL'
+    )
+    website_url = models.URLField(
+        max_length=200,
+        blank=True,
+        help_text='Personal website URL'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user'], name='userprofile_user_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}'s profile"
+
+    def get_avatar_color_index(self):
+        """
+        Generate consistent color index (1-8) based on username hash.
+
+        Uses MD5 hash of lowercase username to ensure the same username
+        always returns the same color. Used for default avatar gradient
+        when no avatar image is uploaded.
+
+        Returns:
+            int: Color index from 1-8
+
+        Example:
+            profile.get_avatar_color_index()  # Returns 3 for user 'john'
+            # Always returns 3 for 'john', ensuring consistency
+        """
+        # Create hash from username (lowercase for consistency)
+        hash_object = hashlib.md5(self.user.username.lower().encode())
+        hash_int = int(hash_object.hexdigest(), 16)
+
+        # Return color index 1-8
+        return (hash_int % 8) + 1
+
+    def get_total_likes(self):
+        """
+        Calculate total likes received across all user's prompts.
+
+        Optimized to use a single database query with aggregate Count.
+        Filters for published prompts (status=1) that aren't deleted.
+
+        Returns:
+            int: Sum of all likes on user's published prompts
+
+        Example:
+            profile = user.userprofile
+            total_likes = profile.get_total_likes()  # Single query
+        """
+        from django.db.models import Count
+
+        result = self.user.prompts.filter(
+            status=1,
+            deleted_at__isnull=True
+        ).aggregate(total_likes=Count('likes'))
+
+        return result['total_likes'] or 0
 
 
 class TagCategory(models.Model):

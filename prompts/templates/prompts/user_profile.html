@@ -6,31 +6,52 @@
 {% block content %}
 <style>
 /* ============================================
-   AVATAR SYSTEM - 8 Hash-Based Gradient Colors
+   PROFILE HEADER - COMPLETE STYLING
    ============================================ */
+
+/* Overall wrapper */
+.profile-header-wrapper {
+    background: #ffffff;
+    width: 100%;
+}
+
+/* ============================================
+   SECTION 1: AVATAR & IDENTITY
+   ============================================ */
+
+.profile-identity {
+    text-align: center;
+    padding: 48px 40px 0;
+    background: #ffffff;
+}
+
+/* Avatar container */
+.profile-avatar-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+/* Avatar (both image and placeholder) */
 .profile-avatar {
     width: 120px;
     height: 120px;
     border-radius: 50%;
+    object-fit: cover;
+    /* REFINEMENT 10: Removed border and box-shadow for clean appearance */
+}
+
+/* Avatar placeholder (when no image) */
+.profile-avatar-placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 48px;
     font-weight: 700;
-    color: white;
-    text-transform: uppercase;
-    border: 4px solid white;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: #ffffff;
 }
 
-.profile-avatar-small {
-    width: 40px;
-    height: 40px;
-    font-size: 16px;
-    border: 2px solid white;
-}
-
-/* 8 Gradient Color Classes (WCAG AA Compliant) */
+/* Avatar color classes (8-color gradient system) */
 .avatar-color-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
 .avatar-color-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
 .avatar-color-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
@@ -40,186 +61,182 @@
 .avatar-color-7 { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
 .avatar-color-8 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
 
-/* ============================================
-   PROFILE HEADER - CENTERED CONTAINER
-   ============================================ */
-.profile-header {
-    background: white;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 40px 0 0;
-    margin-bottom: 0;
-}
-
-.profile-info {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 40px;
-    display: flex;
-    align-items: flex-start;
-    gap: 24px;
-    margin-bottom: 24px;
-}
-
-.profile-details {
-    flex: 1;
-}
-
+/* Username */
 .profile-username {
     font-size: 32px;
     font-weight: 700;
-    margin: 0 0 8px;
     color: #1f2937;
+    margin: 16px 0 12px;
+    line-height: 1.2;
 }
 
-/* BIO DISPLAY */
+/* Bio */
 .profile-bio {
-    max-width: 600px;
     font-size: 16px;
     color: #6b7280;
+    margin: 0 auto 16px;
+    max-width: 600px;
     line-height: 1.6;
-    margin: 0 0 16px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
 }
 
-.profile-bio:empty {
-    display: none;
-}
-
-/* SOCIAL LINKS - Pexels Style Circular Icon Buttons */
-.profile-social-links {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 16px;
-    align-items: center;
-}
-
-.social-link {
+/* Edit Profile Button */
+.btn-edit-profile {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #f3f4f6;
-    color: #6b7280;
-    text-decoration: none;
-    font-size: 18px;
-    transition: all 0.3s ease;
-}
-
-.social-link:hover {
-    background: #3b82f6;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
-}
-
-.social-link:active {
-    transform: translateY(0);
-}
-
-/* EDIT PROFILE BUTTON - Pexels Green */
-.btn-edit-profile {
-    background: #05A081;
-    color: white;
+    gap: 8px;
+    background: #05a081;
+    color: #ffffff;
     padding: 10px 24px;
-    border-radius: 6px;
+    border-radius: 40px;  /* REFINEMENT 11: Pill shape (was 8px) */
+    font-size: 15px;  /* REFINEMENT 11: Increased from 14px to 15px */
     font-weight: 600;
-    font-size: 14px;
+    text-decoration: none;
+    margin: 16px auto 24px;
     border: none;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background 0.2s ease;
+}
+
+.btn-edit-profile:hover {
+    background: #048c73;
+    color: #ffffff;
     text-decoration: none;
-    display: inline-block;
 }
 
-.btn-edit-profile:hover:not(:disabled) {
-    background: #048c70;
-    color: white;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(5, 160, 129, 0.3);
+/* ============================================
+   SECTION 2: STATS ROW
+   ============================================ */
+
+.profile-stats-section {
+    background: #ffffff;
+    padding: 24px 40px;
+    margin-bottom: 60px;  /* REFINEMENT 3: Add breathing room below stats */
+    /* REFINEMENT 2: Removed border-bottom */
 }
 
-.btn-edit-profile:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background: #9ca3af;
-}
-
-/* STATS ROW */
-.profile-stats {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 40px 20px;
-    border-bottom: 1px solid #e5e7eb;
+.profile-stats-row {
     display: flex;
-    gap: 48px; /* CRITICAL: 48px for Pexels spacing (was 32px) */
-    justify-content: center; /* Center stats horizontally */
+    justify-content: center;
+    gap: 0;  /* REFINEMENT 12: Changed from 48px to 0 for divider approach */
+    align-items: flex-start;
 }
 
-.stat-item {
+.profile-stat {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 4px;
 }
 
-.stat-value {
+/* REFINEMENT 12: Add vertical dividers between stats */
+.profile-stat:not(:last-child) {
+    border-right: 1px solid #e5e7eb;
+    padding-right: 24px;
+    margin-right: 24px;
+}
+
+.profile-stat-value {
     font-size: 24px;
     font-weight: 700;
     color: #1f2937;
     line-height: 1;
 }
 
-.stat-label {
+.profile-stat-label {
     font-size: 14px;
-    color: #6b7280;
     font-weight: 400;
-}
-
-/* MEDIA FILTER TABS */
-.media-filter-container {
-    background: white;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 0;
-    margin-bottom: 24px;
-}
-
-.media-filter-tabs {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 40px;
-    display: flex;
-    gap: 0;
-}
-
-.media-tab {
-    padding: 12px 20px; /* Pexels spacing */
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
     color: #6b7280;
-    font-size: 15px; /* Pexels size */
+    white-space: nowrap;
+}
+
+/* ============================================
+   SECTIONS 3 & 4: TAB NAVIGATION + FILTERS (Combined)
+   ============================================ */
+
+/* REFINEMENT 6: Combined container for tabs and filters on same row */
+.profile-navigation-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px 24px;
+    background: #ffffff;
+    /* REFINEMENT 2: Removed border-bottom */
+}
+
+.profile-tabs-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.profile-tab {
+    padding: 12px 20px;
+    font-size: 17px;  /* REFINEMENT 4: Increased from 15px to 17px */
     font-weight: 500;
+    color: #6b7280;
+    background: transparent;
+    border: none;
+    border-radius: 40px;  /* REFINEMENT 1: Pill shape (was 8px 8px 0 0) */
     cursor: pointer;
     transition: all 0.2s ease;
-    text-decoration: none;
-    border-radius: 6px 6px 0 0; /* Rounded top corners */
+    white-space: nowrap;
 }
 
-.media-tab:hover {
-    color: #000000; /* Darker on hover */
-    background: #f9fafb; /* Light gray background */
+.profile-tab:hover:not(.profile-tab-active) {
+    background: #f3f4f6;
+    color: #1f2937;
 }
 
-/* ACTIVE STATE: Black background, white text (Pexels style) */
-.media-tab.active {
-    background-color: #000000; /* CRITICAL: Black bg */
-    color: #ffffff; /* CRITICAL: White text */
-    border-bottom-color: transparent; /* Remove underline */
+.profile-tab-active {
+    background: #000000;
+    color: #ffffff;
+    font-weight: 600;
 }
 
-/* EMPTY STATE */
+.profile-tab-count {
+    font-size: 17px;  /* REFINEMENT 4: Increased from 13px to 17px - same as tab text */
+    opacity: 0.7;
+    margin-left: 4px;
+}
+
+/* Filter controls (now part of navigation row) */
+.profile-filters-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.profile-filter-dropdown {
+    padding: 10px 16px;  /* REFINEMENT 8: Increased from 8px to 10px */
+    font-size: 15px;  /* REFINEMENT 8: Increased from 14px to 15px */
+    font-weight: 500;
+    color: #1f2937;
+    background: #f9fafb;  /* REFINEMENT 8: Lighter gray (was #f3f4f6) */
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231f2937' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+.profile-filter-dropdown:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.profile-filter-dropdown:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+
 .empty-profile {
     text-align: center;
     padding: 80px 20px;
@@ -243,182 +260,224 @@
 }
 
 /* ============================================
-   RESPONSIVE BREAKPOINTS
+   RESPONSIVE DESIGN
    ============================================ */
-@media (max-width: 768px) {
-    .profile-info {
+
+/* REFINEMENT 7: Horizontal scroll for tabs below 990px */
+@media (max-width: 990px) {
+    .profile-navigation-row {
         flex-direction: column;
-        text-align: center;
-        padding: 0 20px;
+        gap: 20px;
+        align-items: stretch;
     }
 
-    .profile-avatar {
-        margin: 0 auto;
+    .profile-tabs-container {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
 
-    .profile-bio {
-        text-align: center;
-        margin: 0 auto 16px;
+    .profile-tabs-container::-webkit-scrollbar {
+        display: none;
     }
 
-    .profile-social-links {
-        justify-content: center;
+    .profile-tab {
+        flex-shrink: 0;
     }
 
-    .profile-stats {
-        padding: 0 20px 20px;
-        gap: 32px; /* Tablet: 32px gap (Pexels spec) */
-        justify-content: center;
-    }
-
-    .stat-item {
-        flex: 1;
-        text-align: center;
-    }
-
-    .media-filter-tabs {
-        padding: 0 20px;
-    }
-
-    .media-tab {
-        flex: 1;
-        padding: 12px 8px;
-        font-size: 14px;
-        text-align: center;
+    .profile-filters-container {
+        width: 100%;
+        justify-content: flex-end;
     }
 }
 
-@media (max-width: 480px) {
-    .profile-avatar {
-        width: 80px; /* Mobile: smaller avatar */
-        height: 80px;
-        font-size: 32px;
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+    .profile-identity {
+        padding: 32px 20px 0;
     }
 
     .profile-username {
         font-size: 24px;
     }
 
-    .profile-stats {
-        gap: 24px; /* Mobile: compact spacing (Pexels spec) */
+    .profile-avatar,
+    .profile-avatar-placeholder {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
     }
 
-    .stat-value {
+    .profile-stats-section {
+        padding: 20px;
+        margin-bottom: 40px;  /* Adjust spacing on tablet */
+    }
+
+    .profile-stat:not(:last-child) {
+        padding-right: 16px;
+        margin-right: 16px;
+    }
+
+    .profile-stat-value {
         font-size: 20px;
     }
 
-    .stat-label {
+    .profile-stat-label {
         font-size: 12px;
     }
 
-    .btn-edit-profile {
-        width: 100%; /* Full width on mobile */
-        max-width: 240px;
+    .profile-navigation-row {
+        padding: 0 20px 20px;
+    }
+
+    .profile-filters-container {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+    .profile-identity {
+        padding: 24px 16px 0;
+    }
+
+    .profile-stats-section {
+        margin-bottom: 30px;  /* Adjust spacing on mobile */
+    }
+
+    .profile-stat:not(:last-child) {
+        padding-right: 12px;
+        margin-right: 12px;
+    }
+
+    .profile-tab {
+        font-size: 15px;
+        padding: 10px 16px;
+    }
+
+    .profile-filter-dropdown {
+        width: 100%;
+        max-width: 200px;
     }
 }
 </style>
 
-<!-- Profile Header -->
-<div class="profile-header">
-    <!-- Profile Info - Centered Container -->
-    <div class="profile-info">
-        <!-- Avatar -->
-        {% if profile.avatar %}
-            <img src="{{ profile.avatar.url }}" alt="{{ profile_user.username }}'s avatar" class="profile-avatar">
-        {% else %}
-            <div class="profile-avatar avatar-color-{{ profile.get_avatar_color_index }}" aria-label="{{ profile_user.username }}'s default avatar">
-                {{ profile_user.username|slice:":1" }}
-            </div>
-        {% endif %}
+<!-- Profile Header - Complete Rebuild -->
+<div class="profile-header-wrapper">
 
-        <!-- User Info -->
-        <div class="profile-details">
-            <h1 class="profile-username">{{ profile_user.username }}</h1>
-
-            {% if profile.bio %}
-                <p class="profile-bio">{{ profile.bio }}</p>
-            {% endif %}
-
-            <!-- Social Links -->
-            {% if profile.twitter_url or profile.instagram_url or profile.website_url %}
-                <div class="profile-social-links" role="list" aria-label="Social media links">
-                    {% if profile.twitter_url %}
-                        <a href="{{ profile.twitter_url }}"
-                           class="social-link"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           aria-label="Visit {{ profile_user.username }}'s Twitter profile"
-                           title="Twitter">
-                            <i class="fab fa-twitter" aria-hidden="true"></i>
-                        </a>
-                    {% endif %}
-                    {% if profile.instagram_url %}
-                        <a href="{{ profile.instagram_url }}"
-                           class="social-link"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           aria-label="Visit {{ profile_user.username }}'s Instagram profile"
-                           title="Instagram">
-                            <i class="fab fa-instagram" aria-hidden="true"></i>
-                        </a>
-                    {% endif %}
-                    {% if profile.website_url %}
-                        <a href="{{ profile.website_url }}"
-                           class="social-link"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           aria-label="Visit {{ profile_user.username }}'s website"
-                           title="Website">
-                            <i class="fas fa-link" aria-hidden="true"></i>
-                        </a>
-                    {% endif %}
+    <!-- ============================================
+         SECTION 1: AVATAR & IDENTITY (Centered)
+         ============================================ -->
+    <div class="profile-identity">
+        <!-- Avatar Container -->
+        <div class="profile-avatar-container">
+            {% if profile.avatar %}
+                <img src="{{ profile.avatar.url }}" alt="{{ profile_user.username }}'s avatar" class="profile-avatar">
+            {% else %}
+                <div class="profile-avatar profile-avatar-placeholder avatar-color-{{ profile.get_avatar_color_index }}">
+                    {{ profile_user.username|slice:":1"|upper }}
                 </div>
             {% endif %}
+        </div>
 
-            <!-- Edit Profile Button (Owner Only) -->
-            {% if is_owner %}
-                <button class="btn-edit-profile" disabled title="Coming soon in Phase F">
-                    <i class="fas fa-edit"></i> Edit profile
-                </button>
-            {% endif %}
+        <!-- Username -->
+        <h1 class="profile-username">{{ profile_user.username }}</h1>
+
+        <!-- Bio (if exists) -->
+        {% if profile.bio %}
+            <p class="profile-bio">{{ profile.bio }}</p>
+        {% endif %}
+
+        <!-- Edit Profile Button (Owner Only) -->
+        {% if is_owner %}
+            <a href="#" class="btn-edit-profile" onclick="alert('Coming soon in Phase F'); return false;">
+                <i class="fas fa-pen"></i>
+                Edit profile
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- ============================================
+         SECTION 2: STATS ROW (Centered Horizontal)
+         ============================================ -->
+    <div class="profile-stats-section">
+        <div class="profile-stats-row">
+            <!-- Total Views -->
+            <div class="profile-stat">
+                <span class="profile-stat-value">0</span>
+                <span class="profile-stat-label">Total Views</span>
+            </div>
+
+            <!-- All-time rank -->
+            <div class="profile-stat">
+                <span class="profile-stat-value">0</span>
+                <span class="profile-stat-label">All-time rank</span>
+            </div>
+
+            <!-- 30-day rank -->
+            <div class="profile-stat">
+                <span class="profile-stat-value">0</span>
+                <span class="profile-stat-label">30-day rank</span>
+            </div>
         </div>
     </div>
 
-    <!-- Stats Row - Centered Container -->
-    <div class="profile-stats">
-        <div class="stat-item">
-            <span class="stat-value">{{ total_prompts }}</span>
-            <span class="stat-label">Prompts</span>
+    <!-- ============================================
+         SECTIONS 3 & 4 COMBINED: TABS + FILTERS ON SAME ROW
+         ============================================ -->
+    <div class="profile-navigation-row">
+        <!-- Left side: Tabs -->
+        <div class="profile-tabs-container">
+            <button class="profile-tab">
+                Highlights
+                <span class="profile-tab-count">0</span>
+            </button>
+            <button class="profile-tab profile-tab-active">
+                Gallery
+                <span class="profile-tab-count">{{ total_prompts|default:0 }}</span>
+            </button>
+            <button class="profile-tab">Collections</button>
+            <button class="profile-tab">Statistics</button>
+            <button class="profile-tab">
+                Followers
+                <span class="profile-tab-count">0</span>
+            </button>
+            <button class="profile-tab">
+                Following
+                <span class="profile-tab-count">0</span>
+            </button>
         </div>
-        <div class="stat-item">
-            <span class="stat-value">{{ total_likes }}</span>
-            <span class="stat-label">Likes</span>
-        </div>
-    </div>
-</div>
 
-<!-- Media Filter Tabs - Centered Container -->
-<div class="media-filter-container">
-    <div class="media-filter-tabs" role="tablist" aria-label="Filter prompts by media type">
-        <a href="{% url 'prompts:user_profile' profile_user.username %}?media=all"
-           class="media-tab {% if media_filter == 'all' %}active{% endif %}"
-           role="tab"
-           aria-selected="{% if media_filter == 'all' %}true{% else %}false{% endif %}">
-            All
-        </a>
-        <a href="{% url 'prompts:user_profile' profile_user.username %}?media=photos"
-           class="media-tab {% if media_filter == 'photos' %}active{% endif %}"
-           role="tab"
-           aria-selected="{% if media_filter == 'photos' %}true{% else %}false{% endif %}">
-            <i class="fas fa-image"></i> Photos
-        </a>
-        <a href="{% url 'prompts:user_profile' profile_user.username %}?media=videos"
-           class="media-tab {% if media_filter == 'videos' %}active{% endif %}"
-           role="tab"
-           aria-selected="{% if media_filter == 'videos' %}true{% else %}false{% endif %}">
-            <i class="fas fa-video"></i> Videos
-        </a>
+        <!-- Right side: Filters -->
+        <div class="profile-filters-container">
+            <!-- Media Type Filter with form submit -->
+            <form method="get" id="media-filter-form" style="display: inline;">
+                <select name="media" id="media-type-filter" class="profile-filter-dropdown" onchange="this.form.submit()">
+                    <option value="all" {% if media_filter == 'all' or not media_filter %}selected{% endif %}>
+                        Photos and videos
+                    </option>
+                    <option value="photos" {% if media_filter == 'photos' %}selected{% endif %}>
+                        Photos only
+                    </option>
+                    <option value="videos" {% if media_filter == 'videos' %}selected{% endif %}>
+                        Videos only
+                    </option>
+                </select>
+            </form>
+
+            <!-- Sort Order (placeholder for future functionality) -->
+            <select class="profile-filter-dropdown">
+                <option value="recency">Recency</option>
+                <option value="popular">Popular</option>
+                <option value="curated">Curated</option>
+            </select>
+        </div>
     </div>
+
 </div>
 
 <!-- Masonry Grid (Reusable Partial) - FULL WIDTH -->

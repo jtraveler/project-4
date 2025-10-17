@@ -565,9 +565,12 @@ class Prompt(models.Model):
         Returns:
             str: Cloudinary URL for the thumbnail
         """
+        from django.conf import settings
+        
         if self.is_video() and self.featured_video:
             # Generate thumbnail from video at 0 seconds with quality optimization
             return self.featured_video.build_url(
+                cloud_name=settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
                 width=width,
                 crop='limit',  # Changed from 'fill' to 'limit'
                 quality=quality,
@@ -577,6 +580,7 @@ class Prompt(models.Model):
             )
         elif self.featured_image:
             return self.featured_image.build_url(
+                cloud_name=settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
                 width=width,
                 quality=quality,
                 format='webp'
@@ -586,15 +590,15 @@ class Prompt(models.Model):
     def get_video_url(self, quality='auto'):
         """
         Get optimized video URL with adaptive quality.
-
         Args:
             quality (str): Quality setting (auto adapts based on connection)
-
         Returns:
             str: Cloudinary URL for the optimized video
         """
         if self.is_video() and self.featured_video:
+            from django.conf import settings
             return self.featured_video.build_url(
+                cloud_name=settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
                 quality=quality,
                 format='mp4',
                 video_codec='h264',

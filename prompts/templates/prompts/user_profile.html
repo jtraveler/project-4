@@ -163,10 +163,36 @@
     /* REFINEMENT 2: Removed border-bottom */
 }
 
+/* CRITICAL FIX: Wrapper shell for tabs + arrows */
+.profile-tabs-wrapper {
+    position: relative;  /* Arrows position absolute to this */
+    display: flex;
+    align-items: center;
+    width: 100%;  /* Take full width of left side */
+    min-width: 0;  /* FIX: Allow flex item to shrink below content width */
+    flex-shrink: 1;  /* FIX: Explicitly allow shrinking to prevent horizontal scroll */
+}
+
 .profile-tabs-container {
     display: flex;
     gap: 8px;
     align-items: center;
+    min-width: 0;  /* REFINEMENT 1: Enable overflow behavior */
+    /* REMOVED: position: relative; - arrows now position to wrapper */
+
+    /* FIX 2: Enable horizontal scrolling on desktop */
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;  /* Smooth scroll on iOS */
+    scrollbar-width: none;  /* Hide scrollbar Firefox */
+    -ms-overflow-style: none;  /* Hide scrollbar IE/Edge */
+
+    flex: 1;  /* Take remaining space in wrapper */
+}
+
+/* FIX 2: Hide scrollbar for Chrome/Safari */
+.profile-tabs-container::-webkit-scrollbar {
+    display: none;
 }
 
 .profile-tab {
@@ -199,6 +225,142 @@
     margin-left: 4px;
 }
 
+/* FIX 3: Overflow arrow buttons - Accessible implementation */
+
+/* Right arrow button */
+.overflow-arrow {
+    /* FIX 2: Enhanced gradient with better coverage over dark backgrounds */
+    background: linear-gradient(
+        to left,
+        #ffffff 0%,
+        rgba(255, 255, 255, 0.95) 20%,
+        rgba(255, 255, 255, 0.7) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+
+    /* Position on right edge, full height */
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;  /* Above tabs */
+
+    /* Layout */
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 50px;
+
+    /* Button reset */
+    border: none;
+    padding: 0;
+    background-color: transparent;  /* Keep only gradient */
+    cursor: pointer;
+
+    /* Interaction */
+    pointer-events: auto;  /* Button itself is clickable */
+    transition: opacity 0.15s ease-out;
+    opacity: 0;  /* Hidden by default */
+
+    /* FIX: Removed box-shadow - not needed, was causing unwanted drop shadow */
+}
+
+/* Left arrow button */
+.overflow-arrow-left {
+    /* FIX 2: Enhanced gradient with better coverage over dark backgrounds */
+    background: linear-gradient(
+        to right,
+        #ffffff 0%,
+        rgba(255, 255, 255, 0.95) 20%,
+        rgba(255, 255, 255, 0.7) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+
+    /* Position on left edge, full height */
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;  /* Above tabs */
+
+    /* Layout */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;  /* Align to left */
+    min-width: 50px;
+
+    /* Button reset */
+    border: none;
+    padding: 0;
+    background-color: transparent;  /* Keep only gradient */
+    cursor: pointer;
+
+    /* Interaction */
+    pointer-events: auto;  /* Button itself is clickable */
+    transition: opacity 0.15s ease-out;
+    opacity: 0;  /* Hidden by default */
+
+    /* FIX: Removed box-shadow - not needed, was causing unwanted drop shadow */
+}
+
+/* Show right arrow when tabs overflow */
+.profile-tabs-container.has-overflow .overflow-arrow {
+    opacity: 1;
+}
+
+/* Show left arrow when scrolled right */
+.profile-tabs-container.has-scroll-left .overflow-arrow-left {
+    opacity: 1;
+}
+
+/* Right arrow icon styling */
+.overflow-arrow i {
+    color: #6b7280;  /* Gray */
+    font-size: 20px;
+    padding-right: 16px;
+    transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+    pointer-events: none;  /* Let button handle clicks */
+}
+
+.overflow-arrow:hover i {
+    color: #1f2937;  /* Darker on hover */
+    transform: translateX(2px);  /* Subtle move right on hover */
+}
+
+/* FIX 1: Prevent button position shift on click */
+.overflow-arrow:active {
+    transform: none;  /* Button stays fixed - no position shift */
+}
+
+/* FIX 1: Apply press effect to icon instead of button */
+.overflow-arrow:active i {
+    transform: scale(0.95);  /* Icon scales for feedback without layout shift */
+}
+
+/* Left arrow icon styling */
+.overflow-arrow-left i {
+    color: #6b7280;  /* Gray */
+    font-size: 20px;
+    padding-left: 16px;  /* Padding on LEFT instead of right */
+    transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+    pointer-events: none;  /* Let button handle clicks */
+}
+
+.overflow-arrow-left:hover i {
+    color: #1f2937;  /* Darker on hover */
+    transform: translateX(-2px);  /* Subtle move LEFT on hover */
+}
+
+/* FIX 1: Prevent button position shift on click */
+.overflow-arrow-left:active {
+    transform: none;  /* Button stays fixed - no position shift */
+}
+
+/* FIX 1: Apply press effect to icon instead of button */
+.overflow-arrow-left:active i {
+    transform: translateX(-2px) scale(0.95);  /* Combine hover position with scale */
+}
+
 /* Filter controls (now part of navigation row) */
 .profile-filters-container {
     display: flex;
@@ -206,31 +368,73 @@
     align-items: center;
 }
 
+/* FIX 1: Media filter form styling */
+#media-filter-form {
+    display: inline-block;
+    margin: 0;
+}
+
 .profile-filter-dropdown {
-    padding: 10px 16px;  /* REFINEMENT 8: Increased from 8px to 10px */
-    font-size: 15px;  /* REFINEMENT 8: Increased from 14px to 15px */
+    /* REFINEMENT 7: Pexels-style button appearance */
+    /* Layout */
+    position: relative;
+    z-index: 0;
+    box-sizing: border-box;
+    max-width: 100%;
+    height: 48px;  /* Taller - was ~32px */
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+
+    /* Spacing */
+    padding-left: 20px;  /* Increased from 16px */
+    padding-right: 44px;  /* Space for arrow */
+    margin: 0;
+
+    /* Typography */
+    font-size: 17px;  /* Larger - was 15px */
     font-weight: 500;
+    letter-spacing: -0.5px;  /* Tighter - modern typography */
+    white-space: nowrap;
+    text-decoration: none;
+    vertical-align: top;
     color: #1f2937;
-    background: #f9fafb;  /* REFINEMENT 8: Lighter gray (was #f3f4f6) */
+
+    /* Visual */
+    background: #f9fafb;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    border-radius: 12px;  /* More rounded - was 8px */
+    outline: none;
+
+    /* Dropdown Arrow */
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231f2937' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 36px;
+    background-position: right 16px center;  /* Fixed position */
+
+    /* Transitions */
+    transition: background-color 0.1s ease,
+                border-color 0.25s ease,
+                transform 0.1s ease;
+
+    cursor: pointer;
 }
 
 .profile-filter-dropdown:hover {
     background: #f3f4f6;
     border-color: #d1d5db;
+    /* FIX 2: Force arrow to stay in same position */
+    background-position: right 16px center !important;
+    padding-right: 44px !important;
 }
 
 .profile-filter-dropdown:focus {
     outline: 2px solid #3b82f6;
     outline-offset: 2px;
+}
+
+.profile-filter-dropdown:active {
+    transform: scale(0.98);  /* Slight press effect */
 }
 
 /* ============================================
@@ -271,6 +475,10 @@
         align-items: stretch;
     }
 
+    .profile-tabs-wrapper {
+        width: 100%;
+    }
+
     .profile-tabs-container {
         width: 100%;
         overflow-x: auto;
@@ -288,9 +496,20 @@
         flex-shrink: 0;
     }
 
+    /* FIX 1 & 5: Full-width filters on mobile with stacked layout */
+    #media-filter-form {
+        width: 100%;
+        display: block;
+    }
+
     .profile-filters-container {
         width: 100%;
-        justify-content: flex-end;
+        flex-direction: column;  /* Stack vertically */
+        gap: 12px;  /* Space between dropdowns */
+    }
+
+    .profile-filter-dropdown {
+        width: 100%;  /* Each dropdown full-width */
     }
 }
 
@@ -430,32 +649,50 @@
          SECTIONS 3 & 4 COMBINED: TABS + FILTERS ON SAME ROW
          ============================================ -->
     <div class="profile-navigation-row">
-        <!-- Left side: Tabs -->
-        <div class="profile-tabs-container">
-            <button class="profile-tab">
-                Highlights
-                <span class="profile-tab-count">0</span>
+        <!-- Left side: Tabs with wrapper shell -->
+        <div class="profile-tabs-wrapper">
+            <!-- LEFT ARROW - Outside scrolling container, positioned to wrapper -->
+            <button class="overflow-arrow-left" aria-label="Scroll tabs left" tabindex="-1">
+                <i class="fas fa-chevron-left" aria-hidden="true"></i>
             </button>
-            <button class="profile-tab profile-tab-active">
-                Gallery
-                <span class="profile-tab-count">{{ total_prompts|default:0 }}</span>
-            </button>
-            <button class="profile-tab">Collections</button>
-            <button class="profile-tab">Statistics</button>
-            <button class="profile-tab">
-                Followers
-                <span class="profile-tab-count">0</span>
-            </button>
-            <button class="profile-tab">
-                Following
-                <span class="profile-tab-count">0</span>
+
+            <!-- SCROLLING TABS CONTAINER - Only tabs inside -->
+            <div class="profile-tabs-container">
+                <button class="profile-tab profile-tab-active">
+                    Gallery
+                    <span class="profile-tab-count">{{ total_prompts|default:0 }}</span>
+                </button>
+                <button class="profile-tab">Collections</button>
+                <button class="profile-tab">Statistics</button>
+                <button class="profile-tab">
+                    Followers
+                    <span class="profile-tab-count">0</span>
+                </button>
+                <button class="profile-tab">
+                    Following
+                    <span class="profile-tab-count">0</span>
+                </button>
+
+                <!-- Trash tab (Owner Only) -->
+                {% if is_owner %}
+                <button class="profile-tab" onclick="alert('Trash feature coming in Phase F'); return false;">
+                    <i class="fas fa-trash-alt" style="margin-right: 6px; font-size: 15px;"></i>
+                    Trash
+                    <span class="profile-tab-count">0</span>
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- RIGHT ARROW - Outside scrolling container, positioned to wrapper -->
+            <button class="overflow-arrow" aria-label="Scroll tabs right" tabindex="-1">
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
             </button>
         </div>
 
         <!-- Right side: Filters -->
         <div class="profile-filters-container">
             <!-- Media Type Filter with form submit -->
-            <form method="get" id="media-filter-form" style="display: inline;">
+            <form method="get" id="media-filter-form">
                 <select name="media" id="media-type-filter" class="profile-filter-dropdown" onchange="this.form.submit()">
                     <option value="all" {% if media_filter == 'all' or not media_filter %}selected{% endif %}>
                         Photos and videos
@@ -497,5 +734,171 @@
         </p>
     </div>
 {% endif %}
+
+<script>
+// FIX 3: Bidirectional overflow arrows with keyboard navigation
+(function() {
+    const tabsContainer = document.querySelector('.profile-tabs-container');
+    const rightArrow = document.querySelector('.overflow-arrow');
+    const leftArrow = document.querySelector('.overflow-arrow-left');
+
+    if (!tabsContainer || !rightArrow || !leftArrow) {
+        console.log('⚠️ Tabs container or arrows not found');
+        return;
+    }
+
+    console.log('✅ Overflow arrow script loaded (LEFT + RIGHT)');
+
+    // Debounce helper for scroll events
+    let scrollTimeout;
+    function debounce(func, delay) {
+        return function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(func, delay);
+        };
+    }
+
+    // Check if tabs overflow horizontally
+    function checkOverflow() {
+        return tabsContainer.scrollWidth > tabsContainer.clientWidth;
+    }
+
+    // Dynamically show/hide arrows based on overflow and scroll position
+    function updateArrowVisibility() {
+        const hasOverflow = checkOverflow();
+
+        // No overflow: hide both arrows
+        if (!hasOverflow) {
+            leftArrow.style.opacity = '0';
+            leftArrow.style.pointerEvents = 'none';
+            rightArrow.style.opacity = '0';
+            rightArrow.style.pointerEvents = 'none';
+            console.log('📏 No overflow - both arrows hidden');
+            return;
+        }
+
+        const scrollLeft = tabsContainer.scrollLeft;
+        const maxScroll = tabsContainer.scrollWidth - tabsContainer.clientWidth;
+
+        // LEFT ARROW: Show if scrolled right (5px threshold prevents flickering)
+        if (scrollLeft <= 5) {
+            leftArrow.style.opacity = '0';
+            leftArrow.style.pointerEvents = 'none';
+        } else {
+            leftArrow.style.opacity = '1';
+            leftArrow.style.pointerEvents = 'auto';
+        }
+
+        // RIGHT ARROW: Show if not at end (5px threshold)
+        if (scrollLeft >= maxScroll - 5) {
+            rightArrow.style.opacity = '0';
+            rightArrow.style.pointerEvents = 'none';
+        } else {
+            rightArrow.style.opacity = '1';
+            rightArrow.style.pointerEvents = 'auto';
+        }
+
+        console.log(`📏 Overflow detected - Left: ${leftArrow.style.opacity === '1' ? 'visible' : 'hidden'}, Right: ${rightArrow.style.opacity === '1' ? 'visible' : 'hidden'} (scroll: ${Math.round(scrollLeft)}/${Math.round(maxScroll)})`);
+    }
+
+    // Calculate scroll amount (200px or 1/4 container width, whichever is smaller)
+    function getScrollAmount() {
+        return Math.min(200, tabsContainer.scrollWidth / 4);
+    }
+
+    // RIGHT ARROW: Click to scroll right
+    rightArrow.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('🖱️ Right arrow clicked - scrolling right');
+
+        tabsContainer.scrollBy({
+            left: getScrollAmount(),
+            behavior: 'smooth'
+        });
+
+        // Update arrow visibility after smooth scroll completes (300ms)
+        setTimeout(updateArrowVisibility, 300);
+    });
+
+    // LEFT ARROW: Click to scroll left
+    leftArrow.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('🖱️ Left arrow clicked - scrolling left');
+
+        tabsContainer.scrollBy({
+            left: -getScrollAmount(),  // Negative for left scroll
+            behavior: 'smooth'
+        });
+
+        // Update arrow visibility after smooth scroll completes (300ms)
+        setTimeout(updateArrowVisibility, 300);
+    });
+
+    // KEYBOARD NAVIGATION: Arrow keys, Home, End
+    tabsContainer.addEventListener('keydown', function(e) {
+        const scrollAmount = getScrollAmount();
+
+        switch(e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                console.log('⌨️ Arrow Left key - scrolling left');
+                tabsContainer.scrollBy({
+                    left: -scrollAmount,
+                    behavior: 'smooth'
+                });
+                setTimeout(updateArrowVisibility, 300);
+                break;
+
+            case 'ArrowRight':
+                e.preventDefault();
+                console.log('⌨️ Arrow Right key - scrolling right');
+                tabsContainer.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'smooth'
+                });
+                setTimeout(updateArrowVisibility, 300);
+                break;
+
+            case 'Home':
+                e.preventDefault();
+                console.log('⌨️ Home key - scrolling to start');
+                tabsContainer.scrollTo({
+                    left: 0,
+                    behavior: 'smooth'
+                });
+                setTimeout(updateArrowVisibility, 300);
+                break;
+
+            case 'End':
+                e.preventDefault();
+                console.log('⌨️ End key - scrolling to end');
+                tabsContainer.scrollTo({
+                    left: tabsContainer.scrollWidth,
+                    behavior: 'smooth'
+                });
+                setTimeout(updateArrowVisibility, 300);
+                break;
+        }
+    });
+
+    // Ensure focused tab is visible
+    document.querySelectorAll('.profile-tab').forEach(tab => {
+        tab.addEventListener('focus', function() {
+            this.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest'
+            });
+        });
+    });
+
+    // Update arrow visibility on load, resize, and scroll (debounced)
+    updateArrowVisibility();
+    window.addEventListener('resize', debounce(updateArrowVisibility, 100));
+    tabsContainer.addEventListener('scroll', debounce(updateArrowVisibility, 50));
+
+    console.log('✅ Overflow arrows + keyboard navigation registered');
+})();
+</script>
 
 {% endblock %}

@@ -6,7 +6,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.shortcuts import redirect
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile
 
 
 @admin.register(Prompt)
@@ -762,3 +762,53 @@ class TagCategoryAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Allow deletion for cleanup"""
         return True
+
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    """
+    Admin interface for UserProfile model.
+    
+    Features:
+    - List view with bio preview, avatar status
+    - Search by username, email, bio
+    - Filter by creation date
+    - Organized fieldsets (User, Profile Info, Social Media, Timestamps)
+    - Read-only timestamps
+    """
+    list_display = ["user", "bio_preview", "has_avatar", "created_at"]
+    list_filter = ["created_at", "updated_at"]
+    search_fields = ["user__username", "user__email", "bio"]
+    readonly_fields = ["created_at", "updated_at"]
+    list_per_page = 50
+    
+    fieldsets = (
+        ("User", {
+            "fields": ("user",)
+        }),
+        ("Profile Information", {
+            "fields": ("bio", "avatar")
+        }),
+        ("Social Media", {
+            "fields": ("twitter_url", "instagram_url", "website_url")
+        }),
+        ("Timestamps", {
+            "fields": ("created_at", "updated_at"),
+            "classes": ("collapse",)
+        }),
+    )
+    
+    def bio_preview(self, obj):
+        """Show first 50 chars of bio"""
+        if obj.bio:
+            return obj.bio[:50] + "..." if len(obj.bio) > 50 else obj.bio
+        return "(No bio)"
+    bio_preview.short_description = "Bio"
+    
+    def has_avatar(self, obj):
+        """Show if user has uploaded avatar"""
+        return bool(obj.avatar)
+    has_avatar.boolean = True
+    has_avatar.short_description = "Avatar"
+

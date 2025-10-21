@@ -1,0 +1,40 @@
+--- a/prompts/templates/prompts/prompt_detail.html
++++ b/prompts/templates/prompts/prompt_detail.html
+@@ -693,12 +693,26 @@
+     // Handle report form submission via AJAX
+     if (reportForm) {
+         reportForm.addEventListener('submit', function(event) {
+             event.preventDefault();
+
+             // Hide previous messages
+             reportError.classList.add('d-none');
+             reportSuccess.classList.add('d-none');
+
++            // CRITICAL FIX: Force blur on textarea to commit value
++            // This ensures the browser finalizes the input before we read it
++            if (commentTextarea) {
++                commentTextarea.blur();
++            }
++
++            // DEBUG: Log what we're about to send
++            console.log('=== Report Form Debug ===');
++            console.log('Comment textarea value:', commentTextarea ? commentTextarea.value : 'MISSING');
++            console.log('Comment length:', commentTextarea ? commentTextarea.value.length : 0);
++            console.log('Reason value:', document.getElementById('id_reason').value);
++            console.log('========================');
++
+             // Disable submit button
+             submitReportBtn.disabled = true;
+             submitReportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
+
+             // Get form data
+             const formData = new FormData(reportForm);
++
++            // DEBUG: Log FormData contents
++            console.log('FormData contents:');
++            for (let [key, value] of formData.entries()) {
++                console.log(`  ${key}: "${value}"`);
++            }
+
+             // Submit via AJAX
+             fetch(reportForm.action, {

@@ -827,8 +827,8 @@ class PromptReportAdmin(admin.ModelAdmin):
     - Color-coded status badges
     """
     list_display = [
-        "id", "prompt_title_link", "reported_by", "reason_display",
-        "status_badge", "created_at", "reviewed_by"
+        "id", "view_report_link", "prompt_title_link", "reported_by",
+        "reason_display", "comment_preview", "status_badge", "created_at"
     ]
     list_filter = ["status", "reason", "created_at"]
     search_fields = [
@@ -856,6 +856,28 @@ class PromptReportAdmin(admin.ModelAdmin):
         """Optimize queries with select_related"""
         qs = super().get_queryset(request)
         return qs.select_related("prompt", "reported_by", "reviewed_by")
+
+    def view_report_link(self, obj):
+        """Create a clickable 'View Report' button"""
+        url = reverse("admin:prompts_promptreport_change", args=[obj.id])
+        return format_html(
+            '<a class="button" href="{}" style="padding: 5px 10px; background: #417690; '
+            'color: white; text-decoration: none; border-radius: 4px; display: inline-block;">'
+            'View Report</a>',
+            url
+        )
+    view_report_link.short_description = "Actions"
+    view_report_link.allow_tags = True
+
+    def comment_preview(self, obj):
+        """Show first 50 characters of the comment"""
+        if obj.comment and obj.comment.strip():
+            preview = obj.comment[:50]
+            if len(obj.comment) > 50:
+                preview += "..."
+            return preview
+        return "(no comment)"
+    comment_preview.short_description = "Comment"
 
     def prompt_title_link(self, obj):
         """Display prompt title as clickable link to prompt admin page"""

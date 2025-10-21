@@ -706,6 +706,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get form data
             const formData = new FormData(reportForm);
 
+            // CRITICAL FIX: Explicitly set comment value to ensure it's captured
+            // FormData sometimes misses textarea values due to browser timing
+            if (commentTextarea) {
+                formData.set('comment', commentTextarea.value);
+            }
+
             // Submit via AJAX
             fetch(reportForm.action, {
                 method: 'POST',

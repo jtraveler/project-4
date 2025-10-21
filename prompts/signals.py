@@ -1,21 +1,22 @@
 """
 Signal handlers for the prompts app.
 
-Handles automatic creation of UserProfile instances for new and existing users.
-Also handles Cloudinary cleanup when avatars are changed.
+Handles automatic creation of UserProfile and EmailPreferences instances
+for new and existing users. Also handles Cloudinary cleanup when avatars
+are changed.
 
 IMPLEMENTATION NOTE:
-- Uses a single signal handler to avoid redundancy
-- Only creates profiles for newly created users (created=True)
+- Uses signal handlers to auto-create related models
+- Only creates for newly created users (created=True)
 - Uses get_or_create() for backward compatibility
-- Avoids infinite loops by never calling profile.save() in post_save signal
+- Avoids infinite loops by never calling save() in post_save signals
 - Cleans up old Cloudinary avatars on pre_save when new avatar uploaded
 """
 
 from django.db.models.signals import post_save, pre_save
 from django.contrib.auth.models import User
 from django.dispatch import receiver
-from .models import UserProfile
+from .models import UserProfile, EmailPreferences
 import logging
 import cloudinary
 
@@ -61,6 +62,65 @@ def ensure_user_profile_exists(sender, instance, created, **kwargs):
         except Exception as e:
             logger.error(
                 f"Failed to create UserProfile for user {instance.username}: {e}",
+                exc_info=True
+            )
+
+
+@receiver(post_save, sender=User)
+def ensure_email_preferences_exist(sender, instance, created, **kwargs):
+    """
+    Ensure EmailPreferences exists for every User.
+
+    This signal handler creates EmailPreferences for newly created users.
+    Uses get_or_create() to ensure backward compatibility with existing
+    users who may not have email preferences.
+
+    The EmailPreferences model controls which email notifications each user
+    receives (comments, replies, follows, likes, mentions, digest, updates).
+    All notifications default to enabled except marketing emails.
+
+    Args:
+        sender: The model class (User)
+        instance: The actual User instance being saved
+        created (bool): True if this is a new user, False if updating
+        **kwargs: Additional keyword arguments from signal
+
+    Example:
+        # Automatically triggered on user creation:
+        user = User.objects.create_user('john', 'john@example.com', 'pass')
+        # EmailPreferences is created automatically via signal
+        prefs = user.email_preferences  # Now accessible
+        print(prefs.notify_comments)  # True (default)
+
+    Note:
+        - Only runs for newly created users (created=True)
+        - Uses get_or_create() to prevent duplicate creation
+        - Never calls prefs.save() to avoid infinite recursion
+        - Logs all preference creation events for debugging
+        - Auto-generates unsubscribe_token via model's save() method
+    """
+    if created:
+        try:
+            prefs, prefs_created = EmailPreferences.objects.get_or_create(
+                user=instance
+            )
+
+            if prefs_created:
+                logger.info(
+                    f"Created EmailPreferences for new user: "
+                    f"{instance.username} "
+                    f"(token: {prefs.unsubscribe_token[:20]}...)"
+                )
+            else:
+                logger.info(
+                    f"EmailPreferences already existed for user: "
+                    f"{instance.username}"
+                )
+
+        except Exception as e:
+            logger.error(
+                f"Failed to create EmailPreferences for user "
+                f"{instance.username}: {e}",
                 exc_info=True
             )
 

@@ -8,6 +8,7 @@ from taggit.managers import TaggableManager
 import cloudinary.uploader
 import logging
 import hashlib
+import secrets
 
 logger = logging.getLogger(__name__)
 
@@ -284,6 +285,133 @@ class PromptReport(models.Model):
         self.reviewed_at = timezone.now()
         if notes:
             self.admin_notes = notes
+        self.save()
+
+
+class EmailPreferences(models.Model):
+    """
+    User email notification preferences.
+
+    Controls which types of email notifications each user receives.
+    Each user has a one-to-one relationship with their preferences.
+    All notifications default to enabled except marketing emails.
+
+    Attributes:
+        user (OneToOneField): Link to Django User model
+        notify_comments (BooleanField): New comments on user's prompts
+        notify_replies (BooleanField): Replies to user's comments
+        notify_follows (BooleanField): New followers
+        notify_likes (BooleanField): Likes on user's prompts
+        notify_mentions (BooleanField): @username mentions
+        notify_weekly_digest (BooleanField): Weekly activity summary
+        notify_updates (BooleanField): Product updates and announcements
+        notify_marketing (BooleanField): Marketing emails and offers
+        unsubscribe_token (CharField): Unique token for one-click unsubscribe
+        updated_at (DateTimeField): When preferences were last changed
+
+    Example:
+        prefs = user.email_preferences
+        if prefs.notify_comments:
+            send_comment_notification(user, comment)
+    """
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='email_preferences',
+        help_text='User these preferences belong to'
+    )
+
+    # Activity notifications
+    notify_comments = models.BooleanField(
+        default=True,
+        help_text='New comments on your prompts'
+    )
+    notify_replies = models.BooleanField(
+        default=True,
+        help_text='Replies to your comments'
+    )
+
+    # Social notifications
+    notify_follows = models.BooleanField(
+        default=True,
+        help_text='New followers'
+    )
+    notify_likes = models.BooleanField(
+        default=True,
+        help_text='Likes on your prompts'
+    )
+    notify_mentions = models.BooleanField(
+        default=True,
+        help_text='Mentions (@username)'
+    )
+
+    # Digest and platform
+    notify_weekly_digest = models.BooleanField(
+        default=True,
+        help_text='Weekly activity summary'
+    )
+    notify_updates = models.BooleanField(
+        default=True,
+        help_text='Product updates and announcements'
+    )
+    notify_marketing = models.BooleanField(
+        default=False,
+        help_text='Marketing emails and offers'
+    )
+
+    # Unsubscribe system
+    unsubscribe_token = models.CharField(
+        max_length=64,
+        unique=True,
+        blank=True,
+        help_text='Unique token for one-click unsubscribe links'
+    )
+
+    # Timestamps
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text='When these preferences were last updated'
+    )
+
+    class Meta:
+        verbose_name = 'Email Preferences'
+        verbose_name_plural = 'Email Preferences'
+        ordering = ['user__username']
+        indexes = [
+            models.Index(fields=['user'], name='emailpref_user_idx'),
+            models.Index(fields=['unsubscribe_token'], name='emailpref_token_idx'),
+        ]
+
+    def __str__(self):
+        return f"Email Preferences for {self.user.username}"
+
+    def save(self, *args, **kwargs):
+        """
+        Auto-generate unsubscribe token if not present.
+
+        Uses secrets.token_urlsafe(48) to generate a cryptographically
+        secure token for unsubscribe links.
+        """
+        if not self.unsubscribe_token:
+            self.unsubscribe_token = secrets.token_urlsafe(48)
+        super().save(*args, **kwargs)
+
+    def unsubscribe_all(self):
+        """
+        Disable all notification types except critical updates.
+
+        Used when user clicks "Unsubscribe from all" or uses the
+        one-click unsubscribe link in email footers.
+        """
+        self.notify_comments = False
+        self.notify_replies = False
+        self.notify_follows = False
+        self.notify_likes = False
+        self.notify_mentions = False
+        self.notify_weekly_digest = False
+        self.notify_marketing = False
+        # Keep notify_updates=True so users still get critical platform updates
         self.save()
 
 

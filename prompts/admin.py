@@ -6,7 +6,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.shortcuts import redirect
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences
 
 
 @admin.register(Prompt)
@@ -967,4 +967,61 @@ class PromptReportAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         """Prevent manual creation - reports come from users"""
         return False
+
+
+@admin.register(EmailPreferences)
+class EmailPreferencesAdmin(admin.ModelAdmin):
+    """
+    Admin interface for EmailPreferences model.
+
+    Features:
+    - List view with all notification toggles
+    - Filter by notification preferences
+    - Search by username/email
+    - Organized fieldsets by notification type
+    - Read-only token and timestamps
+    """
+    list_display = [
+        'user',
+        'notify_comments',
+        'notify_replies',
+        'notify_follows',
+        'notify_likes',
+        'notify_updates',
+        'notify_marketing',
+        'updated_at'
+    ]
+    list_filter = [
+        'notify_comments',
+        'notify_replies',
+        'notify_updates',
+        'notify_marketing',
+        'updated_at'
+    ]
+    search_fields = ['user__username', 'user__email']
+    readonly_fields = ['unsubscribe_token', 'updated_at']
+    list_per_page = 50
+
+    fieldsets = (
+        ('User', {
+            'fields': ('user',)
+        }),
+        ('Activity Notifications', {
+            'fields': ('notify_comments', 'notify_replies'),
+            'description': 'Notifications about activity on your content'
+        }),
+        ('Social Notifications', {
+            'fields': ('notify_follows', 'notify_likes', 'notify_mentions'),
+            'description': 'Notifications about social interactions'
+        }),
+        ('Digest & Updates', {
+            'fields': ('notify_weekly_digest', 'notify_updates', 'notify_marketing'),
+            'description': 'Periodic emails and announcements'
+        }),
+        ('System', {
+            'fields': ('unsubscribe_token', 'updated_at'),
+            'classes': ('collapse',),
+            'description': 'Internal system fields'
+        }),
+    )
 

@@ -121,7 +121,16 @@ class UserProfile(models.Model):
         """
         Calculate total likes received across all user's prompts.
 
-        Optimized to use a single database query with aggregate Count.
+        Iterates through each published prompt and sums the likes.count()
+        for each prompt. This correctly counts the TOTAL number of likes,
+        not just the number of prompts that have likes.
+
+        Bug Fixed: Previously used Count('likes') which counted relationships
+        (prompts with likes) instead of total like count. For example:
+        - 3 prompts with 10, 5, 0 likes
+        - Old: returned 2 (prompts with likes)
+        - New: returns 15 (total likes)
+
         Filters for published prompts (status=1) that aren't deleted.
 
         Returns:
@@ -129,16 +138,153 @@ class UserProfile(models.Model):
 
         Example:
             profile = user.userprofile
-            total_likes = profile.get_total_likes()  # Single query
+            total_likes = profile.get_total_likes()
         """
-        from django.db.models import Count
+        total = 0
+        for prompt in self.user.prompts.filter(status=1, deleted_at__isnull=True):
+            total += prompt.likes.count()
+        return total
 
-        result = self.user.prompts.filter(
-            status=1,
-            deleted_at__isnull=True
-        ).aggregate(total_likes=Count('likes'))
 
-        return result['total_likes'] or 0
+class PromptReport(models.Model):
+    """
+    User reports of inappropriate prompts.
+
+    Allows users to flag prompts for admin review. Each user can only
+    report a specific prompt once. Admins receive email notifications
+    for new reports.
+
+    Attributes:
+        prompt (ForeignKey): The prompt being reported
+        reported_by (ForeignKey): User who submitted the report
+        reviewed_by (ForeignKey): Admin who reviewed the report (optional)
+        reason (CharField): Reason for reporting (from predefined choices)
+        comment (TextField): Optional additional details (max 1000 chars)
+        status (CharField): Review status (pending/reviewed/dismissed/action_taken)
+        created_at (DateTimeField): When report was submitted
+        reviewed_at (DateTimeField): When admin reviewed the report
+
+    Example:
+        report = PromptReport.objects.create(
+            prompt=prompt,
+            reported_by=user,
+            reason='inappropriate',
+            comment='Contains explicit content'
+        )
+    """
+
+    REASON_CHOICES = [
+        ('inappropriate', 'Inappropriate Content'),
+        ('spam', 'Spam or Misleading'),
+        ('copyright', 'Copyright Violation'),
+        ('harassment', 'Harassment or Bullying'),
+        ('other', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('reviewed', 'Reviewed'),
+        ('dismissed', 'Dismissed'),
+        ('action_taken', 'Action Taken'),
+    ]
+
+    # Relationships
+    prompt = models.ForeignKey(
+        'Prompt',
+        on_delete=models.CASCADE,
+        related_name='reports',
+        help_text='The prompt being reported'
+    )
+    reported_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='submitted_reports',
+        help_text='User who reported this prompt'
+    )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_reports',
+        help_text='Admin who reviewed this report'
+    )
+
+    # Report Details
+    reason = models.CharField(
+        max_length=20,
+        choices=REASON_CHOICES,
+        help_text='Primary reason for reporting'
+    )
+    comment = models.TextField(
+        blank=True,
+        max_length=1000,
+        help_text='Additional details (optional, max 1000 characters)'
+    )
+
+    # Status Tracking
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        help_text='Current review status'
+    )
+
+    # Admin notes (helpful for tracking decisions)
+    admin_notes = models.TextField(
+        blank=True,
+        help_text='Internal notes from admin review (not visible to users)'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Prompt Report'
+        verbose_name_plural = 'Prompt Reports'
+        ordering = ['-created_at']
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['prompt', 'reported_by'],
+                name='unique_user_prompt_report'
+            )
+        ]
+
+        indexes = [
+            models.Index(fields=['status', 'created_at'], name='report_status_date_idx'),
+            models.Index(fields=['prompt'], name='report_prompt_idx'),
+            models.Index(fields=['reported_by'], name='report_user_idx'),
+            models.Index(fields=['prompt', 'status'], name='report_prompt_status_idx'),
+        ]
+
+    def __str__(self):
+        return f"Report #{self.id}: {self.prompt.title} by {self.reported_by.username}"
+
+    def is_pending(self):
+        """Check if report is awaiting review"""
+        return self.status == 'pending'
+
+    def mark_reviewed(self, admin_user, notes=''):
+        """Mark report as reviewed by admin"""
+        from django.utils import timezone
+        self.status = 'reviewed'
+        self.reviewed_by = admin_user
+        self.reviewed_at = timezone.now()
+        if notes:
+            self.admin_notes = notes
+        self.save()
+
+    def mark_dismissed(self, admin_user, notes=''):
+        """Dismiss report as invalid"""
+        from django.utils import timezone
+        self.status = 'dismissed'
+        self.reviewed_by = admin_user
+        self.reviewed_at = timezone.now()
+        if notes:
+            self.admin_notes = notes
+        self.save()
 
 
 class TagCategory(models.Model):

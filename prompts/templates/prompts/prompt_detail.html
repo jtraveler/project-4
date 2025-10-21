@@ -151,7 +151,17 @@
                                     <span class="like-count">{{ number_of_likes }}</span>
                                 </a>
                             {% endif %}
-                            
+
+                            <!-- Report Button (only for authenticated users, not author) -->
+                            {% if user.is_authenticated and prompt.author != user %}
+                            <button class="action-btn btn-report"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#reportModal"
+                                    aria-label="Report this prompt">
+                                <i class="fas fa-flag" aria-hidden="true"></i>
+                            </button>
+                            {% endif %}
+
                         </div>
                     </div>
                 </div>
@@ -364,6 +374,77 @@
     </div>
 </div>
 
+<!-- Report Prompt Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportModalLabel">
+                    <i class="fas fa-flag me-2"></i>Report Prompt
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm" method="post" action="{% url 'prompts:report_prompt' prompt.slug %}">
+                    {% csrf_token %}
+
+                    <!-- Reason Selection -->
+                    <div class="mb-3">
+                        <label for="id_reason" class="form-label fw-bold">
+                            <i class="fas fa-exclamation-triangle me-1"></i> Reason for Reporting *
+                        </label>
+                        <select name="reason" id="id_reason" class="form-control form-select" required>
+                            <option value="">-- Select a reason --</option>
+                            <option value="inappropriate">Inappropriate Content</option>
+                            <option value="spam">Spam or Misleading</option>
+                            <option value="copyright">Copyright Violation</option>
+                            <option value="harassment">Harassment or Bullying</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <small class="form-text text-muted">Select the reason that best describes the issue</small>
+                    </div>
+
+                    <!-- Additional Comment -->
+                    <div class="mb-3">
+                        <label for="id_comment" class="form-label fw-bold">
+                            <i class="fas fa-comment me-1"></i> Additional Details (Optional)
+                        </label>
+                        <textarea name="comment" id="id_comment" class="form-control"
+                                  rows="4" maxlength="1000"
+                                  placeholder="Please provide additional context to help us review this report..."></textarea>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Provide context to help us review (max 1000 characters)
+                            </small>
+                            <small id="comment-counter" class="text-muted fw-bold">0 / 1000</small>
+                        </div>
+                    </div>
+
+                    <!-- Error Display Area -->
+                    <div id="reportError" class="alert alert-danger d-none" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <span id="reportErrorMessage"></span>
+                    </div>
+
+                    <!-- Success Display Area -->
+                    <div id="reportSuccess" class="alert alert-success d-none" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <span id="reportSuccessMessage"></span>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </button>
+                <button type="submit" form="reportForm" class="btn btn-danger" id="submitReportBtn">
+                    <i class="fas fa-flag me-1"></i> Submit Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock content %}
 
 {% block extras %}
@@ -570,6 +651,122 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         document.body.removeChild(textArea);
+    }
+
+    // Report Form Handling
+    const reportForm = document.getElementById('reportForm');
+    const reportModal = document.getElementById('reportModal');
+    const submitReportBtn = document.getElementById('submitReportBtn');
+    const commentTextarea = document.getElementById('id_comment');
+    const commentCounter = document.getElementById('comment-counter');
+    const reportError = document.getElementById('reportError');
+    const reportSuccess = document.getElementById('reportSuccess');
+    const reportErrorMessage = document.getElementById('reportErrorMessage');
+    const reportSuccessMessage = document.getElementById('reportSuccessMessage');
+
+    // Character counter for report comment
+    if (commentTextarea && commentCounter) {
+        function updateCommentCounter() {
+            const count = commentTextarea.value.length;
+            const maxLength = 1000;
+
+            commentCounter.textContent = count + ' / ' + maxLength;
+
+            // Visual feedback for character limit
+            if (count > maxLength) {
+                commentCounter.classList.add('text-danger');
+                commentCounter.classList.remove('text-muted', 'text-warning');
+            } else if (count > maxLength * 0.9) {
+                commentCounter.classList.add('text-warning');
+                commentCounter.classList.remove('text-muted', 'text-danger');
+            } else {
+                commentCounter.classList.add('text-muted');
+                commentCounter.classList.remove('text-warning', 'text-danger');
+            }
+        }
+
+        commentTextarea.addEventListener('input', updateCommentCounter);
+        commentTextarea.addEventListener('change', updateCommentCounter);
+        updateCommentCounter(); // Initialize on page load
+    }
+
+    // Handle report form submission via AJAX
+    if (reportForm) {
+        reportForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            // Hide previous messages
+            reportError.classList.add('d-none');
+            reportSuccess.classList.add('d-none');
+
+            // Disable submit button
+            submitReportBtn.disabled = true;
+            submitReportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
+
+            // Get form data
+            const formData = new FormData(reportForm);
+
+            // Submit via AJAX
+            fetch(reportForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    reportSuccessMessage.textContent = data.message;
+                    reportSuccess.classList.remove('d-none');
+
+                    // Reset form
+                    reportForm.reset();
+                    if (commentCounter) {
+                        commentCounter.textContent = '0 / 1000';
+                        commentCounter.classList.add('text-muted');
+                        commentCounter.classList.remove('text-warning', 'text-danger');
+                    }
+
+                    // Close modal after 2 seconds
+                    setTimeout(function() {
+                        const modalInstance = bootstrap.Modal.getInstance(reportModal);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                        // Clear success message when modal closes
+                        reportSuccess.classList.add('d-none');
+                    }, 2000);
+                } else {
+                    // Show error message
+                    reportErrorMessage.textContent = data.error || 'An error occurred. Please try again.';
+                    reportError.classList.remove('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                reportErrorMessage.textContent = 'A network error occurred. Please try again.';
+                reportError.classList.remove('d-none');
+            })
+            .finally(function() {
+                // Re-enable submit button
+                submitReportBtn.disabled = false;
+                submitReportBtn.innerHTML = '<i class="fas fa-flag me-1"></i> Submit Report';
+            });
+        });
+
+        // Reset form and messages when modal is closed
+        reportModal.addEventListener('hidden.bs.modal', function() {
+            reportForm.reset();
+            reportError.classList.add('d-none');
+            reportSuccess.classList.add('d-none');
+            if (commentCounter) {
+                commentCounter.textContent = '0 / 1000';
+                commentCounter.classList.add('text-muted');
+                commentCounter.classList.remove('text-warning', 'text-danger');
+            }
+        });
     }
 });
 </script>

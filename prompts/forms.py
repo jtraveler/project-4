@@ -2,8 +2,9 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
 from taggit.forms import TagWidget
-from .models import Comment, CollaborateRequest, Prompt
+from .models import Comment, CollaborateRequest, Prompt, UserProfile, PromptReport
 from .services import ProfanityFilterService
+import re
 
 
 class CommentForm(forms.ModelForm):
@@ -213,3 +214,350 @@ class PromptForm(forms.ModelForm):
                 )
 
                 raise ValidationError(error_message)
+
+
+class UserProfileForm(forms.ModelForm):
+    """
+    ModelForm for editing user profile information.
+
+    Features:
+    - Bio with 500 character limit and live counter
+    - Avatar upload with Cloudinary integration
+    - Social media URL validation
+    - User-friendly error messages
+    - Proper placeholders and help text
+    """
+
+    # Override avatar to use ClearableFileInput for better UX
+    avatar = forms.ImageField(
+        required=False,
+        label='Profile Avatar',
+        help_text='Upload a profile picture (JPG, PNG, WebP - Max 5MB)',
+        widget=forms.ClearableFileInput(attrs={
+            'accept': 'image/jpeg,image/png,image/webp',
+            'class': 'form-control-file avatar-upload-input',
+            'id': 'id_avatar'
+        })
+    )
+
+    class Meta:
+        model = UserProfile
+        fields = ['bio', 'avatar', 'twitter_url', 'instagram_url', 'website_url']
+        widgets = {
+            'bio': forms.Textarea(attrs={
+                'class': 'form-control modern-textarea',
+                'placeholder': 'Tell the community about yourself... (max 500 characters)',
+                'rows': 5,
+                'maxlength': 500,
+                'id': 'id_bio'
+            }),
+            'twitter_url': forms.URLInput(attrs={
+                'class': 'form-control modern-input',
+                'placeholder': '@username or https://twitter.com/username',
+                'id': 'id_twitter_url'
+            }),
+            'instagram_url': forms.URLInput(attrs={
+                'class': 'form-control modern-input',
+                'placeholder': '@username or https://instagram.com/username',
+                'id': 'id_instagram_url'
+            }),
+            'website_url': forms.URLInput(attrs={
+                'class': 'form-control modern-input',
+                'placeholder': 'yourwebsite.com or https://yourwebsite.com',
+                'id': 'id_website_url'
+            }),
+        }
+        help_texts = {
+            'bio': 'A brief description about yourself (500 characters max)',
+            'twitter_url': 'Enter your username (@username) or full URL',
+            'instagram_url': 'Enter your username (@username) or full URL',
+            'website_url': 'Enter your domain (auto-adds https://)',
+        }
+        labels = {
+            'bio': 'Bio',
+            'avatar': 'Profile Avatar',
+            'twitter_url': 'Twitter/X URL',
+            'instagram_url': 'Instagram URL',
+            'website_url': 'Website URL',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Make all fields optional (bio already is in model)
+        for field in self.fields:
+            self.fields[field].required = False
+
+        # Add character counter data attribute to bio
+        self.fields['bio'].widget.attrs.update({
+            'data-max-length': '500',
+            'data-counter-target': '#bio-counter'
+        })
+
+    def clean_bio(self):
+        """Validate bio length and content"""
+        bio = self.cleaned_data.get('bio', '').strip()
+
+        # Length validation (redundant with maxlength, but good practice)
+        if len(bio) > 500:
+            raise ValidationError('Bio cannot exceed 500 characters.')
+
+        # Optional: Check for profanity in bio (if desired)
+        # if bio:
+        #     profanity_service = ProfanityFilterService()
+        #     is_clean, found_words, max_severity = profanity_service.check_text(bio)
+        #     if not is_clean and max_severity in ['high', 'critical']:
+        #         raise ValidationError('Bio contains inappropriate content.')
+
+        return bio
+
+    def clean_avatar(self):
+        """Validate avatar upload"""
+        avatar = self.cleaned_data.get('avatar')
+
+        if avatar:
+            # Check file size (5MB limit for avatars)
+            if hasattr(avatar, 'size') and avatar.size > 5 * 1024 * 1024:
+                raise ValidationError('Avatar file size must be under 5MB.')
+
+            # Check file type
+            if hasattr(avatar, 'name'):
+                filename = avatar.name.lower()
+                valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+                if not any(filename.endswith(ext) for ext in valid_extensions):
+                    raise ValidationError(
+                        'Invalid file format. Please upload JPG, PNG, or WebP.'
+                    )
+
+            # Validate dimensions (optional, but recommended)
+            # Note: This requires Pillow to be installed
+            try:
+                from PIL import Image
+                image = Image.open(avatar)
+                width, height = image.size
+
+                # Minimum dimensions (100x100)
+                if width < 100 or height < 100:
+                    raise ValidationError(
+                        'Avatar must be at least 100x100 pixels.'
+                    )
+
+                # Maximum dimensions (4000x4000 - prevents huge uploads)
+                if width > 4000 or height > 4000:
+                    raise ValidationError(
+                        'Avatar dimensions cannot exceed 4000x4000 pixels.'
+                    )
+
+                # Reset file pointer after reading
+                avatar.seek(0)
+            except ImportError:
+                # Pillow not installed, skip dimension validation
+                pass
+            except Exception as e:
+                raise ValidationError(f'Invalid image file: {str(e)}')
+
+        return avatar
+
+    def clean_twitter_url(self):
+        """Auto-add Twitter domain if user just provides username"""
+        url = self.cleaned_data.get('twitter_url', '').strip()
+
+        if not url:
+            return ''
+
+        # If just username (with or without @), validate and build URL
+        if not url.startswith('http'):
+            # Remove @ if present
+            username = url[1:] if url.startswith('@') else url
+
+            # Validate username format (alphanumeric + underscore, 1-15 chars)
+            if not re.match(r'^[\w]{1,15}$', username):
+                raise ValidationError(
+                    'Twitter username must be 1-15 characters (letters, numbers, underscores only)'
+                )
+
+            # Build full URL with validated username
+            url = f'https://twitter.com/{username}'
+
+        # Now validate the full URL
+        return self._validate_social_url(
+            url,
+            platform='Twitter/X',
+            valid_domains=['twitter.com', 'x.com'],
+            pattern=r'^https?://(www\.)?(twitter\.com|x\.com)/[\w]{1,15}/?$'
+        )
+
+    def clean_instagram_url(self):
+        """Auto-add Instagram domain if user just provides username"""
+        url = self.cleaned_data.get('instagram_url', '').strip()
+
+        if not url:
+            return ''
+
+        # If just username (with or without @), validate and build URL
+        if not url.startswith('http'):
+            # Remove @ if present
+            username = url[1:] if url.startswith('@') else url
+
+            # Validate username format (alphanumeric, dots, underscores, 1-30 chars)
+            if not re.match(r'^[\w.]{1,30}$', username):
+                raise ValidationError(
+                    'Instagram username must be 1-30 characters (letters, numbers, dots, underscores only)'
+                )
+
+            # Build full URL with validated username
+            url = f'https://instagram.com/{username}'
+
+        # Now validate the full URL
+        return self._validate_social_url(
+            url,
+            platform='Instagram',
+            valid_domains=['instagram.com'],
+            pattern=r'^https?://(www\.)?instagram\.com/[\w.]{1,30}/?$'
+        )
+
+    def clean_website_url(self):
+        """Validate website URL (flexible, any valid URL)"""
+        url = self.cleaned_data.get('website_url', '').strip()
+
+        if not url:
+            return url
+
+        # Ensure URL starts with http:// or https://
+        if not url.startswith(('http://', 'https://')):
+            url = f'https://{url}'
+
+        # Django's URLField validator will handle the rest
+        # Just ensure it's not too long
+        if len(url) > 200:
+            raise ValidationError('URL cannot exceed 200 characters.')
+
+        return url
+
+    def _validate_social_url(self, url, platform, valid_domains, pattern):
+        """
+        Generic social media URL validator.
+
+        Args:
+            url: The URL to validate
+            platform: Platform name for error messages
+            valid_domains: List of valid domain names
+            pattern: Regex pattern for URL format
+
+        Returns:
+            Cleaned URL or empty string
+
+        Raises:
+            ValidationError: If URL format is invalid
+        """
+        if not url:
+            return url
+
+        # Ensure URL starts with http:// or https://
+        if not url.startswith(('http://', 'https://')):
+            url = f'https://{url}'
+
+        # Validate against pattern
+        if not re.match(pattern, url, re.IGNORECASE):
+            # More user-friendly error message
+            domains_str = ' or '.join(valid_domains)
+            raise ValidationError(
+                f'Please enter a valid {platform} URL (e.g., https://{valid_domains[0]}/username)'
+            )
+
+        # Additional domain validation
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        if parsed.netloc.replace('www.', '') not in [d for d in valid_domains]:
+            raise ValidationError(
+                f'{platform} URL must be from {", ".join(valid_domains)}'
+            )
+
+        return url
+
+    def clean(self):
+        """Overall form validation"""
+        cleaned_data = super().clean()
+
+        # Optional: Ensure at least one field is filled
+        # (Remove if you want to allow completely empty profiles)
+        # has_content = any([
+        #     cleaned_data.get('bio'),
+        #     cleaned_data.get('avatar'),
+        #     cleaned_data.get('twitter_url'),
+        #     cleaned_data.get('instagram_url'),
+        #     cleaned_data.get('website_url'),
+        # ])
+        # if not has_content:
+        #     raise ValidationError('Please fill in at least one field.')
+
+        return cleaned_data
+
+
+class PromptReportForm(forms.ModelForm):
+    """
+    Form for reporting inappropriate prompts.
+
+    Features:
+    - Reason dropdown with 5 choices
+    - Optional comment field (max 1000 chars)
+    - Bootstrap styling
+    - Character counter for comment field
+    - Validation for comment length
+    """
+
+    class Meta:
+        model = PromptReport
+        fields = ['reason', 'comment']
+        widgets = {
+            'reason': forms.Select(attrs={
+                'class': 'form-control form-select',
+                'id': 'id_reason',
+                'required': True
+            }),
+            'comment': forms.Textarea(attrs={
+                'class': 'form-control',
+                'id': 'id_comment',
+                'placeholder': 'Please provide additional details (optional)...',
+                'rows': 4,
+                'maxlength': 1000,
+                'data-max-length': '1000',
+                'data-counter-target': '#comment-counter'
+            }),
+        }
+        labels = {
+            'reason': 'Reason for Reporting',
+            'comment': 'Additional Details (Optional)',
+        }
+        help_texts = {
+            'reason': 'Select the reason that best describes the issue',
+            'comment': 'Provide context to help us review this report (max 1000 characters)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Make comment optional
+        self.fields['comment'].required = False
+
+        # Make reason required
+        self.fields['reason'].required = True
+
+    def clean_comment(self):
+        """Validate comment length"""
+        comment = self.cleaned_data.get('comment', '').strip()
+
+        # Length validation (redundant with maxlength, but good practice)
+        if len(comment) > 1000:
+            raise ValidationError('Comment cannot exceed 1000 characters.')
+
+        return comment
+
+    def clean_reason(self):
+        """Validate reason is provided"""
+        reason = self.cleaned_data.get('reason')
+
+        if not reason:
+            raise ValidationError('Please select a reason for reporting.')
+
+        return reason

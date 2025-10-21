@@ -6,7 +6,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.shortcuts import redirect
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport
 
 
 @admin.register(Prompt)
@@ -811,4 +811,138 @@ class UserProfileAdmin(admin.ModelAdmin):
         return bool(obj.avatar)
     has_avatar.boolean = True
     has_avatar.short_description = "Avatar"
+
+
+@admin.register(PromptReport)
+class PromptReportAdmin(admin.ModelAdmin):
+    """
+    Admin interface for PromptReport model.
+
+    Features:
+    - List view with prompt title, reporter, reason, status
+    - Bulk actions for marking as reviewed/dismissed
+    - Filtering by status, reason, date
+    - Search by prompt title, reporter, comment
+    - Optimized queries with select_related
+    - Color-coded status badges
+    """
+    list_display = [
+        "id", "prompt_title_link", "reported_by", "reason_display",
+        "status_badge", "created_at", "reviewed_by"
+    ]
+    list_filter = ["status", "reason", "created_at"]
+    search_fields = [
+        "prompt__title", "reported_by__username", "comment", "admin_notes"
+    ]
+    readonly_fields = ["prompt", "reported_by", "created_at", "reviewed_at"]
+    list_per_page = 50
+    date_hierarchy = "created_at"
+    actions = ["mark_as_reviewed", "mark_as_dismissed", "mark_as_action_taken"]
+
+    fieldsets = (
+        ("Report Information", {
+            "fields": ("prompt", "reported_by", "reason", "comment")
+        }),
+        ("Status", {
+            "fields": ("status", "reviewed_by", "admin_notes")
+        }),
+        ("Timestamps", {
+            "fields": ("created_at", "reviewed_at"),
+            "classes": ("collapse",)
+        }),
+    )
+
+    def get_queryset(self, request):
+        """Optimize queries with select_related"""
+        qs = super().get_queryset(request)
+        return qs.select_related("prompt", "reported_by", "reviewed_by")
+
+    def prompt_title_link(self, obj):
+        """Display prompt title as clickable link to prompt admin page"""
+        url = reverse("admin:prompts_prompt_change", args=[obj.prompt.pk])
+        return format_html(
+            '<a href="{}" target="_blank">{}</a>',
+            url, obj.prompt.title
+        )
+    prompt_title_link.short_description = "Prompt"
+    prompt_title_link.admin_order_field = "prompt__title"
+
+    def reason_display(self, obj):
+        """Display reason with icon"""
+        icons = {
+            "inappropriate": "🚫",
+            "spam": "📧",
+            "copyright": "©️",
+            "harassment": "⚠️",
+            "other": "❓",
+        }
+        icon = icons.get(obj.reason, "")
+        return f"{icon} {obj.get_reason_display()}"
+    reason_display.short_description = "Reason"
+    reason_display.admin_order_field = "reason"
+
+    def status_badge(self, obj):
+        """Display status with color-coded badge"""
+        colors = {
+            "pending": "#ffc107",      # yellow
+            "reviewed": "#28a745",     # green
+            "dismissed": "#6c757d",    # grey
+            "action_taken": "#007bff", # blue
+        }
+        color = colors.get(obj.status, "#6c757d")
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 3px; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = "Status"
+    status_badge.admin_order_field = "status"
+
+    # Bulk Actions
+    def mark_as_reviewed(self, request, queryset):
+        """Mark selected reports as reviewed"""
+        updated = 0
+        for report in queryset:
+            if report.status == "pending":
+                report.mark_reviewed(request.user, notes="Bulk action: Marked as reviewed")
+                updated += 1
+
+        self.message_user(
+            request,
+            f"{updated} reports marked as reviewed."
+        )
+    mark_as_reviewed.short_description = "Mark as Reviewed"
+
+    def mark_as_dismissed(self, request, queryset):
+        """Dismiss selected reports"""
+        updated = 0
+        for report in queryset:
+            if report.status == "pending":
+                report.mark_dismissed(request.user, notes="Bulk action: Dismissed")
+                updated += 1
+
+        self.message_user(
+            request,
+            f"{updated} reports dismissed."
+        )
+    mark_as_dismissed.short_description = "Dismiss Reports"
+
+    def mark_as_action_taken(self, request, queryset):
+        """Mark selected reports as action taken"""
+        from django.utils import timezone
+        updated = queryset.filter(status="pending").update(
+            status="action_taken",
+            reviewed_by=request.user,
+            reviewed_at=timezone.now()
+        )
+
+        self.message_user(
+            request,
+            f"{updated} reports marked as action taken."
+        )
+    mark_as_action_taken.short_description = "Mark as Action Taken"
+
+    def has_add_permission(self, request):
+        """Prevent manual creation - reports come from users"""
+        return False
 

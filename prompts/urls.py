@@ -26,6 +26,9 @@ urlpatterns = [
     path('trash/empty/', views.empty_trash, name='empty_trash'),
     # User profile URLs (Phase E)
     path('users/<str:username>/', views.user_profile, name='user_profile'),
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
+    # Report prompt URL (Phase E Task 3)
+    path('prompt/<slug:slug>/report/', views.report_prompt, name='report_prompt'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',
          views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',

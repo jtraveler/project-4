@@ -2,19 +2,22 @@
 Signal handlers for the prompts app.
 
 Handles automatic creation of UserProfile instances for new and existing users.
+Also handles Cloudinary cleanup when avatars are changed.
 
 IMPLEMENTATION NOTE:
 - Uses a single signal handler to avoid redundancy
 - Only creates profiles for newly created users (created=True)
 - Uses get_or_create() for backward compatibility
 - Avoids infinite loops by never calling profile.save() in post_save signal
+- Cleans up old Cloudinary avatars on pre_save when new avatar uploaded
 """
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.contrib.auth.models import User
 from django.dispatch import receiver
 from .models import UserProfile
 import logging
+import cloudinary
 
 logger = logging.getLogger(__name__)
 
@@ -60,3 +63,64 @@ def ensure_user_profile_exists(sender, instance, created, **kwargs):
                 f"Failed to create UserProfile for user {instance.username}: {e}",
                 exc_info=True
             )
+
+
+@receiver(pre_save, sender=UserProfile)
+def delete_old_avatar_on_change(sender, instance, **kwargs):
+    """
+    Delete old Cloudinary avatar when user uploads a new one.
+
+    This signal fires BEFORE saving the UserProfile, allowing us to:
+    1. Check if this is an update (not a new profile creation)
+    2. Compare the old avatar with the new avatar
+    3. Delete the old avatar from Cloudinary if they differ
+
+    Benefits:
+    - Prevents orphaned Cloudinary files
+    - Saves storage space
+    - Keeps Cloudinary clean
+
+    Error Handling:
+    - Catches and logs all errors without blocking save operation
+    - UserProfile will save even if Cloudinary deletion fails
+
+    Example:
+        User uploads new avatar → pre_save signal → delete old avatar → save new avatar
+    """
+    # Skip if this is a new profile (no pk yet)
+    if not instance.pk:
+        logger.debug(f"Skipping avatar cleanup for new profile: {instance.user.username}")
+        return
+
+    try:
+        # Get the old profile from database
+        old_profile = UserProfile.objects.get(pk=instance.pk)
+
+        # Check if avatar changed
+        if old_profile.avatar and old_profile.avatar != instance.avatar:
+            # Delete old avatar from Cloudinary
+            try:
+                cloudinary.uploader.destroy(
+                    old_profile.avatar.public_id,
+                    resource_type='image'
+                )
+                logger.info(
+                    f"✅ Deleted old avatar for user: {instance.user.username} "
+                    f"(public_id: {old_profile.avatar.public_id})"
+                )
+            except Exception as cloudinary_error:
+                logger.warning(
+                    f"⚠️ Failed to delete old avatar from Cloudinary for {instance.user.username}: "
+                    f"{cloudinary_error}. Continuing with save."
+                )
+
+    except UserProfile.DoesNotExist:
+        # Should not happen (we checked pk), but handle gracefully
+        logger.warning(f"UserProfile not found in database during pre_save: {instance.pk}")
+        pass
+    except Exception as e:
+        # Catch any other unexpected errors
+        logger.error(
+            f"❌ Unexpected error in avatar cleanup for {instance.user.username}: {e}",
+            exc_info=True
+        )

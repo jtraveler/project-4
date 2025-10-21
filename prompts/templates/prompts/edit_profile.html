@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load cloudinary %}
+
+{% block title %}Edit Profile - {{ request.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <!-- Page Header -->
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-user-edit me-2"></i>Edit Profile
+                </h2>
+                <a href="{% url 'prompts:user_profile' username=request.user.username %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Profile
+                </a>
+            </div>
+
+            <!-- Success/Error Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {% if 'safe' in message.tags %}
+                            {{ message|safe }}
+                        {% else %}
+                            {{ message }}
+                        {% endif %}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Edit Profile Form -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data" id="edit-profile-form">
+                        {% csrf_token %}
+
+                        <!-- Avatar Section -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-image me-1"></i> Profile Avatar
+                            </label>
+
+                            <!-- Current Avatar Preview -->
+                            <div class="mb-3">
+                                {% if profile.avatar.url %}
+                                    {% cloudinary profile.avatar width=150 height=150 crop="fill" gravity="face" quality="auto" fetch_format="auto" class="rounded-circle border border-3 border-light shadow-sm" alt="{{ request.user.username }}'s avatar" %}
+                                {% else %}
+                                    <div class="avatar-placeholder d-inline-flex align-items-center justify-content-center bg-secondary text-white rounded-circle" style="width: 150px; height: 150px; font-size: 3rem;">
+                                        {{ request.user.username|slice:":1"|upper }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Avatar Upload Input -->
+                            {{ form.avatar }}
+                            {% if form.avatar.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.avatar.errors %}
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted d-block mt-2">
+                                <i class="fas fa-info-circle me-1"></i>{{ form.avatar.help_text }}
+                            </small>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Bio Section -->
+                        <div class="mb-4">
+                            <label for="{{ form.bio.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-align-left me-1"></i> {{ form.bio.label }}
+                            </label>
+                            {{ form.bio }}
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>{{ form.bio.help_text }}
+                                </small>
+                                <small id="bio-counter" class="text-muted fw-bold">0 / 500</small>
+                            </div>
+                            {% if form.bio.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.bio.errors %}
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Social Links Section -->
+                        <h5 class="mb-3">
+                            <i class="fas fa-link me-2"></i>Social Links
+                        </h5>
+
+                        <!-- Twitter URL -->
+                        <div class="mb-3">
+                            <label for="{{ form.twitter_url.id_for_label }}" class="form-label">
+                                <i class="fab fa-twitter me-1 text-info"></i> {{ form.twitter_url.label }}
+                            </label>
+                            {{ form.twitter_url }}
+                            <small class="form-text text-muted d-block mt-1">
+                                {{ form.twitter_url.help_text }}
+                            </small>
+                            {% if form.twitter_url.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.twitter_url.errors %}
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Instagram URL -->
+                        <div class="mb-3">
+                            <label for="{{ form.instagram_url.id_for_label }}" class="form-label">
+                                <i class="fab fa-instagram me-1 text-danger"></i> {{ form.instagram_url.label }}
+                            </label>
+                            {{ form.instagram_url }}
+                            <small class="form-text text-muted d-block mt-1">
+                                {{ form.instagram_url.help_text }}
+                            </small>
+                            {% if form.instagram_url.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.instagram_url.errors %}
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Website URL -->
+                        <div class="mb-4">
+                            <label for="{{ form.website_url.id_for_label }}" class="form-label">
+                                <i class="fas fa-globe me-1 text-primary"></i> {{ form.website_url.label }}
+                            </label>
+                            {{ form.website_url }}
+                            <small class="form-text text-muted d-block mt-1">
+                                {{ form.website_url.help_text }}
+                            </small>
+                            {% if form.website_url.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.website_url.errors %}
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Non-field errors (if any) -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {% for error in form.non_field_errors %}
+                                    <i class="fas fa-exclamation-triangle me-1"></i>{{ error }}<br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Form Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                            <a href="{% url 'prompts:user_profile' username=request.user.username %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Text / Tips -->
+            <div class="alert alert-info mt-4" role="alert">
+                <h6 class="alert-heading">
+                    <i class="fas fa-lightbulb me-2"></i>Profile Tips
+                </h6>
+                <ul class="mb-0 small">
+                    <li>A complete profile helps other users connect with you and your work</li>
+                    <li>Use a clear, recognizable profile picture (face photos work best)</li>
+                    <li>Write a brief bio that describes your interests and expertise</li>
+                    <li>Add social links to help people find you on other platforms</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Character Counter Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const bioField = document.querySelector('#id_bio');
+    const bioCounter = document.querySelector('#bio-counter');
+
+    if (bioField && bioCounter) {
+        // Update counter function
+        function updateCounter() {
+            const count = bioField.value.length;
+            const maxLength = 500;
+
+            bioCounter.textContent = count + ' / ' + maxLength;
+
+            // Visual feedback for character limit
+            if (count > maxLength) {
+                bioCounter.classList.add('text-danger');
+                bioCounter.classList.remove('text-muted');
+            } else if (count > maxLength * 0.9) {
+                bioCounter.classList.add('text-warning');
+                bioCounter.classList.remove('text-muted', 'text-danger');
+            } else {
+                bioCounter.classList.add('text-muted');
+                bioCounter.classList.remove('text-warning', 'text-danger');
+            }
+        }
+
+        // Bind event listeners
+        bioField.addEventListener('input', updateCounter);
+        bioField.addEventListener('change', updateCounter);
+
+        // Initialize counter on page load
+        updateCounter();
+    }
+
+    // Form submission loading state
+    const form = document.querySelector('#edit-profile-form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            }
+        });
+    }
+});
+</script>
+
+<!-- Custom Styles -->
+<style>
+.avatar-placeholder {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.card {
+    border: none;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    transition: transform 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.form-label.fw-bold {
+    color: #333;
+    font-size: 1.05rem;
+}
+
+.text-danger small {
+    font-weight: 500;
+}
+</style>
+{% endblock %}

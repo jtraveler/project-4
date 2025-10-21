@@ -1760,7 +1760,216 @@ def user_profile(request, username):
         'total_prompts': total_prompts,
         'total_likes': total_likes,
         'media_filter': media_filter,
-        'is_owner': is_owner,
+        'is_own_profile': is_owner,
     }
 
     return render(request, 'prompts/user_profile.html', context)
+
+
+@login_required
+def edit_profile(request):
+    """
+    View for editing user profile information.
+
+    Features:
+    - Only allows users to edit their own profile
+    - Handles avatar upload with Cloudinary
+    - Validates form data with UserProfileForm
+    - Success message with redirect to profile
+    - Error handling for form validation and database issues
+
+    Security:
+    - @login_required ensures authentication
+    - Uses get_or_create for backward compatibility
+    - transaction.atomic for database safety
+    - Form validation in UserProfileForm
+
+    Args:
+        request: HttpRequest object
+
+    Returns:
+        HttpResponse: Rendered edit_profile.html template
+    """
+    from django.db import transaction
+    from .forms import UserProfileForm
+
+    # Get or create user profile (backward compatibility)
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=profile)
+
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    # Save profile with Cloudinary upload handled automatically
+                    profile = form.save(commit=False)
+                    profile.user = request.user  # Ensure ownership
+                    profile.save()
+
+                    messages.success(
+                        request,
+                        'Profile updated successfully! '
+                        f'<a href="{reverse("prompts:user_profile", args=[request.user.username])}">View your profile</a>',
+                        extra_tags='safe'
+                    )
+
+                    return redirect('prompts:user_profile', username=request.user.username)
+
+            except Exception as e:
+                # Log the error for debugging
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Profile update failed for {request.user.username}: {e}", exc_info=True)
+
+                messages.error(
+                    request,
+                    'An error occurred while updating your profile. Please try again. '
+                    'If the problem persists, contact support.'
+                )
+        else:
+            # Form validation errors - Django will display them in template
+            messages.error(
+                request,
+                'Please correct the errors below and try again.'
+            )
+    else:
+        # GET request - display form with current profile data
+        form = UserProfileForm(instance=profile)
+
+    context = {
+        'form': form,
+        'profile': profile,
+    }
+
+    return render(request, 'prompts/edit_profile.html', context)
+
+
+@login_required
+@require_POST
+def report_prompt(request, slug):
+    """
+    View for reporting inappropriate prompts.
+
+    Features:
+    - Allows authenticated users to report prompts
+    - Prevents duplicate reports (unique constraint)
+    - Sends email notification to admins
+    - AJAX-compatible (returns JSON for modal submission)
+    - Graceful error handling
+
+    Security:
+    - @login_required ensures authentication
+    - UniqueConstraint prevents spam
+    - Email sent via fail_silently=True (no user-facing errors)
+    - CSRF protection via Django forms
+
+    Args:
+        request: HttpRequest object
+        slug: Prompt slug to report
+
+    Returns:
+        - On success: JSON response with success message
+        - On duplicate: JSON response with error message
+        - On error: JSON response with error details
+    """
+    from django.http import JsonResponse
+    from django.core.mail import EmailMessage
+    from django.conf import settings
+    from .forms import PromptReportForm
+    from .models import PromptReport
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Get the prompt being reported
+    prompt = get_object_or_404(Prompt, slug=slug, status=1)
+
+    # Prevent users from reporting their own prompts
+    if prompt.author == request.user:
+        return JsonResponse({
+            'success': False,
+            'error': 'You cannot report your own prompt.'
+        }, status=403)
+
+    # Process the report form
+    form = PromptReportForm(request.POST)
+
+    if form.is_valid():
+        try:
+            # Create the report
+            report = form.save(commit=False)
+            report.prompt = prompt
+            report.reported_by = request.user
+            report.save()
+
+            # Send email notification to admins
+            try:
+                admin_emails = [admin[1] for admin in settings.ADMINS] if hasattr(settings, 'ADMINS') else []
+
+                if admin_emails:
+                    # Sanitize subject line (prevent email header injection)
+                    safe_title = prompt.title.replace('\r', '').replace('\n', ' ')[:100]
+                    subject = f'New Prompt Report: {safe_title}'
+
+                    message = f"""
+A new prompt has been reported on PromptFinder.
+
+**Report Details:**
+- Prompt: {prompt.title}
+- Reported By: {request.user.username} ({request.user.email})
+- Reason: {report.get_reason_display()}
+- Comment: {report.comment or '(No additional details provided)'}
+- Report ID: #{report.id}
+
+**Actions:**
+- View prompt on site: {request.build_absolute_uri(prompt.get_absolute_url())}
+- Log in to admin panel to review this report
+
+Please review this report at your earliest convenience.
+
+---
+This is an automated notification from PromptFinder.
+                    """
+
+                    email = EmailMessage(
+                        subject=subject,
+                        body=message,
+                        from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@promptfinder.net',
+                        to=admin_emails,
+                    )
+                    email.send(fail_silently=True)
+                    logger.info(f"Report email sent for prompt '{prompt.slug}' by user '{request.user.username}'")
+
+            except Exception as e:
+                # Log email error but don't fail the request
+                logger.error(f"Failed to send report email for prompt '{prompt.slug}': {e}", exc_info=True)
+
+            # Return success response
+            return JsonResponse({
+                'success': True,
+                'message': 'Thank you for your report. Our team will review it shortly.'
+            })
+
+        except Exception as e:
+            # Handle duplicate report or other database errors
+            if 'unique_user_prompt_report' in str(e).lower() or 'duplicate' in str(e).lower():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'You have already reported this prompt. Our team is reviewing your previous report.'
+                }, status=400)
+            else:
+                logger.error(f"Error creating report for prompt '{prompt.slug}': {e}", exc_info=True)
+                return JsonResponse({
+                    'success': False,
+                    'error': 'An error occurred while submitting your report. Please try again.'
+                }, status=500)
+
+    else:
+        # Form validation errors
+        errors = form.errors.as_json()
+        return JsonResponse({
+            'success': False,
+            'error': 'Please correct the errors in your report.',
+            'form_errors': errors
+        }, status=400)

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load cloudinary %}
 
 {% block title %}{{ profile_user.username }}'s Profile - PromptFlow{% endblock %}
 
@@ -594,8 +595,8 @@
     <div class="profile-identity">
         <!-- Avatar Container -->
         <div class="profile-avatar-container">
-            {% if profile.avatar %}
-                <img src="{{ profile.avatar.url }}" alt="{{ profile_user.username }}'s avatar" class="profile-avatar">
+            {% if profile.avatar.url %}
+                {% cloudinary profile.avatar width=120 height=120 crop="fill" gravity="face" quality="auto" fetch_format="auto" class="profile-avatar" %}
             {% else %}
                 <div class="profile-avatar profile-avatar-placeholder avatar-color-{{ profile.get_avatar_color_index }}">
                     {{ profile_user.username|slice:":1"|upper }}
@@ -606,14 +607,43 @@
         <!-- Username -->
         <h1 class="profile-username">{{ profile_user.username }}</h1>
 
+        <!-- Member Since Date -->
+        <p class="profile-meta text-muted" style="font-size: 15px; margin: 8px 0 16px; color: #6b7280;">
+            <i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>
+            Member since {{ profile.created_at|date:"F Y" }}
+        </p>
+
         <!-- Bio (if exists) -->
         {% if profile.bio %}
             <p class="profile-bio">{{ profile.bio }}</p>
         {% endif %}
 
+        <!-- Social Links (if any exist) -->
+        {% if profile.twitter_url or profile.instagram_url or profile.website_url %}
+            <div class="profile-social-links" style="display: flex; gap: 12px; justify-content: center; margin-top: 16px;">
+                {% if profile.twitter_url %}
+                    <a href="{{ profile.twitter_url }}" target="_blank" rel="noopener noreferrer" class="social-link" style="color: #1DA1F2; font-size: 24px;" title="Twitter">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                {% endif %}
+                
+                {% if profile.instagram_url %}
+                    <a href="{{ profile.instagram_url }}" target="_blank" rel="noopener noreferrer" class="social-link" style="color: #E4405F; font-size: 24px;" title="Instagram">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                {% endif %}
+                
+                {% if profile.website_url %}
+                    <a href="{{ profile.website_url }}" target="_blank" rel="noopener noreferrer" class="social-link" style="color: #6b7280; font-size: 24px;" title="Website">
+                        <i class="fas fa-globe"></i>
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+
         <!-- Edit Profile Button (Owner Only) -->
-        {% if is_owner %}
-            <a href="#" class="btn-edit-profile" onclick="alert('Coming soon in Phase F'); return false;">
+        {% if is_own_profile %}
+            <a href="{% url 'prompts:edit_profile' %}" class="btn-edit-profile">
                 <i class="fas fa-pen"></i>
                 Edit profile
             </a>
@@ -625,22 +655,28 @@
          ============================================ -->
     <div class="profile-stats-section">
         <div class="profile-stats-row">
-            <!-- Total Views -->
+            <!-- Total Prompts -->
             <div class="profile-stat">
-                <span class="profile-stat-value">0</span>
-                <span class="profile-stat-label">Total Views</span>
+                <span class="profile-stat-value">{{ total_prompts|default:0 }}</span>
+                <span class="profile-stat-label">Prompts</span>
             </div>
 
-            <!-- All-time rank -->
+            <!-- Likes Received -->
             <div class="profile-stat">
-                <span class="profile-stat-value">0</span>
-                <span class="profile-stat-label">All-time rank</span>
+                <span class="profile-stat-value">{{ total_likes|default:0 }}</span>
+                <span class="profile-stat-label">Likes Received</span>
             </div>
 
-            <!-- 30-day rank -->
+            <!-- Followers -->
             <div class="profile-stat">
                 <span class="profile-stat-value">0</span>
-                <span class="profile-stat-label">30-day rank</span>
+                <span class="profile-stat-label">Followers</span>
+            </div>
+
+            <!-- Following -->
+            <div class="profile-stat">
+                <span class="profile-stat-value">0</span>
+                <span class="profile-stat-label">Following</span>
             </div>
         </div>
     </div>
@@ -674,7 +710,7 @@
                 </button>
 
                 <!-- Trash tab (Owner Only) -->
-                {% if is_owner %}
+                {% if is_own_profile %}
                 <button class="profile-tab" onclick="alert('Trash feature coming in Phase F'); return false;">
                     <i class="fas fa-trash-alt" style="margin-right: 6px; font-size: 15px;"></i>
                     Trash
@@ -726,7 +762,7 @@
         <i class="fas fa-image"></i>
         <h3>No {% if media_filter == 'photos' %}photos{% elif media_filter == 'videos' %}videos{% else %}prompts{% endif %} yet</h3>
         <p>
-            {% if is_owner %}
+            {% if is_own_profile %}
                 Start sharing your creations!
             {% else %}
                 {{ profile_user.username }} hasn't shared any {% if media_filter == 'photos' %}photos{% elif media_filter == 'videos' %}videos{% else %}prompts{% endif %} yet.

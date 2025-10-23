@@ -980,6 +980,10 @@ class EmailPreferencesAdmin(admin.ModelAdmin):
     - Search by username/email
     - Organized fieldsets by notification type
     - Read-only token and timestamps
+    - Deletion warnings for bulk operations (protects user data)
+
+    CRITICAL: User email preferences are valuable data.
+    Deletion should be rare and carefully considered.
     """
     list_display = [
         'user',
@@ -987,6 +991,8 @@ class EmailPreferencesAdmin(admin.ModelAdmin):
         'notify_replies',
         'notify_follows',
         'notify_likes',
+        'notify_mentions',
+        'notify_weekly_digest',
         'notify_updates',
         'notify_marketing',
         'updated_at'
@@ -994,6 +1000,10 @@ class EmailPreferencesAdmin(admin.ModelAdmin):
     list_filter = [
         'notify_comments',
         'notify_replies',
+        'notify_follows',
+        'notify_likes',
+        'notify_mentions',
+        'notify_weekly_digest',
         'notify_updates',
         'notify_marketing',
         'updated_at'
@@ -1024,4 +1034,54 @@ class EmailPreferencesAdmin(admin.ModelAdmin):
             'description': 'Internal system fields'
         }),
     )
+
+    def delete_queryset(self, request, queryset):
+        """
+        Override bulk delete to add extra confirmation and warnings.
+
+        CRITICAL: Deleting email preferences removes user's carefully
+        configured notification settings. This should be very rare.
+        """
+        from django.contrib import messages
+
+        count = queryset.count()
+
+        # Always warn for bulk deletions
+        if count > 1:
+            messages.warning(
+                request,
+                f'⚠️ WARNING: You are about to delete {count} user email preferences. '
+                f'This will permanently remove users\' notification settings. '
+                f'Users will need to reconfigure their preferences. '
+                f'Please confirm this is intentional and you have a backup.'
+            )
+
+        # Extra warning for large bulk deletions
+        if count > 10:
+            messages.error(
+                request,
+                f'🚨 CRITICAL: Deleting {count} user preferences! '
+                f'Have you created a backup? Run: python manage.py backup_email_preferences'
+            )
+
+        # Proceed with deletion (Django will show confirmation page)
+        super().delete_queryset(request, queryset)
+
+    def delete_model(self, request, obj):
+        """
+        Override single item delete to add warning.
+        """
+        from django.contrib import messages
+
+        messages.warning(
+            request,
+            f'Deleted email preferences for user: {obj.user.username}. '
+            f'User will need to reconfigure notification settings.'
+        )
+
+        super().delete_model(request, obj)
+
+    class Meta:
+        verbose_name = "Email Preference"
+        verbose_name_plural = "⚠️ Email Preferences (User Data - Handle with Care)"
 

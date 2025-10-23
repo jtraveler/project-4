@@ -1846,6 +1846,52 @@ def edit_profile(request):
 
 
 @login_required
+def email_preferences(request):
+    """
+    Display and handle email notification preferences.
+
+    GET: Display current preferences with toggle switches
+    POST: Save updated preferences and show success message
+
+    Users can toggle individual notification types on/off.
+
+    Security:
+    - @login_required ensures authentication
+    - Uses get_or_create for backward compatibility
+    - Form validation in EmailPreferencesForm
+
+    Args:
+        request: HttpRequest object
+
+    Returns:
+        HttpResponse: Rendered settings_notifications.html template
+    """
+    from .forms import EmailPreferencesForm
+    from .models import EmailPreferences
+
+    # Get or create preferences for current user (signal should have created it)
+    prefs, created = EmailPreferences.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        form = EmailPreferencesForm(request.POST, instance=prefs)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your email preferences have been updated.')
+            return redirect('prompts:email_preferences')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = EmailPreferencesForm(instance=prefs)
+
+    context = {
+        'form': form,
+        'preferences': prefs,
+    }
+
+    return render(request, 'prompts/settings_notifications.html', context)
+
+
+@login_required
 @require_POST
 def report_prompt(request, slug):
     """

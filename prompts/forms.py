@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
 from taggit.forms import TagWidget
-from .models import Comment, CollaborateRequest, Prompt, UserProfile, PromptReport
+from .models import Comment, CollaborateRequest, Prompt, UserProfile, PromptReport, EmailPreferences
 from .services import ProfanityFilterService
 import re
 
@@ -561,3 +561,82 @@ class PromptReportForm(forms.ModelForm):
             raise ValidationError('Please select a reason for reporting.')
 
         return reason
+
+
+class EmailPreferencesForm(forms.ModelForm):
+    """
+    Form for users to manage their email notification preferences.
+
+    Provides toggle switches for each notification type with helpful
+    descriptions. Organized into logical groups (Activity, Social, Digest).
+    """
+
+    class Meta:
+        model = EmailPreferences
+        fields = [
+            'notify_comments',
+            'notify_replies',
+            'notify_follows',
+            'notify_likes',
+            'notify_mentions',
+            'notify_weekly_digest',
+            'notify_updates',
+            'notify_marketing',
+        ]
+
+        widgets = {
+            'notify_comments': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'notify_comments'
+            }),
+            'notify_replies': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'notify_replies'
+            }),
+            'notify_follows': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'notify_follows'
+            }),
+            'notify_likes': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'notify_likes'
+            }),
+            'notify_mentions': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'notify_mentions'
+            }),
+            'notify_weekly_digest': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'notify_weekly_digest'
+            }),
+            'notify_updates': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'notify_updates'
+            }),
+            'notify_marketing': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'notify_marketing'
+            }),
+        }
+
+        labels = {
+            'notify_comments': 'Comments on my prompts',
+            'notify_replies': 'Replies to my comments',
+            'notify_follows': 'New followers',
+            'notify_likes': 'Likes on my prompts',
+            'notify_mentions': 'When someone mentions me (@username)',
+            'notify_weekly_digest': 'Weekly activity summary',
+            'notify_updates': 'Product updates and announcements',
+            'notify_marketing': 'Marketing emails and special offers',
+        }
+
+        help_texts = {
+            'notify_comments': 'Get notified when someone comments on your prompts',
+            'notify_replies': 'Get notified when someone replies to your comments',
+            'notify_follows': 'Get notified when someone follows you',
+            'notify_likes': 'Get notified when someone likes your prompts',
+            'notify_mentions': 'Get notified when someone mentions you in a comment',
+            'notify_weekly_digest': 'Receive a weekly summary of your activity',
+            'notify_updates': 'Stay informed about new features and important updates',
+            'notify_marketing': 'Receive occasional promotional emails (opt-in)',
+        }

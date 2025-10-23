@@ -27,4 +27,4 @@ Thumbs.db
 staticfiles/
 
 # Reports (CSV files from management commands)
-reports/*.csv
+reports/*.csvbackups/*.json

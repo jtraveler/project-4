@@ -483,6 +483,9 @@
                         <a href="{% url 'prompts:edit_profile' %}" class="dropdown-item">
                             <i class="fas fa-user-edit me-2"></i>Edit Profile
                         </a>
+                        <a href="{% url 'prompts:email_preferences' %}" class="dropdown-item">
+                            <i class="fas fa-bell me-2"></i>Email Preferences
+                        </a>
                         <div class="dropdown-divider"></div>
                         <a href="{% url 'account_logout' %}" class="dropdown-item">
                             <i class="fas fa-sign-out-alt me-2"></i>Logout
@@ -523,6 +526,9 @@
             </a>
             <a href="{% url 'prompts:edit_profile' %}" class="mobile-nav-link">
                 <i class="fas fa-user-edit me-2"></i>Edit Profile
+            </a>
+            <a href="{% url 'prompts:email_preferences' %}" class="mobile-nav-link">
+                <i class="fas fa-bell me-2"></i>Email Preferences
             </a>
             <a href="{% url 'account_logout' %}" class="mobile-nav-link">
                 <i class="fas fa-sign-out-alt me-2"></i>Logout

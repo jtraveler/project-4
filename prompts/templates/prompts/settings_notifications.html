@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Email Notification Settings - PromptFinder{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Page Header -->
+            <div class="mb-4">
+                <h1 class="h2 mb-1">Email Notifications</h1>
+                <p class="text-muted mb-0">Manage which emails you receive from PromptFinder</p>
+            </div>
+
+            <!-- Email Preferences Form -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" id="preferencesForm">
+                        {% csrf_token %}
+
+                        <!-- Activity Notifications -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="fas fa-bell text-primary"></i> Activity Notifications
+                            </h5>
+                            <p class="text-muted small mb-3">Get notified about activity on your content</p>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.notify_comments }}
+                                    <label class="form-check-label" for="notify_comments">
+                                        <strong>{{ form.notify_comments.label }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ form.notify_comments.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.notify_replies }}
+                                    <label class="form-check-label" for="notify_replies">
+                                        <strong>{{ form.notify_replies.label }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ form.notify_replies.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Social Notifications -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="fas fa-users text-success"></i> Social Notifications
+                            </h5>
+                            <p class="text-muted small mb-3">Stay connected with your community</p>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.notify_follows }}
+                                    <label class="form-check-label" for="notify_follows">
+                                        <strong>{{ form.notify_follows.label }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ form.notify_follows.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.notify_likes }}
+                                    <label class="form-check-label" for="notify_likes">
+                                        <strong>{{ form.notify_likes.label }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ form.notify_likes.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.notify_mentions }}
+                                    <label class="form-check-label" for="notify_mentions">
+                                        <strong>{{ form.notify_mentions.label }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ form.notify_mentions.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Digest & Platform Updates -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="fas fa-envelope text-info"></i> Digest & Platform Updates
+                            </h5>
+                            <p class="text-muted small mb-3">Periodic emails and platform news</p>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.notify_weekly_digest }}
+                                    <label class="form-check-label" for="notify_weekly_digest">
+                                        <strong>{{ form.notify_weekly_digest.label }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ form.notify_weekly_digest.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.notify_updates }}
+                                    <label class="form-check-label" for="notify_updates">
+                                        <strong>{{ form.notify_updates.label }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ form.notify_updates.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.notify_marketing }}
+                                    <label class="form-check-label" for="notify_marketing">
+                                        <strong>{{ form.notify_marketing.label }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ form.notify_marketing.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="text-center pt-3">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save"></i> Save Preferences
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

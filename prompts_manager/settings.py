@@ -423,3 +423,25 @@ SUMMERNOTE_CONFIG = {
     'attachment_require_authentication': True,
     'attachment_filesize_limit': 1024 * 1024 * 10,  # 10MB
 }
+
+# ==============================================================================
+# TEST DATABASE CONFIGURATION
+# ==============================================================================
+# Use SQLite in-memory database for tests to avoid PostgreSQL permission issues
+# Production continues using PostgreSQL, tests use fast isolated SQLite
+# This is a common and recommended practice for Django projects
+#
+# Benefits:
+# - No permission issues (SQLite doesn't require CREATEDB)
+# - Faster test execution (in-memory database)
+# - Complete isolation (fresh database per test run)
+# - Production safety (impossible to touch production data)
+# ==============================================================================
+import sys
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }

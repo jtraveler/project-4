@@ -1,0 +1,87 @@
+[
+{
+  "model": "prompts.emailpreferences",
+  "pk": 2,
+  "fields": {
+    "user": 1,
+    "notify_comments": true,
+    "notify_replies": true,
+    "notify_follows": false,
+    "notify_likes": false,
+    "notify_mentions": true,
+    "notify_weekly_digest": true,
+    "notify_updates": true,
+    "notify_marketing": true,
+    "unsubscribe_token": "lrDFfJlUvLMhex9bfRpwmK6Jit_BGmiG78avRYXSQPbQaNorYYQTXExr6MEv9Q7w",
+    "updated_at": "2025-10-23T16:25:38.874Z"
+  }
+},
+{
+  "model": "prompts.emailpreferences",
+  "pk": 7,
+  "fields": {
+    "user": 37,
+    "notify_comments": true,
+    "notify_replies": true,
+    "notify_follows": true,
+    "notify_likes": true,
+    "notify_mentions": true,
+    "notify_weekly_digest": true,
+    "notify_updates": true,
+    "notify_marketing": false,
+    "unsubscribe_token": "RQuu-blwWEwx8cuD68EKDJKyxuKDbj1bN8f7EPp6Jynh2sDfxENmPJWqlrklEyxW",
+    "updated_at": "2025-10-21T21:40:51.439Z"
+  }
+},
+{
+  "model": "prompts.emailpreferences",
+  "pk": 6,
+  "fields": {
+    "user": 34,
+    "notify_comments": true,
+    "notify_replies": false,
+    "notify_follows": true,
+    "notify_likes": false,
+    "notify_mentions": true,
+    "notify_weekly_digest": false,
+    "notify_updates": true,
+    "notify_marketing": false,
+    "unsubscribe_token": "WrWs07Bvf6neEf4mvB2asAbC0y_UxdXopSMjxxWNK3QDqbma3ByPt-I5ZhrP9zU0",
+    "updated_at": "2025-10-23T16:14:22.073Z"
+  }
+},
+{
+  "model": "prompts.emailpreferences",
+  "pk": 8,
+  "fields": {
+    "user": 36,
+    "notify_comments": false,
+    "notify_replies": true,
+    "notify_follows": false,
+    "notify_likes": true,
+    "notify_mentions": false,
+    "notify_weekly_digest": true,
+    "notify_updates": false,
+    "notify_marketing": false,
+    "unsubscribe_token": "gIHUTLZcJBQZeV5oHNR1Xjgnn-9WpQ1TdTQgEQSM3G9IOoeVeJa2tkrPMNG2HAys",
+    "updated_at": "2025-10-23T17:39:04.596Z"
+  }
+},
+{
+  "model": "prompts.emailpreferences",
+  "pk": 9,
+  "fields": {
+    "user": 35,
+    "notify_comments": true,
+    "notify_replies": true,
+    "notify_follows": true,
+    "notify_likes": true,
+    "notify_mentions": true,
+    "notify_weekly_digest": true,
+    "notify_updates": true,
+    "notify_marketing": false,
+    "unsubscribe_token": "JLTeX9RKDH44v5BLDOHzpGDxgUn-pXFwOJwkRA934DAdhPJBfTlA7nRK7Ts1ysPy",
+    "updated_at": "2025-10-21T21:40:51.513Z"
+  }
+}
+]

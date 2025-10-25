@@ -26,3 +26,9 @@ urllib3==1.26.20
 webencodings==0.5.1
 whitenoise==6.9.0
 Pillow==10.4.0
+
+# Rate Limiting
+# Two implementations available (controlled by RATE_LIMIT_BACKEND setting):
+# - 'custom': Security-hardened custom implementation with IP spoofing protection
+# - 'package': django-ratelimit (production recommended, default)
+django-ratelimit==4.1.0

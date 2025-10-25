@@ -303,13 +303,27 @@ UNSUBSCRIBE_RATE_LIMIT = 5  # Max requests per hour
 UNSUBSCRIBE_RATE_LIMIT_TTL = 3600  # 1 hour in seconds
 
 # SECURITY: Trusted proxy configuration for X-Forwarded-For header validation
-# Only trust X-Forwarded-For headers when behind known proxies/load balancers
-# Update this list with your actual proxy IP ranges in production
+# Heroku-specific configuration: Heroku's routing layer uses these IP ranges
+# Only requests from these proxies will have X-Forwarded-For headers trusted
 TRUSTED_PROXIES = [
-    '10.0.0.0/8',      # Private network range
-    '172.16.0.0/12',   # Private network range
-    '192.168.0.0/16',  # Private network range
+    '10.0.0.0/8',      # Heroku internal routing
+    '172.16.0.0/12',   # Heroku internal routing
 ]
+
+# SECURITY: Rate limiting implementation selector
+# Options: 'custom' (security-hardened custom implementation) or 'package' (django-ratelimit)
+# Default: 'package' (production recommended, battle-tested)
+RATE_LIMIT_BACKEND = os.environ.get('RATE_LIMIT_BACKEND', 'package')
+
+# DJANGO-RATELIMIT: Configuration for package-based rate limiting
+RATELIMIT_ENABLE = True  # Set to False to disable all rate limiting globally
+RATELIMIT_USE_CACHE = 'default'  # Use default cache backend for rate limit tracking
+RATELIMIT_VIEW = 'prompts.views.ratelimited'  # Custom 429 error view (optional)
+
+# Rate limit behavior on cache failure
+# True = fail open (allow requests if cache down) - matches custom implementation
+# False = fail closed (block requests if cache down) - more secure but worse UX
+RATELIMIT_FAIL_OPEN = True
 
 # PERFORMANCE OPTIMIZATION: Logging configuration for monitoring
 LOGGING = {

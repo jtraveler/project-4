@@ -587,35 +587,43 @@ class EmailPreferencesForm(forms.ModelForm):
         widgets = {
             'notify_comments': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
-                'id': 'notify_comments'
+                'id': 'notify_comments',
+                'aria-describedby': 'comments-description'
             }),
             'notify_replies': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
-                'id': 'notify_replies'
+                'id': 'notify_replies',
+                'aria-describedby': 'replies-description'
             }),
             'notify_follows': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
-                'id': 'notify_follows'
+                'id': 'notify_follows',
+                'aria-describedby': 'follows-description'
             }),
             'notify_likes': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
-                'id': 'notify_likes'
+                'id': 'notify_likes',
+                'aria-describedby': 'likes-description'
             }),
             'notify_mentions': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
-                'id': 'notify_mentions'
+                'id': 'notify_mentions',
+                'aria-describedby': 'mentions-description'
             }),
             'notify_weekly_digest': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
-                'id': 'notify_weekly_digest'
+                'id': 'notify_weekly_digest',
+                'aria-describedby': 'weekly-description'
             }),
             'notify_updates': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
-                'id': 'notify_updates'
+                'id': 'notify_updates',
+                'aria-describedby': 'updates-description'
             }),
             'notify_marketing': forms.CheckboxInput(attrs={
                 'class': 'form-check-input',
-                'id': 'notify_marketing'
+                'id': 'notify_marketing',
+                'aria-describedby': 'marketing-description'
             }),
         }
 

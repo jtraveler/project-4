@@ -16,14 +16,14 @@
             <!-- Email Preferences Form -->
             <div class="card shadow-sm">
                 <div class="card-body p-4">
-                    <form method="post" id="preferencesForm">
+                    <form method="post" id="preferencesForm" aria-label="Email notification preferences">
                         {% csrf_token %}
 
                         <!-- Activity Notifications -->
                         <div class="mb-4">
-                            <h5 class="mb-3">
+                            <h2 class="mb-3 h5">
                                 <i class="fas fa-bell text-primary"></i> Activity Notifications
-                            </h5>
+                            </h2>
                             <p class="text-muted small mb-3">Get notified about activity on your content</p>
 
                             <div class="mb-3">
@@ -32,7 +32,7 @@
                                     <label class="form-check-label" for="notify_comments">
                                         <strong>{{ form.notify_comments.label }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ form.notify_comments.help_text }}</small>
+                                        <small class="text-muted" id="comments-description">{{ form.notify_comments.help_text }}</small>
                                     </label>
                                 </div>
                             </div>
@@ -43,7 +43,7 @@
                                     <label class="form-check-label" for="notify_replies">
                                         <strong>{{ form.notify_replies.label }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ form.notify_replies.help_text }}</small>
+                                        <small class="text-muted" id="replies-description">{{ form.notify_replies.help_text }}</small>
                                     </label>
                                 </div>
                             </div>
@@ -53,9 +53,9 @@
 
                         <!-- Social Notifications -->
                         <div class="mb-4">
-                            <h5 class="mb-3">
+                            <h2 class="mb-3 h5">
                                 <i class="fas fa-users text-success"></i> Social Notifications
-                            </h5>
+                            </h2>
                             <p class="text-muted small mb-3">Stay connected with your community</p>
 
                             <div class="mb-3">
@@ -64,7 +64,7 @@
                                     <label class="form-check-label" for="notify_follows">
                                         <strong>{{ form.notify_follows.label }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ form.notify_follows.help_text }}</small>
+                                        <small class="text-muted" id="follows-description">{{ form.notify_follows.help_text }}</small>
                                     </label>
                                 </div>
                             </div>
@@ -75,7 +75,7 @@
                                     <label class="form-check-label" for="notify_likes">
                                         <strong>{{ form.notify_likes.label }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ form.notify_likes.help_text }}</small>
+                                        <small class="text-muted" id="likes-description">{{ form.notify_likes.help_text }}</small>
                                     </label>
                                 </div>
                             </div>
@@ -86,7 +86,7 @@
                                     <label class="form-check-label" for="notify_mentions">
                                         <strong>{{ form.notify_mentions.label }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ form.notify_mentions.help_text }}</small>
+                                        <small class="text-muted" id="mentions-description">{{ form.notify_mentions.help_text }}</small>
                                     </label>
                                 </div>
                             </div>
@@ -96,9 +96,9 @@
 
                         <!-- Digest & Platform Updates -->
                         <div class="mb-4">
-                            <h5 class="mb-3">
+                            <h2 class="mb-3 h5">
                                 <i class="fas fa-envelope text-info"></i> Digest & Platform Updates
-                            </h5>
+                            </h2>
                             <p class="text-muted small mb-3">Periodic emails and platform news</p>
 
                             <div class="mb-3">
@@ -107,7 +107,7 @@
                                     <label class="form-check-label" for="notify_weekly_digest">
                                         <strong>{{ form.notify_weekly_digest.label }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ form.notify_weekly_digest.help_text }}</small>
+                                        <small class="text-muted" id="weekly-description">{{ form.notify_weekly_digest.help_text }}</small>
                                     </label>
                                 </div>
                             </div>
@@ -118,7 +118,7 @@
                                     <label class="form-check-label" for="notify_updates">
                                         <strong>{{ form.notify_updates.label }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ form.notify_updates.help_text }}</small>
+                                        <small class="text-muted" id="updates-description">{{ form.notify_updates.help_text }}</small>
                                     </label>
                                 </div>
                             </div>
@@ -129,7 +129,7 @@
                                     <label class="form-check-label" for="notify_marketing">
                                         <strong>{{ form.notify_marketing.label }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ form.notify_marketing.help_text }}</small>
+                                        <small class="text-muted" id="marketing-description">{{ form.notify_marketing.help_text }}</small>
                                     </label>
                                 </div>
                             </div>
@@ -137,7 +137,7 @@
 
                         <!-- Save Button -->
                         <div class="text-center pt-3">
-                            <button type="submit" class="btn btn-primary px-4">
+                            <button type="submit" class="btn btn-primary px-4" aria-label="Save your email notification preferences">
                                 <i class="fas fa-save"></i> Save Preferences
                             </button>
                         </div>

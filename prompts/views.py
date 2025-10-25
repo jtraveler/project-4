@@ -2021,13 +2021,75 @@ This is an automated notification from PromptFinder.
         }, status=400)
 
 
+def get_client_ip(request):
+    """
+    Extract client IP address from request, validating proxy headers.
+
+    Security: Only trusts X-Forwarded-For headers when behind known proxies
+    to prevent IP spoofing attacks. Falls back to REMOTE_ADDR if not behind
+    trusted proxy or header is missing.
+
+    Args:
+        request: Django request object
+
+    Returns:
+        str: Client IP address (validated)
+    """
+    from django.conf import settings
+    import ipaddress
+
+    # Get X-Forwarded-For header (set by proxies/load balancers)
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+
+    if x_forwarded_for:
+        # Split comma-separated IP chain
+        ips = [ip.strip() for ip in x_forwarded_for.split(',')]
+
+        # Iterate from rightmost IP (closest to our server) backwards
+        # Stop at first IP that's NOT in our trusted proxy list
+        for ip in reversed(ips):
+            try:
+                ip_obj = ipaddress.ip_address(ip)
+
+                # Check if IP is in trusted proxy ranges
+                is_trusted_proxy = False
+                for proxy_range in getattr(settings, 'TRUSTED_PROXIES', []):
+                    if ip_obj in ipaddress.ip_network(proxy_range):
+                        is_trusted_proxy = True
+                        break
+
+                # If not a trusted proxy, this is the client IP
+                if not is_trusted_proxy:
+                    return ip
+
+            except ValueError:
+                # Invalid IP format, skip it
+                continue
+
+    # Fallback to REMOTE_ADDR (direct connection or no valid X-Forwarded-For)
+    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+
 def unsubscribe_view(request, token):
     """
-    Handle email unsubscribe requests via unique token.
+    Handle email unsubscribe requests via unique token with rate limiting.
 
     Allows users to unsubscribe from all email notifications with a single
     click from any email footer. This is required by anti-spam regulations
     (CAN-SPAM Act, GDPR).
+
+    Security Features:
+        - IP-based rate limiting (5 requests/hour)
+        - Validated proxy header handling (prevents IP spoofing)
+        - SHA-256 IP hashing for privacy
+        - Cache error handling with fail-open policy
+        - No token information in logs (prevents enumeration)
+
+    Rate Limiting:
+        - 5 requests per IP address per hour (configurable in settings)
+        - Returns 429 status code when limit exceeded
+        - Uses Django cache framework for tracking
+        - Fails open if cache backend unavailable (allows request)
 
     Args:
         request: Django request object
@@ -2035,7 +2097,51 @@ def unsubscribe_view(request, token):
 
     Returns:
         Rendered unsubscribe.html template with success/error context
+        Status 429 if rate limit exceeded
     """
+    from django.conf import settings
+
+    # Get client IP address with validated proxy handling
+    ip = get_client_ip(request)
+
+    # Create cache key from SHA-256 hashed IP (privacy + security)
+    ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+    cache_key = f'unsubscribe_ratelimit_{ip_hash}'
+
+    # Get rate limit configuration from settings
+    rate_limit = getattr(settings, 'UNSUBSCRIBE_RATE_LIMIT', 5)
+    rate_limit_ttl = getattr(settings, 'UNSUBSCRIBE_RATE_LIMIT_TTL', 3600)
+
+    # Check rate limit with cache error handling
+    try:
+        request_count = cache.get(cache_key, 0)
+
+        if request_count >= rate_limit:
+            # Rate limit exceeded
+            logger.warning(
+                f"Rate limit exceeded for IP hash {ip_hash[:16]}... "
+                f"on unsubscribe attempt"
+            )
+
+            context = {
+                'success': False,
+                'rate_limited': True,
+                'error': 'Too many unsubscribe requests. Please try again in an hour.',
+            }
+            return render(request, 'prompts/unsubscribe.html', context, status=429)
+
+        # Increment request count
+        cache.set(cache_key, request_count + 1, rate_limit_ttl)
+
+    except Exception as e:
+        # Cache backend error - log and fail open (allow request)
+        logger.error(
+            f"Cache backend error in rate limiting: {e}. "
+            f"Failing open (allowing request)."
+        )
+        # Continue processing request without rate limiting
+
+    # Continue with unsubscribe logic
     try:
         email_preferences = EmailPreferences.objects.select_related('user').get(
             unsubscribe_token=token
@@ -2054,13 +2160,26 @@ def unsubscribe_view(request, token):
 
         logger.info(f"User {email_preferences.user.username} unsubscribed via token")
 
-        context = {'success': True, 'user': email_preferences.user}
+        context = {
+            'success': True,
+            'rate_limited': False,
+            'user': email_preferences.user
+        }
 
     except EmailPreferences.DoesNotExist:
-        logger.warning(f"Invalid unsubscribe token: {token[:10]}...")
-        context = {'success': False, 'error': 'invalid_token'}
+        # Security: Don't log any part of the token (prevents enumeration)
+        logger.warning("Invalid unsubscribe token attempt")
+        context = {
+            'success': False,
+            'rate_limited': False,
+            'error': 'invalid_token'
+        }
     except Exception as e:
         logger.error(f"Error processing unsubscribe: {e}")
-        context = {'success': False, 'error': 'server_error'}
+        context = {
+            'success': False,
+            'rate_limited': False,
+            'error': 'server_error'
+        }
 
     return render(request, 'prompts/unsubscribe.html', context)

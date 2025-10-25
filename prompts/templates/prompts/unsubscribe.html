@@ -39,10 +39,47 @@
                     {% else %}
                         <!-- ERROR STATES -->
                         <div class="mb-4">
-                            <i class="fas fa-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
+                            {% if rate_limited %}
+                                <i class="fas fa-clock text-warning" style="font-size: 4rem;"></i>
+                            {% else %}
+                                <i class="fas fa-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
+                            {% endif %}
                         </div>
 
-                        {% if error == 'invalid_token' %}
+                        {% if rate_limited %}
+                            <!-- Rate Limit Error -->
+                            <h2 class="h3 mb-3">Too Many Requests</h2>
+
+                            <p class="text-muted mb-4">
+                                {{ error }}
+                            </p>
+
+                            <div class="alert alert-warning" role="alert" aria-live="polite">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Need help?</strong> You can still manage your email preferences from your account settings.
+                            </div>
+
+                            <ul class="list-unstyled text-start mb-4" style="max-width: 400px; margin: 0 auto;">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Wait one hour and try again</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Manage preferences from settings (if logged in)</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Contact support for assistance</li>
+                            </ul>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                                {% if user.is_authenticated %}
+                                    <a href="{% url 'prompts:email_preferences' %}" class="btn btn-primary px-4">
+                                        <i class="fas fa-cog"></i> Manage Preferences
+                                    </a>
+                                {% endif %}
+                                <a href="mailto:support@promptfinder.net" class="btn btn-outline-primary px-4">
+                                    <i class="fas fa-envelope"></i> Contact Support
+                                </a>
+                                <a href="{% url 'prompts:home' %}" class="btn btn-outline-secondary px-4">
+                                    <i class="fas fa-home"></i> Go to Home
+                                </a>
+                            </div>
+
+                        {% elif error == 'invalid_token' %}
                             <!-- Invalid Token Error -->
                             <h2 class="h3 mb-3">Invalid Unsubscribe Link</h2>
 

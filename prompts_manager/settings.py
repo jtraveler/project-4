@@ -298,6 +298,19 @@ CACHES = {
     }
 }
 
+# SECURITY: Rate limiting configuration
+UNSUBSCRIBE_RATE_LIMIT = 5  # Max requests per hour
+UNSUBSCRIBE_RATE_LIMIT_TTL = 3600  # 1 hour in seconds
+
+# SECURITY: Trusted proxy configuration for X-Forwarded-For header validation
+# Only trust X-Forwarded-For headers when behind known proxies/load balancers
+# Update this list with your actual proxy IP ranges in production
+TRUSTED_PROXIES = [
+    '10.0.0.0/8',      # Private network range
+    '172.16.0.0/12',   # Private network range
+    '192.168.0.0/16',  # Private network range
+]
+
 # PERFORMANCE OPTIMIZATION: Logging configuration for monitoring
 LOGGING = {
     'version': 1,

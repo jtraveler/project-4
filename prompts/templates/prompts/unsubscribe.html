@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Unsubscribe - PromptFinder{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+
+                    {% if success %}
+                        <!-- SUCCESS STATE -->
+                        <div class="mb-4">
+                            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                        </div>
+
+                        <h2 class="h3 mb-3">You've Been Unsubscribed</h2>
+
+                        <p class="text-muted mb-4">
+                            {{ user.username }}, you have been successfully unsubscribed from all email notifications.
+                        </p>
+
+                        <div class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Changed your mind?</strong> You can manage your email preferences anytime from your settings.
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                            <a href="{% url 'prompts:email_preferences' %}" class="btn btn-primary px-4">
+                                <i class="fas fa-cog"></i> Manage Preferences
+                            </a>
+                            <a href="{% url 'prompts:home' %}" class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-home"></i> Go to Home
+                            </a>
+                        </div>
+
+                    {% else %}
+                        <!-- ERROR STATES -->
+                        <div class="mb-4">
+                            <i class="fas fa-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
+                        </div>
+
+                        {% if error == 'invalid_token' %}
+                            <!-- Invalid Token Error -->
+                            <h2 class="h3 mb-3">Invalid Unsubscribe Link</h2>
+
+                            <p class="text-muted mb-4">
+                                This unsubscribe link is invalid or has expired. This can happen if:
+                            </p>
+
+                            <ul class="list-unstyled text-start mb-4" style="max-width: 400px; margin: 0 auto;">
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i> The link was copied incorrectly</li>
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i> You've already unsubscribed</li>
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i> Your email preferences were reset</li>
+                            </ul>
+
+                            <div class="alert alert-warning" role="alert">
+                                <i class="fas fa-lightbulb"></i>
+                                If you're logged in, you can manage your email preferences directly from your settings.
+                            </div>
+
+                        {% elif error == 'server_error' %}
+                            <!-- Server Error -->
+                            <h2 class="h3 mb-3">Something Went Wrong</h2>
+
+                            <p class="text-muted mb-4">
+                                We encountered an unexpected error while processing your unsubscribe request.
+                            </p>
+
+                            <div class="alert alert-warning" role="alert">
+                                <i class="fas fa-info-circle"></i>
+                                Please try again in a few minutes. If the problem persists, contact our support team.
+                            </div>
+
+                        {% endif %}
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'prompts:email_preferences' %}" class="btn btn-primary px-4">
+                                    <i class="fas fa-cog"></i> Go to Settings
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'prompts:home' %}" class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-home"></i> Go to Home
+                            </a>
+                        </div>
+
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="text-center mt-4">
+                <p class="text-muted small">
+                    <i class="fas fa-question-circle"></i>
+                    Need help? <a href="mailto:support@promptfinder.net">Contact Support</a>
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Custom spacing for mobile -->
+<style>
+    @media (max-width: 576px) {
+        .card-body {
+            padding: 2rem 1rem !important;
+        }
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        .d-grid.gap-2 {
+            display: block !important;
+        }
+    }
+</style>
+{% endblock %}

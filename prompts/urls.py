@@ -29,6 +29,7 @@ urlpatterns = [
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     # Email preferences (Phase E Task 4)
     path('settings/notifications/', views.email_preferences, name='email_preferences'),
+    path('unsubscribe/<str:token>/', views.unsubscribe_view, name='unsubscribe'),
     # Report prompt URL (Phase E Task 3)
     path('prompt/<slug:slug>/report/', views.report_prompt, name='report_prompt'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',

@@ -9,7 +9,7 @@ from django.db.models import Q, Prefetch
 from django.core.cache import cache  # Import cache for performance
 from django.core.paginator import Paginator
 from taggit.models import Tag
-from .models import Prompt, Comment, ContentFlag, UserProfile
+from .models import Prompt, Comment, ContentFlag, UserProfile, EmailPreferences
 from django.contrib.auth.models import User
 from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
@@ -2019,3 +2019,48 @@ This is an automated notification from PromptFinder.
             'error': 'Please correct the errors in your report.',
             'form_errors': errors
         }, status=400)
+
+
+def unsubscribe_view(request, token):
+    """
+    Handle email unsubscribe requests via unique token.
+
+    Allows users to unsubscribe from all email notifications with a single
+    click from any email footer. This is required by anti-spam regulations
+    (CAN-SPAM Act, GDPR).
+
+    Args:
+        request: Django request object
+        token: Unique unsubscribe token from EmailPreferences
+
+    Returns:
+        Rendered unsubscribe.html template with success/error context
+    """
+    try:
+        email_preferences = EmailPreferences.objects.select_related('user').get(
+            unsubscribe_token=token
+        )
+
+        # Disable all email notifications
+        email_preferences.notify_comments = False
+        email_preferences.notify_replies = False
+        email_preferences.notify_follows = False
+        email_preferences.notify_likes = False
+        email_preferences.notify_mentions = False
+        email_preferences.notify_weekly_digest = False
+        email_preferences.notify_updates = False
+        email_preferences.notify_marketing = False
+        email_preferences.save()
+
+        logger.info(f"User {email_preferences.user.username} unsubscribed via token")
+
+        context = {'success': True, 'user': email_preferences.user}
+
+    except EmailPreferences.DoesNotExist:
+        logger.warning(f"Invalid unsubscribe token: {token[:10]}...")
+        context = {'success': False, 'error': 'invalid_token'}
+    except Exception as e:
+        logger.error(f"Error processing unsubscribe: {e}")
+        context = {'success': False, 'error': 'server_error'}
+
+    return render(request, 'prompts/unsubscribe.html', context)

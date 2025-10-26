@@ -2070,6 +2070,127 @@ def get_client_ip(request):
     return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
 
+def _disable_all_notifications(email_preferences):
+    """
+    Helper function to disable all email notifications for a user.
+
+    Used by both unsubscribe_custom() and unsubscribe_package() to avoid
+    code duplication (DRY principle).
+
+    This function modifies and saves the EmailPreferences instance,
+    disabling all 8 notification types that control email delivery.
+
+    Args:
+        email_preferences: EmailPreferences instance to modify
+
+    Returns:
+        EmailPreferences: Updated instance (for chaining if needed)
+    """
+    email_preferences.notify_comments = False
+    email_preferences.notify_replies = False
+    email_preferences.notify_follows = False
+    email_preferences.notify_likes = False
+    email_preferences.notify_mentions = False
+    email_preferences.notify_weekly_digest = False
+    email_preferences.notify_updates = False
+    email_preferences.notify_marketing = False
+    email_preferences.save(update_fields=[
+        'notify_comments', 'notify_replies', 'notify_follows',
+        'notify_likes', 'notify_mentions', 'notify_weekly_digest',
+        'notify_updates', 'notify_marketing'
+    ])
+    return email_preferences
+
+
+def ratelimited(request, exception=None):
+    """
+    Custom 429 error handler for django-ratelimit.
+
+    Called automatically by RatelimitMiddleware when rate limits are exceeded.
+    Provides a branded, user-friendly error page instead of generic 429.
+
+    The django-ratelimit 4.x decorator raises a Ratelimited exception, which
+    our custom middleware catches and passes to this view function.
+
+    Referenced in settings.py:
+        RATELIMIT_VIEW = 'prompts.views.ratelimited'
+
+    Middleware:
+        prompts.middleware.RatelimitMiddleware intercepts the exception
+        and calls this view to render the custom 429 page.
+
+    Args:
+        request: Django HttpRequest object
+        exception: Optional Ratelimited exception from django-ratelimit 4.x
+                   (contains metadata like rate, group, method)
+
+    Returns:
+        TemplateResponse: Rendered 429.html template with status code 429
+
+    Security:
+        - No sensitive information exposed in error message
+        - Generic retry guidance (doesn't reveal rate limit details)
+        - Properly escapes all context variables
+
+    Template Context:
+        error_title: Human-readable error heading
+        error_message: User-friendly explanation of the error
+        retry_after: Plain language time to wait (matches 5/hour rate limit)
+        support_email: Contact email for persistent issues
+
+    Example Usage:
+        User makes 6th request to /unsubscribe/token/ within 1 hour
+        → @ratelimit decorator raises Ratelimited exception
+        → RatelimitMiddleware catches exception
+        → Middleware calls this view function
+        → User sees branded 429.html template
+
+    Testing:
+        Returns TemplateResponse (not HttpResponse) to expose context
+        and template information for automated testing.
+    """
+    from django.template.response import TemplateResponse
+
+    context = {
+        'error_title': 'Too Many Requests',
+        'error_message': (
+            'You have made too many requests. '
+            'Please wait a moment and try again.'
+        ),
+        'retry_after': '1 hour',  # Matches UNSUBSCRIBE_RATE_LIMIT (5/hour)
+        'support_email': 'support@promptfinder.com',  # For persistent issues
+    }
+
+    # Use TemplateResponse instead of render() for testability
+    # TemplateResponse exposes .context_data and .templates attributes
+    # which are needed by Django's test framework
+    response = TemplateResponse(request, '429.html', context)
+    response.status_code = 429
+    return response
+
+
+def _test_rate_limit_trigger():
+    """
+    Test helper function to manually verify rate limiting.
+
+    This is a development/testing utility - NOT used in production.
+    Helps developers verify the 429 error page displays correctly.
+
+    Usage in Django shell:
+        from prompts.views import _test_rate_limit_trigger
+        _test_rate_limit_trigger()
+        # Then visit /unsubscribe/<token>/ repeatedly
+
+    Note: This is intentionally simple - actual rate limit testing
+    should use automated test suite (see tests below).
+    """
+    from django.core.cache import cache
+    # Clear any existing rate limit cache for testing
+    cache.clear()
+    print("Rate limit cache cleared. Test by making 6+ rapid requests.")
+    print("Example: curl http://127.0.0.1:8000/unsubscribe/test_token/")
+
+
 def unsubscribe_custom(request, token):
     """
     Custom rate limiting implementation with security hardening.
@@ -2134,20 +2255,8 @@ def unsubscribe_custom(request, token):
             unsubscribe_token=token
         )
 
-        # Disable all email notifications
-        email_preferences.notify_comments = False
-        email_preferences.notify_replies = False
-        email_preferences.notify_follows = False
-        email_preferences.notify_likes = False
-        email_preferences.notify_mentions = False
-        email_preferences.notify_weekly_digest = False
-        email_preferences.notify_updates = False
-        email_preferences.notify_marketing = False
-        email_preferences.save(update_fields=[
-            'notify_comments', 'notify_replies', 'notify_follows',
-            'notify_likes', 'notify_mentions', 'notify_weekly_digest',
-            'notify_updates', 'notify_marketing'
-        ])
+        # Disable all email notifications using helper function
+        _disable_all_notifications(email_preferences)
 
         logger.info(f"User {email_preferences.user.username} unsubscribed via email link")
 
@@ -2219,20 +2328,8 @@ def unsubscribe_package(request, token):
             unsubscribe_token=token
         )
 
-        # Disable all email notifications
-        email_preferences.notify_comments = False
-        email_preferences.notify_replies = False
-        email_preferences.notify_follows = False
-        email_preferences.notify_likes = False
-        email_preferences.notify_mentions = False
-        email_preferences.notify_weekly_digest = False
-        email_preferences.notify_updates = False
-        email_preferences.notify_marketing = False
-        email_preferences.save(update_fields=[
-            'notify_comments', 'notify_replies', 'notify_follows',
-            'notify_likes', 'notify_mentions', 'notify_weekly_digest',
-            'notify_updates', 'notify_marketing'
-        ])
+        # Disable all email notifications using helper function
+        _disable_all_notifications(email_preferences)
 
         logger.info(f"User {email_preferences.user.username} unsubscribed via email link")
 
@@ -2261,43 +2358,83 @@ def unsubscribe_package(request, token):
     return render(request, 'prompts/unsubscribe.html', context)
 
 
-def unsubscribe_view(request, token):
-    """
-    Main unsubscribe view with switchable backend.
+# Apply @ratelimit decorator if django-ratelimit is available
+# This ensures rate limiting works regardless of which backend is selected
+if RATELIMIT_AVAILABLE:
+    @ratelimit(key='ip', rate='5/h', method='GET', block=True)
+    def unsubscribe_view(request, token):
+        """
+        Main unsubscribe view with switchable backend (rate limited).
 
-    Uses RATE_LIMIT_BACKEND setting to choose implementation:
-        - 'custom': Security-hardened custom implementation
-        - 'package': django-ratelimit (production recommended, default)
+        Rate Limiting: 5 requests per IP per hour (enforced by @ratelimit decorator)
 
-    Environment Variable Override:
-        export RATE_LIMIT_BACKEND=custom  # Use custom implementation
-        export RATE_LIMIT_BACKEND=package # Use django-ratelimit (default)
+        Uses RATE_LIMIT_BACKEND setting to choose implementation:
+            - 'custom': Security-hardened custom implementation
+            - 'package': django-ratelimit (production recommended, default)
 
-    Fallback Behavior:
-        If 'package' selected but django-ratelimit not installed,
-        automatically falls back to custom implementation with warning.
+        Environment Variable Override:
+            export RATE_LIMIT_BACKEND=custom  # Use custom implementation
+            export RATE_LIMIT_BACKEND=package # Use django-ratelimit (default)
 
-    Args:
-        request: Django request object
-        token: Unique unsubscribe token from EmailPreferences
+        Fallback Behavior:
+            If 'package' selected but django-ratelimit not installed,
+            automatically falls back to custom implementation with warning.
 
-    Returns:
-        Delegated to unsubscribe_custom() or unsubscribe_package()
-    """
-    from django.conf import settings
+        Args:
+            request: Django request object
+            token: Unique unsubscribe token from EmailPreferences
 
-    backend = getattr(settings, 'RATE_LIMIT_BACKEND', 'package')
+        Returns:
+            Delegated to unsubscribe_custom() or unsubscribe_package()
+            Status 429 if rate limit exceeded (handled by decorator)
+        """
+        from django.conf import settings
 
-    # Check if django-ratelimit is available
-    if backend == 'package' and RATELIMIT_AVAILABLE:
-        return unsubscribe_package(request, token)
-    elif backend == 'package' and not RATELIMIT_AVAILABLE:
-        logger.warning(
-            "RATE_LIMIT_BACKEND set to 'package' but django-ratelimit not installed. "
-            "Falling back to custom implementation. "
-            "Install with: pip install django-ratelimit==4.1.0"
-        )
-        return unsubscribe_custom(request, token)
-    else:
-        # backend == 'custom' or any other value
+        backend = getattr(settings, 'RATE_LIMIT_BACKEND', 'package')
+
+        # Check if django-ratelimit is available
+        if backend == 'package' and RATELIMIT_AVAILABLE:
+            return unsubscribe_package(request, token)
+        elif backend == 'package' and not RATELIMIT_AVAILABLE:
+            logger.warning(
+                "RATE_LIMIT_BACKEND set to 'package' but django-ratelimit not installed. "
+                "Falling back to custom implementation. "
+                "Install with: pip install django-ratelimit==4.1.0"
+            )
+            return unsubscribe_custom(request, token)
+        else:
+            # backend == 'custom' or any other value
+            return unsubscribe_custom(request, token)
+else:
+    # If django-ratelimit not available, define undecorated version
+    # Custom implementation will handle rate limiting internally
+    def unsubscribe_view(request, token):
+        """
+        Main unsubscribe view with switchable backend (custom rate limiting).
+
+        Rate Limiting: Handled by custom implementation (django-ratelimit not available)
+
+        Uses RATE_LIMIT_BACKEND setting to choose implementation:
+            - 'custom': Security-hardened custom implementation (default when package unavailable)
+            - 'package': Not available (will fall back to custom with warning)
+
+        Args:
+            request: Django request object
+            token: Unique unsubscribe token from EmailPreferences
+
+        Returns:
+            Delegated to unsubscribe_custom()
+        """
+        from django.conf import settings
+
+        backend = getattr(settings, 'RATE_LIMIT_BACKEND', 'package')
+
+        if backend == 'package':
+            logger.warning(
+                "RATE_LIMIT_BACKEND set to 'package' but django-ratelimit not installed. "
+                "Falling back to custom implementation. "
+                "Install with: pip install django-ratelimit==4.1.0"
+            )
+
+        # Always use custom implementation when django-ratelimit not available
         return unsubscribe_custom(request, token)

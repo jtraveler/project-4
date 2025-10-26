@@ -98,6 +98,7 @@ SITE_ID = 1
 MIDDLEWARE = [
     'django.middleware.gzip.GZipMiddleware',  # Add back for compression
     'django.middleware.security.SecurityMiddleware',
+    'prompts.middleware.RatelimitMiddleware',  # Custom 429 handler for django-ratelimit
     'csp.middleware.CSPMiddleware',  # Add back for security (CSP)
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

@@ -228,6 +228,18 @@
     margin-left: 4px;
 }
 
+/* Fixed-width badge to prevent layout shift when count changes */
+.stat-badge {
+    display: inline-block;
+    min-width: 24px;  /* Accommodate 1-2 digits */
+    text-align: center;
+}
+
+/* Wider badge for 3+ digits */
+.stat-badge.wide {
+    min-width: 36px;
+}
+
 /* FIX 3: Overflow arrow buttons - Accessible implementation */
 
 /* Right arrow button */
@@ -698,35 +710,29 @@
             </button>
         </div>
         {% endif %}
-    </div>
 
-    <!-- ============================================
-         SECTION 2: STATS ROW (Centered Horizontal)
-         ============================================ -->
-    <div class="profile-stats-section">
-        <div class="profile-stats-row">
-            <!-- Total Prompts -->
-            <div class="profile-stat">
-                <span class="profile-stat-value">{{ total_prompts|default:0 }}</span>
-                <span class="profile-stat-label">Prompts</span>
-            </div>
+        <!-- ============================================
+             PLACEHOLDER METRICS SECTION (Below Follow Button)
+             ============================================ -->
+        <div class="placeholder-metrics-section" style="margin-top: 32px; padding: 24px 0; border-top: 1px solid #e5e7eb;">
+            <div class="profile-stats-row">
+                <!-- Total Views -->
+                <div class="profile-stat">
+                    <span class="profile-stat-value">-</span>
+                    <span class="profile-stat-label">Total Views</span>
+                </div>
 
-            <!-- Likes Received -->
-            <div class="profile-stat">
-                <span class="profile-stat-value">{{ total_likes|default:0 }}</span>
-                <span class="profile-stat-label">Likes Received</span>
-            </div>
+                <!-- All-time Rank -->
+                <div class="profile-stat">
+                    <span class="profile-stat-value">-</span>
+                    <span class="profile-stat-label">All-time Rank</span>
+                </div>
 
-            <!-- Followers -->
-            <div class="profile-stat">
-                <span class="profile-stat-value" id="follower-count">{{ profile_user.userprofile.follower_count|default:0 }}</span>
-                <span class="profile-stat-label">Followers</span>
-            </div>
-
-            <!-- Following -->
-            <div class="profile-stat">
-                <span class="profile-stat-value">{{ profile_user.userprofile.following_count|default:0 }}</span>
-                <span class="profile-stat-label">Following</span>
+                <!-- 30-day Rank -->
+                <div class="profile-stat">
+                    <span class="profile-stat-value">-</span>
+                    <span class="profile-stat-label">30-day Rank</span>
+                </div>
             </div>
         </div>
     </div>
@@ -746,17 +752,21 @@
             <div class="profile-tabs-container">
                 <button class="profile-tab profile-tab-active">
                     Gallery
-                    <span class="profile-tab-count">{{ total_prompts|default:0 }}</span>
+                    <span class="profile-tab-count stat-badge">{{ total_prompts|default:0 }}</span>
                 </button>
                 <button class="profile-tab">Collections</button>
                 <button class="profile-tab">Statistics</button>
                 <button class="profile-tab">
                     Followers
-                    <span class="profile-tab-count">0</span>
+                    <span class="profile-tab-count stat-badge" id="follower-count">{{ profile_user.userprofile.follower_count|default:0 }}</span>
                 </button>
                 <button class="profile-tab">
                     Following
-                    <span class="profile-tab-count">0</span>
+                    <span class="profile-tab-count stat-badge">{{ profile_user.userprofile.following_count|default:0 }}</span>
+                </button>
+                <button class="profile-tab">
+                    Likes Received
+                    <span class="profile-tab-count stat-badge">{{ total_likes|default:0 }}</span>
                 </button>
 
                 <!-- Trash tab (Owner Only) -->
@@ -764,7 +774,7 @@
                 <button class="profile-tab" onclick="alert('Trash feature coming in Phase F'); return false;">
                     <i class="fas fa-trash-alt" style="margin-right: 6px; font-size: 15px;"></i>
                     Trash
-                    <span class="profile-tab-count">0</span>
+                    <span class="profile-tab-count stat-badge">0</span>
                 </button>
                 {% endif %}
             </div>
@@ -1021,27 +1031,112 @@ document.addEventListener('DOMContentLoaded', function() {
             `/users/${username}/unfollow/` :
             `/users/${username}/follow/`;
 
+        // CRITICAL: Get and verify CSRF token before making request
+        const csrfToken = getCookie('csrftoken');
+
+        // DEBUG: Log request details
+        console.log('=== FOLLOW BUTTON DEBUG ===');
+        console.log('Action:', isFollowing ? 'UNFOLLOW' : 'FOLLOW');
+        console.log('Target username:', username);
+        console.log('Request URL:', url);
+        console.log('Current button state:', followBtn.dataset.following);
+        console.log('CSRF Token:', csrfToken ? `Present (${csrfToken.substring(0, 10)}...)` : '❌ MISSING');
+
+        // Early abort if no CSRF token
+        if (!csrfToken) {
+            console.error('❌ CRITICAL: No CSRF token found! Cannot proceed.');
+            showErrorMessage('Security token not found. Please refresh the page and try again.');
+            followBtn.disabled = false;
+            spinner.classList.add('d-none');
+            return;
+        }
+
         fetch(url, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
+                'X-CSRFToken': csrfToken,  // Use the verified token
                 'Content-Type': 'application/json',
             },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateButtonState(data.following);
-                updateFollowerCount(data.follower_count);
+        .then(response => {
+            // DEBUG: Log response details
+            console.log('Response status:', response.status);
+            console.log('Response OK:', response.ok);
+            console.log('Response headers:', response.headers);
 
-                // Show success message (optional)
-                console.log(data.message);
+            // Check if response is OK before parsing JSON
+            if (!response.ok) {
+                // Handle specific HTTP status codes
+                if (response.status === 400) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Bad request');
+                    });
+                } else if (response.status === 403) {
+                    throw new Error('You do not have permission to perform this action');
+                } else if (response.status === 404) {
+                    throw new Error('User not found');
+                } else if (response.status === 429) {
+                    throw new Error('Too many requests. Please wait before trying again.');
+                } else if (response.status === 500) {
+                    throw new Error('Server error. Please try again later.');
+                } else {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+            }
+
+            // Parse JSON only if response is OK
+            return response.json();
+        })
+        .then(data => {
+            // DEBUG: Log response data
+            console.log('Response data:', JSON.stringify(data, null, 2));
+            console.log('Success:', data.success);
+            console.log('Following:', data.following);
+            console.log('Follower count:', data.follower_count);
+            console.log('Following count:', data.following_count);
+            console.log('Message:', data.message);
+
+            if (data.error) {
+                // Handle application-level errors
+                console.error('Follow error:', data.error);
+                showErrorMessage(data.error);
+                return;
+            }
+
+            if (data.success) {
+                console.log('SUCCESS - Updating UI...');
+
+                // Update button state
+                console.log('Updating button state to:', data.following ? 'Following' : 'Follow');
+                updateButtonState(data.following);
+
+                // Update ONLY follower count (not following count)
+                // Following count is for the logged-in user, not the profile being viewed
+                if (data.follower_count !== undefined) {
+                    console.log('Updating follower count to:', data.follower_count);
+                    updateFollowerCount(data.follower_count);
+                } else {
+                    console.warn('follower_count is undefined in response!');
+                }
+
+                // REMOVED: updateFollowingCount() call
+                // The following_count returned is for the logged-in user's profile,
+                // NOT for the profile being viewed. Don't update here.
+
+                // Show success message
+                console.log('Success message:', data.message);
+                console.log('=== FOLLOW BUTTON SUCCESS ===');
             } else {
-                console.error('Follow action failed:', data.error);
+                console.error('Response success is false but no error!');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('=== FOLLOW BUTTON ERROR ===');
+            console.error('Error type:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            showErrorMessage(error.message || 'An error occurred. Please try again.');
         })
         .finally(() => {
             followBtn.disabled = false;
@@ -1087,13 +1182,59 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateFollowerCount(count) {
+        console.log('updateFollowerCount called with:', count);
         const followerCountEl = document.getElementById('follower-count');
+        console.log('follower-count element:', followerCountEl);
         if (followerCountEl) {
+            const oldValue = followerCountEl.textContent;
             followerCountEl.textContent = count;
+            console.log(`Follower count updated: ${oldValue} -> ${count}`);
+        } else {
+            console.error('follower-count element not found!');
+        }
+    }
+
+    function updateFollowingCount(count) {
+        console.log('updateFollowingCount called with:', count);
+        const followingCountEl = document.getElementById('following-count');
+        console.log('following-count element:', followingCountEl);
+        if (followingCountEl) {
+            const oldValue = followingCountEl.textContent;
+            followingCountEl.textContent = count;
+            console.log(`Following count updated: ${oldValue} -> ${count}`);
+        } else {
+            console.error('following-count element not found!');
+        }
+    }
+
+    function showErrorMessage(message) {
+        // Create alert element
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            <strong>Error:</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+
+        // Insert alert before follow button
+        const container = followBtn.closest('.follow-button-container');
+        if (container) {
+            container.parentNode.insertBefore(alertDiv, container);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 150);
+            }, 5000);
+        } else {
+            // Fallback to console if container not found
+            console.error('Error displaying message:', message);
         }
     }
 
     function getCookie(name) {
+        // Method 1: Try to get from cookie
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
@@ -1101,10 +1242,47 @@ document.addEventListener('DOMContentLoaded', function() {
                 const cookie = cookies[i].trim();
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    console.log(`CSRF token found in cookie: ${name}=${cookieValue.substring(0, 10)}...`);
                     break;
                 }
             }
         }
+
+        // Method 2: If not in cookie, try to get from DOM (for csrftoken specifically)
+        if (!cookieValue && name === 'csrftoken') {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (token) {
+                cookieValue = token.value;
+                console.log('CSRF token retrieved from DOM element');
+            }
+        }
+
+        // Method 3: Try alternate cookie names
+        if (!cookieValue && name === 'csrftoken') {
+            // Try other possible CSRF cookie names
+            const altNames = ['csrf_token', '_csrf', 'XSRF-TOKEN'];
+            for (const altName of altNames) {
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, altName.length + 1) === (altName + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(altName.length + 1));
+                            console.log(`CSRF token found with alternate name: ${altName}`);
+                            break;
+                        }
+                    }
+                }
+                if (cookieValue) break;
+            }
+        }
+
+        if (!cookieValue && name === 'csrftoken') {
+            console.error('❌ CSRF token NOT FOUND in cookies or DOM!');
+            console.log('Available cookies:', document.cookie);
+            console.log('DOM CSRF inputs:', document.querySelectorAll('[name=csrfmiddlewaretoken]'));
+        }
+
         return cookieValue;
     }
 

@@ -5,6 +5,8 @@
 {% block title %}{{ profile_user.username }}'s Profile - PromptFlow{% endblock %}
 
 {% block content %}
+<!-- CSRF Token for AJAX requests -->
+{% csrf_token %}
 <style>
 /* ============================================
    PROFILE HEADER - COMPLETE STYLING

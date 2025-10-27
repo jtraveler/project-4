@@ -170,11 +170,20 @@
                 <!-- Overlay with user info, platform, and heart -->
                 <div class="card-overlay">
                     <div class="overlay-top">
-                        <span class="user-info">@{{ prompt.author }}</span>
+                        <span class="user-info">
+                            <a href="{% url 'prompts:user_profile' prompt.author.username %}"
+                               class="text-reset text-decoration-none profile-link">
+                                @{{ prompt.author }}
+                            </a>
+                        </span>
                     </div>
                     <div class="overlay-bottom">
                         <span class="platform-info">
-                            <i class="fas fa-user"></i> {{ prompt.author }}
+                            <i class="fas fa-user"></i>
+                            <a href="{% url 'prompts:user_profile' prompt.author.username %}"
+                               class="text-reset text-decoration-none profile-link">
+                                {{ prompt.author }}
+                            </a>
                         </span>
                         <span class="heart-counter">
                             {% if user.is_authenticated %}

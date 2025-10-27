@@ -415,11 +415,57 @@
         }
     
     }
-    
-    
-    
-    
-    
+
+    /* Profile link styles - Phase F UX Fix */
+    a.profile-link {
+        color: inherit;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    a.profile-link:hover {
+        color: #007bff;
+        text-decoration: underline;
+    }
+
+    /* For usernames in cards */
+    .prompt-card a.profile-link {
+        font-weight: 500;
+    }
+
+    /* For comment authors */
+    .comment-author a {
+        color: #212529;
+        font-weight: 600;
+    }
+
+    .comment-author a:hover {
+        color: #007bff;
+    }
+
+    /* Ensure links in muted text stay visible */
+    .text-muted a {
+        color: #6c757d;
+    }
+
+    .text-muted a:hover {
+        color: #007bff;
+    }
+
+    /* Profile links in card overlays */
+    .card-overlay a.profile-link {
+        color: white;
+        font-weight: 500;
+    }
+
+    .card-overlay a.profile-link:hover {
+        color: #e0e0e0;
+        text-decoration: none;
+        opacity: 0.9;
+    }
+
+
+
     </style>        
         {% block extra_head %}{% endblock %}
 

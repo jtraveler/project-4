@@ -106,7 +106,12 @@
                         {% endif %}
                     </h2>
                     <p class="hero-meta">
-                        <span class="author-badge">By @{{ prompt.author }}</span>
+                        <span class="author-badge">
+                            By <a href="{% url 'prompts:user_profile' prompt.author.username %}"
+                                  class="text-decoration-none text-primary profile-link">
+                                @{{ prompt.author }}
+                            </a>
+                        </span>
                     </p>
                 </div>
                 <div class="col-lg-4">
@@ -275,8 +280,11 @@
                             {% if not comment.approved and comment.author == user %}
                                 border border-warning faded
                             {% endif %}">
-                            <p class="font-weight-bold">
-                                By {{ comment.author }} 
+                            <p class="font-weight-bold comment-author">
+                                By <a href="{% url 'prompts:user_profile' comment.author.username %}"
+                                      class="text-decoration-none text-dark profile-link">
+                                    {{ comment.author }}
+                                </a>
                                 <span class="font-weight-normal text-muted">
                                     on {{ comment.created_on }}
                                 </span>

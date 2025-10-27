@@ -122,6 +122,8 @@
     justify-content: center;
     gap: 0;  /* REFINEMENT 12: Changed from 48px to 0 for divider approach */
     align-items: flex-start;
+    border-top: none !important;  /* Ensure no border appears */
+    margin-top: 1.5rem;
 }
 
 .profile-stat {
@@ -187,10 +189,11 @@
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;  /* Smooth scroll on iOS */
-    scrollbar-width: none;  /* Hide scrollbar Firefox */
+    scrollbar-width: thin;  /* Thin scrollbar for visibility */
     -ms-overflow-style: none;  /* Hide scrollbar IE/Edge */
 
     flex: 1;  /* Take remaining space in wrapper */
+    flex-wrap: nowrap;  /* Prevent tabs from wrapping */
 }
 
 /* FIX 2: Hide scrollbar for Chrome/Safari */
@@ -208,7 +211,8 @@
     border-radius: 40px;  /* REFINEMENT 1: Pill shape (was 8px 8px 0 0) */
     cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap;
+    white-space: nowrap;  /* Prevent text wrapping */
+    flex-shrink: 0;  /* Prevent tabs from shrinking */
 }
 
 .profile-tab:hover:not(.profile-tab-active) {
@@ -230,14 +234,24 @@
 
 /* Fixed-width badge to prevent layout shift when count changes */
 .stat-badge {
+    min-width: 28px;  /* Slightly wider to accommodate 1-2 digits */
     display: inline-block;
-    min-width: 24px;  /* Accommodate 1-2 digits */
     text-align: center;
+    padding: 0 4px;
+    font-weight: normal;
+    transition: none;  /* Prevent animation that might cause shift */
 }
 
 /* Wider badge for 3+ digits */
 .stat-badge.wide {
     min-width: 36px;
+}
+
+/* Specific follower count styling */
+#follower-count {
+    min-width: 28px;
+    display: inline-block;
+    text-align: center;
 }
 
 /* FIX 3: Overflow arrow buttons - Accessible implementation */
@@ -593,9 +607,48 @@
         padding: 10px 16px;
     }
 
-    .profile-filter-dropdown {
+    /* Full width dropdowns on mobile */
+    .profile-filter-dropdown,
+    select.form-select,
+    .dropdown-toggle,
+    .dropdown {
+        width: 100% !important;
+        display: block;
+        max-width: none;
+    }
+
+    /* Stack toolbar/filter items vertically */
+    .profile-filters-container,
+    .toolbar,
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 10px;
         width: 100%;
-        max-width: 200px;
+    }
+
+    .profile-filters-container > *,
+    .toolbar > *,
+    .d-flex.justify-content-between > * {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    /* Responsive tabs - ensure horizontal scroll */
+    .profile-tabs-container {
+        overflow-x: scroll;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    .profile-tab {
+        padding: 6px 8px;
+        font-size: 0.9rem;
+    }
+
+    /* Media filter form full width */
+    #media-filter-form {
+        width: 100%;
+        display: block;
     }
 }
 
@@ -714,24 +767,24 @@
         <!-- ============================================
              PLACEHOLDER METRICS SECTION (Below Follow Button)
              ============================================ -->
-        <div class="placeholder-metrics-section" style="margin-top: 32px; padding: 24px 0; border-top: 1px solid #e5e7eb;">
+        <div class="placeholder-metrics-section" style="margin-top: 32px; padding: 24px 0;">
             <div class="profile-stats-row">
                 <!-- Total Views -->
                 <div class="profile-stat">
-                    <span class="profile-stat-value">-</span>
-                    <span class="profile-stat-label">Total Views</span>
+                    <div class="profile-stat-value">-</div>
+                    <div class="profile-stat-label">Total Views</div>
                 </div>
 
                 <!-- All-time Rank -->
                 <div class="profile-stat">
-                    <span class="profile-stat-value">-</span>
-                    <span class="profile-stat-label">All-time Rank</span>
+                    <div class="profile-stat-value">-</div>
+                    <div class="profile-stat-label">All-time Rank</div>
                 </div>
 
                 <!-- 30-day Rank -->
                 <div class="profile-stat">
-                    <span class="profile-stat-value">-</span>
-                    <span class="profile-stat-label">30-day Rank</span>
+                    <div class="profile-stat-value">-</div>
+                    <div class="profile-stat-label">30-day Rank</div>
                 </div>
             </div>
         </div>
@@ -1002,11 +1055,22 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     const followBtn = document.getElementById('follow-btn');
-    if (!followBtn) return;
+
+    // Safety check: Follow button only exists if logged in and viewing another user's profile
+    if (!followBtn) {
+        console.log('Follow button not found - likely viewing own profile or not logged in');
+        return;
+    }
 
     const username = followBtn.dataset.username;
     const spinner = followBtn.querySelector('.spinner-border');
     const buttonText = followBtn.querySelector('.button-text');
+
+    // Validate required elements exist
+    if (!username || !spinner || !buttonText) {
+        console.error('Follow button missing required elements');
+        return;
+    }
 
     // Check initial follow status
     fetch(`/users/${username}/follow-status/`)

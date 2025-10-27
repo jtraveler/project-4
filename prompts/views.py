@@ -2438,3 +2438,141 @@ else:
 
         # Always use custom implementation when django-ratelimit not available
         return unsubscribe_custom(request, token)
+
+
+# ============================================================================
+# FOLLOW SYSTEM VIEWS (Phase F Day 1)
+# ============================================================================
+
+@login_required
+@require_POST
+@ratelimit(key='user', rate='50/h', method='POST')  # Max 50 follows per hour
+def follow_user(request, username):
+    """
+    AJAX endpoint to follow a user.
+    Returns JSON with success status and follower count.
+    """
+    try:
+        # Get the user to follow
+        user_to_follow = get_object_or_404(User, username=username)
+
+        # Prevent self-following
+        if request.user == user_to_follow:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cannot follow yourself'
+            }, status=400)
+
+        # Create follow relationship
+        from prompts.models import Follow
+        follow, created = Follow.objects.get_or_create(
+            follower=request.user,
+            following=user_to_follow
+        )
+
+        if created:
+            # Send notification email if user wants them
+            if should_send_email(user_to_follow, 'follows'):
+                # TODO: Send email notification (implement in Day 3)
+                pass
+
+            # Get updated counts
+            follower_count = user_to_follow.follower_set.count()
+
+            return JsonResponse({
+                'success': True,
+                'following': True,
+                'follower_count': follower_count,
+                'message': f'You are now following {user_to_follow.username}'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Already following this user'
+            }, status=400)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_POST
+@ratelimit(key='user', rate='50/h', method='POST')  # Max 50 unfollows per hour
+def unfollow_user(request, username):
+    """
+    AJAX endpoint to unfollow a user.
+    Returns JSON with success status and follower count.
+    """
+    try:
+        # Get the user to unfollow
+        user_to_unfollow = get_object_or_404(User, username=username)
+
+        # Prevent self-unfollowing
+        if request.user == user_to_unfollow:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cannot unfollow yourself'
+            }, status=400)
+
+        # Delete follow relationship
+        from prompts.models import Follow
+        deleted_count, _ = Follow.objects.filter(
+            follower=request.user,
+            following=user_to_unfollow
+        ).delete()
+
+        if deleted_count > 0:
+            # Get updated counts
+            follower_count = user_to_unfollow.follower_set.count()
+
+            return JsonResponse({
+                'success': True,
+                'following': False,
+                'follower_count': follower_count,
+                'message': f'You have unfollowed {user_to_unfollow.username}'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'You are not following this user'
+            }, status=400)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def get_follow_status(request, username):
+    """
+    Check if current user follows the specified user.
+    Used to set initial button state.
+    """
+    try:
+        user = get_object_or_404(User, username=username)
+
+        if request.user.is_anonymous or request.user == user:
+            is_following = False
+        else:
+            from prompts.models import Follow
+            is_following = Follow.objects.filter(
+                follower=request.user,
+                following=user
+            ).exists()
+
+        return JsonResponse({
+            'success': True,
+            'following': is_following,
+            'follower_count': user.follower_set.count()
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

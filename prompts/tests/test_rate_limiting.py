@@ -410,3 +410,52 @@ class RateLimitTemplateTests(TestCase):
         self.assertIn('col-md-8', html)
         self.assertIn('col-lg-6', html)
         self.assertIn('container', html)
+
+    def test_rate_limit_on_router_function(self):
+        """
+        CRITICAL: Verify rate limiting works on the ROUTER function.
+
+        This test specifically validates the bug fix where the decorator
+        was missing from unsubscribe_view() (the router that URLs call).
+
+        Bug History:
+        - Decorator was on unsubscribe_package() but not unsubscribe_view()
+        - URLs call unsubscribe_view(), so rate limiting never triggered
+        - Fix: Added decorator to unsubscribe_view() router function
+        """
+        # Use the actual URL pattern from urls.py
+        url = reverse('prompts:unsubscribe', kwargs={'token': 'test-token-12345'})
+
+        # Make 5 requests - should all succeed (or 404 if token invalid - that's OK)
+        for i in range(5):
+            response = self.client.get(url)
+            self.assertIn(response.status_code, [200, 404],
+                         f"Request {i+1} should succeed (200 or 404), got {response.status_code}")
+
+        # 6th request should be rate limited
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 429,
+                        "Request 6 should be rate limited (HTTP 429)")
+
+        # Verify 429 page content
+        self.assertIn(b'Too Many Requests', response.content)
+        self.assertIn(b'rate limit', response.content.lower())
+
+    def test_rate_limit_applies_regardless_of_token_validity(self):
+        """
+        Rate limiting should apply whether token is valid or invalid.
+        Security: Prevents token enumeration attacks.
+        """
+        # Invalid token
+        invalid_url = reverse('prompts:unsubscribe', kwargs={'token': 'invalid-token-xyz'})
+
+        # Make 5 requests with invalid token
+        for i in range(5):
+            response = self.client.get(invalid_url)
+            self.assertIn(response.status_code, [200, 404],
+                         f"Request {i+1} with invalid token should pass through rate limit")
+
+        # 6th request should still be rate limited
+        response = self.client.get(invalid_url)
+        self.assertEqual(response.status_code, 429,
+                        "Request 6 should be rate limited even with invalid token")

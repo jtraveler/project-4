@@ -584,6 +584,41 @@
         max-width: 200px;
     }
 }
+
+/* ============================================
+   FOLLOW BUTTON STYLES (Phase F Day 1)
+   ============================================ */
+
+.follow-button-container {
+    display: inline-block;
+}
+
+.follow-button {
+    min-width: 120px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.follow-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-danger.follow-button:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+/* Follower/Following stats hover effect */
+.profile-stat {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.profile-stat:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+}
 </style>
 
 <!-- Profile Header - Complete Rebuild -->
@@ -648,6 +683,19 @@
                 Edit profile
             </a>
         {% endif %}
+
+        <!-- Follow Button (Non-Owner Only) -->
+        {% if user.is_authenticated and not is_own_profile %}
+        <div class="follow-button-container mt-3">
+            <button id="follow-btn"
+                    class="btn btn-primary follow-button"
+                    data-username="{{ profile_user.username }}"
+                    data-following="false">
+                <span class="button-text">Follow</span>
+                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+            </button>
+        </div>
+        {% endif %}
     </div>
 
     <!-- ============================================
@@ -669,13 +717,13 @@
 
             <!-- Followers -->
             <div class="profile-stat">
-                <span class="profile-stat-value">0</span>
+                <span class="profile-stat-value" id="follower-count">{{ profile_user.userprofile.follower_count|default:0 }}</span>
                 <span class="profile-stat-label">Followers</span>
             </div>
 
             <!-- Following -->
             <div class="profile-stat">
-                <span class="profile-stat-value">0</span>
+                <span class="profile-stat-value">{{ profile_user.userprofile.following_count|default:0 }}</span>
                 <span class="profile-stat-label">Following</span>
             </div>
         </div>
@@ -935,6 +983,131 @@
 
     console.log('✅ Overflow arrows + keyboard navigation registered');
 })();
+
+// ============================================================================
+// FOLLOW/UNFOLLOW FUNCTIONALITY (Phase F Day 1)
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const followBtn = document.getElementById('follow-btn');
+    if (!followBtn) return;
+
+    const username = followBtn.dataset.username;
+    const spinner = followBtn.querySelector('.spinner-border');
+    const buttonText = followBtn.querySelector('.button-text');
+
+    // Check initial follow status
+    fetch(`/users/${username}/follow-status/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateButtonState(data.following);
+                updateFollowerCount(data.follower_count);
+            }
+        });
+
+    // Follow/unfollow click handler
+    followBtn.addEventListener('click', function() {
+        // Prevent double-clicks
+        if (followBtn.disabled) return;
+
+        followBtn.disabled = true;
+        spinner.classList.remove('d-none');
+
+        const isFollowing = followBtn.dataset.following === 'true';
+        const url = isFollowing ?
+            `/users/${username}/unfollow/` :
+            `/users/${username}/follow/`;
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateButtonState(data.following);
+                updateFollowerCount(data.follower_count);
+
+                // Show success message (optional)
+                console.log(data.message);
+            } else {
+                console.error('Follow action failed:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        })
+        .finally(() => {
+            followBtn.disabled = false;
+            spinner.classList.add('d-none');
+        });
+    });
+
+    function updateButtonState(isFollowing) {
+        followBtn.dataset.following = isFollowing;
+        if (isFollowing) {
+            followBtn.classList.remove('btn-primary');
+            followBtn.classList.add('btn-secondary');
+            buttonText.textContent = 'Following';
+
+            // Change to "Unfollow" on hover
+            followBtn.addEventListener('mouseenter', handleMouseEnter);
+            followBtn.addEventListener('mouseleave', handleMouseLeave);
+        } else {
+            followBtn.classList.remove('btn-secondary', 'btn-danger');
+            followBtn.classList.add('btn-primary');
+            buttonText.textContent = 'Follow';
+
+            // Remove hover handlers
+            followBtn.removeEventListener('mouseenter', handleMouseEnter);
+            followBtn.removeEventListener('mouseleave', handleMouseLeave);
+        }
+    }
+
+    function handleMouseEnter() {
+        if (followBtn.dataset.following === 'true') {
+            followBtn.classList.remove('btn-secondary');
+            followBtn.classList.add('btn-danger');
+            buttonText.textContent = 'Unfollow';
+        }
+    }
+
+    function handleMouseLeave() {
+        if (followBtn.dataset.following === 'true') {
+            followBtn.classList.remove('btn-danger');
+            followBtn.classList.add('btn-secondary');
+            buttonText.textContent = 'Following';
+        }
+    }
+
+    function updateFollowerCount(count) {
+        const followerCountEl = document.getElementById('follower-count');
+        if (followerCountEl) {
+            followerCountEl.textContent = count;
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    console.log('✅ Follow/Unfollow system loaded');
+});
 </script>
 
 {% endblock %}

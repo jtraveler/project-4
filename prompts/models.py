@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from cloudinary.models import CloudinaryField
 from taggit.managers import TaggableManager
 import cloudinary.uploader
@@ -145,6 +147,44 @@ class UserProfile(models.Model):
         for prompt in self.user.prompts.filter(status=1, deleted_at__isnull=True):
             total += prompt.likes.count()
         return total
+
+    @property
+    def follower_count(self):
+        """Get count of users following this user"""
+        return cache.get_or_set(
+            f'user_{self.user.id}_follower_count',
+            lambda: self.user.follower_set.count(),
+            timeout=300  # 5 minute cache
+        )
+
+    @property
+    def following_count(self):
+        """Get count of users this user follows"""
+        return cache.get_or_set(
+            f'user_{self.user.id}_following_count',
+            lambda: self.user.following_set.count(),
+            timeout=300  # 5 minute cache
+        )
+
+    def is_following(self, user):
+        """Check if this user is following another user"""
+        if not user or self.user == user:
+            return False
+        from prompts.models import Follow
+        return Follow.objects.filter(
+            follower=self.user,
+            following=user
+        ).exists()
+
+    def is_followed_by(self, user):
+        """Check if this user is followed by another user"""
+        if not user or self.user == user:
+            return False
+        from prompts.models import Follow
+        return Follow.objects.filter(
+            follower=user,
+            following=self.user
+        ).exists()
 
 
 class PromptReport(models.Model):
@@ -1336,3 +1376,58 @@ def delete_cloudinary_assets(sender, instance, **kwargs):
                 f"Failed to delete Cloudinary video for Prompt '{instance.title}': {e}",
                 exc_info=True
             )
+
+
+class Follow(models.Model):
+    """
+    Represents a follow relationship between two users.
+    Follower follows Following.
+    """
+    follower = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='following_set',  # who this user follows
+        help_text="The user who is following"
+    )
+    following = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='follower_set',  # who follows this user
+        help_text="The user being followed"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'prompts_follow'
+        unique_together = ('follower', 'following')
+        indexes = [
+            models.Index(fields=['follower', '-created_at']),
+            models.Index(fields=['following', '-created_at']),
+            models.Index(fields=['-created_at']),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.follower.username} follows {self.following.username}"
+
+    def clean(self):
+        """Prevent users from following themselves"""
+        if self.follower == self.following:
+            raise ValidationError("Users cannot follow themselves")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new:
+            # Increment follower counts (consider caching in production)
+            # Clear any cached counts
+            cache.delete(f'user_{self.follower.id}_following_count')
+            cache.delete(f'user_{self.following.id}_follower_count')
+
+    def delete(self, *args, **kwargs):
+        # Clear cached counts before deletion
+        cache.delete(f'user_{self.follower.id}_following_count')
+        cache.delete(f'user_{self.following.id}_follower_count')
+        super().delete(*args, **kwargs)

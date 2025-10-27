@@ -27,6 +27,10 @@ urlpatterns = [
     # User profile URLs (Phase E)
     path('users/<str:username>/', views.user_profile, name='user_profile'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
+    # Follow system URLs (Phase F Day 1)
+    path('users/<str:username>/follow/', views.follow_user, name='follow_user'),
+    path('users/<str:username>/unfollow/', views.unfollow_user, name='unfollow_user'),
+    path('users/<str:username>/follow-status/', views.get_follow_status, name='follow_status'),
     # Email preferences (Phase E Task 4)
     path('settings/notifications/', views.email_preferences, name='email_preferences'),
     path('unsubscribe/<str:token>/', views.unsubscribe_view, name='unsubscribe'),

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudinary 404 Diagnostic</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .instruction {
+            background: #e0f2fe;
+            border-left: 4px solid #0284c7;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        #results {
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e2e8f0;
+        }
+        .error {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .success {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ea580c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Cloudinary 404 Diagnostic Tool</h1>
+
+    <div class="section">
+        <h2>Instructions</h2>
+        <div class="instruction">
+            <strong>Step 1:</strong> Open this file in your browser<br>
+            <strong>Step 2:</strong> Open DevTools (F12 or Cmd+Option+I)<br>
+            <strong>Step 3:</strong> Go to Console tab<br>
+            <strong>Step 4:</strong> Navigate to: <code>http://127.0.0.1:8000/users/admin/</code><br>
+            <strong>Step 5:</strong> Run the diagnostic buttons below
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Quick Diagnostics</h2>
+
+        <button onclick="findAllImages()">1. Find All Images on Page</button>
+        <button onclick="findBrokenImages()">2. Find Broken Images</button>
+        <button onclick="testCloudinaryUrls()">3. Test Cloudinary URLs</button>
+        <button onclick="findMalformedUrls()">4. Find Malformed URLs</button>
+        <button onclick="clearResults()">Clear Results</button>
+
+        <div id="results"></div>
+    </div>
+
+    <div class="section">
+        <h2>Manual Console Commands</h2>
+
+        <p>Copy and paste these into your browser console on the admin profile page:</p>
+
+        <h3>Find All Images</h3>
+        <div class="code-block">
+const images = document.querySelectorAll('img');
+console.log(`Found ${images.length} images`);
+images.forEach((img, i) => {
+    console.log(`${i+1}. ${img.src}`);
+});
+        </div>
+
+        <h3>Find Broken Images</h3>
+        <div class="code-block">
+const broken = Array.from(document.querySelectorAll('img')).filter(img => {
+    return img.complete && img.naturalWidth === 0;
+});
+console.log(`Found ${broken.length} broken images`);
+broken.forEach((img, i) => {
+    console.error(`BROKEN ${i+1}: ${img.src}`);
+});
+        </div>
+
+        <h3>Test Each Cloudinary URL</h3>
+        <div class="code-block">
+const cloudinaryImages = Array.from(document.querySelectorAll('img'))
+    .filter(img => img.src.includes('cloudinary') || img.src.includes('res.'));
+
+cloudinaryImages.forEach(async (img) => {
+    try {
+        const response = await fetch(img.src);
+        if (!response.ok) {
+            console.error(`❌ ${response.status}: ${img.src}`);
+        } else {
+            console.log(`✅ OK: ${img.src}`);
+        }
+    } catch (e) {
+        console.error(`❌ ERROR: ${img.src}`, e);
+    }
+});
+        </div>
+
+        <h3>Find Malformed Cloudinary URLs</h3>
+        <div class="code-block">
+const allImages = document.querySelectorAll('img');
+allImages.forEach(img => {
+    const src = img.src;
+
+    // Check if it's supposed to be Cloudinary but malformed
+    if (src.includes('8ee87aee-3c11') ||
+        (src.includes('cloudinary') && !src.startsWith('http'))) {
+        console.error('⚠️ MALFORMED CLOUDINARY URL:', src);
+    }
+
+    // Check if it's a relative path that looks like public_id
+    if (src.startsWith('/') && src.includes('_')) {
+        console.warn('⚠️ SUSPICIOUS RELATIVE PATH:', src);
+    }
+});
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const prefix = type === 'error' ? '❌ ' : type === 'success' ? '✅ ' : type === 'warning' ? '⚠️  ' : '→ ';
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            results.innerHTML += `<span class="${className}">${prefix}${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function findAllImages() {
+            clearResults();
+            log('FINDING ALL IMAGES ON PAGE...', 'info');
+            log('');
+
+            // Check if we're on the right page
+            const currentUrl = window.location.href;
+            if (!currentUrl.includes('/users/')) {
+                log('⚠️  Warning: Not on a user profile page!', 'warning');
+                log(`Current URL: ${currentUrl}`, 'warning');
+                log('Navigate to http://127.0.0.1:8000/users/admin/ first', 'warning');
+                log('');
+            }
+
+            const images = document.querySelectorAll('img');
+            log(`Found ${images.length} total images`, 'success');
+            log('');
+
+            images.forEach((img, i) => {
+                log(`Image ${i+1}:`);
+                log(`  src: ${img.src}`);
+                log(`  alt: ${img.alt}`);
+                log(`  naturalWidth: ${img.naturalWidth}px`);
+                log(`  complete: ${img.complete}`);
+
+                if (img.src.includes('cloudinary') || img.src.includes('res.cloudinary')) {
+                    log(`  ✓ Cloudinary image`, 'success');
+                }
+
+                log('');
+            });
+        }
+
+        function findBrokenImages() {
+            clearResults();
+            log('FINDING BROKEN IMAGES...', 'info');
+            log('');
+
+            const images = document.querySelectorAll('img');
+            const broken = Array.from(images).filter(img => {
+                return img.complete && img.naturalWidth === 0;
+            });
+
+            if (broken.length === 0) {
+                log('✓ No broken images found!', 'success');
+            } else {
+                log(`Found ${broken.length} broken image(s):`, 'error');
+                log('');
+
+                broken.forEach((img, i) => {
+                    log(`BROKEN IMAGE ${i+1}:`, 'error');
+                    log(`  src: ${img.src}`, 'error');
+                    log(`  alt: ${img.alt || '(no alt text)'}`);
+
+                    // Check if it's the problematic ID
+                    if (img.src.includes('8ee87aee-3c11')) {
+                        log(`  🎯 THIS IS THE PROBLEMATIC IMAGE ID!`, 'error');
+                    }
+
+                    log('');
+                });
+            }
+        }
+
+        async function testCloudinaryUrls() {
+            clearResults();
+            log('TESTING CLOUDINARY URLS...', 'info');
+            log('(This may take a few seconds)', 'warning');
+            log('');
+
+            const images = document.querySelectorAll('img');
+            const cloudinaryImages = Array.from(images).filter(img =>
+                img.src.includes('cloudinary') || img.src.includes('res.')
+            );
+
+            if (cloudinaryImages.length === 0) {
+                log('No Cloudinary images found on page', 'warning');
+                return;
+            }
+
+            log(`Testing ${cloudinaryImages.length} Cloudinary URL(s)...`);
+            log('');
+
+            for (let i = 0; i < cloudinaryImages.length; i++) {
+                const img = cloudinaryImages[i];
+                const url = img.src;
+
+                log(`Testing ${i+1}/${cloudinaryImages.length}:`);
+                log(`  ${url.substring(0, 80)}${url.length > 80 ? '...' : ''}`);
+
+                try {
+                    const response = await fetch(url, { method: 'HEAD' });
+
+                    if (response.ok) {
+                        log(`  ✓ Status: ${response.status} OK`, 'success');
+                    } else {
+                        log(`  ✗ Status: ${response.status} ${response.statusText}`, 'error');
+
+                        // Try to get x-cld-error header
+                        const cldError = response.headers.get('x-cld-error');
+                        if (cldError) {
+                            log(`  x-cld-error: ${cldError}`, 'error');
+                        }
+                    }
+                } catch (e) {
+                    log(`  ✗ Fetch error: ${e.message}`, 'error');
+                }
+
+                log('');
+            }
+
+            log('Test complete!', 'success');
+        }
+
+        function findMalformedUrls() {
+            clearResults();
+            log('FINDING MALFORMED CLOUDINARY URLS...', 'info');
+            log('');
+
+            const images = document.querySelectorAll('img');
+            let foundIssues = false;
+
+            images.forEach((img, i) => {
+                const src = img.src;
+
+                // Check for known problematic ID
+                if (src.includes('8ee87aee-3c11')) {
+                    log(`⚠️  Image ${i+1}: Contains problematic ID`, 'warning');
+                    log(`  src: ${src}`, 'warning');
+                    foundIssues = true;
+                }
+
+                // Check if Cloudinary URL is malformed
+                if (src.includes('cloudinary') && !src.startsWith('http')) {
+                    log(`⚠️  Image ${i+1}: Cloudinary URL missing protocol`, 'warning');
+                    log(`  src: ${src}`, 'warning');
+                    foundIssues = true;
+                }
+
+                // Check for suspicious relative paths
+                if (src.startsWith('/') && src.match(/[a-f0-9]{8}-[a-f0-9]{4}/)) {
+                    log(`⚠️  Image ${i+1}: Suspicious relative path (looks like public_id)`, 'warning');
+                    log(`  src: ${src}`, 'warning');
+                    foundIssues = true;
+                }
+            });
+
+            if (!foundIssues) {
+                log('✓ No obvious malformed URLs found', 'success');
+            }
+
+            log('');
+            log('Check complete!', 'success');
+        }
+    </script>
+</body>
+</html>

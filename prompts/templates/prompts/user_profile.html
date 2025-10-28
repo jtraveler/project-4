@@ -229,29 +229,36 @@
 .profile-tab-count {
     font-size: 17px;  /* REFINEMENT 4: Increased from 13px to 17px - same as tab text */
     opacity: 0.7;
-    margin-left: 4px;
+    margin-left: 5px;
+    display: inline-block;
+    min-width: 40px;  /* Reserve space to prevent tab shifting */
+    text-align: left;  /* Align numbers to left edge of reserved space */
+    font-variant-numeric: tabular-nums;  /* Consistent digit width */
 }
 
 /* Fixed-width badge to prevent layout shift when count changes */
 .stat-badge {
-    min-width: 28px;  /* Slightly wider to accommodate 1-2 digits */
     display: inline-block;
+    min-width: 40px;  /* Reserve space for 3 digits (0-999) */
     text-align: center;
     padding: 0 4px;
     font-weight: normal;
     transition: none;  /* Prevent animation that might cause shift */
+    font-variant-numeric: tabular-nums;  /* Makes all numbers same width */
 }
 
 /* Wider badge for 3+ digits */
 .stat-badge.wide {
-    min-width: 36px;
+    min-width: 50px;
 }
 
-/* Specific follower count styling */
+/* Specific follower count styling - most robust fix */
 #follower-count {
-    min-width: 28px;
     display: inline-block;
+    min-width: 35px;  /* Handle 0-999 comfortably */
     text-align: center;
+    padding: 0 4px;
+    font-variant-numeric: tabular-nums;  /* Consistent digit width */
 }
 
 /* FIX 3: Overflow arrow buttons - Accessible implementation */
@@ -1078,7 +1085,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 updateButtonState(data.following);
-                updateFollowerCount(data.follower_count);
+                // Don't update follower count on page load - it's already displayed in template
+                // updateFollowerCount(data.follower_count);
             }
         });
 
@@ -1098,17 +1106,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // CRITICAL: Get and verify CSRF token before making request
         const csrfToken = getCookie('csrftoken');
 
-        // DEBUG: Log request details
-        console.log('=== FOLLOW BUTTON DEBUG ===');
-        console.log('Action:', isFollowing ? 'UNFOLLOW' : 'FOLLOW');
-        console.log('Target username:', username);
-        console.log('Request URL:', url);
-        console.log('Current button state:', followBtn.dataset.following);
-        console.log('CSRF Token:', csrfToken ? `Present (${csrfToken.substring(0, 10)}...)` : '❌ MISSING');
-
         // Early abort if no CSRF token
         if (!csrfToken) {
-            console.error('❌ CRITICAL: No CSRF token found! Cannot proceed.');
+            console.error('CSRF token not found - cannot proceed with follow action');
             showErrorMessage('Security token not found. Please refresh the page and try again.');
             followBtn.disabled = false;
             spinner.classList.add('d-none');
@@ -1124,11 +1124,6 @@ document.addEventListener('DOMContentLoaded', function() {
             credentials: 'same-origin'
         })
         .then(response => {
-            // DEBUG: Log response details
-            console.log('Response status:', response.status);
-            console.log('Response OK:', response.ok);
-            console.log('Response headers:', response.headers);
-
             // Check if response is OK before parsing JSON
             if (!response.ok) {
                 // Handle specific HTTP status codes
@@ -1153,14 +1148,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            // DEBUG: Log response data
-            console.log('Response data:', JSON.stringify(data, null, 2));
-            console.log('Success:', data.success);
-            console.log('Following:', data.following);
-            console.log('Follower count:', data.follower_count);
-            console.log('Following count:', data.following_count);
-            console.log('Message:', data.message);
-
             if (data.error) {
                 // Handle application-level errors
                 console.error('Follow error:', data.error);
@@ -1169,37 +1156,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (data.success) {
-                console.log('SUCCESS - Updating UI...');
-
                 // Update button state
-                console.log('Updating button state to:', data.following ? 'Following' : 'Follow');
                 updateButtonState(data.following);
 
                 // Update ONLY follower count (not following count)
                 // Following count is for the logged-in user, not the profile being viewed
                 if (data.follower_count !== undefined) {
-                    console.log('Updating follower count to:', data.follower_count);
                     updateFollowerCount(data.follower_count);
-                } else {
-                    console.warn('follower_count is undefined in response!');
                 }
 
                 // REMOVED: updateFollowingCount() call
                 // The following_count returned is for the logged-in user's profile,
                 // NOT for the profile being viewed. Don't update here.
-
-                // Show success message
-                console.log('Success message:', data.message);
-                console.log('=== FOLLOW BUTTON SUCCESS ===');
-            } else {
-                console.error('Response success is false but no error!');
             }
         })
         .catch(error => {
-            console.error('=== FOLLOW BUTTON ERROR ===');
-            console.error('Error type:', error.name);
-            console.error('Error message:', error.message);
-            console.error('Error stack:', error.stack);
+            console.error('Follow action error:', error.message);
             showErrorMessage(error.message || 'An error occurred. Please try again.');
         })
         .finally(() => {
@@ -1246,28 +1218,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateFollowerCount(count) {
-        console.log('updateFollowerCount called with:', count);
         const followerCountEl = document.getElementById('follower-count');
-        console.log('follower-count element:', followerCountEl);
         if (followerCountEl) {
-            const oldValue = followerCountEl.textContent;
             followerCountEl.textContent = count;
-            console.log(`Follower count updated: ${oldValue} -> ${count}`);
-        } else {
-            console.error('follower-count element not found!');
         }
     }
 
     function updateFollowingCount(count) {
-        console.log('updateFollowingCount called with:', count);
         const followingCountEl = document.getElementById('following-count');
-        console.log('following-count element:', followingCountEl);
         if (followingCountEl) {
-            const oldValue = followingCountEl.textContent;
             followingCountEl.textContent = count;
-            console.log(`Following count updated: ${oldValue} -> ${count}`);
-        } else {
-            console.error('following-count element not found!');
         }
     }
 
@@ -1306,7 +1266,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const cookie = cookies[i].trim();
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    console.log(`CSRF token found in cookie: ${name}=${cookieValue.substring(0, 10)}...`);
                     break;
                 }
             }
@@ -1317,13 +1276,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const token = document.querySelector('[name=csrfmiddlewaretoken]');
             if (token) {
                 cookieValue = token.value;
-                console.log('CSRF token retrieved from DOM element');
             }
         }
 
         // Method 3: Try alternate cookie names
         if (!cookieValue && name === 'csrftoken') {
-            // Try other possible CSRF cookie names
             const altNames = ['csrf_token', '_csrf', 'XSRF-TOKEN'];
             for (const altName of altNames) {
                 if (document.cookie && document.cookie !== '') {
@@ -1332,7 +1289,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         const cookie = cookies[i].trim();
                         if (cookie.substring(0, altName.length + 1) === (altName + '=')) {
                             cookieValue = decodeURIComponent(cookie.substring(altName.length + 1));
-                            console.log(`CSRF token found with alternate name: ${altName}`);
                             break;
                         }
                     }
@@ -1341,16 +1297,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Only log error if CSRF token is critical and missing
         if (!cookieValue && name === 'csrftoken') {
-            console.error('❌ CSRF token NOT FOUND in cookies or DOM!');
-            console.log('Available cookies:', document.cookie);
-            console.log('DOM CSRF inputs:', document.querySelectorAll('[name=csrfmiddlewaretoken]'));
+            console.error('CSRF token not found in cookies or DOM');
         }
 
         return cookieValue;
     }
-
-    console.log('✅ Follow/Unfollow system loaded');
 });
 </script>
 

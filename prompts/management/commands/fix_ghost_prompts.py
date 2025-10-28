@@ -131,15 +131,24 @@ class Command(BaseCommand):
         for prompt_id in ghost_ids:
             exists = Prompt.all_objects.filter(id=prompt_id).exists()
             if exists:
-                self.stdout.write(
-                    self.style.WARNING(
-                        f'  Prompt {prompt_id}: EXISTS (not a ghost)'
-                    )
-                )
-            else:
+                prompt = Prompt.all_objects.get(id=prompt_id)
+                status = "DELETED" if prompt.deleted_at else "ACTIVE"
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'  Prompt {prompt_id}: Does not exist (confirmed ghost)'
+                        f'  Prompt {prompt_id}: EXISTS ({status}) - "{prompt.title[:30]}..."'
+                    )
+                )
+                self.stdout.write(
+                    f'    Author: {prompt.author.username if prompt.author else "Unknown"}'
+                )
+                if prompt.deleted_at:
+                    self.stdout.write(
+                        f'    Deleted: {prompt.deleted_at.strftime("%Y-%m-%d")}'
+                    )
+            else:
+                self.stdout.write(
+                    self.style.ERROR(
+                        f'  Prompt {prompt_id}: Does not exist (true ghost)'
                     )
                 )
 

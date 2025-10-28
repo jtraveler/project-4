@@ -2,8 +2,9 @@
 Django management command to fix malformed Cloudinary URLs in the database.
 
 This command:
-- Scans all Prompt records for malformed Cloudinary URLs
-- Identifies URLs missing the cloud_name component
+- Scans UserProfile avatars for malformed URLs (MOST LIKELY 404 SOURCE)
+- Scans Prompt featured_image and featured_video for malformed URLs
+- Identifies URLs missing cloud_name or containing problematic IDs
 - Clears malformed URLs (sets to None) so they regenerate correctly
 - Reports number of fixes made
 
@@ -14,7 +15,7 @@ Usage:
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from prompts.models import Prompt
+from prompts.models import Prompt, UserProfile
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,9 @@ class Command(BaseCommand):
         # Get cloud_name from settings
         cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME', 'dj0uufabo')
 
+        # Problematic Cloudinary ID from console error
+        problem_id = '8ee87aee-3c11-4f23-9749-c737914590dd'
+
         self.stdout.write(self.style.SUCCESS('🔧 Cloudinary URL Fix Tool'))
         self.stdout.write('=' * 60)
         self.stdout.write('')
@@ -47,18 +51,55 @@ class Command(BaseCommand):
             self.stdout.write('')
 
         self.stdout.write(f'Cloud Name: {cloud_name}')
+        self.stdout.write(f'Looking for problematic ID: {problem_id[:40]}...')
         self.stdout.write('')
 
         # Track fixes
+        fixed_avatars = 0
         fixed_images = 0
         fixed_videos = 0
+        fixed_users = []
         fixed_prompts = []
 
-        # Get all prompts (including soft-deleted)
-        all_prompts = Prompt.all_objects.all()
-        total_prompts = all_prompts.count()
+        # ============================================================
+        # SCAN USER AVATARS (MOST LIKELY SOURCE OF 404)
+        # ============================================================
+        self.stdout.write('🔍 Scanning user avatars...')
+        all_profiles = UserProfile.objects.select_related('user').all()
 
-        self.stdout.write(f'Scanning {total_prompts} prompts...')
+        for profile in all_profiles:
+            if profile.avatar:
+                avatar_str = str(profile.avatar)
+
+                # Check for problematic ID OR missing cloud_name
+                if problem_id in avatar_str or (
+                    'cloudinary' in avatar_str and cloud_name not in avatar_str
+                ):
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f'  ⚠️  User {profile.user.username}: Malformed avatar URL'
+                        )
+                    )
+                    self.stdout.write(f'     Before: {avatar_str[:80]}...')
+
+                    if not dry_run:
+                        # Clear the malformed URL
+                        profile.avatar = None
+                        profile.save()
+                        fixed_avatars += 1
+                        fixed_users.append(profile.user.username)
+                        self.stdout.write(
+                            self.style.SUCCESS(f'     ✓ Fixed avatar for {profile.user.username}')
+                        )
+
+        # ============================================================
+        # SCAN PROMPT IMAGES AND VIDEOS
+        # ============================================================
+        self.stdout.write('')
+        self.stdout.write('🔍 Scanning prompt media...')
+        all_prompts = Prompt.all_objects.select_related('author').all()
+        total_prompts = all_prompts.count()
+        self.stdout.write(f'   Checking {total_prompts} prompts...')
         self.stdout.write('')
 
         for prompt in all_prompts:
@@ -67,13 +108,17 @@ class Command(BaseCommand):
             # Check featured_image
             if prompt.featured_image:
                 image_str = str(prompt.featured_image)
-                if 'cloudinary' in image_str and cloud_name not in image_str:
+
+                # Check for problematic ID OR missing cloud_name
+                if problem_id in image_str or (
+                    'cloudinary' in image_str and cloud_name not in image_str
+                ):
                     self.stdout.write(
                         self.style.WARNING(
                             f'  ⚠️  Prompt #{prompt.id}: Malformed image URL'
                         )
                     )
-                    self.stdout.write(f'     Before: {image_str[:100]}...')
+                    self.stdout.write(f'     Before: {image_str[:80]}...')
 
                     if not dry_run:
                         # Clear the malformed URL
@@ -84,13 +129,17 @@ class Command(BaseCommand):
             # Check featured_video
             if prompt.featured_video:
                 video_str = str(prompt.featured_video)
-                if 'cloudinary' in video_str and cloud_name not in video_str:
+
+                # Check for problematic ID OR missing cloud_name
+                if problem_id in video_str or (
+                    'cloudinary' in video_str and cloud_name not in video_str
+                ):
                     self.stdout.write(
                         self.style.WARNING(
                             f'  ⚠️  Prompt #{prompt.id}: Malformed video URL'
                         )
                     )
-                    self.stdout.write(f'     Before: {video_str[:100]}...')
+                    self.stdout.write(f'     Before: {video_str[:80]}...')
 
                     if not dry_run:
                         # Clear the malformed URL
@@ -111,7 +160,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Results Summary:'))
         self.stdout.write('=' * 60)
 
-        total_fixes = fixed_images + fixed_videos
+        total_fixes = fixed_avatars + fixed_images + fixed_videos
 
         if total_fixes > 0:
             if dry_run:
@@ -127,16 +176,22 @@ class Command(BaseCommand):
                     )
                 )
 
-            self.stdout.write(f'  - Images: {fixed_images}')
-            self.stdout.write(f'  - Videos: {fixed_videos}')
-            self.stdout.write(f'  - Prompts affected: {len(fixed_prompts)}')
+            self.stdout.write(f'  - User avatars: {fixed_avatars}')
+            self.stdout.write(f'  - Prompt images: {fixed_images}')
+            self.stdout.write(f'  - Prompt videos: {fixed_videos}')
+
+            if fixed_users:
+                self.stdout.write(f'  - Users affected: {", ".join(fixed_users[:5])}' +
+                                 (f' and {len(fixed_users)-5} more' if len(fixed_users) > 5 else ''))
+            if fixed_prompts:
+                self.stdout.write(f'  - Prompts affected: {len(fixed_prompts)}')
 
             if not dry_run:
                 self.stdout.write('')
                 self.stdout.write('✓ Changes saved to database')
                 logger.info(
                     f'Fixed {total_fixes} malformed Cloudinary URLs '
-                    f'({fixed_images} images, {fixed_videos} videos)'
+                    f'({fixed_avatars} avatars, {fixed_images} images, {fixed_videos} videos)'
                 )
         else:
             self.stdout.write(self.style.SUCCESS('✓ No malformed URLs found!'))

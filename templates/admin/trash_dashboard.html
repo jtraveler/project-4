@@ -48,20 +48,58 @@
             <a href="{% url 'prompts:trash_bin' %}" class="button" style="background: #417690; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">
                 View User Trash Bins
             </a>
-            <button onclick="if(confirm('Are you sure you want to empty the trash? This will permanently delete all trashed prompts.')) { alert('This feature requires implementation in admin.py'); }"
-                    class="button" style="background: #e74c3c; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
-                Empty All Trash
-            </button>
-            <button onclick="if(confirm('Run orphaned file detection? This will scan Cloudinary for orphaned files.')) { window.location.href = '{% url 'admin:index' %}'; }"
+            <a href="{% url 'admin:prompts_prompt_changelist' %}" class="button" style="background: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                View All Prompts
+            </a>
+            <button onclick="alert('Run these commands in terminal:\n\n1. python manage.py fix_cloudinary_urls --dry-run\n2. python manage.py fix_cloudinary_urls\n3. python manage.py fix_ghost_prompts\n4. python manage.py detect_orphaned_files');"
                     class="button" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
-                Detect Orphaned Files
+                Show Maintenance Commands
             </button>
         </div>
         <p style="margin-top: 15px; color: #666; font-size: 13px;">
             <strong>Note:</strong> Orphaned file detection runs automatically via Heroku Scheduler.
-            Check management commands for manual execution.
+            Run management commands manually for immediate fixes.
         </p>
     </div>
+
+    <!-- Ghost Prompts Status -->
+    {% if ghost_prompts %}
+    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0;">👻 Previously Reported "Ghost" Prompts Status</h3>
+        <p style="color: #666; font-size: 14px;">These prompts were reported as "ghosts" but actually exist in the database:</p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <thead>
+                <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                    <th style="padding: 10px; text-align: left;">ID</th>
+                    <th style="padding: 10px; text-align: left;">Title</th>
+                    <th style="padding: 10px; text-align: left;">Author</th>
+                    <th style="padding: 10px; text-align: left;">Status</th>
+                    <th style="padding: 10px; text-align: left;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prompt in ghost_prompts %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px;">{{ prompt.id }}</td>
+                    <td style="padding: 10px;">{{ prompt.title|truncatewords:8 }}</td>
+                    <td style="padding: 10px;">{{ prompt.author }}</td>
+                    <td style="padding: 10px;">
+                        {% if prompt.status == 'Deleted' %}
+                        <span style="color: #e74c3c; font-weight: bold;">🗑️ {{ prompt.status }}</span>
+                        {% else %}
+                        <span style="color: #27ae60; font-weight: bold;">✅ {{ prompt.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px;">
+                        <a href="{% url 'admin:prompts_prompt_change' prompt.id %}"
+                           style="color: #417690; text-decoration: none;">View in Admin</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 
     <!-- Recent Deletions Table -->
     <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">

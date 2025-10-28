@@ -1103,6 +1103,7 @@ def trash_dashboard(request):
     - Count of orphaned images (Cloudinary files without prompts)
     - Count of orphaned videos
     - Recent deletions with restore options
+    - Status of previously reported "ghost" prompts (149, 146, 145)
     """
     # Count deleted prompts (soft-deleted, in trash)
     deleted_count = Prompt.all_objects.filter(deleted_at__isnull=False).count()
@@ -1117,11 +1118,24 @@ def trash_dashboard(request):
         deleted_at__isnull=False
     ).select_related('author', 'deleted_by').order_by('-deleted_at')[:10]
 
+    # Check specific "ghost" prompts that were previously reported
+    ghost_ids = [149, 146, 145]
+    ghost_prompts = Prompt.all_objects.filter(id__in=ghost_ids).select_related('author')
+    ghost_info = []
+    for p in ghost_prompts:
+        ghost_info.append({
+            'id': p.id,
+            'title': p.title,
+            'status': 'Deleted' if p.deleted_at else 'Active',
+            'author': p.author.username if p.author else 'Unknown'
+        })
+
     context = {
         'deleted_count': deleted_count,
         'orphaned_images': orphaned_images,
         'orphaned_videos': orphaned_videos,
         'recent_deletions': recent_deletions,
+        'ghost_prompts': ghost_info,
         'title': 'Trash & Orphaned Files Dashboard',
     }
 

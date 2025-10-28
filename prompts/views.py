@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.db import models
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Prefetch
 from django.core.cache import cache  # Import cache for performance
 from django.core.paginator import Paginator
@@ -1722,12 +1722,24 @@ def user_profile(request, username):
     # Get media filter from query params (default: 'all')
     media_filter = request.GET.get('media', 'all')
 
-    # Base queryset: published prompts by this user (exclude deleted)
-    prompts = Prompt.objects.filter(
-        author=profile_user,
-        status=1,  # Published only
-        deleted_at__isnull=True  # Not in trash
-    ).order_by('-created_on')
+    # Check if viewing user is the profile owner or staff
+    is_owner = request.user.is_authenticated and request.user == profile_user
+    is_staff = request.user.is_authenticated and request.user.is_staff
+
+    # Base queryset: Show drafts to owner and staff, published to everyone else
+    if is_owner or is_staff:
+        # Owner and staff see all prompts (published and draft, exclude deleted)
+        prompts = Prompt.objects.filter(
+            author=profile_user,
+            deleted_at__isnull=True  # Not in trash
+        ).order_by('-created_on')
+    else:
+        # Others see published prompts only
+        prompts = Prompt.objects.filter(
+            author=profile_user,
+            status=1,  # Published only
+            deleted_at__isnull=True  # Not in trash
+        ).order_by('-created_on')
 
     # Apply media filtering
     if media_filter == 'photos':
@@ -1751,9 +1763,6 @@ def user_profile(request, username):
     paginator = Paginator(prompts, 18)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
-
-    # Check if viewing user is the profile owner
-    is_owner = request.user.is_authenticated and request.user == profile_user
 
     context = {
         'profile_user': profile_user,
@@ -2643,3 +2652,38 @@ def get_follow_status(request, username):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def media_issues_dashboard(request):
+    """Dashboard showing all prompts with media issues."""
+    no_media = Prompt.all_objects.filter(
+        Q(featured_image__isnull=True) | Q(featured_image='')
+    )
+
+    published = no_media.filter(status=1)
+    drafts = no_media.filter(status=0)
+
+    context = {
+        'no_media_count': no_media.count(),
+        'published_count': published.count(),
+        'draft_count': drafts.count(),
+        'published_prompts': published,
+        'draft_prompts': drafts[:10],  # Show first 10
+    }
+    return render(request, 'prompts/media_issues.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def fix_all_media_issues(request):
+    """Set all published prompts without media to draft."""
+    if request.method == 'POST':
+        no_media = Prompt.objects.filter(
+            Q(featured_image__isnull=True) | Q(featured_image=''),
+            status=1
+        )
+        count = no_media.update(status=0)
+        messages.success(request, f'Set {count} prompts to draft status.')
+    return redirect('prompts:media_issues_dashboard')

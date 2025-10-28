@@ -49,4 +49,7 @@ urlpatterns = [
     path('prompts-admin/bulk-reorder/', views.bulk_reorder_prompts, name='bulk_reorder_prompts'),
     # Admin moderation dashboard
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),
+    # Media issues dashboard (Phase E.5)
+    path('admin/media-issues/', views.media_issues_dashboard, name='media_issues_dashboard'),
+    path('admin/fix-media-issues/', views.fix_all_media_issues, name='fix_all_media_issues'),
 ]

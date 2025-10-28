@@ -151,20 +151,39 @@
                     </div>
                 {% else %}
                     <!-- Regular image -->
-                    {% if "placeholder" in prompt.featured_image.url %}
-                        <img src="{% static 'images/default.jpg' %}"
-                             alt="{{ prompt.title }}"
-                             width="440"
-                             height="584"
-                             loading="lazy">
+                    {% if prompt.featured_image %}
+                        {% if "placeholder" in prompt.featured_image.url %}
+                            <img src="{% static 'images/placeholder-prompt.svg' %}"
+                                 alt="{{ prompt.title }} - No image available"
+                                 width="440"
+                                 height="300"
+                                 loading="lazy"
+                                 class="placeholder-image">
+                        {% else %}
+                            <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
+                                 alt="{{ prompt.title }}"
+                                 width="440"
+                                 height="584"
+                                 {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %}
+                                 decoding="async">
+                        {% endif %}
                     {% else %}
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
-                             alt="{{ prompt.title }}"
+                        <!-- No media at all - show placeholder -->
+                        <img src="{% static 'images/placeholder-prompt.svg' %}"
+                             alt="{{ prompt.title }} - No image available"
                              width="440"
-                             height="584"
-                             {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %}
-                             decoding="async">
+                             height="300"
+                             loading="lazy"
+                             class="placeholder-image">
                     {% endif %}
+                {% endif %}
+
+                {# Draft Status Indicator #}
+                {% if prompt.status == 0 %}
+                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                     style="background: rgba(0,0,0,0.7); z-index: 10;">
+                    <span class="badge bg-warning text-dark fs-6">DRAFT</span>
+                </div>
                 {% endif %}
 
                 <!-- Overlay with user info, platform, and heart -->

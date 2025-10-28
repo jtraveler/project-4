@@ -181,9 +181,9 @@
         <!-- Media Display Area -->
         <div class="col-lg-8 pb-5">
             <div class="hero-image-shell">
-                {% if prompt.is_video %}
+                {% if prompt.is_video and prompt.featured_video %}
                     <!-- Video Display -->
-                    <video controls class="hero-video" 
+                    <video controls class="hero-video"
                         poster="{{ prompt.get_thumbnail_url }}"
                         preload="metadata"
                         autoplay
@@ -192,19 +192,37 @@
                         <source src="{{ prompt.featured_video.url }}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                {% else %}
+                {% elif prompt.featured_image %}
                     <!-- Image Display -->
                     {% if "placeholder" in prompt.featured_image.url %}
-                        <img src="{% static 'images/default.jpg' %}" 
-                             class="hero-image" 
-                             alt="{{ prompt.title }}"
-                             loading="eager">
+                        <img src="{% static 'images/placeholder-prompt.svg' %}"
+                             class="hero-image"
+                             alt="{{ prompt.title }} - No image available"
+                             loading="eager"
+                             style="background-color: #f0f0f0; object-fit: contain;">
                     {% else %}
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" 
-                             class="hero-image" 
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}"
+                             class="hero-image"
                              alt="{{ prompt.title }}"
                              loading="eager">
                     {% endif %}
+                {% else %}
+                    <!-- No media available -->
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Media Missing</strong>
+                        <p class="mb-2">This prompt is missing its image or video.</p>
+                        {% if user.is_authenticated and user == prompt.author %}
+                            <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-edit"></i> Edit Prompt to Add Media
+                            </a>
+                        {% endif %}
+                    </div>
+                    <img src="{% static 'images/placeholder-prompt.svg' %}"
+                         class="hero-image"
+                         alt="{{ prompt.title }} - No image available"
+                         loading="eager"
+                         style="background-color: #f0f0f0; object-fit: contain;">
                 {% endif %}
             </div>
         </div>

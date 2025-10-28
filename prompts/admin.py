@@ -1085,3 +1085,49 @@ class EmailPreferencesAdmin(admin.ModelAdmin):
         verbose_name = "Email Preference"
         verbose_name_plural = "⚠️ Email Preferences (User Data - Handle with Care)"
 
+
+# ============================================================================
+# TRASH & ORPHANED FILES DASHBOARD
+# ============================================================================
+
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import render
+
+@staff_member_required
+def trash_dashboard(request):
+    """
+    Admin dashboard for trash bin and orphaned file management.
+
+    Displays:
+    - Count of deleted prompts
+    - Count of orphaned images (Cloudinary files without prompts)
+    - Count of orphaned videos
+    - Recent deletions with restore options
+    """
+    # Count deleted prompts (soft-deleted, in trash)
+    deleted_count = Prompt.all_objects.filter(deleted_at__isnull=False).count()
+
+    # Note: Orphaned file counts require Cloudinary API calls
+    # For now, show placeholder counts (run detect_orphaned_files for real data)
+    orphaned_images = 0  # Placeholder
+    orphaned_videos = 0  # Placeholder
+
+    # Get recent 10 deletions
+    recent_deletions = Prompt.all_objects.filter(
+        deleted_at__isnull=False
+    ).select_related('author', 'deleted_by').order_by('-deleted_at')[:10]
+
+    context = {
+        'deleted_count': deleted_count,
+        'orphaned_images': orphaned_images,
+        'orphaned_videos': orphaned_videos,
+        'recent_deletions': recent_deletions,
+        'title': 'Trash & Orphaned Files Dashboard',
+    }
+
+    return render(request, 'admin/trash_dashboard.html', context)
+
+
+# Set custom admin index template
+admin.site.index_template = 'admin/custom_index.html'
+

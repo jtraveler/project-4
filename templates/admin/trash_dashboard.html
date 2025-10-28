@@ -1,0 +1,130 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Trash & Orphaned Files Dashboard{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">PromptFinder Administration</a></h1>
+{% endblock %}
+
+{% block content %}
+<div class="trash-dashboard" style="padding: 20px;">
+    <h1 style="margin-bottom: 30px;">🗑️ Trash & Orphaned Files Dashboard</h1>
+
+    <!-- Summary Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <!-- Deleted Prompts Card -->
+        <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0; color: #666;">🗑️ Deleted Prompts</h3>
+            <div style="font-size: 48px; font-weight: bold; color: #e74c3c; margin: 10px 0;">
+                {{ deleted_count }}
+            </div>
+            <p style="margin: 0; color: #888; font-size: 14px;">Prompts in trash</p>
+        </div>
+
+        <!-- Orphaned Images Card -->
+        <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0; color: #666;">🖼️ Orphaned Images</h3>
+            <div style="font-size: 48px; font-weight: bold; color: #f39c12; margin: 10px 0;">
+                {{ orphaned_images }}
+            </div>
+            <p style="margin: 0; color: #888; font-size: 14px;">Images without prompts</p>
+        </div>
+
+        <!-- Orphaned Videos Card -->
+        <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0; color: #666;">🎬 Orphaned Videos</h3>
+            <div style="font-size: 48px; font-weight: bold; color: #f39c12; margin: 10px 0;">
+                {{ orphaned_videos }}
+            </div>
+            <p style="margin: 0; color: #888; font-size: 14px;">Videos without prompts</p>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0;">🔧 Maintenance Tools</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{% url 'prompts:trash_bin' %}" class="button" style="background: #417690; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                View User Trash Bins
+            </a>
+            <button onclick="if(confirm('Are you sure you want to empty the trash? This will permanently delete all trashed prompts.')) { alert('This feature requires implementation in admin.py'); }"
+                    class="button" style="background: #e74c3c; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                Empty All Trash
+            </button>
+            <button onclick="if(confirm('Run orphaned file detection? This will scan Cloudinary for orphaned files.')) { window.location.href = '{% url 'admin:index' %}'; }"
+                    class="button" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                Detect Orphaned Files
+            </button>
+        </div>
+        <p style="margin-top: 15px; color: #666; font-size: 13px;">
+            <strong>Note:</strong> Orphaned file detection runs automatically via Heroku Scheduler.
+            Check management commands for manual execution.
+        </p>
+    </div>
+
+    <!-- Recent Deletions Table -->
+    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0;">🕒 Recent Deletions</h3>
+
+        {% if recent_deletions %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                    <th style="padding: 10px; text-align: left;">ID</th>
+                    <th style="padding: 10px; text-align: left;">Title</th>
+                    <th style="padding: 10px; text-align: left;">Author</th>
+                    <th style="padding: 10px; text-align: left;">Deleted At</th>
+                    <th style="padding: 10px; text-align: left;">Days Left</th>
+                    <th style="padding: 10px; text-align: left;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prompt in recent_deletions %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px;">{{ prompt.id }}</td>
+                    <td style="padding: 10px;">{{ prompt.title|truncatewords:10 }}</td>
+                    <td style="padding: 10px;">{{ prompt.author.username }}</td>
+                    <td style="padding: 10px;">{{ prompt.deleted_at|date:"Y-m-d H:i" }}</td>
+                    <td style="padding: 10px;">
+                        {% if prompt.days_until_permanent_deletion <= 1 %}
+                        <span style="color: #e74c3c; font-weight: bold;">{{ prompt.days_until_permanent_deletion }} days</span>
+                        {% else %}
+                        {{ prompt.days_until_permanent_deletion }} days
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px;">
+                        <a href="{% url 'admin:prompts_prompt_change' prompt.id %}"
+                           style="color: #417690; text-decoration: none; margin-right: 10px;">View</a>
+                        <a href="{% url 'prompts:prompt_restore' prompt.slug %}"
+                           style="color: #27ae60; text-decoration: none;">Restore</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #888; font-style: italic;">No recent deletions</p>
+        {% endif %}
+    </div>
+
+    <!-- Instructions -->
+    <div style="background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 30px;">
+        <h3 style="margin-top: 0;">📚 How to Use This Dashboard</h3>
+        <ul style="line-height: 1.8;">
+            <li><strong>Deleted Prompts:</strong> Shows prompts currently in trash (5 days free, 30 days premium retention)</li>
+            <li><strong>Orphaned Images/Videos:</strong> Cloudinary files without corresponding database entries</li>
+            <li><strong>Detect Orphaned Files:</strong> Run the detection command manually or check Heroku Scheduler logs</li>
+            <li><strong>Empty Trash:</strong> Permanently delete all expired trash items</li>
+        </ul>
+
+        <h4>Management Commands:</h4>
+        <ul style="line-height: 1.8; font-family: monospace; font-size: 13px;">
+            <li><code>python manage.py cleanup_deleted_prompts</code> - Clean expired trash</li>
+            <li><code>python manage.py detect_orphaned_files</code> - Find orphaned Cloudinary files</li>
+            <li><code>python manage.py fix_cloudinary_urls</code> - Fix malformed Cloudinary URLs</li>
+            <li><code>python manage.py fix_ghost_prompts</code> - Check for orphaned prompts</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

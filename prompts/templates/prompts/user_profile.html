@@ -668,14 +668,44 @@
 }
 
 .follow-button {
+    /* Fixed dimensions to prevent layout shift */
     min-width: 120px;
+    width: 120px;           /* Fixed width prevents shift when text changes */
+    height: 38px;           /* Fixed height */
+    padding: 8px 16px;      /* Consistent padding */
+    font-size: 14px;        /* Fixed font size */
     font-weight: 600;
-    transition: all 0.2s ease;
+    line-height: 1.5;       /* Consistent line height */
+    border: 1px solid transparent; /* Always have border space */
+    box-sizing: border-box; /* Include border in dimensions */
+    display: inline-flex;   /* Use flexbox for centering */
+    align-items: center;    /* Vertical center */
+    justify-content: center; /* Horizontal center */
+    text-align: center;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s; /* Only animate colors */
+}
+
+/* Ensure both button states have identical dimensions */
+.follow-button.btn-primary,
+.follow-button.btn-secondary,
+.follow-button.btn-danger {
+    min-width: 120px;
+    width: 120px;
+    height: 38px;
+    padding: 8px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    box-sizing: border-box;
 }
 
 .follow-button:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+/* Hover states - only change colors, never dimensions */
+.follow-button:hover {
+    transform: none; /* Prevent any scale transforms that cause shift */
 }
 
 .btn-danger.follow-button:hover {
@@ -705,7 +735,15 @@
         <!-- Avatar Container -->
         <div class="profile-avatar-container">
             {% if profile.avatar.url %}
-                {% cloudinary profile.avatar width=120 height=120 crop="fill" gravity="face" quality="auto" fetch_format="auto" class="profile-avatar" %}
+                <img src="{{ profile.avatar.url }}"
+                     alt="{{ profile_user.username }}'s avatar"
+                     class="profile-avatar"
+                     width="120"
+                     height="120"
+                     onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="profile-avatar profile-avatar-placeholder avatar-color-{{ profile.get_avatar_color_index }}" style="display: none;">
+                    {{ profile_user.username|slice:":1"|upper }}
+                </div>
             {% else %}
                 <div class="profile-avatar profile-avatar-placeholder avatar-color-{{ profile.get_avatar_color_index }}">
                     {{ profile_user.username|slice:":1"|upper }}

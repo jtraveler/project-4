@@ -406,6 +406,9 @@ CSP_CONNECT_SRC = (
     "https://res.cloudinary.com",
     "https://api.cloudinary.com",
     "https://widget.cloudinary.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.gstatic.com",
+    "https://cdn.jsdelivr.net",
 )
 
 CSP_FONT_SRC = (

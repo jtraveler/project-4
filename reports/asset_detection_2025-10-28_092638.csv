@@ -1,0 +1,5 @@
+PROMPTS WITH MISSING IMAGES
+prompt_id,prompt_title,author,media_type,public_id,created_at,status,prompt_url
+149,Dynamic Fashion Photography in Natural Landscapes,admin,image,f7d11f59-39e0-41c5-a317-a63dddabc651_qva3ka,2025-10-10 22:35:39,ACTIVE,https://mj-project-4.herokuapp.com/prompt/dynamic-fashion-photography-in-natural-landscapes/
+146,Dynamic Basketball Action Shot,admin,image,cac03f4e-3c34-4089-9f63-ef332fff3123_h0iwxf,2025-10-10 19:39:54,ACTIVE,https://mj-project-4.herokuapp.com/prompt/dynamic-basketball-action-shot/
+145,Majestic Tree with Intricate Patterns,admin,image,8ee87aee-3c11-4f23-9749-c737914590dd_lk4gnu,2025-10-10 19:12:56,ACTIVE,https://mj-project-4.herokuapp.com/prompt/majestic-tree-with-intricate-patterns/

@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.admin.views.decorators import staff_member_required
 from django.views import generic
 from django.contrib import messages
 from django.http import HttpResponseRedirect, Http404
@@ -2687,3 +2688,16 @@ def fix_all_media_issues(request):
         count = no_media.update(status=0)
         messages.success(request, f'Set {count} prompts to draft status.')
     return redirect('prompts:media_issues_dashboard')
+
+
+@staff_member_required
+def debug_no_media(request):
+    """Debug view to see all prompts without media."""
+    # Get ALL prompts without media (including soft-deleted)
+    prompts = Prompt.all_objects.filter(
+        featured_image__isnull=True
+    ).order_by('-created_on')
+
+    return render(request, 'prompts/debug_no_media.html', {
+        'prompts': prompts
+    })

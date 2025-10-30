@@ -77,6 +77,7 @@
                     <th style="padding: 10px; text-align: left;">Title</th>
                     <th style="padding: 10px; text-align: left;">Author</th>
                     <th style="padding: 10px; text-align: left;">Status</th>
+                    <th style="padding: 10px; text-align: left;">Has Media</th>
                     <th style="padding: 10px; text-align: left;">Actions</th>
                 </tr>
             </thead>
@@ -84,18 +85,25 @@
                 {% for prompt in ghost_prompts %}
                 <tr style="border-bottom: 1px solid #eee;">
                     <td style="padding: 10px;">{{ prompt.id }}</td>
-                    <td style="padding: 10px;">{{ prompt.title|truncatewords:8 }}</td>
+                    <td style="padding: 10px;">{{ prompt.title|truncatechars:30 }}</td>
                     <td style="padding: 10px;">{{ prompt.author }}</td>
                     <td style="padding: 10px;">
-                        {% if prompt.status == 'Deleted' %}
-                        <span style="color: #e74c3c; font-weight: bold;">🗑️ {{ prompt.status }}</span>
+                        {% if prompt.status == 'Draft' %}
+                            <span class="badge bg-secondary">Draft</span>
                         {% else %}
-                        <span style="color: #27ae60; font-weight: bold;">✅ {{ prompt.status }}</span>
+                            <span class="badge bg-success">Active</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px;">
+                        {% if prompt.has_media == 'Yes' %}
+                            ✅ Yes
+                        {% else %}
+                            ❌ No
                         {% endif %}
                     </td>
                     <td style="padding: 10px;">
                         <a href="{% url 'admin:prompts_prompt_change' prompt.id %}"
-                           style="color: #417690; text-decoration: none;">View in Admin</a>
+                           class="btn btn-sm btn-info">View in Admin</a>
                     </td>
                 </tr>
                 {% endfor %}

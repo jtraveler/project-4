@@ -17,6 +17,22 @@
                 🗑️ Trash & Orphaned Files
             </a>
         </li>
+        <li style="border-bottom: 1px solid #eee;">
+            <a href="/debug/no-media/"
+               style="display: block; padding: 10px; color: #417690; text-decoration: none; transition: background 0.2s;"
+               onmouseover="this.style.background='#f5f5f5'"
+               onmouseout="this.style.background='transparent'">
+                🔍 Find Prompts Without Media
+            </a>
+        </li>
+        <li style="border-bottom: 1px solid #eee;">
+            <a href="{% url 'prompts:media_issues_dashboard' %}"
+               style="display: block; padding: 10px; color: #417690; text-decoration: none; transition: background 0.2s;"
+               onmouseover="this.style.background='#f5f5f5'"
+               onmouseout="this.style.background='transparent'">
+                📊 Media Issues Dashboard
+            </a>
+        </li>
     </ul>
 </div>
 {% endblock %}

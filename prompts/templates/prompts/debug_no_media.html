@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>🔍 Debug: All Prompts Without Media</h1>
+
+    <div class="alert alert-info">
+        <h5>Summary</h5>
+        <p>Total prompts without media: <strong>{{ prompts.count }}</strong></p>
+        <p>These prompts have featured_image = NULL or empty</p>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Slug</th>
+                <th>Status</th>
+                <th>Author</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prompt in prompts %}
+            <tr>
+                <td>{{ prompt.id }}</td>
+                <td>{{ prompt.title|truncatechars:30 }}</td>
+                <td><code>{{ prompt.slug|truncatechars:20 }}</code></td>
+                <td>
+                    {% if prompt.status == 0 %}
+                        <span class="badge bg-secondary">DRAFT</span>
+                    {% else %}
+                        <span class="badge bg-success">PUBLISHED</span>
+                    {% endif %}
+                </td>
+                <td>{{ prompt.user.username }}</td>
+                <td>{{ prompt.created_on|date:"Y-m-d" }}</td>
+                <td>
+                    <a href="{% url 'prompts:prompt_detail' prompt.slug %}"
+                       class="btn btn-sm btn-primary" target="_blank">View</a>
+                    {% if user.is_staff %}
+                    <a href="/admin/prompts/prompt/{{ prompt.id }}/change/"
+                       class="btn btn-sm btn-warning" target="_blank">Edit Admin</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">No prompts without media found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="mt-4">
+        <h3>Quick Actions</h3>
+        <a href="/admin/" class="btn btn-info">Back to Admin</a>
+        <a href="/admin/trash-dashboard/" class="btn btn-warning">Trash Dashboard</a>
+    </div>
+</div>
+{% endblock %}

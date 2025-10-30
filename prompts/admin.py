@@ -1118,17 +1118,30 @@ def trash_dashboard(request):
         deleted_at__isnull=False
     ).select_related('author', 'deleted_by').order_by('-deleted_at')[:10]
 
-    # Check specific "ghost" prompts that were previously reported
+    # Force fresh database query for ghost prompts
     ghost_ids = [149, 146, 145]
-    ghost_prompts = Prompt.all_objects.filter(id__in=ghost_ids).select_related('author')
     ghost_info = []
-    for p in ghost_prompts:
-        ghost_info.append({
-            'id': p.id,
-            'title': p.title,
-            'status': 'Deleted' if p.deleted_at else 'Active',
-            'author': p.author.username if p.author else 'Unknown'
-        })
+
+    for prompt_id in ghost_ids:
+        try:
+            # Direct database query - no caching
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id, title, status, featured_image, user_id FROM prompts_prompt WHERE id = %s",
+                    [prompt_id]
+                )
+                row = cursor.fetchone()
+                if row:
+                    ghost_info.append({
+                        'id': row[0],
+                        'title': row[1][:50] if row[1] else 'No Title',
+                        'status': 'Draft' if row[2] == 0 else 'Active',
+                        'has_media': 'Yes' if row[3] else 'No',
+                        'author': User.objects.get(id=row[4]).username if row[4] else 'Unknown'
+                    })
+        except Exception as e:
+            print(f"Error with prompt {prompt_id}: {e}")
 
     context = {
         'deleted_count': deleted_count,

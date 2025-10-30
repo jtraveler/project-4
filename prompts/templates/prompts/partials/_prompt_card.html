@@ -178,12 +178,17 @@
                     {% endif %}
                 {% endif %}
 
-                {# Draft Status Indicator #}
+                {# Draft Status Indicator - Fixed to not block clicks #}
                 {% if prompt.status == 0 %}
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-                     style="background: rgba(0,0,0,0.7); z-index: 10;">
-                    <span class="badge bg-warning text-dark fs-6">DRAFT</span>
+                <div class="draft-indicator position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                     style="background: rgba(0,0,0,0.7); z-index: 1; pointer-events: none;">
+                    <span class="badge bg-warning text-dark fs-6" style="pointer-events: auto; z-index: 2;">DRAFT</span>
                 </div>
+                <style>
+                    /* Ensure card links work through overlay */
+                    .card .card-link { position: relative; z-index: 3; }
+                    .card a { position: relative; z-index: 3; }
+                </style>
                 {% endif %}
 
                 <!-- Overlay with user info, platform, and heart -->

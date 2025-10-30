@@ -52,4 +52,6 @@ urlpatterns = [
     # Media issues dashboard (Phase E.5)
     path('admin/media-issues/', views.media_issues_dashboard, name='media_issues_dashboard'),
     path('admin/fix-media-issues/', views.fix_all_media_issues, name='fix_all_media_issues'),
+    # Debug page to find all prompts without media
+    path('debug/no-media/', views.debug_no_media, name='debug_no_media'),
 ]

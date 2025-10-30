@@ -1,64 +1,104 @@
-{% extends 'base.html' %}
+{% extends "admin/base_site.html" %}
 {% load static %}
 
+{% block title %}Debug: Prompts Without Media{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a> ›
+    <a href="/admin/trash-dashboard/">Maintenance</a> ›
+    Debug: Prompts Without Media
+</div>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid">
     <h1>🔍 Debug: All Prompts Without Media</h1>
 
-    <div class="alert alert-info">
-        <h5>Summary</h5>
-        <p>Total prompts without media: <strong>{{ prompts.count }}</strong></p>
-        <p>These prompts have featured_image = NULL or empty</p>
+    <div class="module">
+        <h2>📚 About This Page</h2>
+        <ul>
+            <li><strong>Purpose:</strong> Technical view showing ALL prompts lacking both image AND video</li>
+            <li><strong>Why These Exist:</strong> Created during early development before media upload was required</li>
+            <li><strong>The "Untitled" Pattern:</strong> Test prompts created before proper validation</li>
+            <li><strong>Recommendation:</strong> Delete these test prompts or add media to salvage them</li>
+        </ul>
+
+        <h3>Column Explanations:</h3>
+        <ul>
+            <li><strong>Has Image/Video:</strong> ✅ = has media, ❌ = missing media</li>
+            <li><strong>Status:</strong> DRAFT = not public (safe), PUBLISHED = public (problem)</li>
+            <li><strong>Actions:</strong> View = see frontend, Edit = admin panel</li>
+        </ul>
     </div>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Slug</th>
-                <th>Status</th>
-                <th>Author</th>
-                <th>Created</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for prompt in prompts %}
-            <tr>
-                <td>{{ prompt.id }}</td>
-                <td>{{ prompt.title|truncatechars:30 }}</td>
-                <td><code>{{ prompt.slug|truncatechars:20 }}</code></td>
-                <td>
-                    {% if prompt.status == 0 %}
-                        <span class="badge bg-secondary">DRAFT</span>
-                    {% else %}
-                        <span class="badge bg-success">PUBLISHED</span>
-                    {% endif %}
-                </td>
-                <td>{{ prompt.user.username }}</td>
-                <td>{{ prompt.created_on|date:"Y-m-d" }}</td>
-                <td>
-                    <a href="{% url 'prompts:prompt_detail' prompt.slug %}"
-                       class="btn btn-sm btn-primary" target="_blank">View</a>
-                    {% if user.is_staff %}
-                    <a href="/admin/prompts/prompt/{{ prompt.id }}/change/"
-                       class="btn btn-sm btn-warning" target="_blank">Edit Admin</a>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="7">No prompts without media found</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="module">
+        <h2>Summary</h2>
+        <p>Total prompts without ANY media (no image OR video): <strong>{{ prompts.count }}</strong></p>
+        <p>These prompts have both featured_image AND featured_video = NULL</p>
+    </div>
 
-    <div class="mt-4">
-        <h3>Quick Actions</h3>
-        <a href="/admin/" class="btn btn-info">Back to Admin</a>
-        <a href="/admin/trash-dashboard/" class="btn btn-warning">Trash Dashboard</a>
+    <div class="module">
+        <table class="table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Slug</th>
+                    <th>Status</th>
+                    <th>Has Image</th>
+                    <th>Has Video</th>
+                    <th>Author</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prompt in prompts %}
+                <tr>
+                    <td>{{ prompt.id }}</td>
+                    <td>{{ prompt.title|truncatechars:30 }}</td>
+                    <td><code>{{ prompt.slug|truncatechars:20 }}</code></td>
+                    <td>
+                        {% if prompt.status == 0 %}
+                            <span style="color: gray;">DRAFT</span>
+                        {% else %}
+                            <span style="color: green;">PUBLISHED</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if prompt.featured_image %}
+                            ✅ Yes
+                        {% else %}
+                            ❌ No
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if prompt.featured_video %}
+                            ✅ Yes
+                        {% else %}
+                            ❌ No
+                        {% endif %}
+                    </td>
+                    <td>{{ prompt.user.username }}</td>
+                    <td>
+                        <a href="{% url 'prompts:prompt_detail' prompt.slug %}"
+                           class="button" target="_blank">View</a>
+                        <a href="/admin/prompts/prompt/{{ prompt.id }}/change/"
+                           class="button" target="_blank">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8">No prompts without media found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="submit-row">
+        <a href="/admin/" class="button">Back to Admin</a>
+        <a href="/admin/trash-dashboard/" class="button">Trash Dashboard</a>
     </div>
 </div>
 {% endblock %}

@@ -3,6 +3,13 @@
 
 {% block title %}Trash & Orphaned Files Dashboard{% endblock %}
 
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a> ›
+    Trash & Orphaned Files Dashboard
+</div>
+{% endblock %}
+
 {% block branding %}
 <h1 id="site-name"><a href="{% url 'admin:index' %}">PromptFinder Administration</a></h1>
 {% endblock %}

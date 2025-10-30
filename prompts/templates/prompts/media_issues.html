@@ -1,94 +1,116 @@
-{% extends 'base.html' %}
+{% extends "admin/base_site.html" %}
 {% load static %}
 
+{% block title %}Media Issues Dashboard{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a> ›
+    Media Issues Dashboard
+</div>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h1>📊 Media Issues Dashboard</h1>
+<h1>📊 Media Issues Dashboard</h1>
 
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="alert alert-info">
-                <h5>Summary</h5>
-                <p>Total prompts without media: <strong>{{ no_media_count }}</strong></p>
-                <p>Published (Problem): <strong class="text-danger">{{ published_count }}</strong></p>
-                <p>Drafts (OK): <strong class="text-success">{{ draft_count }}</strong></p>
-            </div>
-        </div>
-    </div>
+<div class="module">
+    <h2>📚 How to Use This Dashboard</h2>
+    <ul>
+        <li><strong>Purpose:</strong> Track and manage prompts that lack media (images or videos)</li>
+        <li><strong>Draft Status:</strong> Prompts without media have been set to draft to prevent broken displays</li>
+        <li><strong>History:</strong> These "Untitled" prompts were likely created during early development/testing</li>
+        <li><strong>Action Needed:</strong> Either add media to these prompts or delete them</li>
+    </ul>
 
-    {% if published_prompts %}
-    <div class="card mt-4">
-        <div class="card-header bg-danger text-white">
-            <h5>⚠️ Published Prompts Without Media (Need Fix)</h5>
-        </div>
-        <div class="card-body">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Author</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for prompt in published_prompts %}
-                    <tr>
-                        <td>{{ prompt.id }}</td>
-                        <td>{{ prompt.title|truncatechars:40 }}</td>
-                        <td>{{ prompt.author.username }}</td>
-                        <td>{{ prompt.created_on|date:"Y-m-d" }}</td>
-                        <td>
-                            <a href="{% url 'prompts:prompt_detail' prompt.slug %}"
-                               class="btn btn-sm btn-info">View</a>
-                            <a href="/admin/prompts/prompt/{{ prompt.id }}/change/"
-                               class="btn btn-sm btn-warning">Edit</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <h3>Understanding the Status:</h3>
+    <ul>
+        <li><strong>"Already Fixed"</strong> = Set to draft status (not publicly visible)</li>
+        <li><strong>Problem Prompts</strong> = Published without media (would show broken)</li>
+    </ul>
+</div>
 
-            <form method="post" action="{% url 'prompts:fix_all_media_issues' %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger"
-                        onclick="return confirm('Set all {{ published_count }} prompts to draft?')">
-                    Set All to Draft
-                </button>
-            </form>
-        </div>
-    </div>
-    {% endif %}
+<div class="module">
+    <h2>Summary</h2>
+    <table>
+        <tr>
+            <td><strong>Total prompts without media:</strong></td>
+            <td>{{ no_media_count }}</td>
+        </tr>
+        <tr>
+            <td><strong>Published (PROBLEM - need fixing):</strong></td>
+            <td style="color: red;">{{ published_count }}</td>
+        </tr>
+        <tr>
+            <td><strong>Drafts (SAFE - not publicly visible):</strong></td>
+            <td style="color: green;">{{ draft_count }}</td>
+        </tr>
+    </table>
+</div>
 
-    {% if draft_prompts %}
-    <div class="card mt-4">
-        <div class="card-header bg-success text-white">
-            <h5>✅ Draft Prompts Without Media (Already Fixed)</h5>
-        </div>
-        <div class="card-body">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Author</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for prompt in draft_prompts %}
-                    <tr>
-                        <td>{{ prompt.id }}</td>
-                        <td>{{ prompt.title|truncatechars:40 }}</td>
-                        <td>{{ prompt.author.username }}</td>
-                        <td><span class="badge bg-secondary">DRAFT</span></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endif %}
+{% if published_prompts %}
+<div class="module">
+    <h2>⚠️ Published Prompts Without Media (Need Fix)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prompt in published_prompts %}
+            <tr>
+                <td>{{ prompt.id }}</td>
+                <td>{{ prompt.title|truncatechars:40 }}</td>
+                <td>{{ prompt.author.username }}</td>
+                <td>{{ prompt.created_on|date:"Y-m-d" }}</td>
+                <td>
+                    <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="button" target="_blank">View Frontend</a>
+                    <a href="/admin/prompts/prompt/{{ prompt.id }}/change/" class="button" target="_blank">Edit Admin</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div class="module">
+    <h2>✅ All {{ draft_count }} Draft Prompts Without Media</h2>
+    <p><em>Showing all drafts (safe - not publicly visible):</em></p>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prompt in draft_prompts %}
+            <tr>
+                <td>{{ prompt.id }}</td>
+                <td>{{ prompt.title|truncatechars:40 }}</td>
+                <td>{{ prompt.author.username }}</td>
+                <td><span style="color: gray;">DRAFT</span></td>
+                <td>
+                    <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="button default" target="_blank">View</a>
+                    <a href="/admin/prompts/prompt/{{ prompt.id }}/change/" class="button default" target="_blank">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="submit-row">
+    <a href="/admin/" class="button">Back to Admin</a>
+    <a href="/debug/no-media/" class="button">Debug View</a>
+    <a href="/admin/trash-dashboard/" class="button">Trash Dashboard</a>
 </div>
 {% endblock %}

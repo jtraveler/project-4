@@ -2659,8 +2659,11 @@ def get_follow_status(request, username):
 @user_passes_test(lambda u: u.is_staff)
 def media_issues_dashboard(request):
     """Dashboard showing all prompts with media issues."""
+    from django.db.models import Q
+
     no_media = Prompt.all_objects.filter(
-        Q(featured_image__isnull=True) | Q(featured_image='')
+        Q(featured_image__isnull=True) | Q(featured_image=''),
+        Q(featured_video__isnull=True) | Q(featured_video='')
     )
 
     published = no_media.filter(status=1)
@@ -2671,7 +2674,7 @@ def media_issues_dashboard(request):
         'published_count': published.count(),
         'draft_count': drafts.count(),
         'published_prompts': published,
-        'draft_prompts': drafts[:10],  # Show first 10
+        'draft_prompts': drafts,  # Show ALL drafts, not just first 10
     }
     return render(request, 'prompts/media_issues.html', context)
 
@@ -2692,12 +2695,16 @@ def fix_all_media_issues(request):
 
 @staff_member_required
 def debug_no_media(request):
-    """Debug view to see all prompts without media."""
-    # Get ALL prompts without media (including soft-deleted)
+    """Debug view to see all prompts without ANY media (no image OR video)."""
+    from django.db.models import Q
+
+    # Get prompts that have NEITHER image NOR video
     prompts = Prompt.all_objects.filter(
-        featured_image__isnull=True
-    ).order_by('-created_on')
+        Q(featured_image__isnull=True) | Q(featured_image=''),
+        Q(featured_video__isnull=True) | Q(featured_video='')
+    ).select_related('author').order_by('-created_on')
 
     return render(request, 'prompts/debug_no_media.html', {
-        'prompts': prompts
+        'prompts': prompts,
+        'title': 'Debug: Prompts Without Media'
     })

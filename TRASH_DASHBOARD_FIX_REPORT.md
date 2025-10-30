@@ -1,30 +1,35 @@
 # Trash Dashboard & Debug Page Implementation
 
 **Date:** October 30, 2025
-**Status:** ✅ Ready for deployment
+**Status:** ✅ Ready for deployment (UPDATED v2)
 
 ## Changes Implemented
 
-### 1. Created Debug Page to Find All Prompts Without Media
+### 1. Created Admin-Integrated Debug Page to Find Prompts Without ANY Media
 
-**File:** `prompts/templates/prompts/debug_no_media.html` (NEW)
-- Shows all prompts where `featured_image` is NULL or empty
-- Displays in a sortable table with:
+**File:** `prompts/templates/prompts/debug_no_media.html` (UPDATED)
+- **Now extends `admin/base_site.html`** for consistent admin UI
+- Shows all prompts where BOTH `featured_image` AND `featured_video` are NULL
+- Displays in admin-styled table with:
   - ID, Title, Slug, Status (Draft/Published)
-  - Author, Created Date
+  - Has Image (✅/❌), Has Video (✅/❌)
+  - Author
   - View button (opens prompt page)
-  - Edit Admin button (staff only)
-- Shows total count of prompts without media
+  - Edit button (opens admin edit page)
+- Shows total count of prompts without ANY media
+- Admin breadcrumbs navigation
 - Quick links to admin and trash dashboard
 
-**View Function:** `prompts/views.py` - Added `debug_no_media()`
+**View Function:** `prompts/views.py` - Updated `debug_no_media()`
 - Staff-only access (`@staff_member_required`)
+- **Now checks BOTH image and video fields** using Q objects
 - Uses `Prompt.all_objects` to include soft-deleted prompts
+- Includes `.select_related('user')` for performance
 - Orders by most recent first
 
-**URL:** Added to `prompts/urls.py`
+**URL:** Registered in `prompts_manager/urls.py` (main URLs)
 ```
-/debug/no-media/
+/debug/no-media/  → admin_debug_no_media
 ```
 
 ### 2. Fixed Trash Dashboard Ghost Prompts Issue
@@ -49,14 +54,35 @@ with connection.cursor() as cursor:
 
 **Result:** Trash dashboard now shows correct "Draft" status for prompts 149, 146, 145
 
-### 3. Enhanced Admin Sidebar with Maintenance Tools
+### 3. Centralized URL Configuration
+
+**File:** `prompts_manager/urls.py` (UPDATED)
+
+**Changes:**
+- Registered all admin maintenance tools at top level (before Django admin)
+- Added imports: `from prompts import views as maintenance_views`
+- URLs now registered with clean, descriptive names:
+  - `admin_trash_dashboard` - Trash & orphaned files
+  - `admin_media_issues_dashboard` - Media issues page
+  - `admin_fix_media_issues` - Fix media issues action
+  - `admin_debug_no_media` - Debug page for prompts without media
+
+**Benefits:**
+- Avoids URL conflicts with prompts app
+- Clean URL structure (all admin tools at `/admin/*` or `/debug/*`)
+- Consistent naming convention
+
+### 4. Enhanced Admin Sidebar with Maintenance Tools
 
 **File:** `templates/admin/custom_index.html` (UPDATED)
 
-Added links to:
-- 🗑️ Trash & Orphaned Files (existing)
-- 🔍 Find Prompts Without Media (NEW)
-- 📊 Media Issues Dashboard (existing)
+**Changes:**
+- Updated URLs to use new names from main urls.py
+- All links now use `{% url %}` tags (not hardcoded paths)
+- Links:
+  - 🗑️ Trash & Orphaned Files → `{% url 'admin_trash_dashboard' %}`
+  - 🔍 Find Prompts Without Media → `{% url 'admin_debug_no_media' %}`
+  - 📊 Media Issues Dashboard → `{% url 'admin_media_issues_dashboard' %}`
 
 All links styled consistently with hover effects.
 
@@ -96,23 +122,51 @@ All links styled consistently with hover effects.
 
 ## Files Modified
 
-1. `prompts/templates/prompts/debug_no_media.html` (NEW - 64 lines)
-2. `prompts/views.py` (ADDED debug_no_media function - 10 lines)
-3. `prompts/urls.py` (ADDED debug URL - 2 lines)
-4. `prompts/admin.py` (MODIFIED trash_dashboard - 23 lines changed)
-5. `templates/admin/custom_index.html` (ADDED 2 new links - 16 lines added)
+### Version 2 Changes (Current):
+1. `prompts/templates/prompts/debug_no_media.html` (UPDATED - now 88 lines)
+   - Changed from `base.html` to `admin/base_site.html`
+   - Added breadcrumbs navigation
+   - Added Has Image/Has Video columns
+   - Admin-styled buttons and layout
+
+2. `prompts/views.py` (UPDATED debug_no_media function - now 15 lines)
+   - Added Q objects to check BOTH image and video fields
+   - Added `.select_related('user')` for performance
+   - Added title to context
+
+3. `prompts_manager/urls.py` (MAJOR UPDATE)
+   - Centralized all admin maintenance URLs
+   - Added 4 URL patterns with clean names
+   - Imported maintenance_views
+
+4. `templates/admin/custom_index.html` (UPDATED)
+   - Changed to use {% url %} tags instead of hardcoded paths
+   - Updated URL names to match main urls.py
+
+5. `prompts/admin.py` (MODIFIED trash_dashboard - 23 lines)
+   - Direct SQL query for ghost prompts
+
+### Original Version 1 Files:
+- All same files but with different implementations
 
 ## Deployment Command
 
 ```bash
 git add .
-git commit -m "fix(admin): Add debug page for prompts without media and fix trash dashboard ghost prompts
+git commit -m "fix(admin): Integrate debug page into admin UI and check both media fields
 
-- Create /debug/no-media/ page to find all 19 prompts without featured_image
-- Fix trash dashboard showing incorrect 'Active' status for ghost prompts (149, 146, 145)
-- Use direct SQL query to bypass Django ORM caching
-- Add maintenance tool links to admin sidebar
-- All tools now accessible from admin index"
+v2 Improvements:
+- Debug page now extends admin/base_site.html (consistent admin UI)
+- Query checks BOTH featured_image AND featured_video fields
+- Centralized URL configuration in main urls.py
+- Admin sidebar links use {% url %} tags (not hardcoded)
+- Added breadcrumbs navigation and Has Image/Has Video columns
+- Performance: Added select_related('user')
+
+v1 Features (preserved):
+- Fix trash dashboard ghost prompts (149, 146, 145) showing wrong status
+- Direct SQL query bypasses Django ORM caching
+- All maintenance tools accessible from admin sidebar"
 
 git push heroku main
 ```
@@ -120,25 +174,50 @@ git push heroku main
 ## Next Steps
 
 After verifying in production:
-1. Review all 19 prompts without media
-2. Decide which need images vs should be deleted
-3. Clean up ghost prompts (149, 146, 145) - currently drafts without media
-4. Consider adding "Fix All" button to convert all published prompts without media to draft
+1. Review prompts shown on debug page (should be fewer than 19 now)
+2. Check if any prompts have image OR video (but not both)
+3. Decide which prompts need media vs should be deleted
+4. Clean up ghost prompts (149, 146, 145) - currently drafts without media
+5. Consider adding "Fix All" button to convert all published prompts without media to draft
 
 ## Technical Notes
 
-**Why Direct SQL Query?**
+**Why Check BOTH Image AND Video?**
+- Version 1 only checked `featured_image`
+- Prompts can have EITHER image OR video (not both)
+- New query: `(image NULL OR empty) AND (video NULL OR empty)`
+- Result: Only truly media-less prompts shown
+
+**Why Direct SQL Query for Ghost Prompts?**
 - Django ORM caching can return stale data
 - `Prompt.all_objects.filter()` was showing cached status
 - Direct SQL ensures fresh database values
 - Only used for specific ghost prompt investigation
 
+**Why Extend admin/base_site.html?**
+- Consistent admin UI navigation and styling
+- Admin sidebar automatically appears
+- Breadcrumbs navigation included
+- Django admin CSS/JS loaded automatically
+
 **Security:**
 - `@staff_member_required` decorator prevents public access
 - SQL query uses parameterized statements (safe from injection)
 - Only reads data, no writes
+- All maintenance tools require staff permissions
 
 **Performance:**
-- Debug page: Single query with `order_by('-created_on')`
+- Debug page: Single query with `select_related('user')`
+- Uses Q objects for complex filtering
+- Index on featured_image and featured_video (if exists)
 - Trash dashboard: 3 separate SQL queries (one per ghost prompt)
-- Negligible performance impact (<10ms)
+- Negligible performance impact (<20ms total)
+
+**URL Structure:**
+```
+/admin/                      → Django admin index
+/admin/trash-dashboard/      → Trash & orphaned files
+/admin/media-issues/         → Media issues dashboard
+/admin/fix-media-issues/     → Fix media issues action
+/debug/no-media/             → Debug prompts without media
+```

@@ -2706,3 +2706,109 @@ def debug_no_media(request):
         'prompts': prompts,
         'title': 'Debug: Prompts Without Media'
     })
+
+
+@staff_member_required
+def bulk_delete_no_media(request):
+    """
+    Bulk soft delete (move to trash) all prompts without featured_image.
+
+    Only affects DRAFT prompts to prevent accidentally deleting published content.
+    Uses soft delete so prompts go to trash and can be restored.
+    """
+    if request.method == 'POST':
+        # Get selected prompt IDs from POST data
+        selected_ids = request.POST.getlist('selected_prompts')
+
+        if not selected_ids:
+            messages.warning(request, "No prompts selected. Please select prompts to delete.")
+            referer = request.META.get('HTTP_REFERER')
+            if referer:
+                return redirect(referer)
+            return redirect('prompts:debug_no_media')
+
+        # Get only selected DRAFT prompts
+        prompts_to_delete = Prompt.objects.filter(
+            id__in=selected_ids,
+            status=0  # Only DRAFT prompts
+        )
+
+        count = prompts_to_delete.count()
+
+        # Soft delete each prompt
+        for prompt in prompts_to_delete:
+            prompt.soft_delete(request.user)
+
+        if count > 0:
+            messages.success(
+                request,
+                f'Successfully moved {count} draft prompt(s) to trash. '
+                f'<a href="{reverse("prompts:trash_bin")}" class="alert-link">View Trash</a>',
+                extra_tags='safe'
+            )
+        else:
+            messages.warning(request, "No DRAFT prompts found in selection. Only draft prompts can be deleted.")
+
+        # Redirect back to the page they came from
+        referer = request.META.get('HTTP_REFERER')
+        if referer and '/debug/no-media/' in referer:
+            return redirect('prompts:debug_no_media')
+        elif referer and '/admin/media-issues/' in referer:
+            return redirect('prompts:media_issues_dashboard')
+        else:
+            return redirect('prompts:debug_no_media')
+
+    return redirect('prompts:debug_no_media')
+
+
+@staff_member_required
+def bulk_set_draft_no_media(request):
+    """
+    Bulk set all PUBLISHED prompts without featured_image to DRAFT status.
+
+    This prevents published prompts with missing media from showing
+    gray placeholders to users.
+    """
+    if request.method == 'POST':
+        # Get selected prompt IDs from POST data
+        selected_ids = request.POST.getlist('selected_prompts')
+
+        if not selected_ids:
+            messages.warning(request, "No prompts selected. Please select prompts to change.")
+            referer = request.META.get('HTTP_REFERER')
+            if referer:
+                return redirect(referer)
+            return redirect('prompts:media_issues_dashboard')
+
+        # Get only selected PUBLISHED prompts
+        prompts_to_draft = Prompt.objects.filter(
+            id__in=selected_ids,
+            status=1  # Only PUBLISHED prompts
+        )
+
+        count = prompts_to_draft.count()
+
+        # Set to DRAFT
+        prompts_to_draft.update(status=0)
+
+        if count > 0:
+            messages.success(
+                request,
+                f'Successfully set {count} published prompt(s) to DRAFT status.'
+            )
+        else:
+            messages.warning(
+                request,
+                'No PUBLISHED prompts found in selection. Only published prompts can be set to draft.'
+            )
+
+        # Redirect back to the page they came from
+        referer = request.META.get('HTTP_REFERER')
+        if referer and '/debug/no-media/' in referer:
+            return redirect('prompts:debug_no_media')
+        elif referer and '/admin/media-issues/' in referer:
+            return redirect('prompts:media_issues_dashboard')
+        else:
+            return redirect('prompts:media_issues_dashboard')
+
+    return redirect('prompts:media_issues_dashboard')

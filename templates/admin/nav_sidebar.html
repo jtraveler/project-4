@@ -1,0 +1,32 @@
+{% load i18n %}
+<button class="sticky toggle-nav-sidebar" id="toggle-nav-sidebar" aria-label="{% translate 'Toggle navigation' %}"></button>
+<nav class="sticky" id="nav-sidebar" aria-label="{% translate 'Sidebar' %}">
+  <input type="search" id="nav-filter"
+         placeholder="{% translate 'Start typing to filter…' %}"
+         aria-label="{% translate 'Filter navigation items' %}">
+  {% include 'admin/app_list.html' with app_list=available_apps show_changelinks=False %}
+
+  <!-- Maintenance Tools Section -->
+  {% block maintenance_tools %}
+  <div class="module" id="maintenance-tools">
+    <h2>🔧 Maintenance Tools</h2>
+    <ul>
+      <li>
+        <a href="{% url 'prompts:debug_no_media' %}">
+          🐛 Debug: No Media
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'prompts:media_issues_dashboard' %}">
+          📊 Media Issues
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'admin_trash_dashboard' %}">
+          🗑️ Trash Dashboard
+        </a>
+      </li>
+    </ul>
+  </div>
+  {% endblock %}
+</nav>

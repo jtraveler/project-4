@@ -53,5 +53,8 @@ urlpatterns = [
     path('admin/media-issues/', views.media_issues_dashboard, name='media_issues_dashboard'),
     path('admin/fix-media-issues/', views.fix_all_media_issues, name='fix_all_media_issues'),
     # Debug page to find all prompts without media
-    path('debug/no-media/', views.debug_no_media, name='debug_no_media'),
+    path('admin/debug/no-media/', views.debug_no_media, name='debug_no_media'),
+    # Bulk actions for admin debug pages
+    path('admin/bulk-delete-no-media/', views.bulk_delete_no_media, name='bulk_delete_no_media'),
+    path('admin/bulk-set-draft-no-media/', views.bulk_set_draft_no_media, name='bulk_set_draft_no_media'),
 ]

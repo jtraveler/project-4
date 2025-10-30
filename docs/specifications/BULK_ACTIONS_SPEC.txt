@@ -1,0 +1,406 @@
+"""
+PHASE F DAY 1: BULK ACTIONS FOR ADMIN DEBUG PAGES
+==================================================
+
+SPECIFICATION FOR CLAUDE CODE (CC)
+Version: 1.0
+Date: October 30, 2025
+Estimated Time: 20-30 minutes
+
+═══════════════════════════════════════════════════════════════
+CRITICAL: READ BEFORE STARTING
+═══════════════════════════════════════════════════════════════
+
+📖 **REQUIRED READING:**
+Read docs/CC_COMMUNICATION_PROTOCOL.md FIRST before implementation
+
+🤖 **AGENT USAGE REQUIREMENT:**
+You MUST report back which wshobson/agents you used during implementation
+
+📊 **COMPLETION REPORT:**
+After finishing, provide:
+1. List of agents used (from wshobson/agents system)
+2. What each agent helped with
+3. Any issues encountered
+4. Confirmation of all testing completed
+
+═══════════════════════════════════════════════════════════════
+OVERVIEW
+═══════════════════════════════════════════════════════════════
+
+Add bulk action buttons to /debug/no-media/ and /admin/media-issues/ 
+pages to handle prompts with missing featured_image efficiently.
+
+CONTEXT:
+- 19 prompts currently have missing featured_image (all DRAFT)
+- These are old test prompts from before new upload system
+- Need admin tools to clean up these prompts in bulk
+- All deletions should use soft delete (move to trash)
+
+GOALS:
+1. Add bulk action buttons to both admin pages
+2. Implement soft delete for bulk operations (not hard delete)
+3. Add confirmation modals for destructive actions
+4. Show success messages with counts
+5. Maintain consistent admin UI styling
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+
+1. prompts/views.py
+   - Add bulk action view functions
+
+2. prompts/templates/admin/debug_no_media.html
+   - Add bulk action buttons
+   - Add confirmation modals
+   - Add JavaScript for selection
+
+3. prompts/templates/admin/media_issues.html
+   - Add bulk action buttons
+   - Add confirmation modals
+   - Add JavaScript for selection
+
+4. prompts/urls.py
+   - Add new URL patterns for bulk actions
+
+═══════════════════════════════════════════════════════════════
+PART 1: VIEW FUNCTIONS (prompts/views.py)
+═══════════════════════════════════════════════════════════════
+
+Add these new view functions after the existing debug_no_media() function:
+
+```python
+@staff_member_required
+def bulk_delete_no_media(request):
+    """
+    Bulk soft delete (move to trash) all prompts without featured_image.
+    
+    Only affects DRAFT prompts to prevent accidentally deleting published content.
+    Uses soft delete so prompts go to trash and can be restored.
+    """
+    if request.method == 'POST':
+        from django.db.models import Q
+        
+        # Get all DRAFT prompts without featured_image
+        prompts_to_delete = Prompt.objects.filter(
+            Q(featured_image__isnull=True) | Q(featured_image=''),
+            status=0  # Only DRAFT prompts
+        )
+        
+        count = prompts_to_delete.count()
+        
+        # Soft delete each prompt
+        for prompt in prompts_to_delete:
+            prompt.soft_delete(request.user)
+        
+        messages.success(
+            request,
+            f'Successfully moved {count} draft prompts to trash. '
+            f'<a href="{reverse("prompts:trash_bin")}" class="alert-link">View Trash</a>',
+            extra_tags='safe'
+        )
+        
+        # Redirect back to the page they came from
+        referer = request.META.get('HTTP_REFERER')
+        if referer and '/debug/no-media/' in referer:
+            return redirect('prompts:debug_no_media')
+        elif referer and '/admin/media-issues/' in referer:
+            return redirect('prompts:media_issues_dashboard')
+        else:
+            return redirect('prompts:debug_no_media')
+    
+    return redirect('prompts:debug_no_media')
+
+
+@staff_member_required
+def bulk_set_draft_no_media(request):
+    """
+    Bulk set all PUBLISHED prompts without featured_image to DRAFT status.
+    
+    This prevents published prompts with missing media from showing
+    gray placeholders to users.
+    """
+    if request.method == 'POST':
+        from django.db.models import Q
+        
+        # Get all PUBLISHED prompts without featured_image
+        prompts_to_draft = Prompt.objects.filter(
+            Q(featured_image__isnull=True) | Q(featured_image=''),
+            status=1  # Only PUBLISHED prompts
+        )
+        
+        count = prompts_to_draft.count()
+        
+        # Set to DRAFT
+        prompts_to_draft.update(status=0)
+        
+        if count > 0:
+            messages.success(
+                request,
+                f'Successfully set {count} published prompts to DRAFT status.'
+            )
+        else:
+            messages.info(
+                request,
+                'No published prompts found without featured_image. All clear!'
+            )
+        
+        # Redirect back to the page they came from
+        referer = request.META.get('HTTP_REFERER')
+        if referer and '/debug/no-media/' in referer:
+            return redirect('prompts:debug_no_media')
+        elif referer and '/admin/media-issues/' in referer:
+            return redirect('prompts:media_issues_dashboard')
+        else:
+            return redirect('prompts:debug_no_media')
+    
+    return redirect('prompts:debug_no_media')
+```
+
+═══════════════════════════════════════════════════════════════
+PART 2: URL PATTERNS (prompts/urls.py)
+═══════════════════════════════════════════════════════════════
+
+Add these URL patterns to the urlpatterns list:
+
+```python
+# Bulk actions for admin debug pages
+path('admin/bulk-delete-no-media/', views.bulk_delete_no_media, name='bulk_delete_no_media'),
+path('admin/bulk-set-draft-no-media/', views.bulk_set_draft_no_media, name='bulk_set_draft_no_media'),
+```
+
+═══════════════════════════════════════════════════════════════
+PART 3: UPDATE debug_no_media.html TEMPLATE
+═══════════════════════════════════════════════════════════════
+
+LOCATION: prompts/templates/admin/debug_no_media.html
+
+STEP 1: Add bulk action buttons AFTER the Summary section, BEFORE the table:
+
+```html
+<!-- Bulk Actions Section -->
+{% if prompts %}
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">🛠️ Bulk Actions</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-3">
+            <strong>Warning:</strong> Bulk actions affect ALL prompts listed below.
+        </p>
+        
+        <div class="d-flex gap-2 flex-wrap">
+            <!-- Bulk Delete Button (DRAFT only) -->
+            <button type="button" 
+                    class="btn btn-danger" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#bulkDeleteModal">
+                🗑️ Delete All Drafts (Move to Trash)
+            </button>
+            
+            <!-- Bulk Set to Draft Button (PUBLISHED only) -->
+            <button type="button" 
+                    class="btn btn-warning" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#bulkDraftModal">
+                📝 Set Published to Draft
+            </button>
+        </div>
+        
+        <div class="mt-3">
+            <small class="text-muted">
+                ℹ️ <strong>Note:</strong> "Delete All Drafts" moves prompts to trash (soft delete). 
+                They can be restored from your trash bin within the retention period.
+            </small>
+        </div>
+    </div>
+</div>
+{% endif %}
+```
+
+STEP 2: Add confirmation modals BEFORE the closing </div> of the main container:
+
+```html
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="bulkDeleteModalLabel">⚠️ Confirm Bulk Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Are you sure you want to move ALL draft prompts without featured_image to trash?</strong></p>
+                
+                <p>This will affect all DRAFT prompts listed on this page.</p>
+                
+                <ul class="text-muted small">
+                    <li>Prompts will be moved to trash (soft delete)</li>
+                    <li>They can be restored from trash</li>
+                    <li>Retention period: 5 days (free) / 30 days (premium)</li>
+                    <li>PUBLISHED prompts will NOT be affected</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'prompts:bulk_delete_no_media' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Move to Trash</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Set to Draft Confirmation Modal -->
+<div class="modal fade" id="bulkDraftModal" tabindex="-1" aria-labelledby="bulkDraftModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="bulkDraftModalLabel">⚠️ Confirm Status Change</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Set all PUBLISHED prompts without featured_image to DRAFT status?</strong></p>
+                
+                <p>This will affect all PUBLISHED prompts on this page.</p>
+                
+                <ul class="text-muted small">
+                    <li>Prompts will become private (only visible to author)</li>
+                    <li>No gray placeholders will show to public users</li>
+                    <li>Authors can re-publish after adding images</li>
+                    <li>DRAFT prompts will NOT be affected</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'prompts:bulk_set_draft_no_media' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">Yes, Set to Draft</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+═══════════════════════════════════════════════════════════════
+PART 4: UPDATE media_issues.html TEMPLATE
+═══════════════════════════════════════════════════════════════
+
+LOCATION: prompts/templates/admin/media_issues.html
+
+Apply the SAME changes as in debug_no_media.html:
+1. Add the bulk actions section after Summary
+2. Add both confirmation modals before closing </div>
+
+The HTML is IDENTICAL to what you added in debug_no_media.html.
+
+═══════════════════════════════════════════════════════════════
+TESTING CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+MANUAL TESTING:
+
+[ ] 1. Visit /debug/no-media/ as staff user
+[ ] 2. Verify bulk action buttons appear above table
+[ ] 3. Click "Delete All Drafts" button
+[ ] 4. Verify confirmation modal appears
+[ ] 5. Click "Yes, Move to Trash"
+[ ] 6. Verify success message with count
+[ ] 7. Verify prompts moved to trash (check /trash/)
+[ ] 8. Visit /trash/ and verify prompts can be restored
+[ ] 9. Test "Set Published to Draft" button (if any published exist)
+[ ] 10. Repeat tests on /admin/media-issues/ page
+
+EDGE CASES:
+
+[ ] 11. Test with 0 prompts (buttons should still show)
+[ ] 12. Test with only DRAFT prompts (delete should work)
+[ ] 13. Test with only PUBLISHED prompts (set draft should work)
+[ ] 14. Test canceling modals (should not perform action)
+[ ] 15. Test browser back button after action
+[ ] 16. Verify CSRF protection working
+
+VERIFICATION:
+
+[ ] 17. Check prompts appear in /trash/ after delete
+[ ] 18. Check prompts can be restored from trash
+[ ] 19. Verify retention period shown in trash
+[ ] 20. Verify no console errors
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION NOTES
+═══════════════════════════════════════════════════════════════
+
+IMPORTANT REMINDERS:
+
+1. **Use Soft Delete:** Always use prompt.soft_delete(user), never 
+   prompt.delete() or hard_delete()
+
+2. **Filter by Status:** Only delete DRAFT prompts, only set PUBLISHED 
+   to draft (prevents accidents)
+
+3. **Success Messages:** Include count and link to trash for transparency
+
+4. **Confirmation Modals:** Always confirm destructive actions
+
+5. **Consistent Styling:** Match existing admin page styles (teal headers, 
+   Bootstrap 5 components)
+
+6. **CSRF Protection:** All POST forms must include {% csrf_token %}
+
+7. **Smart Redirects:** Return to the page user came from
+
+WSHOBSON/AGENTS TO USE:
+
+**REQUIRED AGENTS** (from wshobson/agents system - the 82+ agent system):
+- @django-expert - View functions and URL patterns
+- @ui - Template HTML and Bootstrap components  
+- @code-review - Final review before completion
+
+**OPTIONAL AGENTS** (use if needed):
+- @test - If creating automated tests
+- @debug - If encountering issues
+- @security - For reviewing CSRF and permissions
+
+**REPORTING REQUIREMENT:**
+After completing implementation, CC MUST report back:
+1. Which agents from wshobson/agents were actually used
+2. What each agent contributed to the implementation
+3. Any agent recommendations or suggestions received
+4. Whether any agents were NOT used and why
+
+Example report format:
+```
+AGENTS USED:
+✅ @django-expert - Helped structure view functions and URL patterns
+✅ @ui - Reviewed Bootstrap modal implementation and styling
+✅ @code-review - Final code review before completion
+❌ @test - Not used (manual testing specified)
+```
+
+═══════════════════════════════════════════════════════════════
+EXPECTED OUTCOME
+═══════════════════════════════════════════════════════════════
+
+After implementation:
+
+✅ Bulk action buttons appear on both debug pages
+✅ Confirmation modals prevent accidental deletions
+✅ Soft delete moves prompts to trash (can be restored)
+✅ Success messages show count of affected prompts
+✅ Consistent UI with existing admin pages
+✅ All safety checks in place (status filtering, confirmations)
+
+═══════════════════════════════════════════════════════════════
+QUESTIONS FOR USER BEFORE STARTING
+═══════════════════════════════════════════════════════════════
+
+None - specification is complete and ready for implementation.
+
+═══════════════════════════════════════════════════════════════
+END OF SPECIFICATION
+═══════════════════════════════════════════════════════════════
+"""

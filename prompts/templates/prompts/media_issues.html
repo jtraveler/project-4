@@ -3,6 +3,14 @@
 
 {% block title %}Media Issues Dashboard{% endblock %}
 
+{% block extrahead %}
+<!-- Bootstrap 5 for collapsible cards and modals -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+{% endblock %}
+
 {% block breadcrumbs %}
 <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">Home</a> ›
@@ -13,20 +21,37 @@
 {% block content %}
 <h1>📊 Media Issues Dashboard</h1>
 
-<div class="module">
-    <h2>📚 How to Use This Dashboard</h2>
-    <ul>
-        <li><strong>Purpose:</strong> Track and manage prompts that lack media (images or videos)</li>
-        <li><strong>Draft Status:</strong> Prompts without media have been set to draft to prevent broken displays</li>
-        <li><strong>History:</strong> These "Untitled" prompts were likely created during early development/testing</li>
-        <li><strong>Action Needed:</strong> Either add media to these prompts or delete them</li>
-    </ul>
+<!-- How to Use This Dashboard Section -->
+<div class="card mb-4 border-info">
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"
+         style="cursor: pointer;"
+         data-bs-toggle="collapse"
+         data-bs-target="#howToUse"
+         aria-expanded="false"
+         aria-controls="howToUse">
+        <h5 class="mb-0">
+            📚 How to Use This Dashboard
+        </h5>
+        <i class="bi bi-chevron-down"></i>
+    </div>
+    <div class="collapse" id="howToUse">
+        <div class="card-body">
+            <p><strong>Purpose:</strong> Track and manage prompts that lack media (images or videos)</p>
 
-    <h3>Understanding the Status:</h3>
-    <ul>
-        <li><strong>"Already Fixed"</strong> = Set to draft status (not publicly visible)</li>
-        <li><strong>Problem Prompts</strong> = Published without media (would show broken)</li>
-    </ul>
+            <p><strong>Draft Status:</strong> Prompts without media have been set to draft to prevent broken displays</p>
+
+            <p><strong>History:</strong> These "untitled" prompts were likely created during early development/testing</p>
+
+            <p><strong>Action Needed:</strong> Either add media to these prompts or delete them</p>
+
+            <h6 class="mt-3">Understanding the Status:</h6>
+            <ul class="mb-0">
+                <li><strong>Select:</strong> Check boxes to select specific prompts for bulk actions</li>
+                <li><strong>"Already Fixed":</strong> Set to draft status (not publicly visible)</li>
+                <li><strong>"Problem Prompts":</strong> Published without media (would show broken)</li>
+            </ul>
+        </div>
+    </div>
 </div>
 
 <div class="module">
@@ -47,12 +72,62 @@
     </table>
 </div>
 
+<!-- Bulk Actions Section -->
+{% if draft_prompts or published_prompts %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-lightning-fill"></i> Bulk Actions
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning" role="alert">
+            <strong>⚠️ Warning:</strong> Bulk actions affect selected prompts below.
+        </div>
+
+        <div class="row g-3">
+            <!-- Select All Checkbox -->
+            <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="select-all-prompts">
+                    <label class="form-check-label" for="select-all-prompts">
+                        <strong>Select All Prompts</strong>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="col-md-6">
+                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal" id="delete-button">
+                    <i class="bi bi-trash"></i> Delete Selected Drafts (Move to Trash)
+                </button>
+                <small class="text-muted">Only affects DRAFT prompts</small>
+            </div>
+
+            <div class="col-md-6">
+                <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#bulkDraftModal" id="draft-button">
+                    <i class="bi bi-file-earmark"></i> Set Selected to Draft
+                </button>
+                <small class="text-muted">Only affects PUBLISHED prompts</small>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <span id="selected-count" class="badge bg-info">0 prompts selected</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if published_prompts %}
 <div class="module">
     <h2>⚠️ Published Prompts Without Media (Need Fix)</h2>
     <table>
         <thead>
             <tr>
+                <th style="width: 40px;">
+                    <span class="visually-hidden">Select</span>
+                </th>
                 <th>ID</th>
                 <th>Title</th>
                 <th>Author</th>
@@ -63,6 +138,12 @@
         <tbody>
             {% for prompt in published_prompts %}
             <tr>
+                <td>
+                    <input type="checkbox" class="form-check-input prompt-checkbox"
+                           name="selected_prompts"
+                           value="{{ prompt.id }}"
+                           data-status="{{ prompt.status }}">
+                </td>
                 <td>{{ prompt.id }}</td>
                 <td>{{ prompt.title|truncatechars:40 }}</td>
                 <td>{{ prompt.author.username }}</td>
@@ -84,6 +165,9 @@
     <table>
         <thead>
             <tr>
+                <th style="width: 40px;">
+                    <span class="visually-hidden">Select</span>
+                </th>
                 <th>ID</th>
                 <th>Title</th>
                 <th>Author</th>
@@ -94,6 +178,12 @@
         <tbody>
             {% for prompt in draft_prompts %}
             <tr>
+                <td>
+                    <input type="checkbox" class="form-check-input prompt-checkbox"
+                           name="selected_prompts"
+                           value="{{ prompt.id }}"
+                           data-status="{{ prompt.status }}">
+                </td>
                 <td>{{ prompt.id }}</td>
                 <td>{{ prompt.title|truncatechars:40 }}</td>
                 <td>{{ prompt.author.username }}</td>
@@ -110,7 +200,159 @@
 
 <div class="submit-row">
     <a href="/admin/" class="button">Back to Admin</a>
-    <a href="/debug/no-media/" class="button">Debug View</a>
-    <a href="/admin/trash-dashboard/" class="button">Trash Dashboard</a>
+    <a href="{% url 'prompts:debug_no_media' %}" class="button">Debug View</a>
+    <a href="{% url 'admin_trash_dashboard' %}" class="button">Trash Dashboard</a>
 </div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal fade" id="bulkDeleteModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="bulkDeleteModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Confirm Bulk Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Are you sure you want to move ALL selected draft prompts to trash?</strong></p>
+
+                <p class="text-muted">This will affect selected DRAFT prompts only.</p>
+
+                <ul class="text-muted small">
+                    <li>Prompts will be moved to trash (soft delete)</li>
+                    <li>They can be restored from trash</li>
+                    <li>Retention period: 5 days (free) / 30 days (premium)</li>
+                    <li>PUBLISHED prompts will NOT be affected</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'prompts:bulk_delete_no_media' %}" id="delete-form">
+                    {% csrf_token %}
+                    <!-- Selected IDs will be added dynamically by JavaScript -->
+                    <button type="submit" class="btn btn-danger">Yes, Move to Trash</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Set to Draft Confirmation Modal -->
+<div class="modal fade" id="bulkDraftModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="bulkDraftModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="bulkDraftModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Confirm Status Change
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Set all SELECTED PUBLISHED prompts to DRAFT status?</strong></p>
+
+                <p class="text-muted">This will affect selected PUBLISHED prompts only.</p>
+
+                <ul class="text-muted small">
+                    <li>Prompts will become private (only visible to author)</li>
+                    <li>No gray placeholders will show to public users</li>
+                    <li>Authors can re-publish after adding images</li>
+                    <li>DRAFT prompts will NOT be affected</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'prompts:bulk_set_draft_no_media' %}" id="draft-form">
+                    {% csrf_token %}
+                    <!-- Selected IDs will be added dynamically by JavaScript -->
+                    <button type="submit" class="btn btn-warning">Yes, Set to Draft</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all checkbox functionality
+    const selectAllCheckbox = document.getElementById('select-all-prompts');
+    const promptCheckboxes = document.querySelectorAll('.prompt-checkbox');
+    const selectedCountBadge = document.getElementById('selected-count');
+    const deleteButton = document.getElementById('delete-button');
+    const draftButton = document.getElementById('draft-button');
+    const bulkDeleteModal = document.getElementById('bulkDeleteModal');
+    const bulkDraftModal = document.getElementById('bulkDraftModal');
+
+    // Update selected count
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.prompt-checkbox:checked');
+        selectedCountBadge.textContent = `${checked.length} prompts selected`;
+
+        // Disable buttons if nothing selected
+        if (deleteButton) deleteButton.disabled = checked.length === 0;
+        if (draftButton) draftButton.disabled = checked.length === 0;
+    }
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            promptCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSelectedCount();
+        });
+    }
+
+    // Individual checkbox changes
+    promptCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            // Update select-all state
+            const allChecked = Array.from(promptCheckboxes).every(cb => cb.checked);
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+            }
+            updateSelectedCount();
+        });
+    });
+
+    // When delete modal opens, add checkboxes to form
+    if (bulkDeleteModal) {
+        bulkDeleteModal.addEventListener('show.bs.modal', function() {
+            const form = document.getElementById('delete-form');
+            // Remove old checkboxes
+            form.querySelectorAll('input[name="selected_prompts"]').forEach(input => input.remove());
+
+            // Add new checkboxes for selected prompts
+            document.querySelectorAll('.prompt-checkbox:checked').forEach(checkbox => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_prompts';
+                input.value = checkbox.value;
+                form.appendChild(input);
+            });
+        });
+    }
+
+    // When draft modal opens, add checkboxes to form
+    if (bulkDraftModal) {
+        bulkDraftModal.addEventListener('show.bs.modal', function() {
+            const form = document.getElementById('draft-form');
+            // Remove old checkboxes
+            form.querySelectorAll('input[name="selected_prompts"]').forEach(input => input.remove());
+
+            // Add new checkboxes for selected prompts
+            document.querySelectorAll('.prompt-checkbox:checked').forEach(checkbox => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_prompts';
+                input.value = checkbox.value;
+                form.appendChild(input);
+            });
+        });
+    }
+
+    // Initial count update
+    updateSelectedCount();
+});
+</script>
 {% endblock %}

@@ -2662,8 +2662,7 @@ def media_issues_dashboard(request):
     from django.db.models import Q
 
     no_media = Prompt.all_objects.filter(
-        Q(featured_image__isnull=True) | Q(featured_image=''),
-        Q(featured_video__isnull=True) | Q(featured_video='')
+        Q(featured_image__isnull=True) | Q(featured_image='')
     )
 
     published = no_media.filter(status=1)
@@ -2700,8 +2699,7 @@ def debug_no_media(request):
 
     # Get prompts that have NEITHER image NOR video
     prompts = Prompt.all_objects.filter(
-        Q(featured_image__isnull=True) | Q(featured_image=''),
-        Q(featured_video__isnull=True) | Q(featured_video='')
+        Q(featured_image__isnull=True) | Q(featured_image='')
     ).select_related('author').order_by('-created_on')
 
     return render(request, 'prompts/debug_no_media.html', {

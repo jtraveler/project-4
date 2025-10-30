@@ -1143,14 +1143,19 @@ def trash_dashboard(request):
         except Exception as e:
             print(f"Error with prompt {prompt_id}: {e}")
 
-    context = {
+    # Get Django admin context for sidebar and logout button
+    from django.contrib.admin.sites import site as admin_site
+    context = admin_site.each_context(request)
+
+    # Add custom context
+    context.update({
         'deleted_count': deleted_count,
         'orphaned_images': orphaned_images,
         'orphaned_videos': orphaned_videos,
         'recent_deletions': recent_deletions,
         'ghost_prompts': ghost_info,
         'title': 'Trash & Orphaned Files Dashboard',
-    }
+    })
 
     return render(request, 'admin/trash_dashboard.html', context)
 

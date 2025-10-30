@@ -18,7 +18,7 @@ urlpatterns = [
     path('admin/trash-dashboard/', trash_dashboard, name='admin_trash_dashboard'),
     path('admin/media-issues/', maintenance_views.media_issues_dashboard, name='admin_media_issues_dashboard'),
     path('admin/fix-media-issues/', maintenance_views.fix_all_media_issues, name='admin_fix_media_issues'),
-    path('debug/no-media/', maintenance_views.debug_no_media, name='admin_debug_no_media'),
+    path('admin/debug/no-media/', maintenance_views.debug_no_media, name='admin_debug_no_media'),
 
     # Django admin
     path('admin/', admin.site.urls),

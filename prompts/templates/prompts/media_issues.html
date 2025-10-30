@@ -21,34 +21,37 @@
 {% block content %}
 <h1>📊 Media Issues Dashboard</h1>
 
-<!-- How to Use This Dashboard Section -->
-<div class="card mb-4 border-info">
-    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"
-         style="cursor: pointer;"
-         data-bs-toggle="collapse"
-         data-bs-target="#howToUse"
-         aria-expanded="false"
-         aria-controls="howToUse">
+<!-- 📚 How to Use This Dashboard Section -->
+<div class="card mb-3">
+    <div class="card-header bg-info text-white" data-bs-toggle="collapse" data-bs-target="#howToUse" aria-expanded="false" aria-controls="howToUse" style="cursor: pointer;">
         <h5 class="mb-0">
-            📚 How to Use This Dashboard
+            <i class="bi bi-book"></i> How to Use This Dashboard
+            <i class="bi bi-chevron-down float-end"></i>
         </h5>
-        <i class="bi bi-chevron-down"></i>
     </div>
     <div class="collapse" id="howToUse">
         <div class="card-body">
-            <p><strong>Purpose:</strong> Track and manage prompts that lack media (images or videos)</p>
+            <h6>What This Page Shows:</h6>
+            <ul>
+                <li>Prompts that lack media (missing images or videos)</li>
+                <li>Separated into Published (problem) and Draft (already fixed) sections</li>
+                <li>Helps identify and fix broken media displays</li>
+            </ul>
 
-            <p><strong>Draft Status:</strong> Prompts without media have been set to draft to prevent broken displays</p>
+            <h6>How to Fix:</h6>
+            <ol>
+                <li>Review Published prompts without media (these are problems)</li>
+                <li>Use bulk actions to set published prompts to draft status</li>
+                <li>Either add media to these prompts or delete them</li>
+                <li>Draft prompts are already hidden from public view</li>
+            </ol>
 
-            <p><strong>History:</strong> These "untitled" prompts were likely created during early development/testing</p>
-
-            <p><strong>Action Needed:</strong> Either add media to these prompts or delete them</p>
-
-            <h6 class="mt-3">Understanding the Status:</h6>
-            <ul class="mb-0">
-                <li><strong>Select:</strong> Check boxes to select specific prompts for bulk actions</li>
-                <li><strong>"Already Fixed":</strong> Set to draft status (not publicly visible)</li>
-                <li><strong>"Problem Prompts":</strong> Published without media (would show broken)</li>
+            <h6>Tips:</h6>
+            <ul>
+                <li>Published prompts without media will show broken on homepage</li>
+                <li>Draft prompts without media are safe (not publicly visible)</li>
+                <li>Use "Select All" to quickly fix multiple prompts</li>
+                <li>Check the Debug page for complete technical details</li>
             </ul>
         </div>
     </div>

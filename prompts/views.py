@@ -2660,6 +2660,7 @@ def get_follow_status(request, username):
 def media_issues_dashboard(request):
     """Dashboard showing all prompts with media issues."""
     from django.db.models import Q
+    from django.contrib.admin.sites import site as admin_site
 
     no_media = Prompt.all_objects.filter(
         Q(featured_image__isnull=True) | Q(featured_image='')
@@ -2668,13 +2669,17 @@ def media_issues_dashboard(request):
     published = no_media.filter(status=1)
     drafts = no_media.filter(status=0)
 
-    context = {
+    # Get Django admin context for sidebar and logout button
+    context = admin_site.each_context(request)
+
+    # Add custom context
+    context.update({
         'no_media_count': no_media.count(),
         'published_count': published.count(),
         'draft_count': drafts.count(),
         'published_prompts': published,
         'draft_prompts': drafts,  # Show ALL drafts, not just first 10
-    }
+    })
     return render(request, 'prompts/media_issues.html', context)
 
 
@@ -2696,16 +2701,23 @@ def fix_all_media_issues(request):
 def debug_no_media(request):
     """Debug view to see all prompts without ANY media (no image OR video)."""
     from django.db.models import Q
+    from django.contrib.admin.sites import site as admin_site
 
     # Get prompts that have NEITHER image NOR video
     prompts = Prompt.all_objects.filter(
         Q(featured_image__isnull=True) | Q(featured_image='')
     ).select_related('author').order_by('-created_on')
 
-    return render(request, 'prompts/debug_no_media.html', {
+    # Get Django admin context for sidebar and logout button
+    context = admin_site.each_context(request)
+
+    # Add custom context
+    context.update({
         'prompts': prompts,
         'title': 'Debug: Prompts Without Media'
     })
+
+    return render(request, 'prompts/debug_no_media.html', context)
 
 
 @staff_member_required

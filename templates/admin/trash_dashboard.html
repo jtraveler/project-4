@@ -3,6 +3,14 @@
 
 {% block title %}Trash & Orphaned Files Dashboard{% endblock %}
 
+{% block extrahead %}
+<!-- Bootstrap 5 for collapsible cards and modals -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+{% endblock %}
+
 {% block breadcrumbs %}
 <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">Home</a> ›
@@ -14,9 +22,55 @@
 <h1 id="site-name"><a href="{% url 'admin:index' %}">PromptFinder Administration</a></h1>
 {% endblock %}
 
+
+
 {% block content %}
-<div class="trash-dashboard" style="padding: 20px;">
-    <h1 style="margin-bottom: 30px;">🗑️ Trash & Orphaned Files Dashboard</h1>
+
+<!-- 📚 How to Use This Dashboard Section -->
+    <div class="card mb-3">
+        <div class="card-header bg-info text-white" data-bs-toggle="collapse" data-bs-target="#howToUse" aria-expanded="false" aria-controls="howToUse" style="cursor: pointer;">
+            <h5 class="mb-0">
+                <i class="bi bi-book"></i> How to Use This Dashboard
+                <i class="bi bi-chevron-down float-end"></i>
+            </h5>
+        </div>
+        <div class="collapse" id="howToUse">
+            <div class="card-body">
+                <h6>What This Page Shows:</h6>
+                <ul>
+                    <li>All prompts that have been moved to trash (soft deleted)</li>
+                    <li>Prompts remain in database but hidden from public view</li>
+                    <li>Trash is emptied automatically after retention period (5 days free, 30 days premium)</li>
+                    <li>Orphaned Cloudinary files without corresponding database entries</li>
+                </ul>
+
+                <h6>Available Actions:</h6>
+                <ol>
+                    <li><strong>View User Trash Bins:</strong> See all users' trash items with restore options</li>
+                    <li><strong>View All Prompts:</strong> Access Django admin interface for all prompts</li>
+                    <li><strong>View Media Issues:</strong> See prompts with missing or broken media files</li>
+                    <li><strong>Run Management Commands:</strong> Execute maintenance tasks manually</li>
+                </ol>
+
+                <h6>Management Commands:</h6>
+                <ul style="font-family: monospace; font-size: 13px;">
+                    <li><code>python manage.py cleanup_deleted_prompts</code> - Clean expired trash items</li>
+                    <li><code>python manage.py detect_orphaned_files</code> - Find orphaned Cloudinary files</li>
+                    <li><code>python manage.py fix_cloudinary_urls</code> - Fix malformed Cloudinary URLs</li>
+                    <li><code>python manage.py fix_ghost_prompts</code> - Check for orphaned prompts</li>
+                </ul>
+
+                <h6>Tips:</h6>
+                <ul>
+                    <li>Restored prompts return to their original status before deletion</li>
+                    <li>Permanent deletion cannot be undone - use carefully</li>
+                    <li>Orphaned file detection runs automatically via Heroku Scheduler</li>
+                    <li>Run commands with <code>--dry-run</code> flag first to preview changes</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+<div class="trash-dashboard">
 
     <!-- Summary Cards -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
@@ -164,23 +218,6 @@
         {% endif %}
     </div>
 
-    <!-- Instructions -->
-    <div style="background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 30px;">
-        <h3 style="margin-top: 0;">📚 How to Use This Dashboard</h3>
-        <ul style="line-height: 1.8;">
-            <li><strong>Deleted Prompts:</strong> Shows prompts currently in trash (5 days free, 30 days premium retention)</li>
-            <li><strong>Orphaned Images/Videos:</strong> Cloudinary files without corresponding database entries</li>
-            <li><strong>Detect Orphaned Files:</strong> Run the detection command manually or check Heroku Scheduler logs</li>
-            <li><strong>Empty Trash:</strong> Permanently delete all expired trash items</li>
-        </ul>
-
-        <h4>Management Commands:</h4>
-        <ul style="line-height: 1.8; font-family: monospace; font-size: 13px;">
-            <li><code>python manage.py cleanup_deleted_prompts</code> - Clean expired trash</li>
-            <li><code>python manage.py detect_orphaned_files</code> - Find orphaned Cloudinary files</li>
-            <li><code>python manage.py fix_cloudinary_urls</code> - Fix malformed Cloudinary URLs</li>
-            <li><code>python manage.py fix_ghost_prompts</code> - Check for orphaned prompts</li>
-        </ul>
-    </div>
+    
 </div>
 {% endblock %}

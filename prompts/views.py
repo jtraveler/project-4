@@ -2663,7 +2663,8 @@ def media_issues_dashboard(request):
     from django.contrib.admin.sites import site as admin_site
 
     no_media = Prompt.all_objects.filter(
-        Q(featured_image__isnull=True) | Q(featured_image='')
+        Q(featured_image__isnull=True) | Q(featured_image=''),
+        deleted_at__isnull=True  # Exclude soft-deleted prompts
     )
 
     published = no_media.filter(status=1)

@@ -2694,7 +2694,7 @@ def fix_all_media_issues(request):
         )
         count = no_media.update(status=0)
         messages.success(request, f'Set {count} prompts to draft status.')
-    return redirect('prompts:media_issues_dashboard')
+    return redirect('admin_media_issues_dashboard')
 
 
 @staff_member_required
@@ -2703,9 +2703,10 @@ def debug_no_media(request):
     from django.db.models import Q
     from django.contrib.admin.sites import site as admin_site
 
-    # Get prompts that have NEITHER image NOR video
+    # Get prompts that have NEITHER image NOR video (exclude soft-deleted)
     prompts = Prompt.all_objects.filter(
-        Q(featured_image__isnull=True) | Q(featured_image='')
+        Q(featured_image__isnull=True) | Q(featured_image=''),
+        deleted_at__isnull=True
     ).select_related('author').order_by('-created_on')
 
     # Get Django admin context for sidebar and logout button
@@ -2737,7 +2738,7 @@ def bulk_delete_no_media(request):
             referer = request.META.get('HTTP_REFERER')
             if referer:
                 return redirect(referer)
-            return redirect('prompts:debug_no_media')
+            return redirect('admin_debug_no_media')
 
         # Get only selected DRAFT prompts
         prompts_to_delete = Prompt.objects.filter(
@@ -2764,13 +2765,13 @@ def bulk_delete_no_media(request):
         # Redirect back to the page they came from
         referer = request.META.get('HTTP_REFERER')
         if referer and '/debug/no-media/' in referer:
-            return redirect('prompts:debug_no_media')
+            return redirect('admin_debug_no_media')
         elif referer and '/admin/media-issues/' in referer:
-            return redirect('prompts:media_issues_dashboard')
+            return redirect('admin_media_issues_dashboard')
         else:
-            return redirect('prompts:debug_no_media')
+            return redirect('admin_debug_no_media')
 
-    return redirect('prompts:debug_no_media')
+    return redirect('admin_debug_no_media')
 
 
 @staff_member_required
@@ -2790,7 +2791,7 @@ def bulk_set_draft_no_media(request):
             referer = request.META.get('HTTP_REFERER')
             if referer:
                 return redirect(referer)
-            return redirect('prompts:media_issues_dashboard')
+            return redirect('admin_media_issues_dashboard')
 
         # Get only selected PUBLISHED prompts
         prompts_to_draft = Prompt.objects.filter(
@@ -2817,10 +2818,63 @@ def bulk_set_draft_no_media(request):
         # Redirect back to the page they came from
         referer = request.META.get('HTTP_REFERER')
         if referer and '/debug/no-media/' in referer:
-            return redirect('prompts:debug_no_media')
+            return redirect('admin_debug_no_media')
         elif referer and '/admin/media-issues/' in referer:
-            return redirect('prompts:media_issues_dashboard')
+            return redirect('admin_media_issues_dashboard')
         else:
-            return redirect('prompts:media_issues_dashboard')
+            return redirect('admin_media_issues_dashboard')
 
-    return redirect('prompts:media_issues_dashboard')
+    return redirect('admin_media_issues_dashboard')
+
+
+@staff_member_required
+def bulk_set_published_no_media(request):
+    """
+    Bulk set DRAFT prompts to PUBLISHED status.
+
+    Only affects DRAFT prompts selected via checkbox on debug page.
+    Changes status from 0 (draft) to 1 (published).
+    """
+    if request.method == 'POST':
+        # Get selected prompt IDs from POST data
+        selected_ids = request.POST.getlist('selected_prompts')
+
+        if not selected_ids:
+            messages.warning(request, "No prompts selected. Please select prompts to publish.")
+            referer = request.META.get('HTTP_REFERER')
+            if referer:
+                return redirect(referer)
+            return redirect('admin_debug_no_media')
+
+        # Update only DRAFT prompts
+        prompts_to_publish = Prompt.objects.filter(
+            id__in=selected_ids,
+            status=0  # 0 = DRAFT
+        )
+
+        count = prompts_to_publish.count()
+
+        # Set to PUBLISHED
+        prompts_to_publish.update(status=1)  # 1 = PUBLISHED
+
+        if count > 0:
+            messages.success(
+                request,
+                f'Successfully published {count} draft prompt(s).'
+            )
+        else:
+            messages.warning(
+                request,
+                'No DRAFT prompts found in selection. Only draft prompts can be published.'
+            )
+
+        # Redirect back to the page they came from
+        referer = request.META.get('HTTP_REFERER')
+        if referer and '/debug/no-media/' in referer:
+            return redirect('admin_debug_no_media')
+        elif referer and '/admin/media-issues/' in referer:
+            return redirect('admin_media_issues_dashboard')
+        else:
+            return redirect('admin_debug_no_media')
+
+    return redirect('admin_debug_no_media')

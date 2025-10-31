@@ -2543,6 +2543,134 @@ Build the foundation for social features by implementing user profiles, enhanced
 
 ---
 
+## Phase F: Advanced Admin Tools & UI Refinements
+
+**Status:** IN PROGRESS - Day 1 Active (October 31, 2025)
+**Session:** https://claude.ai/chat/cda5549b-7bd0-4d9d-a456-7a0a4f3ad177
+**Note:** This is an INTERIM UPDATE documenting session notes, not a completion report.
+
+### Phase F Day 1: Bulk Actions System (Oct 31, 2025)
+
+**⚠️ INTERIM SESSION NOTES - NOT COMPLETE**
+
+This section documents work-in-progress. Final update will occur after bug fixes and comprehensive testing.
+
+#### Session Objectives:
+1. Implement bulk actions system for admin debugging pages
+2. Enhance UI consistency across admin tools
+3. Fix URL routing issues discovered during implementation
+4. Update CC Communication Protocol with agent usage guidelines
+
+#### Work Completed (Uncommitted):
+
+**1. CC Communication Protocol Enhancement** ✅
+- Added "🤖 MANDATORY WSHOBSON/AGENTS USAGE" section to docs/CC_COMMUNICATION_PROTOCOL.md
+- Documented 85 available agents across 63 plugins
+- Established agent reporting requirements and format
+- Added Django-specific agent usage guidelines
+- Formalized quality assurance through agent usage
+
+**2. Bulk Actions Implementation (Debug Page)** ✅
+- Three bulk action buttons: Delete Selected, Set to Published, Set to Draft
+- Confirmation modals for all three actions (Bootstrap modals)
+- JavaScript for checkbox selection and form population
+- Enhanced checkbox visibility (darker borders via CSS)
+- Responsive 3-button layout
+- **Status:** Debug page fully functional with all features working
+
+**3. URL Routing Fixes** ✅
+- Fixed 19 incorrect URL references across 4 template/view files
+- Created bulk_set_draft_no_media view function
+- Updated nav_sidebar.html, trash_dashboard.html URL references
+- Fixed 16 redirect statements in prompts/views.py
+- Cleaned up duplicate patterns in prompts/urls.py
+
+**4. Django Admin Message Rendering** ✅
+- Created templates/admin/base_site.html override
+- Conditional |safe filter for success messages with HTML links
+- Maintains security while allowing clickable "View Trash" links
+
+#### Known Issues (Not Yet Fixed):
+
+**🐛 Issue #1: Media Issues Page Shows Deleted Items (HIGH PRIORITY)**
+- **Problem:** media_issues_dashboard view missing `deleted_at__isnull=True` filter
+- **Impact:** Soft-deleted prompts appear in table, shouldn't be visible
+- **Cause:** Query lacks the same filter that debug page has (which works correctly)
+- **Status:** Bug identified, fix pending
+- **Fix:** Add deleted filter to media_issues_dashboard query
+
+**🐛 Issue #2: Items Don't Disappear After Delete (Media Issues Page)**
+- **Problem:** After bulk delete, items remain visible in table until manual refresh
+- **Root Cause:** Same as Issue #1 - missing deleted filter
+- **Status:** Bug identified, fix pending
+- **Note:** Items ARE correctly moved to trash, just still showing in list
+
+**🐛 Issue #3: Success Message HTML Not Verified**
+- **Problem:** templates/admin/base_site.html created but not tested by user
+- **Impact:** Clickable "View Trash" links in success messages unverified
+- **Status:** Implementation complete, testing pending
+
+**🐛 Issue #4: Console Errors (LOW PRIORITY)**
+- Favicon 404 error (typo: favicon.ico1) - cosmetic only
+- Permissions Policy warning - no functional impact
+- **Status:** Documented, deferred
+
+#### Files Modified (9 files, uncommitted):
+
+1. prompts/views.py - Added bulk_set_draft_no_media, fixed 16 redirects
+2. prompts_manager/urls.py - Added new URL pattern
+3. prompts/urls.py - Removed duplicates, added documentation
+4. prompts/templates/prompts/debug_no_media.html - 3rd button, modals, JavaScript
+5. prompts/templates/prompts/media_issues.html - 3rd button, modals, JavaScript
+6. templates/admin/base_site.html - NEW: Django admin override
+7. templates/admin/nav_sidebar.html - Fixed 2 URL references
+8. templates/admin/trash_dashboard.html - Fixed 1 URL reference
+9. docs/CC_COMMUNICATION_PROTOCOL.md - NEW SECTION: Agent usage (~200 lines)
+
+#### Testing Status:
+
+**✅ Verified Working:**
+- Debug page loads and displays correctly
+- All 3 bulk action buttons functional on debug page
+- Confirmation modals open/close correctly
+- Deleted prompts disappear on refresh (debug page only)
+- URL routing completely fixed (19 references)
+- Checkboxes more visible with darker borders
+
+**❌ Not Working (Pending Fixes):**
+- Media issues page shows deleted items (needs filter)
+- Items don't disappear after delete (media issues page)
+
+**⏳ Not Yet Tested:**
+- Success message HTML rendering with clickable links
+
+#### Next Steps (Before Final Documentation):
+
+**Immediate:**
+1. Fix media_issues_dashboard query (add deleted filter)
+2. Test success message HTML rendering
+3. Comprehensive testing of both admin pages
+4. Commit all changes after verification
+
+**After Bug Fixes:**
+1. Update this section with final status
+2. Mark as "Phase F Day 1 Complete ✅"
+3. Add comprehensive testing results
+4. Create handoff document
+5. Continue Phase F Day 2 tasks
+
+#### Session Stats (Interim):
+- Duration: Extended session (multiple CC iterations)
+- Token usage: ~78,000 / 190,000 (59% remaining)
+- CC iterations: 3 rounds (URL fixes)
+- Files modified: 9
+- Commits: 0 (pending bug fixes and testing)
+- Agent consultations: 2 (@code-reviewer, @django-pro)
+
+**Status Note:** This documentation reflects work in progress. Final update will occur after all blocking issues are resolved and comprehensive testing is complete.
+
+---
+
 ## 🔍 SEO Strategy (Complete)
 
 ### On-Page SEO Checklist

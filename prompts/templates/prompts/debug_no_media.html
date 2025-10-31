@@ -9,6 +9,41 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<style>
+/* Checkbox Styling - Enhanced Visibility with Bootstrap Variables */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--bs-primary); /* Bootstrap primary variable */
+    border: 2px solid var(--bs-gray-600); /* Darker border */
+}
+
+input[type="checkbox"]:hover {
+    border-color: var(--bs-primary);
+}
+
+input[type="checkbox"]:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+/* Select All checkbox - slightly larger */
+#select-all-prompts {
+    width: 20px;
+    height: 20px;
+}
+
+/* Checkbox labels */
+label[for="select-all-prompts"] {
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.prompt-checkbox {
+    border: 2px solid var(--bs-gray-700) !important; /* Darker for individual checkboxes */
+}
+</style>
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -87,18 +122,25 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal" id="delete-button">
-                        <i class="bi bi-trash"></i> Delete Selected Drafts (Move to Trash)
+                        <i class="bi bi-trash"></i> Delete Selected Drafts
                     </button>
-                    <small class="text-muted">Only affects DRAFT prompts</small>
+                    <small class="text-muted">Move to trash</small>
                 </div>
 
-                <div class="col-md-6">
-                    <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#bulkDraftModal" id="draft-button">
-                        <i class="bi bi-file-earmark"></i> Set Selected to Draft
+                <div class="col-md-4">
+                    <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#bulkPublishModal" id="publish-button">
+                        <i class="bi bi-check-circle"></i> Set to Published
                     </button>
-                    <small class="text-muted">Only affects PUBLISHED prompts</small>
+                    <small class="text-muted">Make public</small>
+                </div>
+
+                <div class="col-md-4">
+                    <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#bulkDraftModal" id="draft-button">
+                        <i class="bi bi-file-earmark"></i> Set to Draft
+                    </button>
+                    <small class="text-muted">Make private</small>
                 </div>
             </div>
 
@@ -203,9 +245,9 @@
                     <li>PUBLISHED prompts will NOT be affected</li>
                 </ul>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="justify-content: center;">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" action="{% url 'prompts:bulk_delete_no_media' %}" id="delete-form">
+                <form method="post" action="{% url 'bulk_delete_no_media' %}" id="delete-form">
                     {% csrf_token %}
                     <!-- Selected IDs will be added dynamically by JavaScript -->
                     <button type="submit" class="btn btn-danger">Yes, Move to Trash</button>
@@ -215,31 +257,65 @@
     </div>
 </div>
 
-<!-- Bulk Set to Draft Confirmation Modal -->
-<div class="modal fade" id="bulkDraftModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="bulkDraftModalLabel" aria-hidden="true">
+<!-- Bulk Publish Confirmation Modal -->
+<div class="modal fade" id="bulkPublishModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="bulkPublishModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="bulkPublishModalLabel">
+                    <i class="bi bi-check-circle-fill"></i> Confirm Publish
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Publish all SELECTED DRAFT prompts?</strong></p>
+
+                <p class="text-muted">This will affect selected DRAFT prompts only.</p>
+
+                <ul class="text-muted small">
+                    <li>Prompts will become publicly visible</li>
+                    <li>Users can see these prompts on the homepage</li>
+                    <li>Make sure prompts are ready for public view</li>
+                    <li>PUBLISHED prompts will NOT be affected</li>
+                </ul>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'bulk_set_published_no_media' %}" id="publish-form">
+                    {% csrf_token %}
+                    <!-- Selected IDs will be added dynamically by JavaScript -->
+                    <button type="submit" class="btn btn-success">Yes, Publish Selected</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Set to Draft Modal -->
+<div class="modal fade" id="bulkDraftModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="bulkDraftModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title" id="bulkDraftModalLabel">
-                    <i class="bi bi-exclamation-triangle-fill"></i> Confirm Status Change
+                    <i class="bi bi-file-earmark-fill"></i> Confirm Set to Draft
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Set all SELECTED PUBLISHED prompts to DRAFT status?</strong></p>
+                <p><strong>Set all SELECTED PUBLISHED prompts to DRAFT?</strong></p>
 
                 <p class="text-muted">This will affect selected PUBLISHED prompts only.</p>
 
                 <ul class="text-muted small">
-                    <li>Prompts will become private (only visible to author)</li>
-                    <li>No gray placeholders will show to public users</li>
-                    <li>Authors can re-publish after adding images</li>
+                    <li>Prompts will become PRIVATE (hidden from public)</li>
+                    <li>Users will NOT see these prompts on the homepage</li>
+                    <li>Use this for accidental publishes or content needing edits</li>
                     <li>DRAFT prompts will NOT be affected</li>
                 </ul>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="justify-content: center;">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" action="{% url 'prompts:bulk_set_draft_no_media' %}" id="draft-form">
+                <form method="post" action="{% url 'bulk_set_draft_no_media' %}" id="draft-form">
                     {% csrf_token %}
                     <!-- Selected IDs will be added dynamically by JavaScript -->
                     <button type="submit" class="btn btn-warning">Yes, Set to Draft</button>
@@ -256,8 +332,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const promptCheckboxes = document.querySelectorAll('.prompt-checkbox');
     const selectedCountBadge = document.getElementById('selected-count');
     const deleteButton = document.getElementById('delete-button');
+    const publishButton = document.getElementById('publish-button');
     const draftButton = document.getElementById('draft-button');
     const bulkDeleteModal = document.getElementById('bulkDeleteModal');
+    const bulkPublishModal = document.getElementById('bulkPublishModal');
     const bulkDraftModal = document.getElementById('bulkDraftModal');
 
     // Update selected count
@@ -267,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Disable buttons if nothing selected
         deleteButton.disabled = checked.length === 0;
+        publishButton.disabled = checked.length === 0;
         draftButton.disabled = checked.length === 0;
     }
 
@@ -296,6 +375,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (bulkDeleteModal) {
         bulkDeleteModal.addEventListener('show.bs.modal', function() {
             const form = document.getElementById('delete-form');
+            // Remove old checkboxes
+            form.querySelectorAll('input[name="selected_prompts"]').forEach(input => input.remove());
+
+            // Add new checkboxes for selected prompts
+            document.querySelectorAll('.prompt-checkbox:checked').forEach(checkbox => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_prompts';
+                input.value = checkbox.value;
+                form.appendChild(input);
+            });
+        });
+    }
+
+    // When publish modal opens, add checkboxes to form
+    if (bulkPublishModal) {
+        bulkPublishModal.addEventListener('show.bs.modal', function() {
+            const form = document.getElementById('publish-form');
             // Remove old checkboxes
             form.querySelectorAll('input[name="selected_prompts"]').forEach(input => input.remove());
 

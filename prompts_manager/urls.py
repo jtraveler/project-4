@@ -19,6 +19,9 @@ urlpatterns = [
     path('admin/media-issues/', maintenance_views.media_issues_dashboard, name='admin_media_issues_dashboard'),
     path('admin/fix-media-issues/', maintenance_views.fix_all_media_issues, name='admin_fix_media_issues'),
     path('admin/debug/no-media/', maintenance_views.debug_no_media, name='admin_debug_no_media'),
+    path('admin/bulk-delete-no-media/', maintenance_views.bulk_delete_no_media, name='bulk_delete_no_media'),
+    path('admin/bulk-set-published-no-media/', maintenance_views.bulk_set_published_no_media, name='bulk_set_published_no_media'),
+    path('admin/bulk-set-draft-no-media/', maintenance_views.bulk_set_draft_no_media, name='bulk_set_draft_no_media'),
 
     # Django admin
     path('admin/', admin.site.urls),

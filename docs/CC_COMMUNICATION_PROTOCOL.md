@@ -263,6 +263,276 @@ Testing Performed:
 ```
 
 ---
+---
+
+## 🤖 MANDATORY WSHOBSON/AGENTS USAGE
+
+### Critical Requirement (Effective: Phase F Day 1, October 31, 2025):
+
+**YOU MUST use wshobson/agents on EVERY implementation task.**
+
+This is NOT optional. Agents help you write better code, catch issues early, and ensure production-quality implementations on the first attempt.
+
+### What Are wshobson/agents?
+
+**wshobson/agents** is an npm package installed in your Claude Code environment providing 85 specialized AI agents organized into 63 plugins. These agents are experts in specific domains and help you during implementation.
+
+**Key Stats:**
+- 85 specialized agents
+- 63 focused plugins  
+- 47 agent skills
+- 15 workflow orchestrators
+
+**Documentation:** https://github.com/wshobson/agents
+
+### How to Invoke Agents:
+
+**Natural Language (Recommended):**
+```
+"Use django-pro to verify model design"
+"Have security-auditor scan for vulnerabilities"
+"Get test-automator to generate comprehensive tests"
+```
+
+**Slash Commands (Direct):**
+```
+/python-development:python-scaffold fastapi-microservice
+/backend-development:feature-development user authentication
+/security-scanning:security-sast
+```
+
+### Essential Agents for Django Projects:
+
+**Python & Django Development:**
+- **python-pro** - Python 3.12+ expert, async patterns, modern tooling
+- **django-pro** - Django specialist, ORM, signals, migrations, admin
+- **fastapi-pro** - FastAPI for API development
+
+**Architecture & Design:**
+- **backend-architect** - API design, REST/GraphQL, service patterns
+- **database-architect** - Schema design, migrations, optimization
+
+**Quality & Testing:**
+- **test-automator** - Pytest test generation, edge cases, comprehensive coverage
+- **code-reviewer** - Code quality, architectural review, best practices
+
+**Security & Performance:**
+- **security-auditor** - OWASP, vulnerability scanning, security patterns
+- **performance-engineer** - Query optimization, caching, profiling
+
+**DevOps & Deployment:**
+- **deployment-engineer** - CI/CD, containerization, cloud deployment
+- **devops-troubleshooter** - Environment issues, configuration problems
+
+**Database & Data:**
+- **sql-pro** - SQL queries, migrations, database patterns
+- **database-optimizer** - Query performance, indexing strategies
+- **database-admin** - Migration execution, database management
+
+**Frontend & UI (when needed):**
+- **frontend-developer** - React, modern JavaScript, component design
+- **ui-ux-designer** - Interface design, accessibility, user experience
+
+### When to Use Which Agents:
+
+**Model Changes:**
+```
+Use: django-pro, database-architect, security-auditor
+"Have django-pro verify model design"
+"Use database-architect for migration strategy"
+"Get security-auditor to check for data exposure risks"
+```
+
+**View Functions:**
+```
+Use: django-pro, backend-architect, security-auditor
+"Have django-pro check Django patterns"
+"Use backend-architect for API design validation"
+"Get security-auditor for input validation review"
+```
+
+**Templates & UI:**
+```
+Use: ui-ux-designer, frontend-developer, security-auditor
+"Have ui-ux-designer verify accessibility"
+"Use frontend-developer for JavaScript patterns"
+"Get security-auditor to check for XSS vulnerabilities"
+```
+
+**Database Migrations:**
+```
+Use: django-pro, database-architect, database-admin
+"Have django-pro verify migration safety"
+"Use database-architect for schema design"
+"Get database-admin to validate migration steps"
+```
+
+**Testing:**
+```
+Use: test-automator, django-pro
+"Have test-automator generate pytest cases"
+"Use django-pro to verify Django test patterns"
+```
+
+**Bug Fixes:**
+```
+Use: debugging-toolkit, code-reviewer, django-pro
+"Use debugging-toolkit for root cause analysis"
+"Have code-reviewer identify anti-patterns"
+"Get django-pro to suggest Django-specific solutions"
+```
+
+**Security Features:**
+```
+Use: security-auditor, backend-architect, django-pro
+"Have security-auditor perform OWASP review"
+"Use backend-architect for secure API design"
+"Get django-pro to verify Django security settings"
+```
+
+### MANDATORY Reporting Requirement:
+
+**Every completion report MUST include an "Agent Usage Report" section.**
+
+### Required Format:
+
+```
+✅ TASK COMPLETE: [Task Name]
+
+[... your regular completion report sections ...]
+
+═══════════════════════════════════════════════════════════════
+🤖 AGENT USAGE REPORT
+═══════════════════════════════════════════════════════════════
+
+Agents Invoked:
+───────────────
+
+1. **@django-pro**
+   - Task: Verified EmailPreferences model design
+   - Findings: Confirmed proper use of OneToOneField and signals
+   - Confidence: 95% - Production ready
+
+2. **@security-auditor** 
+   - Task: Scanned for security vulnerabilities
+   - Findings: Recommended token hashing in preferences
+   - Confidence: 90% - One improvement suggested
+
+3. **@test-automator**
+   - Task: Generated comprehensive test suite
+   - Findings: Created 12 test cases covering edge cases
+   - Confidence: 100% - All scenarios covered
+
+Why These Agents:
+─────────────────
+- django-pro: Essential for Django model patterns
+- security-auditor: User data requires security review
+- test-automator: Complex logic needs thorough testing
+
+Agent Feedback Summary:
+───────────────────────
+All agents confirmed implementation is production-ready with
+one security enhancement recommendation (token hashing). 
+No blocking issues found.
+
+═══════════════════════════════════════════════════════════════
+```
+
+### Good vs Bad Agent Reporting:
+
+**✅ GOOD Agent Reporting:**
+```
+🤖 AGENT USAGE REPORT
+
+Agents Invoked:
+1. @django-pro
+   - Task: Verified admin.py list_display modification
+   - Findings: Confirmed all 8 fields properly ordered
+   - Confidence: 98% - Follows Django admin best practices
+
+2. @code-reviewer
+   - Task: Architectural review of changes
+   - Findings: Clean implementation, no code smells
+   - Confidence: 95% - Production ready
+
+Why These Agents:
+- django-pro: Essential for Django admin patterns
+- code-reviewer: Quality assurance before commit
+
+Agent Feedback Summary:
+Both agents confirmed changes follow Django best practices
+and are ready for production deployment.
+```
+
+**❌ BAD Agent Reporting (Too Vague):**
+```
+I used some agents to help.
+```
+**Problem:** No detail, can't verify agents were actually used
+
+**❌ BAD Agent Reporting (No Mention):**
+```
+✅ TASK COMPLETE: Email Preferences Admin Fix
+
+[No agent section at all]
+```
+**Problem:** Violates mandatory reporting requirement
+
+**❌ BAD Agent Reporting (Generic):**
+```
+🤖 AGENT USAGE REPORT
+
+Agents: @django-pro, @security-auditor
+They all said it looks good.
+```
+**Problem:** No specific tasks, findings, or confidence levels
+
+### Consequences of Not Using Agents:
+
+**If you submit work WITHOUT proper agent usage and reporting:**
+
+1. ❌ Work marked as **INCOMPLETE**
+2. ❌ Requires **rework and re-submission**
+3. ❌ Additional iteration overhead
+4. ❌ Delays project progress
+5. ❌ Lower confidence in code quality
+
+**Expected behavior:**
+- Use agents proactively on every task
+- Report agent usage comprehensively
+- Include specific findings and confidence levels
+- Demonstrate agents contributed to quality
+
+### Why This Matters:
+
+**Data from Recent Sessions:**
+
+| Session | Agent Usage | Agent Reporting | Result |
+|---------|-------------|-----------------|---------|
+| 1 | ❌ Not used | ❌ Not reported | Multiple iterations needed |
+| 2 | ✅ Used | ❌ Not reported | Emergency fix required |
+| 3 | ✅ Used | ✅ Reported | One-shot success ✅ |
+
+**Pattern Clear:** Agents + Reporting = Quality + Efficiency
+
+### Quick Reference:
+
+**Before starting ANY task, ask yourself:**
+
+1. Which agents should I use for this task?
+2. How will each agent contribute?
+3. What will I ask each agent to verify?
+
+**After completing ANY task, verify:**
+
+1. Did I invoke appropriate agents?
+2. Did I document what each agent did?
+3. Did I include agent findings in my report?
+4. Did I explain why I chose these agents?
+
+If you answer "no" to ANY question above, your work is incomplete.
+
+---
 
 ## 🚨 ERROR HANDLING
 

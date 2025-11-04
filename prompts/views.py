@@ -2765,7 +2765,7 @@ def bulk_delete_no_media(request):
 
         # Redirect back to the page they came from
         referer = request.META.get('HTTP_REFERER')
-        if referer and '/debug/no-media/' in referer:
+        if referer and '/debug-no-media/' in referer:
             return redirect('admin_debug_no_media')
         elif referer and '/admin/media-issues/' in referer:
             return redirect('admin_media_issues_dashboard')
@@ -2818,7 +2818,7 @@ def bulk_set_draft_no_media(request):
 
         # Redirect back to the page they came from
         referer = request.META.get('HTTP_REFERER')
-        if referer and '/debug/no-media/' in referer:
+        if referer and '/debug-no-media/' in referer:
             return redirect('admin_debug_no_media')
         elif referer and '/admin/media-issues/' in referer:
             return redirect('admin_media_issues_dashboard')
@@ -2871,7 +2871,7 @@ def bulk_set_published_no_media(request):
 
         # Redirect back to the page they came from
         referer = request.META.get('HTTP_REFERER')
-        if referer and '/debug/no-media/' in referer:
+        if referer and '/debug-no-media/' in referer:
             return redirect('admin_debug_no_media')
         elif referer and '/admin/media-issues/' in referer:
             return redirect('admin_media_issues_dashboard')

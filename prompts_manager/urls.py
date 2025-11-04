@@ -7,6 +7,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from prompts.admin import trash_dashboard
 from prompts import views as maintenance_views
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.views.generic.base import RedirectView
 
 # Customize admin site headers
 admin.site.site_header = "Prompts Manager Administration"
@@ -25,6 +27,12 @@ urlpatterns = [
 
     # Django admin
     path('admin/', admin.site.urls),
+
+    # Favicon route
+    path('favicon.ico', RedirectView.as_view(
+        url=staticfiles_storage.url('favicon.ico'),
+        permanent=True
+    ), name='favicon'),
 
     # Other apps
     path("summernote/", include('django_summernote.urls')),

@@ -51,6 +51,23 @@ X_FRAME_OPTIONS = 'DENY'
 # ADDITIONAL SECURITY HEADERS FOR LIGHTHOUSE COMPLIANCE
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 
+# PERMISSIONS POLICY (formerly Feature-Policy)
+# Restricts browser features to prevent misuse
+SECURE_PERMISSIONS_POLICY = {
+    'accelerometer': [],
+    'ambient-light-sensor': [],
+    'autoplay': [],
+    'camera': [],
+    'display-capture': [],
+    'geolocation': [],
+    'gyroscope': [],
+    'magnetometer': [],
+    'microphone': [],
+    'midi': [],
+    'payment': [],
+    'usb': [],
+}
+
 # HSTS Headers - Enhanced for production/development
 if not DEBUG:
     # Production HSTS settings (1 year minimum for Lighthouse)

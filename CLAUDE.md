@@ -53,8 +53,13 @@
   - ✅ **Phase C:** Pexels-style upload UI (Step 1 drag-and-drop)
   - ✅ **Phase D:** Two-step upload flow WITH AI generation + idle detection ⭐
   - ✅ **Phase D.5:** Trash Bin + Automated Cleanup ⭐ **COMPLETE** (October 12, 2025)
-  - ✅ **Phase E:** User Profiles & Social Foundation ⭐ **COMPLETE** (October 25, 2025)
-  - 📋 **Phase F:** Social Features & Activity Feeds (next)
+  - ⚠️ **Phase E:** User Profiles & Social Foundation ⭐ **85% COMPLETE** (Oct 25 - Nov 4, 2025)
+    - ⚠️ **CRITICAL:** Task 4 (Email Preferences) at 75% - See `PHASE_E_TASK4_INCOMPLETE_REMINDER.md`
+    - ✅ Task 3: Report Feature (complete)
+    - ✅ Task 5: Profile Header Refinements (complete)
+    - 📋 Part 1: Public User Profiles (IN PROGRESS - Nov 4, 2025)
+  - ✅ **Phase F:** Advanced Admin Tools & UI Refinements ⭐ **COMPLETE** (October 31, 2025)
+  - 📋 **Phase G:** Social Features & Activity Feeds (future)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
@@ -2067,16 +2072,19 @@ Day 1 focused on user-facing trash bin functionality and UX polish. The primary 
 - Review and delete confirmed orphaned files from Cloudinary (14 files, 8.5 MB)
 - **Phase E: User Profiles & Social Foundation** (next phase, 10-12 hours estimated)
 
-## Phase E: User Profiles & Social Foundation ✅
+## Phase E: User Profiles & Social Foundation ⚠️
 
-**Status:** 100% COMPLETE (as of October 27, 2025)
-**Completion Date:** October 27, 2025
-**Production Verified:** October 27, 2025
+**Status:** 85% COMPLETE (as of November 4, 2025)
+**⚠️ CRITICAL INCOMPLETE ITEM:** Task 4 Email Preferences at 75% - Must finish before Phase E sign-off
+**See:** `PHASE_E_TASK4_INCOMPLETE_REMINDER.md` for complete details
+
+**Completion Date:** Pending Task 4 completion
+**Production Verified:** Partial (Tasks 1-3, 5 complete; Task 4 at 75%)
 **Total Tests:** 71/71 passing (46 core features + 25 rate limiting)
-**Agent Testing:** 9.5/10 average (Production ready)
+**Agent Testing:** 9.5/10 average for completed tasks
 **Deployed:** Heroku v365+
-**Next Phase:** Phase F - Social Features & Activity Feeds
-**Priority:** High - Foundation for community features
+**Next Phase:** Complete Task 4, then Phase G - Social Features & Activity Feeds
+**Priority:** HIGH - Complete Task 4 before proceeding
 **Detailed Spec:** See `PHASE_E_SPEC.md`
 
 ### Completion Summary
@@ -2426,6 +2434,44 @@ Day 1 focused on user-facing trash bin functionality and UX polish. The primary 
 ---
 
 ### 🔜 Remaining Phase E Tasks
+
+---
+
+### ⚠️ PHASE E TASK 4 - INCOMPLETE (CRITICAL)
+
+**Status:** 75% Complete - IN PROGRESS
+**Priority:** HIGH - Must complete before Phase E can be marked as done
+**Created:** November 4, 2025
+
+**Why This Section Exists:**
+During Phase E implementation, we strategically started Part 1 (User Profiles) before
+completing Task 4 (Email Preferences). This section ensures Task 4 is NOT forgotten.
+
+**What's Complete (75%):**
+- ✅ EmailPreferences model
+- ✅ EmailPreferencesAdmin
+- ✅ email_preferences() view
+- ✅ EmailPreferencesForm
+- ✅ settings_notifications.html template
+- ✅ Signal for auto-creation
+- ✅ Backup/restore commands
+- ✅ Safety tests
+
+**What's INCOMPLETE (25%):**
+- ❌ Field mismatch issue (Commit 2)
+- ❌ Email helper functions (Commit 3)
+- ❌ should_send_notification() function
+- ❌ Unsubscribe system
+- ❌ Email template footer updates
+
+**FULL DETAILS:** See `PHASE_E_TASK4_INCOMPLETE_REMINDER.md` (15 KB comprehensive guide)
+
+**Complete This Before:**
+- Starting Phase G
+- Marking Phase E as 100% complete
+- Implementing any new notification features
+
+---
 
 Per `PHASE_E_SPEC.md`:
 

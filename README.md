@@ -684,6 +684,29 @@ This project followed Code Institute's Django tutorial series, adapting the blog
 
 
 
+# Development Guidelines
+
+## Working with Claude Code
+
+This project uses Claude Code (CC) for implementation tasks. All CC specifications must follow the standardized template.
+
+**Template:** `CC_SPEC_TEMPLATE.md` (root directory)
+
+**Key Requirements:**
+- Mandatory agent usage (minimum 2-3 agents)
+- Quality ratings 8+/10 required
+- Comprehensive testing
+- Professional documentation
+
+**See Also:**
+- `CC_SPEC_TEMPLATE.md` - Template for CC specifications
+- `docs/CC_COMMUNICATION_PROTOCOL.md` - Full CC protocol
+- Recent Phase F work (Days 2, 2.5, 2.7) - Example implementations
+
+**This process has achieved 9.2/10 average quality ratings.**
+
+
+
 # PostgreSQL Setup
 
 The production database was configured using PostgreSQL to ensure reliable data persistence on the Heroku platform. The database was provisioned through the Code Institute PostgreSQL database creation tool, which provided a managed database instance for the project.

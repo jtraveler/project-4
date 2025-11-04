@@ -2858,6 +2858,55 @@ Console warning appears in Django admin backend:
 
 ---
 
+## 🤖 Working with Claude Code (CC)
+
+### Specification Requirements
+
+**CRITICAL:** All specifications for Claude Code must follow the standardized template.
+
+**Template Location:** `CC_SPEC_TEMPLATE.md` (root directory)
+
+### Why This Matters
+
+During Phase F (Nov 2025), we implemented mandatory agent testing for all CC work:
+
+**Results:**
+- **Average Quality Rating:** 9.2/10
+- **Critical Bugs Caught:** 1 (referer checks - prevented production issue)
+- **Zero Regressions:** All existing features continued working
+- **Professional Deliverables:** Consistent, high-quality output
+
+**The Pattern:**
+1. Every spec includes mandatory agent usage header
+2. Minimum 2-3 agents per task (8+/10 ratings required)
+3. Comprehensive testing and reporting
+4. Clear documentation
+
+### How to Use
+
+**When creating CC specifications:**
+
+1. Start with `CC_SPEC_TEMPLATE.md`
+2. Include the "⚠️ CRITICAL: READ FIRST" header
+3. Specify appropriate agents for the task
+4. Require agent ratings 8+/10
+5. Include comprehensive testing checklist
+
+**Examples:**
+- Phase F Day 2: Admin backend cosmetic fixes (9.25/10)
+- Phase F Day 2.5: Configuration verification (9.25/10)
+- Phase F Day 2.7: Production bug fixes (9.17/10)
+
+### Key Documents
+
+- **Template:** `CC_SPEC_TEMPLATE.md`
+- **Protocol:** `docs/CC_COMMUNICATION_PROTOCOL.md`
+- **Full Protocol:** `PROJECT_COMMUNICATION_PROTOCOL.md`
+
+**This system has proven highly effective and should be maintained for all future work.**
+
+---
+
 ## 🔍 SEO Strategy (Complete)
 
 ### On-Page SEO Checklist

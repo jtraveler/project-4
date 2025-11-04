@@ -2,11 +2,48 @@
 
 **Purpose:** Instructions for Claude Code when executing specifications. Read this at the start of EVERY task to understand expectations and communication standards.
 
-**Version:** 1.0  
-**Last Updated:** October 2025  
-**Project:** PromptFlow (Django Prompts Manager)  
-**For:** Claude Code (CC) - VS Code Extension  
+**Version:** 1.1
+**Last Updated:** November 4, 2025
+**Project:** PromptFlow (Django Prompts Manager)
+**For:** Claude Code (CC) - VS Code Extension
 **Status:** Active Reference Document
+
+---
+
+## 📋 Specification Template
+
+**IMPORTANT:** All CC specifications must follow the standardized template.
+
+**Template Location:** `CC_SPEC_TEMPLATE.md` (in root directory)
+
+### Template Structure
+
+The template includes:
+- ⚠️ Mandatory "CRITICAL: READ FIRST" header
+- Agent usage requirements (minimum 2-3 agents)
+- Quality standards (8+/10 ratings required)
+- Comprehensive testing checklist
+- Standard reporting format
+
+### Why Use The Template
+
+**Phase F Results (Nov 2025):**
+- Average quality: 9.2/10
+- Critical bug caught: Referer checks (prevented production issue)
+- Zero regressions
+- Professional deliverables
+
+**The template codifies these successful patterns.**
+
+### How to Use
+
+1. Copy structure from `CC_SPEC_TEMPLATE.md`
+2. Fill in task-specific details
+3. Include all required sections
+4. Specify appropriate agents
+5. Require 8+/10 ratings
+
+**See Phase F Day 2, 2.5, 2.7 specs for examples.**
 
 ---
 

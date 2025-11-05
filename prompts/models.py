@@ -124,35 +124,41 @@ class UserProfile(models.Model):
         """
         Calculate total likes received across all user's prompts.
 
-        Iterates through each published prompt and sums the likes.count()
-        for each prompt. This correctly counts the TOTAL number of likes,
+        PERFORMANCE OPTIMIZED: Uses database aggregation instead of Python loop.
+        Reduces queries from 100+ (1 per prompt) to just 1 query.
+
+        Uses Count() with aggregate() to let PostgreSQL do the counting at the
+        database level. This correctly counts the TOTAL number of likes,
         not just the number of prompts that have likes.
 
-        Bug Fixed: Previously used Count('likes') which counted relationships
-        (prompts with likes) instead of total like count. For example:
-        - 3 prompts with 10, 5, 0 likes
-        - Old: returned 2 (prompts with likes)
-        - New: returns 15 (total likes)
+        Example with 3 prompts (10, 5, 0 likes):
+        - Count('likes') returns 15 (total likes) ✅
+        - Old Python loop: 100+ queries for 100 prompts ❌
+        - New aggregation: 1 query regardless of prompt count ✅
 
         Filters for published prompts (status=1) that aren't deleted.
 
         Returns:
-            int: Sum of all likes on user's published prompts
+            int: Sum of all likes on user's published prompts (0 if none)
 
         Example:
             profile = user.userprofile
-            total_likes = profile.get_total_likes()
+            total_likes = profile.get_total_likes()  # 1 query, not 100+
         """
-        total = 0
-        for prompt in self.user.prompts.filter(status=1, deleted_at__isnull=True):
-            total += prompt.likes.count()
-        return total
+        from django.db.models import Count
+
+        result = self.user.prompts.filter(
+            status=1,
+            deleted_at__isnull=True
+        ).aggregate(total_likes=Count('likes'))
+
+        return result['total_likes'] or 0
 
     @property
     def follower_count(self):
         """Get count of users following this user"""
         return cache.get_or_set(
-            f'user_{self.user.id}_follower_count',
+            f'followers_count_{self.user.id}',
             lambda: self.user.follower_set.count(),
             timeout=300  # 5 minute cache
         )
@@ -161,7 +167,7 @@ class UserProfile(models.Model):
     def following_count(self):
         """Get count of users this user follows"""
         return cache.get_or_set(
-            f'user_{self.user.id}_following_count',
+            f'following_count_{self.user.id}',
             lambda: self.user.following_set.count(),
             timeout=300  # 5 minute cache
         )
@@ -1422,12 +1428,12 @@ class Follow(models.Model):
 
         if is_new:
             # Increment follower counts (consider caching in production)
-            # Clear any cached counts
-            cache.delete(f'user_{self.follower.id}_following_count')
-            cache.delete(f'user_{self.following.id}_follower_count')
+            # Clear any cached counts - use same format as views
+            cache.delete(f'following_count_{self.follower.id}')
+            cache.delete(f'followers_count_{self.following.id}')
 
     def delete(self, *args, **kwargs):
-        # Clear cached counts before deletion
-        cache.delete(f'user_{self.follower.id}_following_count')
-        cache.delete(f'user_{self.following.id}_follower_count')
+        # Clear cached counts before deletion - use same format as views
+        cache.delete(f'following_count_{self.follower.id}')
+        cache.delete(f'followers_count_{self.following.id}')
         super().delete(*args, **kwargs)

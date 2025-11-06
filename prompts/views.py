@@ -2109,13 +2109,14 @@ def get_client_ip(request):
 
 def _disable_all_notifications(email_preferences):
     """
-    Helper function to disable all email notifications for a user.
+    Disable all email notifications EXCEPT critical platform updates.
 
     Used by both unsubscribe_custom() and unsubscribe_package() to avoid
     code duplication (DRY principle).
 
-    This function modifies and saves the EmailPreferences instance,
-    disabling all 8 notification types that control email delivery.
+    Per model's unsubscribe_all() behavior, notify_updates stays enabled
+    so users still receive critical security and platform notifications.
+    This matches the documented intent in EmailPreferences.unsubscribe_all().
 
     Args:
         email_preferences: EmailPreferences instance to modify
@@ -2129,12 +2130,13 @@ def _disable_all_notifications(email_preferences):
     email_preferences.notify_likes = False
     email_preferences.notify_mentions = False
     email_preferences.notify_weekly_digest = False
-    email_preferences.notify_updates = False
+    # email_preferences.notify_updates = False    # Keep True - critical platform updates
     email_preferences.notify_marketing = False
     email_preferences.save(update_fields=[
         'notify_comments', 'notify_replies', 'notify_follows',
         'notify_likes', 'notify_mentions', 'notify_weekly_digest',
-        'notify_updates', 'notify_marketing'
+        # 'notify_updates',    # Not changing this field - keep enabled
+        'notify_marketing'
     ])
     return email_preferences
 

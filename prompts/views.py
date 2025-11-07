@@ -36,6 +36,124 @@ from .email_utils import should_send_email
 logger = logging.getLogger(__name__)
 
 
+# SEO Phase 2: Similarity Scoring Functions for Deleted Prompts
+
+def calculate_similarity_score(deleted_prompt_data, candidate_prompt):
+    """
+    Calculate similarity score between deleted prompt and candidate prompt.
+
+    Scoring weights:
+    - Tag overlap: 40% (shared tags / total unique tags)
+    - Same AI generator: 30% (1.0 if match, 0.0 if different)
+    - Similar engagement: 20% (based on likes_count proximity)
+    - Recency preference: 10% (newer prompts scored higher)
+
+    Args:
+        deleted_prompt_data (dict): Data from deleted prompt
+            - original_tags (list): Tag names from deleted prompt
+            - ai_generator (str): AI generator choice value
+            - likes_count (int): Number of likes
+            - created_at (datetime): When prompt was created
+        candidate_prompt (Prompt): Active prompt being evaluated
+
+    Returns:
+        float: Similarity score from 0.0 to 1.0
+    """
+    score = 0.0
+
+    # 1. Tag overlap (40% weight)
+    deleted_tags = set(deleted_prompt_data.get('original_tags', []))
+    candidate_tags = set(candidate_prompt.tags.values_list('name', flat=True))
+
+    if deleted_tags and candidate_tags:
+        shared_tags = deleted_tags & candidate_tags
+        total_unique_tags = deleted_tags | candidate_tags
+        tag_similarity = len(shared_tags) / len(total_unique_tags) if total_unique_tags else 0
+        score += tag_similarity * 0.4
+
+    # 2. Same AI generator (30% weight)
+    if deleted_prompt_data.get('ai_generator') == candidate_prompt.ai_generator:
+        score += 0.3
+
+    # 3. Similar engagement (20% weight)
+    deleted_likes = deleted_prompt_data.get('likes_count', 0)
+    candidate_likes = candidate_prompt.likes.count()
+
+    # Calculate engagement similarity (closer likes count = higher score)
+    if deleted_likes > 0 or candidate_likes > 0:
+        max_likes = max(deleted_likes, candidate_likes)
+        min_likes = min(deleted_likes, candidate_likes)
+        engagement_similarity = min_likes / max_likes if max_likes > 0 else 0
+        score += engagement_similarity * 0.2
+
+    # 4. Recency preference (10% weight)
+    # Prefer prompts created within 90 days of the deleted prompt
+    from django.utils import timezone
+    deleted_created = deleted_prompt_data.get('created_at')
+    if deleted_created and candidate_prompt.created_on:
+        days_diff = abs((candidate_prompt.created_on - deleted_created).days)
+        recency_score = max(0, 1 - (days_diff / 365))  # 0 after 1 year
+        score += recency_score * 0.1
+
+    return min(1.0, score)  # Cap at 1.0
+
+
+def find_best_redirect_match(deleted_prompt_data):
+    """
+    Find the best matching prompt for redirect from deleted prompt data.
+
+    Evaluates all active prompts and returns the one with highest similarity score.
+    Returns None if no suitable match found.
+
+    Args:
+        deleted_prompt_data (dict): Data from deleted prompt
+            - original_tags (list): Tag names
+            - ai_generator (str): AI generator
+            - likes_count (int): Likes count
+            - created_at (datetime): Creation date
+
+    Returns:
+        tuple: (best_match_prompt, similarity_score) or (None, 0.0)
+    """
+    from prompts.models import Prompt
+
+    # Get all active prompts (published, not deleted)
+    candidates = Prompt.objects.filter(
+        status=1,
+        deleted_at__isnull=True
+    ).prefetch_related('tags', 'likes')
+
+    # If deleted prompt had tags, prioritize tag-based matching
+    deleted_tags = deleted_prompt_data.get('original_tags', [])
+    if deleted_tags:
+        # Filter to prompts with at least 1 shared tag
+        candidates = candidates.filter(tags__name__in=deleted_tags).distinct()
+
+    if not candidates.exists():
+        # No tag matches, try same AI generator
+        candidates = Prompt.objects.filter(
+            status=1,
+            deleted_at__isnull=True,
+            ai_generator=deleted_prompt_data.get('ai_generator')
+        ).prefetch_related('tags', 'likes')
+
+    if not candidates.exists():
+        # No matches at all
+        return None, 0.0
+
+    # Score all candidates
+    best_match = None
+    best_score = 0.0
+
+    for candidate in candidates[:100]:  # Limit to first 100 for performance
+        score = calculate_similarity_score(deleted_prompt_data, candidate)
+        if score > best_score:
+            best_score = score
+            best_match = candidate
+
+    return best_match, best_score
+
+
 class PromptList(generic.ListView):
     """
     Display a paginated list of published AI prompts with filtering options.
@@ -162,13 +280,50 @@ def prompt_detail(request, slug):
     """
     start_time = time.time()
 
+    # SEO Phase 2: Check for permanently deleted prompts first
+    # If prompt was hard-deleted, check DeletedPrompt table for redirect info
+    try:
+        from prompts.models import DeletedPrompt
+        deleted_record = DeletedPrompt.objects.filter(slug=slug).first()
+
+        if deleted_record and not deleted_record.is_expired:
+            # Found a deleted prompt record that hasn't expired
+            if deleted_record.is_strong_match and deleted_record.redirect_to_slug:
+                # Strong match (≥0.75 score): 301 permanent redirect
+                response = redirect('prompts:prompt_detail', slug=deleted_record.redirect_to_slug)
+                response.status_code = 301
+                return response
+            else:
+                # Weak match (<0.75) or no match: 410 Gone with category suggestions
+                # Find prompts in same AI generator category
+                category_prompts = Prompt.objects.filter(
+                    ai_generator=deleted_record.ai_generator,
+                    status=1,
+                    deleted_at__isnull=True
+                ).order_by('-likes_count')[:6]
+
+                return render(
+                    request,
+                    'prompts/prompt_gone.html',
+                    {
+                        'original_title': deleted_record.original_title,
+                        'ai_generator': deleted_record.get_ai_generator_display(),
+                        'category_prompts': category_prompts,
+                    },
+                    status=410  # 410 Gone
+                )
+    except ImportError:
+        # Model not migrated yet, continue with normal flow
+        pass
+
     # Cache individual prompt details for 10 minutes
     cache_key = (
         f"prompt_detail_{slug}_"
         f"{request.user.id if request.user.is_authenticated else 'anonymous'}"
     )
 
-    prompt_queryset = Prompt.objects.select_related('author').prefetch_related(
+    # Use all_objects to include deleted prompts (needed for back button detection)
+    prompt_queryset = Prompt.all_objects.select_related('author').prefetch_related(
         'tags',
         'likes',
         Prefetch(
@@ -181,10 +336,60 @@ def prompt_detail(request, slug):
 
     if request.user.is_authenticated:
         prompt = get_object_or_404(prompt_queryset, slug=slug)
+
+        # Check if prompt is deleted (handles browser back button after deletion)
+        if prompt.deleted_at is not None:
+            if prompt.author == request.user:
+                # Owner: Redirect to trash with helpful message
+                from django.utils.html import escape
+                messages.info(
+                    request,
+                    f'This prompt "{escape(prompt.title)}" is in your trash. '
+                    f'You can restore it from there.'
+                )
+                return redirect('prompts:trash_bin')
+            elif request.user.is_staff:
+                # Staff: Redirect to admin trash dashboard
+                messages.info(
+                    request,
+                    f'This prompt is in the trash. View in admin dashboard.'
+                )
+                return redirect('admin_trash_dashboard')
+            else:
+                # Non-owner/Bot: Show HTTP 200 "Temporarily Unavailable" page
+                # SEO Strategy: Keeps URL in search index, preserves SEO value if restored
+                from django.utils.html import escape
+
+                # Find similar prompts (tag-based matching)
+                similar_prompts = Prompt.objects.filter(
+                    tags__in=prompt.tags.all(),
+                    status=1,
+                    deleted_at__isnull=True
+                ).exclude(
+                    id=prompt.id
+                ).distinct().order_by('-likes_count')[:6]
+
+                return render(
+                    request,
+                    'prompts/prompt_temporarily_unavailable.html',
+                    {
+                        'prompt_title': escape(prompt.title),
+                        'similar_prompts': similar_prompts,
+                        'can_restore': False,
+                    },
+                    status=200  # Explicit HTTP 200 OK
+                )
+
         if prompt.status != 1 and prompt.author != request.user:
             raise Http404("Prompt not found")
     else:
-        prompt = get_object_or_404(prompt_queryset, slug=slug, status=1)
+        # Anonymous users: Filter out deleted prompts in query
+        prompt = get_object_or_404(
+            prompt_queryset,
+            slug=slug,
+            status=1,
+            deleted_at__isnull=True
+        )
 
     if request.user.is_authenticated:
         comments = [
@@ -227,7 +432,10 @@ def prompt_detail(request, slug):
         f"DEBUG: prompt_detail view took {end_time - start_time:.3f} seconds"
     )
 
-    return render(
+    # Create response with cache-busting headers
+    # Prevents browser from caching this page, ensuring back button
+    # always makes a fresh server request (needed for deleted prompt detection)
+    response = render(
         request,
         "prompts/prompt_detail.html",
         {
@@ -239,6 +447,13 @@ def prompt_detail(request, slug):
             "prompt_is_liked": liked,
         },
     )
+
+    # Add cache-control headers to prevent browser caching
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+
+    return response
 
 
 def comment_edit(request, slug, comment_id):
@@ -745,6 +960,7 @@ def prompt_delete(request, slug):
             f'</form>',
             extra_tags='success safe'
         )
+
         return HttpResponseRedirect(reverse('prompts:home'))
     else:
         messages.add_message(

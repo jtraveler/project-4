@@ -38,6 +38,8 @@ urlpatterns = [
     path('rate-limited/', views.ratelimited, name='ratelimited'),
     # Report prompt URL (Phase E Task 3)
     path('prompt/<slug:slug>/report/', views.report_prompt, name='report_prompt'),
+    # AI Generator Category Pages (SEO Phase 3)
+    path('ai/<slug:generator_slug>/', views.ai_generator_category, name='ai_generator_category'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',
          views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',

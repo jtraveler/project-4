@@ -33,6 +33,14 @@ from .services import ModerationOrchestrator
 # Import email utilities
 from .email_utils import should_send_email
 
+# Import constants (SEO Phase 3)
+from .constants import (
+    AI_GENERATORS,
+    VALID_PROMPT_TYPES,
+    VALID_DATE_FILTERS,
+    VALID_SORT_OPTIONS
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -3121,3 +3129,90 @@ def bulk_set_published_no_media(request):
             return redirect('admin_debug_no_media')
 
     return redirect('admin_debug_no_media')
+
+
+
+def ai_generator_category(request, generator_slug):
+    """
+    Display prompts for a specific AI generator category.
+
+    URL: /ai/<generator_slug>/
+    Example: /ai/midjourney/
+
+    Features:
+    - Filter by type (image/video)
+    - Filter by date (today, week, month, year)
+    - Sort by recent, popular, trending
+    - Pagination (24 prompts per page)
+    - SEO optimized with meta tags and structured data
+    """
+    # Get generator info or 404
+    generator = AI_GENERATORS.get(generator_slug)
+    if not generator:
+        raise Http404("AI generator not found")
+
+    # Base queryset: active prompts for this generator
+    prompts = Prompt.objects.filter(
+        ai_generator=generator['choice_value'],
+        status=1,  # Published only
+        deleted_at__isnull=True  # Not deleted
+    ).select_related('author').prefetch_related('tags', 'likes')
+
+    # Validate and filter by type
+    prompt_type = request.GET.get('type')
+    if prompt_type and prompt_type not in VALID_PROMPT_TYPES:
+        prompt_type = None  # Ignore invalid input
+
+    if prompt_type == 'image':
+        prompts = prompts.filter(featured_image__isnull=False)
+    elif prompt_type == 'video':
+        prompts = prompts.filter(featured_video__isnull=False)
+
+    # Validate and filter by date
+    date_filter = request.GET.get('date')
+    if date_filter and date_filter not in VALID_DATE_FILTERS:
+        date_filter = None  # Ignore invalid input
+
+    now = timezone.now()
+    if date_filter == 'today':
+        prompts = prompts.filter(created_on__gte=now - timedelta(days=1))
+    elif date_filter == 'week':
+        prompts = prompts.filter(created_on__gte=now - timedelta(days=7))
+    elif date_filter == 'month':
+        prompts = prompts.filter(created_on__gte=now - timedelta(days=30))
+    elif date_filter == 'year':
+        prompts = prompts.filter(created_on__gte=now - timedelta(days=365))
+
+    # Validate and apply sort
+    sort_by = request.GET.get('sort', 'recent')
+    if sort_by not in VALID_SORT_OPTIONS:
+        sort_by = 'recent'  # Default to safe value
+
+    if sort_by == 'popular':
+        prompts = prompts.annotate(
+            likes_count=models.Count('likes', distinct=True)
+        ).order_by('-likes_count', '-created_on')
+    elif sort_by == 'trending':
+        # Trending: most likes in last 7 days
+        week_ago = now - timedelta(days=7)
+        prompts = prompts.filter(
+            created_on__gte=week_ago
+        ).annotate(
+            likes_count=models.Count('likes', distinct=True)
+        ).order_by('-likes_count', '-created_on')
+    else:  # recent (default)
+        prompts = prompts.order_by('-created_on')
+
+    # Pagination (24 prompts per page)
+    paginator = Paginator(prompts, 24)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'generator': generator,
+        'prompts': page_obj,
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+    }
+
+    return render(request, 'prompts/ai_generator_category.html', context)

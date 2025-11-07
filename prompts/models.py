@@ -720,6 +720,16 @@ class Prompt(models.Model):
             models.Index(fields=['deleted_at']),
             models.Index(fields=['author', 'deleted_at']),
             models.Index(fields=['original_status']),
+
+            # SEO Phase 3: AI Generator Category Page Optimization
+            models.Index(
+                fields=['ai_generator', 'status', 'deleted_at'],
+                name='prompt_ai_gen_idx'
+            ),
+            models.Index(
+                fields=['ai_generator', 'created_on'],
+                name='prompt_ai_gen_date_idx'
+            ),
         ]
 
     def __str__(self):

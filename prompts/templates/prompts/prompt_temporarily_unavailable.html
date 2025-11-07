@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prompt Temporarily Unavailable - PromptFinder{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <!-- Main Message -->
+            <div class="text-center mb-5">
+                <i class="fas fa-clock text-warning" style="font-size: 4rem;"></i>
+                <h1 class="mt-4 mb-3">Prompt Temporarily Unavailable</h1>
+                <p class="lead text-muted">
+                    "{{ prompt_title }}" is currently unavailable but may return soon.
+                </p>
+
+                {% if can_restore %}
+                <div class="alert alert-info mt-4">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>This is your prompt.</strong>
+                    <a href="{% url 'prompts:trash_bin' %}" class="alert-link">Visit your trash bin</a> to restore it.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Related Prompts -->
+            {% if similar_prompts %}
+            <div class="mt-5">
+                <h2 class="text-center mb-4">You Might Also Like</h2>
+                <div class="row">
+                    {% for prompt in similar_prompts %}
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <div class="card h-100 shadow-sm hover-lift">
+                            <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="text-decoration-none">
+                                {% if prompt.featured_image %}
+                                <img src="{{ prompt.featured_image.url }}"
+                                     class="card-img-top"
+                                     alt="{{ prompt.title }}"
+                                     style="height: 200px; object-fit: cover;">
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title text-dark">{{ prompt.title|truncatewords:8 }}</h5>
+                                    <p class="card-text text-muted small">
+                                        {{ prompt.excerpt|truncatewords:15|default:"Creative AI prompt" }}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center text-muted small">
+                                        <span>
+                                            <i class="fas fa-heart"></i> {{ prompt.likes.count }}
+                                        </span>
+                                        <span>
+                                            <i class="fas fa-tag"></i> {{ prompt.ai_generator|default:"AI" }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Browse Actions -->
+            <div class="text-center mt-5">
+                <h3 class="mb-4">Explore More Prompts</h3>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="{% url 'prompts:home' %}" class="btn btn-primary">
+                        <i class="fas fa-home"></i> Browse All Prompts
+                    </a>
+                    <a href="{% url 'prompts:home' %}?search=" class="btn btn-outline-primary">
+                        <i class="fas fa-search"></i> Search Prompts
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-lift {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.gap-3 {
+    gap: 1rem !important;
+}
+</style>
+{% endblock %}

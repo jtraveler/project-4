@@ -975,6 +975,130 @@ class Prompt(models.Model):
         return critical_flags
 
 
+class DeletedPrompt(models.Model):
+    """
+    Model for tracking permanently deleted prompts for SEO redirects.
+
+    When a prompt is permanently deleted, we store metadata to enable:
+    1. 301 redirects to similar prompts (if match quality ≥0.75)
+    2. 410 Gone responses with category suggestions (if match quality <0.75)
+
+    This preserves SEO value and provides better user experience than 404s.
+    Records expire after 90 days.
+
+    Attributes:
+        slug (SlugField): Original prompt slug (for URL matching)
+        original_title (CharField): Original prompt title
+        original_tags (JSONField): Tags from the deleted prompt
+        ai_generator (CharField): Which AI tool was used
+        likes_count (IntegerField): Number of likes before deletion
+        created_at (DateTimeField): When original prompt was created
+        deleted_at (DateTimeField): When prompt was permanently deleted
+        redirect_to_slug (SlugField): Slug of the best matching prompt (if found)
+        redirect_similarity_score (FloatField): Quality of the match (0-1)
+        expires_at (DateTimeField): When to stop redirecting (90 days after deletion)
+
+    Similarity Scoring:
+        - 0.75-1.00: Strong match → 301 redirect
+        - 0.00-0.74: Weak/no match → 410 Gone with suggestions
+
+    Example:
+        DeletedPrompt.objects.create(
+            slug='cyberpunk-neon-cityscape',
+            original_title='Cyberpunk Neon Cityscape',
+            original_tags=['cyberpunk', 'cityscape', 'neon'],
+            ai_generator='midjourney',
+            likes_count=125,
+            redirect_to_slug='neon-metropolis',
+            redirect_similarity_score=0.85
+        )
+    """
+    # Original prompt data
+    slug = models.SlugField(
+        max_length=200,
+        unique=True,
+        db_index=True,
+        help_text='Original prompt slug for URL matching'
+    )
+    original_title = models.CharField(
+        max_length=200,
+        help_text='Title of deleted prompt'
+    )
+    original_tags = models.JSONField(
+        default=list,
+        help_text='Tags from deleted prompt (for similarity matching)'
+    )
+    ai_generator = models.CharField(
+        max_length=50,
+        choices=AI_GENERATOR_CHOICES,
+        help_text='AI tool used for the deleted prompt'
+    )
+    likes_count = models.IntegerField(
+        default=0,
+        help_text='Number of likes before deletion'
+    )
+
+    # Redirect logic
+    redirect_to_slug = models.SlugField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text='Slug of best matching prompt (for 301 redirect)'
+    )
+    redirect_similarity_score = models.FloatField(
+        default=0.0,
+        help_text='Similarity score 0-1 (≥0.75 = strong match)'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(
+        help_text='When original prompt was created'
+    )
+    deleted_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text='When prompt was permanently deleted'
+    )
+    expires_at = models.DateTimeField(
+        db_index=True,
+        help_text='When to stop redirecting (90 days after deletion)'
+    )
+
+    class Meta:
+        verbose_name = 'Deleted Prompt Redirect'
+        verbose_name_plural = 'Deleted Prompt Redirects'
+        ordering = ['-deleted_at']
+        indexes = [
+            models.Index(fields=['slug'], name='deleted_prompt_slug_idx'),
+            models.Index(fields=['expires_at'], name='deleted_prompt_expires_idx'),
+            models.Index(fields=['redirect_similarity_score'], name='deleted_prompt_score_idx'),
+        ]
+
+    def __str__(self):
+        if self.redirect_to_slug:
+            return f"{self.slug} → {self.redirect_to_slug} (score: {self.redirect_similarity_score:.2f})"
+        return f"{self.slug} (no redirect)"
+
+    @property
+    def is_expired(self):
+        """Check if redirect has expired"""
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+    @property
+    def is_strong_match(self):
+        """Check if similarity score qualifies for 301 redirect"""
+        return self.redirect_similarity_score >= 0.75
+
+    def get_redirect_type(self):
+        """
+        Determine HTTP status code for redirect.
+
+        Returns:
+            int: 301 for strong matches (≥0.75), 410 for weak matches
+        """
+        return 301 if self.is_strong_match else 410
+
+
 class Comment(models.Model):
     """
     Model representing user comments on AI prompts.

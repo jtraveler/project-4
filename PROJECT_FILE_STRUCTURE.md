@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** October 26, 2025
+**Last Updated:** November 7, 2025
 **Project:** PromptFinder (Django 4.2.13)
 **Total Tests:** 69+ passing (46 core + 23 rate limiting)
-**Phase:** E Complete (User Profiles & Social Foundation)
+**Phase:** E Complete (User Profiles & Social Foundation), Phase 3 SEO Complete (AI Generator Landing Pages)
 
 ---
 
@@ -46,6 +46,7 @@ live-working-project/
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
+│   ├── constants.py           # AI generator metadata (Phase 3)
 │   ├── email_utils.py
 │   ├── forms.py
 │   ├── middleware.py
@@ -138,6 +139,7 @@ View functions and class-based views:
 - Email preferences dashboard
 - Unsubscribe handler
 - Report submission
+- **AI generator category pages (Phase 3):** ai_generator_category view with filtering/sorting
 - Rate limiting error page (ratelimited view)
 - Comment moderation
 
@@ -170,6 +172,13 @@ Django signals:
 - Auto-create EmailPreferences on user creation
 - Cloudinary cleanup on prompt deletion
 
+#### `prompts/constants.py`
+AI generator metadata and validation (Phase 3 SEO):
+- **AI_GENERATORS:** Dictionary mapping 11 AI generators to metadata
+- Generator metadata: name, description, official_website, icon, choice_value
+- Used by ai_generator_category view for validation and display
+- Prevents hardcoding generator data across multiple files
+
 #### `prompts/email_utils.py`
 Email helper functions:
 - should_send_email() - Check user preferences
@@ -184,6 +193,7 @@ URL routing for prompts app:
 - User profile endpoints
 - Email preferences endpoints
 - Report endpoints
+- **AI generator category endpoints (Phase 3):** `/ai/<slug:generator_slug>/`
 - Rate limit error page endpoint
 
 ### Middleware

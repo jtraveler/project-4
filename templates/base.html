@@ -56,364 +56,470 @@
 
         <!-- CSS Styles -->
 <style>
-    .modern-navbar {
-        background: #ffffff;
-        border-bottom: 1px solid #e5e7eb;
+    /* ========================================
+       PEXELS-INSPIRED NAVIGATION STYLES
+       ======================================== */
+
+    .pexels-navbar {
+        background: var(--white);
+        border-bottom: 1px solid var(--gray-200);
         padding: 0;
         position: sticky;
         top: 0;
         z-index: 1000;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow-sm);
     }
-    
-    .nav-container {
-       
+
+    .pexels-nav-container {
+        max-width: 1600px;
         margin: 0 auto;
-        padding: 0 12px;
+        padding: 0 var(--space-6);
         display: flex;
         align-items: center;
-        height: 64px;
-        gap: 24px;
+        height: 70px;
+        gap: var(--space-6);
     }
-    
-    /* Left Side */
-    .nav-left {
-        display: flex;
-        align-items: center;
-        gap: 32px;
+
+    /* === LOGO === */
+    .pexels-logo {
+        text-decoration: none;
+        color: var(--black);
+        font-family: var(--font-logo);
+        font-size: 28px;
+        font-weight: 400;
+        letter-spacing: -0.5px;
         flex-shrink: 0;
+        transition: opacity var(--transition-base);
     }
-    
-    .logo {
+
+    .pexels-logo:hover {
+        opacity: 0.7;
         text-decoration: none;
-        color: #1f2937;
+        color: var(--black);
     }
-    
-    .logo-text {
-        font-size: 24px;
-        font-weight: 800;
-        float: left;
-        background: linear-gradient(135deg, var(--main-blue-hover) 0%, var(--main-blue) 50%, var(--main-blue) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        position: relative;
-    }
-    
-    
-    .nav-links {
-        display: flex;
-        gap: 24px;
-    }
-    
-    .nav-link {
-        color: var(--main-blue-hover);
-        text-decoration: none;
-        font-weight: 700;
-        font-size: .9375rem;
-        padding: 8px 12px;
-        border-radius: 6px;
-        transition: all 0.2s ease;
-    }
-    
-    .nav-link:hover {
-        color: var(--main-blue);
-        background: var(--light-blue);
-        text-decoration: none;
-        border-radius: 100px;
-    }
-    
-    .nav-link.active {
-        color: #2563eb;
-        background: #eff6ff;
-        border-radius: 100px;
-    }
-    
-    /* Center Search */
-    .nav-search {
+
+    /* === SEARCH BAR WITH DROPDOWN === */
+    .pexels-search-container {
         flex: 1;
-        width: 100%;
-    }
-    
-    .search-form {
-        width: 100%;
-    }
-    
-    .search-wrapper {
+        max-width: 600px;
         position: relative;
-        width: 100%;
     }
-    
-    .search-icon {
-        position: absolute;
-        left: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #9ca3af;
-        font-size: 16px;
-    }
-    
-    .search-input {
-        width: 100%;
-        height: 44px;
-        padding: 0 16px 0 48px;
-        border: 1px solid #c0cad9; /* Custom color to match the background */
-        border-radius: 22px;
-        background: var(--light-blue);
-        font-size: .9375rem;
-        transition: all 0.2s ease;
-    }
-    
-    .search-input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        background: #ffffff;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-    
-    .search-input::placeholder {
-        color: #9ca3af;
-    }
-    
-    /* Hide the search in the mobile nav */
-    .mobile-menu .nav-search {
-    display: none;
-    }
-    
-    /* Right Side */
-    .nav-right {
+
+    .pexels-search-wrapper {
+        position: relative;
         display: flex;
         align-items: center;
-        gap: 16px;
-        flex-shrink: 0;
+        background: var(--gray-100);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        border: 2px solid transparent;
+        transition: all var(--transition-base);
+    }
+
+    .pexels-search-wrapper:focus-within {
+        background: var(--white);
+        border-color: var(--gray-300);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .search-type-dropdown {
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding: 0 var(--space-4);
+        gap: var(--space-2);
+        cursor: pointer;
+        border-right: 1px solid var(--gray-200);
+        min-width: 110px;
+        height: 48px;
+        user-select: none;
+        transition: background var(--transition-base);
+    }
+
+    .search-type-dropdown:hover {
+        background: var(--gray-200);
+    }
+
+    .search-type-icon {
+        font-size: 18px;
+        color: var(--gray-600);
+    }
+
+    .search-type-text {
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .search-type-arrow {
+        font-size: 12px;
+        color: var(--gray-500);
         margin-left: auto;
     }
-    
-    .welcome-text {
-        color: #374151;
-        white-space: nowrap;
-        font-size: .9375rem;
-        font-weight: 600;
-    }
-    
-    .login-btn {
-        color: #374151;
-        text-decoration: none;
-        font-weight: 700;
-        font-size: .9375rem;
-        padding: 8px 16px;
-        border-radius: 100px;
-        transition: all 0.2s ease;
-    }
-    
-    .login-btn:hover {
-        color: var(--main-blue);
-        background: var(--light-blue);
-        text-decoration: none;
-    }
-    
-    .upload-btn {
-        background: var(--main-blue);
-        color: white;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 14px;
-        padding: 10px 20px;
-        border-radius: 50px;
-        transition: all 0.2s ease;
+
+    .pexels-search-input {
+        flex: 1;
         border: none;
+        background: transparent;
+        padding: 0 var(--space-4);
+        height: 48px;
+        font-size: 15px;
+        color: var(--gray-800);
+        outline: none;
+    }
+
+    .pexels-search-input::placeholder {
+        color: var(--gray-400);
+    }
+
+    .pexels-search-icon {
+        padding: 0 var(--space-4);
+        color: var(--gray-400);
+        font-size: 18px;
         cursor: pointer;
-        display: inline-flex;
-        align-items: center;
     }
-    
-    .upload-btn:hover {
-        background: var(--main-blue-hover);
-        color: white;
-        text-decoration: none;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    }
-    
-    /* User Menu */
-    .user-menu {
-        position: relative;
-    }
-    
-    .user-avatar {
-        background: none;
-        border: none;
-        color: var(--main-blue-hover);
-        font-size: 24px;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 50%;
-        transition: all 0.2s ease;
-    }
-    
-    .user-avatar:hover {
-        color: var(--main-blue);
-    }
-    
-    .user-dropdown {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        margin-top: 8px;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        min-width: 150px;
-        display: none;
-        z-index: 1000;
-    }
-    
-    .user-dropdown.show {
-        display: block;
-    }
-    
-    .dropdown-item {
+
+    /* === NAVIGATION ITEMS === */
+    .pexels-nav-items {
         display: flex;
         align-items: center;
-        padding: 12px 16px;
-        color: var(--main-blue-hover);
-        text-decoration: none;
-        font-size: 14px;
-        transition: all 0.2s ease;
+        gap: var(--space-2);
+        margin-left: auto;
+        flex-shrink: 0;
     }
-    
-    .dropdown-item:hover {
-        background: #f9fafb;
-        color: #2563eb;
+
+    .pexels-nav-item {
+        position: relative;
+        padding: var(--space-2) var(--space-4);
+        color: var(--gray-700);
         text-decoration: none;
-    }
-    
-    /* Mobile Menu */
-    .mobile-menu-toggle {
-        display: none;
-        background: none;
-        border: none;
-        color: #374151;
-        font-size: 20px;
+        font-size: 15px;
+        font-weight: 500;
+        border-radius: var(--radius-md);
         cursor: pointer;
-        padding: 8px;
+        transition: all var(--transition-base);
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        white-space: nowrap;
     }
-    
-    .mobile-menu {
+
+    .pexels-nav-item:hover {
+        background: var(--gray-100);
+        color: var(--gray-900);
+        text-decoration: none;
+    }
+
+    .pexels-nav-item i {
+        font-size: 16px;
+    }
+
+    /* === ICON BUTTONS === */
+    .pexels-icon-btn {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        color: var(--gray-700);
+        cursor: pointer;
+        transition: all var(--transition-base);
+        border: none;
+        background: transparent;
+        font-size: 20px;
+        position: relative;
+    }
+
+    .pexels-icon-btn:hover {
+        background: var(--gray-100);
+        color: var(--gray-900);
+    }
+
+    /* Bell notification badge */
+    .notification-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 8px;
+        height: 8px;
+        background: var(--accent-primary);
+        border-radius: 50%;
+        border: 2px solid var(--white);
+    }
+
+    /* === PROFILE CIRCLE === */
+    .pexels-profile-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--gray-800);
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all var(--transition-base);
+    }
+
+    .pexels-profile-btn:hover {
+        background: var(--gray-900);
+        transform: scale(1.05);
+    }
+
+    /* === UPLOAD BUTTON === */
+    .pexels-upload-btn {
+        background: var(--black);
+        color: var(--white);
+        padding: var(--space-3) var(--space-6);
+        border-radius: var(--radius-md);
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .pexels-upload-btn:hover {
+        background: var(--gray-900);
+        color: var(--white);
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* === DROPDOWN MENUS === */
+    .pexels-dropdown {
+        position: absolute;
+        top: calc(100% + var(--space-2));
+        right: 0;
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-dropdown);
+        min-width: 240px;
+        padding: var(--space-2) 0;
         display: none;
-        background: white;
-        border-top: 1px solid #e5e7eb;
-        padding: 16px 24px;
+        z-index: 2000;
+        animation: dropdownFade 0.2s ease;
     }
-    
-    .mobile-nav-link {
+
+    @keyframes dropdownFade {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .pexels-dropdown.show {
         display: block;
-        padding: 14px 0;
-        border-bottom: 1px solid var(--main-border-color);
-        color: var(--main-blue-hover);
+    }
+
+    /* Left-aligned dropdowns for Explore and Prompts */
+    .pexels-dropdown-left {
+        left: 0;
+        right: auto;
+    }
+
+    .pexels-dropdown-item {
+        display: flex;
+        align-items: flex-start;
+        padding: var(--space-3) var(--space-5);
+        color: var(--gray-700);
         text-decoration: none;
-        font-weight: 700;
+        transition: background var(--transition-base);
+        gap: var(--space-3);
+        cursor: pointer;
     }
-    
-    .mobile-nav-link:hover {
-        color: #2563eb;
+
+    .pexels-dropdown-item:hover {
+        background: var(--gray-50);
+        color: var(--gray-900);
         text-decoration: none;
     }
-    
-    .mobile-user-info {
-        color: #6b7280;
-        padding: 12px 0;
-        border-bottom: 1px solid #f3f4f6;
+
+    .pexels-dropdown-icon {
+        font-size: 18px;
+        color: var(--gray-600);
+        width: 20px;
+        flex-shrink: 0;
+        margin-top: 2px;
     }
-    
-    footer { color: #4b5563}
-    footer .footer-header {
-    
-        color: var(--main-blue-hover);
-        font-weight: 700;
-        font-size: 1.1rem;
-        
+
+    .pexels-dropdown-content {
+        flex: 1;
     }
-    
-    footer .logo-text {
-    
-        width: 100%;
-        margin-bottom: 15px;
-        font-size: 1.8em;
-    
+
+    .pexels-dropdown-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 2px;
     }
-    
-    
-    /* ===== RESPONSIVE BREAKPOINTS FOR DIFFERENT SCREEN SIZES ===== */
-    
-    
-    @media (max-width: 1200px) {
-    
-        .nav-container {
-            padding: 0 16px;
-            gap: 16px;
-        }
-        
-        .nav-links, .welcome-text, .user-menu {
+
+    .pexels-dropdown-subtitle {
+        font-size: 13px;
+        color: var(--gray-500);
+        line-height: 1.4;
+    }
+
+    .pexels-dropdown-divider {
+        height: 1px;
+        background: var(--gray-200);
+        margin: var(--space-2) 0;
+    }
+
+    /* Search type dropdown (special styling) */
+    .search-dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: var(--white);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-dropdown);
+        min-width: 150px;
+        margin-top: var(--space-1);
+        display: none;
+        z-index: 2000;
+    }
+
+    .search-dropdown-menu.show {
+        display: block;
+    }
+
+    .search-dropdown-item {
+        display: flex;
+        align-items: center;
+        padding: var(--space-3) var(--space-4);
+        gap: var(--space-3);
+        cursor: pointer;
+        transition: background var(--transition-base);
+    }
+
+    .search-dropdown-item:hover {
+        background: var(--gray-50);
+    }
+
+    .search-dropdown-item i {
+        font-size: 16px;
+        color: var(--gray-600);
+    }
+
+    .search-dropdown-item span {
+        font-size: 14px;
+        color: var(--gray-700);
+        font-weight: 500;
+    }
+
+    /* === MOBILE MENU === */
+    .pexels-mobile-toggle {
+        display: none;
+        width: 40px;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        color: var(--gray-700);
+        font-size: 24px;
+        cursor: pointer;
+        border-radius: var(--radius-md);
+        transition: background var(--transition-base);
+    }
+
+    .pexels-mobile-toggle:hover {
+        background: var(--gray-100);
+    }
+
+    .pexels-mobile-menu {
+        display: none;
+        background: var(--white);
+        border-top: 1px solid var(--gray-200);
+        padding: var(--space-4);
+    }
+
+    .pexels-mobile-menu.show {
+        display: block;
+    }
+
+    .pexels-mobile-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-4);
+        color: var(--gray-700);
+        text-decoration: none;
+        font-weight: 500;
+        border-radius: var(--radius-md);
+        transition: background var(--transition-base);
+    }
+
+    .pexels-mobile-item:hover {
+        background: var(--gray-100);
+        color: var(--gray-900);
+        text-decoration: none;
+    }
+
+    .pexels-mobile-item i {
+        font-size: 18px;
+        width: 20px;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 1024px) {
+        .pexels-nav-items {
             display: none;
         }
-        
-        .mobile-menu-toggle {
-            display: block;
+
+        .pexels-mobile-toggle {
+            display: flex;
         }
-        
-        .nav-search {
+
+        .pexels-search-container {
             max-width: none;
-            flex: 1;
         }
-        
-        .search-input {
-            height: 40px;
-        }
-        
-        .upload-btn {
-            display: none;
-        }
-    
-        .mobile-menu.show {
-            display: block;
-        }
-        
-        .logo-text {
-            font-size: 20px;
-        }
-        
-        .nav-container {
-            height: 60px;
-        }
-    
-    
-    
     }
-    
+
+    @media (max-width: 768px) {
+        .pexels-nav-container {
+            padding: 0 var(--space-4);
+            height: 64px;
+        }
+
+        .pexels-logo {
+            font-size: 24px;
+        }
+
+        .search-type-dropdown {
+            min-width: 90px;
+            padding: 0 var(--space-3);
+        }
+
+        .search-type-text {
+            font-size: 14px;
+        }
+    }
+
     @media (max-width: 576px) {
-        .footer-sections div:not(:first-child){
-            width: 50%;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-        }
-    
-        /* Makes Contact section in footer wider */
-        .footer-sections div:last-child{
-            width: 100%;
-        }
-    
-        /* Show the search in the mobile nav */
-        .mobile-menu .nav-search {
-            display: block;
-        }
-    
-        /* Hide the search in the desktop nav */
-        .nav-container .nav-search {
+        .pexels-search-container {
             display: none;
         }
-    
+
+        .pexels-mobile-menu .pexels-search-container {
+            display: block;
+            max-width: none;
+            margin-bottom: var(--space-4);
+        }
     }
 
     /* Profile link styles - Phase F UX Fix */
@@ -464,7 +570,18 @@
         opacity: 0.9;
     }
 
+    footer { color: #4b5563}
+    footer .footer-header {
+        color: var(--main-blue-hover);
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
 
+    footer .logo-text {
+        width: 100%;
+        margin-bottom: 15px;
+        font-size: 1.8em;
+    }
 
     </style>        
         {% block extra_head %}{% endblock %}
@@ -473,252 +590,404 @@
 
     </head>
 <body class="d-flex flex-column h-100 main-bg">
-    <!-- Update your base.html navigation section with this modern menu -->
+    <!-- Pexels-Inspired Navigation -->
+<nav class="pexels-navbar">
+    <div class="pexels-nav-container">
 
-<nav class="modern-navbar">
-    <div class="nav-container container">
-        
-        <!-- Left Side: Logo and Navigation Links -->
-        <div class="nav-left">
-            <a href="{% url 'prompts:home' %}" class="logo">
-                <span class="logo-text">PromptFlow</span>
-            </a>
-            
-            <div class="nav-links">
-                <a href="{% url 'prompts:home' %}#browse-prompts" class="nav-link" onclick="clearFiltersAndNavigate(event)">Prompts</a>
-                <a href="{% url 'about' %}" class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}">
-                    About
-                </a>
-                <a href="{% url 'prompts:collaborate' %}" class="nav-link {% if request.resolver_match.url_name == 'collaborate' %}active{% endif %}">
-                    Contact
-                </a>
-            </div>
-        </div>
-        
-        <!-- Center: Search Bar -->
-        <div class="nav-search">
+        <!-- Logo -->
+        <a href="{% url 'prompts:home' %}" class="pexels-logo">PromptFinder</a>
+
+        <!-- Search Bar with Dropdown -->
+        <div class="pexels-search-container">
             <form class="search-form" method="GET" action="{% url 'prompts:home' %}">
-                <div class="search-wrapper">
-                    <i class="fas fa-search search-icon"></i>
-                    <input 
-                        type="text" 
-                        name="search" 
-                        class="search-input" 
-                        placeholder="Search prompts..." 
+                <div class="pexels-search-wrapper">
+                    <!-- Search Type Dropdown -->
+                    <div class="search-type-dropdown" onclick="toggleSearchTypeDropdown(event)">
+                        <i class="fas fa-image search-type-icon" id="searchTypeIcon"></i>
+                        <span class="search-type-text" id="searchTypeText">Images</span>
+                        <i class="fas fa-chevron-down search-type-arrow"></i>
+                    </div>
+
+                    <!-- Dropdown Menu for Search Type -->
+                    <div class="search-dropdown-menu" id="searchTypeMenu">
+                        <div class="search-dropdown-item" onclick="selectSearchType('images')">
+                            <i class="fas fa-image"></i>
+                            <span>Images</span>
+                        </div>
+                        <div class="search-dropdown-item" onclick="selectSearchType('videos')">
+                            <i class="fas fa-video"></i>
+                            <span>Videos</span>
+                        </div>
+                    </div>
+
+                    <!-- Search Input -->
+                    <input
+                        type="text"
+                        name="search"
+                        class="pexels-search-input"
+                        placeholder="Search for AI prompts"
                         value="{{ request.GET.search }}"
+                        id="mainSearchInput"
                     >
+                    <input type="hidden" name="type" id="searchTypeInput" value="images">
+
+                    <!-- Search Icon -->
+                    <i class="fas fa-search pexels-search-icon" onclick="document.querySelector('.search-form').submit()"></i>
                 </div>
             </form>
         </div>
-        
-        <!-- Right Side: User Info and Upload -->
-        <div class="nav-right">
-            {% if user.is_authenticated %}
-                <span class="welcome-text">
-                    Welcome back, {{ user.username }}!
-                </span>
-                
-                <div class="user-menu">
-                    <button class="user-avatar" onclick="toggleUserDropdown()">
-                        <i class="fas fa-user-circle"></i>
-                    </button>
-                    <div class="user-dropdown" id="userDropdown">
-                        <a href="{% url 'prompts:user_profile' username=user.username %}" class="dropdown-item">
-                            <i class="fas fa-user me-2"></i>View Profile
-                        </a>
-                        <a href="{% url 'prompts:edit_profile' %}" class="dropdown-item">
-                            <i class="fas fa-user-edit me-2"></i>Edit Profile
-                        </a>
-                        <a href="{% url 'prompts:email_preferences' %}" class="dropdown-item">
-                            <i class="fas fa-bell me-2"></i>Email Preferences
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a href="{% url 'account_logout' %}" class="dropdown-item">
-                            <i class="fas fa-sign-out-alt me-2"></i>Logout
-                        </a>
-                    </div>
-                </div>
-                <a href="#" class="upload-btn" onclick="createNewPrompt()">
-                    <i class="fas fa-upload me-2"></i>Upload
-                </a>
-            {% else %}
-                <a href="{% url 'account_login' %}" class="login-btn">
-                    Log In
-                </a>
-                <a href="{% url 'account_login' %}" class="upload-btn">
-                    <i class="fas fa-upload me-2"></i>Upload
-                </a>
-            {% endif %}
-        </div>
-        
-        <!-- Mobile Menu Toggle -->
-        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle navigation menu" aria-expanded="false">
-            <i class="fas fa-bars" aria-hidden="true"></i>
-        </button>
-        
-    </div>
-    
-    <!-- Mobile Menu -->
-    <div class="mobile-menu" id="mobileMenu">
-        <a href="{% url 'prompts:home' %}#browse-prompts" class="mobile-nav-link" onclick="clearFiltersAndNavigate(event)">Prompts</a>
-        <a href="{% url 'about' %}" class="mobile-nav-link">About</a>
-        <a href="{% url 'prompts:collaborate' %}" class="mobile-nav-link">Contact</a>
-        {% if user.is_authenticated %}
-            <div class="mobile-user-info">
-                Welcome back, <strong>{{ user.username }}</strong>!
+
+        <!-- Navigation Items (Desktop) -->
+        <div class="pexels-nav-items">
+            <!-- Explore Dropdown -->
+            <div class="pexels-nav-item" onclick="toggleDropdown('exploreDropdown', event)">
+                Explore
+                <i class="fas fa-chevron-down"></i>
             </div>
-            <a href="{% url 'prompts:user_profile' username=user.username %}" class="mobile-nav-link">
-                <i class="fas fa-user me-2"></i>View Profile
+            <div class="pexels-dropdown pexels-dropdown-left" id="exploreDropdown">
+                <a href="#" class="pexels-dropdown-item">
+                    <i class="fas fa-layer-group pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Discover Collections</div>
+                    </div>
+                </a>
+                <a href="#" class="pexels-dropdown-item">
+                    <i class="fas fa-trophy pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Leaderboard</div>
+                    </div>
+                </a>
+                <a href="#" class="pexels-dropdown-item">
+                    <i class="fas fa-newspaper pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">PromptFinder Blog</div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Prompts Dropdown -->
+            <div class="pexels-nav-item" onclick="toggleDropdown('promptsDropdown', event)">
+                Prompts
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="pexels-dropdown pexels-dropdown-left" id="promptsDropdown">
+                <a href="{% url 'prompts:home' %}?type=image" class="pexels-dropdown-item">
+                    <i class="fas fa-image pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Image Prompts</div>
+                        <div class="pexels-dropdown-subtitle">Midjourney, Stable Diffusion & More!</div>
+                    </div>
+                </a>
+                <a href="{% url 'prompts:home' %}?type=video" class="pexels-dropdown-item">
+                    <i class="fas fa-video pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Video Prompts</div>
+                        <div class="pexels-dropdown-subtitle">Midjourney, Veo & More!</div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Three Dots Menu -->
+            <button class="pexels-icon-btn" onclick="toggleDropdown('threeDotsDropdown', event)">
+                <i class="fas fa-ellipsis-h"></i>
+            </button>
+            <div class="pexels-dropdown" id="threeDotsDropdown">
+                <a href="#" class="pexels-dropdown-item">
+                    <i class="fas fa-chart-line pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Image & Video API</div>
+                    </div>
+                </a>
+                <a href="{% url 'about' %}" class="pexels-dropdown-item">
+                    <i class="fas fa-info-circle pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Help Center</div>
+                    </div>
+                </a>
+                <a href="{% url 'about' %}" class="pexels-dropdown-item">
+                    <i class="fas fa-flag pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Report Content</div>
+                    </div>
+                </a>
+                <a href="{% url 'about' %}" class="pexels-dropdown-item">
+                    <i class="fas fa-file-alt pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Imprint & Terms</div>
+                    </div>
+                </a>
+                <div class="pexels-dropdown-divider"></div>
+                <a href="{% url 'about' %}" class="pexels-dropdown-item">
+                    <i class="fas fa-info-circle pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">About</div>
+                    </div>
+                </a>
+                <a href="{% url 'prompts:collaborate' %}" class="pexels-dropdown-item">
+                    <i class="fas fa-envelope pexels-dropdown-icon"></i>
+                    <div class="pexels-dropdown-content">
+                        <div class="pexels-dropdown-title">Contact</div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Bell Icon (Notifications) -->
+            <button class="pexels-icon-btn" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <!-- <span class="notification-badge"></span> --> <!-- Uncomment when notifications active -->
+            </button>
+
+            <!-- Profile Button -->
+            {% if user.is_authenticated %}
+                <button class="pexels-profile-btn" onclick="toggleDropdown('profileDropdown', event)" title="{{ user.username }}">
+                    {{ user.username|slice:":1"|upper }}
+                </button>
+                <div class="pexels-dropdown" id="profileDropdown">
+                    <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-dropdown-item">
+                        <i class="fas fa-user pexels-dropdown-icon"></i>
+                        <div class="pexels-dropdown-content">
+                            <div class="pexels-dropdown-title">View Profile</div>
+                        </div>
+                    </a>
+                    <a href="{% url 'prompts:edit_profile' %}" class="pexels-dropdown-item">
+                        <i class="fas fa-user-edit pexels-dropdown-icon"></i>
+                        <div class="pexels-dropdown-content">
+                            <div class="pexels-dropdown-title">Edit Profile</div>
+                        </div>
+                    </a>
+                    <a href="{% url 'prompts:email_preferences' %}" class="pexels-dropdown-item">
+                        <i class="fas fa-bell pexels-dropdown-icon"></i>
+                        <div class="pexels-dropdown-content">
+                            <div class="pexels-dropdown-title">Email Preferences</div>
+                        </div>
+                    </a>
+                    <div class="pexels-dropdown-divider"></div>
+                    <a href="{% url 'account_logout' %}" class="pexels-dropdown-item">
+                        <i class="fas fa-sign-out-alt pexels-dropdown-icon"></i>
+                        <div class="pexels-dropdown-content">
+                            <div class="pexels-dropdown-title">Logout</div>
+                        </div>
+                    </a>
+                </div>
+            {% else %}
+                <button class="pexels-profile-btn" onclick="window.location.href='{% url 'account_login' %}'" title="Sign in">
+                    <i class="fas fa-user"></i>
+                </button>
+            {% endif %}
+
+            <!-- Upload Button -->
+            <a href="{% if user.is_authenticated %}#{% else %}{% url 'account_login' %}{% endif %}"
+               class="pexels-upload-btn"
+               {% if user.is_authenticated %}onclick="createNewPrompt(); return false;"{% endif %}>
+                Upload
             </a>
-            <a href="{% url 'prompts:edit_profile' %}" class="mobile-nav-link">
-                <i class="fas fa-user-edit me-2"></i>Edit Profile
+        </div>
+
+        <!-- Mobile Menu Toggle -->
+        <button class="pexels-mobile-toggle" onclick="toggleMobileMenu()">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div class="pexels-mobile-menu" id="pexelsMobileMenu">
+        <!-- Search (Mobile) -->
+        <div class="pexels-search-container">
+            <form class="search-form" method="GET" action="{% url 'prompts:home' %}">
+                <div class="pexels-search-wrapper">
+                    <input
+                        type="text"
+                        name="search"
+                        class="pexels-search-input"
+                        placeholder="Search for AI prompts"
+                        value="{{ request.GET.search }}"
+                        style="padding-left: var(--space-4);"
+                    >
+                    <i class="fas fa-search pexels-search-icon" onclick="this.closest('form').submit()"></i>
+                </div>
+            </form>
+        </div>
+
+        <!-- Mobile Links -->
+        <a href="{% url 'prompts:home' %}" class="pexels-mobile-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="{% url 'prompts:home' %}?type=image" class="pexels-mobile-item">
+            <i class="fas fa-image"></i>
+            <span>Image Prompts</span>
+        </a>
+        <a href="{% url 'prompts:home' %}?type=video" class="pexels-mobile-item">
+            <i class="fas fa-video"></i>
+            <span>Video Prompts</span>
+        </a>
+        {% if user.is_authenticated %}
+            <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-mobile-item">
+                <i class="fas fa-user"></i>
+                <span>My Profile</span>
             </a>
-            <a href="{% url 'prompts:email_preferences' %}" class="mobile-nav-link">
-                <i class="fas fa-bell me-2"></i>Email Preferences
+            <a href="#" class="pexels-mobile-item" onclick="createNewPrompt(); return false;">
+                <i class="fas fa-upload"></i>
+                <span>Upload Prompt</span>
             </a>
-            <a href="{% url 'account_logout' %}" class="mobile-nav-link">
-                <i class="fas fa-sign-out-alt me-2"></i>Logout
-            </a>
-            <a href="#" class="mobile-nav-link" onclick="createNewPrompt()">
-                <i class="fas fa-upload me-2"></i>Upload Prompt
+            <a href="{% url 'account_logout' %}" class="pexels-mobile-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
             </a>
         {% else %}
-            <a href="{% url 'account_login' %}" class="mobile-nav-link">Log In</a>
-            <a href="{% url 'account_login' %}" class="mobile-nav-link">
-                <i class="fas fa-upload me-2"></i>Upload Prompt
+            <a href="{% url 'account_login' %}" class="pexels-mobile-item">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Log In</span>
             </a>
         {% endif %}
-            <div class="nav-search mt-3">
-                <form class="search-form" method="GET" action="{% url 'prompts:home' %}">
-                    <div class="search-wrapper">
-                        <i class="fas fa-search search-icon"></i>
-                        <input 
-                            type="text" 
-                            name="search" 
-                            class="search-input" 
-                            placeholder="Search prompts..." 
-                            value="{{ request.GET.search }}"
-                        >
-                    </div>
-                </form>
-            </div>
     </div>
 </nav>
 
 
-<!-- JavaScript for functionality -->
+<!-- JavaScript for Pexels-Inspired Navigation -->
 <script>
-// Handle Prompts navigation - goes to home page with #browse-prompts
-function handlePromptsNavigation(event) {
-    event.preventDefault();
-    
-    // If we're already on the home page, just scroll to browse-prompts
-    if (window.location.pathname === '{% url "prompts:home" %}' || window.location.pathname === '/') {
-        const target = document.querySelector('#browse-prompts') || document.querySelector('.masonry-container');
-        if (target) {
-            const navbarHeight = document.querySelector('.modern-navbar').offsetHeight;
-            const targetPosition = target.offsetTop - navbarHeight - 20;
-            
-            window.scrollTo({
-                top: targetPosition,
-                behavior: 'smooth'
-            });
-        }
-    } else {
-        // If we're on a different page, navigate to home page with anchor
-        window.location.href = '{% url "prompts:home" %}#browse-prompts';
+// ========================================
+// DROPDOWN MANAGEMENT
+// ========================================
+
+// Global variable to track currently open dropdown
+let currentOpenDropdown = null;
+
+// Toggle dropdown menus (Explore, Prompts, Three Dots, Profile)
+function toggleDropdown(dropdownId, event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById(dropdownId);
+
+    // Close currently open dropdown if different
+    if (currentOpenDropdown && currentOpenDropdown !== dropdown) {
+        currentOpenDropdown.classList.remove('show');
     }
+
+    // Toggle the clicked dropdown
+    dropdown.classList.toggle('show');
+    currentOpenDropdown = dropdown.classList.contains('show') ? dropdown : null;
 }
+
+// Toggle search type dropdown
+function toggleSearchTypeDropdown(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('searchTypeMenu');
+    menu.classList.toggle('show');
+}
+
+// Select search type (Images or Videos)
+function selectSearchType(type) {
+    const icon = document.getElementById('searchTypeIcon');
+    const text = document.getElementById('searchTypeText');
+    const input = document.getElementById('searchTypeInput');
+    const menu = document.getElementById('searchTypeMenu');
+
+    if (type === 'images') {
+        icon.className = 'fas fa-image search-type-icon';
+        text.textContent = 'Images';
+        input.value = 'images';
+    } else if (type === 'videos') {
+        icon.className = 'fas fa-video search-type-icon';
+        text.textContent = 'Videos';
+        input.value = 'videos';
+    }
+
+    menu.classList.remove('show');
+}
+
+// Toggle mobile menu
+function toggleMobileMenu() {
+    const mobileMenu = document.getElementById('pexelsMobileMenu');
+    mobileMenu.classList.toggle('show');
+}
+
+// Close all dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    // Close all pexels dropdowns
+    const dropdowns = document.querySelectorAll('.pexels-dropdown, .search-dropdown-menu');
+    dropdowns.forEach(dropdown => {
+        dropdown.classList.remove('show');
+    });
+    currentOpenDropdown = null;
+});
+
+// Prevent dropdown from closing when clicking inside it
+document.querySelectorAll('.pexels-dropdown, .search-dropdown-menu').forEach(dropdown => {
+    dropdown.addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
+});
+
+// ========================================
+// NAVIGATION & UTILITY FUNCTIONS
+// ========================================
 
 // Create new prompt function
 function createNewPrompt() {
     {% if user.is_authenticated %}
-        // Updated to use the correct URL with prompt/ prefix
         window.location.href = '{% url "prompts:prompt_create" %}';
     {% else %}
         window.location.href = '{% url "account_login" %}';
     {% endif %}
 }
 
-// Toggle user dropdown
-function toggleUserDropdown() {
-    const dropdown = document.getElementById('userDropdown');
-    dropdown.classList.toggle('show');
-}
-
-// Toggle mobile menu
-function toggleMobileMenu() {
-    const mobileMenu = document.getElementById('mobileMenu');
-    mobileMenu.classList.toggle('show');
-}
-
-// Close dropdowns when clicking outside
-document.addEventListener('click', function(event) {
-    const userDropdown = document.getElementById('userDropdown');
-    const userAvatar = document.querySelector('.user-avatar');
-    
-    if (!userAvatar.contains(event.target)) {
-        userDropdown.classList.remove('show');
-    }
-});
-
 // Handle search form submission
-document.querySelector('.search-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const searchValue = document.querySelector('.search-input').value;
-    if (searchValue.trim()) {
-        window.location.href = `{% url 'prompts:home' %}?search=${encodeURIComponent(searchValue)}`;
-    }
-});
-
-// Hero section smooth scroll functionality
 document.addEventListener('DOMContentLoaded', function() {
+    const searchForms = document.querySelectorAll('.search-form');
+    searchForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const searchInput = this.querySelector('.pexels-search-input');
+            if (searchInput && !searchInput.value.trim()) {
+                e.preventDefault();
+            }
+        });
+    });
+
     // Handle smooth scroll for browse prompts buttons
     const browseButtons = document.querySelectorAll('a[href="#browse-prompts"]');
     browseButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            
-            // Scroll to the masonry container (where prompts are displayed)
-            const target = document.querySelector('.masonry-container');
+
+            const target = document.querySelector('.masonry-container') || document.querySelector('#browse-prompts');
             if (target) {
-                const navbarHeight = document.querySelector('.modern-navbar').offsetHeight;
+                const navbar = document.querySelector('.pexels-navbar');
+                const navbarHeight = navbar ? navbar.offsetHeight : 70;
                 const targetPosition = target.offsetTop - navbarHeight - 20;
-                
+
                 window.scrollTo({
                     top: targetPosition,
                     behavior: 'smooth'
                 });
-            } else {
-                // Fallback: scroll to main content if masonry container not found
-                const mainContent = document.querySelector('#browse-prompts');
-                if (mainContent) {
-                    const navbarHeight = document.querySelector('.modern-navbar').offsetHeight;
-                    const targetPosition = mainContent.offsetTop - navbarHeight - 20;
-                    
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                }
             }
         });
     });
-    
+
     // Handle anchor navigation from external links
     if (window.location.hash === '#browse-prompts') {
         setTimeout(() => {
             const target = document.querySelector('.masonry-container') || document.querySelector('#browse-prompts');
             if (target) {
-                const navbarHeight = document.querySelector('.modern-navbar').offsetHeight;
+                const navbar = document.querySelector('.pexels-navbar');
+                const navbarHeight = navbar ? navbar.offsetHeight : 70;
                 const targetPosition = target.offsetTop - navbarHeight - 20;
-                
+
                 window.scrollTo({
                     top: targetPosition,
                     behavior: 'smooth'
                 });
             }
-        }, 500); // Small delay to ensure page is loaded
+        }, 500);
+    }
+});
+
+// Close mobile menu when window is resized to desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 1024) {
+        const mobileMenu = document.getElementById('pexelsMobileMenu');
+        if (mobileMenu) {
+            mobileMenu.classList.remove('show');
+        }
     }
 });
 </script>
@@ -909,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="col-md-12 col-lg-4 col-xl-3 mb-4">
             <!-- Content -->
             <a href="{% url 'prompts:home' %}" class="logo footer-header">
-                <span class="logo-text">PromptFlow</span>
+                <span class="logo-text" style="font-family: var(--font-logo); color: var(--black);">PromptFinder</span>
             </a>
             
             <p>

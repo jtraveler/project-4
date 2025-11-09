@@ -24,8 +24,16 @@
 
   /* === UI SPECIFIC COLORS === */
   --text-primary: #191919;      /* Main text color globally */
+  --text-dark: #212529;          /* Dark text color */
+  --text-muted: #6c757d;         /* Muted text color */
   --icon-secondary: #a8a8a8;    /* Dropdown icons */
   --arrow-color: #cdcdcd;       /* Dropdown arrows */
+
+  /* === ACTION COLORS === */
+  --link-color: #007bff;                    /* Bootstrap primary blue */
+  --link-color-hover: #0056b3;               /* Darker blue for hover */
+  --notification-red: #ef4444;               /* Notification badge red */
+  --hover-bg-light: rgba(0, 0, 0, 0.05);    /* Light hover background */
 
   /* === SPACING SYSTEM (8px base) === */
   --space-1: 4px;    /* 0.5x */
@@ -54,20 +62,49 @@
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  --radius-standard: 12px;  /* Standard border radius for most elements */
   --radius-full: 9999px;
 
-  /* === TRANSITIONS === */
+  /* === TRANSITIONS & TIMING === */
   --transition-fast: 0.15s ease;
   --transition-base: 0.2s ease;
   --transition-slow: 0.3s ease;
+  --delay-dropdown: 300ms;                   /* Hover delay before hiding dropdown */
+  --duration-animation: 200ms;               /* Standard animation duration */
+  --duration-slide: 0.3s;                    /* Slide animation duration */
+
+  /* === Z-INDEX SYSTEM === */
+  --z-nav: 1000;                             /* Navbar z-index */
+  --z-dropdown: 2000;                        /* Dropdown z-index */
+  --z-modal: 3000;                           /* Modal z-index (future use) */
+  --z-skip-link: 9999;                       /* Skip to main content link */
+
+  /* === LAYOUT DIMENSIONS === */
+  --navbar-height: 70px;                     /* Desktop navbar height */
+  --navbar-height-mobile: 64px;              /* Mobile navbar height */
+  --container-max-width: 1280px;             /* Max container width */
+  --input-height: 48px;                      /* Standard input height */
+  --icon-btn-size: 40px;                     /* Icon button size */
+  --logo-spacing: 25px;                      /* Logo right margin */
+
+  /* === TYPOGRAPHY SIZES === */
+  --font-size-logo: 28px;                    /* Logo font size (desktop) */
+  --font-size-logo-mobile: 24px;             /* Logo font size (mobile) */
+  --font-size-nav: 17px;                     /* Navigation text size */
+  --font-size-base: 15px;                    /* Base text size */
+  --font-size-small: 14px;                   /* Small text size */
+  --font-size-xs: 13px;                      /* Extra small text size */
+  --font-size-icon: 18px;                    /* Standard icon size */
+  --font-size-icon-large: 24px;              /* Large icon size */
+  --letter-spacing-logo: -0.5px;             /* Logo letter spacing */
 
   /* === LEGACY SUPPORT (for existing styles) === */
   --main-blue: var(--gray-800);
   --light-blue: #f5f5f5;
   --main-blue-hover: var(--gray-900);
-  --main-border-color: #e5e7eb;
   --accent-primary: var(--gray-800);  /* Alias for backward compatibility */
+
+  /* Deprecated - use var(--radius-lg) instead */
+  --radius-standard: var(--radius-lg);  /* DEPRECATED: Use --radius-lg */
 }
 
 /* ===== FONT FAMILY DECLARATIONS ===== */

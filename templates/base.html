@@ -71,7 +71,7 @@
     }
 
     .pexels-nav-container {
-        max-width: 1600px;
+        max-width: 1280px;  /* Container constraint */
         margin: 0 auto;
         padding: 0 var(--space-6);
         display: flex;
@@ -89,6 +89,7 @@
         font-weight: 400;
         letter-spacing: -0.5px;
         flex-shrink: 0;
+        margin-right: 25px;  /* Logo spacing */
         transition: opacity var(--transition-base);
     }
 
@@ -101,6 +102,7 @@
     /* === SEARCH BAR WITH DROPDOWN === */
     .pexels-search-container {
         flex: 1;
+        width: 100%;  /* Full width */
         max-width: 600px;
         position: relative;
     }
@@ -110,7 +112,7 @@
         display: flex;
         align-items: center;
         background: var(--gray-100);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-standard);  /* 12px standard border-radius */
         overflow: hidden;
         border: 2px solid transparent;
         transition: all var(--transition-base);
@@ -129,6 +131,8 @@
         padding: 0 var(--space-4);
         gap: var(--space-2);
         cursor: pointer;
+        background: var(--white);  /* White background */
+        border-radius: var(--radius-standard);  /* 12px border-radius */
         border-right: 1px solid var(--gray-200);
         min-width: 110px;
         height: 48px;
@@ -137,7 +141,7 @@
     }
 
     .search-type-dropdown:hover {
-        background: var(--gray-200);
+        background: var(--gray-50);
     }
 
     .search-type-icon {
@@ -153,7 +157,7 @@
 
     .search-type-arrow {
         font-size: 12px;
-        color: var(--gray-500);
+        color: var(--arrow-color);  /* #cdcdcd */
         margin-left: auto;
     }
 
@@ -164,7 +168,7 @@
         padding: 0 var(--space-4);
         height: 48px;
         font-size: 15px;
-        color: var(--gray-800);
+        color: var(--text-primary);
         outline: none;
     }
 
@@ -191,9 +195,9 @@
     .pexels-nav-item {
         position: relative;
         padding: var(--space-2) var(--space-4);
-        color: var(--gray-700);
+        color: var(--text-primary);
         text-decoration: none;
-        font-size: 15px;
+        font-size: 17px;  /* Updated from 15px */
         font-weight: 500;
         border-radius: var(--radius-md);
         cursor: pointer;
@@ -211,7 +215,8 @@
     }
 
     .pexels-nav-item i {
-        font-size: 16px;
+        color: var(--arrow-color);  /* #cdcdcd for dropdown chevrons */
+        margin-left: 5px;
     }
 
     /* === ICON BUTTONS === */
@@ -231,6 +236,11 @@
         position: relative;
     }
 
+    /* Three dots icon specific size */
+    .pexels-icon-btn.three-dots {
+        font-size: 18px;
+    }
+
     .pexels-icon-btn:hover {
         background: var(--gray-100);
         color: var(--gray-900);
@@ -243,7 +253,7 @@
         right: 8px;
         width: 8px;
         height: 8px;
-        background: var(--accent-primary);
+        background: #ef4444;  /* Red for notifications, not accent color */
         border-radius: 50%;
         border: 2px solid var(--white);
     }
@@ -299,7 +309,7 @@
     .pexels-dropdown {
         position: absolute;
         top: calc(100% + var(--space-2));
-        right: 0;
+        left: 0;  /* Position under the item by default */
         background: var(--white);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-dropdown);
@@ -325,17 +335,17 @@
         display: block;
     }
 
-    /* Left-aligned dropdowns for Explore and Prompts */
-    .pexels-dropdown-left {
-        left: 0;
-        right: auto;
+    /* Right-aligned dropdowns for profile */
+    .pexels-dropdown-right {
+        left: auto;
+        right: 0;
     }
 
     .pexels-dropdown-item {
         display: flex;
         align-items: flex-start;
         padding: var(--space-3) var(--space-5);
-        color: var(--gray-700);
+        color: var(--text-primary);
         text-decoration: none;
         transition: background var(--transition-base);
         gap: var(--space-3);
@@ -350,7 +360,7 @@
 
     .pexels-dropdown-icon {
         font-size: 18px;
-        color: var(--gray-600);
+        color: var(--icon-secondary);  /* #a8a8a8 */
         width: 20px;
         flex-shrink: 0;
         margin-top: 2px;
@@ -363,7 +373,7 @@
     .pexels-dropdown-title {
         font-size: 15px;
         font-weight: 600;
-        color: var(--gray-800);
+        color: var(--gray-600);  /* Lighter shade */
         margin-bottom: 2px;
     }
 
@@ -644,7 +654,7 @@
                 Explore
                 <i class="fas fa-chevron-down"></i>
             </div>
-            <div class="pexels-dropdown pexels-dropdown-left" id="exploreDropdown">
+            <div class="pexels-dropdown" id="exploreDropdown">
                 <a href="#" class="pexels-dropdown-item">
                     <i class="fas fa-layer-group pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
@@ -670,7 +680,7 @@
                 Prompts
                 <i class="fas fa-chevron-down"></i>
             </div>
-            <div class="pexels-dropdown pexels-dropdown-left" id="promptsDropdown">
+            <div class="pexels-dropdown" id="promptsDropdown">
                 <a href="{% url 'prompts:home' %}?type=image" class="pexels-dropdown-item">
                     <i class="fas fa-image pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
@@ -688,10 +698,10 @@
             </div>
 
             <!-- Three Dots Menu -->
-            <button class="pexels-icon-btn" onclick="toggleDropdown('threeDotsDropdown', event)">
+            <button class="pexels-icon-btn three-dots" onclick="toggleDropdown('threeDotsDropdown', event)">
                 <i class="fas fa-ellipsis-h"></i>
             </button>
-            <div class="pexels-dropdown" id="threeDotsDropdown">
+            <div class="pexels-dropdown pexels-dropdown-right" id="threeDotsDropdown">
                 <a href="#" class="pexels-dropdown-item">
                     <i class="fas fa-chart-line pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
@@ -742,7 +752,7 @@
                 <button class="pexels-profile-btn" onclick="toggleDropdown('profileDropdown', event)" title="{{ user.username }}">
                     {{ user.username|slice:":1"|upper }}
                 </button>
-                <div class="pexels-dropdown" id="profileDropdown">
+                <div class="pexels-dropdown pexels-dropdown-right" id="profileDropdown">
                     <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-dropdown-item">
                         <i class="fas fa-user pexels-dropdown-icon"></i>
                         <div class="pexels-dropdown-content">

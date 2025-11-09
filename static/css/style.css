@@ -4,9 +4,9 @@
    ======================================== */
 :root {
   /* === BRAND COLORS === */
-  --accent-primary: rgb(73, 242, 100);        /* Bright green accent */
-  --accent-primary-hover: rgb(58, 227, 85);   /* 10% darker */
-  --accent-primary-light: rgba(73, 242, 100, 0.1); /* Background tint */
+  --accent-color: rgb(73, 242, 100);          /* Bright green accent */
+  --accent-color-hover: rgb(58, 227, 85);     /* 10% darker */
+  --accent-color-light: rgba(73, 242, 100, 0.1); /* Background tint */
 
   /* === NEUTRAL COLORS === */
   --white: #FFFFFF;
@@ -21,6 +21,11 @@
   --gray-800: #262626;    /* Headings */
   --gray-900: #171717;    /* High contrast text */
   --black: #000000;       /* Logo, critical emphasis */
+
+  /* === UI SPECIFIC COLORS === */
+  --text-primary: #191919;      /* Main text color globally */
+  --icon-secondary: #a8a8a8;    /* Dropdown icons */
+  --arrow-color: #cdcdcd;       /* Dropdown arrows */
 
   /* === SPACING SYSTEM (8px base) === */
   --space-1: 4px;    /* 0.5x */
@@ -37,7 +42,7 @@
   /* === TYPOGRAPHY === */
   --font-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
                'Oxygen', 'Ubuntu', 'Cantarell', 'Helvetica Neue', sans-serif;
-  --font-logo: 'Fugaz One', cursive, system-ui, sans-serif;
+  --font-logo: 'Fugaz One', 'Roboto', system-ui, sans-serif;
 
   /* === SHADOWS === */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -49,6 +54,7 @@
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
+  --radius-standard: 12px;  /* Standard border radius for most elements */
   --radius-full: 9999px;
 
   /* === TRANSITIONS === */
@@ -61,6 +67,7 @@
   --light-blue: #eff3f8;
   --main-blue-hover: rgb(58, 227, 85);
   --main-border-color: #e5e7eb;
+  --accent-primary: var(--accent-color);  /* Alias for backward compatibility */
 }
 
 /* ===== FONT FAMILY DECLARATIONS ===== */
@@ -68,6 +75,7 @@
 body {
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background-color: white;
+  color: var(--text-primary);  /* Global text color #191919 */
 }
 
 /* Headings and navigation use Roboto */

@@ -67,7 +67,6 @@
         position: sticky;
         top: 0;
         z-index: 1000;
-        box-shadow: var(--shadow-sm);
     }
 
     .pexels-nav-container {
@@ -103,7 +102,7 @@
     .pexels-search-container {
         flex: 1;
         width: 100%;  /* Full width */
-        max-width: 600px;
+        max-width: clamp(320px, 50vw, 600px);  /* Responsive width */
         position: relative;
     }
 
@@ -121,6 +120,7 @@
     .pexels-search-wrapper:focus-within {
         background: var(--white);
         border-color: #e5e7eb;  /* Matches profile-filter-dropdown */
+        box-shadow: 0 0 0 1px rgba(229, 231, 235, 0.3);  /* Subtle focus indicator (WCAG 2.4.7) */
     }
 
     .search-type-dropdown {
@@ -132,7 +132,7 @@
         cursor: pointer;
         background: var(--white);  /* White background */
         border-radius: var(--radius-standard);  /* 12px border-radius */
-        border: none;
+        border: 4px solid var(--gray-100);
         min-width: 110px;
         height: 48px;
         user-select: none;
@@ -140,7 +140,7 @@
     }
 
     .search-type-dropdown:hover {
-        background: var(--gray-50);
+        background: rgba(0, 0, 0, 0.05);  /* Slightly darker than search wrapper */
     }
 
     .search-type-icon {
@@ -220,6 +220,34 @@
     .pexels-nav-item:focus {
         outline: 2px solid var(--gray-800);
         outline-offset: 2px;
+    }
+
+    /* Active page indicator with animated underline */
+    .pexels-nav-item[aria-current="page"] {
+        position: relative;
+    }
+
+    .pexels-nav-item[aria-current="page"]::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: var(--space-4);
+        right: var(--space-4);
+        height: 2px;
+        background: var(--gray-800);
+        border-radius: 2px;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: scaleX(0);
+            opacity: 0;
+        }
+        to {
+            transform: scaleX(1);
+            opacity: 1;
+        }
     }
 
     .pexels-nav-item i {
@@ -365,6 +393,7 @@
         visibility: hidden;
         transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
         pointer-events: none;
+        will-change: opacity, visibility, transform;  /* Performance optimization */
     }
 
     .pexels-dropdown.show,
@@ -1095,7 +1124,7 @@ document.querySelectorAll('.pexels-dropdown, .search-dropdown-menu').forEach(dro
     });
 });
 
-// Keyboard navigation for dropdowns
+// Keyboard navigation for dropdowns and search
 document.addEventListener('keydown', function(event) {
     // Escape key - close all dropdowns
     if (event.key === 'Escape') {
@@ -1110,6 +1139,15 @@ document.addEventListener('keydown', function(event) {
         });
 
         currentOpenDropdown = null;
+    }
+
+    // Forward slash key - focus search (unless typing in an input)
+    if (event.key === '/' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+        event.preventDefault();  // Prevent '/' from appearing in search
+        const searchInput = document.getElementById('mainSearchInput');
+        if (searchInput) {
+            searchInput.focus();
+        }
     }
 });
 

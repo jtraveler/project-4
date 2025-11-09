@@ -114,14 +114,13 @@
         background: var(--gray-100);
         border-radius: var(--radius-standard);  /* 12px standard border-radius */
         overflow: visible;
-        border: 2px solid transparent;
+        border: 1px solid transparent;
         transition: all var(--transition-base);
     }
 
     .pexels-search-wrapper:focus-within {
         background: var(--white);
-        border-color: var(--gray-300);
-        box-shadow: var(--shadow-sm);
+        border-color: #e5e7eb;  /* Matches profile-filter-dropdown */
     }
 
     .search-type-dropdown {
@@ -133,7 +132,7 @@
         cursor: pointer;
         background: var(--white);  /* White background */
         border-radius: var(--radius-standard);  /* 12px border-radius */
-        border-right: 1px solid var(--gray-200);
+        border: none;
         min-width: 110px;
         height: 48px;
         user-select: none;
@@ -380,6 +379,25 @@
     .pexels-dropdown.hiding,
     .search-dropdown-menu.hiding {
         animation: dropdownFadeOut 0.2s ease forwards;
+    }
+
+    /* Respect motion sensitivity preferences (WCAG 2.1 Level AAA) */
+    @media (prefers-reduced-motion: reduce) {
+        .pexels-dropdown,
+        .search-dropdown-menu {
+            transition: none !important;
+            animation: none !important;
+        }
+
+        .pexels-dropdown.show,
+        .search-dropdown-menu.show {
+            animation: none !important;
+        }
+
+        .pexels-dropdown.hiding,
+        .search-dropdown-menu.hiding {
+            animation: none !important;
+        }
     }
 
     /* Right-aligned dropdowns for profile */
@@ -671,6 +689,7 @@
                             onclick="toggleSearchTypeDropdown(event)"
                             aria-haspopup="true"
                             aria-expanded="false"
+                            aria-controls="searchTypeMenu"
                             aria-label="Select search type">
                         <i class="fas fa-image search-type-icon" id="searchTypeIcon" aria-hidden="true"></i>
                         <span class="search-type-text" id="searchTypeText">Images</span>
@@ -714,6 +733,7 @@
                     onmouseleave="hideDropdown('exploreDropdown', this)"
                     aria-haspopup="true"
                     aria-expanded="false"
+                    aria-controls="exploreDropdown"
                     aria-label="Explore menu">
                 Explore
                 <i class="fas fa-chevron-down" aria-hidden="true"></i>
@@ -748,6 +768,7 @@
                     onmouseleave="hideDropdown('promptsDropdown', this)"
                     aria-haspopup="true"
                     aria-expanded="false"
+                    aria-controls="promptsDropdown"
                     aria-label="Prompts menu">
                 Prompts
                 <i class="fas fa-chevron-down" aria-hidden="true"></i>
@@ -778,6 +799,7 @@
                     onmouseleave="hideDropdown('threeDotsDropdown', this)"
                     aria-haspopup="true"
                     aria-expanded="false"
+                    aria-controls="threeDotsDropdown"
                     aria-label="More options menu">
                 <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
             </button>
@@ -837,6 +859,7 @@
                         onmouseleave="hideDropdown('profileDropdown', this)"
                         aria-haspopup="true"
                         aria-expanded="false"
+                        aria-controls="profileDropdown"
                         aria-label="User menu for {{ user.username }}">
                     {{ user.username|slice:":1"|upper }}
                 </button>

@@ -190,6 +190,7 @@
         gap: var(--space-2);
         margin-left: auto;
         flex-shrink: 0;
+        position: relative;
     }
 
     .pexels-nav-item {
@@ -206,12 +207,20 @@
         align-items: center;
         gap: var(--space-1);
         white-space: nowrap;
+        background: transparent;
+        border: none;
+        font-family: var(--font-base);
     }
 
     .pexels-nav-item:hover {
         background: var(--gray-100);
         color: var(--gray-900);
         text-decoration: none;
+    }
+
+    .pexels-nav-item:focus {
+        outline: 2px solid var(--gray-800);
+        outline-offset: 2px;
     }
 
     .pexels-nav-item i {
@@ -276,9 +285,18 @@
     }
 
     .pexels-profile-btn:hover {
-        background: var(--gray-900);
         transform: scale(1.05);
     }
+
+    /* Avatar gradient colors */
+    .avatar-color-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .avatar-color-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .avatar-color-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .avatar-color-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .avatar-color-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .avatar-color-6 { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+    .avatar-color-7 { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
+    .avatar-color-8 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
 
     /* === UPLOAD BUTTON === */
     .pexels-upload-btn {
@@ -427,8 +445,9 @@
 
     .search-dropdown-item span {
         font-size: 14px;
-        color: var(--gray-700);
+        color: var(--text-primary);
         font-weight: 500;
+        display: inline-block;
     }
 
     /* === MOBILE MENU === */
@@ -582,15 +601,22 @@
 
     footer { color: #4b5563}
     footer .footer-header {
-        color: var(--main-blue-hover);
         font-weight: 700;
         font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+
+    footer .footer-header.logo {
+        color: var(--black);
+        text-decoration: none;
+        display: inline-block;
     }
 
     footer .logo-text {
         width: 100%;
         margin-bottom: 15px;
         font-size: 1.8em;
+        color: var(--black);
     }
 
     </style>        
@@ -612,14 +638,19 @@
             <form class="search-form" method="GET" action="{% url 'prompts:home' %}">
                 <div class="pexels-search-wrapper">
                     <!-- Search Type Dropdown -->
-                    <div class="search-type-dropdown" onclick="toggleSearchTypeDropdown(event)">
-                        <i class="fas fa-image search-type-icon" id="searchTypeIcon"></i>
+                    <button type="button"
+                            class="search-type-dropdown"
+                            onclick="toggleSearchTypeDropdown(event)"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            aria-label="Select search type">
+                        <i class="fas fa-image search-type-icon" id="searchTypeIcon" aria-hidden="true"></i>
                         <span class="search-type-text" id="searchTypeText">Images</span>
-                        <i class="fas fa-chevron-down search-type-arrow"></i>
-                    </div>
+                        <i class="fas fa-chevron-down search-type-arrow" aria-hidden="true"></i>
+                    </button>
 
                     <!-- Dropdown Menu for Search Type -->
-                    <div class="search-dropdown-menu" id="searchTypeMenu">
+                    <div class="search-dropdown-menu" id="searchTypeMenu" role="menu" aria-label="Search type options">
                         <div class="search-dropdown-item" onclick="selectSearchType('images')">
                             <i class="fas fa-image"></i>
                             <span>Images</span>
@@ -650,11 +681,15 @@
         <!-- Navigation Items (Desktop) -->
         <div class="pexels-nav-items">
             <!-- Explore Dropdown -->
-            <div class="pexels-nav-item" onclick="toggleDropdown('exploreDropdown', event)">
+            <button class="pexels-nav-item"
+                    onclick="toggleDropdown('exploreDropdown', event)"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-label="Explore menu">
                 Explore
-                <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="pexels-dropdown" id="exploreDropdown">
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div class="pexels-dropdown" id="exploreDropdown" role="menu" aria-label="Explore options">
                 <a href="#" class="pexels-dropdown-item">
                     <i class="fas fa-layer-group pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
@@ -676,11 +711,15 @@
             </div>
 
             <!-- Prompts Dropdown -->
-            <div class="pexels-nav-item" onclick="toggleDropdown('promptsDropdown', event)">
+            <button class="pexels-nav-item"
+                    onclick="toggleDropdown('promptsDropdown', event)"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-label="Prompts menu">
                 Prompts
-                <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="pexels-dropdown" id="promptsDropdown">
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div class="pexels-dropdown" id="promptsDropdown" role="menu" aria-label="Prompts options">
                 <a href="{% url 'prompts:home' %}?type=image" class="pexels-dropdown-item">
                     <i class="fas fa-image pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
@@ -698,10 +737,14 @@
             </div>
 
             <!-- Three Dots Menu -->
-            <button class="pexels-icon-btn three-dots" onclick="toggleDropdown('threeDotsDropdown', event)">
-                <i class="fas fa-ellipsis-h"></i>
+            <button class="pexels-icon-btn three-dots"
+                    onclick="toggleDropdown('threeDotsDropdown', event)"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-label="More options menu">
+                <i class="fas fa-ellipsis-h" aria-hidden="true"></i>
             </button>
-            <div class="pexels-dropdown pexels-dropdown-right" id="threeDotsDropdown">
+            <div class="pexels-dropdown pexels-dropdown-right" id="threeDotsDropdown" role="menu" aria-label="More options">
                 <a href="#" class="pexels-dropdown-item">
                     <i class="fas fa-chart-line pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
@@ -742,17 +785,21 @@
             </div>
 
             <!-- Bell Icon (Notifications) -->
-            <button class="pexels-icon-btn" title="Notifications">
-                <i class="fas fa-bell"></i>
+            <button class="pexels-icon-btn" aria-label="Notifications">
+                <i class="fas fa-bell" aria-hidden="true"></i>
                 <!-- <span class="notification-badge"></span> --> <!-- Uncomment when notifications active -->
             </button>
 
             <!-- Profile Button -->
             {% if user.is_authenticated %}
-                <button class="pexels-profile-btn" onclick="toggleDropdown('profileDropdown', event)" title="{{ user.username }}">
+                <button class="pexels-profile-btn avatar-color-5"
+                        onclick="toggleDropdown('profileDropdown', event)"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-label="User menu for {{ user.username }}">
                     {{ user.username|slice:":1"|upper }}
                 </button>
-                <div class="pexels-dropdown pexels-dropdown-right" id="profileDropdown">
+                <div class="pexels-dropdown pexels-dropdown-right" id="profileDropdown" role="menu" aria-label="User account options">
                     <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-dropdown-item">
                         <i class="fas fa-user pexels-dropdown-icon"></i>
                         <div class="pexels-dropdown-content">
@@ -867,22 +914,33 @@ let currentOpenDropdown = null;
 function toggleDropdown(dropdownId, event) {
     event.stopPropagation();
     const dropdown = document.getElementById(dropdownId);
+    const button = event.currentTarget;
 
     // Close currently open dropdown if different
     if (currentOpenDropdown && currentOpenDropdown !== dropdown) {
         currentOpenDropdown.classList.remove('show');
+        // Update aria-expanded for previously open dropdown's button
+        const prevButton = document.querySelector(`[onclick*="${currentOpenDropdown.id}"]`);
+        if (prevButton) prevButton.setAttribute('aria-expanded', 'false');
     }
 
     // Toggle the clicked dropdown
-    dropdown.classList.toggle('show');
-    currentOpenDropdown = dropdown.classList.contains('show') ? dropdown : null;
+    const isOpen = dropdown.classList.toggle('show');
+    currentOpenDropdown = isOpen ? dropdown : null;
+
+    // Update ARIA attribute
+    button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
 
 // Toggle search type dropdown
 function toggleSearchTypeDropdown(event) {
     event.stopPropagation();
     const menu = document.getElementById('searchTypeMenu');
-    menu.classList.toggle('show');
+    const button = event.currentTarget;
+    const isOpen = menu.classList.toggle('show');
+
+    // Update ARIA attribute
+    button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
 
 // Select search type (Images or Videos)
@@ -918,6 +976,12 @@ document.addEventListener('click', function(event) {
     dropdowns.forEach(dropdown => {
         dropdown.classList.remove('show');
     });
+
+    // Reset all aria-expanded attributes
+    document.querySelectorAll('[aria-expanded="true"]').forEach(button => {
+        button.setAttribute('aria-expanded', 'false');
+    });
+
     currentOpenDropdown = null;
 });
 
@@ -925,6 +989,35 @@ document.addEventListener('click', function(event) {
 document.querySelectorAll('.pexels-dropdown, .search-dropdown-menu').forEach(dropdown => {
     dropdown.addEventListener('click', function(event) {
         event.stopPropagation();
+    });
+});
+
+// Keyboard navigation for dropdowns
+document.addEventListener('keydown', function(event) {
+    // Escape key - close all dropdowns
+    if (event.key === 'Escape') {
+        const dropdowns = document.querySelectorAll('.pexels-dropdown.show, .search-dropdown-menu.show');
+        dropdowns.forEach(dropdown => {
+            dropdown.classList.remove('show');
+        });
+
+        // Reset all aria-expanded attributes
+        document.querySelectorAll('[aria-expanded="true"]').forEach(button => {
+            button.setAttribute('aria-expanded', 'false');
+        });
+
+        currentOpenDropdown = null;
+    }
+});
+
+// Add keyboard support to dropdown buttons
+document.querySelectorAll('[aria-haspopup="true"]').forEach(button => {
+    button.addEventListener('keydown', function(event) {
+        // Enter or Space - toggle dropdown
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            button.click();
+        }
     });
 });
 
@@ -1188,7 +1281,7 @@ window.addEventListener('resize', function() {
           <div class="col-md-12 col-lg-4 col-xl-3 mb-4">
             <!-- Content -->
             <a href="{% url 'prompts:home' %}" class="logo footer-header">
-                <span class="logo-text" style="font-family: var(--font-logo); color: var(--black);">PromptFinder</span>
+                <span class="logo-text">PromptFinder</span>
             </a>
             
             <p>

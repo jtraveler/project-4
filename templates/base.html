@@ -138,6 +138,8 @@
         overflow: visible;
         border: 1px solid transparent;
         transition: all var(--transition-base);
+        width: 100%;  /* Ensure wrapper respects container width */
+        max-width: 100%;  /* Prevent overflow beyond container */
     }
 
     .pexels-search-wrapper:focus-within {
@@ -158,6 +160,7 @@
         border: 4px solid var(--gray-100);
         min-width: 110px;
         height: var(--input-height);
+        flex-shrink: 0;  /* Prevent shrinking at default size */
         user-select: none;
         transition: background var(--transition-base);
     }
@@ -185,6 +188,7 @@
 
     .pexels-search-input {
         flex: 1;
+        min-width: 0;  /* CRITICAL: Allow shrinking below content size */
         border: none;
         background: transparent;
         padding: 0 var(--space-4);
@@ -215,6 +219,7 @@
         transition: color var(--transition-base);
         display: flex;
         align-items: center;
+        flex-shrink: 0;  /* Prevent button from shrinking */
     }
 
     .pexels-search-icon-btn:hover {
@@ -653,6 +658,20 @@
             max-width: clamp(200px, 30vw, 420px);  /* Even tighter compression */
         }
 
+        .search-type-dropdown {
+            min-width: 95px;  /* Reduce from 110px to prevent overflow */
+            padding: 0 var(--space-3);  /* 16px → 12px */
+            flex-shrink: 1;  /* CRITICAL: Allow shrinking to min-width at smaller viewports */
+        }
+
+        .pexels-search-input {
+            padding: 0 var(--space-3);  /* 16px → 12px, save 8px */
+        }
+
+        .pexels-search-icon-btn {
+            padding: 0 var(--space-3);  /* 16px → 12px, save 8px */
+        }
+
         .pexels-nav-item {
             padding: var(--space-2) var(--space-3);  /* Reduce nav button padding */
             font-size: 16px;  /* 17px → 16px */
@@ -689,12 +708,21 @@
         }
 
         .search-type-dropdown {
-            min-width: 90px;
-            padding: 0 var(--space-3);
+            min-width: 85px;  /* Further reduce at mobile sizes */
+            padding: 0 var(--space-2);  /* 12px → 8px */
+            flex-shrink: 1;  /* Ensure shrinking allowed at mobile sizes */
         }
 
         .search-type-text {
             font-size: 14px;
+        }
+
+        .pexels-search-input {
+            padding: 0 var(--space-2);  /* Further reduce padding */
+        }
+
+        .pexels-search-icon-btn {
+            padding: 0 var(--space-2);  /* Further reduce padding */
         }
     }
 

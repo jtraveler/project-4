@@ -391,13 +391,38 @@ def prompt_detail(request, slug):
         if prompt.status != 1 and prompt.author != request.user:
             raise Http404("Prompt not found")
     else:
-        # Anonymous users: Filter out deleted prompts in query
-        prompt = get_object_or_404(
-            prompt_queryset,
-            slug=slug,
-            status=1,
-            deleted_at__isnull=True
-        )
+        # Anonymous users: Include deleted prompts in query (for SEO strategy)
+        prompt = get_object_or_404(prompt_queryset, slug=slug)
+
+        # Check if prompt is deleted
+        if prompt.deleted_at is not None:
+            # Anonymous user viewing deleted prompt: Show "Temporarily Unavailable" page
+            # SEO Strategy: HTTP 200 keeps URL in search index, preserves SEO value if restored
+            from django.utils.html import escape
+
+            # Find similar prompts (tag-based matching)
+            similar_prompts = Prompt.objects.filter(
+                tags__in=prompt.tags.all(),
+                status=1,
+                deleted_at__isnull=True
+            ).exclude(
+                id=prompt.id
+            ).distinct().order_by('-likes_count')[:6]
+
+            return render(
+                request,
+                'prompts/prompt_temporarily_unavailable.html',
+                {
+                    'prompt_title': escape(prompt.title),
+                    'similar_prompts': similar_prompts,
+                    'can_restore': False,
+                },
+                status=200  # Explicit HTTP 200 OK for SEO
+            )
+
+        # Check if prompt is not published (draft)
+        if prompt.status != 1:
+            raise Http404("Prompt not found")
 
     if request.user.is_authenticated:
         comments = [

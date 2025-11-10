@@ -123,9 +123,9 @@
 
     /* === SEARCH BAR WITH DROPDOWN === */
     .pexels-search-container {
-        flex: 1;
-        width: 100%;  /* Full width */
-        max-width: clamp(320px, 50vw, 600px);  /* Responsive width */
+        flex: 1 1 auto;           /* Allow grow AND shrink */
+        min-width: 0;             /* Critical: Allow shrinking below content size */
+        max-width: clamp(240px, 40vw, 580px);  /* 20px safety buffer for browser variance */
         position: relative;
     }
 
@@ -634,7 +634,7 @@
         }
 
         .pexels-search-container {
-            max-width: clamp(280px, 45vw, 550px);  /* More aggressive contraction */
+            max-width: clamp(220px, 35vw, 500px);  /* More aggressive contraction */
         }
 
         .pexels-logo {
@@ -650,7 +650,7 @@
         }
 
         .pexels-search-container {
-            max-width: clamp(260px, 40vw, 480px);  /* Even tighter */
+            max-width: clamp(200px, 30vw, 420px);  /* Even tighter compression */
         }
 
         .pexels-nav-item {
@@ -670,7 +670,7 @@
         }
 
         .pexels-search-container {
-            max-width: clamp(240px, 60vw, 600px);  /* Expand after nav items hidden */
+            max-width: clamp(280px, 50vw, 600px);  /* Expand after nav items hidden */
         }
 
         .pexels-nav-container {

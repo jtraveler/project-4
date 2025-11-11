@@ -388,7 +388,10 @@
         box-shadow: var(--shadow-dropdown);
         min-width: 240px;
         padding: var(--space-2) 0;
-        display: none;
+        /* SEO-friendly visibility (allows crawling) */
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
         z-index: var(--z-dropdown);
         animation: dropdownFade 0.2s ease;
     }
@@ -426,7 +429,6 @@
 
     .pexels-dropdown.show,
     .search-dropdown-menu.show {
-        display: block;
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
@@ -521,12 +523,11 @@
         box-shadow: var(--shadow-dropdown);
         min-width: 150px;
         margin-top: var(--space-1);
-        display: none;
+        /* SEO-friendly visibility (allows crawling) */
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
         z-index: var(--z-dropdown);
-    }
-
-    .search-dropdown-menu.show {
-        display: block;
     }
 
     .search-dropdown-item {
@@ -572,8 +573,8 @@
 
     /* Mobile Icon Buttons */
     .pexels-mobile-icon-btn {
-        width: 40px;
-        height: 40px;
+        width: 44px;  /* WCAG 2.5.5 - Minimum touch target size */
+        height: 44px;  /* WCAG 2.5.5 - Minimum touch target size */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -589,6 +590,11 @@
 
     .pexels-mobile-icon-btn:hover {
         background: var(--gray-100);
+    }
+
+    .pexels-mobile-icon-btn:focus {
+        outline: 2px solid var(--gray-800);  /* WCAG 2.4.7 - Focus visible */
+        outline-offset: 2px;
     }
 
     /* Mobile Upload Button - Dark background with white icon */
@@ -650,7 +656,7 @@
 
     /* Mobile Search Overlay */
     .mobile-search-overlay {
-        display: none;
+        /* SEO-friendly visibility */
         position: fixed;
         top: 0;
         left: 0;
@@ -659,12 +665,21 @@
         background: var(--white);
         z-index: var(--z-modal);
         padding: 0 var(--space-4);
-    }
-
-    .mobile-search-overlay.active {
         display: flex;
         align-items: center;
         gap: var(--space-3);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(-100%);
+        transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+    }
+
+    .mobile-search-overlay.active {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translateY(0);
     }
 
     .mobile-search-overlay .pexels-search-wrapper {
@@ -678,11 +693,11 @@
         min-width: auto;
     }
 
-    /* Old Mobile Toggle (will be replaced) */
+    /* Mobile Hamburger Toggle Button */
     .pexels-mobile-toggle {
-        display: none;
-        width: 40px;
-        height: 40px;
+        width: 44px;  /* WCAG 2.5.5 - Minimum touch target size */
+        height: 44px;  /* WCAG 2.5.5 - Minimum touch target size */
+        display: flex;
         align-items: center;
         justify-content: center;
         border: none;
@@ -699,15 +714,26 @@
         background: var(--gray-100);
     }
 
+    .pexels-mobile-toggle:focus {
+        outline: 2px solid var(--gray-800);  /* WCAG 2.4.7 - Focus visible */
+        outline-offset: 2px;
+    }
+
     .pexels-mobile-menu {
-        display: none;
+        /* SEO-friendly visibility (allows crawling of mobile navigation) */
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
         background: var(--white);
         border-top: 1px solid var(--gray-200);
-        padding: var(--space-4);
+        padding: 0 var(--space-4);
+        transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
     }
 
     .pexels-mobile-menu.show {
-        display: block;
+        max-height: 600px;  /* Adjust based on content height */
+        opacity: 1;
+        padding: var(--space-4);
     }
 
     .pexels-mobile-item {
@@ -788,6 +814,27 @@
 
         .pexels-nav-container {
             gap: var(--space-3);  /* Tighter spacing */
+        }
+
+        /* Profile dropdown positioning on mobile */
+        .pexels-mobile-icons .pexels-profile-btn {
+            position: relative;
+        }
+
+        /* Ensure dropdown appears below profile button on mobile */
+        .pexels-mobile-icons ~ .pexels-dropdown-right {
+            right: var(--space-4);
+            top: auto;
+        }
+
+        /* Touch-friendly dropdown spacing on mobile */
+        .pexels-dropdown {
+            min-width: 220px;
+        }
+
+        .pexels-dropdown-item {
+            padding: var(--space-4) var(--space-5);
+            min-height: 48px;  /* WCAG 2.5.5 - Target size minimum */
         }
     }
 
@@ -987,19 +1034,19 @@
                  onmouseenter="keepDropdownOpen('exploreDropdown')"
                  onmouseleave="hideDropdown('exploreDropdown', document.querySelector('[onmouseenter*=exploreDropdown]'))"
                  role="menu" aria-label="Explore options">
-                <a href="#" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}#collections" class="pexels-dropdown-item">
                     <i class="fas fa-layer-group pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Discover Collections</div>
                     </div>
                 </a>
-                <a href="#" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}#leaderboard" class="pexels-dropdown-item">
                     <i class="fas fa-trophy pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Leaderboard</div>
                     </div>
                 </a>
-                <a href="#" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}#blog" class="pexels-dropdown-item">
                     <i class="fas fa-newspaper pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">PromptFinder Blog</div>
@@ -1054,7 +1101,7 @@
                  onmouseenter="keepDropdownOpen('threeDotsDropdown')"
                  onmouseleave="hideDropdown('threeDotsDropdown', document.querySelector('[onmouseenter*=threeDotsDropdown]'))"
                  role="menu" aria-label="More options">
-                <a href="#" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}#api" class="pexels-dropdown-item">
                     <i class="fas fa-chart-line pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Image & Video API</div>
@@ -1158,8 +1205,12 @@
         <!-- Mobile Icon Bar -->
         <div class="pexels-mobile-icons">
             <!-- Search Icon (triggers overlay) -->
-            <button class="pexels-mobile-icon-btn" onclick="toggleMobileSearch()"
-                    aria-label="Open search">
+            <button class="pexels-mobile-icon-btn"
+                    onclick="toggleMobileSearch()"
+                    aria-label="Open search"
+                    aria-expanded="false"
+                    aria-controls="mobileSearchOverlay"
+                    id="mobileSearchToggle">
                 <i class="fas fa-search" aria-hidden="true"></i>
             </button>
 
@@ -1175,10 +1226,13 @@
                 <i class="fas fa-arrow-up" aria-hidden="true"></i>
             </button>
 
-            <!-- Profile Button (Avatar Circle) -->
+            <!-- Profile Button (Avatar Circle) - Shows dropdown on mobile -->
             {% if user.is_authenticated %}
                 <button class="pexels-profile-btn avatar-color-5"
-                        onclick="window.location.href='{% url 'prompts:user_profile' username=user.username %}'"
+                        onclick="toggleDropdown('profileDropdown', event)"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="profileDropdown"
                         aria-label="User menu for {{ user.username }}">
                     {{ user.username|slice:":1"|upper }}
                 </button>
@@ -1378,11 +1432,18 @@ function toggleDropdown(dropdownId, event) {
     }
 }
 
-// Search type dropdown (keep click-based)
+// Search type dropdown (works for both desktop and mobile)
 function toggleSearchTypeDropdown(event) {
     event.stopPropagation();
-    const menu = document.getElementById('searchTypeMenu');
     const button = event.currentTarget;
+    const menuId = button.getAttribute('aria-controls');
+    const menu = document.getElementById(menuId);
+
+    if (!menu) {
+        console.error('Dropdown menu not found:', menuId);
+        return;
+    }
+
     const isOpen = menu.classList.toggle('show');
     button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
@@ -1424,11 +1485,18 @@ function toggleMobileMenu() {
 function toggleMobileSearch() {
     const overlay = document.getElementById('mobileSearchOverlay');
     const searchInput = document.getElementById('mobileSearchInput');
+    const searchBtn = document.getElementById('mobileSearchToggle');
 
     overlay.classList.toggle('active');
+    const isOpen = overlay.classList.contains('active');
+
+    // Update aria-expanded for accessibility (WCAG 4.1.2)
+    if (searchBtn) {
+        searchBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
 
     // Focus search input when opening
-    if (overlay.classList.contains('active')) {
+    if (isOpen) {
         setTimeout(() => searchInput.focus(), 100);
     }
 }
@@ -1584,8 +1652,60 @@ window.addEventListener('resize', function() {
         if (mobileMenu) {
             mobileMenu.classList.remove('show');
         }
+        // Close any open dropdowns when resizing
+        const dropdowns = document.querySelectorAll('.pexels-dropdown.show, .search-dropdown-menu.show');
+        dropdowns.forEach(dropdown => dropdown.classList.remove('show'));
     }
 });
+
+// ========================================
+// TOUCH EVENT HANDLING FOR MOBILE
+// ========================================
+
+// Detect if device supports touch
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+// Improve touch handling for dropdowns on mobile
+if (isTouchDevice) {
+    // Add touch handling for all dropdown triggers
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropdownTriggers = document.querySelectorAll('[aria-haspopup="true"]');
+
+        dropdownTriggers.forEach(trigger => {
+            // Prevent double-tap zoom on dropdown triggers
+            trigger.addEventListener('touchend', function(e) {
+                // Allow the onclick handler to work naturally
+                // This prevents the 300ms delay on mobile
+            }, { passive: true });
+        });
+
+        // Ensure touch events work for search dropdown
+        const searchDropdownTriggers = document.querySelectorAll('.search-type-dropdown');
+        searchDropdownTriggers.forEach(trigger => {
+            trigger.addEventListener('touchend', function(e) {
+                e.preventDefault();  // Prevent 300ms delay
+                trigger.click();     // Trigger the click event
+            });
+        });
+
+        // Close mobile search overlay when tapping outside
+        document.addEventListener('touchstart', function(e) {
+            const overlay = document.getElementById('mobileSearchOverlay');
+            if (overlay && overlay.classList.contains('active')) {
+                if (!overlay.contains(e.target)) {
+                    toggleMobileSearch();
+                }
+            }
+        }, { passive: true });
+    });
+}
+
+// Improve touch scrolling in mobile menu
+const mobileMenu = document.getElementById('pexelsMobileMenu');
+if (mobileMenu && isTouchDevice) {
+    mobileMenu.style.webkitOverflowScrolling = 'touch';
+    mobileMenu.style.overflowY = 'auto';
+}
 </script>
 
 

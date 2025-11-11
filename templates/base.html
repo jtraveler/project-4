@@ -95,7 +95,6 @@
     .pexels-nav-container {
         max-width: var(--container-max-width);  /* Container constraint */
         margin: 0 auto;
-        padding: 0 var(--space-6);
         display: flex;
         align-items: center;
         height: var(--navbar-height);
@@ -125,7 +124,6 @@
     .pexels-search-container {
         flex: 1 1 auto;           /* Allow grow AND shrink */
         min-width: 0;             /* Critical: Allow shrinking below content size */
-        max-width: clamp(240px, 40vw, 580px);  /* 20px safety buffer for browser variance */
         position: relative;
     }
 
@@ -248,7 +246,7 @@
         text-decoration: none;
         font-size: 17px;  /* Updated from 15px */
         font-weight: 500;
-        border-radius: var(--radius-md);
+        border-radius: 50px;  /* Round border-radius */
         cursor: pointer;
         transition: all var(--transition-base);
         display: flex;
@@ -503,7 +501,7 @@
 
     .pexels-dropdown-icon {
         font-size: 18px;
-        color: var(--icon-secondary);  /* #a8a8a8 */
+        color: var(--gray-700);  /* Primary body text color */
         width: 20px;
         flex-shrink: 0;
         margin-top: 2px;
@@ -638,10 +636,6 @@
             gap: var(--space-4);  /* 24px → 16px */
         }
 
-        .pexels-search-container {
-            max-width: clamp(220px, 35vw, 500px);  /* More aggressive contraction */
-        }
-
         .pexels-logo {
             margin-right: 15px;  /* 25px → 15px */
         }
@@ -652,10 +646,6 @@
         .pexels-nav-container {
             gap: var(--space-3);  /* 16px → 12px */
             padding: 0 var(--space-4);  /* 24px → 16px */
-        }
-
-        .pexels-search-container {
-            max-width: clamp(200px, 30vw, 420px);  /* Even tighter compression */
         }
 
         .search-type-dropdown {
@@ -686,10 +676,6 @@
 
         .pexels-mobile-toggle {
             display: flex;
-        }
-
-        .pexels-search-container {
-            max-width: clamp(280px, 50vw, 600px);  /* Expand after nav items hidden */
         }
 
         .pexels-nav-container {
@@ -817,7 +803,7 @@
     <a href="#browse-prompts" class="skip-to-main">Skip to main content</a>
 
     <!-- Pexels-Inspired Navigation -->
-<nav class="pexels-navbar">
+<nav class="pexels-navbar container">
     <div class="pexels-nav-container">
 
         <!-- Logo -->

@@ -591,6 +591,17 @@
         background: var(--gray-100);
     }
 
+    /* Mobile Upload Button - Dark background with white icon */
+    .mobile-upload-btn {
+        background: var(--black);
+        color: var(--white);
+    }
+
+    .mobile-upload-btn:hover {
+        background: var(--gray-900);
+        color: var(--white);
+    }
+
     /* 2-Line Hamburger Icon */
     .hamburger {
         width: 20px;
@@ -646,7 +657,6 @@
         right: 0;
         height: var(--navbar-height-mobile);
         background: var(--white);
-        border-bottom: 1px solid var(--gray-200);
         z-index: var(--z-modal);
         padding: 0 var(--space-4);
     }
@@ -659,21 +669,13 @@
 
     .mobile-search-overlay .pexels-search-wrapper {
         flex: 1;
+        background: var(--white);
+        border: 1px solid var(--gray-100);
     }
 
-    /* Icon-only search dropdown on mobile */
+    /* Search dropdown on mobile - keep text and arrow */
     .mobile-search-overlay .search-type-dropdown {
         min-width: auto;
-        width: 48px;
-        padding: 0;
-    }
-
-    .mobile-search-overlay .search-type-text {
-        display: none;  /* Hide text, show icon only */
-    }
-
-    .mobile-search-overlay .search-type-arrow {
-        display: none;  /* Hide arrow on mobile */
     }
 
     /* Old Mobile Toggle (will be replaced) */
@@ -1041,6 +1043,7 @@
             <button class="pexels-icon-btn three-dots"
                     onmouseenter="showDropdown('threeDotsDropdown', this)"
                     onmouseleave="hideDropdown('threeDotsDropdown', this)"
+                    onclick="toggleDropdown('threeDotsDropdown', event)"
                     aria-haspopup="true"
                     aria-expanded="false"
                     aria-controls="threeDotsDropdown"
@@ -1165,25 +1168,25 @@
                 <i class="fas fa-bell" aria-hidden="true"></i>
             </button>
 
-            <!-- Upload Icon -->
-            <button class="pexels-mobile-icon-btn"
+            <!-- Upload Button - Dark background with white arrow icon -->
+            <button class="pexels-mobile-icon-btn mobile-upload-btn"
                     onclick="{% if user.is_authenticated %}createNewPrompt();{% else %}window.location.href='{% url 'account_login' %}';{% endif %}"
                     aria-label="Upload prompt">
-                <i class="fas fa-upload" aria-hidden="true"></i>
+                <i class="fas fa-arrow-up" aria-hidden="true"></i>
             </button>
 
-            <!-- Profile Icon -->
+            <!-- Profile Button (Avatar Circle) -->
             {% if user.is_authenticated %}
-                <button class="pexels-mobile-icon-btn"
+                <button class="pexels-profile-btn avatar-color-5"
                         onclick="window.location.href='{% url 'prompts:user_profile' username=user.username %}'"
-                        aria-label="Your profile">
-                    <i class="fas fa-user" aria-hidden="true"></i>
+                        aria-label="User menu for {{ user.username }}">
+                    {{ user.username|slice:":1"|upper }}
                 </button>
             {% else %}
-                <button class="pexels-mobile-icon-btn"
+                <button class="pexels-profile-btn"
                         onclick="window.location.href='{% url 'account_login' %}'"
                         aria-label="Sign in">
-                    <i class="fas fa-user" aria-hidden="true"></i>
+                    <i class="fas fa-user"></i>
                 </button>
             {% endif %}
 
@@ -1257,7 +1260,7 @@
 </nav>
 
 <!-- Mobile Search Overlay -->
-<div class="mobile-search-overlay" id="mobileSearchOverlay">
+<div class="mobile-search-overlay container" id="mobileSearchOverlay">
     <form class="search-form" method="GET" action="{% url 'prompts:home' %}" style="display: flex; align-items: center; gap: var(--space-3); width: 100%;">
         <div class="pexels-search-wrapper">
             <!-- Search Type Dropdown (Icon Only) -->
@@ -1293,16 +1296,16 @@
                    id="mobileSearchInput">
             <input type="hidden" name="type" id="mobileSearchTypeInput" value="images">
 
+            <!-- Close Button (inside wrapper, before search icon) -->
+            <button type="button" class="pexels-search-icon-btn" onclick="toggleMobileSearch()" aria-label="Close search">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+
             <!-- Search Submit Button -->
             <button type="submit" class="pexels-search-icon-btn" aria-label="Search">
                 <i class="fas fa-search" aria-hidden="true"></i>
             </button>
         </div>
-
-        <!-- Close Button -->
-        <button type="button" class="pexels-mobile-icon-btn" onclick="toggleMobileSearch()" aria-label="Close search">
-            <i class="fas fa-times" aria-hidden="true"></i>
-        </button>
     </form>
 </div>
 

@@ -411,6 +411,12 @@
         -webkit-overflow-scrolling: touch;
     }
 
+    /* RTL (Right-to-Left) language support for desktop profile dropdown */
+    [dir="rtl"] #profileDropdown {
+        right: auto;  /* Reset right positioning */
+        left: var(--space-4);  /* Mirror positioning for RTL languages */
+    }
+
     @keyframes dropdownFade {
         from {
             opacity: 0;
@@ -588,8 +594,8 @@
 
     /* Mobile Icon Buttons */
     .pexels-mobile-icon-btn {
-        width: 38px;  /* Compact width for space efficiency */
-        height: 38px;  /* Square dimensions */
+        width: 40px;  /* Improved from 38px - closer to WCAG AAA (44px) */
+        height: 40px;  /* Square dimensions for better accessibility */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -781,14 +787,20 @@
         outline-offset: 2px;
     }
 
-    /* Active state (X): transparent background, no hover interference */
+    /* Active state (X): transparent background */
     .pexels-mobile-toggle.active {
-        background: transparent !important;  /* Ensure this always takes precedence */
+        background: transparent;  /* No !important needed - :not(.active) prevents conflicts */
     }
 
-    /* When active (X), hover should not add background */
+    /* When active (X), hover maintains transparent background */
     .pexels-mobile-toggle.active:hover {
-        background: transparent;
+        background: transparent;  /* Explicit override for hover state when active */
+    }
+
+    /* When active (X), pressed state also maintains transparency */
+    .pexels-mobile-toggle.active:active {
+        background: transparent;  /* Prevents :active pseudo-class from adding background */
+        transform: scale(0.95);  /* Maintain touch feedback */
     }
 
     .pexels-mobile-menu {
@@ -898,6 +910,12 @@
             top: var(--navbar-height-mobile) !important;  /* Mobile navbar height */
             right: 10% !important;  /* Not too far to the right edge on mobile */
             max-height: calc(100vh - var(--navbar-height-mobile) - 20px);  /* Prevent overflow on landscape */
+        }
+
+        /* RTL (Right-to-Left) language support for profile dropdown */
+        [dir="rtl"] #profileDropdown {
+            right: auto !important;  /* Reset right positioning */
+            left: 10% !important;  /* Mirror positioning for RTL languages (Arabic, Hebrew) */
         }
 
         /* Touch-friendly dropdown spacing on mobile */
@@ -1552,6 +1570,15 @@ function selectSearchType(type) {
 }
 
 // Toggle mobile menu
+// Haptic feedback helper - provides tactile response on mobile devices
+function triggerHapticFeedback(duration = 10) {
+    // Check if Vibration API is supported (primarily Android devices)
+    if ('vibrate' in navigator) {
+        navigator.vibrate(duration);  // Subtle 10ms vibration
+    }
+    // Note: iOS Safari does not support Vibration API
+}
+
 function toggleMobileMenu() {
     const mobileMenu = document.getElementById('pexelsMobileMenu');
     const toggleBtn = document.querySelector('.pexels-mobile-toggle');
@@ -1562,6 +1589,9 @@ function toggleMobileMenu() {
     // Update aria-expanded
     const isOpen = mobileMenu.classList.contains('show');
     toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+    // Haptic feedback on mobile devices
+    triggerHapticFeedback();
 }
 
 // Toggle mobile search overlay
@@ -1582,6 +1612,9 @@ function toggleMobileSearch() {
     if (isOpen) {
         setTimeout(() => searchInput.focus(), 100);
     }
+
+    // Haptic feedback on mobile devices
+    triggerHapticFeedback();
 }
 
 // Select search type for mobile overlay
@@ -1782,6 +1815,22 @@ if (isTouchDevice) {
                 }
             }
         }, { passive: true });
+
+        // Add haptic feedback to all mobile icon buttons
+        const mobileIconButtons = document.querySelectorAll('.pexels-mobile-icon-btn');
+        mobileIconButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                triggerHapticFeedback();
+            }, { passive: true });
+        });
+
+        // Add haptic feedback to dropdown selections
+        const dropdownItems = document.querySelectorAll('.pexels-dropdown-item');
+        dropdownItems.forEach(item => {
+            item.addEventListener('click', function() {
+                triggerHapticFeedback(5);  // Lighter vibration for dropdown selections
+            }, { passive: true });
+        });
     });
 }
 

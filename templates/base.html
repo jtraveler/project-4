@@ -400,6 +400,17 @@
         animation: dropdownFade 0.2s ease;
     }
 
+    /* Profile dropdown uses fixed positioning (works on both desktop and mobile) */
+    #profileDropdown {
+        position: fixed !important;
+        top: var(--navbar-height) !important;  /* Desktop navbar height */
+        right: var(--space-4);
+        left: auto;
+        max-height: calc(100vh - var(--navbar-height) - 20px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     @keyframes dropdownFade {
         from {
             opacity: 0;
@@ -577,10 +588,8 @@
 
     /* Mobile Icon Buttons */
     .pexels-mobile-icon-btn {
-        width: 44px;  /* WCAG 2.5.5 - Minimum 44x44px touch target */
-        height: 44px;
-        min-width: 44px;  /* Prevent shrinking */
-        min-height: 44px;
+        width: 38px;  /* User specification */
+        height: 44px;  /* WCAG 2.5.5 - Minimum height maintained */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -608,12 +617,10 @@
         outline-offset: 2px;
     }
 
-    /* Slightly smaller width for search and bell icons (visual hierarchy) */
+    /* Smaller width for search and bell icons (user specification) */
     .pexels-mobile-icon-btn.mobile-search-btn,
     .pexels-mobile-icon-btn.mobile-bell-btn {
-        width: 40px;  /* Still tappable, smaller than 44px for hierarchy */
-        min-width: 40px;
-        font-size: 18px;  /* Slightly smaller icon size */
+        width: 30px;  /* User specification */
     }
 
     /* Mobile Upload Button - Dark background with white icon */
@@ -737,15 +744,13 @@
 
     /* Mobile Hamburger Toggle Button */
     .pexels-mobile-toggle {
-        width: 44px;  /* WCAG 2.5.5 - Minimum 44x44px touch target */
-        height: 44px;
-        min-width: 44px;  /* Prevent shrinking */
-        min-height: 44px;
+        width: 38px;  /* User specification */
+        height: 44px;  /* WCAG 2.5.5 - Minimum height maintained */
         display: flex;
         align-items: center;
         justify-content: center;
         border: none;
-        background: transparent;
+        background: var(--white);  /* White background for hamburger state */
         color: var(--gray-700);
         font-size: 24px;
         cursor: pointer;
@@ -766,6 +771,11 @@
     .pexels-mobile-toggle:focus {
         outline: 2px solid var(--gray-800);  /* WCAG 2.4.7 - Focus visible */
         outline-offset: 2px;
+    }
+
+    /* Background fades to transparent when menu is open (X state) */
+    .pexels-mobile-toggle.active {
+        background: transparent;
     }
 
     .pexels-mobile-menu {
@@ -870,21 +880,10 @@
             position: relative;
         }
 
-        /* Fix: Profile dropdown must be visible on mobile even though parent is display:none */
+        /* Profile dropdown: Override top position for mobile navbar height */
         #profileDropdown {
-            position: fixed !important;  /* Override parent's display:none */
-            top: var(--navbar-height-mobile) !important;
-            right: var(--space-4);
-            left: auto;
+            top: var(--navbar-height-mobile) !important;  /* Mobile navbar height */
             max-height: calc(100vh - var(--navbar-height-mobile) - 20px);  /* Prevent overflow on landscape */
-            overflow-y: auto;  /* Scrollable if too tall */
-            -webkit-overflow-scrolling: touch;  /* Smooth scrolling on iOS */
-        }
-
-        /* Ensure dropdown appears below profile button on mobile */
-        .pexels-mobile-icons ~ .pexels-dropdown-right {
-            right: var(--space-4);
-            top: auto;
         }
 
         /* Touch-friendly dropdown spacing on mobile */
@@ -1218,36 +1217,6 @@
                         aria-label="User menu for {{ user.username }}">
                     {{ user.username|slice:":1"|upper }}
                 </button>
-                <div class="pexels-dropdown pexels-dropdown-right" id="profileDropdown"
-                     onmouseenter="keepDropdownOpen('profileDropdown')"
-                     onmouseleave="hideDropdown('profileDropdown', document.querySelector('[onmouseenter*=profileDropdown]'))"
-                     role="menu" aria-label="User account options">
-                    <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-dropdown-item">
-                        <i class="fas fa-user pexels-dropdown-icon"></i>
-                        <div class="pexels-dropdown-content">
-                            <div class="pexels-dropdown-title">View Profile</div>
-                        </div>
-                    </a>
-                    <a href="{% url 'prompts:edit_profile' %}" class="pexels-dropdown-item">
-                        <i class="fas fa-user-edit pexels-dropdown-icon"></i>
-                        <div class="pexels-dropdown-content">
-                            <div class="pexels-dropdown-title">Edit Profile</div>
-                        </div>
-                    </a>
-                    <a href="{% url 'prompts:email_preferences' %}" class="pexels-dropdown-item">
-                        <i class="fas fa-bell pexels-dropdown-icon"></i>
-                        <div class="pexels-dropdown-content">
-                            <div class="pexels-dropdown-title">Email Preferences</div>
-                        </div>
-                    </a>
-                    <div class="pexels-dropdown-divider"></div>
-                    <a href="{% url 'account_logout' %}" class="pexels-dropdown-item">
-                        <i class="fas fa-sign-out-alt pexels-dropdown-icon"></i>
-                        <div class="pexels-dropdown-content">
-                            <div class="pexels-dropdown-title">Logout</div>
-                        </div>
-                    </a>
-                </div>
             {% else %}
                 <button class="pexels-profile-btn" onclick="window.location.href='{% url 'account_login' %}'" title="Sign in">
                     <i class="fas fa-user"></i>
@@ -1261,6 +1230,40 @@
                 Upload
             </a>
         </div>
+
+        <!-- Profile Dropdown (shared by desktop and mobile) - Must be OUTSIDE .pexels-nav-items to work on mobile -->
+        {% if user.is_authenticated %}
+        <div class="pexels-dropdown pexels-dropdown-right" id="profileDropdown"
+             onmouseenter="keepDropdownOpen('profileDropdown')"
+             onmouseleave="hideDropdown('profileDropdown', document.querySelector('[onmouseenter*=profileDropdown]'))"
+             role="menu" aria-label="User account options">
+            <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-dropdown-item">
+                <i class="fas fa-user pexels-dropdown-icon"></i>
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">View Profile</div>
+                </div>
+            </a>
+            <a href="{% url 'prompts:edit_profile' %}" class="pexels-dropdown-item">
+                <i class="fas fa-user-edit pexels-dropdown-icon"></i>
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Edit Profile</div>
+                </div>
+            </a>
+            <a href="{% url 'prompts:email_preferences' %}" class="pexels-dropdown-item">
+                <i class="fas fa-bell pexels-dropdown-icon"></i>
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Email Preferences</div>
+                </div>
+            </a>
+            <div class="pexels-dropdown-divider"></div>
+            <a href="{% url 'account_logout' %}" class="pexels-dropdown-item">
+                <i class="fas fa-sign-out-alt pexels-dropdown-icon"></i>
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Logout</div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
 
         <!-- Mobile Icon Bar -->
         <div class="pexels-mobile-icons">

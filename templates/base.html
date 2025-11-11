@@ -329,18 +329,6 @@
         color: var(--gray-900);
     }
 
-    /* Bell notification badge */
-    .notification-badge {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        width: 8px;
-        height: 8px;
-        background: var(--notification-red);  /* Notification badge red */
-        border-radius: 50%;
-        border: 2px solid var(--white);
-    }
-
     /* === PROFILE CIRCLE === */
     .pexels-profile-btn {
         width: 40px;
@@ -362,15 +350,8 @@
         transform: scale(1.05);
     }
 
-    /* Avatar gradient colors */
-    .avatar-color-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .avatar-color-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-    .avatar-color-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-    .avatar-color-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    /* Avatar gradient color (only color-5 in use) */
     .avatar-color-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-    .avatar-color-6 { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
-    .avatar-color-7 { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
-    .avatar-color-8 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
 
     /* === UPLOAD BUTTON === */
     .pexels-upload-btn {
@@ -581,6 +562,121 @@
     }
 
     /* === MOBILE MENU === */
+    /* Mobile Icon Bar Container */
+    .pexels-mobile-icons {
+        display: none;
+        align-items: center;
+        gap: var(--space-2);
+        margin-left: auto;
+    }
+
+    /* Mobile Icon Buttons */
+    .pexels-mobile-icon-btn {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        color: var(--gray-700);
+        font-size: 20px;
+        cursor: pointer;
+        border-radius: var(--radius-md);
+        transition: all var(--transition-base);
+        position: relative;
+    }
+
+    .pexels-mobile-icon-btn:hover {
+        background: var(--gray-100);
+    }
+
+    /* 2-Line Hamburger Icon */
+    .hamburger {
+        width: 20px;
+        height: 14px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .hamburger-line {
+        width: 100%;
+        height: 2px;
+        background: var(--gray-700);
+        border-radius: 2px;
+        transition: all 0.3s ease;
+    }
+
+    /* Hamburger → X Animation */
+    .pexels-mobile-toggle.active .hamburger-line:first-child {
+        transform: rotate(45deg) translateY(6px);
+    }
+
+    .pexels-mobile-toggle.active .hamburger-line:last-child {
+        transform: rotate(-45deg) translateY(-6px);
+    }
+
+    /* Circular Background Fade on Active */
+    .pexels-mobile-toggle::before {
+        content: '';
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        background: var(--gray-100);
+        border-radius: 50%;
+        opacity: 0;
+        transform: scale(0.8);
+        transition: all 0.3s ease;
+        z-index: -1;
+    }
+
+    .pexels-mobile-toggle.active::before {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    /* Mobile Search Overlay */
+    .mobile-search-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--navbar-height-mobile);
+        background: var(--white);
+        border-bottom: 1px solid var(--gray-200);
+        z-index: var(--z-modal);
+        padding: 0 var(--space-4);
+    }
+
+    .mobile-search-overlay.active {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+    }
+
+    .mobile-search-overlay .pexels-search-wrapper {
+        flex: 1;
+    }
+
+    /* Icon-only search dropdown on mobile */
+    .mobile-search-overlay .search-type-dropdown {
+        min-width: auto;
+        width: 48px;
+        padding: 0;
+    }
+
+    .mobile-search-overlay .search-type-text {
+        display: none;  /* Hide text, show icon only */
+    }
+
+    .mobile-search-overlay .search-type-arrow {
+        display: none;  /* Hide arrow on mobile */
+    }
+
+    /* Old Mobile Toggle (will be replaced) */
     .pexels-mobile-toggle {
         display: none;
         width: 40px;
@@ -594,6 +690,7 @@
         cursor: pointer;
         border-radius: var(--radius-md);
         transition: background var(--transition-base);
+        position: relative;
     }
 
     .pexels-mobile-toggle:hover {
@@ -679,12 +776,16 @@
             display: none;
         }
 
-        .pexels-mobile-toggle {
-            display: flex;
+        .pexels-mobile-icons {
+            display: flex;  /* Show mobile icon bar */
+        }
+
+        .pexels-search-container {
+            display: none;  /* Hide desktop search */
         }
 
         .pexels-nav-container {
-            gap: var(--space-6);  /* Restore spacing */
+            gap: var(--space-3);  /* Tighter spacing */
         }
     }
 
@@ -1051,13 +1152,52 @@
             </a>
         </div>
 
-        <!-- Mobile Menu Toggle -->
-        <button class="pexels-mobile-toggle" onclick="toggleMobileMenu()"
-                aria-label="Open navigation menu"
-                aria-expanded="false"
-                aria-controls="pexelsMobileMenu">
-            <i class="fas fa-bars" aria-hidden="true"></i>
-        </button>
+        <!-- Mobile Icon Bar -->
+        <div class="pexels-mobile-icons">
+            <!-- Search Icon (triggers overlay) -->
+            <button class="pexels-mobile-icon-btn" onclick="toggleMobileSearch()"
+                    aria-label="Open search">
+                <i class="fas fa-search" aria-hidden="true"></i>
+            </button>
+
+            <!-- Bell Icon (Notifications) -->
+            <button class="pexels-mobile-icon-btn" aria-label="Notifications">
+                <i class="fas fa-bell" aria-hidden="true"></i>
+            </button>
+
+            <!-- Upload Icon -->
+            <button class="pexels-mobile-icon-btn"
+                    onclick="{% if user.is_authenticated %}createNewPrompt();{% else %}window.location.href='{% url 'account_login' %}';{% endif %}"
+                    aria-label="Upload prompt">
+                <i class="fas fa-upload" aria-hidden="true"></i>
+            </button>
+
+            <!-- Profile Icon -->
+            {% if user.is_authenticated %}
+                <button class="pexels-mobile-icon-btn"
+                        onclick="window.location.href='{% url 'prompts:user_profile' username=user.username %}'"
+                        aria-label="Your profile">
+                    <i class="fas fa-user" aria-hidden="true"></i>
+                </button>
+            {% else %}
+                <button class="pexels-mobile-icon-btn"
+                        onclick="window.location.href='{% url 'account_login' %}'"
+                        aria-label="Sign in">
+                    <i class="fas fa-user" aria-hidden="true"></i>
+                </button>
+            {% endif %}
+
+            <!-- Hamburger Menu Toggle (2 lines) -->
+            <button class="pexels-mobile-toggle" onclick="toggleMobileMenu()"
+                    aria-label="Open navigation menu"
+                    aria-expanded="false"
+                    aria-controls="pexelsMobileMenu">
+                <div class="hamburger">
+                    <div class="hamburger-line"></div>
+                    <div class="hamburger-line"></div>
+                </div>
+            </button>
+        </div>
     </div>
 
     <!-- Mobile Menu -->
@@ -1116,6 +1256,55 @@
     </div>
 </nav>
 
+<!-- Mobile Search Overlay -->
+<div class="mobile-search-overlay" id="mobileSearchOverlay">
+    <form class="search-form" method="GET" action="{% url 'prompts:home' %}" style="display: flex; align-items: center; gap: var(--space-3); width: 100%;">
+        <div class="pexels-search-wrapper">
+            <!-- Search Type Dropdown (Icon Only) -->
+            <button type="button"
+                    class="search-type-dropdown"
+                    onclick="toggleSearchTypeDropdown(event)"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="mobileSearchTypeMenu"
+                    aria-label="Select search type">
+                <i class="fas fa-image search-type-icon" id="mobileSearchTypeIcon" aria-hidden="true"></i>
+                <span class="search-type-text" id="mobileSearchTypeText">Images</span>
+                <i class="fas fa-chevron-down search-type-arrow" aria-hidden="true"></i>
+            </button>
+
+            <!-- Dropdown Menu for Search Type -->
+            <div class="search-dropdown-menu" id="mobileSearchTypeMenu" role="menu" aria-label="Search type options">
+                <button type="button" class="search-dropdown-item" onclick="selectMobileSearchType('images')" role="menuitem">
+                    <i class="fas fa-image" aria-hidden="true"></i>
+                    <span>Images</span>
+                </button>
+                <button type="button" class="search-dropdown-item" onclick="selectMobileSearchType('videos')" role="menuitem">
+                    <i class="fas fa-video" aria-hidden="true"></i>
+                    <span>Videos</span>
+                </button>
+            </div>
+
+            <!-- Search Input -->
+            <input type="text"
+                   name="search"
+                   class="pexels-search-input"
+                   placeholder="Search for AI prompts"
+                   id="mobileSearchInput">
+            <input type="hidden" name="type" id="mobileSearchTypeInput" value="images">
+
+            <!-- Search Submit Button -->
+            <button type="submit" class="pexels-search-icon-btn" aria-label="Search">
+                <i class="fas fa-search" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <!-- Close Button -->
+        <button type="button" class="pexels-mobile-icon-btn" onclick="toggleMobileSearch()" aria-label="Close search">
+            <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+    </form>
+</div>
 
 <!-- JavaScript for Pexels-Inspired Navigation -->
 <script>
@@ -1218,7 +1407,47 @@ function selectSearchType(type) {
 // Toggle mobile menu
 function toggleMobileMenu() {
     const mobileMenu = document.getElementById('pexelsMobileMenu');
+    const toggleBtn = document.querySelector('.pexels-mobile-toggle');
+
     mobileMenu.classList.toggle('show');
+    toggleBtn.classList.toggle('active');  // Animate hamburger → X
+
+    // Update aria-expanded
+    const isOpen = mobileMenu.classList.contains('show');
+    toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+// Toggle mobile search overlay
+function toggleMobileSearch() {
+    const overlay = document.getElementById('mobileSearchOverlay');
+    const searchInput = document.getElementById('mobileSearchInput');
+
+    overlay.classList.toggle('active');
+
+    // Focus search input when opening
+    if (overlay.classList.contains('active')) {
+        setTimeout(() => searchInput.focus(), 100);
+    }
+}
+
+// Select search type for mobile overlay
+function selectMobileSearchType(type) {
+    const icon = document.getElementById('mobileSearchTypeIcon');
+    const text = document.getElementById('mobileSearchTypeText');
+    const input = document.getElementById('mobileSearchTypeInput');
+    const menu = document.getElementById('mobileSearchTypeMenu');
+
+    if (type === 'images') {
+        icon.className = 'fas fa-image search-type-icon';
+        text.textContent = 'Images';
+        input.value = 'images';
+    } else if (type === 'videos') {
+        icon.className = 'fas fa-video search-type-icon';
+        text.textContent = 'Videos';
+        input.value = 'videos';
+    }
+
+    menu.classList.remove('show');
 }
 
 // Close all dropdowns when clicking outside

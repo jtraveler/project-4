@@ -617,10 +617,12 @@
         outline-offset: 2px;
     }
 
-    /* Smaller width for search and bell icons (user specification) */
+    /* Responsive width for search and bell icons with accessibility minimum */
     .pexels-mobile-icon-btn.mobile-search-btn,
     .pexels-mobile-icon-btn.mobile-bell-btn {
-        width: 30px;  /* User specification */
+        min-width: 35px;  /* WCAG 2.5.5 - Accessibility minimum */
+        width: clamp(35px, 4vw, 38px);  /* Responsive: shrinks with viewport, max 38px */
+        flex-shrink: 1;  /* Allow shrinking in flex container */
     }
 
     /* Mobile Upload Button - Dark background with white icon */
@@ -745,12 +747,11 @@
     /* Mobile Hamburger Toggle Button */
     .pexels-mobile-toggle {
         width: 38px;  /* User specification */
-        height: 44px;  /* WCAG 2.5.5 - Minimum height maintained */
+        height: 38px;  /* Square shape to avoid oval appearance */
         display: flex;
         align-items: center;
         justify-content: center;
         border: none;
-        background: var(--white);  /* White background for hamburger state */
         color: var(--gray-700);
         font-size: 24px;
         cursor: pointer;
@@ -759,11 +760,18 @@
         position: relative;
     }
 
-    .pexels-mobile-toggle:hover {
+    /* Default state: white background (hamburger icon) */
+    .pexels-mobile-toggle:not(.active) {
+        background: var(--white);
+    }
+
+    /* Hover only applies when NOT active (not in X state) */
+    .pexels-mobile-toggle:not(.active):hover {
         background: var(--gray-100);
     }
 
-    .pexels-mobile-toggle:active {
+    /* Active (pressed) only applies when NOT active (not in X state) */
+    .pexels-mobile-toggle:not(.active):active {
         transform: scale(0.95);  /* Touch feedback */
         background: var(--gray-200);
     }
@@ -773,8 +781,13 @@
         outline-offset: 2px;
     }
 
-    /* Background fades to transparent when menu is open (X state) */
+    /* Active state (X): transparent background, no hover interference */
     .pexels-mobile-toggle.active {
+        background: transparent !important;  /* Ensure this always takes precedence */
+    }
+
+    /* When active (X), hover should not add background */
+    .pexels-mobile-toggle.active:hover {
         background: transparent;
     }
 
@@ -883,6 +896,7 @@
         /* Profile dropdown: Override top position for mobile navbar height */
         #profileDropdown {
             top: var(--navbar-height-mobile) !important;  /* Mobile navbar height */
+            right: 10% !important;  /* Not too far to the right edge on mobile */
             max-height: calc(100vh - var(--navbar-height-mobile) - 20px);  /* Prevent overflow on landscape */
         }
 

@@ -582,14 +582,14 @@
     .pexels-mobile-icons {
         display: none;
         align-items: center;
-        gap: var(--space-2);
+        gap: 6px;  /* Reduced from var(--space-2) (8px) to minimize visual spacing */
         margin-left: auto;
     }
 
     /* Mobile Icon Buttons */
     .pexels-mobile-icon-btn {
-        width: 38px;  /* User specification */
-        height: 44px;  /* WCAG 2.5.5 - Minimum height maintained */
+        width: 38px;  /* Compact width for space efficiency */
+        height: 38px;  /* Square dimensions */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -617,12 +617,12 @@
         outline-offset: 2px;
     }
 
-    /* Responsive width for search and bell icons with accessibility minimum */
+    /* Search and bell icons - WCAG AAA compliant with optimized visual spacing */
     .pexels-mobile-icon-btn.mobile-search-btn,
     .pexels-mobile-icon-btn.mobile-bell-btn {
-        min-width: 35px;  /* WCAG 2.5.5 - Accessibility minimum */
-        width: clamp(35px, 4vw, 38px);  /* Responsive: shrinks with viewport, max 38px */
-        flex-shrink: 1;  /* Allow shrinking in flex container */
+        width: 44px;  /* WCAG 2.5.5 AAA - Minimum 44x44px touch target */
+        height: 44px;  /* WCAG 2.5.5 AAA - Square dimensions */
+        font-size: 22px;  /* Larger icon (vs 20px) reduces visual white space */
     }
 
     /* Mobile Upload Button - Dark background with white icon */
@@ -746,8 +746,8 @@
 
     /* Mobile Hamburger Toggle Button */
     .pexels-mobile-toggle {
-        width: 38px;  /* User specification */
-        height: 38px;  /* Square shape to avoid oval appearance */
+        width: 44px;  /* WCAG 2.5.5 AAA - Minimum 44x44px touch target */
+        height: 44px;  /* WCAG 2.5.5 AAA - Square shape for true circle */
         display: flex;
         align-items: center;
         justify-content: center;

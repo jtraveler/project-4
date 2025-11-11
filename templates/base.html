@@ -816,6 +816,8 @@
                     <!-- Search Type Dropdown -->
                     <button type="button"
                             class="search-type-dropdown"
+                            onmouseenter="showDropdown('searchTypeMenu', this)"
+                            onmouseleave="hideDropdown('searchTypeMenu', this)"
                             onclick="toggleSearchTypeDropdown(event)"
                             aria-haspopup="true"
                             aria-expanded="false"
@@ -827,7 +829,9 @@
                     </button>
 
                     <!-- Dropdown Menu for Search Type -->
-                    <div class="search-dropdown-menu" id="searchTypeMenu" role="menu" aria-label="Search type options">
+                    <div class="search-dropdown-menu" id="searchTypeMenu" role="menu" aria-label="Search type options"
+                         onmouseenter="keepDropdownOpen('searchTypeMenu')"
+                         onmouseleave="hideDropdown('searchTypeMenu', document.querySelector('[aria-controls=searchTypeMenu]'))">
                         <div class="search-dropdown-item" onclick="selectSearchType('images')">
                             <i class="fas fa-image"></i>
                             <span>Images</span>
@@ -863,6 +867,7 @@
             <button class="pexels-nav-item"
                     onmouseenter="showDropdown('exploreDropdown', this)"
                     onmouseleave="hideDropdown('exploreDropdown', this)"
+                    onclick="toggleDropdown('exploreDropdown', event)"
                     aria-haspopup="true"
                     aria-expanded="false"
                     aria-controls="exploreDropdown"
@@ -898,6 +903,7 @@
             <button class="pexels-nav-item"
                     onmouseenter="showDropdown('promptsDropdown', this)"
                     onmouseleave="hideDropdown('promptsDropdown', this)"
+                    onclick="toggleDropdown('promptsDropdown', event)"
                     aria-haspopup="true"
                     aria-expanded="false"
                     aria-controls="promptsDropdown"
@@ -989,6 +995,7 @@
                 <button class="pexels-profile-btn avatar-color-5"
                         onmouseenter="showDropdown('profileDropdown', this)"
                         onmouseleave="hideDropdown('profileDropdown', this)"
+                        onclick="toggleDropdown('profileDropdown', event)"
                         aria-haspopup="true"
                         aria-expanded="false"
                         aria-controls="profileDropdown"

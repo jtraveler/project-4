@@ -592,17 +592,17 @@
         margin-left: auto;
     }
 
-    /* Mobile Icon Buttons */
+    /* Mobile Icon Buttons - WCAG 2.5.5 AAA Compliant (44×44px minimum) */
     .pexels-mobile-icon-btn {
-        width: 40px;  /* Improved from 38px - closer to WCAG AAA (44px) */
-        height: 40px;  /* Square dimensions for better accessibility */
+        width: 44px;  /* WCAG 2.5.5 AAA - Minimum 44×44px touch target */
+        height: 44px;  /* Perfect WCAG AAA compliance for all mobile buttons */
         display: flex;
         align-items: center;
         justify-content: center;
         border: none;
         background: transparent;
         color: var(--gray-700);
-        font-size: 20px;
+        font-size: 20px;  /* Standard icon size */
         cursor: pointer;
         border-radius: var(--radius-md);
         transition: all var(--transition-base);
@@ -623,12 +623,10 @@
         outline-offset: 2px;
     }
 
-    /* Search and bell icons - WCAG AAA compliant with optimized visual spacing */
+    /* Search and bell icons - Larger font size to reduce visual white space */
     .pexels-mobile-icon-btn.mobile-search-btn,
     .pexels-mobile-icon-btn.mobile-bell-btn {
-        width: 44px;  /* WCAG 2.5.5 AAA - Minimum 44x44px touch target */
-        height: 44px;  /* WCAG 2.5.5 AAA - Square dimensions */
-        font-size: 22px;  /* Larger icon (vs 20px) reduces visual white space */
+        font-size: 22px;  /* Larger icon (vs 20px) reduces visual white space in transparent buttons */
     }
 
     /* Mobile Upload Button - Dark background with white icon */
@@ -1570,16 +1568,56 @@ function selectSearchType(type) {
 }
 
 // Toggle mobile menu
+// Performance monitoring for touch interactions (debug aid)
+const touchPerformance = {
+    enabled: false,  // Set to true for debugging performance issues
+    lastInteraction: null,
+
+    log: function(action, duration) {
+        if (!this.enabled) return;
+
+        const now = performance.now();
+        const timeSinceLast = this.lastInteraction ? now - this.lastInteraction : 0;
+        this.lastInteraction = now;
+
+        // Warn if interaction took longer than 100ms (performance threshold)
+        if (duration && duration > 100) {
+            console.warn(
+                `⚠️ Performance: ${action} took ${duration.toFixed(2)}ms ` +
+                `(threshold: 100ms). Consider optimization.`
+            );
+        }
+
+        // Log all interactions if enabled
+        console.log(
+            `📊 Touch Performance: ${action} | ` +
+            `Duration: ${duration ? duration.toFixed(2) + 'ms' : 'N/A'} | ` +
+            `Since last: ${timeSinceLast.toFixed(2)}ms`
+        );
+    }
+};
+
 // Haptic feedback helper - provides tactile response on mobile devices
+let hapticWarningShown = false;  // Flag to show warning only once
 function triggerHapticFeedback(duration = 10) {
     // Check if Vibration API is supported (primarily Android devices)
     if ('vibrate' in navigator) {
         navigator.vibrate(duration);  // Subtle 10ms vibration
+    } else if (!hapticWarningShown) {
+        // Debug aid: Warn developers when Vibration API is unsupported
+        console.warn(
+            '⚠️ Haptic Feedback: Vibration API not supported on this device/browser.\n' +
+            'This is expected on iOS Safari and some desktop browsers.\n' +
+            'Haptic feedback will be silently skipped (no impact on functionality).'
+        );
+        hapticWarningShown = true;  // Only warn once per session
     }
-    // Note: iOS Safari does not support Vibration API
+    // Note: iOS Safari does not support Vibration API (graceful degradation)
 }
 
 function toggleMobileMenu() {
+    const startTime = performance.now();  // Performance monitoring
+
     const mobileMenu = document.getElementById('pexelsMobileMenu');
     const toggleBtn = document.querySelector('.pexels-mobile-toggle');
 
@@ -1592,10 +1630,16 @@ function toggleMobileMenu() {
 
     // Haptic feedback on mobile devices
     triggerHapticFeedback();
+
+    // Log performance if monitoring enabled
+    const duration = performance.now() - startTime;
+    touchPerformance.log('Mobile Menu Toggle', duration);
 }
 
 // Toggle mobile search overlay
 function toggleMobileSearch() {
+    const startTime = performance.now();  // Performance monitoring
+
     const overlay = document.getElementById('mobileSearchOverlay');
     const searchInput = document.getElementById('mobileSearchInput');
     const searchBtn = document.getElementById('mobileSearchToggle');
@@ -1615,6 +1659,10 @@ function toggleMobileSearch() {
 
     // Haptic feedback on mobile devices
     triggerHapticFeedback();
+
+    // Log performance if monitoring enabled
+    const duration = performance.now() - startTime;
+    touchPerformance.log('Mobile Search Toggle', duration);
 }
 
 // Select search type for mobile overlay
@@ -1807,6 +1855,12 @@ if (isTouchDevice) {
         });
 
         // Close mobile search overlay when tapping outside
+        //
+        // IMPORTANT: { passive: true } is CRITICAL for mobile performance
+        // - Prevents browsers from waiting to see if preventDefault() will be called
+        // - Eliminates the 300ms touch delay on older mobile browsers
+        // - Allows smooth scrolling while touch events are being processed
+        // - Chrome/Firefox show console warnings if omitted on touchstart/touchmove
         document.addEventListener('touchstart', function(e) {
             const overlay = document.getElementById('mobileSearchOverlay');
             if (overlay && overlay.classList.contains('active')) {
@@ -1814,14 +1868,15 @@ if (isTouchDevice) {
                     toggleMobileSearch();
                 }
             }
-        }, { passive: true });
+        }, { passive: true });  // Passive = "I promise not to call preventDefault()"
 
         // Add haptic feedback to all mobile icon buttons
+        // Using passive: true because we never call preventDefault() in these handlers
         const mobileIconButtons = document.querySelectorAll('.pexels-mobile-icon-btn');
         mobileIconButtons.forEach(button => {
             button.addEventListener('click', function() {
                 triggerHapticFeedback();
-            }, { passive: true });
+            }, { passive: true });  // Improves scroll performance during clicks
         });
 
         // Add haptic feedback to dropdown selections
@@ -1829,7 +1884,7 @@ if (isTouchDevice) {
         dropdownItems.forEach(item => {
             item.addEventListener('click', function() {
                 triggerHapticFeedback(5);  // Lighter vibration for dropdown selections
-            }, { passive: true });
+            }, { passive: true });  // No preventDefault() needed = use passive for performance
         });
     });
 }

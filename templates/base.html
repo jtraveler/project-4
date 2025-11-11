@@ -555,6 +555,11 @@
         gap: var(--space-3);
         cursor: pointer;
         transition: background var(--transition-base);
+        width: 100%;  /* Button reset: full width */
+        border: none;  /* Button reset: no border */
+        background: transparent;  /* Button reset: no background */
+        text-align: left;  /* Button reset: left align */
+        font-family: inherit;  /* Button reset: inherit font */
     }
 
     .search-dropdown-item:hover {
@@ -832,14 +837,14 @@
                     <div class="search-dropdown-menu" id="searchTypeMenu" role="menu" aria-label="Search type options"
                          onmouseenter="keepDropdownOpen('searchTypeMenu')"
                          onmouseleave="hideDropdown('searchTypeMenu', document.querySelector('[aria-controls=searchTypeMenu]'))">
-                        <div class="search-dropdown-item" onclick="selectSearchType('images')">
-                            <i class="fas fa-image"></i>
+                        <button type="button" class="search-dropdown-item" onclick="selectSearchType('images')" role="menuitem">
+                            <i class="fas fa-image" aria-hidden="true"></i>
                             <span>Images</span>
-                        </div>
-                        <div class="search-dropdown-item" onclick="selectSearchType('videos')">
-                            <i class="fas fa-video"></i>
+                        </button>
+                        <button type="button" class="search-dropdown-item" onclick="selectSearchType('videos')" role="menuitem">
+                            <i class="fas fa-video" aria-hidden="true"></i>
                             <span>Videos</span>
-                        </div>
+                        </button>
                     </div>
 
                     <!-- Search Input -->
@@ -1047,8 +1052,11 @@
         </div>
 
         <!-- Mobile Menu Toggle -->
-        <button class="pexels-mobile-toggle" onclick="toggleMobileMenu()">
-            <i class="fas fa-bars"></i>
+        <button class="pexels-mobile-toggle" onclick="toggleMobileMenu()"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                aria-controls="pexelsMobileMenu">
+            <i class="fas fa-bars" aria-hidden="true"></i>
         </button>
     </div>
 

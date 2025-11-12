@@ -8,6 +8,13 @@
   --accent-color-hover: var(--gray-900);      /* Darker gray on hover */
   --accent-color-light: rgba(38, 38, 38, 0.1); /* Gray background tint */
 
+  /* === ACCENT COLORS (Brand Green) === */
+  /* Primary brand accent - bright green for visual elements (backgrounds, borders, icons on dark backgrounds) */
+  --accent-color-primary: rgb(73, 242, 100);  /* Bright green - high visibility, excellent contrast on dark backgrounds */
+
+  /* Secondary brand accent - darker green for text/icons with better contrast on light backgrounds */
+  --accent-color-for-text-icons: #16ba31;     /* Darker green - WCAG AA compliant for text, better readability on white/light backgrounds */
+
   /* === NEUTRAL COLORS === */
   --white: #FFFFFF;
   --gray-50: #FAFAFA;     /* Page backgrounds */

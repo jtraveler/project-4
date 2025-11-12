@@ -846,7 +846,7 @@
         height: 1px;
         background: var(--gray-200);
         opacity: 0;
-        transition: opacity 0.3s ease 0s;  /* Instant fade-out when closing */
+        transition: opacity 0.5s ease 0s;  /* 0.5s fade-out when closing */
     }
 
     .pexels-mobile-menu.show {
@@ -855,10 +855,10 @@
         transform: translateY(0);  /* Slide into view */
     }
 
-    /* Fade in border 0.3s after menu appears */
+    /* Fade in border 0.3s after 0.5s delay */
     .pexels-mobile-menu.show::before {
         opacity: 1;
-        transition: opacity 0.3s ease 0.3s;  /* 0.3s delay, then 0.3s fade-in */
+        transition: opacity 0.3s ease 0.5s;  /* 0.5s delay, then 0.3s fade-in */
     }
 
     /* Prevent background scrolling when mobile menu is open */

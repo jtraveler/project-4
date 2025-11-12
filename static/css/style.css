@@ -345,9 +345,9 @@ main {
 
 /* ===== MASONRY LAYOUT - FLEXBOX COLUMN APPROACH ===== */
 .masonry-container {
-  max-width: 100%;
-  margin: 0;
-  padding: 20px 40px;
+  max-width: 1600px;
+  margin: 0 auto;  /* Center align content */
+  padding: 20px 16px;
   width: 100%;
   box-sizing: border-box;  /* Ensure padding doesn't cause overflow */
 }

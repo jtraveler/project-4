@@ -696,17 +696,14 @@
     
     <!-- Load More Button -->
     {% if page_obj.has_next %}
-    <div class="load-more-container text-center mt-5">
-        <button id="load-more-btn" 
+    <div class="load-more-container text-center mt-5 mb-5">
+        <button id="load-more-btn"
                 class="btn btn-primary btn-lg"
                 data-next-page="{{ page_obj.next_page_number }}"
                 aria-label="Load more prompts">
             <i class="fas fa-plus-circle me-2"></i>
             Load More Prompts
         </button>
-        <div id="loading-spinner" class="mt-3" style="display: none;">
-            <i class="fas fa-spinner fa-spin"></i> Loading more prompts...
-        </div>
     </div>
     {% else %}
     <!-- End of results message -->
@@ -1215,17 +1212,18 @@ function initVideoObserver() {
     
     // Load More functionality
     const loadMoreBtn = document.getElementById('load-more-btn');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    
+
     if (loadMoreBtn) {
         loadMoreBtn.addEventListener('click', function() {
             const nextPage = this.getAttribute('data-next-page');
             const currentUrl = window.location.pathname;
             const currentParams = new URLSearchParams(window.location.search);
             currentParams.set('page', nextPage);
-            
-            loadMoreBtn.style.display = 'none';
-            loadingSpinner.style.display = 'block';
+
+            // Disable button and show loading state (prevents jumping)
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading More Prompts...';
+            loadMoreBtn.style.pointerEvents = 'none';  // Prevent additional clicks
             
             // Hide all order numbers temporarily if they're currently visible
             const wasOrderVisible = orderDisplayVisible;
@@ -1281,11 +1279,14 @@ function initVideoObserver() {
                     // Update load more button
                     const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
                     if (newLoadMoreBtn) {
-                        loadMoreBtn.setAttribute('data-next-page', 
+                        // More pages available - restore button
+                        loadMoreBtn.setAttribute('data-next-page',
                             newLoadMoreBtn.getAttribute('data-next-page'));
-                        loadMoreBtn.style.display = 'block';
+                        loadMoreBtn.disabled = false;
+                        loadMoreBtn.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Load More Prompts';
+                        loadMoreBtn.style.pointerEvents = 'auto';
                     } else {
-                        // Replace the load more container with end message
+                        // No more pages - replace with end message
                         const loadMoreContainer = document.querySelector('.load-more-container');
                         if (loadMoreContainer) {
                             loadMoreContainer.innerHTML = `
@@ -1299,13 +1300,15 @@ function initVideoObserver() {
                             `;
                         }
                     }
-                    
-                    loadingSpinner.style.display = 'none';
                 })
                 .catch(error => {
                     console.error('Error loading more prompts:', error);
-                    loadingSpinner.style.display = 'none';
-                    loadMoreBtn.style.display = 'block';
+                    // Restore button on error
+                    loadMoreBtn.disabled = false;
+                    loadMoreBtn.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Load More Prompts';
+                    loadMoreBtn.style.pointerEvents = 'auto';
+                    // Show error message to user
+                    alert('Failed to load more prompts. Please try again.');
                 });
         });
     }

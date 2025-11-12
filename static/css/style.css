@@ -116,9 +116,15 @@
 
 /* ===== FONT FAMILY DECLARATIONS ===== */
 /* Prevent horizontal scrollbar globally (CRITICAL FIX) */
+*, *::before, *::after {
+  box-sizing: border-box;  /* Ensure padding/borders are included in width */
+}
+
 html, body {
   overflow-x: hidden;  /* Prevent horizontal scrollbar */
   max-width: 100vw;    /* Ensure nothing exceeds viewport width */
+  margin: 0;
+  padding: 0;
 }
 
 /* Base font for body and most text */
@@ -343,6 +349,14 @@ main {
   margin: 0;
   padding: 20px 40px;
   width: 100%;
+  box-sizing: border-box;  /* Ensure padding doesn't cause overflow */
+}
+
+/* Responsive padding for masonry container */
+@media (max-width: 768px) {
+  .masonry-container {
+    padding: 20px 15px;  /* Reduce horizontal padding on mobile */
+  }
 }
 
 /* Masonry grid flexbox layout */

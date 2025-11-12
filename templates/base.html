@@ -98,6 +98,9 @@
         align-items: center;
         height: var(--navbar-height);
         gap: var(--space-6);
+        padding: 0 var(--space-4);  /* Add horizontal padding to prevent overflow */
+        max-width: 100%;  /* Ensure container doesn't exceed viewport */
+        box-sizing: border-box;  /* Include padding in width calculation */
     }
 
     /* === LOGO === */
@@ -819,7 +822,6 @@
         right: 0;
         bottom: 0;  /* Full height overlay */
         background: var(--white);
-        border-top: 1px solid var(--gray-200);
         padding: var(--space-4);
         overflow-y: auto;  /* Allow scrolling if content exceeds viewport */
         -webkit-overflow-scrolling: touch;  /* Smooth scrolling on iOS */
@@ -829,12 +831,34 @@
         visibility: hidden;
         transform: translateY(-20px);  /* Slide from just above (not top of viewport) */
         transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+
+        /* Animated border using ::before pseudo-element */
+        border-top: none;  /* Remove direct border */
+    }
+
+    /* Animated top border for mobile menu */
+    .pexels-mobile-menu::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--gray-200);
+        opacity: 0;
+        transition: opacity 0.5s ease 0s;  /* Instant fade-out when closing */
     }
 
     .pexels-mobile-menu.show {
         opacity: 1;
         visibility: visible;
         transform: translateY(0);  /* Slide into view */
+    }
+
+    /* Fade in border 0.5s after menu appears */
+    .pexels-mobile-menu.show::before {
+        opacity: 1;
+        transition: opacity 0.5s ease 0.5s;  /* 0.5s delay, then 0.5s fade-in */
     }
 
     /* Prevent background scrolling when mobile menu is open */

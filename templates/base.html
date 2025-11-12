@@ -93,7 +93,6 @@
     }
 
     .pexels-nav-container {
-        max-width: var(--container-max-width);  /* Container constraint */
         margin: 0 auto;
         display: flex;
         align-items: center;
@@ -164,7 +163,7 @@
     }
 
     .search-type-dropdown:hover {
-        background: var(--gray-100);  /* Consistent with other hover states */
+        background: var(--gray-200);  /* Slightly darker for better visual feedback */
     }
 
     .search-type-icon {
@@ -404,7 +403,7 @@
     #profileDropdown {
         position: fixed !important;
         top: var(--navbar-height) !important;  /* Desktop navbar height */
-        right: var(--space-4);
+        right: var(--space-2);  /* Closer to edge, aligns better under profile icon */
         left: auto;
         max-height: calc(100vh - var(--navbar-height) - 20px);
         overflow-y: auto;
@@ -571,7 +570,7 @@
 
     .search-dropdown-item i {
         font-size: 18px;  /* Changed from 16px to match other dropdown icons */
-        color: var(--icon-secondary);  /* Changed from var(--gray-600) for consistency */
+        color: var(--gray-700);  /* Darker for better contrast */
         width: 20px;  /* Added for consistency */
         flex-shrink: 0;  /* Added to prevent icon squishing */
         margin-top: 2px;  /* Added for visual alignment */
@@ -581,6 +580,18 @@
         font-size: 15px;  /* Changed from 14px to match dropdown titles */
         color: var(--text-primary);
         font-weight: 600;  /* Changed from 500 for consistency */
+    }
+
+    /* Selected search dropdown item (accent color for text and icon) */
+    .search-dropdown-item[aria-selected="true"] i,
+    .search-dropdown-item.selected i {
+        color: var(--accent-color, #2563eb);  /* Accent color for selected icon */
+    }
+
+    .search-dropdown-item[aria-selected="true"] span,
+    .search-dropdown-item.selected span {
+        color: var(--accent-color, #2563eb);  /* Accent color for selected text */
+        font-weight: 700;  /* Bolder for emphasis */
     }
 
     /* === MOBILE MENU === */
@@ -802,20 +813,36 @@
     }
 
     .pexels-mobile-menu {
-        /* SEO-friendly visibility (allows crawling of mobile navigation) */
-        max-height: 0;
-        overflow: hidden;
-        opacity: 0;
+        /* Fixed overlay that doesn't push content down */
+        position: fixed;
+        top: var(--navbar-height-mobile, 60px);
+        left: 0;
+        right: 0;
+        bottom: 0;
         background: var(--white);
         border-top: 1px solid var(--gray-200);
-        padding: 0 var(--space-4);
-        transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+        padding: var(--space-4);
+        overflow-y: auto;  /* Allow scrolling if content exceeds viewport */
+        -webkit-overflow-scrolling: touch;  /* Smooth scrolling on iOS */
+        z-index: 999;  /* Below navbar (z-index: 1000) but above content */
+        /* SEO-friendly visibility (allows crawling of mobile navigation) */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-100%);  /* Slide from top */
+        transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
     }
 
     .pexels-mobile-menu.show {
-        max-height: 600px;  /* Adjust based on content height */
         opacity: 1;
-        padding: var(--space-4);
+        visibility: visible;
+        transform: translateY(0);  /* Slide into view */
+    }
+
+    /* Prevent background scrolling when mobile menu is open */
+    body.mobile-menu-open {
+        overflow: hidden;  /* No scrolling on body */
+        position: fixed;  /* Prevent iOS scroll bounce */
+        width: 100%;  /* Maintain width when position: fixed */
     }
 
     .pexels-mobile-item {
@@ -968,6 +995,27 @@
         }
     }
 
+    /* Screens below 400px - Adjust mobile icon spacing with flexbox */
+    @media (max-width: 400px) {
+        .pexels-mobile-icons {
+            gap: 4px;  /* Tighter spacing for very small screens */
+            margin-right: 8px;  /* Add margin from edge for better visual balance */
+        }
+
+        /* Ensure all buttons maintain WCAG 2.5.5 AAA compliance (44×44px) */
+        .pexels-mobile-icon-btn,
+        .pexels-profile-btn,
+        .pexels-mobile-toggle {
+            min-width: 44px;  /* Maintain tap target size */
+            min-height: 44px;
+        }
+
+        /* Slightly smaller icons on very small screens (but buttons stay 44×44px) */
+        .pexels-mobile-icon-btn {
+            font-size: 20px;  /* Slightly smaller icons (maintains 44×44px button) */
+        }
+    }
+
     /* Profile link styles - Phase F UX Fix */
     a.profile-link {
         color: inherit;
@@ -1047,8 +1095,8 @@
     <a href="#browse-prompts" class="skip-to-main">Skip to main content</a>
 
     <!-- Pexels-Inspired Navigation -->
-<nav class="pexels-navbar container">
-    <div class="pexels-nav-container">
+<nav class="pexels-navbar">
+    <div class="pexels-nav-container container">
 
         <!-- Logo -->
         <a href="{% url 'prompts:home' %}" class="pexels-logo">PromptFinder</a>
@@ -1351,7 +1399,7 @@
     </div>
 
     <!-- Mobile Menu -->
-    <div class="pexels-mobile-menu" id="pexelsMobileMenu">
+    <div class="pexels-mobile-menu" id="pexelsMobileMenu" aria-hidden="true">
         <!-- Mobile Links -->
         <a href="{% url 'prompts:home' %}" class="pexels-mobile-item">
             <i class="fas fa-home"></i>
@@ -1684,18 +1732,58 @@ function triggerHapticFeedback(duration = 10) {
     // Note: iOS Safari does not support Vibration API (graceful degradation)
 }
 
+// Store last focused element for focus management
+let lastFocusedElement = null;
+
 function toggleMobileMenu() {
     const startTime = performance.now();  // Performance monitoring
 
     const mobileMenu = document.getElementById('pexelsMobileMenu');
     const toggleBtn = document.querySelector('.pexels-mobile-toggle');
+    const isOpen = mobileMenu.classList.contains('show');
 
-    mobileMenu.classList.toggle('show');
-    toggleBtn.classList.toggle('active');  // Animate hamburger → X
+    if (!isOpen) {
+        // Opening menu
+        mobileMenu.classList.add('show');
+        toggleBtn.classList.add('active');  // Animate hamburger → X
+
+        // WCAG 2.4.3 - Focus Order: Move focus to first menu item
+        const firstMenuItem = mobileMenu.querySelector('a, button');
+        if (firstMenuItem) {
+            lastFocusedElement = document.activeElement;  // Store current focus
+            setTimeout(() => {
+                if (firstMenuItem && typeof firstMenuItem.focus === 'function') {
+                    firstMenuItem.focus();  // Focus first menu item
+                }
+            }, 100);  // Small delay for animation
+        }
+
+        // WCAG 4.1.2 - aria-hidden: Hide menu from screen readers when closed
+        mobileMenu.setAttribute('aria-hidden', 'false');
+
+        // Prevent background scrolling (iOS scroll bounce prevention)
+        document.body.classList.add('mobile-menu-open');
+    } else {
+        // Closing menu
+        mobileMenu.classList.remove('show');
+        toggleBtn.classList.remove('active');  // Animate X → hamburger
+
+        // WCAG 4.1.2 - aria-hidden: Show menu to screen readers
+        mobileMenu.setAttribute('aria-hidden', 'true');
+
+        // Restore background scrolling
+        document.body.classList.remove('mobile-menu-open');
+
+        // WCAG 2.4.3 - Focus Order: Return focus to trigger button
+        if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+            setTimeout(() => {
+                lastFocusedElement.focus();  // Return focus
+            }, 100);
+        }
+    }
 
     // Update aria-expanded
-    const isOpen = mobileMenu.classList.contains('show');
-    toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    toggleBtn.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
 
     // Haptic feedback on mobile devices
     triggerHapticFeedback();
@@ -1790,8 +1878,16 @@ document.querySelectorAll('.pexels-dropdown, .search-dropdown-menu').forEach(dro
 
 // Keyboard navigation for dropdowns and search
 document.addEventListener('keydown', function(event) {
-    // Escape key - close all dropdowns
+    // Escape key - close mobile menu and all dropdowns (WCAG 2.1.1 - Keyboard)
     if (event.key === 'Escape') {
+        // Close mobile menu if open
+        const mobileMenu = document.getElementById('pexelsMobileMenu');
+        if (mobileMenu && mobileMenu.classList.contains('show')) {
+            toggleMobileMenu();  // Close mobile menu
+            return;  // Don't process other ESC actions
+        }
+
+        // Close all dropdowns
         const dropdowns = document.querySelectorAll('.pexels-dropdown.show, .search-dropdown-menu.show');
         dropdowns.forEach(dropdown => {
             dropdown.classList.remove('show');

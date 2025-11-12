@@ -28,7 +28,7 @@ class About(models.Model):
         - Only create ONE About instance
         - Use Django admin's rich text editor for content formatting
         - Images are stored on Cloudinary for performance
-        - title should be descriptive (e.g., "About PromptFlow")
+        - title should be descriptive (e.g., "About PromptFinder")
 
     Template Usage:
         {% if about.content %}
@@ -39,8 +39,8 @@ class About(models.Model):
 
     Example:
         about = About.objects.create(
-            title="About PromptFlow",
-            content="<p>PromptFlow is a community...</p>",
+            title="About PromptFinder",
+            content="<p>PromptFinder is a community...</p>",
             # profile_image uploaded via admin
         )
     """

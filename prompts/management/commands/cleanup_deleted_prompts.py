@@ -220,7 +220,7 @@ class Command(BaseCommand):
             return
 
         # Build email body
-        subject = 'PromptFlow: Daily Trash Cleanup Report'
+        subject = 'PromptFinder: Daily Trash Cleanup Report'
 
         body = f"""
 Daily Trash Cleanup Report

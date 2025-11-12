@@ -358,10 +358,8 @@ class RateLimitTemplateTests(TestCase):
         response.render()  # TemplateResponse is lazy - must render first
         html = response.content.decode('utf-8')
 
-        # Template uses PromptFinder in title, but base.html uses PromptFlow
-        # Both are present due to template inheritance
-        self.assertIn('PromptFinder', html)  # In 429.html title
-        # Note: PromptFlow also appears from base.html navbar
+        # Template uses PromptFinder in title and base.html also uses PromptFinder
+        self.assertIn('PromptFinder', html)  # Appears in 429.html title and base.html navbar
 
     def test_template_has_accessibility_features(self):
         """Test 429 template includes ARIA attributes."""

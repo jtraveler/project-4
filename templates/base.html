@@ -7,24 +7,24 @@
 <!DOCTYPE html>
 <html class="h-100" lang="en">
     <head>
-        <title>{% block title %}PromptFlow - Discover, Share & Craft Exceptional AI Prompts{% endblock %}</title>
-        
+        <title>{% block title %}PromptFinder - Discover, Share & Craft Exceptional AI Prompts{% endblock %}</title>
+
         <!-- Essential Meta Tags for SEO and Performance -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="{% block meta_description %}Discover, share, and craft exceptional AI prompts with our vibrant community. From creative inspiration to technical precision, find the perfect prompts to unleash your AI potential. Join PromptFlow today!{% endblock %}">
+        <meta name="description" content="{% block meta_description %}Discover, share, and craft exceptional AI prompts with our vibrant community. From creative inspiration to technical precision, find the perfect prompts to unleash your AI potential. Join PromptFinder today!{% endblock %}">
         <meta name="keywords" content="AI prompts, artificial intelligence, creative prompts, prompt engineering, AI community, prompt sharing, AI tools">
-        <meta name="author" content="PromptFlow">
-        
+        <meta name="author" content="PromptFinder">
+
         <!-- Open Graph Meta Tags for Social Sharing -->
-        <meta property="og:title" content="PromptFlow - Your Creative AI Community">
+        <meta property="og:title" content="PromptFinder - Your Creative AI Community">
         <meta property="og:description" content="Discover, share, and create exceptional AI prompts with our vibrant community. From creative inspiration to technical precision, find the perfect prompts to unleash your AI potential.">
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ request.build_absolute_uri }}">
-        
+
         <!-- Twitter Card Meta Tags -->
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="PromptFlow - Your Creative AI Community">
+        <meta name="twitter:title" content="PromptFinder - Your Creative AI Community">
         <meta name="twitter:description" content="Discover, share, and craft exceptional AI prompts with our vibrant community.">
         
         <!-- Security Headers-->
@@ -141,7 +141,7 @@
 
     .pexels-search-wrapper:focus-within {
         background: var(--gray-100);
-        border-color: #949494;  /* WCAG 2.2 Level AA compliant - 3.02:1 contrast ratio (upgraded from gray-300 1.40:1) */
+        border-color: #767676;  /* WCAG 2.1 Level AA compliant - 4.5:1 contrast ratio for text, strong focus indicator */
         box-shadow: unset;
     }
 
@@ -1151,6 +1151,7 @@
                         placeholder="Search for AI prompts"
                         value="{{ request.GET.search }}"
                         id="mainSearchInput"
+                        aria-label="Search for AI prompts"
                     >
                     <input type="hidden" name="type" id="searchTypeInput" value="images">
 
@@ -2187,7 +2188,7 @@ if (mobileMenu && isTouchDevice) {
             <div class="col-lg-6">
                 <div class="hero-content">
                     <h1 class="hero-main-title">
-                        Welcome to <span class="hero-brand">PromptFlow</span>
+                        Welcome to <span class="hero-brand">PromptFinder</span>
                     </h1>
                     <p class="hero-subtitle">
                         (Your Creative AI Community)
@@ -2315,16 +2316,16 @@ if (mobileMenu && isTouchDevice) {
 
             <!-- Right -->
             <div>
-                <a href="https://www.facebook.com" class="me-4" aria-label="Visit PromptFlow on Facebook">
+                <a href="https://www.facebook.com" class="me-4" aria-label="Visit PromptFinder on Facebook">
                     <i class="fab fa-facebook-f" aria-hidden="true"></i>
                 </a>
-                <a href="https://www.x.com" class="me-4" aria-label="Follow PromptFlow on X">
+                <a href="https://www.x.com" class="me-4" aria-label="Follow PromptFinder on X">
                     <i class="fab fa-twitter" aria-hidden="true"></i>
                 </a>
-                <a href="https://www.instagram.com" class="me-4" aria-label="Follow PromptFlow on Instagram">
+                <a href="https://www.instagram.com" class="me-4" aria-label="Follow PromptFinder on Instagram">
                     <i class="fab fa-instagram" aria-hidden="true"></i>
                 </a>
-                
+
             </div>
             <!-- Right -->
         </div>
@@ -2405,7 +2406,7 @@ if (mobileMenu && isTouchDevice) {
          style="border-top: 1px solid var(--main-border-color);"
          >
       © 2025 Copyright:
-      <a href="{% url 'prompts:home' %}" class="logo footer-header">PromptFlow</a
+      <a href="{% url 'prompts:home' %}" class="logo footer-header">PromptFinder</a
         >
     </div>
     <!-- Copyright -->

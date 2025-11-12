@@ -455,7 +455,14 @@
             display: none !important;
         }
     }
-    
+
+    /* Mobile padding fix for very small screens (iPhone SE, etc.) */
+    @media (max-width: 400px) {
+        .masonry-container {
+            padding: 20px 12px;  /* Reduced from 20px to prevent horizontal scrollbar */
+        }
+    }
+
     /* Animation for items */
     @keyframes fadeIn {
         from {
@@ -586,6 +593,13 @@
         padding: 12px 8px;
         font-size: 14px;
         text-align: center;
+    }
+}
+
+/* Mobile padding fix for very small screens (iPhone SE, etc.) */
+@media (max-width: 400px) {
+    .media-filter-container {
+        padding: 0 12px;  /* Reduced from 20px to prevent horizontal scrollbar */
     }
 }
 </style>

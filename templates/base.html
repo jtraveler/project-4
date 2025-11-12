@@ -141,7 +141,7 @@
 
     .pexels-search-wrapper:focus-within {
         background: var(--gray-100);
-        border-color: #e5e7eb;  /* Matches profile-filter-dropdown */
+        border-color: var(--gray-300);  /* #D4D4D4 - Lighter than #9ca3af, provides visible focus indicator (WCAG 2.4.7) */
         box-shadow: unset;
     }
 
@@ -403,7 +403,7 @@
     #profileDropdown {
         position: fixed !important;
         top: var(--navbar-height) !important;  /* Desktop navbar height */
-        right: var(--space-6);  /* Further from edge to align under profile icon */
+        right: 10%;  /* 10% from right edge aligns well under profile icon */
         left: auto;
         max-height: calc(100vh - var(--navbar-height) - 20px);
         overflow-y: auto;
@@ -413,7 +413,7 @@
     /* RTL (Right-to-Left) language support for desktop profile dropdown */
     [dir="rtl"] #profileDropdown {
         right: auto;  /* Reset right positioning */
-        left: var(--space-6);  /* Mirror positioning for RTL languages */
+        left: 10%;  /* Mirror positioning for RTL languages */
     }
 
     @keyframes dropdownFade {
@@ -578,20 +578,19 @@
 
     .search-dropdown-item span {
         font-size: 15px;  /* Changed from 14px to match dropdown titles */
-        color: var(--text-primary);
+        color: var(--gray-600);  /* Secondary text color */
         font-weight: 600;  /* Changed from 500 for consistency */
     }
 
     /* Selected search dropdown item (accent color for text and icon) */
     .search-dropdown-item[aria-selected="true"] i,
     .search-dropdown-item.selected i {
-        color: var(--accent-color, #2563eb);  /* Accent color for selected icon */
+        color: var(--link-color);  /* Bootstrap blue (#007bff) for selected icon */
     }
 
     .search-dropdown-item[aria-selected="true"] span,
     .search-dropdown-item.selected span {
-        color: var(--accent-color, #2563eb);  /* Accent color for selected text */
-        font-weight: 700;  /* Bolder for emphasis */
+        color: var(--link-color);  /* Bootstrap blue (#007bff) for selected text */
     }
 
     /* === MOBILE MENU === */
@@ -818,8 +817,7 @@
         top: var(--navbar-height-mobile, 60px);
         left: 0;
         right: 0;
-        height: fit-content;  /* Only take space needed for content */
-        max-height: calc(100vh - var(--navbar-height-mobile, 60px));  /* Prevent overflow */
+        bottom: 0;  /* Full height overlay */
         background: var(--white);
         border-top: 1px solid var(--gray-200);
         padding: var(--space-4);

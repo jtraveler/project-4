@@ -555,6 +555,7 @@
     margin: 0 auto;
     margin-bottom: 0;
     max-width: 1600px;
+    width: 100%;
 }
 
 .media-filter-tabs {
@@ -1235,11 +1236,22 @@ function initVideoObserver() {
             }
             
             fetch(`${currentUrl}?${currentParams.toString()}`)
-                .then(response => response.text())
+                .then(response => {
+                    // Check if response is OK (status 200-299)
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
                 .then(html => {
                     const parser = new DOMParser();
                     const newDoc = parser.parseFromString(html, 'text/html');
                     const newItems = Array.from(newDoc.querySelectorAll('[data-item]'));
+
+                    // Safety check: Verify we got items
+                    if (newItems.length === 0) {
+                        console.warn('No items found in response - might be at end of results');
+                    }
                     
                     // Distribute new items with left-to-right preference
                     distributeItems(newItems, true, true);

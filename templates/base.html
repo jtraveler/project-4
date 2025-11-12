@@ -140,9 +140,9 @@
     }
 
     .pexels-search-wrapper:focus-within {
-        background: var(--white);
+        background: var(--gray-100);
         border-color: #e5e7eb;  /* Matches profile-filter-dropdown */
-        box-shadow: 0 0 0 1px rgba(229, 231, 235, 0.3);  /* Subtle focus indicator (WCAG 2.4.7) */
+        box-shadow: unset;
     }
 
     .search-type-dropdown {
@@ -403,7 +403,7 @@
     #profileDropdown {
         position: fixed !important;
         top: var(--navbar-height) !important;  /* Desktop navbar height */
-        right: var(--space-2);  /* Closer to edge, aligns better under profile icon */
+        right: var(--space-6);  /* Further from edge to align under profile icon */
         left: auto;
         max-height: calc(100vh - var(--navbar-height) - 20px);
         overflow-y: auto;
@@ -413,7 +413,7 @@
     /* RTL (Right-to-Left) language support for desktop profile dropdown */
     [dir="rtl"] #profileDropdown {
         right: auto;  /* Reset right positioning */
-        left: var(--space-4);  /* Mirror positioning for RTL languages */
+        left: var(--space-6);  /* Mirror positioning for RTL languages */
     }
 
     @keyframes dropdownFade {
@@ -818,7 +818,8 @@
         top: var(--navbar-height-mobile, 60px);
         left: 0;
         right: 0;
-        bottom: 0;
+        height: fit-content;  /* Only take space needed for content */
+        max-height: calc(100vh - var(--navbar-height-mobile, 60px));  /* Prevent overflow */
         background: var(--white);
         border-top: 1px solid var(--gray-200);
         padding: var(--space-4);
@@ -828,7 +829,7 @@
         /* SEO-friendly visibility (allows crawling of mobile navigation) */
         opacity: 0;
         visibility: hidden;
-        transform: translateY(-100%);  /* Slide from top */
+        transform: translateY(-20px);  /* Slide from just above (not top of viewport) */
         transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
     }
 
@@ -999,7 +1000,6 @@
     @media (max-width: 400px) {
         .pexels-mobile-icons {
             gap: 4px;  /* Tighter spacing for very small screens */
-            margin-right: 8px;  /* Add margin from edge for better visual balance */
         }
 
         /* Ensure all buttons maintain WCAG 2.5.5 AAA compliance (44×44px) */
@@ -1602,14 +1602,27 @@ function selectSearchType(type) {
     const input = document.getElementById('searchTypeInput');
     const menu = document.getElementById('searchTypeMenu');
 
+    // Remove aria-selected from all items
+    menu.querySelectorAll('.search-dropdown-item').forEach(item => {
+        item.setAttribute('aria-selected', 'false');
+    });
+
     if (type === 'images') {
         icon.className = 'fas fa-image search-type-icon';
         text.textContent = 'Images';
         input.value = 'images';
+
+        // Set aria-selected on images option
+        const imagesItem = menu.querySelector('[onclick*="images"]');
+        if (imagesItem) imagesItem.setAttribute('aria-selected', 'true');
     } else if (type === 'videos') {
         icon.className = 'fas fa-video search-type-icon';
         text.textContent = 'Videos';
         input.value = 'videos';
+
+        // Set aria-selected on videos option
+        const videosItem = menu.querySelector('[onclick*="videos"]');
+        if (videosItem) videosItem.setAttribute('aria-selected', 'true');
     }
 
     menu.classList.remove('show');
@@ -1839,14 +1852,27 @@ function selectMobileSearchType(type) {
     const input = document.getElementById('mobileSearchTypeInput');
     const menu = document.getElementById('mobileSearchTypeMenu');
 
+    // Remove aria-selected from all items
+    menu.querySelectorAll('.search-dropdown-item').forEach(item => {
+        item.setAttribute('aria-selected', 'false');
+    });
+
     if (type === 'images') {
         icon.className = 'fas fa-image search-type-icon';
         text.textContent = 'Images';
         input.value = 'images';
+
+        // Set aria-selected on images option
+        const imagesItem = menu.querySelector('[onclick*="images"]');
+        if (imagesItem) imagesItem.setAttribute('aria-selected', 'true');
     } else if (type === 'videos') {
         icon.className = 'fas fa-video search-type-icon';
         text.textContent = 'Videos';
         input.value = 'videos';
+
+        // Set aria-selected on videos option
+        const videosItem = menu.querySelector('[onclick*="videos"]');
+        if (videosItem) videosItem.setAttribute('aria-selected', 'true');
     }
 
     menu.classList.remove('show');
@@ -1938,6 +1964,20 @@ function createNewPrompt() {
 
 // Handle search form submission
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize aria-selected for default search type (images)
+    const desktopMenu = document.getElementById('searchTypeMenu');
+    const mobileMenu = document.getElementById('mobileSearchTypeMenu');
+
+    if (desktopMenu) {
+        const imagesItem = desktopMenu.querySelector('[onclick*="images"]');
+        if (imagesItem) imagesItem.setAttribute('aria-selected', 'true');
+    }
+
+    if (mobileMenu) {
+        const imagesItem = mobileMenu.querySelector('[onclick*="images"]');
+        if (imagesItem) imagesItem.setAttribute('aria-selected', 'true');
+    }
+
     const searchForms = document.querySelectorAll('.search-form');
     searchForms.forEach(form => {
         form.addEventListener('submit', function(e) {

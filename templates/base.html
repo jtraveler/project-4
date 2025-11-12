@@ -141,7 +141,7 @@
 
     .pexels-search-wrapper:focus-within {
         background: var(--gray-100);
-        border-color: var(--gray-300);  /* #D4D4D4 - Lighter than #9ca3af, provides visible focus indicator (WCAG 2.4.7) */
+        border-color: #949494;  /* WCAG 2.2 Level AA compliant - 3.02:1 contrast ratio (upgraded from gray-300 1.40:1) */
         box-shadow: unset;
     }
 
@@ -582,15 +582,15 @@
         font-weight: 600;  /* Changed from 500 for consistency */
     }
 
-    /* Selected search dropdown item (accent color for text and icon) */
+    /* Selected search dropdown item (secondary accent color for better text contrast) */
     .search-dropdown-item[aria-selected="true"] i,
     .search-dropdown-item.selected i {
-        color: rgb(73, 242, 100);  /* Bright green accent color */
+        color: #16ba31;  /* Secondary accent - better text contrast than primary rgb(73, 242, 100) */
     }
 
     .search-dropdown-item[aria-selected="true"] span,
     .search-dropdown-item.selected span {
-        color: rgb(73, 242, 100);  /* Bright green accent color */
+        color: #16ba31;  /* Secondary accent - better text contrast than primary rgb(73, 242, 100) */
     }
 
     /* === MOBILE MENU === */
@@ -1011,6 +1011,17 @@
         /* Slightly smaller icons on very small screens (but buttons stay 44×44px) */
         .pexels-mobile-icon-btn {
             font-size: 20px;  /* Slightly smaller icons (maintains 44×44px button) */
+        }
+
+        /* Profile dropdown positioning - prevent overflow on very small screens (e.g., iPhone SE 375px) */
+        #profileDropdown {
+            right: 5% !important;  /* Reduced from 10% to prevent overflow (e.g., 375px × 5% = 18.75px vs 10% = 37.5px) */
+        }
+
+        /* RTL (Right-to-Left) language support */
+        [dir="rtl"] #profileDropdown {
+            right: auto !important;
+            left: 5% !important;  /* Mirror positioning for RTL languages */
         }
     }
 
@@ -1745,6 +1756,7 @@ function triggerHapticFeedback(duration = 10) {
 
 // Store last focused element for focus management
 let lastFocusedElement = null;
+let focusTrapListener = null;  // Store reference to remove listener on close
 
 function toggleMobileMenu() {
     const startTime = performance.now();  // Performance monitoring
@@ -1774,6 +1786,32 @@ function toggleMobileMenu() {
 
         // Prevent background scrolling (iOS scroll bounce prevention)
         document.body.classList.add('mobile-menu-open');
+
+        // WCAG 2.1.2 - No Keyboard Trap: Implement focus trap to prevent Tab from escaping modal
+        focusTrapListener = function(event) {
+            // Only trap Tab key (allow other keys like Escape to work normally)
+            if (event.key === 'Tab') {
+                const focusableElements = mobileMenu.querySelectorAll(
+                    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                );
+                const firstFocusable = focusableElements[0];
+                const lastFocusable = focusableElements[focusableElements.length - 1];
+
+                // Shift+Tab on first element → focus last element
+                if (event.shiftKey && document.activeElement === firstFocusable) {
+                    event.preventDefault();
+                    lastFocusable.focus();
+                }
+                // Tab on last element → focus first element
+                else if (!event.shiftKey && document.activeElement === lastFocusable) {
+                    event.preventDefault();
+                    firstFocusable.focus();
+                }
+            }
+        };
+
+        // Add focus trap listener
+        document.addEventListener('keydown', focusTrapListener);
     } else {
         // Closing menu
         mobileMenu.classList.remove('show');
@@ -1784,6 +1822,12 @@ function toggleMobileMenu() {
 
         // Restore background scrolling
         document.body.classList.remove('mobile-menu-open');
+
+        // Remove focus trap listener (CRITICAL: prevent memory leak and continued trapping)
+        if (focusTrapListener) {
+            document.removeEventListener('keydown', focusTrapListener);
+            focusTrapListener = null;
+        }
 
         // WCAG 2.4.3 - Focus Order: Return focus to trigger button
         if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {

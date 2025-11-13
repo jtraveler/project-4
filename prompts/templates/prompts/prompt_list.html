@@ -1235,8 +1235,22 @@ function initVideoObserver() {
                 });
             }
             
-            fetch(`${currentUrl}?${currentParams.toString()}`)
+            // Build fetch URL properly
+            const fetchUrl = `${currentUrl}?${currentParams.toString()}`;
+            console.log('🔍 LOAD MORE DEBUG:');
+            console.log('  Next page:', nextPage);
+            console.log('  Current URL:', currentUrl);
+            console.log('  Params:', currentParams.toString());
+            console.log('  Final fetch URL:', fetchUrl);
+
+            fetch(fetchUrl)
                 .then(response => {
+                    console.log('  ✓ Response received:', response.status, response.statusText);
+                    console.log('  Response headers:', {
+                        contentType: response.headers.get('content-type'),
+                        contentLength: response.headers.get('content-length')
+                    });
+
                     // Check if response is OK (status 200-299)
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -1244,33 +1258,64 @@ function initVideoObserver() {
                     return response.text();
                 })
                 .then(html => {
+                    console.log('  ✓ HTML received, length:', html.length);
+
                     const parser = new DOMParser();
                     const newDoc = parser.parseFromString(html, 'text/html');
                     const newItems = Array.from(newDoc.querySelectorAll('[data-item]'));
 
+                    console.log('  ✓ Parsed HTML, found items:', newItems.length);
+
                     // Safety check: Verify we got items
                     if (newItems.length === 0) {
-                        console.warn('No items found in response - might be at end of results');
+                        console.warn('  ⚠️  No items found in response - might be at end of results');
+                        // If no items found, check if there's an error message in the response
+                        const errorMsg = newDoc.querySelector('.alert-danger, .error-message');
+                        if (errorMsg) {
+                            console.error('  ❌ Error in response:', errorMsg.textContent);
+                            throw new Error('Server returned an error: ' + errorMsg.textContent.trim());
+                        }
                     }
-                    
+
                     // Distribute new items with left-to-right preference
-                    distributeItems(newItems, true, true);
-                    
+                    console.log('  → Distributing items...');
+                    try {
+                        distributeItems(newItems, true, true);
+                        console.log('  ✓ Items distributed successfully');
+                    } catch (e) {
+                        console.error('  ❌ Error in distributeItems:', e);
+                        throw e;
+                    }
+
                     // Attach heart functionality to new items
-                    attachHeartFunctionality();
-                    
+                    console.log('  → Attaching heart functionality...');
+                    try {
+                        attachHeartFunctionality();
+                        console.log('  ✓ Heart functionality attached');
+                    } catch (e) {
+                        console.error('  ❌ Error in attachHeartFunctionality:', e);
+                        throw e;
+                    }
+
                     // Apply drag functionality to new items if drag mode is enabled
                     if (dragModeEnabled) {
-                        newItems.forEach(item => {
-                            enableDragging(item);
-                            // Show drag handles for new items
-                            const dragHandle = item.querySelector('.drag-handle');
-                            if (dragHandle) {
-                                dragHandle.classList.add('visible');
-                            }
-                        });
+                        console.log('  → Applying drag functionality...');
+                        try {
+                            newItems.forEach(item => {
+                                enableDragging(item);
+                                // Show drag handles for new items
+                                const dragHandle = item.querySelector('.drag-handle');
+                                if (dragHandle) {
+                                    dragHandle.classList.add('visible');
+                                }
+                            });
+                            console.log('  ✓ Drag functionality applied');
+                        } catch (e) {
+                            console.error('  ❌ Error in drag functionality:', e);
+                            throw e;
+                        }
                     }
-                    
+
                     // Show order numbers again if they were visible before
                     if (wasOrderVisible) {
                         setTimeout(() => {
@@ -1279,7 +1324,7 @@ function initVideoObserver() {
                                 display.style.display = 'block';
                             });
                             orderDisplayVisible = true;
-                            
+
                             // Update button text
                             const toggleBtn = document.getElementById('toggle-order-btn');
                             if (toggleBtn) {
@@ -1287,10 +1332,12 @@ function initVideoObserver() {
                             }
                         }, 300);
                     }
-                    
+
                     // Update load more button
+                    console.log('  → Updating Load More button...');
                     const newLoadMoreBtn = newDoc.getElementById('load-more-btn');
                     if (newLoadMoreBtn) {
+                        console.log('  ✓ More pages available, next page:', newLoadMoreBtn.getAttribute('data-next-page'));
                         // More pages available - restore button
                         loadMoreBtn.setAttribute('data-next-page',
                             newLoadMoreBtn.getAttribute('data-next-page'));
@@ -1298,6 +1345,7 @@ function initVideoObserver() {
                         loadMoreBtn.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Load More Prompts';
                         loadMoreBtn.style.pointerEvents = 'auto';
                     } else {
+                        console.log('  ✓ No more pages - showing end message');
                         // No more pages - replace with end message
                         const loadMoreContainer = document.querySelector('.load-more-container');
                         if (loadMoreContainer) {
@@ -1312,15 +1360,23 @@ function initVideoObserver() {
                             `;
                         }
                     }
+
+                    console.log('✅ LOAD MORE COMPLETED SUCCESSFULLY');
                 })
                 .catch(error => {
-                    console.error('Error loading more prompts:', error);
+                    console.error('❌ LOAD MORE ERROR:');
+                    console.error('  Error type:', error.name);
+                    console.error('  Error message:', error.message);
+                    console.error('  Error stack:', error.stack);
+
                     // Restore button on error
                     loadMoreBtn.disabled = false;
                     loadMoreBtn.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Load More Prompts';
                     loadMoreBtn.style.pointerEvents = 'auto';
-                    // Show error message to user
-                    alert('Failed to load more prompts. Please try again.');
+
+                    // Show detailed error message to user
+                    const errorDetail = error.message || 'Unknown error';
+                    alert(`Failed to load more prompts.\n\nError: ${errorDetail}\n\nPlease check the browser console for details and try again.`);
                 });
         });
     }

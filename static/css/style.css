@@ -350,7 +350,7 @@ main {
 .masonry-container {
   max-width: 1600px;
   margin: 0 auto;  /* Center align content */
-  padding: 20px 16px;
+  padding: 40px 0;
   width: 100%;
   box-sizing: border-box;  /* Ensure padding doesn't cause overflow */
 }

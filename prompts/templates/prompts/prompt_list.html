@@ -1298,7 +1298,7 @@ function initVideoObserver() {
                     }
 
                     // Apply drag functionality to new items if drag mode is enabled
-                    if (dragModeEnabled) {
+                    if (typeof dragModeEnabled !== 'undefined' && dragModeEnabled) {
                         console.log('  → Applying drag functionality...');
                         try {
                             newItems.forEach(item => {

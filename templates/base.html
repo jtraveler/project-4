@@ -84,8 +84,10 @@
     /* ========================================
        BOOTSTRAP CONTAINER OVERRIDE
        ======================================== */
-    .container {
-        max-width: 1600px !important;  /* Override Bootstrap's 1320px default for ultrawide displays */
+    @media (min-width: 1700px) {
+        .container {
+            max-width: 1600px !important;  /* Override Bootstrap's 1320px default for ultrawide displays */
+        }
     }
 
     /* ========================================
@@ -2323,7 +2325,7 @@ if (mobileMenu && isTouchDevice) {
 {% endif %}
 
 
-    <main class="flex-shrink-0 main-bg" id="browse-prompts">    
+    <main class="flex-shrink-0 main-bg container" id="browse-prompts">    
 
         {% block content %}
         <!-- Content Goes here -->

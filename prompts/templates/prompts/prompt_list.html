@@ -13,9 +13,9 @@
 <!-- Working Masonry with Columns -->
 <style>
     .masonry-container {
-        max-width: 100%;
-        margin: 0;
-        padding: 20px 40px;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 40px 0;
         width: 100%;
     }
     
@@ -442,24 +442,13 @@
             margin: 20px 20px;
             padding: 12px 15px;
         }
-
-        .masonry-container {
-            padding: 20px 20px;
-        }
     }
-    
+
     @media (max-width: 500px) {
         .masonry-grid[data-columns="1"] .masonry-column:nth-child(2),
         .masonry-grid[data-columns="1"] .masonry-column:nth-child(3),
         .masonry-grid[data-columns="1"] .masonry-column:nth-child(4) {
             display: none !important;
-        }
-    }
-
-    /* Mobile padding fix for very small screens (iPhone SE, etc.) */
-    @media (max-width: 400px) {
-        .masonry-container {
-            padding: 20px 12px;  /* Reduced from 20px to prevent horizontal scrollbar */
         }
     }
 

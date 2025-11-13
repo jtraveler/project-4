@@ -355,13 +355,6 @@ main {
   box-sizing: border-box;  /* Ensure padding doesn't cause overflow */
 }
 
-/* Responsive padding for masonry container */
-@media (max-width: 768px) {
-  .masonry-container {
-    padding: 20px 15px;  /* Reduce horizontal padding on mobile */
-  }
-}
-
 /* Masonry grid flexbox layout */
 .masonry-grid {
   display: flex;

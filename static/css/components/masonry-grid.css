@@ -1,0 +1,255 @@
+/* ============================================
+   MASONRY GRID COMPONENT
+   Extracted from: prompt_list.html, trash_bin.html, partials/_masonry_grid.html
+   Used on: Homepage, Trash Bin, AI Generator Pages
+   Phase 1 CSS Cleanup - November 15, 2025
+   ============================================ */
+
+/* Wrapper */
+.masonry-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Flexbox grid for equal column distribution */
+.masonry-grid {
+    display: flex !important;
+    gap: 15px;
+    width: 100%;
+    align-items: flex-start;
+}
+
+/* Individual columns - CRITICAL: flex: 1 ensures equal width */
+.masonry-column {
+    flex: 1;
+    display: flex !important;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 0; /* Prevents flex items from overflowing */
+}
+
+/* Masonry items */
+.masonry-item {
+    width: 100% !important;
+    margin-bottom: 0 !important;
+    display: block !important;
+    position: relative !important;
+    float: none !important;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.masonry-item.new-item {
+    animation: fadeIn 0.6s ease forwards;
+}
+
+/* Prompt cards */
+.prompt-card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: #fff;
+    width: 100%;
+    height: fit-content;
+}
+
+.prompt-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Image wrappers */
+.image-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.image-wrapper img {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+}
+
+/* ============================================
+   VIDEO CARD STYLES
+   ============================================ */
+
+.video-card {
+    position: relative;
+    width: 100%;
+}
+
+.video-card .image-wrapper {
+    position: relative;
+    width: 100%;
+    background: transparent;
+}
+
+/* Video element - hidden by default */
+.gallery-video {
+    width: 100%;
+    height: auto;
+    display: none;
+    visibility: hidden;
+    object-fit: contain;
+    border-radius: 12px;
+    position: relative;
+    z-index: 2;
+}
+
+/* When video is playing */
+.gallery-video[data-initialized="true"] {
+    display: block;
+    visibility: visible;
+}
+
+/* Thumbnail - overlays video */
+.video-thumbnail {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: opacity 0.3s ease;
+    object-fit: contain;
+    border-radius: 12px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Fade out when video plays */
+.video-thumbnail[style*="opacity: 0"] {
+    opacity: 0 !important;
+}
+
+/* Play icon - centered overlay */
+.video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    color: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 4;
+}
+
+.video-card:hover .video-play-icon {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.video-play-icon[style*="opacity: 0"] {
+    opacity: 0 !important;
+}
+
+/* Video in detail page */
+.hero-video {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    display: block;
+}
+
+/* Video loading state */
+.video-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* 4 columns → 3 columns */
+@media (max-width: 1100px) {
+    .masonry-grid[data-columns="3"] .masonry-column:nth-child(4) {
+        display: none !important;
+    }
+}
+
+/* 3 columns → 2 columns */
+@media (max-width: 800px) {
+    .masonry-grid[data-columns="2"] .masonry-column:nth-child(3),
+    .masonry-grid[data-columns="2"] .masonry-column:nth-child(4) {
+        display: none !important;
+    }
+}
+
+/* Mobile-specific video fix */
+@media (max-width: 768px) {
+    .video-card .image-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .video-thumbnail {
+        position: relative !important;
+        width: 100%;
+        height: auto;
+        display: block;
+        opacity: 1 !important;
+    }
+
+    .gallery-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: none !important;
+    }
+
+    .video-play-icon {
+        z-index: 10;
+        opacity: 1 !important;
+    }
+}
+
+/* 2 columns → 1 column */
+@media (max-width: 500px) {
+    .masonry-grid[data-columns="1"] .masonry-column:nth-child(2),
+    .masonry-grid[data-columns="1"] .masonry-column:nth-child(3),
+    .masonry-grid[data-columns="1"] .masonry-column:nth-child(4) {
+        display: none !important;
+    }
+}
+
+/* Hide unused masonry.js elements */
+.grid-sizer,
+.gutter-sizer {
+    display: none !important;
+}
+
+/* Placeholder image styling */
+.placeholder-image {
+    background-color: #f0f0f0;
+    object-fit: contain;
+}

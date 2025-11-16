@@ -11,11 +11,15 @@
 <!-- Preload media based on type -->
 {% if prompt.is_video %}
     <!-- Preload video poster/thumbnail -->
-    <link rel="preload" as="image" href="{{ prompt.get_thumbnail_url }}" />
+    {% with thumbnail_url=prompt.get_thumbnail_url %}
+        {% if thumbnail_url %}
+            <link rel="preload" as="image" href="{{ thumbnail_url }}" />
+        {% endif %}
+    {% endwith %}
 {% else %}
     <!-- Preload the hero image for LCP optimization -->
-    {% if not "placeholder" in prompt.featured_image.url %}
-        <link rel="preload" as="image" 
+    {% if prompt.featured_image and not "placeholder" in prompt.featured_image.url %}
+        <link rel="preload" as="image"
           href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" />
     {% endif %}
 {% endif %}

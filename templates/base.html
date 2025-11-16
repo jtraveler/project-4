@@ -142,23 +142,23 @@
                 Explore
                 <i class="fas fa-chevron-down" aria-hidden="true"></i>
             </button>
-            <div class="pexels-dropdown" id="exploreDropdown"
+            <div class="pexels-dropdown dropdown-centered" id="exploreDropdown"
                  onmouseenter="keepDropdownOpen('exploreDropdown')"
                  onmouseleave="hideDropdown('exploreDropdown', document.querySelector('[onmouseenter*=exploreDropdown]'))"
                  role="menu" aria-label="Explore options">
-                <a href="{% url 'about' %}#collections" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}#collections" class="pexels-dropdown-item" role="menuitem" tabindex="0">
                     <i class="fas fa-layer-group pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Discover Collections</div>
                     </div>
                 </a>
-                <a href="{% url 'about' %}#leaderboard" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}#leaderboard" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-trophy pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Leaderboard</div>
                     </div>
                 </a>
-                <a href="{% url 'about' %}#blog" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}#blog" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-newspaper pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">PromptFinder Blog</div>
@@ -182,14 +182,14 @@
                  onmouseenter="keepDropdownOpen('promptsDropdown')"
                  onmouseleave="hideDropdown('promptsDropdown', document.querySelector('[onmouseenter*=promptsDropdown]'))"
                  role="menu" aria-label="Prompts options">
-                <a href="{% url 'prompts:home' %}?type=image" class="pexels-dropdown-item">
+                <a href="{% url 'prompts:home' %}?type=image" class="pexels-dropdown-item" role="menuitem" tabindex="0">
                     <i class="fas fa-image pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Image Prompts</div>
                         <div class="pexels-dropdown-subtitle">Midjourney, Stable Diffusion & More!</div>
                     </div>
                 </a>
-                <a href="{% url 'prompts:home' %}?type=video" class="pexels-dropdown-item">
+                <a href="{% url 'prompts:home' %}?type=video" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-video pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Video Prompts</div>
@@ -213,38 +213,38 @@
                  onmouseenter="keepDropdownOpen('threeDotsDropdown')"
                  onmouseleave="hideDropdown('threeDotsDropdown', document.querySelector('[onmouseenter*=threeDotsDropdown]'))"
                  role="menu" aria-label="More options">
-                <a href="{% url 'about' %}#api" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}#api" class="pexels-dropdown-item" role="menuitem" tabindex="0">
                     <i class="fas fa-chart-line pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Image & Video API</div>
                     </div>
                 </a>
-                <a href="{% url 'about' %}" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-info-circle pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Help Center</div>
                     </div>
                 </a>
-                <a href="{% url 'about' %}" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-flag pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Report Content</div>
                     </div>
                 </a>
-                <a href="{% url 'about' %}" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-file-alt pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Imprint & Terms</div>
                     </div>
                 </a>
                 <div class="pexels-dropdown-divider"></div>
-                <a href="{% url 'about' %}" class="pexels-dropdown-item">
+                <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-info-circle pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">About</div>
                     </div>
                 </a>
-                <a href="{% url 'prompts:collaborate' %}" class="pexels-dropdown-item">
+                <a href="{% url 'prompts:collaborate' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-envelope pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Contact</div>
@@ -290,26 +290,26 @@
              onmouseenter="keepDropdownOpen('profileDropdown')"
              onmouseleave="hideDropdown('profileDropdown', document.querySelector('[onmouseenter*=profileDropdown]'))"
              role="menu" aria-label="User account options">
-            <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-dropdown-item">
+            <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-dropdown-item" role="menuitem" tabindex="0">
                 <i class="fas fa-user pexels-dropdown-icon"></i>
                 <div class="pexels-dropdown-content">
                     <div class="pexels-dropdown-title">View Profile</div>
                 </div>
             </a>
-            <a href="{% url 'prompts:edit_profile' %}" class="pexels-dropdown-item">
+            <a href="{% url 'prompts:edit_profile' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                 <i class="fas fa-user-edit pexels-dropdown-icon"></i>
                 <div class="pexels-dropdown-content">
                     <div class="pexels-dropdown-title">Edit Profile</div>
                 </div>
             </a>
-            <a href="{% url 'prompts:email_preferences' %}" class="pexels-dropdown-item">
+            <a href="{% url 'prompts:email_preferences' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                 <i class="fas fa-bell pexels-dropdown-icon"></i>
                 <div class="pexels-dropdown-content">
                     <div class="pexels-dropdown-title">Email Preferences</div>
                 </div>
             </a>
             <div class="pexels-dropdown-divider"></div>
-            <a href="{% url 'account_logout' %}" class="pexels-dropdown-item">
+            <a href="{% url 'account_logout' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                 <i class="fas fa-sign-out-alt pexels-dropdown-icon"></i>
                 <div class="pexels-dropdown-content">
                     <div class="pexels-dropdown-title">Logout</div>
@@ -508,7 +508,7 @@ function hideDropdown(dropdownId, button) {
                 currentOpenDropdown = null;
             }
         }, 200); // Match animation duration
-    }, 300); // 300ms delay before hiding
+    }, 500); // 500ms delay before hiding (covers 80% of users crossing gap)
 }
 
 // Immediate hide (for switching between dropdowns)
@@ -934,6 +934,42 @@ document.addEventListener('keydown', function(event) {
 
         currentOpenDropdown = null;
         clickLockedDropdown = null; // Clear click-lock when pressing Escape
+    }
+
+    // Arrow key navigation within open dropdown menus (WCAG 2.1.1 - Keyboard)
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        const activeElement = document.activeElement;
+
+        // Check if focused element is inside a dropdown menu
+        const menuItem = activeElement.closest('[role="menuitem"]');
+        if (menuItem) {
+            const menu = menuItem.closest('[role="menu"]');
+            if (menu && menu.classList.contains('show')) {
+                event.preventDefault();
+
+                const items = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+                const currentIndex = items.indexOf(menuItem);
+                let nextIndex;
+
+                if (event.key === 'ArrowDown') {
+                    nextIndex = (currentIndex + 1) % items.length;
+                } else if (event.key === 'ArrowUp') {
+                    nextIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+                } else if (event.key === 'Home') {
+                    nextIndex = 0;
+                } else if (event.key === 'End') {
+                    nextIndex = items.length - 1;
+                }
+
+                // Update roving tabindex
+                items.forEach((item, index) => {
+                    item.setAttribute('tabindex', index === nextIndex ? '0' : '-1');
+                });
+
+                // Move focus to next item
+                items[nextIndex].focus();
+            }
+        }
     }
 
     // Forward slash key - focus search (unless typing in an input)

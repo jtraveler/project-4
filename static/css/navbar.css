@@ -359,12 +359,19 @@
     animation: dropdownFade 0.2s ease;
 }
 
+/* Centered dropdown modifier (opt-in for specific dropdowns like Explore) */
+.pexels-dropdown.dropdown-centered {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 /* Profile dropdown uses fixed positioning (works on both desktop and mobile) */
 #profileDropdown {
     position: fixed !important;
     top: var(--navbar-height) !important;  /* Desktop navbar height */
     right: 10%;  /* 10% from right edge aligns well under profile icon */
     left: auto;
+    transform: none !important;  /* Prevent any centering from being applied */
     max-height: calc(100vh - var(--navbar-height) - 20px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -376,6 +383,7 @@
     left: 10%;  /* Mirror positioning for RTL languages */
 }
 
+/* Standard dropdown animations (no horizontal centering) */
 @keyframes dropdownFade {
     from {
         opacity: 0;
@@ -398,6 +406,29 @@
     }
 }
 
+/* Centered dropdown animations (with horizontal centering) */
+@keyframes dropdownFadeCentered {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes dropdownFadeOutCentered {
+    from {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-10px);
+    }
+}
+
 .pexels-dropdown,
 .search-dropdown-menu {
     opacity: 0;
@@ -415,9 +446,19 @@
     animation: dropdownFade 0.2s ease forwards;
 }
 
+/* Centered dropdown show animation */
+.pexels-dropdown.dropdown-centered.show {
+    animation: dropdownFadeCentered 0.2s ease forwards;
+}
+
 .pexels-dropdown.hiding,
 .search-dropdown-menu.hiding {
     animation: dropdownFadeOut 0.2s ease forwards;
+}
+
+/* Centered dropdown hide animation */
+.pexels-dropdown.dropdown-centered.hiding {
+    animation: dropdownFadeOutCentered 0.2s ease forwards;
 }
 
 /* Respect motion sensitivity preferences (WCAG 2.1 Level AAA) */
@@ -460,6 +501,15 @@
     background: var(--gray-50);
     color: var(--gray-900);
     text-decoration: none;
+}
+
+/* Focus styles for keyboard navigation (WCAG 2.4.7) */
+.pexels-dropdown-item:focus {
+    background: var(--gray-100);
+    color: var(--gray-900);
+    text-decoration: none;
+    outline: 2px solid var(--gray-800);
+    outline-offset: -2px;
 }
 
 .pexels-dropdown-icon {

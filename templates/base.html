@@ -283,7 +283,7 @@
             {% endif %}
 
             <!-- Upload Button -->
-            <a href="{% if user.is_authenticated %}#{% else %}{% url 'account_login' %}{% endif %}"
+            <a href="{% if user.is_authenticated %}{% url 'prompts:prompt_create' %}{% else %}{% url 'account_login' %}{% endif %}"
                class="pexels-upload-btn"
                {% if user.is_authenticated %}onclick="createNewPrompt(); return false;"{% endif %}>
                 Upload
@@ -499,6 +499,9 @@ function showDropdown(dropdownId, button) {
         item.setAttribute('tabindex', index === 0 ? '0' : '-1');
     });
 
+    // Apply will-change for smooth animation (GPU optimization)
+    dropdown.style.willChange = 'opacity, visibility, transform';
+
     dropdown.classList.remove('hiding');
     dropdown.classList.add('show');
     button.setAttribute('aria-expanded', 'true');
@@ -533,6 +536,9 @@ function hideDropdownImmediate(dropdown) {
     dropdown.classList.remove('show', 'hiding');
     const button = document.querySelector(`[onmouseenter*="${dropdown.id}"]`);
     if (button) button.setAttribute('aria-expanded', 'false');
+
+    // Remove will-change to free GPU memory
+    dropdown.style.willChange = 'auto';
 
     // Clear click-lock when closing
     if (clickLockedDropdown === dropdown) {
@@ -900,13 +906,22 @@ function selectMobileSearchType(type) {
     menu.classList.remove('show');
 }
 
+// Cache dropdown elements for performance (avoid querying DOM on every click)
+let cachedDropdowns = null;
+
+// Initialize cached dropdowns on page load
+document.addEventListener('DOMContentLoaded', function() {
+    cachedDropdowns = document.querySelectorAll('.pexels-dropdown, .search-dropdown-menu');
+});
+
 // Close all dropdowns when clicking outside
 document.addEventListener('click', function(event) {
-    // Close all pexels dropdowns
-    const dropdowns = document.querySelectorAll('.pexels-dropdown, .search-dropdown-menu');
-    dropdowns.forEach(dropdown => {
-        dropdown.classList.remove('show');
-    });
+    // Use cached dropdowns instead of querying DOM every click
+    if (cachedDropdowns) {
+        cachedDropdowns.forEach(dropdown => {
+            dropdown.classList.remove('show');
+        });
+    }
 
     // Reset all aria-expanded attributes
     document.querySelectorAll('[aria-expanded="true"]').forEach(button => {

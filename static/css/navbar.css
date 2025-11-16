@@ -313,6 +313,12 @@
     transform: scale(0.95);  /* Touch feedback */
 }
 
+/* Focus styles for keyboard navigation (WCAG 2.4.7) */
+.pexels-profile-btn:focus {
+    outline: 2px solid var(--gray-800);
+    outline-offset: 2px;
+}
+
 /* Avatar gradient color (only color-5 in use) */
 .avatar-color-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
 
@@ -442,7 +448,7 @@
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
     pointer-events: none;
-    will-change: opacity, visibility, transform;  /* Performance optimization */
+    /* will-change removed - applied dynamically in JS only when opening */
 }
 
 .pexels-dropdown.show,

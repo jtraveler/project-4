@@ -469,7 +469,7 @@
 // Hover-based dropdown management
 let hoverTimeout = null;
 let currentOpenDropdown = null;
-let clickLockedDropdown = null; // Track if dropdown was clicked to stay open
+// Removed clickLockedDropdown - caused two-click bug
 
 // Show dropdown on mouse enter
 function showDropdown(dropdownId, button) {
@@ -492,11 +492,6 @@ function showDropdown(dropdownId, button) {
 function hideDropdown(dropdownId, button) {
     const dropdown = document.getElementById(dropdownId);
 
-    // Don't hide if dropdown is click-locked (user clicked to keep it open)
-    if (clickLockedDropdown === dropdown) {
-        return;
-    }
-
     hoverTimeout = setTimeout(() => {
         dropdown.classList.add('hiding');
         button.setAttribute('aria-expanded', 'false');
@@ -513,13 +508,13 @@ function hideDropdown(dropdownId, button) {
 
 // Immediate hide (for switching between dropdowns)
 function hideDropdownImmediate(dropdown) {
+    clearTimeout(hoverTimeout);
     dropdown.classList.remove('show', 'hiding');
     const button = document.querySelector(`[onmouseenter*="${dropdown.id}"]`);
     if (button) button.setAttribute('aria-expanded', 'false');
 
-    // Clear click-lock when closing
-    if (clickLockedDropdown === dropdown) {
-        clickLockedDropdown = null;
+    if (currentOpenDropdown === dropdown) {
+        currentOpenDropdown = null;
     }
 }
 
@@ -535,22 +530,11 @@ function toggleDropdown(dropdownId, event) {
     const button = event.currentTarget;
 
     if (dropdown.classList.contains('show')) {
-        // Dropdown is already open
-        // On desktop: First click locks it open, second click closes it
-        // On mobile: Click always toggles
-
-        if (clickLockedDropdown === dropdown) {
-            // Already locked, so close it
-            hideDropdownImmediate(dropdown);
-            clickLockedDropdown = null;
-        } else {
-            // Lock it open (prevent hover from closing it)
-            clickLockedDropdown = dropdown;
-        }
+        // Dropdown is open, close it
+        hideDropdownImmediate(dropdown);
     } else {
         // Dropdown is closed, open it
         showDropdown(dropdownId, button);
-        clickLockedDropdown = dropdown; // Lock it open
     }
 }
 

@@ -411,7 +411,10 @@
 </nav>
 
 <!-- Mobile Search Overlay -->
-<div class="mobile-search-overlay container" id="mobileSearchOverlay">
+<div class="mobile-search-overlay container" id="mobileSearchOverlay"
+     role="dialog"
+     aria-modal="true"
+     aria-label="Search prompts">
     <form class="search-form" method="GET" action="{% url 'prompts:home' %}" style="display: flex; align-items: center; gap: var(--space-3); width: 100%;">
         <div class="pexels-search-wrapper">
             <!-- Search Type Dropdown (Icon Only) -->
@@ -481,6 +484,12 @@ function showDropdown(dropdownId, button) {
     if (currentOpenDropdown && currentOpenDropdown !== dropdown) {
         hideDropdownImmediate(currentOpenDropdown);
     }
+
+    // Reset roving tabindex to first item (WCAG 2.4.3 - Focus Order)
+    const items = dropdown.querySelectorAll('[role="menuitem"]');
+    items.forEach((item, index) => {
+        item.setAttribute('tabindex', index === 0 ? '0' : '-1');
+    });
 
     dropdown.classList.remove('hiding');
     dropdown.classList.add('show');
@@ -775,6 +784,11 @@ function toggleMobileMenu() {
                 }
             }
         };
+
+        // Remove any existing focus trap listener first (prevent memory leak)
+        if (focusTrapListener) {
+            document.removeEventListener('keydown', focusTrapListener);
+        }
 
         // Add focus trap listener
         document.addEventListener('keydown', focusTrapListener);

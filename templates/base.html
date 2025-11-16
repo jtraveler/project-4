@@ -131,18 +131,19 @@
         <!-- Navigation Items (Desktop) -->
         <div class="pexels-nav-items">
             <!-- Explore Dropdown -->
-            <button class="pexels-nav-item"
-                    onmouseenter="showDropdown('exploreDropdown', this)"
-                    onmouseleave="hideDropdown('exploreDropdown', this)"
-                    onclick="toggleDropdown('exploreDropdown', event)"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    aria-controls="exploreDropdown"
-                    aria-label="Explore menu">
-                Explore
-                <i class="fas fa-chevron-down" aria-hidden="true"></i>
-            </button>
-            <div class="pexels-dropdown dropdown-centered" id="exploreDropdown"
+            <div class="pexels-dropdown-wrapper">
+                <button class="pexels-nav-item"
+                        onmouseenter="showDropdown('exploreDropdown', this)"
+                        onmouseleave="hideDropdown('exploreDropdown', this)"
+                        onclick="toggleDropdown('exploreDropdown', event)"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="exploreDropdown"
+                        aria-label="Explore menu">
+                    Explore
+                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div class="pexels-dropdown dropdown-centered" id="exploreDropdown"
                  onmouseenter="keepDropdownOpen('exploreDropdown')"
                  onmouseleave="hideDropdown('exploreDropdown', document.querySelector('[onmouseenter*=exploreDropdown]'))"
                  role="menu" aria-label="Explore options">
@@ -164,21 +165,23 @@
                         <div class="pexels-dropdown-title">PromptFinder Blog</div>
                     </div>
                 </a>
+                </div>
             </div>
 
             <!-- Prompts Dropdown -->
-            <button class="pexels-nav-item"
-                    onmouseenter="showDropdown('promptsDropdown', this)"
-                    onmouseleave="hideDropdown('promptsDropdown', this)"
-                    onclick="toggleDropdown('promptsDropdown', event)"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    aria-controls="promptsDropdown"
-                    aria-label="Prompts menu">
-                Prompts
-                <i class="fas fa-chevron-down" aria-hidden="true"></i>
-            </button>
-            <div class="pexels-dropdown" id="promptsDropdown"
+            <div class="pexels-dropdown-wrapper">
+                <button class="pexels-nav-item"
+                        onmouseenter="showDropdown('promptsDropdown', this)"
+                        onmouseleave="hideDropdown('promptsDropdown', this)"
+                        onclick="toggleDropdown('promptsDropdown', event)"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="promptsDropdown"
+                        aria-label="Prompts menu">
+                    Prompts
+                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div class="pexels-dropdown" id="promptsDropdown"
                  onmouseenter="keepDropdownOpen('promptsDropdown')"
                  onmouseleave="hideDropdown('promptsDropdown', document.querySelector('[onmouseenter*=promptsDropdown]'))"
                  role="menu" aria-label="Prompts options">
@@ -196,10 +199,12 @@
                         <div class="pexels-dropdown-subtitle">Midjourney, Veo & More!</div>
                     </div>
                 </a>
+                </div>
             </div>
 
             <!-- Three Dots Menu -->
-            <button class="pexels-icon-btn three-dots"
+            <div class="pexels-dropdown-wrapper">
+                <button class="pexels-icon-btn three-dots"
                     onmouseenter="showDropdown('threeDotsDropdown', this)"
                     onmouseleave="hideDropdown('threeDotsDropdown', this)"
                     onclick="toggleDropdown('threeDotsDropdown', event)"
@@ -250,6 +255,7 @@
                         <div class="pexels-dropdown-title">Contact</div>
                     </div>
                 </a>
+                </div>
             </div>
 
             <!-- Bell Icon (Notifications) -->
@@ -471,12 +477,14 @@
 
 // Hover-based dropdown management
 let hoverTimeout = null;
+let animationTimeout = null;
 let currentOpenDropdown = null;
 let clickLockedDropdown = null; // Track if dropdown was clicked to stay open
 
 // Show dropdown on mouse enter
 function showDropdown(dropdownId, button) {
     clearTimeout(hoverTimeout);
+    clearTimeout(animationTimeout);
 
     const dropdown = document.getElementById(dropdownId);
 
@@ -510,8 +518,8 @@ function hideDropdown(dropdownId, button) {
         dropdown.classList.add('hiding');
         button.setAttribute('aria-expanded', 'false');
 
-        // Remove show class after animation
-        setTimeout(() => {
+        // Remove show class after animation - STORE this timeout!
+        animationTimeout = setTimeout(() => {
             dropdown.classList.remove('show', 'hiding');
             if (currentOpenDropdown === dropdown) {
                 currentOpenDropdown = null;
@@ -535,6 +543,7 @@ function hideDropdownImmediate(dropdown) {
 // Keep dropdown open when mouse is over it
 function keepDropdownOpen(dropdownId) {
     clearTimeout(hoverTimeout);
+    clearTimeout(animationTimeout);
 }
 
 // Click function - works for both desktop and mobile
@@ -544,22 +553,13 @@ function toggleDropdown(dropdownId, event) {
     const button = event.currentTarget;
 
     if (dropdown.classList.contains('show')) {
-        // Dropdown is already open
-        // On desktop: First click locks it open, second click closes it
-        // On mobile: Click always toggles
-
-        if (clickLockedDropdown === dropdown) {
-            // Already locked, so close it
-            hideDropdownImmediate(dropdown);
-            clickLockedDropdown = null;
-        } else {
-            // Lock it open (prevent hover from closing it)
-            clickLockedDropdown = dropdown;
-        }
+        // Dropdown is already open - close it immediately (no double-click needed)
+        hideDropdownImmediate(dropdown);
+        clickLockedDropdown = null;
     } else {
         // Dropdown is closed, open it
         showDropdown(dropdownId, button);
-        clickLockedDropdown = dropdown; // Lock it open
+        clickLockedDropdown = dropdown; // Lock it open (prevent hover from closing)
     }
 }
 

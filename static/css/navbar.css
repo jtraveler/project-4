@@ -342,6 +342,13 @@
 }
 
 /* === DROPDOWN MENUS === */
+
+/* Wrapper for button + dropdown positioning */
+.pexels-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
 .pexels-dropdown {
     position: absolute;
     top: calc(100% + var(--space-2));
@@ -508,8 +515,6 @@
     background: var(--gray-100);
     color: var(--gray-900);
     text-decoration: none;
-    outline: 2px solid var(--gray-800);
-    outline-offset: -2px;
 }
 
 .pexels-dropdown-icon {

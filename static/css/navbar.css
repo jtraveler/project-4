@@ -363,7 +363,7 @@
     visibility: hidden;
     pointer-events: none;
     z-index: var(--z-dropdown);
-    animation: dropdownFade 0.2s ease;
+    /* NO animation on base class - only when .show or .hiding is applied */
 }
 
 /* Centered dropdown modifier (opt-in for specific dropdowns like Explore) */

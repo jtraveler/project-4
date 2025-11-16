@@ -189,12 +189,15 @@ document.addEventListener('DOMContentLoaded', function() {
         columns = [];
         columnCount = getColumnCount();
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < columnCount; i++) {  // Fixed: Use columnCount instead of hardcoded 4
             const column = document.createElement('div');
             column.className = 'masonry-column';
             grid.appendChild(column);
             columns.push(column);
         }
+
+        // Set data attribute for CSS responsive rules
+        grid.setAttribute('data-columns', columnCount);
     }
 
     function distributeItems() {

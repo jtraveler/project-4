@@ -37,7 +37,9 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
     'mj-project-4-68750ca94690.herokuapp.com',
-    '.herokuapp.com'
+    '.herokuapp.com',
+    'promptfinder.net',
+    'www.promptfinder.net',
 ]
 
 # SECURITY WARNING: don't run with debug turned on in production!

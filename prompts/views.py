@@ -308,7 +308,7 @@ def prompt_detail(request, slug):
                     ai_generator=deleted_record.ai_generator,
                     status=1,
                     deleted_at__isnull=True
-                ).order_by('-likes_count')[:6]
+                ).order_by('-created_on')[:6]
 
                 return render(
                     request,
@@ -375,7 +375,7 @@ def prompt_detail(request, slug):
                     deleted_at__isnull=True
                 ).exclude(
                     id=prompt.id
-                ).distinct().order_by('-likes_count')[:6]
+                ).distinct().order_by('-created_on')[:6]
 
                 return render(
                     request,
@@ -407,7 +407,7 @@ def prompt_detail(request, slug):
                 deleted_at__isnull=True
             ).exclude(
                 id=prompt.id
-            ).distinct().order_by('-likes_count')[:6]
+            ).distinct().order_by('-created_on')[:6]
 
             return render(
                 request,
@@ -3216,7 +3216,7 @@ def ai_generator_category(request, generator_slug):
     if sort_by == 'popular':
         prompts = prompts.annotate(
             likes_count=models.Count('likes', distinct=True)
-        ).order_by('-likes_count', '-created_on')
+        ).order_by('-created_on', '-created_on')
     elif sort_by == 'trending':
         # Trending: most likes in last 7 days
         week_ago = now - timedelta(days=7)
@@ -3224,7 +3224,7 @@ def ai_generator_category(request, generator_slug):
             created_on__gte=week_ago
         ).annotate(
             likes_count=models.Count('likes', distinct=True)
-        ).order_by('-likes_count', '-created_on')
+        ).order_by('-created_on', '-created_on')
     else:  # recent (default)
         prompts = prompts.order_by('-created_on')
 

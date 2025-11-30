@@ -1333,6 +1333,7 @@ def prompt_permanent_delete(request, slug):
     )
 
     if request.method == 'POST':
+        from prompts.models import DeletedPrompt
         title = prompt.title
 
         # SEO: Create DeletedPrompt record before hard delete
@@ -1370,6 +1371,7 @@ def empty_trash(request):
     URL: /trash/empty/
     """
     if request.method == 'POST':
+        from prompts.models import DeletedPrompt
         trashed = Prompt.all_objects.filter(
             author=request.user,
             deleted_at__isnull=False

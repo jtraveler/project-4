@@ -108,25 +108,25 @@
 
                 {# Action Buttons #}
                 <div class="trash-card-actions">
-                    {# Primary: Restore & Publish #}
+                    {# Primary: Restore & Publish (Dark Gray) #}
                     <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
                         {% csrf_token %}
                         <input type="hidden" name="restore_as" value="published">
-                        <button type="submit" class="trash-btn-restore-publish" title="Restore and make public immediately">
+                        <button type="submit" class="trash-btn-action" title="Restore and make public immediately">
                             <i class="fas fa-globe" aria-hidden="true"></i> Restore & Publish
                         </button>
                     </form>
 
-                    {# Secondary: Restore as Draft #}
+                    {# Secondary: Restore as Draft (Dark Gray) #}
                     <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
                         {% csrf_token %}
                         <input type="hidden" name="restore_as" value="draft">
-                        <button type="submit" class="trash-btn-restore-draft" title="Restore as draft for editing">
+                        <button type="submit" class="trash-btn-action" title="Restore as draft for editing">
                             <i class="fas fa-edit" aria-hidden="true"></i> Restore as Draft
                         </button>
                     </form>
 
-                    {# Delete Forever Button #}
+                    {# Delete Forever Button (Red - Destructive) #}
                     <button type="button" class="trash-btn-delete"
                             data-bs-toggle="modal"
                             data-bs-target="#deleteModal{{ prompt.id }}">

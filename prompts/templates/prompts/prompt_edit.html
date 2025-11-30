@@ -161,7 +161,7 @@
                 <div class="form-check form-switch form-switch-lg">
                     <input class="form-check-input" type="checkbox" role="switch" name="is_published" id="is_published" value="1"
                            {% if prompt.status == 1 %}checked{% endif %}
-                           {% if prompt.requires_manual_review %}disabled{% endif %}>
+                           {% if prompt.requires_manual_review and prompt.moderation_status != 'approved' %}disabled{% endif %}>
                     <label class="form-check-label" for="is_published">
                         <i class="fas fa-globe me-1" aria-hidden="true"></i>
                         Published
@@ -171,8 +171,12 @@
                     </label>
                 </div>
                 <div class="toggle-helper-text">
-                    {% if prompt.requires_manual_review %}
-                        <i class="fas fa-lock text-warning"></i> This prompt requires admin approval before it can be published.
+                    {% if prompt.requires_manual_review and prompt.moderation_status != 'approved' %}
+                        <i class="fas fa-lock text-warning"></i> This prompt is pending admin review and cannot be published until approved.
+                    {% elif prompt.requires_manual_review and prompt.moderation_status == 'approved' %}
+                        <i class="fas fa-check-circle text-success"></i> Admin approved. You can now publish this prompt.
+                    {% elif prompt.moderation_status == 'rejected' %}
+                        <i class="fas fa-times-circle text-danger"></i> This prompt was rejected and cannot be published.
                     {% else %}
                         <span id="publish-helper">
                             {% if prompt.status == 1 %}

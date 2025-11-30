@@ -25,7 +25,8 @@ class PromptAdmin(SummernoteModelAdmin):
     prepopulated_fields = {'slug': ('title',)}
     summernote_fields = ('content',)
     ordering = ['order', '-created_on']
-    actions = ['make_published', 'make_draft', 'approve_and_publish', 'reset_order_to_date']
+    # Order matters: most important/common actions first
+    actions = ['approve_and_publish', 'make_published', 'make_draft', 'reset_order_to_date']
     list_editable = ('order',)
     list_per_page = 50  # Pagination for performance
     date_hierarchy = 'created_on'
@@ -187,33 +188,75 @@ class PromptAdmin(SummernoteModelAdmin):
     reorder_links.allow_tags = True
 
     def make_published(self, request, queryset):
-        queryset.update(status=1)
+        """
+        Simple publish action - ONLY sets status=1.
+        WARNING: Does NOT clear moderation flags.
+        """
+        # Count flagged prompts that need proper approval
+        flagged_count = queryset.filter(
+            moderation_status='flagged',
+            requires_manual_review=True
+        ).count()
+
+        # Warn admin if flagged prompts detected
+        if flagged_count > 0:
+            from django.contrib import messages
+            self.message_user(
+                request,
+                f'⚠️ WARNING: {flagged_count} prompt(s) still have moderation flags. '
+                f'Users will NOT be able to toggle draft/publish on these prompts. '
+                f'Use "Approve & Publish" action instead to clear moderation flags.',
+                level=messages.WARNING
+            )
+
+        # Proceed with simple publish
+        updated = queryset.update(status=1)
         self.message_user(
-            request, f'{queryset.count()} prompts marked as published.'
+            request,
+            f'{updated} prompt{"s" if updated != 1 else ""} published (status only).'
         )
-    make_published.short_description = 'Mark selected prompts as published'
+    make_published.short_description = 'Publish (status only - does NOT clear moderation flags)'
 
     def make_draft(self, request, queryset):
-        """Bulk action to mark selected prompts as drafts."""
+        """Mark prompts as drafts. Does NOT change moderation status."""
         updated = queryset.update(status=0)
         self.message_user(
             request,
-            f'{updated} prompt{"s" if updated != 1 else ""} marked as draft.'
+            f'{updated} prompt{"s" if updated != 1 else ""} moved to draft.'
         )
-    make_draft.short_description = 'Mark selected prompts as drafts'
+    make_draft.short_description = 'Move to Draft'
 
     def approve_and_publish(self, request, queryset):
-        """Approve moderation and publish prompts"""
+        """
+        Approve moderation AND publish prompts.
+        This clears moderation flags and allows users to toggle draft/publish.
+        """
+        # Count how many actually need approval
+        needs_approval = queryset.filter(
+            moderation_status__in=['flagged', 'pending'],
+            requires_manual_review=True
+        ).count()
+
+        # Update ALL selected prompts
         updated = queryset.update(
             status=1,
             moderation_status='approved',
             requires_manual_review=False
         )
-        self.message_user(
-            request,
-            f'{updated} prompts approved and published successfully.'
-        )
-    approve_and_publish.short_description = 'Approve moderation & publish selected prompts'
+
+        # Informative success message
+        if needs_approval > 0:
+            self.message_user(
+                request,
+                f'✓ {updated} prompts approved and published. '
+                f'{needs_approval} flagged prompt(s) now cleared - users can toggle draft/publish.'
+            )
+        else:
+            self.message_user(
+                request,
+                f'✓ {updated} prompts approved and published.'
+            )
+    approve_and_publish.short_description = 'Approve & Publish (clears moderation flags)'
 
     def reset_order_to_date(self, request, queryset):
         """Reset order based on creation date (newest first)"""

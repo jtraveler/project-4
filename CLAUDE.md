@@ -3883,6 +3883,102 @@ When a deleted prompt URL is accessed:
 
 ---
 
+## 🗑️ Trash UX Overhaul & Profile Integration - November 30, 2025
+
+**Session:** https://claude.ai/chat/22ba30d4-91a8-416a-998a-9cb1592fa061
+**Status:** ✅ 95% COMPLETE
+**Total Commits:** 10
+
+### Session Overview
+
+Comprehensive modernization of the Trash Bin feature, including UI updates to match the design system, security fixes, and consolidation into the user profile page.
+
+### Key Accomplishments
+
+1. **Button Styling Modernization** - WCAG AA compliant colors, unified `.trash-btn-action` class
+2. **Empty Trash Modal Conversion** - Replaced standalone page with accessible in-page modal
+3. **Browser Cache Fix** - `@never_cache` decorator prevents "ghost items"
+4. **Profile Page Integration** - Trash moved to `/users/{username}/trash/` as profile tab
+5. **NSFW Security Fix** - Blocked users from bypassing moderation via trash restore
+6. **Cloudinary Error Handling** - Placeholder fallback for missing/errored images
+
+### Git Commits (10 Total)
+
+| # | Type | Scope | Description |
+|---|------|-------|-------------|
+| 1 | style | trash | Modernize trash bin buttons with design system (WCAG AA colors, 44px touch targets) |
+| 2 | style | trash | Unify button colors with dark gray accent (`--btn-text-sm`, `--btn-padding-sm` vars) |
+| 3 | feat | trash | Convert Empty Trash confirmation to modal (ARIA, escape key, focus management) |
+| 4 | chore | trash | Remove unused `confirm_empty_trash.html` template |
+| 5 | fix | cache | Prevent browser caching on trash page (`@never_cache` decorator) |
+| 6 | feat | profile | Consolidate trash into profile page tab (`/users/{username}/trash/`) |
+| 7 | fix | profile | Add missing `cloudinary_tags` template load |
+| 8 | security | restore | Block NSFW content from bypassing moderation via trash restore |
+| 9 | fix | trash | Fix NSFW prompt images not displaying (CloudinaryResource handling) |
+| 10 | fix | trash | Add onerror fallback for missing Cloudinary images (404 handling) |
+
+### Files Modified
+
+**Views & URLs:**
+- `prompts/views.py` - Trash redirect, restore security, cache control
+- `prompts/urls.py` - Profile trash URL pattern
+
+**Templates:**
+- `prompts/templates/prompts/user_profile.html` - Full trash tab implementation
+- `prompts/templates/prompts/trash_bin.html` - Button styling, onerror fallback
+- `templates/base.html` - Profile dropdown "Trash" link
+
+**Template Tags:**
+- `prompts/templatetags/cloudinary_tags.py` - CloudinaryResource object handling
+
+**Removed:**
+- `prompts/templates/prompts/confirm_empty_trash.html` - Replaced by modal
+
+### Security Enhancement Details
+
+**NSFW Restore Loophole Fixed:**
+
+Users could previously bypass NSFW/moderation approval by:
+1. Uploading flagged content (goes to Pending Review)
+2. Deleting the prompt (moves to Trash)
+3. Clicking "Restore & Publish" (would publish WITHOUT admin approval!)
+
+**Solution Applied:**
+- **Backend:** Forces `requires_manual_review` prompts to restore as draft only
+- **Frontend:** Hides "Restore & Publish" button for flagged content
+- **Defense in depth:** Both layers protect against the vulnerability
+
+### Known Issue (Resolved)
+
+**NSFW Image Not Displaying:**
+- **Root Cause:** `CloudinaryResource.url` throws `ValueError` when SDK cloud_name not configured
+- **Solution:** Updated `cloudinary_transform` filter to handle CloudinaryResource objects directly
+- **Additional Fix:** Added `onerror` fallback for images that return 404 from Cloudinary
+- **Finding:** 2 of 6 NSFW prompts have orphaned database records (Cloudinary files deleted)
+
+### Agent Validation
+
+**Commit 8 (Security Fix):** 9/10
+- Defense in depth approach
+- Both frontend + backend protected
+
+**Commit 9 (CloudinaryResource Fix):** Investigation-based
+- Root cause identified via Django shell testing
+- Template filter enhanced to handle 4 input types
+
+**Commit 10 (onerror Fallback):** Data-driven
+- Verified via curl tests (3/5 NSFW images return 200, 2 return 404)
+- Fallback provides graceful degradation for orphaned records
+
+### URL Changes
+
+| Before | After |
+|--------|-------|
+| `/trash/` | Redirects (302) to `/users/{username}/trash/` |
+| N/A | `/users/{username}/trash/` (new canonical URL) |
+
+---
+
 ## 📚 Documentation Archive Structure
 
 **Created:** November 3, 2025

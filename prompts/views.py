@@ -16,6 +16,7 @@ from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from django.utils.html import escape
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -1062,6 +1063,7 @@ def prompt_delete(request, slug):
         )
 
 
+@never_cache
 @login_required
 def trash_bin(request):
     """

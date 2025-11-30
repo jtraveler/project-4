@@ -108,7 +108,8 @@
 
                 {# Action Buttons #}
                 <div class="trash-card-actions">
-                    {# Primary: Restore & Publish (Dark Gray) #}
+                    {# Primary: Restore & Publish (Dark Gray) - Hidden for NSFW/flagged content #}
+                    {% if not prompt.requires_manual_review %}
                     <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
                         {% csrf_token %}
                         <input type="hidden" name="restore_as" value="published">
@@ -116,6 +117,7 @@
                             <i class="fas fa-globe" aria-hidden="true"></i> Restore & Publish
                         </button>
                     </form>
+                    {% endif %}
 
                     {# Secondary: Restore as Draft (Dark Gray) #}
                     <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">

@@ -1116,6 +1116,16 @@ def prompt_restore(request, slug):
     if restore_as not in ['published', 'draft']:
         restore_as = 'draft'  # Force to safe default
 
+    # SECURITY: Prevent publishing NSFW/flagged content without admin approval
+    # Users could otherwise bypass moderation by: upload NSFW → delete → restore as published
+    if restore_as == 'published' and prompt.requires_manual_review:
+        messages.warning(
+            request,
+            'This prompt requires admin approval before publishing. '
+            'It has been restored as a draft instead.'
+        )
+        restore_as = 'draft'  # Force to draft for safety
+
     if restore_as == 'published':
         prompt.status = 1  # Published
         status_message = 'published and is now visible to everyone'

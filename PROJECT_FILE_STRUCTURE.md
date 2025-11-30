@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** November 7, 2025
+**Last Updated:** November 30, 2025
 **Project:** PromptFinder (Django 4.2.13)
 **Total Tests:** 69+ passing (46 core + 23 rate limiting)
-**Phase:** E Complete (User Profiles & Social Foundation), Phase 3 SEO Complete (AI Generator Landing Pages)
+**Phase:** E Complete, Phase F Complete, Draft Mode System Complete (Nov 29, 2025)
 
 ---
 
@@ -142,6 +142,7 @@ View functions and class-based views:
 - **AI generator category pages (Phase 3):** ai_generator_category view with filtering/sorting
 - Rate limiting error page (ratelimited view)
 - Comment moderation
+- **Draft Mode (Nov 2025):** `prompt_publish` view for publishing drafts
 
 #### `prompts/middleware.py`
 Custom Django middleware:
@@ -165,6 +166,7 @@ Django admin configuration:
 - EmailPreferences admin (organized fieldsets)
 - PromptReport admin (moderation tools)
 - Comment admin (moderation)
+- **Draft Mode (Nov 2025):** `make_draft` bulk action for marking prompts as drafts
 
 #### `prompts/signals.py`
 Django signals:

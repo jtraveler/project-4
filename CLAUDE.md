@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** November 17, 2025
-**Project Status:** Pre-Launch Development - Phase E Complete, Phase F Complete, Performance Optimizations Complete, CSS Cleanup Phase 1 Ready
+**Last Updated:** November 30, 2025
+**Project Status:** Pre-Launch Development - Phase E Complete, Phase F Complete, Performance Optimizations Complete, Draft Mode System Complete, CSS Cleanup Phase 1 Ready
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -78,6 +78,14 @@
     - ✅ 97% memory reduction (1KB vs 15-30KB)
     - ✅ Zero security vulnerabilities found
     - ✅ Agent-validated: @code-reviewer (9/10), @performance-expert (9.5/10), @security (9.5/10)
+  - ✅ **Draft Mode System** ⭐ **COMPLETE** (November 29, 2025)
+    - ✅ Draft Mode Banner (yellow warning for draft/pending prompts)
+    - ✅ Notification Color System (WCAG AA compliant flash messages)
+    - ✅ User Draft Controls (Save as Draft toggle, Published/Draft toggle)
+    - ✅ Admin bulk action (Mark selected prompts as drafts)
+    - ✅ Security: Moderation enforced for drafts, publish checks moderation_status
+    - ✅ Bug Fixed: Toggle locked after admin approval (Nov 30, 2025)
+    - Agent Rating: 9.0/10 average
   - 📋 **CSS Cleanup Phase 1:** Extract inline styles, improve caching (1-2 days) - READY TO START
   - 📋 **Phase G:** Social Features & Activity Feeds (future)
 - Transitioning from student project to mainstream monetization platform
@@ -3622,6 +3630,151 @@ Improvement:       51% faster (130ms saved) ✅
 - Captured lessons learned for future reference
 - Created reusable agent testing pattern
 - Established "measure first, optimize later" principle
+
+---
+
+## 📝 Draft Mode System - November 29, 2025
+
+**Status:** ✅ COMPLETE
+**Duration:** Extended session
+**Agent Rating:** 9.0/10 average
+
+### Overview
+
+The Draft Mode System allows users to save prompts as drafts before publishing, provides visual feedback for draft/pending review states, and adds admin tools for managing draft prompts.
+
+### Components Implemented
+
+#### 1. Draft Mode Banner (`templates/base.html`)
+
+Yellow warning banner displayed at top of page for draft prompts with two variants:
+
+| Variant | Condition | Message | Button |
+|---------|-----------|---------|--------|
+| **User Draft** | `status=0`, user is owner, not pending review | "This prompt is in draft mode and only visible to you" | "Publish Now" |
+| **Pending Review** | `status=0`, `requires_manual_review=True` | "This prompt is pending admin review" | None |
+
+**Styling:**
+- Background: `#fff3cd` (warning yellow)
+- Text: `#856404` (dark amber)
+- Uses Bootstrap alert component with `alert-warning` class
+- Icon: `fa-eye-slash` for draft, implied clock for pending
+
+#### 2. Notification Color System (`static/css/style.css`, `templates/base.html`)
+
+WCAG AA compliant colored backgrounds for Django flash messages:
+
+| Type | Background | Border | Text | Use Case |
+|------|------------|--------|------|----------|
+| **Success** | `#d4edda` | `#c3e6cb` | `#155724` | Published successfully |
+| **Info** | `#cce5ff` | `#b8daff` | `#004085` | Informational notices |
+| **Warning** | `#fff3cd` | `#ffeaa7` | `#856404` | Draft mode, cautions |
+| **Error** | `#f8d7da` | `#f5c6cb` | `#721c24` | Validation errors |
+
+#### 3. User Draft Controls
+
+**Upload Page (`/upload/details/`):**
+- "Save as Draft" checkbox toggle
+- When checked: Prompt saved with `status=0` (draft)
+- When unchecked: Prompt auto-publishes after moderation passes
+
+**Edit Page (`/prompt/<slug>/edit/`):**
+- Published/Draft toggle switch
+- Toggle styling: 52x28px, brand green (`#28a745`), 0.3s transitions
+- Dynamic helper text updates on toggle change
+- Disabled when prompt requires manual review AND not yet approved
+
+#### 4. Admin Enhancements (`prompts/admin.py`)
+
+- **Bulk Action:** "Mark selected prompts as drafts"
+- Sets `status=0` for selected prompts
+- Complements existing "Mark selected prompts as published" action
+
+#### 5. Security Implementation
+
+- **Drafts run full moderation:** No bypass of content moderation for drafts
+- **`prompt_publish` view checks:** `moderation_status` verified before allowing publish
+- **Prevents:** Users publishing prompts that were flagged for manual review
+
+### Files Modified (November 29, 2025)
+
+| File | Changes |
+|------|---------|
+| `prompts/views.py` | `upload_submit`, `prompt_edit`, `prompt_publish` views |
+| `prompts/admin.py` | Added `make_draft` bulk action |
+| `prompts/templates/prompts/prompt_detail.html` | Draft banner integration |
+| `prompts/templates/prompts/prompt_edit.html` | Published/Draft toggle |
+| `prompts/templates/prompts/upload_step2.html` | "Save as Draft" checkbox |
+| `templates/base.html` | Notification container + draft banner |
+| `static/css/style.css` | Toggle component CSS (82 lines) |
+| `design-references/UI_STYLE_GUIDE.md` | Toggle + notification docs |
+
+### Bug Fixed: Toggle Locked After Admin Approval ✅
+
+**Issue:** Toggle locked after admin approval of NSFW prompt
+
+**Status:** ✅ FIXED (November 30, 2025)
+
+**Description:** After an admin approves a prompt that was flagged for manual review (e.g., NSFW content), the edit page toggle remained locked/disabled.
+
+**Root Cause:** Template and view checked `requires_manual_review` but didn't account for approved status.
+
+**Files Fixed:**
+1. `prompts/templates/prompts/prompt_edit.html` (lines 164, 174-188)
+2. `prompts/views.py` (line 1232 - `prompt_publish` view)
+
+**Solution Applied:**
+```python
+# Old logic (buggy):
+if prompt.requires_manual_review:
+    disable_toggle()
+
+# New logic (fixed):
+if prompt.requires_manual_review and prompt.moderation_status != 'approved':
+    disable_toggle()
+```
+
+**Additional Improvements:**
+- Added helper text for approved prompts: "Admin approved. You can now publish this prompt."
+- Added helper text for rejected prompts: "This prompt was rejected and cannot be published."
+- Both frontend (template) AND backend (view) updated for security consistency
+
+### Admin UX Improvements for Moderation Actions ✅
+
+**Issue:** Admin confusion between "Mark as published" and "Approve & Publish" actions
+
+**Status:** ✅ IMPLEMENTED (November 30, 2025)
+
+**Problem:** When an admin used "Mark selected prompts as published" on a flagged prompt, the prompt was published but the user's toggle remained locked because `moderation_status` stayed as 'flagged'. Admins assumed they had "approved" the content.
+
+**Solution (per @django-pro and @ui-ux-designer agents):**
+
+**1. Action Order Changed:**
+- "Approve & Publish" now appears FIRST (most common for flagged content)
+
+**2. Clearer Action Names:**
+| Before | After |
+|--------|-------|
+| "Mark selected prompts as published" | "Publish (status only - does NOT clear moderation flags)" |
+| "Mark selected prompts as drafts" | "Move to Draft" |
+| "Approve moderation & publish selected prompts" | "Approve & Publish (clears moderation flags)" |
+
+**3. Smart Warning System:**
+When admin uses "Publish (status only)" on flagged prompts:
+```
+⚠️ WARNING: 3 prompt(s) still have moderation flags. Users will NOT be able
+to toggle draft/publish on these prompts. Use "Approve & Publish" action
+instead to clear moderation flags.
+```
+
+**4. Informative Success Messages:**
+- "Approve & Publish": `✓ 5 prompts approved and published. 3 flagged prompt(s) now cleared - users can toggle draft/publish.`
+
+**File Modified:** `prompts/admin.py` (lines 28-29, 190-259)
+
+**Agent Ratings:**
+- @django-pro: 9/10 (smart filtering, informative messages)
+- @ui-ux-designer: Recommended cleaner action names
 
 ---
 

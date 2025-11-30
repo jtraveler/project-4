@@ -1228,8 +1228,8 @@ def prompt_publish(request, slug):
         messages.info(request, 'This prompt is already published.')
         return redirect('prompts:prompt_detail', slug=slug)
 
-    # SECURITY: Check if admin approval required (prevents bypass)
-    if prompt.requires_manual_review:
+    # SECURITY: Check if admin approval required AND not yet approved (prevents bypass)
+    if prompt.requires_manual_review and prompt.moderation_status != 'approved':
         messages.error(
             request,
             'This prompt is pending review and cannot be published until approved by an admin.'

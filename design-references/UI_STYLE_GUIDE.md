@@ -2,7 +2,7 @@
 
 **Based on:** Pexels.com + Vimeo.com Design Systems
 **Created:** November 8, 2025
-**Last Updated:** November 17, 2025 (Session: Performance Optimization - Event Delegation)
+**Last Updated:** November 30, 2025 (Session: Draft Mode System Documentation)
 **Purpose:** Reference guide for complete UI redesign
 **Project:** PromptFinder - AI Prompt Sharing Platform
 
@@ -782,6 +782,80 @@ document.addEventListener('DOMContentLoaded', function() {
 - Edit page: "Published" toggle
 - Settings page: Notification preferences
 - Any binary choice requiring clear visual feedback
+
+---
+
+### Draft Mode Banner (Status Banner)
+
+Contextual banner displayed at top of page for prompts in draft or pending review states.
+
+**Two Variants:**
+
+| Variant | Background | Icon | Message | Button |
+|---------|------------|------|---------|--------|
+| **User Draft** | `#fff3cd` | `fa-eye-slash` | "This prompt is in draft mode and only visible to you" | "Publish Now" (primary) |
+| **Pending Review** | `#fff3cd` | `fa-clock` | "This prompt is pending admin review" | None |
+
+**HTML Structure:**
+```html
+<!-- User Draft Variant -->
+<div class="alert alert-warning draft-mode-banner mb-0 text-center" role="alert">
+    <i class="fas fa-eye-slash me-2" aria-hidden="true"></i>
+    <strong>Draft Mode:</strong> This prompt is only visible to you.
+    <a href="{% url 'prompts:prompt_publish' prompt.slug %}"
+       class="btn btn-success btn-sm ms-3">
+        <i class="fas fa-globe me-1"></i> Publish Now
+    </a>
+</div>
+
+<!-- Pending Review Variant -->
+<div class="alert alert-warning pending-review-banner mb-0 text-center" role="alert">
+    <i class="fas fa-clock me-2" aria-hidden="true"></i>
+    <strong>Pending Review:</strong> This prompt is awaiting admin approval.
+</div>
+```
+
+**CSS Classes:**
+```css
+.draft-mode-banner,
+.pending-review-banner {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+    border-radius: 0;  /* Full-width, no rounded corners */
+    margin-bottom: 0;
+}
+
+.draft-mode-banner .btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+```
+
+**Display Logic:**
+```python
+# Show banner if:
+# 1. Prompt status is 0 (draft)
+# 2. Current user is the prompt owner
+# 3. NOT on edit page (banner shows on detail page only)
+
+if prompt.status == 0 and request.user == prompt.author:
+    if prompt.requires_manual_review:
+        show_pending_review_banner()
+    else:
+        show_draft_mode_banner()
+```
+
+**Placement:**
+- Below navbar, above page content
+- Full width (no container padding)
+- Sticky: No (scrolls with page)
+- Z-index: Below navbar (999)
+
+**Accessibility:**
+- `role="alert"` for screen reader announcement
+- `aria-hidden="true"` on decorative icons
+- Color contrast: 4.5:1 minimum (WCAG AA)
 
 ---
 

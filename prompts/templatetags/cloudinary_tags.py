@@ -8,14 +8,22 @@ def cloudinary_transform(image_url, transformations):
     """
     Insert Cloudinary transformations in the correct position and force HTTPS
     Usage: {{ image.url|cloudinary_transform:"q_auto,w_300,h_500,c_limit" }}
+           {{ image|cloudinary_transform:"q_auto,w_300,h_500,c_limit" }}  # Also works with CloudinaryResource directly
 
-    Handles three types of URLs:
-    1. Full Cloudinary URLs: https://res.cloudinary.com/.../upload/...
-    2. Malformed URLs without domain: Just the public_id
-    3. Partial URLs: Missing /upload/ section
+    Handles four types of inputs:
+    1. CloudinaryResource objects: Extract public_id and build URL
+    2. Full Cloudinary URLs: https://res.cloudinary.com/.../upload/...
+    3. Malformed URLs without domain: Just the public_id
+    4. Partial URLs: Missing /upload/ section
     """
     if not image_url:
         return image_url
+
+    # Handle CloudinaryResource objects (from CloudinaryField)
+    # Convert to string to get the public_id
+    if hasattr(image_url, 'public_id'):
+        # It's a CloudinaryResource - extract public_id
+        image_url = str(image_url)  # str(CloudinaryResource) returns public_id
 
     # Import settings to get cloud name
     from django.conf import settings

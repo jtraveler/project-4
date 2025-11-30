@@ -958,7 +958,8 @@
                                     <source src="{{ prompt.featured_video.url }}" type="video/mp4">
                                 </video>
                             {% elif prompt.featured_image %}
-                                <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
+                                {# Use featured_image directly (public_id) instead of .url to avoid CloudinaryResource error #}
+                                <img src="{{ prompt.featured_image|cloudinary_transform:'w_440,f_webp,q_90' }}"
                                      class="w-100"
                                      style="display: block; border-radius: 12px 12px 0 0;"
                                      alt="{{ prompt.title }}">

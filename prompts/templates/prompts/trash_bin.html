@@ -44,9 +44,9 @@
 
             {% if trash_count > 0 %}
                 <div class="mb-3">
-                    <a href="{% url 'prompts:empty_trash' %}" class="trash-btn-empty">
+                    <button type="button" class="trash-btn-empty" onclick="openEmptyTrashModal()">
                         <i class="fas fa-trash-alt" aria-hidden="true"></i> Empty Trash ({{ trash_count }})
-                    </a>
+                    </button>
                 </div>
             {% endif %}
         </div>
@@ -169,6 +169,39 @@
     </div>
 </div>
 {% endfor %}
+
+{# Empty Trash Confirmation Modal #}
+{% if trash_count > 0 %}
+<div class="trash-modal-backdrop" id="emptyTrashModal" role="dialog" aria-modal="true" aria-labelledby="emptyTrashTitle">
+    <div class="trash-modal">
+        <h2 class="trash-modal-title" id="emptyTrashTitle">
+            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+            Empty Entire Trash?
+        </h2>
+
+        <p class="trash-modal-body">
+            Are you sure you want to permanently delete <strong>{{ trash_count }} item(s)</strong>?
+        </p>
+
+        <div class="trash-modal-warning">
+            <strong>Warning:</strong> This action cannot be undone. All items and their associated images/videos will be permanently removed.
+        </div>
+
+        <form method="post" action="{% url 'prompts:empty_trash' %}">
+            {% csrf_token %}
+            <div class="trash-modal-actions">
+                <button type="submit" class="trash-modal-btn-confirm">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
+                    Yes, Empty Trash
+                </button>
+                <button type="button" class="trash-modal-btn-cancel" onclick="closeEmptyTrashModal()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
 {% else %}
 <div class="container">
     <div class="row">
@@ -260,6 +293,53 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 250);
     });
+});
+
+// Empty Trash Modal Functions
+function openEmptyTrashModal() {
+    const modal = document.getElementById('emptyTrashModal');
+    if (!modal) return;
+
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
+
+    // Focus the cancel button for accessibility
+    const cancelBtn = modal.querySelector('.trash-modal-btn-cancel');
+    if (cancelBtn) cancelBtn.focus();
+
+    // Close on escape key
+    document.addEventListener('keydown', handleEmptyTrashEscapeKey);
+}
+
+function closeEmptyTrashModal() {
+    const modal = document.getElementById('emptyTrashModal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+    document.body.style.overflow = ''; // Restore scrolling
+    document.removeEventListener('keydown', handleEmptyTrashEscapeKey);
+
+    // Return focus to the Empty Trash button
+    const emptyBtn = document.querySelector('.trash-btn-empty');
+    if (emptyBtn) emptyBtn.focus();
+}
+
+function handleEmptyTrashEscapeKey(event) {
+    if (event.key === 'Escape') {
+        closeEmptyTrashModal();
+    }
+}
+
+// Close modal when clicking backdrop (outside modal content)
+document.addEventListener('DOMContentLoaded', function() {
+    const emptyTrashModal = document.getElementById('emptyTrashModal');
+    if (emptyTrashModal) {
+        emptyTrashModal.addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeEmptyTrashModal();
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

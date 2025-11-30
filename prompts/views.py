@@ -1364,41 +1364,34 @@ def empty_trash(request):
     SEO: Creates DeletedPrompt records for each item before deletion to enable
     smart redirects instead of 404 errors.
 
-    Variables:
-        trash_count: Number of items to be deleted
+    Note: Confirmation is handled via modal on trash_bin page. GET requests
+    redirect to trash_bin. Only POST requests process deletion.
 
-    Template: prompts/confirm_empty_trash.html (GET) or redirect (POST)
     URL: /trash/empty/
     """
-    if request.method == 'POST':
-        from prompts.models import DeletedPrompt
-        trashed = Prompt.all_objects.filter(
-            author=request.user,
-            deleted_at__isnull=False
-        )
-        count = trashed.count()
-
-        # Permanently delete all trashed items
-        for prompt in trashed:
-            # SEO: Create DeletedPrompt record before hard delete
-            DeletedPrompt.create_from_prompt(prompt)
-            prompt.hard_delete()
-
-        messages.warning(
-            request,
-            f'{count} item(s) permanently deleted. '
-            f'This action cannot be undone.'
-        )
+    # Only accept POST requests - confirmation is handled via modal on trash page
+    if request.method != 'POST':
         return redirect('prompts:trash_bin')
 
-    # Count for confirmation message
-    trash_count = Prompt.all_objects.filter(
+    from prompts.models import DeletedPrompt
+    trashed = Prompt.all_objects.filter(
         author=request.user,
         deleted_at__isnull=False
-    ).count()
+    )
+    count = trashed.count()
 
-    context = {'trash_count': trash_count}
-    return render(request, 'prompts/confirm_empty_trash.html', context)
+    # Permanently delete all trashed items
+    for prompt in trashed:
+        # SEO: Create DeletedPrompt record before hard delete
+        DeletedPrompt.create_from_prompt(prompt)
+        prompt.hard_delete()
+
+    messages.warning(
+        request,
+        f'{count} item(s) permanently deleted. '
+        f'This action cannot be undone.'
+    )
+    return redirect('prompts:trash_bin')
 
 
 def collaborate_request(request):

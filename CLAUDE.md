@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
 **Last Updated:** November 30, 2025
-**Project Status:** Pre-Launch Development - Phase E Complete, Phase F Complete, Performance Optimizations Complete, Draft Mode System Complete, CSS Cleanup Phase 1 Ready
+**Project Status:** Pre-Launch Development - Phase E Complete, Phase F Complete, Performance Optimizations Complete, Draft Mode System Complete, CSS Cleanup Phase 1 Complete, Phase G Ready
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -86,8 +86,13 @@
     - ✅ Security: Moderation enforced for drafts, publish checks moderation_status
     - ✅ Bug Fixed: Toggle locked after admin approval (Nov 30, 2025)
     - Agent Rating: 9.0/10 average
-  - 📋 **CSS Cleanup Phase 1:** Extract inline styles, improve caching (1-2 days) - READY TO START
-  - 📋 **Phase G:** Social Features & Activity Feeds (future)
+  - ✅ **CSS Cleanup Phase 1:** Component-based CSS architecture ⭐ **COMPLETE** (November 2025)
+    - ✅ Extracted navbar styles to `static/css/navbar.css` (1,136 lines)
+    - ✅ Removed `.masonry-container` duplication from templates
+    - ✅ Created `static/css/components/masonry-grid.css` (255 lines)
+    - ✅ Created `static/css/pages/prompt-list.css` (304 lines)
+  - 📋 **CSS Cleanup Phase 2:** Extract remaining inline styles (17 templates) - FUTURE WORK
+  - 🔜 **Phase G:** Social Features & Activity Feeds - NEXT PRIORITY
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
@@ -3976,6 +3981,147 @@ Users could previously bypass NSFW/moderation approval by:
 |--------|-------|
 | `/trash/` | Redirects (302) to `/users/{username}/trash/` |
 | N/A | `/users/{username}/trash/` (new canonical URL) |
+
+---
+
+## 🎨 CSS Cleanup Status - November 2025
+
+### Phase 1: COMPLETE ✅
+
+**Completed:** November 2025
+**Status:** Merged to main
+
+**What Was Accomplished:**
+- ✅ Extracted navbar styles to `static/css/navbar.css` (1,136 lines)
+- ✅ Removed `.masonry-container` duplication from templates
+- ✅ Created component-based CSS architecture
+- ✅ Created `static/css/components/masonry-grid.css` (255 lines)
+- ✅ Created `static/css/pages/prompt-list.css` (304 lines)
+
+**CSS Architecture:**
+```
+static/css/
+├── navbar.css (1,136 lines)
+├── style.css (1,789 lines)
+├── components/
+│   └── masonry-grid.css (255 lines)
+└── pages/
+    └── prompt-list.css (304 lines)
+```
+
+**Branch Cleanup (November 30, 2025):**
+- Deleted stale branch: `claude/phase-1-css-cleanup-01NwaZx8inyivpT2bnGHfjsg`
+- Branch was 17 commits behind main with 0 unique commits
+- Both local and remote branches removed
+
+---
+
+### Phase 2: FUTURE WORK (Low Priority)
+
+**Status:** Documented for future cleanup sprint
+**Priority:** Low - Current inline styles work correctly
+**Estimated Time:** 2-3 days
+
+**Remaining Work:**
+17 templates still contain inline `<style>` blocks that could be extracted:
+
+**High Priority Templates:**
+1. `user_profile.html` - Complex, frequently used
+2. `prompt_list.html` - Homepage
+3. `prompt_detail.html` - High traffic page
+
+**Medium Priority Templates:**
+4. `prompt_edit.html`
+5. `upload_step2.html`
+6. `trash_bin.html`
+
+**Low Priority Templates (Admin/Standalone):**
+7. `settings_notifications.html`
+8. `ai_generator_category.html`
+9. `confirm_permanent_delete.html`
+10. `confirm_restore.html`
+11. And 7 others (admin pages, error pages)
+
+**Why Deferred:**
+- Inline styles work correctly (no bugs)
+- Phase G (Social Features) provides more user value
+- CSS cleanup is maintenance work that can wait
+- Can be tackled during a dedicated "cleanup sprint"
+
+**When to Revisit:**
+- During a maintenance/cleanup sprint
+- Before major UI overhaul
+- If performance issues arise from inline styles
+
+---
+
+## 📋 Phase G: Social Features & Activity Feeds - NEXT PRIORITY
+
+**Status:** Ready to Start
+**Priority:** HIGH - Next major feature work
+**Estimated Duration:** 1-2 weeks
+
+### Why Phase G Next?
+
+| Factor | Reasoning |
+|--------|-----------|
+| **User Value** | High - New functionality users want |
+| **Engagement** | Increases time on site and return visits |
+| **Monetization** | Supports premium feature conversion |
+| **Foundation** | Builds on completed Phase E profiles |
+
+### Planned Features
+
+**1. Follow/Unfollow System**
+- Follow button on user profiles (foundation exists from Phase E)
+- Follower/following counts
+- Follow notifications (uses existing EmailPreferences)
+
+**2. Activity Feeds**
+- Personal feed of followed users' new prompts
+- Activity notifications
+- "New from people you follow" section
+
+**3. User Discovery**
+- Suggested users to follow
+- Popular creators section
+- "Users who liked this also follow..." recommendations
+
+### Prerequisites (All Complete ✅)
+- ✅ User profiles (Phase E)
+- ✅ Email preferences system (Phase E Task 4)
+- ✅ Notification infrastructure
+- ✅ Profile pages with stats
+
+### Database Models Needed
+
+```python
+class Follow(models.Model):
+    follower = models.ForeignKey(User, related_name='following')
+    following = models.ForeignKey(User, related_name='followers')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('follower', 'following')
+        indexes = [
+            models.Index(fields=['follower', 'created_at']),
+            models.Index(fields=['following', 'created_at']),
+        ]
+```
+
+### Implementation Order
+
+1. **Week 1:** Follow/Unfollow system
+   - Follow model and migrations
+   - Follow/unfollow views
+   - Update profile template with working follow button
+   - Follower/following pages
+
+2. **Week 2:** Activity feeds
+   - Feed algorithm (chronological first)
+   - Feed page/section
+   - Activity notifications
+   - User discovery features
 
 ---
 

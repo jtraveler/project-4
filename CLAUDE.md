@@ -3776,6 +3776,111 @@ instead to clear moderation flags.
 - @django-pro: 9/10 (smart filtering, informative messages)
 - @ui-ux-designer: Recommended cleaner action names
 
+### Delete System Enhancements ✅
+
+**Status:** ✅ COMPLETE (November 30, 2025)
+**Session:** Delete System Verification + Bug Fixes
+
+#### Overview
+
+The Delete System received critical bug fixes to ensure DeletedPrompt records are created on ALL delete paths, enabling proper SEO redirects for deleted prompt URLs.
+
+#### Critical Bug Fixed: DeletedPrompt Records Not Created on UI Delete
+
+**Issue:** When users deleted prompts via the "Delete Forever" button in the Trash UI, no DeletedPrompt record was created. This caused 404 errors instead of proper SEO redirects.
+
+**Root Cause:** Only the `cleanup_deleted_prompts` management command was creating DeletedPrompt records. The UI delete paths (`prompt_permanent_delete` and `empty_trash` views) were missing this functionality.
+
+**Solution Implemented:**
+
+1. **Added `create_from_prompt()` class method to DeletedPrompt model:**
+   - Finds best matching prompt for redirect targeting
+   - Creates DeletedPrompt record with 90-day expiration
+   - Calculates similarity score using tags, AI generator, likes, and recency
+
+2. **Updated delete views to use shared method:**
+   - `prompt_permanent_delete()` view (single item delete)
+   - `empty_trash()` view (bulk delete)
+   - Both now create DeletedPrompt records before hard deletion
+
+3. **Refactored cleanup command:**
+   - Uses shared `create_from_prompt()` method
+   - Consistent behavior across all delete paths
+   - Removed duplicate code
+
+#### SEO Redirect Logic
+
+**Location:** `prompts/views.py` (lines 293-327)
+
+When a deleted prompt URL is accessed:
+
+| Similarity Score | Action |
+|-----------------|--------|
+| ≥ 0.75 (strong match) | 301 redirect to similar prompt |
+| < 0.75 (weak match) | 410 Gone page with suggestions |
+| No record / expired | 404 Not Found |
+
+**410 Gone Page Features:**
+- Shows original prompt title
+- Displays related prompts from same AI generator
+- Provides search and browse CTAs
+- Proper HTTP 410 status code for SEO
+
+#### Files Modified (November 30, 2025)
+
+| File | Changes |
+|------|---------|
+| `prompts/models.py` | Added `DeletedPrompt.create_from_prompt()` class method (76 lines) |
+| `prompts/views.py` | Updated `prompt_permanent_delete()` and `empty_trash()` views with imports |
+| `prompts/management/commands/cleanup_deleted_prompts.py` | Refactored to use shared method, removed unused import |
+
+#### Testing Results
+
+| Test | Result |
+|------|--------|
+| DeletedPrompt records created | ✅ 4 records created correctly |
+| Prompts removed from DB | ✅ All prompts removed |
+| SEO redirects | ✅ 410 Gone page verified manually |
+| Trash empty | ✅ Confirmed |
+| Cleanup command | ✅ Runs without errors (--dry-run tested) |
+
+#### Agent Validation
+
+| Agent | Rating | Verdict |
+|-------|--------|---------|
+| @django-pro | 8.5/10 | Excellent Django pattern, production-ready |
+| @code-reviewer | 8.5/10 | Well-structured, properly implements DRY |
+| @security-auditor | 8.5/10 | Secure, no blocking issues |
+
+### November 30, 2025 Session Commits
+
+**4 commits completed:**
+
+**Commit 1: `fix(admin): Improve moderation action UX and fix toggle unlock bug`** (53774e2)
+- Toggle now correctly enabled after admin approval
+- Added moderation_status check to disabled condition
+- Reorder actions: "Approve & Publish" now first
+- Clearer action names with explanatory text
+- Smart warning for using simple publish on flagged prompts
+- Files: `prompts/admin.py`, `prompts/templates/prompts/prompt_edit.html`
+
+**Commit 2: `docs: Update documentation for toggle fix and admin UX improvements`** (e1b08c9)
+- CLAUDE.md: Added "Admin UX Improvements for Moderation Actions" section
+- UI_STYLE_GUIDE.md: Updated with Draft Mode System documentation
+- Security fix in views.py: prompt_publish now checks moderation_status
+
+**Commit 3: `fix(seo): Create DeletedPrompt records on UI delete for SEO redirects`** (f4d0d16)
+- Added `create_from_prompt()` class method to DeletedPrompt model
+- Updated `prompt_permanent_delete()` and `empty_trash()` views
+- Refactored `cleanup_deleted_prompts` command to use shared method
+- Agent testing: @django-pro 8.5/10, @code-reviewer 8.5/10, @security-auditor 8.5/10
+
+**Commit 4: `fix(views): Add missing DeletedPrompt import to delete views`** (9b4f203)
+- Fixed NameError: 'DeletedPrompt' is not defined at line 1340
+- Added lazy import inside `prompt_permanent_delete()` view
+- Added lazy import inside `empty_trash()` view
+- Follows existing pattern of lazy imports to avoid circular dependencies
+
 ---
 
 ## 📚 Documentation Archive Structure

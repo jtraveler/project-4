@@ -1108,6 +1108,82 @@ class DeletedPrompt(models.Model):
         """
         return 301 if self.is_strong_match else 410
 
+    @classmethod
+    def create_from_prompt(cls, prompt, logger=None):
+        """
+        Create a DeletedPrompt record from a Prompt object before hard deletion.
+
+        This method finds the best matching prompt for SEO redirects and creates
+        a DeletedPrompt record that enables:
+        - 301 redirects to similar prompts (if match quality ≥0.75)
+        - 410 Gone responses with category suggestions (if match quality <0.75)
+
+        Args:
+            prompt (Prompt): The prompt object about to be permanently deleted
+            logger (logging.Logger, optional): Logger for output messages
+
+        Returns:
+            DeletedPrompt: The created DeletedPrompt record, or None if creation failed
+
+        Example:
+            # Before calling prompt.hard_delete()
+            DeletedPrompt.create_from_prompt(prompt)
+            prompt.hard_delete()
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from prompts.views import find_best_redirect_match
+
+        # Gather prompt data for similarity matching
+        tag_names = list(prompt.tags.values_list('name', flat=True))
+        deleted_prompt_data = {
+            'original_tags': tag_names,
+            'ai_generator': prompt.ai_generator,
+            'likes_count': prompt.likes.count(),
+            'created_at': prompt.created_on,
+        }
+
+        # Find best redirect match
+        best_match, similarity_score = find_best_redirect_match(deleted_prompt_data)
+
+        # Calculate expiration (90 days from now)
+        expires_at = timezone.now() + timedelta(days=90)
+
+        try:
+            deleted_record = cls.objects.create(
+                slug=prompt.slug,
+                original_title=prompt.title,
+                original_tags=tag_names,
+                ai_generator=prompt.ai_generator,
+                likes_count=deleted_prompt_data['likes_count'],
+                created_at=prompt.created_on,
+                redirect_to_slug=best_match.slug if best_match else None,
+                redirect_similarity_score=similarity_score,
+                expires_at=expires_at
+            )
+
+            if logger:
+                if best_match:
+                    logger.info(
+                        f"Created DeletedPrompt record for '{prompt.slug}' → "
+                        f"'{best_match.slug}' (score: {similarity_score:.2f})"
+                    )
+                else:
+                    logger.info(
+                        f"Created DeletedPrompt record for '{prompt.slug}' "
+                        "(no redirect target)"
+                    )
+
+            return deleted_record
+
+        except Exception as e:
+            if logger:
+                logger.error(
+                    f"Failed to create DeletedPrompt record for '{prompt.slug}': {e}",
+                    exc_info=True
+                )
+            return None
+
 
 class Comment(models.Model):
     """

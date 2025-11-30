@@ -1314,6 +1314,10 @@ def prompt_permanent_delete(request, slug):
     associated Cloudinary assets. Only the author can permanently delete
     their own prompts.
 
+    SEO: Creates a DeletedPrompt record before deletion to enable:
+    - 301 redirects to similar prompts (if match quality ≥0.75)
+    - 410 Gone responses with suggestions (if match quality <0.75)
+
     Variables:
         slug: URL slug of the prompt being deleted
         prompt: The Prompt object being permanently deleted
@@ -1330,6 +1334,11 @@ def prompt_permanent_delete(request, slug):
 
     if request.method == 'POST':
         title = prompt.title
+
+        # SEO: Create DeletedPrompt record before hard delete
+        # This enables smart redirects instead of 404 errors
+        DeletedPrompt.create_from_prompt(prompt)
+
         prompt.hard_delete()
 
         messages.warning(
@@ -1351,6 +1360,9 @@ def empty_trash(request):
     This action cannot be undone. Removes all deleted prompts from database
     and deletes all associated Cloudinary assets.
 
+    SEO: Creates DeletedPrompt records for each item before deletion to enable
+    smart redirects instead of 404 errors.
+
     Variables:
         trash_count: Number of items to be deleted
 
@@ -1366,6 +1378,8 @@ def empty_trash(request):
 
         # Permanently delete all trashed items
         for prompt in trashed:
+            # SEO: Create DeletedPrompt record before hard delete
+            DeletedPrompt.create_from_prompt(prompt)
             prompt.hard_delete()
 
         messages.warning(

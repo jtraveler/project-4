@@ -24,7 +24,6 @@ from datetime import timedelta
 import logging
 
 from prompts.models import Prompt, DeletedPrompt
-from prompts.views import find_best_redirect_match
 
 logger = logging.getLogger(__name__)
 
@@ -278,67 +277,29 @@ Premium Users: {stats['premium_users']} prompts
         """
         Create DeletedPrompt record for SEO redirect before hard delete.
 
-        Finds best matching prompt and stores redirect information.
-        Record expires after 90 days.
+        Uses the shared DeletedPrompt.create_from_prompt() class method
+        and adds console output for the management command.
 
         Args:
             prompt: Prompt object about to be permanently deleted
         """
-        # Gather prompt data for similarity matching
-        tag_names = list(prompt.tags.values_list('name', flat=True))
-        deleted_prompt_data = {
-            'original_tags': tag_names,
-            'ai_generator': prompt.ai_generator,
-            'likes_count': prompt.likes.count(),
-            'created_at': prompt.created_on,
-        }
+        # Use shared class method to create the record
+        deleted_record = DeletedPrompt.create_from_prompt(prompt, logger=logger)
 
-        # Find best redirect match
-        best_match, similarity_score = find_best_redirect_match(deleted_prompt_data)
-
-        # Calculate expiration (90 days from now)
-        expires_at = timezone.now() + timedelta(days=90)
-
-        # Create DeletedPrompt record
-        try:
-            deleted_record = DeletedPrompt.objects.create(
-                slug=prompt.slug,
-                original_title=prompt.title,
-                original_tags=tag_names,
-                ai_generator=prompt.ai_generator,
-                likes_count=deleted_prompt_data['likes_count'],
-                created_at=prompt.created_on,
-                redirect_to_slug=best_match.slug if best_match else None,
-                redirect_similarity_score=similarity_score,
-                expires_at=expires_at
-            )
-
-            if best_match:
+        # Add console output for management command visibility
+        if deleted_record:
+            if deleted_record.redirect_to_slug:
                 self.stdout.write(
-                    f"  → Created redirect record to '{best_match.slug}' "
-                    f"(score: {similarity_score:.2f})"
-                )
-                logger.info(
-                    f"Created DeletedPrompt record for '{prompt.slug}' → "
-                    f"'{best_match.slug}' (score: {similarity_score:.2f})"
+                    f"  → Created redirect record to '{deleted_record.redirect_to_slug}' "
+                    f"(score: {deleted_record.redirect_similarity_score:.2f})"
                 )
             else:
                 self.stdout.write(
                     "  → No matching prompt found (will show 410 Gone)"
                 )
-                logger.info(
-                    f"Created DeletedPrompt record for '{prompt.slug}' "
-                    "(no redirect target)"
-                )
-
-        except Exception as e:
-            # Log error but don't block deletion
+        else:
             self.stdout.write(
                 self.style.WARNING(
-                    f"  ⚠ Failed to create DeletedPrompt record: {e}"
+                    f"  ⚠ Failed to create DeletedPrompt record for '{prompt.slug}'"
                 )
-            )
-            logger.error(
-                f"Failed to create DeletedPrompt record for '{prompt.slug}': {e}",
-                exc_info=True
             )

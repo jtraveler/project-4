@@ -1067,63 +1067,18 @@ def prompt_delete(request, slug):
 @login_required
 def trash_bin(request):
     """
-    Display user's trash bin with deleted prompts.
+    Redirect to profile trash tab (deprecated standalone page).
 
-    Free users: Last 10 items, 5-day retention
-    Premium users: Unlimited items, 30-day retention
+    The trash functionality has been consolidated into the user profile page.
+    Uses 302 temporary redirect (not 301) because:
+    - Feature consolidation could be reverted based on user feedback
+    - 301 is cached forever by browsers, making rollback difficult
+    - 302 allows flexibility while still providing seamless UX
 
-    Variables:
-        trashed_prompts: QuerySet of deleted prompts
-        trash_count: Total number of items in trash
-        retention_days: Days before permanent deletion
-        is_premium: Whether user has premium account
-        capacity_reached: Whether free user hit 10-item limit
-
-    Template: prompts/trash_bin.html
-    URL: /trash/
+    Old URL: /trash/
+    New URL: /users/{username}/trash/
     """
-    user = request.user
-    retention_days = 30 if (
-        hasattr(user, 'is_premium') and user.is_premium
-    ) else 5
-
-    # PERFORMANCE OPTIMIZATION: Prefetch all relations to avoid N+1 queries
-    # Same pattern as PromptList and user_profile - reduces queries from 15 to 5
-    base_queryset = Prompt.all_objects.select_related(
-        'author'  # ForeignKey - join User table (avoids N queries for prompt.author)
-    ).prefetch_related(
-        'tags',   # ManyToMany - separate query fetches all tags (avoids N queries)
-        'likes',  # ManyToMany - separate query fetches all likes (avoids N queries)
-        Prefetch(
-            'comments',  # Reverse FK - fetch only approved comments
-            queryset=Comment.objects.filter(approved=True)
-        )
-    ).filter(
-        author=user,
-        deleted_at__isnull=False
-    ).order_by('-deleted_at')
-
-    # Count BEFORE slicing (more efficient - counts all, then fetches 10)
-    trash_count = base_queryset.count()
-
-    # Apply limits AFTER counting
-    if hasattr(user, 'is_premium') and user.is_premium:
-        # Premium: show all deleted items
-        trashed = base_queryset
-    else:
-        # Free: limit to last 10 items only
-        trashed = base_queryset[:10]
-
-    context = {
-        'trashed_prompts': trashed,
-        'trash_count': trash_count,
-        'retention_days': retention_days,
-        'is_premium': hasattr(user, 'is_premium') and user.is_premium,
-        'capacity_reached': trash_count >= 10 and not (
-            hasattr(user, 'is_premium') and user.is_premium
-        ),
-    }
-    return render(request, 'prompts/trash_bin.html', context)
+    return redirect('prompts:user_profile_trash', username=request.user.username)
 
 
 @login_required
@@ -2144,21 +2099,24 @@ def extend_upload_time(request):
         })
 
 
-def user_profile(request, username):
+def user_profile(request, username, active_tab=None):
     """
     Display public user profile page with user's prompts.
 
     Shows user information, stats, and a paginated masonry grid of their
-    published prompts. Supports media filtering (all/photos/videos).
+    published prompts. Supports media filtering (all/photos/videos) and
+    trash tab for profile owners.
 
     Args:
         request: HTTP request object
         username (str): Username of the profile to display
+        active_tab (str): Optional active tab ('trash' for trash view)
 
     URL:
         /users/<username>/ - Public profile page
         /users/<username>/?media=photos - Show only images
         /users/<username>/?media=videos - Show only videos
+        /users/<username>/trash/ - Trash bin (owner only)
 
     Template:
         prompts/user_profile.html
@@ -2172,6 +2130,9 @@ def user_profile(request, username):
         total_likes (int): Sum of likes across all user's prompts
         media_filter (str): Current media filter ('all', 'photos', or 'videos')
         is_owner (bool): True if viewing user is the profile owner
+        active_tab (str): Currently active tab ('gallery' or 'trash')
+        trash_items (QuerySet): Trashed prompts (only for owner viewing trash tab)
+        trash_count (int): Count of items in trash
 
     Example:
         # View john's profile
@@ -2182,6 +2143,9 @@ def user_profile(request, username):
 
         # View john's videos only
         /users/john/?media=videos
+
+        # View john's trash (owner only)
+        /users/john/trash/
 
     Raises:
         Http404: If user with given username doesn't exist
@@ -2245,6 +2209,24 @@ def user_profile(request, username):
 
     total_likes = profile.get_total_likes()
 
+    # Trash tab data (only for owner)
+    trash_items = []
+    trash_count = 0
+    if is_owner:
+        trash_items_qs = Prompt.all_objects.filter(
+            author=profile_user,
+            deleted_at__isnull=False
+        ).order_by('-deleted_at')
+        trash_count = trash_items_qs.count()
+
+        # Only load full data if trash tab is active
+        if active_tab == 'trash':
+            trash_items = list(trash_items_qs)
+
+    # Redirect non-owners away from trash tab
+    if active_tab == 'trash' and not is_owner:
+        return redirect('prompts:user_profile', username=username)
+
     # Pagination (18 prompts per page, same as homepage)
     paginator = Paginator(prompts, 18)
     page_number = request.GET.get('page', 1)
@@ -2259,9 +2241,23 @@ def user_profile(request, username):
         'total_likes': total_likes,
         'media_filter': media_filter,
         'is_own_profile': is_owner,
+        'active_tab': active_tab or 'gallery',
+        'trash_items': trash_items,
+        'trash_count': trash_count,
     }
 
-    return render(request, 'prompts/user_profile.html', context)
+    response = render(request, 'prompts/user_profile.html', context)
+
+    # Prevent caching when viewing trash tab (same fix as standalone trash page)
+    # Uses 'private' to ensure shared caches (CDN, proxies) don't cache user-specific data
+    # Vary: Cookie ensures cache key depends on user session
+    if active_tab == 'trash':
+        response['Cache-Control'] = 'private, no-cache, no-store, must-revalidate'
+        response['Vary'] = 'Cookie'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+
+    return response
 
 
 @login_required

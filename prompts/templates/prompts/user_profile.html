@@ -848,10 +848,12 @@
 
             <!-- SCROLLING TABS CONTAINER - Only tabs inside -->
             <div class="profile-tabs-container">
-                <button class="profile-tab profile-tab-active">
+                <a href="{% url 'prompts:user_profile' username=profile_user.username %}"
+                   class="profile-tab {% if active_tab == 'gallery' %}profile-tab-active{% endif %}"
+                   style="text-decoration: none;">
                     Gallery
                     <span class="profile-tab-count stat-badge">{{ total_prompts|default:0 }}</span>
-                </button>
+                </a>
                 <button class="profile-tab">Collections</button>
                 <button class="profile-tab">Statistics</button>
                 <button class="profile-tab">
@@ -869,11 +871,13 @@
 
                 <!-- Trash tab (Owner Only) -->
                 {% if is_own_profile %}
-                <button class="profile-tab" onclick="alert('Trash feature coming in Phase F'); return false;">
+                <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}"
+                   class="profile-tab {% if active_tab == 'trash' %}profile-tab-active{% endif %}"
+                   style="text-decoration: none;">
                     <i class="fas fa-trash-alt" style="margin-right: 6px; font-size: 15px;"></i>
                     Trash
-                    <span class="profile-tab-count stat-badge">0</span>
-                </button>
+                    <span class="profile-tab-count stat-badge">{{ trash_count|default:0 }}</span>
+                </a>
                 {% endif %}
             </div>
 
@@ -911,6 +915,188 @@
 
 </div>
 
+{% if active_tab == 'trash' %}
+<!-- ============================================
+     TRASH TAB CONTENT
+     ============================================ -->
+{% if is_own_profile %}
+<div class="container mt-4">
+    <!-- Trash Info Banner -->
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        <strong>Free:</strong> Items are kept for 5 days before permanent deletion. Last 10 items shown.
+    </div>
+
+    {% if trash_items %}
+        <!-- Empty Trash Button -->
+        <div class="mb-4">
+            <button type="button" class="trash-btn-empty" onclick="openEmptyTrashModal()">
+                <i class="fas fa-trash-alt" aria-hidden="true"></i> Empty Trash ({{ trash_count }})
+            </button>
+        </div>
+
+        <!-- Trash Items Grid (Masonry) -->
+        <div class="masonry-container" style="max-width: 1600px; margin: 0 auto; padding: 40px 0; width: 100%;">
+            <div class="masonry-wrapper">
+                <div class="masonry-grid" id="trash-masonry-grid">
+                    <!-- Columns will be created by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Store items in hidden container for JavaScript -->
+            <div id="trash-items-container" style="display: none;">
+                {% for prompt in trash_items %}
+                <div class="masonry-item" data-item data-order="{{ forloop.counter }}" data-slug="{{ prompt.slug }}">
+                    <div class="card prompt-card {% if prompt.is_expiring_soon %}border-danger{% endif %}">
+                        {# Thumbnail #}
+                        <div class="position-relative">
+                            {% if prompt.featured_video %}
+                                <video class="w-100"
+                                       style="display: block; border-radius: 12px 12px 0 0;"
+                                       autoplay loop muted playsinline preload="metadata">
+                                    <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                                </video>
+                            {% elif prompt.featured_image %}
+                                <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
+                                     class="w-100"
+                                     style="display: block; border-radius: 12px 12px 0 0;"
+                                     alt="{{ prompt.title }}">
+                            {% else %}
+                                <div class="w-100 bg-secondary d-flex align-items-center justify-content-center" style="height: 300px; border-radius: 12px 12px 0 0;">
+                                    <i class="fas fa-image fa-3x text-white" aria-hidden="true"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# Card Meta #}
+                        <div class="trash-card-meta">
+                            <h5 class="trash-card-title">{{ prompt.title|truncatewords:10 }}</h5>
+                            <p class="trash-card-info">
+                                <i class="far fa-clock" aria-hidden="true"></i> Deleted {{ prompt.deleted_at|timesince }} ago
+                            </p>
+
+                            {% if prompt.is_expiring_soon %}
+                                <div class="alert alert-danger py-1 px-2 small mb-2">
+                                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                                    Expires in {{ prompt.days_until_permanent_deletion }} day(s)!
+                                </div>
+                            {% else %}
+                                <p class="trash-card-info">
+                                    <i class="fas fa-calendar" aria-hidden="true"></i> {{ prompt.days_until_permanent_deletion }} days remaining
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        {# Action Buttons #}
+                        <div class="trash-card-actions">
+                            {# Primary: Restore & Publish (Dark Gray) #}
+                            <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="restore_as" value="published">
+                                <button type="submit" class="trash-btn-action" title="Restore and make public immediately">
+                                    <i class="fas fa-globe" aria-hidden="true"></i> Restore & Publish
+                                </button>
+                            </form>
+
+                            {# Secondary: Restore as Draft (Dark Gray) #}
+                            <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="restore_as" value="draft">
+                                <button type="submit" class="trash-btn-action" title="Restore as draft for editing">
+                                    <i class="fas fa-edit" aria-hidden="true"></i> Restore as Draft
+                                </button>
+                            </form>
+
+                            {# Delete Forever Button (Red - Destructive) #}
+                            <button type="button" class="trash-btn-delete"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal{{ prompt.id }}">
+                                <i class="fas fa-trash" aria-hidden="true"></i> Delete Forever
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Delete Modals - Outside hidden container so Bootstrap can find them #}
+        {% for prompt in trash_items %}
+        <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ prompt.id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header border-danger">
+                        <h5 class="modal-title text-danger" id="deleteModalLabel{{ prompt.id }}">
+                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Delete Forever?
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Permanently delete <strong>"{{ prompt.title }}"</strong>?</p>
+                        <div class="alert alert-danger mb-0">
+                            <strong>Warning:</strong> Cannot be undone.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="trash-modal-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <form method="post" action="{% url 'prompts:prompt_permanent_delete' prompt.slug %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="trash-modal-btn-confirm">
+                                <i class="fas fa-trash" aria-hidden="true"></i> Delete Forever
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {# Empty Trash Confirmation Modal #}
+        <div class="trash-modal-backdrop" id="emptyTrashModal" role="dialog" aria-modal="true" aria-labelledby="emptyTrashTitle">
+            <div class="trash-modal">
+                <h2 class="trash-modal-title" id="emptyTrashTitle">
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                    Empty Entire Trash?
+                </h2>
+
+                <p class="trash-modal-body">
+                    Are you sure you want to permanently delete <strong>{{ trash_count }} item(s)</strong>?
+                </p>
+
+                <div class="trash-modal-warning">
+                    <strong>Warning:</strong> This action cannot be undone. All items and their associated images/videos will be permanently removed.
+                </div>
+
+                <form method="post" action="{% url 'prompts:empty_trash' %}">
+                    {% csrf_token %}
+                    <div class="trash-modal-actions">
+                        <button type="submit" class="trash-modal-btn-confirm">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
+                            Yes, Empty Trash
+                        </button>
+                        <button type="button" class="trash-modal-btn-cancel" onclick="closeEmptyTrashModal()">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Empty Trash State -->
+        <div class="empty-profile">
+            <i class="fas fa-trash-alt"></i>
+            <h3>Trash is Empty</h3>
+            <p>Items you delete will appear here for 5 days before being permanently removed.</p>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<!-- ============================================
+     GALLERY TAB CONTENT (Default)
+     ============================================ -->
 <!-- Masonry Grid (Reusable Partial) - FULL WIDTH -->
 {% if prompts %}
     {% include 'prompts/partials/_masonry_grid.html' with items=prompts grid_id='profile-grid' show_load_more=True page_obj=page_obj show_admin_controls=False %}
@@ -927,6 +1113,7 @@
             {% endif %}
         </p>
     </div>
+{% endif %}
 {% endif %}
 
 <script>
@@ -1341,6 +1528,126 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         return cookieValue;
+    }
+});
+
+// ============================================================================
+// TRASH TAB FUNCTIONALITY (Masonry Grid + Modal)
+// ============================================================================
+
+// Trash Masonry Grid Logic
+document.addEventListener('DOMContentLoaded', function() {
+    const trashGrid = document.getElementById('trash-masonry-grid');
+    const trashContainer = document.getElementById('trash-items-container');
+
+    if (!trashGrid || !trashContainer) {
+        return; // Not on trash tab
+    }
+
+    let columns = [];
+    let columnCount = 4;
+
+    function getColumnCount() {
+        const width = window.innerWidth;
+        if (width < 500) return 1;
+        if (width < 800) return 2;
+        if (width < 1100) return 3;
+        return 4;
+    }
+
+    function createColumns() {
+        trashGrid.innerHTML = '';
+        columns = [];
+        columnCount = getColumnCount();
+
+        for (let i = 0; i < columnCount; i++) {
+            const column = document.createElement('div');
+            column.className = 'masonry-column';
+            trashGrid.appendChild(column);
+            columns.push(column);
+        }
+
+        trashGrid.setAttribute('data-columns', columnCount);
+    }
+
+    function distributeItems() {
+        const items = Array.from(trashContainer.querySelectorAll('[data-item]'));
+
+        items.forEach((item, index) => {
+            const targetColumn = index % columnCount;
+            if (columns[targetColumn]) {
+                columns[targetColumn].appendChild(item);
+                item.style.animationDelay = `${index * 0.05}s`;
+            }
+        });
+    }
+
+    // Initialize
+    createColumns();
+    distributeItems();
+
+    // Handle resize
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            const newColumnCount = getColumnCount();
+            if (newColumnCount !== columnCount) {
+                const allItems = [];
+                columns.forEach(col => {
+                    allItems.push(...Array.from(col.querySelectorAll('.masonry-item')));
+                });
+
+                allItems.forEach(item => trashContainer.appendChild(item));
+
+                createColumns();
+                distributeItems();
+            }
+        }, 250);
+    });
+});
+
+// Empty Trash Modal Functions
+function openEmptyTrashModal() {
+    const modal = document.getElementById('emptyTrashModal');
+    if (!modal) return;
+
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    const cancelBtn = modal.querySelector('.trash-modal-btn-cancel');
+    if (cancelBtn) cancelBtn.focus();
+
+    document.addEventListener('keydown', handleEmptyTrashEscapeKey);
+}
+
+function closeEmptyTrashModal() {
+    const modal = document.getElementById('emptyTrashModal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', handleEmptyTrashEscapeKey);
+
+    const emptyBtn = document.querySelector('.trash-btn-empty');
+    if (emptyBtn) emptyBtn.focus();
+}
+
+function handleEmptyTrashEscapeKey(event) {
+    if (event.key === 'Escape') {
+        closeEmptyTrashModal();
+    }
+}
+
+// Close modal when clicking backdrop
+document.addEventListener('DOMContentLoaded', function() {
+    const emptyTrashModal = document.getElementById('emptyTrashModal');
+    if (emptyTrashModal) {
+        emptyTrashModal.addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeEmptyTrashModal();
+            }
+        });
     }
 });
 </script>

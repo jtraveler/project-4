@@ -27,6 +27,7 @@ urlpatterns = [
     path('trash/empty/', views.empty_trash, name='empty_trash'),
     # User profile URLs (Phase E)
     path('users/<str:username>/', views.user_profile, name='user_profile'),
+    path('users/<str:username>/trash/', views.user_profile, {'active_tab': 'trash'}, name='user_profile_trash'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     # Follow system URLs (Phase F Day 1)
     path('users/<str:username>/follow/', views.follow_user, name='follow_user'),

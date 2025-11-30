@@ -314,6 +314,12 @@
                     <div class="pexels-dropdown-title">Email Preferences</div>
                 </div>
             </a>
+            <a href="{% url 'prompts:user_profile_trash' username=user.username %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
+                <i class="fas fa-trash pexels-dropdown-icon"></i>
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Trash</div>
+                </div>
+            </a>
             <div class="pexels-dropdown-divider"></div>
             <a href="{% url 'account_logout' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                 <i class="fas fa-sign-out-alt pexels-dropdown-icon"></i>

@@ -25,7 +25,7 @@ class PromptAdmin(SummernoteModelAdmin):
     prepopulated_fields = {'slug': ('title',)}
     summernote_fields = ('content',)
     ordering = ['order', '-created_on']
-    actions = ['make_published', 'approve_and_publish', 'reset_order_to_date']
+    actions = ['make_published', 'make_draft', 'approve_and_publish', 'reset_order_to_date']
     list_editable = ('order',)
     list_per_page = 50  # Pagination for performance
     date_hierarchy = 'created_on'
@@ -192,6 +192,15 @@ class PromptAdmin(SummernoteModelAdmin):
             request, f'{queryset.count()} prompts marked as published.'
         )
     make_published.short_description = 'Mark selected prompts as published'
+
+    def make_draft(self, request, queryset):
+        """Bulk action to mark selected prompts as drafts."""
+        updated = queryset.update(status=0)
+        self.message_user(
+            request,
+            f'{updated} prompt{"s" if updated != 1 else ""} marked as draft.'
+        )
+    make_draft.short_description = 'Mark selected prompts as drafts'
 
     def approve_and_publish(self, request, queryset):
         """Approve moderation and publish prompts"""

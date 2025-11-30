@@ -1209,10 +1209,51 @@ if (mobileMenu && isTouchDevice) {
 {# Position: After navbar, before hero       #}
 {# DO NOT MOVE - CC tends to relocate these  #}
 {# ========================================== #}
+
+{# Draft Mode / Pending Review Banner - Shows BEFORE flash messages #}
+{% if prompt and user.is_authenticated and user == prompt.author and prompt.status == 0 %}
+<div class="container mt-3">
+    {% if prompt.requires_manual_review %}
+    {# ADMIN PENDING: No publish button, informational only #}
+    <div class="alert alert-warning d-flex align-items-center mb-3" role="alert"
+         style="background-color: #fff3cd; border: 1px solid #ffeaa7;">
+        <div>
+            <i class="fas fa-clock me-2"></i>
+            <strong>Pending Review:</strong> This prompt is being reviewed by our team and cannot be published until approved. You'll be notified once the review is complete.
+        </div>
+    </div>
+    {% else %}
+    {# USER DRAFT: Can publish #}
+    <div class="alert alert-warning d-flex align-items-center justify-content-between mb-3" role="alert"
+         style="background-color: #fff3cd; border: 1px solid #ffeaa7;">
+        <div>
+            <i class="fas fa-eye-slash me-2"></i>
+            <strong>Draft Mode:</strong> This prompt is only visible to you. Publish it to make it public.
+        </div>
+        <form method="post" action="{% url 'prompts:prompt_publish' prompt.slug %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning btn-sm">
+                <i class="fas fa-globe me-1"></i> Publish Now
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
 {% if messages %}
 <div class="container mt-3">
     {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" aria-live="polite" aria-atomic="true">
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert" aria-live="polite" aria-atomic="true"
+         {% if message.tags == 'error' or message.tags == 'danger' %}
+         style="background-color: #fee2e2; border-color: #fca5a5; color: #991b1b;"
+         {% elif message.tags == 'warning' %}
+         style="background-color: #fff3cd; border-color: #ffeaa7; color: #856404;"
+         {% elif message.tags == 'success' %}
+         style="background-color: #d1e7dd; border-color: #badbcc; color: #0f5132;"
+         {% elif message.tags == 'info' %}
+         style="background-color: #cff4fc; border-color: #b6effb; color: #055160;"
+         {% endif %}>
         {% if 'safe' in message.tags %}
             {{ message|safe }}
         {% else %}

@@ -278,6 +278,49 @@ html, body {
 --info-light: #DBEAFE;    /* Backgrounds */
 ```
 
+#### Notification/Alert Colors (Flash Messages)
+
+These colors are used for Django flash messages and alert banners throughout the application.
+
+| Message Type | Django Tag | Background | Border | Text Color | Use Case |
+|--------------|------------|------------|--------|------------|----------|
+| **Success** | `success` | `#d1e7dd` | `#badbcc` | `#0f5132` | Published successfully, action completed |
+| **Info** | `info` | `#cff4fc` | `#b6effb` | `#055160` | Informational notices, pending review |
+| **Warning** | `warning` | `#fff3cd` | `#ffeaa7` | `#856404` | Draft mode, awaiting approval, cautions |
+| **Error** | `error`/`danger` | `#fee2e2` | `#fca5a5` | `#991b1b` | Validation errors, content violations |
+
+**CSS Variables (add to styles.css):**
+```css
+/* Notification/Alert System */
+--alert-success-bg: #d1e7dd;
+--alert-success-border: #badbcc;
+--alert-success-text: #0f5132;
+
+--alert-info-bg: #cff4fc;
+--alert-info-border: #b6effb;
+--alert-info-text: #055160;
+
+--alert-warning-bg: #fff3cd;
+--alert-warning-border: #ffeaa7;
+--alert-warning-text: #856404;
+
+--alert-error-bg: #fee2e2;
+--alert-error-border: #fca5a5;
+--alert-error-text: #991b1b;
+```
+
+**Usage in Templates:**
+```html
+<div class="alert alert-{{ message.tags }}"
+     style="background-color: var(--alert-{{ message.tags }}-bg);
+            border-color: var(--alert-{{ message.tags }}-border);
+            color: var(--alert-{{ message.tags }}-text);">
+    {{ message }}
+</div>
+```
+
+**Note:** Django uses `error` tag but Bootstrap uses `danger` class. Handle both in templates.
+
 ### Color Usage Rules
 
 **90% Neutral (Gray Scale)**
@@ -657,6 +700,88 @@ font-family: 'Open Sans', -apple-system, BlinkMacSystemFont,
   box-shadow: 0 0 0 3px rgba(22, 186, 49, 0.1);
 }
 ```
+
+**Toggle Switch (Custom Component):**
+
+Modern, accessible toggle switch component for binary choices (draft/published, on/off, etc.)
+
+**Size:** 52x28px (larger than Bootstrap default for better touch targets)
+**Colors:**
+- Off state: `#e5e7eb` (gray)
+- On state: `#16ba31` (brand green)
+- Focus ring: `rgba(22, 186, 49, 0.25)`
+
+**HTML Structure:**
+```html
+<div class="mb-4">
+    <label class="form-label fw-bold">Visibility</label>
+    <div class="form-check form-switch form-switch-lg">
+        <input class="form-check-input" type="checkbox" role="switch"
+               id="save_as_draft" name="save_as_draft" value="1">
+        <label class="form-check-label" for="save_as_draft">
+            <i class="fas fa-eye-slash me-1" aria-hidden="true"></i>
+            Save as draft
+            <span class="toggle-status draft" id="draft-status-text">
+                (private, only you can see)
+            </span>
+        </label>
+    </div>
+    <div class="toggle-helper-text">
+        <span id="visibility-helper">
+            Leave unchecked to publish immediately after moderation review.
+        </span>
+    </div>
+</div>
+```
+
+**CSS Classes:**
+- `.form-switch-lg` - Larger switch size (52x28px vs Bootstrap's 32x20px)
+- `.toggle-status` - Status indicator text with dynamic color
+- `.toggle-status.draft` - Orange/gray color for draft state
+- `.toggle-status.published` - Green color for published state
+- `.toggle-helper-text` - Small gray helper text below toggle
+
+**JavaScript Pattern:**
+```javascript
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('save_as_draft');
+    const helperText = document.getElementById('visibility-helper');
+    const statusText = document.getElementById('draft-status-text');
+
+    if (toggle && helperText && statusText) {
+        toggle.addEventListener('change', function() {
+            if (this.checked) {
+                helperText.textContent = 'Your prompt will be saved privately.';
+                statusText.textContent = '(private, only you can see)';
+                statusText.className = 'toggle-status draft';
+            } else {
+                helperText.textContent = 'Your prompt will be published after review.';
+                statusText.textContent = '(public, visible to everyone)';
+                statusText.className = 'toggle-status published';
+            }
+        });
+    }
+});
+```
+
+**Accessibility:**
+- `role="switch"` for screen reader context
+- `aria-hidden="true"` on decorative icons
+- Focus ring with 3px offset and 25% opacity
+- Large touch target (52x28px minimum)
+- Color contrast ratio >4.5:1 (WCAG AA)
+
+**States:**
+- **Default (unchecked):** Gray background, circle on left, helper text for "publish"
+- **Checked:** Green background, circle on right, helper text for "draft"
+- **Disabled:** 50% opacity, no hover effects, cursor not-allowed
+- **Focus:** Green ring around switch (0 0 0 3px rgba(22, 186, 49, 0.25))
+
+**Use Cases:**
+- Upload page: "Save as Draft" toggle
+- Edit page: "Published" toggle
+- Settings page: Notification preferences
+- Any binary choice requiring clear visual feedback
 
 ---
 

@@ -17,6 +17,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.utils.html import escape
+from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import timedelta
 from django.conf import settings
 from csp.decorators import csp_exempt
@@ -644,8 +646,20 @@ def prompt_edit(request, slug):
         if prompt_form.is_valid():
             prompt = prompt_form.save(commit=False)
             prompt.author = request.user
-            # Set as draft initially - moderation will publish if approved
-            prompt.status = 0
+
+            # Check if user toggled the Published/Draft status
+            is_published = request.POST.get('is_published') == '1'
+
+            # If admin-pending, ignore user's choice and keep as draft
+            if prompt.requires_manual_review:
+                prompt.status = 0
+            # If user wants draft, set to draft and skip moderation
+            elif not is_published:
+                prompt.status = 0
+            # If user wants published, run moderation
+            else:
+                # Set as draft initially - moderation will publish if approved
+                prompt.status = 0
 
             # Handle media upload if new media provided
             featured_media = prompt_form.cleaned_data.get('featured_media')
@@ -661,6 +675,45 @@ def prompt_edit(request, slug):
 
             prompt.save()
             prompt_form.save_m2m()
+
+            # If user explicitly wants draft (not published), skip moderation
+            if not is_published and not prompt.requires_manual_review:
+                # User chose to save as draft - keep status=0 and skip moderation
+                prompt.status = 0
+                prompt.save(update_fields=['status'])
+
+                messages.info(
+                    request,
+                    'Your prompt has been saved as a draft. It is only visible to you. '
+                    'Toggle "Published" to make it public.'
+                )
+
+                # Clear relevant caches
+                cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+                cache.delete(f"prompt_detail_{slug}_anonymous")
+                for page in range(1, 5):
+                    cache.delete(f"prompt_list_None_None_{page}")
+
+                return HttpResponseRedirect(
+                    reverse('prompts:prompt_detail', args=[slug])
+                )
+
+            # If admin-pending, show message and skip moderation
+            if prompt.requires_manual_review:
+                messages.warning(
+                    request,
+                    'Your prompt is still pending admin approval. It cannot be published until approved.'
+                )
+
+                # Clear relevant caches
+                cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+                cache.delete(f"prompt_detail_{slug}_anonymous")
+                for page in range(1, 5):
+                    cache.delete(f"prompt_list_None_None_{page}")
+
+                return HttpResponseRedirect(
+                    reverse('prompts:prompt_detail', args=[slug])
+                )
 
             # Re-run moderation if media or text changed (orchestrator handles status updates)
             try:
@@ -694,12 +747,14 @@ def prompt_edit(request, slug):
                         'It has been saved as a draft and will not be published. '
                         'An admin will review it shortly.'
                     )
-                elif moderation_result['requires_review']:
-                    messages.warning(
-                        request,
-                        'Prompt updated and pending review. '
-                        'It has been saved as a draft and will be published once approved by our team.'
-                    )
+                # REMOVED: Duplicate flash message for requires_review case
+                # The styled banner on prompt detail page will show this status
+                # elif moderation_result['requires_review']:
+                #     messages.warning(
+                #         request,
+                #         'Prompt updated and pending review. '
+                #         'It has been saved as a draft and will be published once approved by our team.'
+                #     )
                 else:
                     messages.success(request, 'Prompt updated successfully!')
 
@@ -857,12 +912,14 @@ def prompt_create(request):
                         'It has been saved as a draft and will not be published. '
                         'An admin will review it shortly.'
                     )
-                elif moderation_result['requires_review']:
-                    messages.warning(
-                        request,
-                        'Your prompt has been created and is pending review. '
-                        'It has been saved as a draft and will be published once approved by our team.'
-                    )
+                # REMOVED: Duplicate flash message for requires_review case
+                # The styled banner on prompt detail page will show this status
+                # elif moderation_result['requires_review']:
+                #     messages.warning(
+                #         request,
+                #         'Your prompt has been created and is pending review. '
+                #         'It has been saved as a draft and will be published once approved by our team.'
+                #     )
                 else:
                     messages.success(
                         request,
@@ -1068,20 +1125,26 @@ def trash_bin(request):
 
 
 @login_required
+@require_POST
 def prompt_restore(request, slug):
     """
-    Restore a prompt from trash (immediate, no confirmation).
+    Restore a soft-deleted prompt from trash.
 
-    Only the author can restore their own prompts. Moves prompt back to
-    original status and clears deletion metadata.
+    Accepts 'restore_as' POST parameter:
+    - 'published': Restore with status=1 (Published)
+    - 'draft': Restore with status=0 (Draft) - default
+
+    Only the prompt owner can restore their prompt.
 
     Variables:
         slug: URL slug of the prompt being restored
         prompt: The Prompt object being restored
+        restore_as: POST parameter determining restore status
 
     Template: None (immediate redirect)
     URL: /trash/<slug>/restore/
     """
+    # Use all_objects to find deleted prompts
     prompt = get_object_or_404(
         Prompt.all_objects,
         slug=slug,
@@ -1089,36 +1152,157 @@ def prompt_restore(request, slug):
         deleted_at__isnull=False
     )
 
-    if request.method == 'POST':
-        prompt.restore()
+    # Determine restore status based on POST parameter with validation
+    restore_as = request.POST.get('restore_as', 'draft')
 
-        # Create link to restored prompt
-        prompt_url = reverse('prompts:prompt_detail', args=[prompt.slug])
+    # Validate restore_as parameter (prevent injection)
+    if restore_as not in ['published', 'draft']:
+        restore_as = 'draft'  # Force to safe default
+
+    if restore_as == 'published':
+        prompt.status = 1  # Published
+        status_message = 'published and is now visible to everyone'
+    else:
+        prompt.status = 0  # Draft
+        status_message = 'restored as a draft'
+
+    # Clear deletion metadata
+    prompt.deleted_at = None
+    prompt.save(update_fields=['deleted_at', 'status'])
+
+    # Clear caches
+    cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+    cache.delete(f"prompt_detail_{slug}_anonymous")
+    cache.delete("prompt_list")
+    cache.delete("trash_bin")
+
+    # Create link to restored prompt with XSS protection
+    prompt_url = reverse('prompts:prompt_detail', args=[prompt.slug])
+    messages.success(
+        request,
+        f'Your prompt "{escape(prompt.title)}" has been {status_message}! '
+        f'<a href="{prompt_url}" class="alert-link">View Prompt</a>',
+        extra_tags='success safe'
+    )
+
+    # Check if return_to URL was provided (from Undo button) with open redirect protection
+    return_to = request.POST.get('return_to', '')
+
+    if return_to and url_has_allowed_host_and_scheme(
+        return_to,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure()
+    ):
+        # Safe redirect - go back to original page
+        return redirect(return_to)
+
+    # Default: redirect to prompt detail page
+    return redirect('prompts:prompt_detail', slug=slug)
+
+
+@login_required
+@require_POST
+def prompt_publish(request, slug):
+    """
+    Publish a draft prompt directly from the draft banner.
+
+    Only the prompt owner can publish their draft.
+    Changes status from 0 (Draft) to 1 (Published).
+
+    Variables:
+        slug: URL slug of the prompt being published
+        prompt: The Prompt object being published
+
+    Template: None (immediate redirect)
+    URL: /prompt/<slug>/publish/
+    """
+    prompt = get_object_or_404(Prompt, slug=slug)
+
+    # Permission check - only owner can publish
+    if prompt.author != request.user:
+        messages.error(request, 'You do not have permission to publish this prompt.')
+        return redirect('prompts:prompt_detail', slug=slug)
+
+    # Check if already published
+    if prompt.status == 1:
+        messages.info(request, 'This prompt is already published.')
+        return redirect('prompts:prompt_detail', slug=slug)
+
+    # SECURITY: Check if admin approval required (prevents bypass)
+    if prompt.requires_manual_review:
+        messages.error(
+            request,
+            'This prompt is pending review and cannot be published until approved by an admin.'
+        )
+        return redirect('prompts:prompt_detail', slug=slug)
+
+    # Check if already moderated and approved - publish directly
+    if prompt.moderation_status == 'approved':
+        prompt.status = 1  # Published
+        prompt.save(update_fields=['status'])
+
+        # Clear caches
+        cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+        cache.delete(f"prompt_detail_{slug}_anonymous")
+        cache.delete("prompt_list")
+
         messages.success(
             request,
-            f'"{prompt.title}" has been restored successfully! '
-            f'<a href="{prompt_url}" class="alert-link">View Prompt</a>',
-            extra_tags='success safe'
+            f'Your prompt "{escape(prompt.title)}" has been published and is now visible to everyone!'
         )
+        return redirect('prompts:prompt_detail', slug=slug)
 
-        # Check if return_to URL was provided (from Undo button)
-        return_to = request.POST.get('return_to', '')
+    # If not yet moderated or status unclear, run moderation
+    try:
+        from .services.moderation_orchestrator import ModerationOrchestrator
+        orchestrator = ModerationOrchestrator()
+        moderation_result = orchestrator.moderate_prompt(prompt, force=True)
 
-        if return_to:
-            # Undo button was clicked - go back to original page
-            return redirect(return_to)
+        # Refresh prompt to get updated status from orchestrator
+        prompt.refresh_from_db()
 
-        # Check referer for Restore button behavior
-        referer = request.META.get('HTTP_REFERER', '')
-        if 'trash' in referer:
-            # Restore from trash page - stay on trash
-            return redirect('prompts:trash_bin')
+        # Check moderation result
+        if prompt.requires_manual_review:
+            messages.warning(
+                request,
+                'Your prompt requires review before it can be published. '
+                'An admin will review it shortly.'
+            )
+            return redirect('prompts:prompt_detail', slug=slug)
+
+        if moderation_result.get('overall_status') == 'approved':
+            # Orchestrator already set status=1
+            messages.success(
+                request,
+                f'Your prompt "{escape(prompt.title)}" has been published!'
+            )
         else:
-            # Fallback - go to homepage
-            return redirect('prompts:home')
+            messages.error(
+                request,
+                'Your prompt could not be published due to content review requirements.'
+            )
+            return redirect('prompts:prompt_detail', slug=slug)
 
-    # If GET request, redirect to trash bin
-    return redirect('prompts:trash_bin')
+    except Exception as e:
+        logger.error(f"Error publishing prompt {slug}: {str(e)}", exc_info=True)
+        messages.error(
+            request,
+            'An error occurred while publishing. Please try again or contact support.'
+        )
+        return redirect('prompts:prompt_detail', slug=slug)
+
+    # Clear relevant caches
+    cache.delete(f"prompt_detail_{slug}_{request.user.id}")
+    cache.delete(f"prompt_detail_{slug}_anonymous")
+    cache.delete("prompt_list")
+
+    # Success message with XSS protection
+    messages.success(
+        request,
+        f'Your prompt "{escape(prompt.title)}" has been published and is now visible to everyone!'
+    )
+
+    return redirect('prompts:prompt_detail', slug=slug)
 
 
 @login_required
@@ -1622,6 +1806,7 @@ def upload_submit(request):
     content = request.POST.get('content', '').strip()  # User's prompt text
     ai_generator = request.POST.get('ai_generator', '').strip()
     tags_json = request.POST.get('tags', '[]')
+    save_as_draft = request.POST.get('save_as_draft') == '1'  # Check if "Save as Draft" was checked
 
     # Get AI-generated title/description from session
     ai_title = request.session.get('ai_title') or 'Untitled Prompt'
@@ -1758,7 +1943,8 @@ def upload_submit(request):
         tag, _ = Tag.objects.get_or_create(name=tag_name)
         prompt.tags.add(tag)
 
-    # Run moderation checks (orchestrator handles status updates)
+    # ALWAYS run moderation for content safety (even for drafts)
+    # This prevents users from bypassing moderation by saving as draft
     # COPIED FROM prompt_create - WORKING LOGIC
     try:
         print("=" * 80)
@@ -1797,8 +1983,27 @@ def upload_submit(request):
 
         logger.info(f"After refresh - Upload prompt {prompt.id} status: {prompt.status} (0=draft, 1=published)")
 
-        # Show appropriate message based on moderation result
-        if moderation_result['overall_status'] == 'approved':
+        # Handle "Save as Draft" - override status to draft regardless of moderation
+        if save_as_draft:
+            # Keep as draft even if moderation approved
+            prompt.status = 0
+            prompt.save(update_fields=['status'])
+
+            # Show message based on moderation result
+            if prompt.requires_manual_review:
+                messages.warning(
+                    request,
+                    'Your prompt has been saved as a draft. However, it requires admin review '
+                    'before it can be published. An admin will review it shortly.'
+                )
+            else:
+                messages.info(
+                    request,
+                    'Your prompt has been saved as a draft. It is only visible to you. '
+                    'You can publish it anytime from the prompt page by clicking "Publish Now".'
+                )
+        # Normal publish flow (not a draft)
+        elif moderation_result['overall_status'] == 'approved':
             logger.info(f"Showing SUCCESS message - upload prompt {prompt.id} is published")
             messages.success(
                 request,
@@ -1818,12 +2023,8 @@ def upload_submit(request):
                 'It has been saved as a draft and will not be published. '
                 'An admin will review it shortly.'
             )
-        elif moderation_result['requires_review']:
-            messages.warning(
-                request,
-                'Your prompt has been created and is pending review. '
-                'It has been saved as a draft and will be published once approved by our team.'
-            )
+        # REMOVED: Duplicate flash message for requires_review case
+        # The styled banner on prompt detail page will show this status
         else:
             messages.success(
                 request,

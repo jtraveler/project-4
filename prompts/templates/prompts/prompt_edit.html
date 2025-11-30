@@ -155,6 +155,36 @@
                 </div>
             </div>
 
+            <!-- Published/Draft Toggle -->
+            <div class="field-group mb-4">
+                <label class="field-label">Visibility</label>
+                <div class="form-check form-switch form-switch-lg">
+                    <input class="form-check-input" type="checkbox" role="switch" name="is_published" id="is_published" value="1"
+                           {% if prompt.status == 1 %}checked{% endif %}
+                           {% if prompt.requires_manual_review %}disabled{% endif %}>
+                    <label class="form-check-label" for="is_published">
+                        <i class="fas fa-globe me-1" aria-hidden="true"></i>
+                        Published
+                        <span class="toggle-status {% if prompt.status == 1 %}published{% else %}draft{% endif %}" id="publish-status-text">
+                            {% if prompt.status == 1 %}(public, visible to everyone){% else %}(private, only you can see){% endif %}
+                        </span>
+                    </label>
+                </div>
+                <div class="toggle-helper-text">
+                    {% if prompt.requires_manual_review %}
+                        <i class="fas fa-lock text-warning"></i> This prompt requires admin approval before it can be published.
+                    {% else %}
+                        <span id="publish-helper">
+                            {% if prompt.status == 1 %}
+                                Toggle off to save as draft (private).
+                            {% else %}
+                                Toggle on to publish publicly (visible to everyone).
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
             <!-- Form Buttons -->
             <div class="form-actions">
                 <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="btn-secondary">
@@ -220,12 +250,31 @@ function toggleMediaFields() {
 document.addEventListener('DOMContentLoaded', function() {
     // Initial media field toggle
     toggleMediaFields();
-    
+
     // Add event listeners to radio buttons
     const radioButtons = document.querySelectorAll('input[name="media_type"]');
     radioButtons.forEach(radio => {
         radio.addEventListener('change', toggleMediaFields);
     });
+
+    // Toggle switch dynamic helper text (only if not requires_manual_review)
+    const publishToggle = document.getElementById('is_published');
+    const publishHelper = document.getElementById('publish-helper');
+    const publishStatusText = document.getElementById('publish-status-text');
+
+    if (publishToggle && publishHelper && publishStatusText) {
+        publishToggle.addEventListener('change', function() {
+            if (this.checked) {
+                publishHelper.textContent = 'Toggle off to save as draft (private).';
+                publishStatusText.textContent = '(public, visible to everyone)';
+                publishStatusText.className = 'toggle-status published';
+            } else {
+                publishHelper.textContent = 'Toggle on to publish publicly (visible to everyone).';
+                publishStatusText.textContent = '(private, only you can see)';
+                publishStatusText.className = 'toggle-status draft';
+            }
+        });
+    }
 });
 </script>
 

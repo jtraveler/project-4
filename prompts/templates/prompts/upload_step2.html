@@ -298,6 +298,25 @@
                 </select>
             </div>
 
+            {# Save as Draft Toggle #}
+            <div class="mb-4">
+                <label class="form-label fw-bold">Visibility</label>
+                <div class="form-check form-switch form-switch-lg">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="save_as_draft" name="save_as_draft" value="1">
+                    <label class="form-check-label" for="save_as_draft">
+                        <i class="fas fa-eye-slash me-1" aria-hidden="true"></i>
+                        Save as draft
+                        <span class="toggle-status draft" id="draft-status-text">(private, only you can see)</span>
+                    </label>
+                </div>
+                <div class="toggle-helper-text">
+                    <span id="visibility-helper">
+                        Leave unchecked to publish immediately after moderation review.
+                    </span>
+                </div>
+            </div>
+
             <!-- Submit Section -->
             <div class="submit-section">
                 <button type="button" class="btn-delete" id="delete-upload">
@@ -824,5 +843,26 @@ document.addEventListener('keypress', startIdleTimer);
 startIdleTimer();
 console.log('Navigation guard loaded successfully');
 console.log('To test browser warning, run: testBrowserWarning()');
+
+// Toggle switch dynamic helper text
+document.addEventListener('DOMContentLoaded', function() {
+    const saveAsDraftToggle = document.getElementById('save_as_draft');
+    const helperText = document.getElementById('visibility-helper');
+    const statusText = document.getElementById('draft-status-text');
+
+    if (saveAsDraftToggle && helperText && statusText) {
+        saveAsDraftToggle.addEventListener('change', function() {
+            if (this.checked) {
+                helperText.textContent = 'Your prompt will be saved privately. You can publish it later.';
+                statusText.textContent = '(private, only you can see)';
+                statusText.className = 'toggle-status draft';
+            } else {
+                helperText.textContent = 'Your prompt will be published after moderation review.';
+                statusText.textContent = '(public, visible to everyone)';
+                statusText.className = 'toggle-status published';
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

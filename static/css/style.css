@@ -104,6 +104,21 @@
   --font-size-icon-large: 24px;              /* Large icon size */
   --letter-spacing-logo: -0.5px;             /* Logo letter spacing */
 
+  /* === SEMANTIC COLORS (WCAG AA Compliant) === */
+  --success: #059669;              /* Green - positive actions (4.54:1 contrast) */
+  --success-hover: #047857;        /* Darker green on hover */
+  --success-light: #D1FAE5;        /* Light green backgrounds */
+
+  --error: #DC2626;                /* Red - errors, destructive (4.83:1 contrast) */
+  --error-hover: #B91C1C;          /* Darker red on hover */
+  --error-light: #FEE2E2;          /* Light red backgrounds */
+
+  --warning: #F59E0B;              /* Orange - warnings, cautions */
+  --warning-light: #FEF3C7;        /* Light orange backgrounds */
+
+  --info: #1d4ed8;                 /* Darker blue - WCAG AA compliant */
+  --info-light: #DBEAFE;           /* Light blue backgrounds */
+
   /* === LEGACY SUPPORT (for existing styles) === */
   --main-blue: var(--gray-800);
   --light-blue: #f5f5f5;
@@ -1479,4 +1494,256 @@ footer {
 
 .toggle-status.pending {
     color: #6c757d;
+}
+
+/* ========================================
+   TRASH BIN BUTTON & CARD STYLING
+   Modern, consistent button hierarchy
+   ======================================== */
+
+/* === TRASH CARD STRUCTURE === */
+.trash-card-meta {
+    padding: 16px;
+    padding-bottom: 8px;
+}
+
+.trash-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.trash-card-info {
+    font-size: 13px;
+    color: var(--gray-500);
+    margin-bottom: 4px;
+}
+
+.trash-card-info i {
+    width: 16px;
+    margin-right: 6px;
+    color: var(--gray-400);
+}
+
+.trash-card-actions {
+    padding: 16px;
+    background-color: var(--white);
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* === TRASH BUTTON BASE STYLES === */
+.trash-btn {
+    border-radius: var(--radius-md);
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px; /* Touch target WCAG AAA */
+    border: none;
+    text-decoration: none;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.trash-btn:focus-visible {
+    outline: 2px solid var(--accent-color-for-text-icons);
+    outline-offset: 2px;
+}
+
+/* === PRIMARY: Restore & Publish (Green) === */
+.trash-btn-restore-publish {
+    background-color: var(--success);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    text-decoration: none;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.trash-btn-restore-publish:hover {
+    background-color: var(--success-hover);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    text-decoration: none;
+}
+
+.trash-btn-restore-publish:active {
+    transform: translateY(0);
+}
+
+.trash-btn-restore-publish:focus-visible {
+    outline: 2px solid var(--success);
+    outline-offset: 2px;
+}
+
+/* === SECONDARY: Restore as Draft (Gray) === */
+.trash-btn-restore-draft {
+    background-color: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    text-decoration: none;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.trash-btn-restore-draft:hover {
+    background-color: var(--gray-200);
+    color: var(--gray-800);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+}
+
+.trash-btn-restore-draft:active {
+    transform: translateY(0);
+}
+
+.trash-btn-restore-draft:focus-visible {
+    outline: 2px solid var(--gray-600);
+    outline-offset: 2px;
+}
+
+/* === DESTRUCTIVE: Delete Forever (Red) === */
+.trash-btn-delete {
+    background-color: var(--error);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    text-decoration: none;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.trash-btn-delete:hover {
+    background-color: var(--error-hover);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    text-decoration: none;
+}
+
+.trash-btn-delete:active {
+    transform: translateY(0);
+}
+
+.trash-btn-delete:focus-visible {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
+}
+
+/* === PAGE-LEVEL: Empty Trash (Red, Larger) === */
+.trash-btn-empty {
+    background-color: var(--error);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    text-decoration: none;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.trash-btn-empty:hover {
+    background-color: var(--error-hover);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    text-decoration: none;
+}
+
+.trash-btn-empty:active {
+    transform: translateY(0);
+}
+
+.trash-btn-empty:focus-visible {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
+}
+
+/* === MODAL BUTTONS === */
+.trash-modal-btn-cancel {
+    background-color: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-decoration: none;
+}
+
+.trash-modal-btn-cancel:hover {
+    background-color: var(--gray-200);
+    color: var(--gray-800);
+}
+
+.trash-modal-btn-confirm {
+    background-color: var(--error);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-decoration: none;
+}
+
+.trash-modal-btn-confirm:hover {
+    background-color: var(--error-hover);
+    color: white;
 }

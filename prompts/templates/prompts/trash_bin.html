@@ -14,7 +14,7 @@
     <div class="row">
         <div class="col-12">
             <h1 class="mb-4">
-                <i class="fas fa-trash"></i> Trash Bin
+                <i class="fas fa-trash" aria-hidden="true"></i> Trash Bin
                 {% if trash_count > 0 %}
                     <span class="badge bg-secondary">{{ trash_count }}</span>
                 {% endif %}
@@ -34,7 +34,7 @@
             {% endif %}
 
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
+                <i class="fas fa-info-circle" aria-hidden="true"></i>
                 {% if is_premium %}
                     <strong>Premium:</strong> Items are kept for 30 days before permanent deletion.
                 {% else %}
@@ -44,8 +44,8 @@
 
             {% if trash_count > 0 %}
                 <div class="mb-3">
-                    <a href="{% url 'prompts:empty_trash' %}" class="btn btn-danger">
-                        <i class="fas fa-trash-alt"></i> Empty Trash ({{ trash_count }})
+                    <a href="{% url 'prompts:empty_trash' %}" class="trash-btn-empty">
+                        <i class="fas fa-trash-alt" aria-hidden="true"></i> Empty Trash ({{ trash_count }})
                     </a>
                 </div>
             {% endif %}
@@ -82,55 +82,55 @@
                              alt="{{ prompt.title }}">
                     {% else %}
                         <div class="w-100 bg-secondary d-flex align-items-center justify-content-center" style="height: 300px; border-radius: 12px 12px 0 0;">
-                            <i class="fas fa-image fa-3x text-white"></i>
+                            <i class="fas fa-image fa-3x text-white" aria-hidden="true"></i>
                         </div>
                     {% endif %}
                 </div>
 
-                {# Card Body #}
-                <div class="card-body">
-                    <h5 class="card-title">{{ prompt.title|truncatewords:10 }}</h5>
-                    <p class="text-muted small mb-2">
-                        <i class="far fa-clock"></i> Deleted {{ prompt.deleted_at|timesince }} ago
+                {# Card Meta #}
+                <div class="trash-card-meta">
+                    <h5 class="trash-card-title">{{ prompt.title|truncatewords:10 }}</h5>
+                    <p class="trash-card-info">
+                        <i class="far fa-clock" aria-hidden="true"></i> Deleted {{ prompt.deleted_at|timesince }} ago
                     </p>
 
                     {% if prompt.is_expiring_soon %}
                         <div class="alert alert-danger py-1 px-2 small mb-2">
-                            <i class="fas fa-exclamation-triangle"></i>
+                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
                             Expires in {{ prompt.days_until_permanent_deletion }} day(s)!
                         </div>
                     {% else %}
-                        <p class="text-muted small mb-2">
-                            {{ prompt.days_until_permanent_deletion }} days remaining
+                        <p class="trash-card-info">
+                            <i class="fas fa-calendar" aria-hidden="true"></i> {{ prompt.days_until_permanent_deletion }} days remaining
                         </p>
                     {% endif %}
+                </div>
 
-                    {# Two-button restore system #}
-                    <div class="d-flex flex-column gap-2 mb-2">
-                        {# Primary: Restore & Publish #}
-                        <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="restore_as" value="published">
-                            <button type="submit" class="btn btn-success btn-sm w-100" title="Restore and make public immediately">
-                                <i class="fas fa-globe me-1"></i> Restore & Publish
-                            </button>
-                        </form>
+                {# Action Buttons #}
+                <div class="trash-card-actions">
+                    {# Primary: Restore & Publish #}
+                    <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="restore_as" value="published">
+                        <button type="submit" class="trash-btn-restore-publish" title="Restore and make public immediately">
+                            <i class="fas fa-globe" aria-hidden="true"></i> Restore & Publish
+                        </button>
+                    </form>
 
-                        {# Secondary: Restore as Draft #}
-                        <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="restore_as" value="draft">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100" title="Restore as draft for editing">
-                                <i class="fas fa-edit me-1"></i> Restore as Draft
-                            </button>
-                        </form>
-                    </div>
+                    {# Secondary: Restore as Draft #}
+                    <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="restore_as" value="draft">
+                        <button type="submit" class="trash-btn-restore-draft" title="Restore as draft for editing">
+                            <i class="fas fa-edit" aria-hidden="true"></i> Restore as Draft
+                        </button>
+                    </form>
 
                     {# Delete Forever Button #}
-                    <button type="button" class="btn btn-danger btn-sm w-100"
+                    <button type="button" class="trash-btn-delete"
                             data-bs-toggle="modal"
                             data-bs-target="#deleteModal{{ prompt.id }}">
-                        <i class="fas fa-trash me-1"></i> Delete Forever
+                        <i class="fas fa-trash" aria-hidden="true"></i> Delete Forever
                     </button>
                 </div>
             </div>
@@ -146,7 +146,7 @@
         <div class="modal-content">
             <div class="modal-header border-danger">
                 <h5 class="modal-title text-danger" id="deleteModalLabel{{ prompt.id }}">
-                    <i class="fas fa-exclamation-triangle"></i> Delete Forever?
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Delete Forever?
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -157,10 +157,12 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="trash-modal-btn-cancel" data-bs-dismiss="modal">Cancel</button>
                 <form method="post" action="{% url 'prompts:prompt_permanent_delete' prompt.slug %}" class="d-inline">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Delete Forever</button>
+                    <button type="submit" class="trash-modal-btn-confirm">
+                        <i class="fas fa-trash" aria-hidden="true"></i> Delete Forever
+                    </button>
                 </form>
             </div>
         </div>
@@ -171,7 +173,7 @@
 <div class="container">
     <div class="row">
         <div class="col-12 text-center py-5">
-            <i class="fas fa-trash fa-4x text-muted mb-3"></i>
+            <i class="fas fa-trash fa-4x text-muted mb-3" aria-hidden="true"></i>
             <h3 class="text-muted">Trash is Empty</h3>
             <p class="text-muted">Deleted items will appear here</p>
         </div>

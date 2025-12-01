@@ -109,21 +109,74 @@
 }
 
 /* ============================================
-   SORT DROPDOWN FILTER (Pexels-style)
-   Phase G Implementation
+   HOMEPAGE FILTER BAR (Phase G Part A)
+   Tabs LEFT, Dropdown RIGHT (Pexels-style)
    ============================================ */
 
-.filter-bar-container {
+.homepage-filter-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: white;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 0 40px;
+    padding: 16px 40px;
     margin: 0 auto;
     max-width: 1600px;
     width: 100%;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
 }
+
+/* ============================================
+   HOMEPAGE TABS (Pexels-style pills) - LEFT SIDE
+   ============================================ */
+
+.homepage-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.homepage-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #666;
+    background-color: transparent;
+    border-radius: 50px; /* Pill shape */
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.homepage-tab:hover {
+    color: #1a1a1a;
+    background-color: #f5f5f5;
+    text-decoration: none;
+}
+
+/* Active tab - Dark pill style (Pexels-style) */
+.homepage-tab.active {
+    color: #ffffff;
+    background-color: #1a1a1a;
+    font-weight: 600;
+}
+
+.homepage-tab.active:hover {
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+
+/* Focus state for accessibility */
+.homepage-tab:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1a1a1a;
+}
+
+/* ============================================
+   SORT DROPDOWN - RIGHT SIDE
+   ============================================ */
 
 .sort-dropdown {
     position: relative;
@@ -166,8 +219,8 @@
 .sort-dropdown-menu {
     position: absolute;
     top: calc(100% + 4px);
-    left: 0;
-    min-width: 160px;
+    right: 0;  /* Align to right edge */
+    min-width: 140px;
     padding: 8px 0;
     background-color: #ffffff;
     border: 1px solid #e0e0e0;
@@ -177,7 +230,7 @@
     visibility: hidden;
     transform: translateY(-8px);
     transition: all 0.2s ease;
-    z-index: 100;
+    z-index: 1000;
 }
 
 .sort-dropdown.open .sort-dropdown-menu {
@@ -219,7 +272,10 @@
     flex-shrink: 0;
 }
 
-/* Empty state for Following filter */
+/* ============================================
+   EMPTY STATE (Following filter)
+   ============================================ */
+
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -269,9 +325,30 @@
     text-decoration: none;
 }
 
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+
 @media (max-width: 768px) {
-    .filter-bar-container {
-        padding: 0 20px;
+    .homepage-filter-bar {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+        padding: 16px 20px;
+    }
+
+    .homepage-tabs {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .homepage-tab {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+
+    .sort-dropdown {
+        align-self: flex-end;
     }
 
     .sort-dropdown-btn {
@@ -284,16 +361,53 @@
     }
 }
 
-@media (max-width: 400px) {
-    .filter-bar-container {
-        padding: 0 12px;
+@media (max-width: 480px) {
+    .homepage-filter-bar {
+        padding: 12px 16px;
+    }
+
+    .homepage-tabs {
+        gap: 4px;
+    }
+
+    .homepage-tab {
+        padding: 8px 12px;
+        font-size: 13px;
     }
 }
 </style>
 
-<!-- Filter Bar: Sort Dropdown + Media Tabs (Phase G) -->
-<div class="filter-bar-container">
-    <!-- Sort Dropdown (Left) -->
+<!-- Homepage Filter Bar (Phase G Part A): Tabs LEFT, Dropdown RIGHT -->
+<div class="homepage-filter-bar">
+    <!-- LEFT: Tab Navigation (Pexels-style pills) -->
+    <nav class="homepage-tabs" role="tablist" aria-label="Content filter">
+        <a href="{% url 'prompts:home' %}?tab=home{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="homepage-tab {% if current_tab == 'home' %}active{% endif %}"
+           role="tab"
+           aria-selected="{% if current_tab == 'home' %}true{% else %}false{% endif %}">
+            Home
+        </a>
+        <a href="{% url 'prompts:home' %}?tab=all{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="homepage-tab {% if current_tab == 'all' %}active{% endif %}"
+           role="tab"
+           aria-selected="{% if current_tab == 'all' %}true{% else %}false{% endif %}">
+            All
+        </a>
+        <a href="{% url 'prompts:home' %}?tab=photos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="homepage-tab {% if current_tab == 'photos' %}active{% endif %}"
+           role="tab"
+           aria-selected="{% if current_tab == 'photos' %}true{% else %}false{% endif %}">
+            Photos
+        </a>
+        <a href="{% url 'prompts:home' %}?tab=videos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="homepage-tab {% if current_tab == 'videos' %}active{% endif %}"
+           role="tab"
+           aria-selected="{% if current_tab == 'videos' %}true{% else %}false{% endif %}">
+            Videos
+        </a>
+    </nav>
+
+    <!-- RIGHT: Sort Dropdown -->
     <div class="sort-dropdown" id="sortDropdown">
         <button class="sort-dropdown-btn" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false">
             {% if sort_by == 'new' %}
@@ -303,12 +417,12 @@
             {% else %}
                 Trending
             {% endif %}
-            <svg class="sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg class="sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </button>
         <div class="sort-dropdown-menu" id="sortDropdownMenu" role="menu">
-            <a href="{% url 'prompts:home' %}?sort=trending{% if media_filter != 'all' %}&media={{ media_filter }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=trending{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
                class="sort-dropdown-item {% if sort_by == 'trending' %}active{% endif %}"
                role="menuitem">
                 {% if sort_by == 'trending' %}
@@ -320,7 +434,7 @@
                 {% endif %}
                 Trending
             </a>
-            <a href="{% url 'prompts:home' %}?sort=new{% if media_filter != 'all' %}&media={{ media_filter }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=new{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
                class="sort-dropdown-item {% if sort_by == 'new' %}active{% endif %}"
                role="menuitem">
                 {% if sort_by == 'new' %}
@@ -333,7 +447,7 @@
                 New
             </a>
             {% if user.is_authenticated %}
-            <a href="{% url 'prompts:home' %}?sort=following{% if media_filter != 'all' %}&media={{ media_filter }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=following{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
                class="sort-dropdown-item {% if sort_by == 'following' %}active{% endif %}"
                role="menuitem">
                 {% if sort_by == 'following' %}
@@ -347,28 +461,6 @@
             </a>
             {% endif %}
         </div>
-    </div>
-
-    <!-- Media Filter Tabs (Right) -->
-    <div class="media-filter-tabs" role="tablist" aria-label="Filter prompts by media type">
-        <a href="{% url 'prompts:home' %}?media=all{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
-           class="media-tab {% if media_filter == 'all' %}active{% endif %}"
-           role="tab"
-           aria-selected="{% if media_filter == 'all' %}true{% else %}false{% endif %}">
-            All
-        </a>
-        <a href="{% url 'prompts:home' %}?media=photos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
-           class="media-tab {% if media_filter == 'photos' %}active{% endif %}"
-           role="tab"
-           aria-selected="{% if media_filter == 'photos' %}true{% else %}false{% endif %}">
-            <i class="fas fa-image"></i> Photos
-        </a>
-        <a href="{% url 'prompts:home' %}?media=videos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
-           class="media-tab {% if media_filter == 'videos' %}active{% endif %}"
-           role="tab"
-           aria-selected="{% if media_filter == 'videos' %}true{% else %}false{% endif %}">
-            <i class="fas fa-video"></i> Videos
-        </a>
     </div>
 </div>
 

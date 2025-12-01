@@ -4055,73 +4055,129 @@ static/css/
 
 ---
 
-## 📋 Phase G: Social Features & Activity Feeds - NEXT PRIORITY
+## 📋 Phase G: Homepage Sorting & Social Features
 
-**Status:** Ready to Start
-**Priority:** HIGH - Next major feature work
-**Estimated Duration:** 1-2 weeks
+**Status:** Part A IN PROGRESS (December 1, 2025)
+**Priority:** HIGH - Current development focus
+**Estimated Duration:** 3-4 days total
 
-### Why Phase G Next?
+### Phase G Overview
 
-| Factor | Reasoning |
-|--------|-----------|
-| **User Value** | High - New functionality users want |
-| **Engagement** | Increases time on site and return visits |
-| **Monetization** | Supports premium feature conversion |
-| **Foundation** | Builds on completed Phase E profiles |
+Phase G implements homepage sorting controls and social feed features in multiple parts:
 
-### Planned Features
+| Part | Feature | Status | Duration |
+|------|---------|--------|----------|
+| **Part A** | Homepage Tabs & Sorting Dropdown | 🔄 IN PROGRESS | 1-2 days |
+| **Part B** | Following Feed Integration | 📋 Planned | 1 day |
+| **Part C** | User Discovery Features | 📋 Planned | 1 day |
 
-**1. Follow/Unfollow System**
-- Follow button on user profiles (foundation exists from Phase E)
-- Follower/following counts
-- Follow notifications (uses existing EmailPreferences)
+---
 
-**2. Activity Feeds**
-- Personal feed of followed users' new prompts
-- Activity notifications
-- "New from people you follow" section
+### Phase G Part A: Homepage Tabs & Sorting (Current)
 
-**3. User Discovery**
+**Implementation Date:** December 1, 2025
+**Status:** Implementation complete, pending validation
+
+#### Features Implemented
+
+**1. Pexels-Style Tab Navigation (LEFT side)**
+- **Home** tab: Shows all prompts (default)
+- **All** tab: Same as Home (future: may include followed users)
+- **Photos** tab: Filter to image prompts only
+- **Videos** tab: Filter to video prompts only
+- Dark pill styling for active tab
+
+**2. Sort Dropdown (RIGHT side)**
+- **Trending**: Engagement-based (likes + comments, last 7 days)
+- **New**: Chronological (most recent first)
+- **Following**: Content from followed users (requires login)
+
+**3. Trending Algorithm with Fallback**
+- Primary: Engagement score = likes + comments (last 7 days)
+- Fallback: If < 20 trending items, show popular (all time)
+- Constant: `TRENDING_MINIMUM = 20`
+
+**4. URL Parameters**
+- `?tab=home|all|photos|videos` - Media type filter
+- `?sort=trending|new|following` - Sort order
+- Combined: `?tab=photos&sort=new` - Photos sorted by new
+
+#### Technical Implementation
+
+**Backend (prompts/views.py - PromptList class):**
+```python
+# Constants
+VALID_HOMEPAGE_SORTS = {'trending', 'new', 'following'}
+VALID_HOMEPAGE_TABS = {'home', 'all', 'photos', 'videos'}
+TRENDING_MINIMUM = 20
+
+# Tab filtering
+if tab == 'photos':
+    queryset = queryset.filter(featured_image__isnull=False)
+elif tab == 'videos':
+    queryset = queryset.filter(featured_video__isnull=False)
+
+# Trending with engagement score
+engagement_score = Count('likes') + Count('comments', filter=Q(comments__approved=True))
+```
+
+**Frontend (prompt_list.html):**
+- `.homepage-filter-bar`: Flexbox container (space-between)
+- `.homepage-tabs`: Left-aligned tab navigation
+- `.homepage-tab`: Pill-shaped tabs (50px border-radius)
+- `.homepage-tab.active`: Dark background (#1a1a1a), white text
+- `.sort-dropdown`: Right-aligned sorting dropdown
+
+#### Files Modified
+
+1. `prompts/views.py` - PromptList class enhanced with:
+   - Tab parameter handling (replacing old media parameter)
+   - Engagement score calculation
+   - Trending fallback logic
+   - Context data for current_tab
+
+2. `prompts/templates/prompts/prompt_list.html`:
+   - New CSS for homepage-filter-bar layout
+   - Tab navigation HTML (Home, All, Photos, Videos)
+   - Sort dropdown preserves tab parameter
+
+#### Default State
+- Tab: **Home** (shows all content)
+- Sort: **Trending** (engagement-based)
+- URL: `/` or `/?tab=home&sort=trending`
+
+---
+
+### Phase G Part B: Following Feed (Planned)
+
+**Prerequisites:**
+- ✅ Follow model exists (Phase F)
+- ✅ Follow/unfollow views working
+- 🔄 Part A implementation
+
+**Features:**
+- "Following" sort option shows content from followed users
+- Empty state for users not following anyone
+- Empty state for followed users with no content
+- Proper handling for logged-out users
+
+---
+
+### Phase G Part C: User Discovery (Planned)
+
+**Features:**
 - Suggested users to follow
 - Popular creators section
 - "Users who liked this also follow..." recommendations
 
+---
+
 ### Prerequisites (All Complete ✅)
 - ✅ User profiles (Phase E)
+- ✅ Follow system (Phase F)
 - ✅ Email preferences system (Phase E Task 4)
 - ✅ Notification infrastructure
 - ✅ Profile pages with stats
-
-### Database Models Needed
-
-```python
-class Follow(models.Model):
-    follower = models.ForeignKey(User, related_name='following')
-    following = models.ForeignKey(User, related_name='followers')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('follower', 'following')
-        indexes = [
-            models.Index(fields=['follower', 'created_at']),
-            models.Index(fields=['following', 'created_at']),
-        ]
-```
-
-### Implementation Order
-
-1. **Week 1:** Follow/Unfollow system
-   - Follow model and migrations
-   - Follow/unfollow views
-   - Update profile template with working follow button
-   - Follower/following pages
-
-2. **Week 2:** Activity feeds
-   - Feed algorithm (chronological first)
-   - Feed page/section
-   - Activity notifications
-   - User discovery features
 
 ---
 

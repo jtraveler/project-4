@@ -195,6 +195,10 @@ class PromptList(generic.ListView):
 
     # Valid sort options for homepage (Phase G)
     VALID_HOMEPAGE_SORTS = {'trending', 'new', 'following'}
+    # Valid tab options for homepage (Phase G Part A)
+    VALID_HOMEPAGE_TABS = {'home', 'all', 'photos', 'videos'}
+    # Minimum trending items before fallback to popular
+    TRENDING_MINIMUM = 20
 
     def get_queryset(self):
         start_time = time.time()
@@ -202,9 +206,13 @@ class PromptList(generic.ListView):
         # Get and validate request parameters
         tag_name = self.request.GET.get('tag')
         search_query = self.request.GET.get('search')
-        media_filter = self.request.GET.get('media', 'all')
+        tab = self.request.GET.get('tab', 'home')
         sort_by = self.request.GET.get('sort', 'trending')
         page = self.request.GET.get('page', 1)
+
+        # Validate tab parameter
+        if tab not in self.VALID_HOMEPAGE_TABS:
+            tab = 'home'
 
         # Validate sort parameter (security: prevent cache pollution)
         if sort_by not in self.VALID_HOMEPAGE_SORTS:
@@ -215,7 +223,7 @@ class PromptList(generic.ListView):
             sort_by = 'trending'
 
         # Create secure cache key using hash to prevent injection
-        cache_params = f"{tag_name}_{search_query}_{media_filter}_{sort_by}_{page}"
+        cache_params = f"{tag_name}_{search_query}_{tab}_{sort_by}_{page}"
         cache_key = f"prompt_list_{hashlib.md5(cache_params.encode()).hexdigest()}"
 
         # Don't cache 'following' filter (user-specific) or search results
@@ -235,30 +243,18 @@ class PromptList(generic.ListView):
             )
         ).filter(status=1, deleted_at__isnull=True)
 
-        # Apply sort filter (Phase G)
-        if sort_by == 'following':
-            # Filter to only prompts from followed users (single query with subquery)
-            queryset = queryset.filter(
-                author_id__in=self.request.user.following_set.values_list(
-                    'following_id', flat=True
-                )
-            ).order_by('-created_on')
-        elif sort_by == 'trending':
-            # Last 7 days, sorted by likes count
-            week_ago = timezone.now() - timedelta(days=7)
-            queryset = queryset.filter(created_on__gte=week_ago).annotate(
-                likes_count=Count('likes', distinct=True)
-            ).order_by('-likes_count', '-created_on')
-        elif sort_by == 'new':
-            # Most recent first
-            queryset = queryset.order_by('-created_on')
-        else:
-            # Fallback to default ordering (for admin manual ordering)
-            queryset = queryset.order_by('order', '-created_on')
+        # Apply tab filter (media type) - Phase G Part A
+        if tab == 'photos':
+            queryset = queryset.filter(featured_image__isnull=False)
+        elif tab == 'videos':
+            queryset = queryset.filter(featured_video__isnull=False)
+        # 'home' and 'all' show everything (no media filter)
 
+        # Apply tag filter if present
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name)
 
+        # Apply search filter if present
         if search_query:
             queryset = queryset.filter(
                 Q(title__icontains=search_query) |
@@ -268,12 +264,38 @@ class PromptList(generic.ListView):
                 Q(tags__name__icontains=search_query)
             ).distinct()
 
-        # Apply media filtering (Phase E)
-        if media_filter == 'photos':
-            queryset = queryset.filter(featured_image__isnull=False)
-        elif media_filter == 'videos':
-            queryset = queryset.filter(featured_video__isnull=False)
-        # 'all' shows everything (no additional filtering)
+        # Apply sort filter (Phase G)
+        if sort_by == 'following':
+            # Filter to only prompts from followed users (single query with subquery)
+            queryset = queryset.filter(
+                author_id__in=self.request.user.following_set.values_list(
+                    'following_id', flat=True
+                )
+            ).order_by('-created_on')
+        elif sort_by == 'trending':
+            # Trending: Last 7 days, sorted by engagement (likes + comments)
+            week_ago = timezone.now() - timedelta(days=7)
+            trending_queryset = queryset.filter(created_on__gte=week_ago).annotate(
+                likes_count=Count('likes', distinct=True),
+                comments_count=Count('comments', filter=Q(comments__approved=True), distinct=True),
+                engagement_score=Count('likes', distinct=True) + Count('comments', filter=Q(comments__approved=True), distinct=True)
+            ).order_by('-engagement_score', '-created_on')
+
+            # Fallback: If less than TRENDING_MINIMUM items, show popular (all time)
+            if trending_queryset.count() < self.TRENDING_MINIMUM:
+                queryset = queryset.annotate(
+                    likes_count=Count('likes', distinct=True),
+                    comments_count=Count('comments', filter=Q(comments__approved=True), distinct=True),
+                    engagement_score=Count('likes', distinct=True) + Count('comments', filter=Q(comments__approved=True), distinct=True)
+                ).order_by('-engagement_score', '-created_on')
+            else:
+                queryset = trending_queryset
+        elif sort_by == 'new':
+            # Most recent first
+            queryset = queryset.order_by('-created_on')
+        else:
+            # Fallback to default ordering (for admin manual ordering)
+            queryset = queryset.order_by('order', '-created_on')
 
         # Apply final distinct (needed for tag/search filters with joins)
         queryset = queryset.distinct()
@@ -294,7 +316,14 @@ class PromptList(generic.ListView):
         context = super().get_context_data(**kwargs)
         context['current_tag'] = self.request.GET.get('tag')
         context['search_query'] = self.request.GET.get('search')
-        context['media_filter'] = self.request.GET.get('media', 'all')
+
+        # Tab filter context (Phase G Part A)
+        tab = self.request.GET.get('tab', 'home')
+        if tab not in self.VALID_HOMEPAGE_TABS:
+            tab = 'home'
+        context['current_tab'] = tab
+        # Legacy support for media_filter
+        context['media_filter'] = 'photos' if tab == 'photos' else ('videos' if tab == 'videos' else 'all')
 
         # Sort filter context (Phase G) - validate consistently with get_queryset
         sort_by = self.request.GET.get('sort', 'trending')

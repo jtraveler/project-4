@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.db import models
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Count
 from django.core.cache import cache  # Import cache for performance
 from django.core.paginator import Paginator
 from taggit.models import Tag
@@ -193,21 +193,37 @@ class PromptList(generic.ListView):
     template_name = "prompts/prompt_list.html"
     paginate_by = 18
 
+    # Valid sort options for homepage (Phase G)
+    VALID_HOMEPAGE_SORTS = {'trending', 'new', 'following'}
+
     def get_queryset(self):
         start_time = time.time()
 
-        # Create cache key based on request parameters
+        # Get and validate request parameters
         tag_name = self.request.GET.get('tag')
         search_query = self.request.GET.get('search')
         media_filter = self.request.GET.get('media', 'all')
-        cache_key = (
-            f"prompt_list_{tag_name}_{search_query}_{media_filter}_"
-            f"{self.request.GET.get('page', 1)}"
-        )
+        sort_by = self.request.GET.get('sort', 'trending')
+        page = self.request.GET.get('page', 1)
+
+        # Validate sort parameter (security: prevent cache pollution)
+        if sort_by not in self.VALID_HOMEPAGE_SORTS:
+            sort_by = 'trending'
+
+        # Handle unauthenticated users trying to access 'following'
+        if sort_by == 'following' and not self.request.user.is_authenticated:
+            sort_by = 'trending'
+
+        # Create secure cache key using hash to prevent injection
+        cache_params = f"{tag_name}_{search_query}_{media_filter}_{sort_by}_{page}"
+        cache_key = f"prompt_list_{hashlib.md5(cache_params.encode()).hexdigest()}"
+
+        # Don't cache 'following' filter (user-specific) or search results
+        use_cache = not search_query and sort_by != 'following'
 
         # Try to get from cache first (5 minute cache)
         cached_result = cache.get(cache_key)
-        if cached_result and not search_query:  # Don't cache search results
+        if cached_result and use_cache:
             return cached_result
 
         queryset = Prompt.objects.select_related('author').prefetch_related(
@@ -217,7 +233,28 @@ class PromptList(generic.ListView):
                 'comments',
                 queryset=Comment.objects.filter(approved=True)
             )
-        ).filter(status=1, deleted_at__isnull=True).order_by('order', '-created_on')
+        ).filter(status=1, deleted_at__isnull=True)
+
+        # Apply sort filter (Phase G)
+        if sort_by == 'following':
+            # Filter to only prompts from followed users (single query with subquery)
+            queryset = queryset.filter(
+                author_id__in=self.request.user.following_set.values_list(
+                    'following_id', flat=True
+                )
+            ).order_by('-created_on')
+        elif sort_by == 'trending':
+            # Last 7 days, sorted by likes count
+            week_ago = timezone.now() - timedelta(days=7)
+            queryset = queryset.filter(created_on__gte=week_ago).annotate(
+                likes_count=Count('likes', distinct=True)
+            ).order_by('-likes_count', '-created_on')
+        elif sort_by == 'new':
+            # Most recent first
+            queryset = queryset.order_by('-created_on')
+        else:
+            # Fallback to default ordering (for admin manual ordering)
+            queryset = queryset.order_by('order', '-created_on')
 
         if tag_name:
             queryset = queryset.filter(tags__name=tag_name)
@@ -238,14 +275,17 @@ class PromptList(generic.ListView):
             queryset = queryset.filter(featured_video__isnull=False)
         # 'all' shows everything (no additional filtering)
 
-        # Cache the result for 5 minutes (only if not a search query)
-        if not search_query:
-            cache.set(cache_key, queryset, 300)
+        # Apply final distinct (needed for tag/search filters with joins)
+        queryset = queryset.distinct()
+
+        # Cache the evaluated result for 5 minutes (only if cacheable)
+        # Force evaluation with list() to cache actual results, not lazy QuerySet
+        if use_cache:
+            cache.set(cache_key, list(queryset), 300)
 
         end_time = time.time()
-        logger.warning(
-            f"DEBUG: Queryset generation took {end_time - start_time:.3f} "
-            f"seconds"
+        logger.debug(
+            f"Queryset generation took {end_time - start_time:.3f} seconds"
         )
 
         return queryset
@@ -255,6 +295,18 @@ class PromptList(generic.ListView):
         context['current_tag'] = self.request.GET.get('tag')
         context['search_query'] = self.request.GET.get('search')
         context['media_filter'] = self.request.GET.get('media', 'all')
+
+        # Sort filter context (Phase G) - validate consistently with get_queryset
+        sort_by = self.request.GET.get('sort', 'trending')
+        if sort_by not in self.VALID_HOMEPAGE_SORTS:
+            sort_by = 'trending'
+        if sort_by == 'following' and not self.request.user.is_authenticated:
+            sort_by = 'trending'
+        context['sort_by'] = sort_by
+
+        # For "Following" empty state - check if user follows anyone
+        if sort_by == 'following' and self.request.user.is_authenticated:
+            context['following_count'] = self.request.user.following_set.count()
 
         # Add admin ordering controls context
         if self.request.user.is_staff:
@@ -3434,7 +3486,7 @@ def ai_generator_category(request, generator_slug):
     if sort_by == 'popular':
         prompts = prompts.annotate(
             likes_count=models.Count('likes', distinct=True)
-        ).order_by('-created_on', '-created_on')
+        ).order_by('-likes_count', '-created_on')
     elif sort_by == 'trending':
         # Trending: most likes in last 7 days
         week_ago = now - timedelta(days=7)
@@ -3442,7 +3494,7 @@ def ai_generator_category(request, generator_slug):
             created_on__gte=week_ago
         ).annotate(
             likes_count=models.Count('likes', distinct=True)
-        ).order_by('-created_on', '-created_on')
+        ).order_by('-likes_count', '-created_on')
     else:  # recent (default)
         prompts = prompts.order_by('-created_on')
 

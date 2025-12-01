@@ -107,23 +107,263 @@
         padding: 0 12px;  /* Reduced from 20px to prevent horizontal scrollbar */
     }
 }
+
+/* ============================================
+   SORT DROPDOWN FILTER (Pexels-style)
+   Phase G Implementation
+   ============================================ */
+
+.filter-bar-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0 40px;
+    margin: 0 auto;
+    max-width: 1600px;
+    width: 100%;
+}
+
+.sort-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.sort-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1a1a1a;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sort-dropdown-btn:hover {
+    border-color: #666;
+}
+
+.sort-dropdown-btn:focus {
+    outline: none;
+    border-color: #262626;
+    box-shadow: 0 0 0 2px rgba(38, 38, 38, 0.1);
+}
+
+.sort-dropdown-chevron {
+    transition: transform 0.2s ease;
+}
+
+.sort-dropdown.open .sort-dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+.sort-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 160px;
+    padding: 8px 0;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+    z-index: 100;
+}
+
+.sort-dropdown.open .sort-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.sort-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #1a1a1a;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.sort-dropdown-item:hover {
+    background-color: #f5f5f5;
+    text-decoration: none;
+    color: #1a1a1a;
+}
+
+/* Focus state for keyboard accessibility (WCAG 2.1 Level AA) */
+.sort-dropdown-item:focus {
+    outline: 2px solid #262626;
+    outline-offset: -2px;
+    background-color: #f5f5f5;
+}
+
+.sort-dropdown-item.active {
+    font-weight: 600;
+}
+
+.sort-check-icon {
+    color: #262626;
+    flex-shrink: 0;
+}
+
+/* Empty state for Following filter */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    text-align: center;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.empty-state-icon {
+    color: #999;
+    margin-bottom: 20px;
+}
+
+.empty-state-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 12px 0;
+}
+
+.empty-state-text {
+    font-size: 15px;
+    color: #666;
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+}
+
+.empty-state-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    background-color: #262626;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.empty-state-btn:hover {
+    background-color: #404040;
+    color: #fff;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .filter-bar-container {
+        padding: 0 20px;
+    }
+
+    .sort-dropdown-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .sort-dropdown-menu {
+        min-width: 140px;
+    }
+}
+
+@media (max-width: 400px) {
+    .filter-bar-container {
+        padding: 0 12px;
+    }
+}
 </style>
 
-<div class="media-filter-container">
+<!-- Filter Bar: Sort Dropdown + Media Tabs (Phase G) -->
+<div class="filter-bar-container">
+    <!-- Sort Dropdown (Left) -->
+    <div class="sort-dropdown" id="sortDropdown">
+        <button class="sort-dropdown-btn" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false">
+            {% if sort_by == 'new' %}
+                New
+            {% elif sort_by == 'following' %}
+                Following
+            {% else %}
+                Trending
+            {% endif %}
+            <svg class="sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <div class="sort-dropdown-menu" id="sortDropdownMenu" role="menu">
+            <a href="{% url 'prompts:home' %}?sort=trending{% if media_filter != 'all' %}&media={{ media_filter }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="sort-dropdown-item {% if sort_by == 'trending' %}active{% endif %}"
+               role="menuitem">
+                {% if sort_by == 'trending' %}
+                <svg class="sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {% else %}
+                <span style="width: 16px;"></span>
+                {% endif %}
+                Trending
+            </a>
+            <a href="{% url 'prompts:home' %}?sort=new{% if media_filter != 'all' %}&media={{ media_filter }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="sort-dropdown-item {% if sort_by == 'new' %}active{% endif %}"
+               role="menuitem">
+                {% if sort_by == 'new' %}
+                <svg class="sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {% else %}
+                <span style="width: 16px;"></span>
+                {% endif %}
+                New
+            </a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'prompts:home' %}?sort=following{% if media_filter != 'all' %}&media={{ media_filter }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="sort-dropdown-item {% if sort_by == 'following' %}active{% endif %}"
+               role="menuitem">
+                {% if sort_by == 'following' %}
+                <svg class="sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {% else %}
+                <span style="width: 16px;"></span>
+                {% endif %}
+                Following
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Media Filter Tabs (Right) -->
     <div class="media-filter-tabs" role="tablist" aria-label="Filter prompts by media type">
-        <a href="{% url 'prompts:home' %}?media=all{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+        <a href="{% url 'prompts:home' %}?media=all{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
            class="media-tab {% if media_filter == 'all' %}active{% endif %}"
            role="tab"
            aria-selected="{% if media_filter == 'all' %}true{% else %}false{% endif %}">
             All
         </a>
-        <a href="{% url 'prompts:home' %}?media=photos{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+        <a href="{% url 'prompts:home' %}?media=photos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
            class="media-tab {% if media_filter == 'photos' %}active{% endif %}"
            role="tab"
            aria-selected="{% if media_filter == 'photos' %}true{% else %}false{% endif %}">
             <i class="fas fa-image"></i> Photos
         </a>
-        <a href="{% url 'prompts:home' %}?media=videos{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+        <a href="{% url 'prompts:home' %}?media=videos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
            class="media-tab {% if media_filter == 'videos' %}active{% endif %}"
            role="tab"
            aria-selected="{% if media_filter == 'videos' %}true{% else %}false{% endif %}">
@@ -221,6 +461,64 @@
 </div>
 {% else %}
 <!-- No results message - Outside masonry container -->
+{% if sort_by == 'following' and following_count == 0 %}
+<!-- Special empty state: User follows no one -->
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+    </div>
+    <h3 class="empty-state-title">Start following creators</h3>
+    <p class="empty-state-text">
+        Follow your favorite prompt creators to see their latest work here.
+        Discover trending prompts to find creators you'll love.
+    </p>
+    <a href="{% url 'prompts:home' %}?sort=trending" class="empty-state-btn">
+        Browse Trending Prompts
+    </a>
+</div>
+{% elif sort_by == 'following' %}
+<!-- User follows people but no prompts from them -->
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+    </div>
+    <h3 class="empty-state-title">No prompts yet</h3>
+    <p class="empty-state-text">
+        The creators you follow haven't shared any prompts yet.
+        Check back later or discover new creators.
+    </p>
+    <a href="{% url 'prompts:home' %}?sort=trending" class="empty-state-btn">
+        Browse Trending Prompts
+    </a>
+</div>
+{% elif sort_by == 'trending' %}
+<!-- No trending prompts in last 7 days -->
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+        </svg>
+    </div>
+    <h3 class="empty-state-title">No trending prompts</h3>
+    <p class="empty-state-text">
+        There are no trending prompts from the last 7 days.
+        Browse all new prompts instead.
+    </p>
+    <a href="{% url 'prompts:home' %}?sort=new" class="empty-state-btn">
+        Browse New Prompts
+    </a>
+</div>
+{% else %}
+<!-- Generic empty state -->
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-6 text-center py-5">
@@ -229,6 +527,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endif %}
 
 <!-- Sticky Save Panel (only visible to staff when changes are made) -->
@@ -1320,5 +1619,42 @@ function applyOrderDisplayState() {
         display.style.display = orderDisplayVisible ? 'block' : 'none';
     });
 }
+
+// ============================================
+// SORT DROPDOWN FUNCTIONALITY (Phase G)
+// ============================================
+(function() {
+    'use strict';
+
+    const dropdown = document.getElementById('sortDropdown');
+    const dropdownBtn = document.getElementById('sortDropdownBtn');
+
+    if (!dropdown || !dropdownBtn) return;
+
+    // Toggle dropdown on button click
+    dropdownBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+        const isOpen = dropdown.classList.contains('open');
+        dropdownBtn.setAttribute('aria-expanded', isOpen);
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('open');
+            dropdownBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Close dropdown on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dropdown.classList.contains('open')) {
+            dropdown.classList.remove('open');
+            dropdownBtn.setAttribute('aria-expanded', 'false');
+            dropdownBtn.focus();
+        }
+    });
+})();
 </script>
 {% endblock %}

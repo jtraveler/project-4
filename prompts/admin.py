@@ -6,7 +6,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.shortcuts import redirect
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView
 
 
 @admin.register(Prompt)
@@ -1215,11 +1215,42 @@ def trash_dashboard(request):
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):
     """Admin interface for site-wide settings (singleton)."""
-    list_display = ('__str__', 'auto_approve_comments')
+    list_display = (
+        '__str__',
+        'auto_approve_comments',
+        'trending_recency_hours',
+        'view_count_visibility'
+    )
     fieldsets = (
         ('Comment Settings', {
             'fields': ('auto_approve_comments',),
             'description': 'Control how comments are handled on the site.'
+        }),
+        ('Trending Algorithm', {
+            'fields': (
+                'trending_like_weight',
+                'trending_comment_weight',
+                'trending_view_weight',
+                'trending_recency_hours',
+                'trending_gravity',
+            ),
+            'description': (
+                'Configure the trending algorithm weights. '
+                'Higher weights = more influence on trending score. '
+                'Recency hours defines the "recent engagement" window. '
+                'Gravity controls how quickly old content loses trending status.'
+            ),
+            'classes': ('collapse',),  # Collapsible for power users
+        }),
+        ('View Count Visibility', {
+            'fields': ('view_count_visibility',),
+            'description': (
+                'Control who can see view counts on prompts. '
+                'Admin: Only staff users. '
+                'Author: Admin + the prompt author. '
+                'Premium: Admin + premium subscribers. '
+                'Public: Everyone can see view counts.'
+            ),
         }),
     )
 
@@ -1229,6 +1260,32 @@ class SiteSettingsAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         # Prevent deletion of settings
+        return False
+
+
+@admin.register(PromptView)
+class PromptViewAdmin(admin.ModelAdmin):
+    """Admin interface for viewing prompt views (read-only analytics)."""
+    list_display = ('prompt', 'user', 'session_display', 'viewed_at')
+    list_filter = ('viewed_at',)
+    search_fields = ('prompt__title', 'user__username')
+    readonly_fields = ('prompt', 'user', 'session_key', 'ip_hash', 'viewed_at')
+    ordering = ('-viewed_at',)
+    date_hierarchy = 'viewed_at'
+
+    def session_display(self, obj):
+        """Display truncated session key for anonymous users."""
+        if obj.user:
+            return '-'  # User is identified
+        return obj.session_key[:8] + '...' if obj.session_key else '-'
+    session_display.short_description = 'Session'
+
+    def has_add_permission(self, request):
+        # Views are recorded automatically, not manually added
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Views should be read-only
         return False
 
 

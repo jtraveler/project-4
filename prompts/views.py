@@ -274,14 +274,33 @@ class PromptList(generic.ListView):
                 )
             ).order_by('-created_on')
         elif sort_by == 'trending':
-            # Trending: Show ALL prompts with engaged recent content first
-            # 1. Trending items (last 7 days with engagement) sorted by score
-            # 2. Then ALL other prompts sorted by newest
-            from django.db.models import Case, When, Value, IntegerField
+            # Trending: Enhanced algorithm with configurable weights (Phase G Part B)
+            # Uses SiteSettings for weights, includes view counts, supports engagement velocity
+            from django.db.models import Case, When, Value, IntegerField, FloatField, F
+            from django.db.models.functions import Coalesce, Greatest
 
+            # Get trending configuration from SiteSettings
+            try:
+                from .models import SiteSettings
+                settings = SiteSettings.objects.first()
+                if settings:
+                    like_weight = float(settings.trending_like_weight)
+                    comment_weight = float(settings.trending_comment_weight)
+                    view_weight = float(settings.trending_view_weight)
+                    recency_hours = settings.trending_recency_hours
+                    gravity = float(settings.trending_gravity)
+                else:
+                    # Defaults if no SiteSettings exists
+                    like_weight, comment_weight, view_weight = 3.0, 5.0, 0.1
+                    recency_hours, gravity = 48, 1.5
+            except Exception:
+                like_weight, comment_weight, view_weight = 3.0, 5.0, 0.1
+                recency_hours, gravity = 48, 1.5
+
+            recency_cutoff = timezone.now() - timedelta(hours=recency_hours)
             week_ago = timezone.now() - timedelta(days=7)
 
-            # Annotate ALL prompts with engagement score and trending flag
+            # Annotate ALL prompts with weighted engagement score
             queryset = queryset.annotate(
                 likes_count=Count('likes', distinct=True),
                 comments_count=Count(
@@ -289,18 +308,35 @@ class PromptList(generic.ListView):
                     filter=Q(comments__approved=True),
                     distinct=True
                 ),
-                engagement_score=Count('likes', distinct=True) + Count(
+                views_count=Count('views', distinct=True),
+                # Recent engagement: comments/views within recency window
+                recent_comments=Count(
                     'comments',
-                    filter=Q(comments__approved=True),
+                    filter=Q(comments__approved=True, comments__created_on__gte=recency_cutoff),
                     distinct=True
                 ),
-                # Flag: 1 if posted in last 7 days AND has engagement, else 0
-                # Uses engagement_score > 0 to check for actual engagement
-                # (M2M fields like likes can't use __isnull correctly)
+                recent_views=Count(
+                    'views',
+                    filter=Q(views__viewed_at__gte=recency_cutoff),
+                    distinct=True
+                ),
+                # Weighted engagement score (configurable via admin)
+                engagement_score=(
+                    F('likes_count') * Value(like_weight, output_field=FloatField()) +
+                    F('comments_count') * Value(comment_weight, output_field=FloatField()) +
+                    F('views_count') * Value(view_weight, output_field=FloatField())
+                ),
+                # Recent engagement velocity (allows old content to trend if getting new engagement)
+                recent_engagement=(
+                    F('recent_comments') * Value(comment_weight, output_field=FloatField()) +
+                    F('recent_views') * Value(view_weight, output_field=FloatField())
+                ),
+                # Flag: 1 if posted in last 7 days AND has engagement, OR has recent engagement
+                # Engagement velocity: old prompts with recent activity can still trend
                 is_trending=Case(
                     When(
-                        created_on__gte=week_ago,
-                        engagement_score__gt=0,
+                        Q(created_on__gte=week_ago, engagement_score__gt=0) |
+                        Q(recent_engagement__gt=0),
                         then=Value(1)
                     ),
                     default=Value(0),
@@ -308,7 +344,8 @@ class PromptList(generic.ListView):
                 )
             ).order_by(
                 '-is_trending',       # Trending items first (1 before 0)
-                '-engagement_score',  # Then by engagement
+                '-engagement_score',  # Then by total engagement score
+                '-recent_engagement', # Then by recent engagement velocity
                 '-created_on'         # Then by newest
             )
         elif sort_by == 'new':
@@ -361,6 +398,28 @@ class PromptList(generic.ListView):
         # Add admin ordering controls context
         if self.request.user.is_staff:
             context['show_admin_controls'] = True
+
+        # View count visibility (Phase G Part B)
+        # Determines if view overlay should be shown on prompt cards
+        try:
+            from .models import SiteSettings
+            settings = SiteSettings.objects.first()
+            visibility = settings.view_count_visibility if settings else 'admin'
+        except Exception:
+            visibility = 'admin'
+
+        user = self.request.user
+        if user.is_authenticated and user.is_staff:
+            context['can_see_views'] = True
+        elif visibility == 'public':
+            context['can_see_views'] = True
+        elif visibility == 'premium' and user.is_authenticated and hasattr(user, 'is_premium') and user.is_premium:
+            context['can_see_views'] = True
+        else:
+            context['can_see_views'] = False
+
+        # Store visibility setting for author-specific checks in template
+        context['view_visibility'] = visibility
 
         return context
 
@@ -581,6 +640,20 @@ def prompt_detail(request, slug):
     if request.user.is_authenticated:
         liked = request.user in prompt.likes.all()
 
+    # Record view (Phase G Part B) - only for published, non-deleted prompts
+    view_created = False
+    if prompt.status == 1 and prompt.deleted_at is None:
+        try:
+            from .models import PromptView
+            _, view_created = PromptView.record_view(prompt, request)
+        except Exception as e:
+            # Don't fail the page load if view tracking fails
+            logger.warning(f"Failed to record view for prompt {slug}: {e}")
+
+    # Get view count and visibility for template
+    view_count = prompt.get_view_count()
+    can_see_views = prompt.can_see_view_count(request.user)
+
     end_time = time.time()
     logger.warning(
         f"DEBUG: prompt_detail view took {end_time - start_time:.3f} seconds"
@@ -599,6 +672,8 @@ def prompt_detail(request, slug):
             "comment_form": comment_form,
             "number_of_likes": prompt.likes.count(),
             "prompt_is_liked": liked,
+            "view_count": view_count,
+            "can_see_views": can_see_views,
         },
     )
 

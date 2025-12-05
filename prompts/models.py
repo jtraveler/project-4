@@ -984,6 +984,101 @@ class Prompt(models.Model):
             critical_flags.extend(log.flags.all())
         return critical_flags
 
+    # View tracking helper methods (Phase G Part B)
+    def get_view_count(self):
+        """
+        Get total unique view count for this prompt.
+
+        Returns:
+            int: Total number of unique views (deduplicated by user/session)
+        """
+        return self.views.count()
+
+    def get_recent_engagement(self, hours=None):
+        """
+        Get engagement metrics for a recent period (for trending calculation).
+
+        Uses SiteSettings.trending_recency_hours if hours not specified.
+
+        Args:
+            hours (int, optional): Hours to look back. Defaults to SiteSettings value.
+
+        Returns:
+            dict: Dictionary with likes, comments, views counts for the period
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Q
+
+        # Get hours from SiteSettings if not specified
+        if hours is None:
+            try:
+                settings = SiteSettings.objects.first()
+                hours = settings.trending_recency_hours if settings else 48
+            except Exception:
+                hours = 48
+
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        # Count recent likes (likes don't have timestamps, so count all)
+        likes_count = self.likes.count()
+
+        # Count recent approved comments
+        comments_count = self.comments.filter(
+            approved=True,
+            created_on__gte=cutoff
+        ).count()
+
+        # Count recent views
+        views_count = self.views.filter(viewed_at__gte=cutoff).count()
+
+        return {
+            'likes': likes_count,
+            'comments': comments_count,
+            'views': views_count,
+            'total': likes_count + comments_count + views_count
+        }
+
+    def can_see_view_count(self, user):
+        """
+        Check if a user can see the view count based on SiteSettings.
+
+        Visibility levels (from SiteSettings.view_count_visibility):
+        - 'admin': Only staff/superusers
+        - 'author': Admin + prompt author
+        - 'premium': Admin + premium users
+        - 'public': Everyone
+
+        Args:
+            user: User instance or AnonymousUser
+
+        Returns:
+            bool: True if user can see view count
+        """
+        try:
+            settings = SiteSettings.objects.first()
+            visibility = settings.view_count_visibility if settings else 'admin'
+        except Exception:
+            visibility = 'admin'
+
+        # Admin always can see
+        if user and hasattr(user, 'is_staff') and user.is_staff:
+            return True
+
+        if visibility == 'admin':
+            return False
+
+        if visibility == 'author':
+            return user and user.is_authenticated and user == self.author
+
+        if visibility == 'premium':
+            return user and hasattr(user, 'is_premium') and user.is_premium
+
+        if visibility == 'public':
+            return True
+
+        return False
+
 
 class DeletedPrompt(models.Model):
     """
@@ -1660,14 +1755,69 @@ class SiteSettings(models.Model):
         auto_approve_comments (BooleanField): If True, new comments are
             automatically approved. If False, require admin approval.
 
+    Trending Algorithm Fields (Phase G Part B):
+        trending_like_weight: Points per like
+        trending_comment_weight: Points per comment
+        trending_view_weight: Points per view
+        trending_recency_hours: Hours for "recent" engagement window
+        trending_gravity: Time decay strength
+
+    View Visibility:
+        view_count_visibility: Controls who can see view counts
+
     Usage:
         settings = SiteSettings.get_settings()
         if settings.auto_approve_comments:
             comment.approved = True
     """
+    # === COMMENT SETTINGS ===
     auto_approve_comments = models.BooleanField(
         default=True,
         help_text="Automatically approve new comments (disable for manual moderation)"
+    )
+
+    # === TRENDING ALGORITHM CONFIGURATION ===
+    trending_like_weight = models.DecimalField(
+        default=3.0,
+        max_digits=4,
+        decimal_places=1,
+        help_text="Points per like (default: 3.0)"
+    )
+    trending_comment_weight = models.DecimalField(
+        default=5.0,
+        max_digits=4,
+        decimal_places=1,
+        help_text="Points per comment (default: 5.0)"
+    )
+    trending_view_weight = models.DecimalField(
+        default=0.1,
+        max_digits=4,
+        decimal_places=2,
+        help_text="Points per view (default: 0.1)"
+    )
+    trending_recency_hours = models.PositiveIntegerField(
+        default=48,
+        help_text="Hours to consider for 'recent' engagement velocity (default: 48)"
+    )
+    trending_gravity = models.DecimalField(
+        default=1.5,
+        max_digits=3,
+        decimal_places=1,
+        help_text="Time decay strength - higher = faster decay (default: 1.5)"
+    )
+
+    # === VIEW VISIBILITY CONFIGURATION ===
+    VIEW_VISIBILITY_CHOICES = [
+        ('admin', 'Admin Only'),
+        ('author', 'Admin + Prompt Author'),
+        ('premium', 'Admin + Premium Users'),
+        ('public', 'Everyone (Public)'),
+    ]
+    view_count_visibility = models.CharField(
+        max_length=10,
+        choices=VIEW_VISIBILITY_CHOICES,
+        default='admin',
+        help_text="Who can see view counts on prompts"
     )
 
     class Meta:
@@ -1692,3 +1842,98 @@ class SiteSettings(models.Model):
             settings, _ = cls.objects.get_or_create(pk=1)
             cache.set('site_settings', settings, 3600)  # Cache for 1 hour
         return settings
+
+
+class PromptView(models.Model):
+    """
+    Track unique views per prompt with deduplication.
+
+    Deduplication Strategy:
+    - Authenticated users: One view per user per prompt (dedupe by user_id)
+    - Anonymous users: One view per session per prompt (dedupe by session_key)
+    - Additional IP hash tracking for analytics/abuse detection
+
+    Usage:
+        # Record a view
+        PromptView.record_view(prompt, request)
+
+        # Get view count
+        prompt.views.count()
+
+        # Get recent views (for trending)
+        prompt.get_recent_views_count(hours=48)
+    """
+    prompt = models.ForeignKey(
+        'Prompt',
+        on_delete=models.CASCADE,
+        related_name='views'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='prompt_views'
+    )
+    session_key = models.CharField(
+        max_length=40,
+        blank=True,
+        default='',
+        help_text="Session key for anonymous users"
+    )
+    ip_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        help_text="SHA-256 hash of IP for analytics (not stored raw for privacy)"
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Prompt View"
+        verbose_name_plural = "Prompt Views"
+        indexes = [
+            models.Index(fields=['prompt', 'viewed_at']),
+            models.Index(fields=['prompt', 'user']),
+            models.Index(fields=['prompt', 'session_key']),
+        ]
+
+    def __str__(self):
+        viewer = self.user.username if self.user else f"anon:{self.session_key[:8]}"
+        return f"View: {self.prompt.title[:30]} by {viewer}"
+
+    @classmethod
+    def record_view(cls, prompt, request):
+        """
+        Record a view for a prompt, with deduplication.
+
+        Returns:
+            tuple: (view_object, created) - created is True if new view recorded
+        """
+        from .views import get_client_ip  # Reuse existing IP detection
+
+        # Get IP hash for analytics
+        ip = get_client_ip(request)
+        ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+
+        if request.user.is_authenticated:
+            # Authenticated user: dedupe by user
+            view, created = cls.objects.get_or_create(
+                prompt=prompt,
+                user=request.user,
+                defaults={'ip_hash': ip_hash}
+            )
+        else:
+            # Anonymous user: dedupe by session
+            if not request.session.session_key:
+                request.session.create()
+            session_key = request.session.session_key
+
+            view, created = cls.objects.get_or_create(
+                prompt=prompt,
+                session_key=session_key,
+                user=None,
+                defaults={'ip_hash': ip_hash}
+            )
+
+        return view, created

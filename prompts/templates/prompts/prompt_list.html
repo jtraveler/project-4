@@ -50,6 +50,11 @@
 
 <!-- Media Filter Tabs (Phase E) -->
 <style>
+/* Smooth scroll for anchor navigation */
+html {
+    scroll-behavior: smooth;
+}
+
 .media-filter-container {
     background: white;
     border-bottom: 1px solid #e5e7eb;
@@ -514,8 +519,8 @@
 
 <!-- Check if we have prompts to show -->
 {% if prompt_list %}
-<!-- Optimized masonry grid -->
-<div class="masonry-container">
+<!-- Optimized masonry grid - browse-prompts anchor for smooth scroll navigation -->
+<div id="browse-prompts" class="masonry-container">
     <div class="masonry-wrapper">
         <div class="masonry-grid" id="masonry-grid">
             <!-- Columns will be created by JavaScript -->
@@ -1071,12 +1076,25 @@ function initVideoObserver() {
             section.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const promptSlug = this.getAttribute('data-prompt-slug');
                 const heartIcon = this.querySelector('i');
                 const likeCount = this.querySelector('.like-count');
                 const likePlural = this.querySelector('.like-plural');
-                
+
+                // Store original state for potential rollback
+                const originalCount = parseInt(likeCount.textContent) || 0;
+                const wasLiked = heartIcon.classList.contains('fas');
+
+                // Optimistic UI update - immediately show the change
+                const newLiked = !wasLiked;
+                const newCount = newLiked ? originalCount + 1 : originalCount - 1;
+
+                heartIcon.className = newLiked ? 'fas fa-heart me-1' : 'far fa-heart me-1';
+                heartIcon.style.color = 'white';
+                likeCount.textContent = newCount;
+                likePlural.textContent = newCount === 1 ? '' : 's';
+
                 fetch('/prompt/' + promptSlug + '/like/', {
                     method: 'POST',
                     headers: {
@@ -1085,16 +1103,23 @@ function initVideoObserver() {
                         'Content-Type': 'application/json',
                     },
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('Request failed');
+                    return response.json();
+                })
                 .then(data => {
+                    // Sync with server's authoritative count (handles race conditions)
                     likeCount.textContent = data.like_count;
                     likePlural.textContent = data.like_count === 1 ? '' : 's';
                     heartIcon.className = data.liked ? 'fas fa-heart me-1' : 'far fa-heart me-1';
-                    heartIcon.style.color = 'white';
                 })
                 .catch(error => {
+                    // Rollback to original state on error
                     console.error('Error:', error);
-                    alert('Something went wrong. Please try again.');
+                    heartIcon.className = wasLiked ? 'fas fa-heart me-1' : 'far fa-heart me-1';
+                    heartIcon.style.color = 'white';
+                    likeCount.textContent = originalCount;
+                    likePlural.textContent = originalCount === 1 ? '' : 's';
                 });
             });
             

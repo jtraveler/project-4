@@ -6,7 +6,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.shortcuts import redirect
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings
 
 
 @admin.register(Prompt)
@@ -1210,6 +1210,26 @@ def trash_dashboard(request):
     })
 
     return render(request, 'admin/trash_dashboard.html', context)
+
+
+@admin.register(SiteSettings)
+class SiteSettingsAdmin(admin.ModelAdmin):
+    """Admin interface for site-wide settings (singleton)."""
+    list_display = ('__str__', 'auto_approve_comments')
+    fieldsets = (
+        ('Comment Settings', {
+            'fields': ('auto_approve_comments',),
+            'description': 'Control how comments are handled on the site.'
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # Only allow one instance (singleton)
+        return not SiteSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of settings
+        return False
 
 
 # Set custom admin index template

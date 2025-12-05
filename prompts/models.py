@@ -1647,3 +1647,48 @@ class Follow(models.Model):
         cache.delete(f'following_count_{self.follower.id}')
         cache.delete(f'followers_count_{self.following.id}')
         super().delete(*args, **kwargs)
+
+
+class SiteSettings(models.Model):
+    """
+    Singleton model for site-wide configuration settings.
+
+    Only one instance should exist, managed via get_settings() class method.
+    Provides admin-configurable toggles for site behavior.
+
+    Attributes:
+        auto_approve_comments (BooleanField): If True, new comments are
+            automatically approved. If False, require admin approval.
+
+    Usage:
+        settings = SiteSettings.get_settings()
+        if settings.auto_approve_comments:
+            comment.approved = True
+    """
+    auto_approve_comments = models.BooleanField(
+        default=True,
+        help_text="Automatically approve new comments (disable for manual moderation)"
+    )
+
+    class Meta:
+        verbose_name = "Site Settings"
+        verbose_name_plural = "Site Settings"
+
+    def __str__(self):
+        return "Site Settings"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists (singleton pattern)
+        self.pk = 1
+        super().save(*args, **kwargs)
+        # Clear cached settings
+        cache.delete('site_settings')
+
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton settings instance."""
+        settings = cache.get('site_settings')
+        if settings is None:
+            settings, _ = cls.objects.get_or_create(pk=1)
+            cache.set('site_settings', settings, 3600)  # Cache for 1 hour
+        return settings

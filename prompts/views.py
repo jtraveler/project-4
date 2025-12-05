@@ -274,23 +274,40 @@ class PromptList(generic.ListView):
                 )
             ).order_by('-created_on')
         elif sort_by == 'trending':
-            # Trending: Last 7 days, sorted by engagement (likes + comments)
-            week_ago = timezone.now() - timedelta(days=7)
-            trending_queryset = queryset.filter(created_on__gte=week_ago).annotate(
-                likes_count=Count('likes', distinct=True),
-                comments_count=Count('comments', filter=Q(comments__approved=True), distinct=True),
-                engagement_score=Count('likes', distinct=True) + Count('comments', filter=Q(comments__approved=True), distinct=True)
-            ).order_by('-engagement_score', '-created_on')
+            # Trending: Show ALL prompts with engaged recent content first
+            # 1. Trending items (last 7 days with engagement) sorted by score
+            # 2. Then ALL other prompts sorted by newest
+            from django.db.models import Case, When, Value, IntegerField
 
-            # Fallback: If less than TRENDING_MINIMUM items, show popular (all time)
-            if trending_queryset.count() < self.TRENDING_MINIMUM:
-                queryset = queryset.annotate(
-                    likes_count=Count('likes', distinct=True),
-                    comments_count=Count('comments', filter=Q(comments__approved=True), distinct=True),
-                    engagement_score=Count('likes', distinct=True) + Count('comments', filter=Q(comments__approved=True), distinct=True)
-                ).order_by('-engagement_score', '-created_on')
-            else:
-                queryset = trending_queryset
+            week_ago = timezone.now() - timedelta(days=7)
+
+            # Annotate ALL prompts with engagement score and trending flag
+            queryset = queryset.annotate(
+                likes_count=Count('likes', distinct=True),
+                comments_count=Count(
+                    'comments',
+                    filter=Q(comments__approved=True),
+                    distinct=True
+                ),
+                engagement_score=Count('likes', distinct=True) + Count(
+                    'comments',
+                    filter=Q(comments__approved=True),
+                    distinct=True
+                ),
+                # Flag: 1 if posted in last 7 days with engagement, else 0
+                is_trending=Case(
+                    When(
+                        created_on__gte=week_ago,
+                        then=Value(1)
+                    ),
+                    default=Value(0),
+                    output_field=IntegerField()
+                )
+            ).order_by(
+                '-is_trending',       # Trending items first (1 before 0)
+                '-engagement_score',  # Then by engagement
+                '-created_on'         # Then by newest
+            )
         elif sort_by == 'new':
             # Most recent first
             queryset = queryset.order_by('-created_on')
@@ -528,15 +545,27 @@ def prompt_detail(request, slug):
             comment = comment_form.save(commit=False)
             comment.author = request.user
             comment.prompt = prompt
+
+            # Check site settings for auto-approve
+            from .models import SiteSettings
+            site_settings = SiteSettings.get_settings()
+            comment.approved = site_settings.auto_approve_comments
+
             comment.save()
 
             # Clear cache when new comment is added
             cache.delete(cache_key)
 
-            messages.add_message(
-                request, messages.SUCCESS,
-                'Comment submitted and awaiting approval'
-            )
+            if comment.approved:
+                messages.add_message(
+                    request, messages.SUCCESS,
+                    'Comment posted successfully!'
+                )
+            else:
+                messages.add_message(
+                    request, messages.SUCCESS,
+                    'Comment submitted and awaiting approval'
+                )
             return HttpResponseRedirect(request.path_info)
     else:
         comment_form = CommentForm()

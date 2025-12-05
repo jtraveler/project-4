@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** November 30, 2025
-**Project Status:** Pre-Launch Development - Phase E Complete, Phase F Complete, Performance Optimizations Complete, Draft Mode System Complete, CSS Cleanup Phase 1 Complete, Phase G Ready
+**Last Updated:** December 5, 2025
+**Project Status:** Pre-Launch Development - Phase E Complete, Phase F Complete, Performance Optimizations Complete, Draft Mode System Complete, CSS Cleanup Phase 1 Complete, Phase G Part A Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -4055,120 +4055,163 @@ static/css/
 
 ---
 
-## 📋 Phase G: Homepage Sorting & Social Features
+## 📋 Phase G: Homepage Tabs & Sorting - December 5, 2025
 
-**Status:** Part A IN PROGRESS (December 1, 2025)
-**Priority:** HIGH - Current development focus
-**Estimated Duration:** 3-4 days total
-
-### Phase G Overview
-
-Phase G implements homepage sorting controls and social feed features in multiple parts:
-
-| Part | Feature | Status | Duration |
-|------|---------|--------|----------|
-| **Part A** | Homepage Tabs & Sorting Dropdown | 🔄 IN PROGRESS | 1-2 days |
-| **Part B** | Following Feed Integration | 📋 Planned | 1 day |
-| **Part C** | User Discovery Features | 📋 Planned | 1 day |
+**Status:** ✅ PART A COMPLETE | 🔄 PART B PLANNED
+**Session Chat:** https://claude.ai/chat/07791520-02d8-4592-a60a-443249906759
+**Commits:** 6
 
 ---
 
-### Phase G Part A: Homepage Tabs & Sorting (Current)
+### Overview
 
-**Implementation Date:** December 1, 2025
-**Status:** Implementation complete, pending validation
+Implemented Pexels-style homepage filtering system with tab navigation and sorting dropdown, enabling users to filter content by type (Home/All/Photos/Videos) and sort by engagement (Trending/New/Following).
+
+---
+
+### Part A: Homepage Tabs & Sorting ✅ COMPLETE
 
 #### Features Implemented
 
-**1. Pexels-Style Tab Navigation (LEFT side)**
-- **Home** tab: Shows all prompts (default)
-- **All** tab: Same as Home (future: may include followed users)
-- **Photos** tab: Filter to image prompts only
-- **Videos** tab: Filter to video prompts only
-- Dark pill styling for active tab
+**Tab Navigation (LEFT side):**
+- Home - All content with trending algorithm (default)
+- All - All content chronologically
+- Photos - Photos only
+- Videos - Videos only
+- Pexels-style dark pill (#1a1a1a) for active tab
+- ARIA accessibility (role="tablist", aria-selected)
 
-**2. Sort Dropdown (RIGHT side)**
-- **Trending**: Engagement-based (likes + comments, last 7 days)
-- **New**: Chronological (most recent first)
-- **Following**: Content from followed users (requires login)
+**Sort Dropdown (RIGHT side):**
+- Trending - Engagement score (likes + comments), recent content prioritized
+- New - Most recent first
+- Following - Prompts from followed users only (authenticated)
+- Checkmark indicator on active option
 
-**3. Trending Algorithm with Fallback**
-- Primary: Engagement score = likes + comments (last 7 days)
-- Fallback: If < 20 trending items, show popular (all time)
-- Constant: `TRENDING_MINIMUM = 20`
+**Trending Algorithm:**
+- `engagement_score` = likes count + approved comments count
+- `is_trending` flag prioritizes recent engaged content
+- Shows ALL prompts (trending first, then rest by newest)
+- No artificial limits - pagination handles naturally
 
-**4. URL Parameters**
-- `?tab=home|all|photos|videos` - Media type filter
-- `?sort=trending|new|following` - Sort order
-- Combined: `?tab=photos&sort=new` - Photos sorted by new
+**Like Button Optimistic UI:**
+- Instant visual feedback on click
+- Heart icon and count update immediately
+- Server sync in background
+- Graceful rollback on error
 
-#### Technical Implementation
+**Auto-Approve Comments:**
+- SiteSettings singleton model added
+- `auto_approve_comments` toggle (default: True)
+- Admin can disable for manual moderation
+- Different success messages based on approval state
 
-**Backend (prompts/views.py - PromptList class):**
-```python
-# Constants
-VALID_HOMEPAGE_SORTS = {'trending', 'new', 'following'}
-VALID_HOMEPAGE_TABS = {'home', 'all', 'photos', 'videos'}
-TRENDING_MINIMUM = 20
+**Navigation Improvements:**
+- "Browse Prompts" smooth scrolls to prompts section
+- `scroll-behavior: smooth` CSS rule
+- `id="browse-prompts"` anchor on masonry container
 
-# Tab filtering
-if tab == 'photos':
-    queryset = queryset.filter(featured_image__isnull=False)
-elif tab == 'videos':
-    queryset = queryset.filter(featured_video__isnull=False)
+#### Commits (6 total)
 
-# Trending with engagement score
-engagement_score = Count('likes') + Count('comments', filter=Q(comments__approved=True))
-```
-
-**Frontend (prompt_list.html):**
-- `.homepage-filter-bar`: Flexbox container (space-between)
-- `.homepage-tabs`: Left-aligned tab navigation
-- `.homepage-tab`: Pill-shaped tabs (50px border-radius)
-- `.homepage-tab.active`: Dark background (#1a1a1a), white text
-- `.sort-dropdown`: Right-aligned sorting dropdown
+| Commit | Description |
+|--------|-------------|
+| `09b51ed` | fix(phase-g): Homepage fixes round 2 - trending, likes, comments, scroll |
+| `3f03a48` | fix(homepage): Add missing context_object_name to PromptList view |
+| `a7d6b81` | feat(phase-g): Implement homepage tabs and sorting dropdown (Part A) |
+| `b94f16f` | feat(homepage): Add sorting dropdown with Trending/New/Following filters |
+| `d39483b` | docs: Update CLAUDE.md with CSS cleanup status and Phase G roadmap |
+| `ee32ee5` | docs: Add Trash UX Overhaul session documentation to CLAUDE.md |
 
 #### Files Modified
 
-1. `prompts/views.py` - PromptList class enhanced with:
-   - Tab parameter handling (replacing old media parameter)
-   - Engagement score calculation
-   - Trending fallback logic
-   - Context data for current_tab
+| File | Changes |
+|------|---------|
+| `prompts/views.py` | PromptList with tab/sort logic, trending algorithm, comment auto-approve |
+| `prompts/models.py` | SiteSettings singleton model |
+| `prompts/admin.py` | SiteSettingsAdmin interface |
+| `prompts/templates/prompts/prompt_list.html` | Tabs, dropdown, optimistic like, smooth scroll (~150 lines CSS) |
+| `prompts/migrations/0035_sitesettings.py` | SiteSettings migration |
 
-2. `prompts/templates/prompts/prompt_list.html`:
-   - New CSS for homepage-filter-bar layout
-   - Tab navigation HTML (Home, All, Photos, Videos)
-   - Sort dropdown preserves tab parameter
+#### Bugs Fixed During Implementation
 
-#### Default State
-- Tab: **Home** (shows all content)
-- Sort: **Trending** (engagement-based)
-- URL: `/` or `/?tab=home&sort=trending`
+1. **Grid not loading for Home/All tabs**
+   - Root cause: Missing `context_object_name = 'prompt_list'` in PromptList
+   - Template expected `prompt_list`, Django provided `object_list`
+
+2. **Trending only showing ~20 items**
+   - Root cause: 7-day filter was limiting results
+   - Fix: Show ALL prompts with `is_trending` flag for priority sorting
+
+3. **Sorting bug in ai_generator_category**
+   - Was: `order_by('-created_on', '-created_on')` (duplicate)
+   - Fixed: `order_by('-likes_count', '-created_on')`
+
+#### Agent Validation
+
+| Agent | Rating | Notes |
+|-------|--------|-------|
+| @django-expert | 8.5/10 | Query efficiency approved |
+| @ui-ux-designer | 8.5/10 | Production ready |
+| @code-reviewer | 7.5/10 | Approved with recommendations |
+| **Average** | **8.17/10** | Exceeds 8+ requirement |
 
 ---
 
-### Phase G Part B: Following Feed (Planned)
+### Part B: Views Tracking System 📋 PLANNED
 
-**Prerequisites:**
-- ✅ Follow model exists (Phase F)
-- ✅ Follow/unfollow views working
-- 🔄 Part A implementation
+**Status:** Not started
+**Priority:** Next after Part A testing complete
 
-**Features:**
-- "Following" sort option shows content from followed users
-- Empty state for users not following anyone
-- Empty state for followed users with no content
-- Proper handling for logged-out users
+#### Requirements (Confirmed)
+- Track unique views per prompt detail page
+- Dedupe authenticated users by `user_id`
+- Dedupe anonymous users by cookie/session (not IP for privacy)
+- Admin-only view count overlay on grid thumbnails
+- Future: Include views in trending algorithm
+
+#### Planned Model
+```python
+class PromptView(models.Model):
+    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE, related_name='views')
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    session_key = models.CharField(max_length=40, blank=True)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['prompt', 'user']),
+            models.Index(fields=['prompt', 'session_key']),
+        ]
+```
 
 ---
 
-### Phase G Part C: User Discovery (Planned)
+### Part C: User Discovery (Planned)
 
 **Features:**
 - Suggested users to follow
 - Popular creators section
 - "Users who liked this also follow..." recommendations
+
+---
+
+### Known Issues / Testing Needed
+
+⚠️ **Migration Required:** Run `heroku run python manage.py migrate` for SiteSettings
+
+**Testing Checklist:**
+- [ ] All tab + sort combinations display content correctly
+- [ ] Like button updates instantly
+- [ ] Comments auto-approve
+- [ ] Smooth scroll works
+
+---
+
+### Future Enhancements (From Agent Feedback)
+
+- Add `author__userprofile` to select_related (prevent N+1)
+- Extract parameter validation to helper method (DRY)
+- Move inline CSS to external file
+- Increase inactive tab color contrast (#595959)
 
 ---
 

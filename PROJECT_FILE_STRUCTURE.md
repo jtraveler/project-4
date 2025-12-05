@@ -128,6 +128,10 @@ Database models:
 - **EmailPreferences:** Notification preferences (8 toggles)
 - **PromptReport:** Content reporting system
 - **Comment:** User comments on prompts
+- **SiteSettings:** Singleton model for site-wide configuration (Dec 5, 2025)
+  - `auto_approve_comments` - Toggle for automatic comment approval (default: True)
+  - Admin interface at `/admin/prompts/sitesettings/`
+  - Uses `get_settings()` class method with caching
 - Custom managers (PromptManager for active, all_objects for deleted)
 
 #### `prompts/views.py`

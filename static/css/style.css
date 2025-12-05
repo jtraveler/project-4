@@ -513,7 +513,7 @@ main {
 
 .platform-info {
   color: white;
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 500;
 }
 
@@ -521,19 +521,26 @@ main {
   margin-right: 4px;
 }
 
-/* View Counter - Phase G Part B */
-.view-counter {
+/* View Count Badge - Top Left Corner (Phase G Part B) */
+.view-count-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.75);
   color: white;
-  font-size: 0.85rem;
-  font-weight: 400;
-  margin-left: 16px;
-  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
   align-items: center;
+  gap: 6px;
+  z-index: 5;
+  pointer-events: none;
 }
 
-.view-counter i {
-  opacity: 0.95;
-  margin-right: 4px;
+.view-count-badge i {
+  font-size: 0.75rem;
 }
 
 .heart-counter {

@@ -191,6 +191,14 @@
                 </style>
                 {% endif %}
 
+                {# View Count Badge (Phase G Part B) - Top Left Corner #}
+                {% if can_see_views or view_visibility == 'author' and user == prompt.author %}
+                <div class="view-count-badge">
+                    <i class="fas fa-eye"></i>
+                    <span>{{ prompt.views_count|default:0 }}</span>
+                </div>
+                {% endif %}
+
                 <!-- Overlay with user info, platform, and heart -->
                 <div class="card-overlay">
                     <div class="overlay-top">
@@ -209,15 +217,6 @@
                                 {{ prompt.author }}
                             </a>
                         </span>
-                        {# View Count Overlay (Phase G Part B) - Visibility controlled by SiteSettings #}
-                        {% if can_see_views or view_visibility == 'author' and user == prompt.author %}
-                        <span class="view-counter" title="Total views">
-                            <small>
-                                <i class="fas fa-eye me-1" style="color: white;"></i>
-                                <span>{{ prompt.views_count|default:0 }}</span>
-                            </small>
-                        </span>
-                        {% endif %}
                         <span class="heart-counter">
                             {% if user.is_authenticated %}
                                 <small class="like-section"

@@ -183,7 +183,7 @@ class PromptList(generic.ListView):
         - Custom ordering: Respects manual order field, then creation date
 
     Context variables:
-        object_list: Paginated list of Prompt objects
+        prompt_list: Paginated list of Prompt objects
         current_tag: The tag being filtered (if any)
         search_query: The search term (if any)
 
@@ -191,6 +191,7 @@ class PromptList(generic.ListView):
     URL: / (homepage)
     """
     template_name = "prompts/prompt_list.html"
+    context_object_name = 'prompt_list'  # Required for template to access prompts
     paginate_by = 18
 
     # Valid sort options for homepage (Phase G)

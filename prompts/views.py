@@ -365,10 +365,10 @@ class PromptList(generic.ListView):
         # Apply final distinct (needed for tag/search filters with joins)
         queryset = queryset.distinct()
 
-        # Cache the evaluated result for 5 minutes (only if cacheable)
+        # Cache the evaluated result for 60 seconds (only if cacheable)
         # Force evaluation with list() to cache actual results, not lazy QuerySet
         if use_cache:
-            cache.set(cache_key, list(queryset), 300)
+            cache.set(cache_key, list(queryset), 60)
 
         end_time = time.time()
         logger.debug(

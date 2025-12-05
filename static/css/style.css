@@ -521,6 +521,21 @@ main {
   margin-right: 4px;
 }
 
+/* View Counter - Phase G Part B */
+.view-counter {
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 400;
+  margin-left: 16px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.view-counter i {
+  opacity: 0.95;
+  margin-right: 4px;
+}
+
 .heart-counter {
   color: white;
   font-size: 1rem;

@@ -1853,6 +1853,11 @@ class PromptView(models.Model):
     - Anonymous users: One view per session per prompt (dedupe by session_key)
     - Additional IP hash tracking for analytics/abuse detection
 
+    Security Features (Phase G Part B Fixes):
+    - IP hashing with server-side pepper (via IP_HASH_PEPPER env var)
+    - Rate limiting: 10 views per minute per IP
+    - Bot detection: Filters common bot user-agents
+
     Usage:
         # Record a view
         PromptView.record_view(prompt, request)
@@ -1885,7 +1890,7 @@ class PromptView(models.Model):
         max_length=64,
         blank=True,
         default='',
-        help_text="SHA-256 hash of IP for analytics (not stored raw for privacy)"
+        help_text="SHA-256 hash of IP (with pepper) for analytics"
     )
     viewed_at = models.DateTimeField(auto_now_add=True)
 
@@ -1898,23 +1903,98 @@ class PromptView(models.Model):
             models.Index(fields=['prompt', 'session_key']),
         ]
 
+    # Common bot user-agent patterns to filter (lowercase)
+    BOT_PATTERNS = [
+        'bot', 'crawler', 'spider', 'scraper',
+        'googlebot', 'bingbot', 'slurp', 'duckduckbot',
+        'baiduspider', 'yandexbot', 'sogou', 'exabot',
+        'facebot', 'ia_archiver', 'semrushbot', 'ahrefsbot',
+        'mj12bot', 'dotbot', 'petalbot', 'bytespider',
+        'applebot', 'twitterbot', 'linkedinbot', 'facebookexternalhit',
+        'curl', 'wget', 'python-requests', 'axios', 'node-fetch',
+    ]
+
     def __str__(self):
         viewer = self.user.username if self.user else f"anon:{self.session_key[:8]}"
         return f"View: {self.prompt.title[:30]} by {viewer}"
 
     @classmethod
+    def _hash_ip(cls, ip_address):
+        """
+        Hash IP address with server-side pepper for enhanced privacy.
+
+        The pepper prevents rainbow table attacks on hashed IPs.
+        Falls back to SECRET_KEY prefix if IP_HASH_PEPPER not set.
+        """
+        import os
+        from django.conf import settings
+
+        pepper = os.environ.get('IP_HASH_PEPPER', settings.SECRET_KEY[:16])
+        salted = f"{pepper}:{ip_address}"
+        return hashlib.sha256(salted.encode()).hexdigest()
+
+    @classmethod
+    def _is_rate_limited(cls, ip_hash):
+        """
+        Check if IP has exceeded rate limit (10 views/minute).
+
+        Uses Django cache for rate tracking with 60-second sliding window.
+        Returns True if rate limited, False otherwise.
+        """
+        cache_key = f"view_rate:{ip_hash}"
+        current_count = cache.get(cache_key, 0)
+
+        if current_count >= 10:
+            return True
+
+        # Increment counter with 60-second expiry
+        cache.set(cache_key, current_count + 1, timeout=60)
+        return False
+
+    @classmethod
+    def _is_bot(cls, user_agent):
+        """
+        Detect if request is from a known bot.
+
+        Checks user-agent against common bot patterns.
+        Returns True for bots, False for regular users.
+        """
+        if not user_agent:
+            return True  # No user-agent is suspicious
+
+        ua_lower = user_agent.lower()
+        return any(pattern in ua_lower for pattern in cls.BOT_PATTERNS)
+
+    @classmethod
     def record_view(cls, prompt, request):
         """
-        Record a view for a prompt, with deduplication.
+        Record a view for a prompt, with deduplication, rate limiting, and bot filtering.
+
+        Security Features:
+        - Filters bot traffic based on user-agent
+        - Rate limits to 10 views per minute per IP
+        - Uses peppered IP hashing for privacy
 
         Returns:
             tuple: (view_object, created) - created is True if new view recorded
+                   Returns (None, False) if filtered by bot detection or rate limiting
         """
         from .views import get_client_ip  # Reuse existing IP detection
 
-        # Get IP hash for analytics
+        # Get user-agent for bot detection
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        # Filter bot traffic
+        if cls._is_bot(user_agent):
+            return None, False
+
+        # Get IP and create peppered hash
         ip = get_client_ip(request)
-        ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+        ip_hash = cls._hash_ip(ip)
+
+        # Check rate limit
+        if cls._is_rate_limited(ip_hash):
+            return None, False
 
         if request.user.is_authenticated:
             # Authenticated user: dedupe by user

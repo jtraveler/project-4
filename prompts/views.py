@@ -355,6 +355,13 @@ class PromptList(generic.ListView):
             # Fallback to default ordering (for admin manual ordering)
             queryset = queryset.order_by('order', '-created_on')
 
+        # Ensure views_count is annotated for all sort types (for view overlay display)
+        # The 'trending' sort already annotates this, so only add for other sorts
+        if sort_by != 'trending':
+            queryset = queryset.annotate(
+                views_count=Count('views', distinct=True)
+            )
+
         # Apply final distinct (needed for tag/search filters with joins)
         queryset = queryset.distinct()
 

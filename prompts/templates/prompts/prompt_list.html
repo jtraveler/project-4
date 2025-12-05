@@ -386,25 +386,25 @@ html {
 <div class="homepage-filter-bar">
     <!-- LEFT: Tab Navigation (Pexels-style pills) -->
     <nav class="homepage-tabs" role="tablist" aria-label="Content filter">
-        <a href="{% url 'prompts:home' %}?tab=home{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+        <a href="{% url 'prompts:home' %}?tab=home{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
            class="homepage-tab {% if current_tab == 'home' %}active{% endif %}"
            role="tab"
            aria-selected="{% if current_tab == 'home' %}true{% else %}false{% endif %}">
             Home
         </a>
-        <a href="{% url 'prompts:home' %}?tab=all{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+        <a href="{% url 'prompts:home' %}?tab=all{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
            class="homepage-tab {% if current_tab == 'all' %}active{% endif %}"
            role="tab"
            aria-selected="{% if current_tab == 'all' %}true{% else %}false{% endif %}">
             All
         </a>
-        <a href="{% url 'prompts:home' %}?tab=photos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+        <a href="{% url 'prompts:home' %}?tab=photos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
            class="homepage-tab {% if current_tab == 'photos' %}active{% endif %}"
            role="tab"
            aria-selected="{% if current_tab == 'photos' %}true{% else %}false{% endif %}">
             Photos
         </a>
-        <a href="{% url 'prompts:home' %}?tab=videos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+        <a href="{% url 'prompts:home' %}?tab=videos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
            class="homepage-tab {% if current_tab == 'videos' %}active{% endif %}"
            role="tab"
            aria-selected="{% if current_tab == 'videos' %}true{% else %}false{% endif %}">

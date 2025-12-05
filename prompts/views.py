@@ -294,10 +294,13 @@ class PromptList(generic.ListView):
                     filter=Q(comments__approved=True),
                     distinct=True
                 ),
-                # Flag: 1 if posted in last 7 days with engagement, else 0
+                # Flag: 1 if posted in last 7 days AND has engagement, else 0
+                # Uses engagement_score > 0 to check for actual engagement
+                # (M2M fields like likes can't use __isnull correctly)
                 is_trending=Case(
                     When(
                         created_on__gte=week_ago,
+                        engagement_score__gt=0,
                         then=Value(1)
                     ),
                     default=Value(0),
@@ -546,10 +549,14 @@ def prompt_detail(request, slug):
             comment.author = request.user
             comment.prompt = prompt
 
-            # Check site settings for auto-approve
-            from .models import SiteSettings
-            site_settings = SiteSettings.get_settings()
-            comment.approved = site_settings.auto_approve_comments
+            # Check site settings for auto-approve (with defensive error handling)
+            try:
+                from .models import SiteSettings
+                site_settings = SiteSettings.get_settings()
+                comment.approved = site_settings.auto_approve_comments
+            except Exception:
+                # Fail secure: require moderation if SiteSettings unavailable
+                comment.approved = False
 
             comment.save()
 

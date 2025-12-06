@@ -203,3 +203,32 @@ AI_GENERATORS = {
 VALID_PROMPT_TYPES = ['image', 'video']
 VALID_DATE_FILTERS = ['today', 'week', 'month', 'year']
 VALID_SORT_OPTIONS = ['recent', 'popular', 'trending']
+
+
+# =============================================================================
+# BOT DETECTION PATTERNS (Phase G Part B - View Tracking)
+# =============================================================================
+
+BOT_USER_AGENT_PATTERNS = [
+    # Search engine bots
+    'googlebot', 'bingbot', 'slurp', 'duckduckbot',
+    'baiduspider', 'yandexbot', 'sogou', 'exabot',
+
+    # Social media bots
+    'facebot', 'facebookexternalhit', 'twitterbot', 'linkedinbot',
+
+    # SEO/Analytics bots
+    'semrushbot', 'ahrefsbot', 'mj12bot', 'dotbot', 'petalbot',
+
+    # Archive bots
+    'ia_archiver', 'bytespider', 'applebot',
+
+    # Generic patterns
+    'bot', 'crawler', 'spider', 'scraper',
+
+    # HTTP clients (often used for scraping)
+    'curl', 'wget', 'python-requests', 'axios', 'node-fetch',
+]
+
+# Default rate limit for view tracking (views per minute per IP)
+DEFAULT_VIEW_RATE_LIMIT = 10

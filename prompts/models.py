@@ -12,6 +12,8 @@ import logging
 import hashlib
 import secrets
 
+from .constants import BOT_USER_AGENT_PATTERNS, DEFAULT_VIEW_RATE_LIMIT
+
 logger = logging.getLogger(__name__)
 
 
@@ -1820,6 +1822,12 @@ class SiteSettings(models.Model):
         help_text="Who can see view counts on prompts"
     )
 
+    # === RATE LIMITING CONFIGURATION ===
+    view_rate_limit = models.PositiveIntegerField(
+        default=10,
+        help_text="Maximum views per minute per IP address (default: 10)"
+    )
+
     class Meta:
         verbose_name = "Site Settings"
         verbose_name_plural = "Site Settings"
@@ -1903,16 +1911,8 @@ class PromptView(models.Model):
             models.Index(fields=['prompt', 'session_key']),
         ]
 
-    # Common bot user-agent patterns to filter (lowercase)
-    BOT_PATTERNS = [
-        'bot', 'crawler', 'spider', 'scraper',
-        'googlebot', 'bingbot', 'slurp', 'duckduckbot',
-        'baiduspider', 'yandexbot', 'sogou', 'exabot',
-        'facebot', 'ia_archiver', 'semrushbot', 'ahrefsbot',
-        'mj12bot', 'dotbot', 'petalbot', 'bytespider',
-        'applebot', 'twitterbot', 'linkedinbot', 'facebookexternalhit',
-        'curl', 'wget', 'python-requests', 'axios', 'node-fetch',
-    ]
+    # Bot patterns imported from constants for maintainability
+    # See prompts/constants.py for the full list (BOT_USER_AGENT_PATTERNS)
 
     def __str__(self):
         viewer = self.user.username if self.user else f"anon:{self.session_key[:8]}"
@@ -1936,15 +1936,22 @@ class PromptView(models.Model):
     @classmethod
     def _is_rate_limited(cls, ip_hash):
         """
-        Check if IP has exceeded rate limit (10 views/minute).
+        Check if IP has exceeded rate limit (configurable via SiteSettings).
 
         Uses Django cache for rate tracking with 60-second sliding window.
         Returns True if rate limited, False otherwise.
         """
+        # Get rate limit from SiteSettings, fall back to default constant
+        try:
+            settings = SiteSettings.get_settings()
+            rate_limit = settings.view_rate_limit
+        except Exception:
+            rate_limit = DEFAULT_VIEW_RATE_LIMIT
+
         cache_key = f"view_rate:{ip_hash}"
         current_count = cache.get(cache_key, 0)
 
-        if current_count >= 10:
+        if current_count >= rate_limit:
             return True
 
         # Increment counter with 60-second expiry
@@ -1956,14 +1963,14 @@ class PromptView(models.Model):
         """
         Detect if request is from a known bot.
 
-        Checks user-agent against common bot patterns.
+        Checks user-agent against common bot patterns from constants.
         Returns True for bots, False for regular users.
         """
         if not user_agent:
             return True  # No user-agent is suspicious
 
         ua_lower = user_agent.lower()
-        return any(pattern in ua_lower for pattern in cls.BOT_PATTERNS)
+        return any(pattern in ua_lower for pattern in BOT_USER_AGENT_PATTERNS)
 
     @classmethod
     def record_view(cls, prompt, request):

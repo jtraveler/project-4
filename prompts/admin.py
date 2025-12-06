@@ -1242,14 +1242,13 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             ),
             'classes': ('collapse',),  # Collapsible for power users
         }),
-        ('View Count Visibility', {
-            'fields': ('view_count_visibility',),
+        ('View Count Settings', {
+            'fields': ('view_count_visibility', 'view_rate_limit'),
             'description': (
-                'Control who can see view counts on prompts. '
-                'Admin: Only staff users. '
-                'Author: Admin + the prompt author. '
-                'Premium: Admin + premium subscribers. '
-                'Public: Everyone can see view counts.'
+                'Control view count display and rate limiting. '
+                'Visibility: Admin (staff only), Author (admin + owner), '
+                'Premium (admin + subscribers), Public (everyone). '
+                'Rate limit: Max views per minute per IP to prevent abuse.'
             ),
         }),
     )

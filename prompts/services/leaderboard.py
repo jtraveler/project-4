@@ -1,0 +1,251 @@
+"""
+Leaderboard Service for PromptFinder.
+
+Provides algorithms and caching for community leaderboards:
+- Most Viewed: Users ranked by total views on their content
+- Most Active: Users ranked by activity score (uploads, comments, likes)
+
+Uses 5-minute caching to optimize performance.
+"""
+
+from django.contrib.auth.models import User
+from django.db.models import Count, Q, F, Value, IntegerField
+from django.db.models.functions import Coalesce
+from django.core.cache import cache
+from django.utils import timezone
+from datetime import timedelta
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class LeaderboardService:
+    """Service for leaderboard calculations with caching."""
+
+    CACHE_TTL = 300  # 5 minutes
+    DEFAULT_LIMIT = 25
+
+    @classmethod
+    def get_date_filter(cls, period='week'):
+        """
+        Get date cutoff for time period.
+
+        Args:
+            period: 'week', 'month', or 'all'
+
+        Returns:
+            datetime or None for all-time
+        """
+        now = timezone.now()
+        if period == 'week':
+            return now - timedelta(days=7)
+        elif period == 'month':
+            return now - timedelta(days=30)
+        return None  # All time
+
+    @classmethod
+    def get_most_viewed(cls, period='week', limit=None):
+        """
+        Get users ranked by views on their content.
+
+        Algorithm:
+            Score = SUM(views on all user's prompts)
+
+        Args:
+            period: 'week', 'month', or 'all'
+            limit: Max results (default: 25)
+
+        Returns:
+            List of User objects with total_views annotation
+        """
+        if limit is None:
+            limit = cls.DEFAULT_LIMIT
+
+        cache_key = f'leaderboard_viewed_{period}_{limit}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            logger.debug(f"Leaderboard cache hit: {cache_key}")
+            return cached
+
+        logger.info(f"Leaderboard cache miss: {cache_key}, calculating...")
+
+        date_filter = cls.get_date_filter(period)
+
+        # Build view count filter
+        view_filter = Q(
+            prompts__status=1,
+            prompts__deleted_at__isnull=True
+        )
+
+        if date_filter:
+            view_filter &= Q(prompts__views__viewed_at__gte=date_filter)
+
+        # Build query for users with view counts
+        queryset = User.objects.filter(
+            is_active=True,
+        ).annotate(
+            total_views=Count(
+                'prompts__views',
+                filter=view_filter,
+                distinct=True
+            ),
+            prompt_count=Count(
+                'prompts',
+                filter=Q(
+                    prompts__status=1,
+                    prompts__deleted_at__isnull=True
+                ),
+                distinct=True
+            ),
+            follower_count=Count('follower_set', distinct=True)
+        ).filter(
+            total_views__gt=0
+        ).order_by('-total_views').select_related('userprofile')[:limit]
+
+        result = list(queryset)
+        cache.set(cache_key, result, cls.CACHE_TTL)
+        logger.info(f"Leaderboard cached: {cache_key}, {len(result)} users")
+        return result
+
+    @classmethod
+    def get_most_active(cls, period='week', limit=None):
+        """
+        Get users ranked by activity score.
+
+        Algorithm:
+            Score = (prompts_uploaded * 10) + (comments_made * 2) + (likes_given * 1)
+
+        Args:
+            period: 'week', 'month', or 'all'
+            limit: Max results (default: 25)
+
+        Returns:
+            List of User objects with activity_score annotation
+        """
+        if limit is None:
+            limit = cls.DEFAULT_LIMIT
+
+        cache_key = f'leaderboard_active_{period}_{limit}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            logger.debug(f"Leaderboard cache hit: {cache_key}")
+            return cached
+
+        logger.info(f"Leaderboard cache miss: {cache_key}, calculating...")
+
+        date_filter = cls.get_date_filter(period)
+
+        # Build activity filters
+        prompt_filter = Q(prompts__status=1, prompts__deleted_at__isnull=True)
+        comment_filter = Q(comments__approved=True)
+
+        if date_filter:
+            prompt_filter &= Q(prompts__created_on__gte=date_filter)
+            comment_filter &= Q(comments__created_on__gte=date_filter)
+
+        # Note: likes_given requires tracking who liked what
+        # Using prompt_likes (reverse relation from Prompt.likes M2M)
+        # This counts prompts the user has liked
+        like_filter = Q()
+        if date_filter:
+            # We don't have a timestamp on likes, so for time-filtered
+            # we'll only count uploads and comments for activity
+            pass
+
+        # Build query for users with activity scores
+        queryset = User.objects.filter(
+            is_active=True,
+        ).annotate(
+            uploads_count=Count(
+                'prompts',
+                filter=prompt_filter,
+                distinct=True
+            ),
+            comments_count=Count(
+                'comments',
+                filter=comment_filter,
+                distinct=True
+            ),
+            # Likes given - count of prompts this user has liked
+            # prompt_likes is the related_name from Prompt.likes M2M
+            likes_given_count=Count('prompt_likes', distinct=True),
+            prompt_count=Count(
+                'prompts',
+                filter=Q(
+                    prompts__status=1,
+                    prompts__deleted_at__isnull=True
+                ),
+                distinct=True
+            ),
+            follower_count=Count('follower_set', distinct=True)
+        ).annotate(
+            # Activity score: uploads*10 + comments*2 + likes*1
+            activity_score=F('uploads_count') * 10 + F('comments_count') * 2 + F('likes_given_count')
+        ).filter(
+            activity_score__gt=0
+        ).order_by('-activity_score').select_related('userprofile')[:limit]
+
+        result = list(queryset)
+        cache.set(cache_key, result, cls.CACHE_TTL)
+        logger.info(f"Leaderboard cached: {cache_key}, {len(result)} users")
+        return result
+
+    @classmethod
+    def get_user_thumbnails(cls, user, limit=4):
+        """
+        Get recent prompt thumbnails for a user.
+
+        Args:
+            user: User object
+            limit: Max thumbnails (default: 4)
+
+        Returns:
+            QuerySet of Prompt objects
+        """
+        return user.prompts.filter(
+            status=1,
+            deleted_at__isnull=True
+        ).order_by('-created_on')[:limit]
+
+    @classmethod
+    def get_follow_status_bulk(cls, current_user, target_users):
+        """
+        Check if current user follows each target user.
+
+        Args:
+            current_user: The authenticated user (or None)
+            target_users: List of User objects to check
+
+        Returns:
+            Dict mapping user_id -> is_following (bool)
+        """
+        if not current_user or not current_user.is_authenticated:
+            return {u.id: False for u in target_users}
+
+        from prompts.models import Follow
+
+        target_ids = [u.id for u in target_users]
+        following_ids = set(Follow.objects.filter(
+            follower=current_user,
+            following_id__in=target_ids
+        ).values_list('following_id', flat=True))
+
+        return {u.id: u.id in following_ids for u in target_users}
+
+    @classmethod
+    def invalidate_cache(cls, period=None):
+        """
+        Invalidate leaderboard cache.
+
+        Args:
+            period: Specific period to invalidate, or None for all
+        """
+        periods = [period] if period else ['week', 'month', 'all']
+        limits = [cls.DEFAULT_LIMIT]  # Could add more if needed
+
+        for p in periods:
+            for l in limits:
+                cache.delete(f'leaderboard_viewed_{p}_{l}')
+                cache.delete(f'leaderboard_active_{p}_{l}')
+
+        logger.info(f"Leaderboard cache invalidated for periods: {periods}")

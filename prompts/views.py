@@ -3659,3 +3659,60 @@ def ai_generator_category(request, generator_slug):
     }
 
     return render(request, 'prompts/ai_generator_category.html', context)
+
+
+# =============================================================================
+# LEADERBOARD VIEW (Phase G Part C)
+# =============================================================================
+
+def leaderboard(request):
+    """
+    Community Favorites / Leaderboard page.
+
+    Displays top content creators ranked by:
+    - Most Viewed: Total views on their prompts
+    - Most Active: Activity score (uploads*10 + comments*2 + likes*1)
+
+    URL: /leaderboard/
+    Query params:
+        - tab: 'viewed' (default) or 'active'
+        - period: 'week' (default), 'month', or 'all'
+    """
+    from prompts.services.leaderboard import LeaderboardService
+
+    # Get and validate parameters
+    tab = request.GET.get('tab', 'viewed')
+    period = request.GET.get('period', 'week')
+
+    # Validate inputs (whitelist approach)
+    if tab not in ('viewed', 'active'):
+        tab = 'viewed'
+    if period not in ('week', 'month', 'all'):
+        period = 'week'
+
+    # Get leaderboard data
+    if tab == 'active':
+        creators = LeaderboardService.get_most_active(period=period, limit=25)
+    else:
+        creators = LeaderboardService.get_most_viewed(period=period, limit=25)
+
+    # Get follow status for current user (bulk query)
+    following_status = LeaderboardService.get_follow_status_bulk(request.user, creators)
+
+    # Attach thumbnails and follow status to each creator
+    for creator in creators:
+        creator.thumbnails = LeaderboardService.get_user_thumbnails(creator, limit=4)
+        creator.remaining_count = max(0, creator.prompt_count - 4)
+        creator.is_following = following_status.get(creator.id, False)
+
+    context = {
+        'creators': creators,
+        'current_tab': tab,
+        'current_period': period,
+        'period_choices': [
+            ('week', 'This Week'),
+            ('month', 'This Month'),
+            ('all', 'All Time'),
+        ],
+    }
+    return render(request, 'prompts/leaderboard.html', context)

@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Community Favorites - Top Creators | PromptFinder{% endblock %}
+
+{% block meta_description %}
+Discover the most popular content creators on PromptFinder. See who has the most views, likes, and activity in our AI prompt community.
+{% endblock %}
+
+{% block extra_head %}
+<!-- Schema.org structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Community Favorites - Top Creators",
+  "description": "Discover the most popular content creators on PromptFinder ranked by views and activity.",
+  "url": "{{ request.build_absolute_uri }}",
+  "publisher": {
+    "@type": "Organization",
+    "name": "PromptFinder",
+    "url": "https://promptfinder.net"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="leaderboard-page">
+    <!-- Header -->
+    <div class="leaderboard-header">
+        <h1 class="leaderboard-title">Community Favorites</h1>
+        <p class="leaderboard-subtitle">
+            Members with the most
+            {% if current_tab == 'viewed' %}views{% else %}activity{% endif %}
+            {% if current_period == 'week' %}this week{% elif current_period == 'month' %}this month{% else %}of all time{% endif %}
+        </p>
+    </div>
+
+    <!-- Tabs and Filter Row -->
+    <div class="leaderboard-controls">
+        <div class="leaderboard-tabs" role="tablist" aria-label="Leaderboard type">
+            <a href="?tab=viewed&period={{ current_period }}"
+               class="leaderboard-tab {% if current_tab == 'viewed' %}active{% endif %}"
+               role="tab"
+               aria-selected="{% if current_tab == 'viewed' %}true{% else %}false{% endif %}"
+               aria-controls="leaderboard-list">
+                Most Viewed
+            </a>
+            <a href="?tab=active&period={{ current_period }}"
+               class="leaderboard-tab {% if current_tab == 'active' %}active{% endif %}"
+               role="tab"
+               aria-selected="{% if current_tab == 'active' %}true{% else %}false{% endif %}"
+               aria-controls="leaderboard-list">
+                Most Active
+            </a>
+        </div>
+
+        <div class="leaderboard-filter">
+            <label for="period-select" class="visually-hidden">Time period</label>
+            <select id="period-select" class="period-select" aria-label="Select time period">
+                {% for value, label in period_choices %}
+                <option value="{{ value }}" {% if current_period == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Leaderboard List -->
+    <div class="leaderboard-list" id="leaderboard-list" role="tabpanel">
+        {% for creator in creators %}
+        <div class="leaderboard-row">
+            <span class="leaderboard-rank">{{ forloop.counter }}</span>
+
+            <div class="leaderboard-user">
+                <a href="{% url 'prompts:user_profile' creator.username %}" class="user-avatar-link">
+                    {% if creator.userprofile.avatar %}
+                    <img src="{{ creator.userprofile.avatar.url }}"
+                         alt="{{ creator.username }}'s avatar"
+                         class="leaderboard-avatar"
+                         loading="lazy">
+                    {% else %}
+                    <div class="leaderboard-avatar-placeholder"
+                         style="background: var(--avatar-gradient-{{ creator.userprofile.get_avatar_color_index }}, var(--main-blue));">
+                        {{ creator.username|first|upper }}
+                    </div>
+                    {% endif %}
+                </a>
+
+                <div class="leaderboard-user-info">
+                    <a href="{% url 'prompts:user_profile' creator.username %}" class="leaderboard-username">
+                        {{ creator.username }}
+                    </a>
+                    <span class="leaderboard-stats">
+                        {% if current_tab == 'viewed' %}
+                        {{ creator.total_views|intcomma }} view{{ creator.total_views|pluralize }}
+                        {% else %}
+                        {{ creator.activity_score|intcomma }} activity points
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div class="leaderboard-actions">
+                {% if user.is_authenticated and user != creator %}
+                <button class="leaderboard-follow-btn {% if creator.is_following %}following{% endif %}"
+                        data-username="{{ creator.username }}"
+                        data-following="{{ creator.is_following|yesno:'true,false' }}"
+                        aria-label="{% if creator.is_following %}Unfollow{% else %}Follow{% endif %} {{ creator.username }}">
+                    <span class="btn-text">{% if creator.is_following %}Following{% else %}Follow{% endif %}</span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="leaderboard-thumbnails">
+                {% for prompt in creator.thumbnails %}
+                <a href="{% url 'prompts:prompt_detail' prompt.slug %}"
+                   class="thumbnail-link"
+                   aria-label="View {{ prompt.title }}">
+                    {% if prompt.featured_image %}
+                    <img src="{{ prompt.featured_image.url }}"
+                         alt=""
+                         class="leaderboard-thumbnail"
+                         loading="lazy">
+                    {% elif prompt.featured_video %}
+                    <div class="leaderboard-thumbnail video-thumb">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                    {% endif %}
+                </a>
+                {% endfor %}
+
+                {% if creator.remaining_count > 0 %}
+                <a href="{% url 'prompts:user_profile' creator.username %}" class="thumbnail-more">
+                    +{{ creator.remaining_count|intcomma }}<br>
+                    <small>See All</small>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="leaderboard-empty">
+            <i class="fas fa-users"></i>
+            <p>No creators found for this time period.</p>
+            <p class="text-muted">Try selecting a longer time period or check back later.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // Period select change handler
+    const periodSelect = document.getElementById('period-select');
+    if (periodSelect) {
+        periodSelect.addEventListener('change', function() {
+            const currentTab = '{{ current_tab }}';
+            window.location.href = '?tab=' + currentTab + '&period=' + this.value;
+        });
+    }
+
+    // Follow button handlers (event delegation)
+    const leaderboardList = document.getElementById('leaderboard-list');
+    if (leaderboardList) {
+        leaderboardList.addEventListener('click', function(event) {
+            const btn = event.target.closest('.leaderboard-follow-btn');
+            if (!btn || btn.disabled) return;
+
+            event.preventDefault();
+            const username = btn.dataset.username;
+            const isFollowing = btn.dataset.following === 'true';
+            const spinner = btn.querySelector('.spinner-border');
+            const btnText = btn.querySelector('.btn-text');
+
+            // Disable button and show spinner
+            btn.disabled = true;
+            spinner.classList.remove('d-none');
+
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                              document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                btn.disabled = false;
+                spinner.classList.add('d-none');
+                return;
+            }
+
+            const url = isFollowing
+                ? `/users/${username}/unfollow/`
+                : `/users/${username}/follow/`;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Toggle state
+                    const newFollowing = !isFollowing;
+                    btn.dataset.following = newFollowing.toString();
+                    btnText.textContent = newFollowing ? 'Following' : 'Follow';
+                    btn.classList.toggle('following', newFollowing);
+                } else {
+                    console.error('Follow action failed:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                spinner.classList.add('d-none');
+            });
+        });
+
+        // Hover effects for following buttons
+        leaderboardList.addEventListener('mouseenter', function(event) {
+            const btn = event.target.closest('.leaderboard-follow-btn.following');
+            if (btn) {
+                btn.querySelector('.btn-text').textContent = 'Unfollow';
+                btn.classList.add('hover-unfollow');
+            }
+        }, true);
+
+        leaderboardList.addEventListener('mouseleave', function(event) {
+            const btn = event.target.closest('.leaderboard-follow-btn.following');
+            if (btn) {
+                btn.querySelector('.btn-text').textContent = 'Following';
+                btn.classList.remove('hover-unfollow');
+            }
+        }, true);
+    }
+})();
+</script>
+{% endblock %}

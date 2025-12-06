@@ -42,6 +42,8 @@ urlpatterns = [
     path('prompt/<slug:slug>/report/', views.report_prompt, name='report_prompt'),
     # AI Generator Category Pages (SEO Phase 3)
     path('ai/<slug:generator_slug>/', views.ai_generator_category, name='ai_generator_category'),
+    # Leaderboard (Phase G Part C)
+    path('leaderboard/', views.leaderboard, name='leaderboard'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',
          views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',

@@ -153,10 +153,11 @@
                         <div class="pexels-dropdown-title">Discover Collections</div>
                     </div>
                 </a>
-                <a href="{% url 'about' %}#leaderboard" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
+                <a href="{% url 'prompts:leaderboard' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <i class="fas fa-trophy pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
-                        <div class="pexels-dropdown-title">Leaderboard</div>
+                        <div class="pexels-dropdown-title">Community Favorites</div>
+                        <div class="pexels-dropdown-desc">Top creators and trending prompts</div>
                     </div>
                 </a>
                 <a href="{% url 'about' %}#blog" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
@@ -399,6 +400,10 @@
         <a href="{% url 'prompts:home' %}?type=video" class="pexels-mobile-item">
             <i class="fas fa-video"></i>
             <span>Video Prompts</span>
+        </a>
+        <a href="{% url 'prompts:leaderboard' %}" class="pexels-mobile-item">
+            <i class="fas fa-trophy"></i>
+            <span>Community Favorites</span>
         </a>
         {% if user.is_authenticated %}
             <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-mobile-item">

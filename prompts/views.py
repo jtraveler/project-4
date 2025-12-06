@@ -179,7 +179,7 @@ class PromptList(generic.ListView):
         - Pagination: 18 prompts per page
         - Performance: Uses select_related and prefetch_related for
           optimization
-        - Caching: 5-minute cache for non-search results
+        - Caching: 60-second cache for non-search results
         - Custom ordering: Respects manual order field, then creation date
 
     Context variables:
@@ -230,7 +230,7 @@ class PromptList(generic.ListView):
         # Don't cache 'following' filter (user-specific) or search results
         use_cache = not search_query and sort_by != 'following'
 
-        # Try to get from cache first (5 minute cache)
+        # Try to get from cache first (60 second cache)
         cached_result = cache.get(cache_key)
         if cached_result and use_cache:
             return cached_result

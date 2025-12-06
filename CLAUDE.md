@@ -4156,31 +4156,187 @@ Implemented Pexels-style homepage filtering system with tab navigation and sorti
 
 ---
 
-### Part B: Views Tracking System 📋 PLANNED
+### Part B: Views Tracking System ✅ COMPLETE
 
-**Status:** Not started
-**Priority:** Next after Part A testing complete
+**Status:** ✅ COMPLETE (December 5, 2025)
+**Commits:** 7 commits
+**Deployed:** Heroku production
+**Agent Rating:** 7.8/10 average
 
-#### Requirements (Confirmed)
-- Track unique views per prompt detail page
-- Dedupe authenticated users by `user_id`
-- Dedupe anonymous users by cookie/session (not IP for privacy)
-- Admin-only view count overlay on grid thumbnails
-- Future: Include views in trending algorithm
+---
 
-#### Planned Model
+#### Features Implemented
+
+**1. PromptView Model (View Tracking)**
+- Tracks unique views per prompt detail page
+- Deduplicates by authenticated user OR session+IP hash
+- SHA-256 IP hashing with server-side pepper (privacy-first)
+- Indexed for query performance
+
+**2. Security Enhancements**
+- `IP_HASH_PEPPER` environment variable for secure hashing
+- Rate limiting: 10 views/minute per IP (prevents inflation attacks)
+- Bot detection: 28+ user-agent patterns filtered
+- Empty user-agent requests blocked
+
+**3. Configurable Trending Algorithm**
+- Admin-configurable weights in SiteSettings:
+  - `trending_like_weight` (default: 3.0)
+  - `trending_comment_weight` (default: 5.0)
+  - `trending_view_weight` (default: 0.1)
+  - `trending_recency_hours` (default: 48)
+  - `trending_gravity` (default: 1.5)
+
+**4. View Count Display**
+- Top-left badge overlay on prompt thumbnails
+- Configurable visibility: Admin / Author / Premium / Public
+- Eye icon with count (e.g., 👁 42)
+- Semi-transparent dark background (75% opacity) for readability
+
+**5. Performance Optimization**
+- Homepage cache TTL reduced from 5 minutes to 60 seconds
+- View counts update within ~1 minute
+- Cached queryset includes views_count annotation
+
+---
+
+#### Commits (7 total)
+
+| Commit | Description |
+|--------|-------------|
+| `351d698` | fix(phase-g): Fix trending algorithm and tab navigation anchors |
+| `46bc8a1` | feat(phase-g): Implement views tracking and configurable trending (Part B) |
+| `094e86e` | fix(phase-g): Security enhancements and view overlay fix for Part B |
+| `9db9f8e` | fix(phase-g): Add missing CSS for view counter overlay |
+| `74b8b8e` | feat(phase-g): Reposition view counter as top-left badge |
+| `52a0275` | perf(cache): Reduce homepage cache TTL from 5 min to 60 sec |
+| `42b18a3` | perf(cache): Reduce homepage cache TTL from 5 min to 60 sec |
+
+---
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `prompts/models.py` | PromptView model, SiteSettings fields, security methods |
+| `prompts/views.py` | views_count annotation, cache TTL (60s) |
+| `prompts/admin.py` | SiteSettingsAdmin fieldsets, PromptViewAdmin |
+| `_prompt_card.html` | View count badge (top-left positioning) |
+| `static/css/style.css` | .view-count-badge styles, .platform-info font-size |
+
+---
+
+#### Admin Usage Guide
+
+**Configuring Trending Algorithm:**
+1. Navigate to `/admin/prompts/sitesettings/1/change/`
+2. Adjust weights under "Trending Algorithm" section:
+   - **Like weight:** Points per like (default: 3.0)
+   - **Comment weight:** Points per comment (default: 5.0)
+   - **View weight:** Points per view (default: 0.1)
+   - **Recency hours:** Time window for "recent" engagement (default: 48)
+   - **Gravity:** Decay rate - higher = faster decay (default: 1.5)
+3. Click "Save" - changes take effect within 60 seconds
+
+**Configuring View Count Visibility:**
+1. In same SiteSettings page, find "View Count Visibility"
+2. Options:
+   - **admin:** Only staff users see view counts
+   - **author:** Admin + prompt author sees their own counts
+   - **premium:** Admin + premium subscribers see counts
+   - **public:** Everyone sees view counts
+3. Default is "admin" for privacy
+
+**Viewing Analytics:**
+1. Navigate to `/admin/prompts/promptview/`
+2. See all recorded views with filters by prompt, user, date
+3. Use for understanding content performance
+
+---
+
+#### Environment Variables
+
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `IP_HASH_PEPPER` | Recommended | `SECRET_KEY[:16]` | Server-side pepper for IP hashing |
+
+**Setting on Heroku:**
+```bash
+# Generate secure pepper
+python -c "import secrets; print(secrets.token_hex(16))"
+
+# Set on Heroku
+heroku config:set IP_HASH_PEPPER="<generated-value>" --app mj-project-4
+```
+
+---
+
+#### Agent Validation Summary
+
+| Agent | Rating | Notes |
+|-------|--------|-------|
+| @django-expert | 7.5/10 | Cache timing approved, SECRET_KEY fallback acceptable |
+| @security-auditor | 8.5/10 | Improved from 7.5 → 8.5 with pepper + rate limiting |
+| @code-reviewer | 8.5/10 | Clean implementation, minor suggestions |
+| @frontend-developer | 8.5/10 | Solid positioning, correct z-index |
+| @ui-ux-designer | 8.5/10 | Badge positioning approved, good hierarchy |
+| **Average** | **7.8/10** | Production ready |
+
+---
+
+#### Known Limitations & Future Improvements
+
+**Priority: LOW (Deferred)**
+
+1. **Template Parentheses** (@frontend-developer)
+   - Current: `{% if can_see_views or view_visibility == 'author' and user == prompt.author %}`
+   - Suggested: Add parentheses for clarity (works correctly as-is)
+
+2. **Rate Limit Configuration** (@code-reviewer)
+   - Current: Hardcoded 10 views/minute
+   - Suggested: Move to SiteSettings for admin configurability
+
+3. **BOT_PATTERNS Location** (@code-reviewer)
+   - Current: Defined in PromptView class
+   - Suggested: Move to `prompts/constants.py` for consistency
+
+**Note:** All suggestions are LOW priority. Current implementation is production-ready and secure.
+
+---
+
+#### Security Features (Detail)
+
+**IP Hashing with Pepper:**
 ```python
-class PromptView(models.Model):
-    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE, related_name='views')
-    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
-    session_key = models.CharField(max_length=40, blank=True)
-    viewed_at = models.DateTimeField(auto_now_add=True)
+@classmethod
+def _hash_ip(cls, ip_address):
+    pepper = os.environ.get('IP_HASH_PEPPER', settings.SECRET_KEY[:16])
+    salted = f"{pepper}:{ip_address}"
+    return hashlib.sha256(salted.encode()).hexdigest()
+```
 
-    class Meta:
-        indexes = [
-            models.Index(fields=['prompt', 'user']),
-            models.Index(fields=['prompt', 'session_key']),
-        ]
+**Rate Limiting:**
+```python
+@classmethod
+def _is_rate_limited(cls, ip_hash):
+    cache_key = f"view_rate:{ip_hash}"
+    current_count = cache.get(cache_key, 0)
+    if current_count >= 10:
+        return True
+    cache.set(cache_key, current_count + 1, timeout=60)
+    return False
+```
+
+**Bot Detection (28 patterns):**
+```python
+BOT_PATTERNS = [
+    'bot', 'crawler', 'spider', 'scraper', 'googlebot', 'bingbot',
+    'slurp', 'duckduckbot', 'baiduspider', 'yandexbot', 'sogou',
+    'exabot', 'facebot', 'ia_archiver', 'semrushbot', 'ahrefsbot',
+    'mj12bot', 'dotbot', 'petalbot', 'bytespider', 'applebot',
+    'twitterbot', 'linkedinbot', 'facebookexternalhit', 'curl',
+    'wget', 'python-requests', 'axios', 'node-fetch',
+]
 ```
 
 ---
@@ -4196,13 +4352,17 @@ class PromptView(models.Model):
 
 ### Known Issues / Testing Needed
 
-⚠️ **Migration Required:** Run `heroku run python manage.py migrate` for SiteSettings
+✅ **Migration Applied:** SiteSettings fields and PromptView model deployed
 
-**Testing Checklist:**
-- [ ] All tab + sort combinations display content correctly
-- [ ] Like button updates instantly
-- [ ] Comments auto-approve
-- [ ] Smooth scroll works
+**Testing Checklist (Part A & B):**
+- [x] All tab + sort combinations display content correctly
+- [x] Like button updates instantly
+- [x] Comments auto-approve
+- [x] Smooth scroll works
+- [x] View count badge displays for admins
+- [x] View tracking records unique views
+- [x] Rate limiting blocks excessive requests
+- [x] Bot detection filters crawlers
 
 ---
 

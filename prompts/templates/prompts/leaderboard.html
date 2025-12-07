@@ -142,7 +142,7 @@ Discover the most popular content creators on PromptFinder. See who has the most
                          loading="lazy">
                     {% elif prompt.featured_video %}
                     <div class="leaderboard-thumbnail video-thumb-wrapper">
-                        <img src="{% with video_url=prompt.featured_video.url %}{{ video_url|slice:':-4' }}.jpg{% endwith %}"
+                        <img src="{{ prompt.get_thumbnail_url }}"
                              alt=""
                              class="leaderboard-thumbnail"
                              loading="lazy"

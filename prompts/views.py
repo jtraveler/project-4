@@ -3680,30 +3680,36 @@ def leaderboard(request):
     """
     from prompts.services.leaderboard import LeaderboardService
 
-    # Get and validate parameters
+    # Get and validate parameters (whitelist approach)
     tab = request.GET.get('tab', 'viewed')
     period = request.GET.get('period', 'week')
 
-    # Validate inputs (whitelist approach)
     if tab not in ('viewed', 'active'):
         tab = 'viewed'
     if period not in ('week', 'month', 'all'):
         period = 'week'
 
-    # Get leaderboard data
-    if tab == 'active':
-        creators = LeaderboardService.get_most_active(period=period, limit=25)
-    else:
-        creators = LeaderboardService.get_most_viewed(period=period, limit=25)
+    # Get leaderboard data with error handling
+    creators = []
+    try:
+        if tab == 'active':
+            creators = LeaderboardService.get_most_active(period=period)
+        else:
+            creators = LeaderboardService.get_most_viewed(period=period)
 
-    # Get follow status for current user (bulk query)
-    following_status = LeaderboardService.get_follow_status_bulk(request.user, creators)
+        # Attach thumbnails in bulk (prevents N+1 query)
+        LeaderboardService.attach_thumbnails_bulk(creators)
 
-    # Attach thumbnails and follow status to each creator
-    for creator in creators:
-        creator.thumbnails = LeaderboardService.get_user_thumbnails(creator, limit=4)
-        creator.remaining_count = max(0, creator.prompt_count - 4)
-        creator.is_following = following_status.get(creator.id, False)
+        # Get follow status for current user (bulk query)
+        following_status = LeaderboardService.get_follow_status_bulk(request.user, creators)
+
+        # Attach follow status to each creator
+        for creator in creators:
+            creator.is_following = following_status.get(creator.id, False)
+
+    except Exception as e:
+        logger.error(f"Leaderboard query failed: {e}", exc_info=True)
+        messages.error(request, "Unable to load leaderboard data. Please try again.")
 
     context = {
         'creators': creators,

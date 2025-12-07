@@ -24,6 +24,19 @@ class LeaderboardService:
 
     CACHE_TTL = 300  # 5 minutes
     DEFAULT_LIMIT = 25
+    MAX_LIMIT = 100  # Prevent resource exhaustion
+    THUMBNAIL_LIMIT = 4  # Thumbnails per user
+
+    @classmethod
+    def _validate_limit(cls, limit):
+        """Validate and sanitize limit parameter."""
+        if limit is None:
+            return cls.DEFAULT_LIMIT
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            return cls.DEFAULT_LIMIT
+        return max(1, min(limit, cls.MAX_LIMIT))
 
     @classmethod
     def get_date_filter(cls, period='week'):
@@ -58,8 +71,7 @@ class LeaderboardService:
         Returns:
             List of User objects with total_views annotation
         """
-        if limit is None:
-            limit = cls.DEFAULT_LIMIT
+        limit = cls._validate_limit(limit)
 
         cache_key = f'leaderboard_viewed_{period}_{limit}'
         cached = cache.get(cache_key)
@@ -122,8 +134,7 @@ class LeaderboardService:
         Returns:
             List of User objects with activity_score annotation
         """
-        if limit is None:
-            limit = cls.DEFAULT_LIMIT
+        limit = cls._validate_limit(limit)
 
         cache_key = f'leaderboard_active_{period}_{limit}'
         cached = cache.get(cache_key)
@@ -208,6 +219,46 @@ class LeaderboardService:
         ).annotate(
             likes_count=Count('likes')
         ).order_by('-likes_count', '-created_on')[:limit]
+
+    @classmethod
+    def attach_thumbnails_bulk(cls, creators, limit=4):
+        """
+        Attach thumbnails to all creators in a single query (prevents N+1).
+
+        Args:
+            creators: List of User objects with prompt_count annotation
+            limit: Max thumbnails per user (default: 4)
+
+        Returns:
+            None (modifies creators in-place)
+        """
+        if not creators:
+            return
+
+        from prompts.models import Prompt
+
+        creator_ids = [c.id for c in creators]
+
+        # Get top prompts per user sorted by likes
+        prompts = Prompt.objects.filter(
+            author_id__in=creator_ids,
+            status=1,
+            deleted_at__isnull=True
+        ).annotate(
+            likes_count=Count('likes')
+        ).order_by('author_id', '-likes_count', '-created_on').select_related('author')
+
+        # Group prompts by user, taking only top N
+        thumbnails_by_user = {}
+        for prompt in prompts:
+            user_prompts = thumbnails_by_user.setdefault(prompt.author_id, [])
+            if len(user_prompts) < limit:
+                user_prompts.append(prompt)
+
+        # Attach to creators
+        for creator in creators:
+            creator.thumbnails = thumbnails_by_user.get(creator.id, [])
+            creator.remaining_count = max(0, getattr(creator, 'prompt_count', 0) - limit)
 
     @classmethod
     def get_follow_status_bulk(cls, current_user, target_users):

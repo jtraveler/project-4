@@ -2,7 +2,7 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}Community Favorites - Top Creators | PromptFinder{% endblock %}
+{% block title %}Leaderboard - Top Creators | PromptFinder{% endblock %}
 
 {% block meta_description %}
 Discover the most popular content creators on PromptFinder. See who has the most views, likes, and activity in our AI prompt community.
@@ -14,7 +14,7 @@ Discover the most popular content creators on PromptFinder. See who has the most
 {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
-  "name": "Community Favorites - Top Creators",
+  "name": "Leaderboard - Top Creators",
   "description": "Discover the most popular content creators on PromptFinder ranked by views and activity.",
   "url": "{{ request.build_absolute_uri }}",
   "publisher": {
@@ -30,7 +30,7 @@ Discover the most popular content creators on PromptFinder. See who has the most
 <div class="leaderboard-page">
     <!-- Header -->
     <div class="leaderboard-header">
-        <h1 class="leaderboard-title">Community Favorites</h1>
+        <h1 class="leaderboard-title">Leaderboard</h1>
         <p class="leaderboard-subtitle">
             Members with the most
             {% if current_tab == 'viewed' %}views{% else %}activity{% endif %}
@@ -92,26 +92,25 @@ Discover the most popular content creators on PromptFinder. See who has the most
                     <a href="{% url 'prompts:user_profile' creator.username %}" class="leaderboard-username">
                         {{ creator.username }}
                     </a>
-                    <span class="leaderboard-stats">
+                    <div class="leaderboard-stats">
                         {% if current_tab == 'viewed' %}
-                        {{ creator.total_views|intcomma }} view{{ creator.total_views|pluralize }}
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                        <span>{{ creator.total_views|intcomma }} view{{ creator.total_views|pluralize }}</span>
                         {% else %}
-                        {{ creator.activity_score|intcomma }} activity points
+                        <i class="fas fa-bolt" aria-hidden="true"></i>
+                        <span>{{ creator.activity_score|intcomma }} points</span>
                         {% endif %}
-                    </span>
+                    </div>
+                    {% if user.is_authenticated and user != creator %}
+                    <button class="leaderboard-follow-btn {% if creator.is_following %}following{% endif %}"
+                            data-username="{{ creator.username }}"
+                            data-following="{{ creator.is_following|yesno:'true,false' }}"
+                            aria-label="{% if creator.is_following %}Unfollow{% else %}Follow{% endif %} {{ creator.username }}">
+                        <span class="btn-text">{% if creator.is_following %}Following{% else %}Follow{% endif %}</span>
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    </button>
+                    {% endif %}
                 </div>
-            </div>
-
-            <div class="leaderboard-actions">
-                {% if user.is_authenticated and user != creator %}
-                <button class="leaderboard-follow-btn {% if creator.is_following %}following{% endif %}"
-                        data-username="{{ creator.username }}"
-                        data-following="{{ creator.is_following|yesno:'true,false' }}"
-                        aria-label="{% if creator.is_following %}Unfollow{% else %}Follow{% endif %} {{ creator.username }}">
-                    <span class="btn-text">{% if creator.is_following %}Following{% else %}Follow{% endif %}</span>
-                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                </button>
-                {% endif %}
             </div>
 
             <div class="leaderboard-thumbnails">
@@ -125,8 +124,13 @@ Discover the most popular content creators on PromptFinder. See who has the most
                          class="leaderboard-thumbnail"
                          loading="lazy">
                     {% elif prompt.featured_video %}
-                    <div class="leaderboard-thumbnail video-thumb">
-                        <i class="fas fa-play-circle"></i>
+                    <div class="leaderboard-thumbnail video-thumb-wrapper">
+                        <img src="{% with video_url=prompt.featured_video.url %}{{ video_url|slice:':-4' }}.jpg{% endwith %}"
+                             alt=""
+                             class="leaderboard-thumbnail"
+                             loading="lazy"
+                             onerror="this.parentElement.innerHTML='<i class=\'fas fa-play-circle\'></i>';">
+                        <i class="fas fa-play-circle video-play-icon"></i>
                     </div>
                     {% endif %}
                 </a>

@@ -193,19 +193,21 @@ class LeaderboardService:
     @classmethod
     def get_user_thumbnails(cls, user, limit=4):
         """
-        Get recent prompt thumbnails for a user.
+        Get most popular prompt thumbnails for a user.
 
         Args:
             user: User object
             limit: Max thumbnails (default: 4)
 
         Returns:
-            QuerySet of Prompt objects
+            QuerySet of Prompt objects sorted by popularity (likes count)
         """
         return user.prompts.filter(
             status=1,
             deleted_at__isnull=True
-        ).order_by('-created_on')[:limit]
+        ).annotate(
+            likes_count=Count('likes')
+        ).order_by('-likes_count', '-created_on')[:limit]
 
     @classmethod
     def get_follow_status_bulk(cls, current_user, target_users):

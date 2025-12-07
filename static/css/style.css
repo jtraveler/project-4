@@ -137,10 +137,10 @@
   --leaderboard-row-bg: var(--white);
   --leaderboard-row-hover: var(--gray-50);
   --leaderboard-border: var(--gray-200);
-  --leaderboard-rank-color: var(--gray-500);
-  --leaderboard-rank-size: 1.25rem;
-  --leaderboard-avatar-size: 48px;
-  --leaderboard-thumbnail-size: 80px;
+  --leaderboard-rank-color: var(--text-primary);
+  --leaderboard-rank-size: 2em;
+  --leaderboard-avatar-size: 80px;
+  --leaderboard-thumbnail-size: 150px;
   --leaderboard-thumbnail-gap: 8px;
   --leaderboard-row-padding: 16px 24px;
 
@@ -1835,9 +1835,10 @@ footer {
    ═══════════════════════════════════════════════════════════════ */
 
 .leaderboard-page {
-    max-width: 1200px;
+    width: 100%;
+    max-width: none;
     margin: 0 auto;
-    padding: var(--space-10) var(--space-5);
+    padding: 0;
 }
 
 .leaderboard-header {
@@ -1895,18 +1896,40 @@ footer {
 }
 
 .period-select {
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--leaderboard-border);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-small);
-    background: var(--leaderboard-bg);
-    cursor: pointer;
+    /* Pexels-style dropdown */
+    position: relative;
+    padding: 10px 44px 10px 16px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-full);
+    font-size: 15px;
+    font-weight: 500;
+    background: var(--white);
     color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    /* Custom dropdown arrow */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 12px 12px;
+}
+
+.period-select:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
 }
 
 .period-select:focus {
     outline: 2px solid var(--link-color);
     outline-offset: 2px;
+}
+
+.period-select:active {
+    transform: scale(0.98);
 }
 
 /* Leaderboard List Container */
@@ -1939,9 +1962,9 @@ footer {
 /* Rank Number */
 .leaderboard-rank {
     font-size: var(--leaderboard-rank-size);
-    font-weight: 600;
+    font-weight: 500;
     color: var(--leaderboard-rank-color);
-    min-width: 32px;
+    min-width: 48px;
     text-align: center;
     flex-shrink: 0;
 }
@@ -1981,6 +2004,7 @@ footer {
 }
 
 .leaderboard-username {
+    font-size: 1.3em;
     font-weight: 600;
     color: var(--text-primary);
     text-decoration: none;
@@ -1994,8 +2018,12 @@ footer {
 }
 
 .leaderboard-stats {
-    font-size: var(--font-size-small);
+    font-size: 16px;
+    font-weight: 600;
     color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 /* Actions Section */
@@ -2018,6 +2046,7 @@ footer {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
+    margin-top: var(--space-2);
 }
 
 .leaderboard-follow-btn:hover {
@@ -2077,6 +2106,30 @@ footer {
     font-size: 1.5rem;
 }
 
+.leaderboard-thumbnail.video-thumb-wrapper {
+    position: relative;
+    width: var(--leaderboard-thumbnail-size);
+    height: var(--leaderboard-thumbnail-size);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.leaderboard-thumbnail.video-thumb-wrapper img {
+    width: 100%;
+    height: 100%;
+}
+
+.video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 2rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+}
+
 .thumbnail-more {
     width: var(--leaderboard-thumbnail-size);
     height: var(--leaderboard-thumbnail-size);
@@ -2126,18 +2179,42 @@ footer {
    ═══════════════════════════════════════════════════════════════ */
 
 @media (max-width: 992px) {
+    .leaderboard-row {
+        flex-wrap: wrap;
+    }
+
     .leaderboard-thumbnails {
-        display: none;
+        width: 100%;
+        margin-top: var(--space-3);
+        padding-left: calc(48px + var(--space-4));
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--gray-300) transparent;
+    }
+
+    .leaderboard-thumbnails::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .leaderboard-thumbnails::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .leaderboard-thumbnails::-webkit-scrollbar-thumb {
+        background: var(--gray-300);
+        border-radius: 2px;
     }
 
     .leaderboard-user {
         min-width: 150px;
+        flex: 1;
     }
 }
 
 @media (max-width: 768px) {
     .leaderboard-page {
-        padding: var(--space-6) var(--space-4);
+        padding: var(--space-4);
     }
 
     .leaderboard-title {
@@ -2167,14 +2244,14 @@ footer {
     }
 
     .leaderboard-rank {
-        font-size: 1rem;
-        min-width: 24px;
+        font-size: 1.5rem;
+        min-width: 32px;
     }
 
     .leaderboard-avatar,
     .leaderboard-avatar-placeholder {
-        width: 40px;
-        height: 40px;
+        width: 56px;
+        height: 56px;
     }
 
     .leaderboard-user {
@@ -2183,11 +2260,11 @@ footer {
     }
 
     .leaderboard-username {
-        font-size: var(--font-size-small);
+        font-size: 1.1em;
     }
 
     .leaderboard-stats {
-        font-size: var(--font-size-xs);
+        font-size: 14px;
     }
 
     .leaderboard-follow-btn {

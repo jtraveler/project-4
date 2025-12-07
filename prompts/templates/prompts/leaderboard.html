@@ -27,6 +27,7 @@ Discover the most popular content creators on PromptFinder. See who has the most
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="leaderboard-page">
     <!-- Header -->
     <div class="leaderboard-header">
@@ -57,13 +58,29 @@ Discover the most popular content creators on PromptFinder. See who has the most
             </a>
         </div>
 
-        <div class="leaderboard-filter">
-            <label for="period-select" class="visually-hidden">Time period</label>
-            <select id="period-select" class="period-select" aria-label="Select time period">
+        <div class="period-dropdown" id="periodDropdown">
+            <button class="period-dropdown-btn" id="periodDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-label="Select time period">
+                {% if current_period == 'week' %}This Week{% elif current_period == 'month' %}This Month{% else %}All Time{% endif %}
+                <svg class="period-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="period-dropdown-menu" id="periodDropdownMenu" role="menu">
                 {% for value, label in period_choices %}
-                <option value="{{ value }}" {% if current_period == value %}selected{% endif %}>{{ label }}</option>
+                <a href="?tab={{ current_tab }}&period={{ value }}"
+                   class="period-dropdown-item {% if current_period == value %}active{% endif %}"
+                   role="menuitem">
+                    {% if current_period == value %}
+                    <svg class="period-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {% else %}
+                    <span style="width: 16px; display: inline-block;"></span>
+                    {% endif %}
+                    {{ label }}
+                </a>
                 {% endfor %}
-            </select>
+            </div>
         </div>
     </div>
 
@@ -158,12 +175,34 @@ Discover the most popular content creators on PromptFinder. See who has the most
 (function() {
     'use strict';
 
-    // Period select change handler
-    const periodSelect = document.getElementById('period-select');
-    if (periodSelect) {
-        periodSelect.addEventListener('change', function() {
-            const currentTab = '{{ current_tab }}';
-            window.location.href = '?tab=' + currentTab + '&period=' + this.value;
+    // Period dropdown functionality
+    const periodDropdown = document.getElementById('periodDropdown');
+    const periodDropdownBtn = document.getElementById('periodDropdownBtn');
+
+    if (periodDropdown && periodDropdownBtn) {
+        // Toggle dropdown on button click
+        periodDropdownBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            periodDropdown.classList.toggle('open');
+            const isOpen = periodDropdown.classList.contains('open');
+            periodDropdownBtn.setAttribute('aria-expanded', isOpen);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!periodDropdown.contains(e.target)) {
+                periodDropdown.classList.remove('open');
+                periodDropdownBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Close dropdown on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && periodDropdown.classList.contains('open')) {
+                periodDropdown.classList.remove('open');
+                periodDropdownBtn.setAttribute('aria-expanded', 'false');
+                periodDropdownBtn.focus();
+            }
         });
     }
 

@@ -9,8 +9,7 @@ Uses 5-minute caching to optimize performance.
 """
 
 from django.contrib.auth.models import User
-from django.db.models import Count, Q, F, Value, IntegerField
-from django.db.models.functions import Coalesce
+from django.db.models import Count, Q, F
 from django.core.cache import cache
 from django.utils import timezone
 from datetime import timedelta
@@ -25,7 +24,7 @@ class LeaderboardService:
     CACHE_TTL = 300  # 5 minutes
     DEFAULT_LIMIT = 25
     MAX_LIMIT = 100  # Prevent resource exhaustion
-    THUMBNAIL_LIMIT = 4  # Thumbnails per user
+    THUMBNAIL_LIMIT = 5  # Thumbnails per user
 
     @classmethod
     def _validate_limit(cls, limit):
@@ -157,11 +156,8 @@ class LeaderboardService:
         # Note: likes_given requires tracking who liked what
         # Using prompt_likes (reverse relation from Prompt.likes M2M)
         # This counts prompts the user has liked
-        like_filter = Q()
-        if date_filter:
-            # We don't have a timestamp on likes, so for time-filtered
-            # we'll only count uploads and comments for activity
-            pass
+        # We don't have a timestamp on likes, so for time-filtered
+        # queries we count all likes (no date filter applied to likes)
 
         # Build query for users with activity scores
         queryset = User.objects.filter(
@@ -202,17 +198,18 @@ class LeaderboardService:
         return result
 
     @classmethod
-    def get_user_thumbnails(cls, user, limit=4):
+    def get_user_thumbnails(cls, user, limit=None):
         """
         Get most popular prompt thumbnails for a user.
 
         Args:
             user: User object
-            limit: Max thumbnails (default: 4)
+            limit: Max thumbnails (default: THUMBNAIL_LIMIT)
 
         Returns:
             QuerySet of Prompt objects sorted by popularity (likes count)
         """
+        limit = limit or cls.THUMBNAIL_LIMIT
         return user.prompts.filter(
             status=1,
             deleted_at__isnull=True
@@ -221,13 +218,13 @@ class LeaderboardService:
         ).order_by('-likes_count', '-created_on')[:limit]
 
     @classmethod
-    def attach_thumbnails_bulk(cls, creators, limit=4):
+    def attach_thumbnails_bulk(cls, creators, limit=None):
         """
         Attach thumbnails to all creators in a single query (prevents N+1).
 
         Args:
             creators: List of User objects with prompt_count annotation
-            limit: Max thumbnails per user (default: 4)
+            limit: Max thumbnails per user (default: THUMBNAIL_LIMIT)
 
         Returns:
             None (modifies creators in-place)
@@ -235,6 +232,7 @@ class LeaderboardService:
         if not creators:
             return
 
+        limit = limit or cls.THUMBNAIL_LIMIT
         from prompts.models import Prompt
 
         creator_ids = [c.id for c in creators]
@@ -297,8 +295,8 @@ class LeaderboardService:
         limits = [cls.DEFAULT_LIMIT]  # Could add more if needed
 
         for p in periods:
-            for l in limits:
-                cache.delete(f'leaderboard_viewed_{p}_{l}')
-                cache.delete(f'leaderboard_active_{p}_{l}')
+            for limit_val in limits:
+                cache.delete(f'leaderboard_viewed_{p}_{limit_val}')
+                cache.delete(f'leaderboard_active_{p}_{limit_val}')
 
         logger.info(f"Leaderboard cache invalidated for periods: {periods}")

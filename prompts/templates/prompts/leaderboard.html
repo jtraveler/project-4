@@ -132,33 +132,33 @@ Discover the most popular content creators on PromptFinder. See who has the most
 
             <div class="leaderboard-thumbnails">
                 {% for prompt in creator.thumbnails %}
+                {% if forloop.counter <= 4 or creator.remaining_count == 0 %}
+                {# Show first 4 thumbnails normally, or 5th if no more remaining #}
                 <a href="{% url 'prompts:prompt_detail' prompt.slug %}"
                    class="thumbnail-link"
                    aria-label="View {{ prompt.title }}">
-                    {% if prompt.featured_image %}
-                    <img src="{{ prompt.featured_image.url }}"
+                    <img src="{% if prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
                          alt=""
                          class="leaderboard-thumbnail"
                          loading="lazy">
-                    {% elif prompt.featured_video %}
-                    <div class="leaderboard-thumbnail video-thumb-wrapper">
-                        <img src="{{ prompt.get_thumbnail_url }}"
+                </a>
+                {% elif forloop.counter == 5 and creator.remaining_count > 0 %}
+                {# 5th thumbnail with overlay showing remaining count #}
+                <a href="{% url 'prompts:user_profile' creator.username %}"
+                   class="thumbnail-link thumbnail-overlay-link"
+                   aria-label="View all prompts by {{ creator.username }}">
+                    <div class="thumbnail-overlay-container">
+                        <img src="{% if prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
                              alt=""
                              class="leaderboard-thumbnail"
-                             loading="lazy"
-                             onerror="this.parentElement.innerHTML='<i class=\'fas fa-play-circle\'></i>';">
-                        <i class="fas fa-play-circle video-play-icon"></i>
+                             loading="lazy">
+                        <div class="thumbnail-overlay">
+                            <span class="thumbnail-overlay-text">+{{ creator.remaining_count|intcomma }}</span>
+                        </div>
                     </div>
-                    {% endif %}
-                </a>
-                {% endfor %}
-
-                {% if creator.remaining_count > 0 %}
-                <a href="{% url 'prompts:user_profile' creator.username %}" class="thumbnail-more">
-                    +{{ creator.remaining_count|intcomma }}<br>
-                    <small>See All</small>
                 </a>
                 {% endif %}
+                {% endfor %}
             </div>
         </div>
         {% empty %}

@@ -278,6 +278,28 @@ html {
 }
 
 /* ============================================
+   HOMEPAGE DROPDOWNS CONTAINER (Phase I.2)
+   ============================================ */
+
+.homepage-dropdowns {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Platform dropdown menu - needs more height for all items */
+.platform-menu {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.platform-menu .dropdown-divider {
+    height: 1px;
+    margin: 8px 0;
+    background-color: #e9ecef;
+}
+
+/* ============================================
    EMPTY STATE (Following filter)
    ============================================ */
 
@@ -352,8 +374,9 @@ html {
         font-size: 14px;
     }
 
-    .sort-dropdown {
+    .homepage-dropdowns {
         align-self: flex-end;
+        gap: 8px;
     }
 
     .sort-dropdown-btn {
@@ -412,20 +435,50 @@ html {
         </a>
     </nav>
 
-    <!-- RIGHT: Sort Dropdown -->
-    <div class="sort-dropdown" id="sortDropdown">
-        <button class="sort-dropdown-btn" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false">
-            {% if sort_by == 'new' %}
-                New
-            {% elif sort_by == 'following' %}
-                Following
-            {% else %}
-                Trending
-            {% endif %}
-            <svg class="sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </button>
+    <!-- RIGHT: Dropdowns Container -->
+    <div class="homepage-dropdowns">
+        <!-- All Platforms Dropdown (Phase I.2) - Dynamic from AI_GENERATORS constant -->
+        <div class="sort-dropdown" id="platformDropdown">
+            <button class="sort-dropdown-btn" id="platformDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-label="Select AI platform">
+                <i class="fas fa-robot me-1" style="font-size: 12px;"></i>
+                All Platforms
+                <svg class="sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="sort-dropdown-menu platform-menu" id="platformDropdownMenu" role="menu">
+                <a href="{% url 'prompts:inspiration_index' %}"
+                   class="sort-dropdown-item"
+                   role="menuitem">
+                    <i class="fas fa-th-large me-2" style="width: 16px;"></i>
+                    View All Platforms
+                </a>
+                <div class="dropdown-divider"></div>
+                {% for slug, gen in ai_generators.items %}
+                <a href="{% url 'prompts:ai_generator_category' slug %}"
+                   class="sort-dropdown-item"
+                   role="menuitem">
+                    <span style="width: 16px;"></span>
+                    {{ gen.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Sort Dropdown -->
+        <div class="sort-dropdown" id="sortDropdown">
+            <button class="sort-dropdown-btn" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                {% if sort_by == 'new' %}
+                    New
+                {% elif sort_by == 'following' %}
+                    Following
+                {% else %}
+                    Trending
+                {% endif %}
+                <svg class="sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
         <div class="sort-dropdown-menu" id="sortDropdownMenu" role="menu">
             <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=trending{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
                class="sort-dropdown-item {% if sort_by == 'trending' %}active{% endif %}"
@@ -465,6 +518,7 @@ html {
                 Following
             </a>
             {% endif %}
+        </div>
         </div>
     </div>
 </div>
@@ -1754,6 +1808,57 @@ function applyOrderDisplayState() {
         dropdown.classList.toggle('open');
         const isOpen = dropdown.classList.contains('open');
         dropdownBtn.setAttribute('aria-expanded', isOpen);
+
+        // Close platform dropdown when opening sort dropdown
+        const platformDropdown = document.getElementById('platformDropdown');
+        if (platformDropdown) {
+            platformDropdown.classList.remove('open');
+            document.getElementById('platformDropdownBtn')?.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('open');
+            dropdownBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Close dropdown on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dropdown.classList.contains('open')) {
+            dropdown.classList.remove('open');
+            dropdownBtn.setAttribute('aria-expanded', 'false');
+            dropdownBtn.focus();
+        }
+    });
+})();
+
+// ============================================
+// PLATFORM DROPDOWN FUNCTIONALITY (Phase I.2)
+// ============================================
+(function() {
+    'use strict';
+
+    const dropdown = document.getElementById('platformDropdown');
+    const dropdownBtn = document.getElementById('platformDropdownBtn');
+
+    if (!dropdown || !dropdownBtn) return;
+
+    // Toggle dropdown on button click
+    dropdownBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+        const isOpen = dropdown.classList.contains('open');
+        dropdownBtn.setAttribute('aria-expanded', isOpen);
+
+        // Close sort dropdown when opening platform dropdown
+        const sortDropdown = document.getElementById('sortDropdown');
+        if (sortDropdown) {
+            sortDropdown.classList.remove('open');
+            document.getElementById('sortDropdownBtn')?.setAttribute('aria-expanded', 'false');
+        }
     });
 
     // Close dropdown when clicking outside

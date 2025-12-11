@@ -428,6 +428,9 @@ class PromptList(generic.ListView):
         # Store visibility setting for author-specific checks in template
         context['view_visibility'] = visibility
 
+        # AI Generators for platform dropdown (Phase I.2 - DRY fix)
+        context['ai_generators'] = AI_GENERATORS
+
         return context
 
 
@@ -3654,6 +3657,65 @@ def bulk_set_published_no_media(request):
 
     return redirect('admin_debug_no_media')
 
+
+
+# =============================================================================
+# INSPIRATION HUB (Phase I.2)
+# =============================================================================
+
+def inspiration_index(request):
+    """
+    Inspiration hub page - showcases AI generators and trending prompts.
+
+    URL: /inspiration/
+    Phase I.2 implementation.
+
+    Features:
+    - AI generator cards with prompt counts
+    - Trending prompts across all generators
+    - Responsive grid layout
+    """
+    # Build generator data with prompt counts - Single aggregated query (N+1 fix)
+    # Get all counts in one query instead of 11 separate queries
+    generator_counts = Prompt.objects.filter(
+        status=1,
+        deleted_at__isnull=True
+    ).values('ai_generator').annotate(
+        count=models.Count('id')
+    )
+    count_map = {item['ai_generator']: item['count'] for item in generator_counts}
+
+    generators_with_counts = []
+    for slug, data in AI_GENERATORS.items():
+        generators_with_counts.append({
+            'name': data['name'],
+            'slug': slug,
+            'description': data.get('description', ''),
+            'icon': data.get('icon', ''),
+            'prompt_count': count_map.get(data['choice_value'], 0),
+        })
+
+    # Sort by prompt count (most prompts first)
+    generators_with_counts.sort(key=lambda x: x['prompt_count'], reverse=True)
+
+    # Get trending prompts (most liked in last 7 days, limit 24)
+    week_ago = timezone.now() - timedelta(days=7)
+    trending_prompts = Prompt.objects.filter(
+        status=1,
+        deleted_at__isnull=True,
+        created_on__gte=week_ago
+    ).select_related('author').prefetch_related('tags', 'likes').annotate(
+        likes_count=models.Count('likes', distinct=True)
+    ).order_by('-likes_count', '-created_on')[:24]
+
+    context = {
+        'generators': generators_with_counts,
+        'trending_prompts': trending_prompts,
+        'page_title': 'AI Prompt Inspiration',
+        'page_description': 'Discover AI prompts across Midjourney, DALL-E, Stable Diffusion, and more. Browse trending prompts and find inspiration for your next creation.',
+    }
+
+    return render(request, 'prompts/inspiration_index.html', context)
 
 
 def ai_generator_category(request, generator_slug):

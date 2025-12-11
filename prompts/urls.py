@@ -61,12 +61,9 @@ urlpatterns = [
              permanent=True,
          ),
          name='ai_directory_redirect'),
-    # Temporary /inspiration/ placeholder (302 - will be replaced in Phase I.2)
+    # Inspiration hub page (Phase I.2)
     path('inspiration/',
-         RedirectView.as_view(
-             url='/',
-             permanent=False,
-         ),
+         views.inspiration_index,
          name='inspiration_index'),
     # Leaderboard (Phase G Part C)
     path('leaderboard/', views.leaderboard, name='leaderboard'),

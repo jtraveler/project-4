@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load cloudinary %}
+{% load cloudinary_tags %}
+
+{% block title %}{{ page_title }} - Discover AI Prompts | PromptFinder{% endblock %}
+
+{% block meta_description %}
+{{ page_description }}
+{% endblock %}
+
+{% block extra_head %}
+<!-- Schema.org structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "{{ page_title|escapejs }}",
+  "description": "{{ page_description|escapejs }}",
+  "url": "{{ request.build_absolute_uri }}",
+  "publisher": {
+    "@type": "Organization",
+    "name": "PromptFinder",
+    "url": "https://promptfinder.net"
+  },
+  "mainEntity": {
+    "@type": "ItemList",
+    "numberOfItems": {{ generators|length }},
+    "itemListElement": [
+      {% for gen in generators %}
+      {
+        "@type": "ListItem",
+        "position": {{ forloop.counter }},
+        "name": "{{ gen.name|escapejs }} Prompts",
+        "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'prompts:ai_generator_category' gen.slug %}"
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mt-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'prompts:home' %}">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Inspiration</li>
+        </ol>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="inspiration-hero text-center py-5 mb-4">
+        <h1 class="display-5 fw-bold mb-3">AI Prompt Inspiration</h1>
+        <p class="lead text-muted mb-0 mx-auto" style="max-width: 700px;">
+            Discover amazing prompts across all AI platforms. Browse by generator or explore trending creations from our community.
+        </p>
+    </div>
+
+    <!-- AI Generator Cards Section -->
+    <section class="generator-section mb-5">
+        <h2 class="section-title mb-4">
+            <i class="fas fa-robot me-2"></i>Browse by AI Platform
+        </h2>
+
+        <div class="generator-grid">
+            {% for gen in generators %}
+            <a href="{% url 'prompts:ai_generator_category' gen.slug %}" class="generator-card">
+                <div class="generator-card-inner">
+                    {% if gen.icon %}
+                    <img src="{% static gen.icon %}"
+                         alt="{{ gen.name }} icon"
+                         class="generator-icon"
+                         width="48"
+                         height="48"
+                         loading="lazy">
+                    {% else %}
+                    <div class="generator-icon-fallback">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    {% endif %}
+                    <div class="generator-info">
+                        <h3 class="generator-name">{{ gen.name }}</h3>
+                        <span class="generator-count">{{ gen.prompt_count }} prompt{{ gen.prompt_count|pluralize }}</span>
+                    </div>
+                    <i class="fas fa-chevron-right generator-arrow"></i>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Trending Prompts Section -->
+    <section class="trending-section mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="section-title mb-0">
+                <i class="fas fa-fire me-2 text-danger"></i>Trending This Week
+            </h2>
+            <a href="{% url 'prompts:home' %}?sort=trending" class="btn btn-outline-primary btn-sm">
+                View All <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        {% if trending_prompts %}
+        {% include 'prompts/partials/_masonry_grid.html' with items=trending_prompts grid_id='trending-grid' show_load_more=False %}
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-fire-alt text-muted" style="font-size: 3rem;"></i>
+            <h3 class="mt-3 text-muted">No trending prompts yet</h3>
+            <p class="text-muted">Be the first to share something amazing!</p>
+            <a href="{% url 'prompts:upload_step1' %}" class="btn btn-primary mt-2">
+                <i class="fas fa-upload me-2"></i>Upload a Prompt
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- CTA Section -->
+    <div class="cta-section rounded-3 p-4 p-md-5 mb-4 text-center">
+        <h2 class="mb-3 text-white">Share Your AI Creations</h2>
+        <p class="lead mb-4 text-white-50">
+            Join our community of creators and share your best prompts with the world.
+        </p>
+        <a href="{% url 'prompts:upload_step1' %}" class="btn btn-light btn-lg">
+            <i class="fas fa-upload me-2"></i>Upload Your Prompt
+        </a>
+    </div>
+</div>
+
+<style>
+/* Hero Section */
+.inspiration-hero {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 3rem 1.5rem;
+}
+
+/* Section Titles */
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+/* Generator Grid - Responsive */
+.generator-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+}
+
+@media (max-width: 1199px) {
+    .generator-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 991px) {
+    .generator-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    .generator-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 479px) {
+    .generator-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Generator Card */
+.generator-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.generator-card:hover {
+    text-decoration: none;
+    color: inherit;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #dee2e6;
+}
+
+.generator-card-inner {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    gap: 0.75rem;
+}
+
+.generator-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.generator-icon-fallback {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.generator-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.generator-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.generator-count {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.generator-arrow {
+    color: #adb5bd;
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.generator-card:hover .generator-arrow {
+    transform: translateX(3px);
+    color: #6c757d;
+}
+
+/* CTA Section */
+.cta-section {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+/* Override masonry container padding for this page */
+.trending-section .masonry-container {
+    padding: 20px 0;
+}
+</style>
+{% endblock %}

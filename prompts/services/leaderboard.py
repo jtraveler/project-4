@@ -24,7 +24,7 @@ class LeaderboardService:
     CACHE_TTL = 300  # 5 minutes
     DEFAULT_LIMIT = 25
     MAX_LIMIT = 100  # Prevent resource exhaustion
-    THUMBNAIL_LIMIT = 5  # Thumbnails per user
+    THUMBNAIL_LIMIT = 4  # Round 5 Fix 3: Reduced from 5 to 4 thumbnails per user
 
     @classmethod
     def _validate_limit(cls, limit):

@@ -1895,6 +1895,11 @@ footer {
     color: var(--tab-text-active);
 }
 
+.leaderboard-tab:focus {
+    outline: 2px solid var(--link-color);
+    outline-offset: 2px;
+}
+
 .period-select {
     /* Pexels-style dropdown */
     position: relative;
@@ -2097,6 +2102,7 @@ footer {
     min-width: 0;
 }
 
+/* Task 8: Username with truncation for long names */
 .leaderboard-username {
     font-size: 1.3em;
     font-weight: 600;
@@ -2105,6 +2111,8 @@ footer {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 200px; /* Task 8: Truncate long usernames */
+    display: block;
 }
 
 .leaderboard-username:hover {
@@ -2168,17 +2176,36 @@ footer {
     cursor: not-allowed;
 }
 
+.leaderboard-follow-btn:focus {
+    outline: 2px solid var(--link-color);
+    outline-offset: 2px;
+}
+
 /* Thumbnails Section */
 .leaderboard-thumbnails {
     display: flex;
+    flex-wrap: nowrap; /* Fix 4: CRITICAL - prevents wrapping, enables scrolling */
     gap: var(--leaderboard-thumbnail-gap);
     align-items: center;
-    flex-shrink: 0;
+    /* Round 6: REMOVED flex-shrink: 0 - not needed, can cause issues */
+    padding-bottom: 20px; /* Round 5 Fix 1: Space for scrollbar */
+    /* Round 6: REMOVED justify-content: right - BREAKS HORIZONTAL SCROLL */
 }
 
-.thumbnail-link {
+/* Single Link Wrapper for All Thumbnails */
+.leaderboard-thumbnails-link {
+    text-decoration: none;
     display: block;
-    flex-shrink: 0;
+    /* Round 4 Fix 2: REMOVED flex-shrink: 0 - was preventing scrollbar! */
+    overflow: hidden;  /* Clips content, enables child scrollbar */
+    min-width: 0;      /* Allows flex child to shrink below content size */
+    flex: 1 380px;     /* Round 5 Fix 2: Minimum 380px, grows with available space */
+}
+
+.leaderboard-thumbnails-link:focus {
+    outline: 2px solid var(--link-color);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
 }
 
 .leaderboard-thumbnail {
@@ -2186,11 +2213,31 @@ footer {
     height: var(--leaderboard-thumbnail-size);
     object-fit: cover;
     border-radius: var(--radius-md);
-    transition: transform var(--transition-fast);
 }
 
-.leaderboard-thumbnail:hover {
-    transform: scale(1.05);
+/* Thumbnail Wrapper for Hover Overlay */
+.leaderboard-thumbnail-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    width: var(--leaderboard-thumbnail-size);
+    height: var(--leaderboard-thumbnail-size);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+/* Group Hover Overlay (appears on all thumbnails when parent link is hovered) */
+.thumbnail-hover-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0);
+    transition: background-color var(--transition-fast);
+    pointer-events: none;
+}
+
+/* Fix 8: Hover overlay set to 60% opacity */
+.leaderboard-thumbnails-link:hover .thumbnail-hover-overlay,
+.leaderboard-thumbnails-link:focus .thumbnail-hover-overlay {
+    background-color: rgba(0, 0, 0, 0.60);
 }
 
 /* Thumbnail Overlay Container (5th thumbnail with +X more) */
@@ -2207,6 +2254,7 @@ footer {
     height: 100%;
 }
 
+/* Permanent Overlay on 5th Thumbnail */
 .thumbnail-overlay {
     position: absolute;
     inset: 0;
@@ -2217,8 +2265,17 @@ footer {
     transition: background var(--transition-fast);
 }
 
-.thumbnail-overlay-link:hover .thumbnail-overlay {
-    background: rgba(0, 0, 0, 0.7);
+.leaderboard-thumbnails-link:hover .thumbnail-overlay,
+.leaderboard-thumbnails-link:focus .thumbnail-overlay {
+    background: rgba(0, 0, 0, 0.75);
+}
+
+/* Overlay Content Container */
+.thumbnail-overlay-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
 }
 
 .thumbnail-overlay-text {
@@ -2226,6 +2283,15 @@ footer {
     font-size: 24px;
     font-weight: 600;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Task 10: Overlay subtext increased to 14px */
+.thumbnail-overlay-subtext {
+    color: var(--white);
+    font-size: var(--font-size-small); /* 14px */
+    font-weight: 400;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    opacity: 0.9;
 }
 
 /* Empty State */
@@ -2249,38 +2315,113 @@ footer {
    LEADERBOARD RESPONSIVE STYLES
    ═══════════════════════════════════════════════════════════════ */
 
+/* Fix 4: Scrollbar for all viewports when thumbnails overflow */
+.leaderboard-thumbnails {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-400) var(--gray-200);
+}
+
+.leaderboard-thumbnails::-webkit-scrollbar {
+    height: 8px; /* Fix 4: Increased from 6px for visibility */
+    display: block;
+}
+
+.leaderboard-thumbnails::-webkit-scrollbar-track {
+    background: var(--gray-200); /* Fix 4: Visible track */
+    border-radius: 10px;
+}
+
+.leaderboard-thumbnails::-webkit-scrollbar-thumb {
+    background-color: var(--gray-400);
+    border-radius: 10px; /* Pill/oval shape */
+    min-width: 40px; /* Fix 4: Minimum thumb size */
+}
+
+.leaderboard-thumbnails::-webkit-scrollbar-thumb:hover {
+    background-color: var(--gray-500);
+}
+
+/* Fix 4: Ensure thumbnail wrappers don't shrink */
+.leaderboard-thumbnail-wrapper,
+.leaderboard-thumbnail-wrapper.thumbnail-overlay-container {
+    flex-shrink: 0;
+}
+
+/* Task 9: Desktop spacing between user info and thumbnails */
+@media (min-width: 993px) {
+    .leaderboard-user {
+        margin-right: var(--space-12); /* 48px - closest to 50px */
+    }
+}
+
 @media (max-width: 992px) {
+    /* Round 3 Fix 1: Removed all border declarations - using default styles */
     .leaderboard-row {
         flex-wrap: wrap;
     }
 
+    /* Round 3 Fix 4 & 8: Mobile thumbnails - adds padding, inherits scrollbar from global styles */
     .leaderboard-thumbnails {
         width: 100%;
         margin-top: var(--space-3);
-        padding-left: calc(48px + var(--space-4));
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-        scrollbar-color: var(--gray-300) transparent;
+        padding-left: var(--space-12); /* 48px - closest to 50px */
+        padding-bottom: 20px; /* Round 7 Fix 3: Changed from var(--space-2) to 20px */
+        -webkit-overflow-scrolling: touch; /* Round 3 Fix 6: Deprecated but kept for iOS <13 */
+        border-radius: var(--radius-md); /* Round 7 Fix 5: Rounded corners on mobile */
     }
+    /* Round 3 Fix 8: Duplicate scrollbar styles removed - inherited from global rules above */
 
-    .leaderboard-thumbnails::-webkit-scrollbar {
-        height: 4px;
-    }
-
-    .leaderboard-thumbnails::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .leaderboard-thumbnails::-webkit-scrollbar-thumb {
-        background: var(--gray-300);
-        border-radius: 2px;
+    /* Round 3 Fix 7: Mobile helper text - styled as visible subheader */
+    .leaderboard-thumbnails-hint {
+        display: block !important; /* Round 3 Fix 4: Override desktop display:none with !important */
+        width: 100%; /* Full width - own row */
+        font-size: 14px;
+        font-weight: 600; /* Semi-bold for subheader look */
+        color: var(--gray-700); /* Darker for visibility */
+        margin-top: var(--space-4); /* 16px */
+        /* Round 7 Fix 1: Removed margin-bottom */
+        padding-left: var(--space-12); /* Round 3 Fix 3: 48px to match thumbnails */
+        text-align: left;
+        letter-spacing: 0.3px;
     }
 
     .leaderboard-user {
         min-width: 150px;
         flex: 1;
     }
+
+    /* Round 3 Fix 2: Mobile layout - user info becomes row with follow button at end */
+    .leaderboard-user-info {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        width: 100%;
+        flex-wrap: wrap; /* Round 4 Fix 1: Allow wrapping if needed */
+    }
+
+    /* Round 3 Fix 2: Wrapper groups username + stats together */
+    .user-name-and-stats {
+        display: flex;
+        flex-direction: column;
+        flex: 120px 1; /* Round 4 Fix 1: Minimum 120px, can grow */
+        min-width: 0; /* Allow text truncation */
+    }
+
+    /* Round 3 Fix 6: Mobile follow button - compact styling, aligned right */
+    .leaderboard-follow-btn {
+        padding: 6px 16px;
+        font-size: var(--font-size-sm, 14px);
+        flex-shrink: 0; /* Don't shrink the button */
+    }
+}
+
+/* Round 3 Fix 4: Desktop helper text hidden - overridden by !important in mobile media query */
+.leaderboard-thumbnails-hint {
+    display: none;
 }
 
 @media (max-width: 768px) {
@@ -2332,6 +2473,7 @@ footer {
 
     .leaderboard-username {
         font-size: 1.1em;
+        max-width: 150px; /* Task 8: Smaller on mobile */
     }
 
     .leaderboard-stats {

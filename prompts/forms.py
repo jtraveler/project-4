@@ -1,10 +1,19 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
+from django.core.files.uploadedfile import UploadedFile, InMemoryUploadedFile, TemporaryUploadedFile
 from taggit.forms import TagWidget
 from .models import Comment, CollaborateRequest, Prompt, UserProfile, PromptReport, EmailPreferences
 from .services import ProfanityFilterService
 import re
+
+# Import CloudinaryResource for explicit type checking (security hardening)
+try:
+    from cloudinary import CloudinaryResource
+    CLOUDINARY_AVAILABLE = True
+except ImportError:
+    CloudinaryResource = None
+    CLOUDINARY_AVAILABLE = False
 
 
 class CommentForm(forms.ModelForm):
@@ -313,12 +322,15 @@ class UserProfileForm(forms.ModelForm):
 
     def clean_avatar(self):
         """
-        Validate avatar upload.
+        Validate avatar upload with explicit type checking for security.
 
         Handles three cases:
         1. No new file uploaded (avatar is None or False) - keep existing
         2. Existing CloudinaryResource object - return as-is (no re-validation)
-        3. New file upload (has 'read' method) - validate size, type, dimensions
+        3. New file upload (Django UploadedFile) - validate size, type, dimensions
+
+        Security: Uses isinstance() instead of hasattr() to prevent spoofed objects
+        from bypassing validation by simply having a 'public_id' attribute.
         """
         avatar = self.cleaned_data.get('avatar')
 
@@ -326,16 +338,23 @@ class UserProfileForm(forms.ModelForm):
         if not avatar:
             return self.instance.avatar if self.instance else None
 
-        # Case 2: Already a CloudinaryResource (existing avatar) - don't re-validate
-        # CloudinaryResource objects have 'public_id' attribute
-        if hasattr(avatar, 'public_id'):
-            return avatar
+        # Case 2: Explicit type check for CloudinaryResource
+        # More secure than hasattr() - ensures it's actually a Cloudinary object
+        if CLOUDINARY_AVAILABLE and CloudinaryResource is not None:
+            if isinstance(avatar, CloudinaryResource):
+                return avatar
+        else:
+            # Fallback: Check class name if Cloudinary import failed
+            # Still more secure than hasattr() as it checks the actual type
+            avatar_type = type(avatar).__name__
+            if avatar_type in ('CloudinaryResource', 'CloudinaryImage', 'CloudinaryField'):
+                return avatar
 
-        # Case 3: New file upload - validate before saving
-        # New uploads have 'read' method (file-like objects)
-        if not hasattr(avatar, 'read'):
-            # Neither CloudinaryResource nor file - unexpected type
-            return avatar
+        # Case 3: Explicit type check for Django file uploads
+        # UploadedFile is base class for InMemoryUploadedFile and TemporaryUploadedFile
+        if not isinstance(avatar, (UploadedFile, InMemoryUploadedFile, TemporaryUploadedFile)):
+            # Unknown type - reject for security
+            raise ValidationError('Invalid file type. Please upload an image file.')
 
         # Validate file size (5MB limit for avatars)
         if hasattr(avatar, 'size') and avatar.size > 5 * 1024 * 1024:

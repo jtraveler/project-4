@@ -2425,16 +2425,38 @@ def user_profile(request, username, active_tab=None):
     from .models import PromptView
     from .services.leaderboard import LeaderboardService
 
-    # Check cache first for profile stats
-    cache_key = f'profile_stats_{profile_user.id}'
-    cached_stats = cache.get(cache_key)
+    # Cache key validation function (security hardening)
+    # Prevents cache poisoning by validating user_id before key generation
+    def _get_profile_stats_cache_key(user_id):
+        """
+        Generate a validated cache key for profile stats.
+
+        Security measures:
+        1. Validates user_id is a positive integer
+        2. Uses versioned prefix (allows cache invalidation on schema changes)
+        3. Returns None if validation fails (triggers fresh calculation)
+        """
+        if not isinstance(user_id, int) or user_id <= 0:
+            return None
+        return f'pf_profile_stats_v1_{user_id}'
+
+    # Get validated cache key
+    cache_key = _get_profile_stats_cache_key(profile_user.id)
+
+    # Only use cache if key is valid
+    cached_stats = cache.get(cache_key) if cache_key else None
 
     if cached_stats:
-        # Use cached values
-        total_views = cached_stats.get('total_views', 0)
-        all_time_rank = cached_stats.get('all_time_rank')
-        thirty_day_rank = cached_stats.get('thirty_day_rank')
-    else:
+        # Validate cached data structure before using (prevents corrupted cache data)
+        if isinstance(cached_stats, dict) and 'total_views' in cached_stats:
+            total_views = cached_stats.get('total_views', 0)
+            all_time_rank = cached_stats.get('all_time_rank')
+            thirty_day_rank = cached_stats.get('thirty_day_rank')
+        else:
+            # Invalid cache data structure - recalculate
+            cached_stats = None
+
+    if not cached_stats:
         # Compute stats with error handling for each metric
         # Total Views: Sum of all unique views across user's prompts
         try:
@@ -2466,11 +2488,13 @@ def user_profile(request, username, active_tab=None):
             thirty_day_rank = None
 
         # Cache results for 5 minutes (300 seconds) - aligns with leaderboard cache TTL
-        cache.set(cache_key, {
-            'total_views': total_views,
-            'all_time_rank': all_time_rank,
-            'thirty_day_rank': thirty_day_rank,
-        }, 300)
+        # Only cache if we have a valid key (security: prevents cache pollution)
+        if cache_key:
+            cache.set(cache_key, {
+                'total_views': total_views,
+                'all_time_rank': all_time_rank,
+                'thirty_day_rank': thirty_day_rank,
+            }, 300)
 
     # Trash tab data (only for owner)
     trash_items = []

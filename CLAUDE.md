@@ -21,7 +21,8 @@
 11. [User Management](#user-management)
 12. [Feature Specifications](#feature-specifications)
 13. [Trash Bin & Orphaned File Management](#phase-d5-trash-bin--orphaned-file-management-)
-14. [Unanswered Questions](#unanswered-questions)
+14. [Phase I: Inspiration Page & AI Generators](#-phase-i-inspiration-page--ai-generators-planned)
+15. [Unanswered Questions](#unanswered-questions)
 
 ---
 
@@ -4829,6 +4830,342 @@ class UserProfile(models.Model):
 - Protects users from immediate username theft
 - Short enough that usernames cycle back to availability quickly
 - Balances user protection with username availability
+
+---
+
+## 🌟 Phase I: Inspiration Page & AI Generators (PLANNED)
+
+**Status:** 🔜 PLANNED (Not Started)
+**Priority:** Medium
+**Estimated Effort:** 2-3 weeks
+**Prerequisites:** Phase H Complete (or can run in parallel)
+
+---
+
+### Overview
+
+Transform the current `/ai/{generator}/` pages into a comprehensive "Inspiration" hub with:
+1. Unified inspiration landing page at `/inspiration/`
+2. Enhanced AI generator category pages
+3. Curated collections and trending prompts
+4. Advanced filtering and discovery features
+
+---
+
+### Architectural Decisions
+
+#### 1. URL Structure
+
+**Current State:**
+- `/ai/midjourney/` - AI generator category pages
+- No unified browsing experience
+
+**Proposed Structure:**
+```
+/inspiration/                    → Main hub page (NEW)
+/inspiration/generators/         → All AI generators listing (NEW)
+/inspiration/ai/{generator}/     → Individual generator pages (MIGRATED)
+/inspiration/collections/        → Curated collections (NEW)
+/inspiration/trending/           → Trending prompts (NEW)
+```
+
+**URL Migration Strategy:**
+- 301 redirects from `/ai/{generator}/` → `/inspiration/ai/{generator}/`
+- Maintain SEO equity through permanent redirects
+- Update all internal links to new URLs
+- Sitemap regeneration after migration
+
+---
+
+#### 2. AI Generators Expansion
+
+**Current Generators (11):**
+- Midjourney, DALL-E 3, DALL-E 2, Stable Diffusion
+- Leonardo AI, Flux, Sora, Sora 2
+- Veo 3, Adobe Firefly, Bing Image Creator
+
+**Proposed Additions (Investigation Required):**
+| Generator | Type | Priority | Notes |
+|-----------|------|----------|-------|
+| Ideogram | Image | High | Popular for text rendering |
+| Playground AI | Image | Medium | Growing community |
+| Canva AI | Image | Medium | Enterprise market |
+| Kaiber | Video | High | Popular video AI |
+| Pika Labs | Video | High | Text-to-video |
+| Runway Gen-2/3 | Video | High | Leading video AI |
+| Haiper | Video | Medium | Emerging competitor |
+| Luma Dream Machine | Video | Medium | Newer entrant |
+
+**Action Items:**
+- [ ] Research each generator's user base and community
+- [ ] Evaluate SEO keyword volume for each
+- [ ] Determine official links/affiliate opportunities
+- [ ] Create generator metadata (logo, description, official URL)
+
+---
+
+#### 3. Design Reference
+
+**Pexels Inspiration Model:**
+- Clean, minimal design aesthetic
+- Large hero images/videos
+- Infinite scroll or pagination
+- Filtering by type, color, orientation
+- "Explore" navigation pattern
+
+**Key UI Elements:**
+- Generator showcase cards with logo and sample count
+- Trending section with engagement metrics
+- Featured collections by theme
+- Quick filter chips (Images/Videos/All)
+- Sort options (Trending/New/Popular)
+
+---
+
+### Feature Requirements
+
+#### Phase I.1: Inspiration Landing Page
+
+**URL:** `/inspiration/`
+
+**Components:**
+1. **Hero Section**
+   - Rotating featured prompt showcase
+   - "Discover AI Art Prompts" heading
+   - Search bar with auto-suggest
+
+2. **Generator Showcase**
+   - Grid of all AI generators
+   - Each card shows: Logo, name, prompt count
+   - "View All Generators" link
+
+3. **Trending Section**
+   - Top 12 trending prompts (24hr)
+   - Mix of images and videos
+   - Engagement indicators (views, likes)
+
+4. **Collections Preview**
+   - 3-4 featured curated collections
+   - "Explore All Collections" link
+
+5. **By Category**
+   - Top tags/categories with counts
+   - Quick navigation to filtered views
+
+---
+
+#### Phase I.2: Enhanced Generator Pages
+
+**URL:** `/inspiration/ai/{generator}/`
+
+**Improvements Over Current:**
+1. **Generator Hero**
+   - Official logo (requires sourcing)
+   - Description (what it's known for)
+   - Link to official site (affiliate if available)
+   - Stats: Total prompts, this week's additions
+
+2. **Advanced Filtering**
+   - Type: Images / Videos
+   - Time: Today / Week / Month / All Time
+   - Sort: Trending / New / Popular
+   - Orientation: Portrait / Landscape / Square (images only)
+
+3. **Showcase Grid**
+   - Masonry layout (existing)
+   - Lazy loading
+   - View count badges (existing from Phase G)
+   - Quick-like functionality
+
+4. **SEO Enhancement**
+   - Expanded meta descriptions (150-160 chars)
+   - FAQ schema for common questions
+   - Breadcrumb schema
+   - Generator-specific long-form content (300+ words)
+
+---
+
+#### Phase I.3: Curated Collections
+
+**URL:** `/inspiration/collections/`
+
+**Collection Types:**
+1. **Staff Picks** - Manually curated by admins
+2. **Trending This Week** - Auto-generated from metrics
+3. **Theme Collections** - "Cyberpunk", "Nature", "Portraits", etc.
+4. **Community Favorites** - Top liked prompts
+
+**Database Model (NEW):**
+```python
+class Collection(models.Model):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(max_length=500)
+    cover_image = CloudinaryField('image', blank=True)
+    prompts = models.ManyToManyField('Prompt', related_name='collections')
+    is_auto_generated = models.BooleanField(default=False)
+    auto_criteria = models.JSONField(null=True, blank=True)  # For auto-gen rules
+    is_featured = models.BooleanField(default=False)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_featured', '-updated_at']
+```
+
+---
+
+#### Phase I.4: Trending & Discovery
+
+**URL:** `/inspiration/trending/`
+
+**Features:**
+1. **Time Period Selector**
+   - Today (24hr)
+   - This Week
+   - This Month
+   - All Time
+
+2. **Metric Toggles**
+   - Most Viewed
+   - Most Liked
+   - Most Commented
+   - Fastest Rising (velocity algorithm)
+
+3. **Category Breakdown**
+   - Trending in each top-level tag
+   - Trending per AI generator
+
+---
+
+### Implementation Phases
+
+| Sub-Phase | Description | Effort | Dependencies |
+|-----------|-------------|--------|--------------|
+| I.1 | URL migration with 301 redirects | 2-3 hours | None |
+| I.2 | Inspiration landing page design | 4-6 hours | I.1 |
+| I.3 | Inspiration landing page implementation | 6-8 hours | I.2 |
+| I.4 | Generator page enhancements | 4-6 hours | I.1 |
+| I.5 | Collection model + admin | 3-4 hours | None |
+| I.6 | Collection pages + UI | 4-6 hours | I.5 |
+| I.7 | Trending page implementation | 4-6 hours | Phase G.B (views) |
+| I.8 | New AI generators research | 2-3 hours | None |
+| I.9 | New AI generators implementation | 4-6 hours | I.8 |
+| I.10 | SEO optimization pass | 3-4 hours | I.1-I.9 |
+| I.11 | Testing + polish | 4-6 hours | All above |
+
+**Total Estimated Effort:** 40-58 hours (2-3 weeks)
+
+---
+
+### Investigation Required
+
+Before implementation, research needed for:
+
+1. **AI Generator Logos**
+   - Can we use official logos? (trademark considerations)
+   - Alternative: AI-generated placeholder graphics
+   - Check each generator's brand guidelines
+
+2. **Affiliate Programs**
+   - Midjourney affiliate program?
+   - Adobe Firefly affiliate?
+   - Leonardo AI affiliate?
+   - Research commission structures
+
+3. **Content Requirements**
+   - Long-form content for each generator page
+   - FAQ content for schema markup
+   - Collection descriptions
+
+4. **Performance Impact**
+   - Collections query complexity
+   - Caching strategy for trending
+   - CDN considerations for new pages
+
+---
+
+### Database Changes Required
+
+**New Models:**
+- `Collection` (as defined above)
+
+**Modified Models:**
+- `Prompt`: Add `collections` M2M through relationship
+
+**Migrations:**
+- Create Collection model
+- Add M2M relationship to Prompt
+
+---
+
+### SEO Considerations
+
+**Keyword Targets:**
+- "[Generator] prompts" (e.g., "Midjourney prompts")
+- "[Generator] examples"
+- "AI art prompts"
+- "AI image generator prompts"
+- "[Theme] AI art" (e.g., "cyberpunk AI art")
+
+**Schema Markup:**
+- CollectionPage for inspiration landing
+- ItemList for generator pages
+- FAQPage for generator-specific FAQs
+- BreadcrumbList on all pages
+
+**URL Migration Safety:**
+- All old URLs 301 redirect
+- Update sitemap.xml
+- Submit URL changes to Google Search Console
+- Monitor for 404 spikes
+
+---
+
+### Success Criteria
+
+- [ ] `/inspiration/` landing page live and responsive
+- [ ] All `/ai/` URLs redirect properly (301)
+- [ ] At least 3 curated collections created
+- [ ] Trending page shows accurate metrics
+- [ ] All new generator pages have 300+ word descriptions
+- [ ] Schema markup validated on all new pages
+- [ ] Page load time < 2 seconds
+- [ ] Mobile-responsive design verified
+- [ ] No SEO traffic loss 30 days post-migration
+
+---
+
+### Deferred Items (Future Consideration)
+
+1. **User-Created Collections** - Allow users to create/share collections (Premium feature)
+2. **Collection Following** - Notification when collection updated
+3. **AI Generator Comparisons** - Side-by-side prompt comparisons
+4. **Prompt Challenges** - Community challenges with themes
+5. **Generator Reviews** - User ratings/reviews of AI generators
+
+---
+
+### Notes
+
+**Why "Inspiration" vs "Explore"?**
+- "Inspiration" aligns better with creative intent
+- Pexels uses this terminology successfully
+- Differentiates from generic "Browse" or "Explore"
+- Better SEO for "AI art inspiration" keywords
+
+**Why migrate URLs?**
+- Current `/ai/` is too short/generic
+- `/inspiration/ai/` provides context
+- Allows expansion to non-generator content
+- Better information architecture
+
+**Risk Assessment:**
+- URL migration has SEO risk (mitigated by 301 redirects)
+- Content expansion requires writing effort
+- Generator logos may require legal review
+- Timeline depends on content creation speed
 
 ---
 

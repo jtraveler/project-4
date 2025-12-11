@@ -2419,6 +2419,28 @@ def user_profile(request, username, active_tab=None):
 
     total_likes = profile.get_total_likes()
 
+    # Calculate profile metrics (Phase G enhancement)
+    # Import here to avoid circular imports
+    from .models import PromptView
+    from .services.leaderboard import LeaderboardService
+
+    # Total Views: Sum of all unique views across user's prompts
+    total_views = PromptView.objects.filter(prompt__author=profile_user).count()
+
+    # All-time Rank: Position on Most Viewed leaderboard (all time)
+    all_time_rank = LeaderboardService.get_user_rank(
+        user=profile_user,
+        metric='views',
+        period='all'
+    )
+
+    # 30-day Rank: Position on Most Active leaderboard (past 30 days)
+    thirty_day_rank = LeaderboardService.get_user_rank(
+        user=profile_user,
+        metric='active',
+        period='month'
+    )
+
     # Trash tab data (only for owner)
     trash_items = []
     trash_count = 0
@@ -2449,11 +2471,15 @@ def user_profile(request, username, active_tab=None):
         'page_obj': page_obj,  # Paginator object for load more
         'total_prompts': total_prompts,
         'total_likes': total_likes,
+        'total_views': total_views,  # Phase G: Total views across all prompts
+        'all_time_rank': all_time_rank,  # Phase G: Most Viewed leaderboard position
+        'thirty_day_rank': thirty_day_rank,  # Phase G: Most Active leaderboard position (30 days)
         'media_filter': media_filter,
         'is_own_profile': is_owner,
         'active_tab': active_tab or 'gallery',
         'trash_items': trash_items,
         'trash_count': trash_count,
+        'show_statistics_tab': False,  # Phase G: Hidden for future implementation
     }
 
     response = render(request, 'prompts/user_profile.html', context)

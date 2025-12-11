@@ -4554,6 +4554,50 @@ class LeaderboardService:
 
 ---
 
+#### Profile Metrics (December 11, 2025)
+
+**User profile pages now display actual stats instead of placeholder dashes.**
+
+| Stat | Definition | Formula/Query | Time Window |
+|------|------------|---------------|-------------|
+| **Total Views** | Unique views across all user's prompts | `PromptView.objects.filter(prompt__author=user).count()` | All time |
+| **All-time Rank** | Position on Most Viewed leaderboard | `SUM(views)` per user | All time |
+| **30-day Rank** | Position on Most Active leaderboard | `(uploads×10) + (comments×2) + (likes×1)` | Rolling 30 days |
+
+**Ranking Formulas:**
+
+**Most Viewed (All-time Rank):**
+- Counts total unique views across all user's prompts
+- Higher views = better rank
+- Rank 1 = user with most total views
+- Uses `LeaderboardService.get_user_rank(user, metric='views', period='all')`
+
+**Most Active (30-day Rank):**
+- Scores based on recent activity:
+  - Each upload: 10 points
+  - Each comment: 2 points
+  - Each like given: 1 point
+- Only counts activity within past 30 days (rolling window)
+- Higher score = better rank
+- Rank 1 = most active user in past 30 days
+- Uses `LeaderboardService.get_user_rank(user, metric='active', period='month')`
+
+**Why This Hybrid Approach:**
+- **All-time Rank = Most Viewed:** Pairs with "Total Views" stat (same metric family)
+- **30-day Rank = Most Active:** Encourages ongoing engagement and community participation
+- Users see both their content reach (views) and their contribution (activity)
+
+**Display Logic:**
+- Rank displays as `#1`, `#5`, `#42`, etc.
+- Users not ranked (no activity or beyond top 1000) show `-`
+- Total Views shows `0` for users with no views
+
+**Statistics Tab:**
+- Hidden via `show_statistics_tab: False` context variable
+- Can be enabled later for complex analytics (bar graphs, trends)
+
+---
+
 ### Known Issues / Testing Needed
 
 ✅ **Migration Applied:** SiteSettings fields and PromptView model deployed

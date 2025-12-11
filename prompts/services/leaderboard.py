@@ -284,6 +284,38 @@ class LeaderboardService:
         return {u.id: u.id in following_ids for u in target_users}
 
     @classmethod
+    def get_user_rank(cls, user, metric='views', period='all'):
+        """
+        Get a specific user's rank on the leaderboard.
+
+        Used by user profile page to display ranking stats.
+
+        Args:
+            user: User object to find rank for
+            metric: 'views' for Most Viewed, 'active' for Most Active
+            period: 'week', 'month', or 'all'
+
+        Returns:
+            int: 1-indexed rank position, or None if user not ranked
+        """
+        if not user:
+            return None
+
+        # Use higher limit for rank lookup to find users not in top 25
+        limit = 1000
+
+        if metric == 'views':
+            leaderboard = cls.get_most_viewed(period=period, limit=limit)
+        else:
+            leaderboard = cls.get_most_active(period=period, limit=limit)
+
+        for index, entry in enumerate(leaderboard, start=1):
+            if entry.id == user.id:
+                return index
+
+        return None  # User not ranked (no activity or beyond limit)
+
+    @classmethod
     def invalidate_cache(cls, period=None):
         """
         Invalidate leaderboard cache.

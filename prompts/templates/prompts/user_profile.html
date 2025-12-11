@@ -811,25 +811,26 @@
         {% endif %}
 
         <!-- ============================================
-             PLACEHOLDER METRICS SECTION (Below Follow Button)
+             PROFILE METRICS SECTION (Below Follow Button)
+             Phase G Enhancement: Display actual stats
              ============================================ -->
         <div class="placeholder-metrics-section" style="margin-top: 32px; padding: 24px 0;">
             <div class="profile-stats-row">
-                <!-- Total Views -->
+                <!-- Total Views: Sum of all unique views across user's prompts -->
                 <div class="profile-stat">
-                    <div class="profile-stat-value">-</div>
+                    <div class="profile-stat-value">{{ total_views|default:0 }}</div>
                     <div class="profile-stat-label">Total Views</div>
                 </div>
 
-                <!-- All-time Rank -->
+                <!-- All-time Rank: Position on Most Viewed leaderboard (all time) -->
                 <div class="profile-stat">
-                    <div class="profile-stat-value">-</div>
+                    <div class="profile-stat-value">{% if all_time_rank %}#{{ all_time_rank }}{% else %}-{% endif %}</div>
                     <div class="profile-stat-label">All-time Rank</div>
                 </div>
 
-                <!-- 30-day Rank -->
+                <!-- 30-day Rank: Position on Most Active leaderboard (past 30 days) -->
                 <div class="profile-stat">
-                    <div class="profile-stat-value">-</div>
+                    <div class="profile-stat-value">{% if thirty_day_rank %}#{{ thirty_day_rank }}{% else %}-{% endif %}</div>
                     <div class="profile-stat-label">30-day Rank</div>
                 </div>
             </div>
@@ -856,7 +857,7 @@
                     <span class="profile-tab-count stat-badge">{{ total_prompts|default:0 }}</span>
                 </a>
                 <button class="profile-tab">Collections</button>
-                <button class="profile-tab">Statistics</button>
+                {% if show_statistics_tab %}<button class="profile-tab">Statistics</button>{% endif %}
                 <button class="profile-tab">
                     Followers
                     <span class="profile-tab-count stat-badge" id="follower-count">{{ profile_user.userprofile.follower_count|default:0 }}</span>

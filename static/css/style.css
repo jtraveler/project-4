@@ -2315,28 +2315,35 @@ footer {
    LEADERBOARD RESPONSIVE STYLES
    ═══════════════════════════════════════════════════════════════ */
 
-/* Fix 4: Scrollbar for all viewports when thumbnails overflow */
+/* Round 8 Fix 1-2: Scrollbar ALWAYS visible with custom styling */
 .leaderboard-thumbnails {
-    overflow-x: auto;
+    overflow-x: scroll;  /* Changed from 'auto' to 'scroll' - forces scrollbar */
     overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--gray-400) var(--gray-200);
+    scrollbar-gutter: stable;  /* Reserve space for scrollbar */
 }
 
+/* Webkit browsers - Custom scrollbar styling */
 .leaderboard-thumbnails::-webkit-scrollbar {
-    height: 8px; /* Fix 4: Increased from 6px for visibility */
-    display: block;
+    height: 10px;  /* Increased for better visibility */
+    display: block !important;  /* Force display */
+    -webkit-appearance: none;   /* Override system styling */
 }
 
 .leaderboard-thumbnails::-webkit-scrollbar-track {
-    background: var(--gray-200); /* Fix 4: Visible track */
+    background: var(--gray-200);
     border-radius: 10px;
+    -webkit-appearance: none;
+    visibility: visible !important;  /* Prevent auto-hide */
 }
 
 .leaderboard-thumbnails::-webkit-scrollbar-thumb {
     background-color: var(--gray-400);
-    border-radius: 10px; /* Pill/oval shape */
-    min-width: 40px; /* Fix 4: Minimum thumb size */
+    border-radius: 10px;  /* Pill/oval shape */
+    min-width: 40px;
+    -webkit-appearance: none;
+    visibility: visible !important;  /* Prevent auto-hide */
 }
 
 .leaderboard-thumbnails::-webkit-scrollbar-thumb:hover {
@@ -2347,6 +2354,52 @@ footer {
 .leaderboard-thumbnail-wrapper,
 .leaderboard-thumbnail-wrapper.thumbnail-overlay-container {
     flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Round 8 Fix 3: Responsive 4th/5th thumbnail behavior
+   - Default (<1700px): 4 thumbnails, 4th has overlay if more exist
+   - Wide (>1700px): 5 thumbnails, 5th has overlay
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Default: 5th thumbnail hidden */
+.leaderboard-thumbnail-wrapper.thumbnail-5th {
+    display: none;
+}
+
+/* Default: 4th thumbnail shows overlay when has more content */
+.leaderboard-thumbnail-wrapper.thumbnail-4th .thumbnail-overlay-4th {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    z-index: 2;
+}
+
+/* Default: Hide hover overlay on 4th when it has the permanent overlay */
+.leaderboard-thumbnail-wrapper.thumbnail-4th.has-more .thumbnail-hover-overlay {
+    display: none;
+}
+
+/* Wide desktop (>1700px): Show 5th thumbnail, hide 4th overlay */
+@media (min-width: 1701px) {
+    /* Show 5th thumbnail */
+    .leaderboard-thumbnail-wrapper.thumbnail-5th {
+        display: block;
+    }
+
+    /* Hide overlay on 4th thumbnail (5th now has it) */
+    .leaderboard-thumbnail-wrapper.thumbnail-4th .thumbnail-overlay-4th {
+        display: none;
+    }
+
+    /* 4th thumbnail shows normal hover overlay instead */
+    .leaderboard-thumbnail-wrapper.thumbnail-4th.has-more .thumbnail-hover-overlay {
+        display: block;
+    }
 }
 
 /* Task 9: Desktop spacing between user info and thumbnails */

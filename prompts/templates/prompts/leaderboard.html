@@ -142,8 +142,8 @@ Discover the most popular content creators on PromptFinder. See who has the most
                aria-label="View all {{ creator.prompt_count }} prompts by {{ creator.username }}">
                 <div class="leaderboard-thumbnails">
                     {% for prompt in creator.thumbnails %}
-                    {% if forloop.counter <= 3 or creator.remaining_count == 0 %}
-                    {# Round 5 Fix 3: Thumbnails 1-3 (or 4th if no more remaining) #}
+                    {% if forloop.counter <= 3 %}
+                    {# Round 8: Thumbnails 1-3 - always visible with hover overlay #}
                     <div class="leaderboard-thumbnail-wrapper">
                         <img src="{% if prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
                              alt="{{ prompt.title }}"
@@ -151,9 +151,26 @@ Discover the most popular content creators on PromptFinder. See who has the most
                              loading="lazy">
                         <div class="thumbnail-hover-overlay" aria-hidden="true"></div>
                     </div>
-                    {% elif forloop.counter == 4 and creator.remaining_count > 0 %}
-                    {# Round 5 Fix 3: 4th thumbnail with permanent overlay #}
-                    <div class="leaderboard-thumbnail-wrapper thumbnail-overlay-container">
+                    {% elif forloop.counter == 4 %}
+                    {# Round 8: 4th thumbnail - overlay on narrow screens, normal on wide when 5th exists #}
+                    <div class="leaderboard-thumbnail-wrapper thumbnail-4th {% if creator.remaining_count > 0 %}has-more{% endif %}">
+                        <img src="{% if prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
+                             alt="{{ prompt.title }}"
+                             class="leaderboard-thumbnail"
+                             loading="lazy">
+                        <div class="thumbnail-hover-overlay" aria-hidden="true"></div>
+                        {% if creator.remaining_count > 0 %}
+                        <div class="thumbnail-overlay thumbnail-overlay-4th">
+                            <div class="thumbnail-overlay-content">
+                                <span class="thumbnail-overlay-text">+{{ creator.remaining_count|intcomma }}</span>
+                                <span class="thumbnail-overlay-subtext">See all prompts</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif forloop.counter == 5 and creator.remaining_count > 0 %}
+                    {# Round 8: 5th thumbnail - only visible on wide desktop (>1700px) with overlay #}
+                    <div class="leaderboard-thumbnail-wrapper thumbnail-overlay-container thumbnail-5th">
                         <img src="{% if prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
                              alt="{{ prompt.title }}"
                              class="leaderboard-thumbnail"

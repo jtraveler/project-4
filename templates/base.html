@@ -147,7 +147,7 @@
                  onmouseenter="keepDropdownOpen('exploreDropdown')"
                  onmouseleave="hideDropdown('exploreDropdown', document.querySelector('[onmouseenter*=exploreDropdown]'))"
                  role="menu" aria-label="Explore options">
-                <a href="{% url 'about' %}#collections" class="pexels-dropdown-item" role="menuitem" tabindex="0">
+                <a href="{% url 'about' %}#collections" class="pexels-dropdown-item nav-link-discover-collections" role="menuitem" tabindex="0">
                     <i class="fas fa-layer-group pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Discover Collections</div>
@@ -159,7 +159,7 @@
                         <div class="pexels-dropdown-title">Leaderboard</div>
                     </div>
                 </a>
-                <a href="{% url 'about' %}#blog" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
+                <a href="{% url 'about' %}#blog" class="pexels-dropdown-item nav-link-blog" role="menuitem" tabindex="-1">
                     <i class="fas fa-newspaper pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">PromptFinder Blog</div>
@@ -1403,7 +1403,7 @@ if (mobileMenu && isTouchDevice) {
           >
     <!-- Section: Social media -->
     <div
-             class="p-4"
+             class="p-4 footer-social-section"
              style="border-bottom: 1px solid var(--main-border-color);"
              >
         <div class="container d-flex justify-content-between ">

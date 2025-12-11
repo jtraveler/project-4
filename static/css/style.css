@@ -2548,3 +2548,29 @@ footer {
         display: none;
     }
 }
+
+/* ============================================
+   TEMPORARILY HIDDEN FOR PUBLIC LAUNCH
+   Remove these rules when features are ready
+   Search for "hidden from public for now" to find all
+   ============================================ */
+
+/* hidden from public for now */
+.nav-link-discover-collections {
+    display: none !important;
+}
+
+/* hidden from public for now */
+.nav-link-blog {
+    display: none !important;
+}
+
+/* hidden from public for now */
+.pexels-icon-btn.three-dots {
+    display: none !important;
+}
+
+/* hidden from public for now */
+.footer-social-section {
+    display: none !important;
+}

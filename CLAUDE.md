@@ -1,6 +1,6 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 7, 2025
+**Last Updated:** December 11, 2025
 **Project Status:** Pre-Launch Development - Phase E Complete, Phase F Complete, Performance Optimizations Complete, Draft Mode System Complete, CSS Cleanup Phase 1 Complete, Phase G Parts A, B, C Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -4394,11 +4394,13 @@ BOT_USER_AGENT_PATTERNS = [
 
 ### Part C: Community Favorites / Leaderboard ✅ COMPLETE
 
-**Status:** 100% Complete
-**Session Chat:** https://claude.ai/chat/5ab46a30-3d54-4586-bd40-0e0309fb8f2c
-**Commits:** 6 commits total (5 initial + 1 UI fixes)
+**Status:** 100% Complete (with known macOS limitation)
+**Session Chats:**
+- Initial: https://claude.ai/chat/5ab46a30-3d54-4586-bd40-0e0309fb8f2c
+- Final Polish: December 11, 2025
+**Commits:** 9 commits total
 **Deployed:** Heroku production
-**Agent Rating:** 8.7/10 average (final validation)
+**Agent Rating:** 8.9/10 average (final validation)
 
 ---
 
@@ -4408,21 +4410,45 @@ BOT_USER_AGENT_PATTERNS = [
 - Two ranking modes: Most Viewed / Most Active
 - Time period filters: Week / Month / All Time
 - Follow buttons with AJAX functionality
-- User thumbnails showing recent prompts
+- User thumbnails showing recent prompts (4 default, 5 on wide desktop >1700px)
 - Responsive design with mobile breakpoints (992px and below)
 - Pexels-inspired design aesthetic
+- Custom period dropdown (replaced native select)
 
 **2. LeaderboardService Class** (`prompts/services/leaderboard.py`)
 - 5-minute caching for performance optimization
 - **Most Viewed:** SUM of all views on user's prompts
 - **Most Active:** `uploads*10 + comments*2 + likes*1` scoring
 - Bulk follow status query (prevents N+1 queries)
+- Bulk thumbnail attachment (prevents N+1 queries)
 - Time period filtering (7 days / 30 days / all time)
+- Input validation with bounds checking
 
 **3. Navigation Integration**
 - Added "Leaderboard" link to Explore dropdown in navbar
 - Trophy icon visual indicator
 - Accessible via `/leaderboard/` URL route
+
+**4. Mobile Layout**
+- 3-column structure: [Avatar] [Name+Stats] [Follow Button]
+- Helper text: "Click the thumbnails below to visit user's profile"
+- Horizontal scrolling thumbnails
+- Touch-friendly tap targets
+
+---
+
+#### Iterative Refinement (9 Rounds)
+
+| Round | Date | Key Changes |
+|-------|------|-------------|
+| **Initial** | Dec 6 | Core leaderboard implementation (5 commits) |
+| **Round 1-3** | Dec 7 | Video thumbnails fix, stats color, code quality improvements |
+| **Round 4** | Dec 9 | Scrollbar root cause fix (flex-shrink: 0 was blocking overflow) |
+| **Round 5** | Dec 9 | Reduced thumbnails from 5 to 4, added scrollbar padding |
+| **Round 6** | Dec 9 | Fixed scrollbar again (removed justify-content: right) |
+| **Round 7** | Dec 9 | Mobile helper text polish, border-radius on thumbnails container |
+| **Round 8** | Dec 9 | Scrollbar always visible attempt, 5 thumbnails on wide desktop (>1700px) |
+| **Final** | Dec 11 | Header spacing fix, thumbnail width 480px, scrollbar track visibility |
 
 ---
 
@@ -4430,67 +4456,31 @@ BOT_USER_AGENT_PATTERNS = [
 
 | File | Type | Description |
 |------|------|-------------|
-| `prompts/services/leaderboard.py` | New | LeaderboardService class (251 lines) |
-| `prompts/templates/prompts/leaderboard.html` | New | Leaderboard template (247 lines) |
+| `prompts/services/leaderboard.py` | New | LeaderboardService class (~280 lines) |
+| `prompts/templates/prompts/leaderboard.html` | New | Leaderboard template (~250 lines) |
 | `prompts/views.py` | Modified | Added `leaderboard` view function |
 | `prompts/urls.py` | Modified | URL route `/leaderboard/` |
-| `static/css/style.css` | Modified | Leaderboard CSS variables + styles |
+| `static/css/style.css` | Modified | Leaderboard CSS (~200 lines added) |
 | `templates/base.html` | Modified | Navigation dropdown links |
-
----
-
-#### Agent Validation (Final - December 7, 2025)
-
-| Agent | Rating | Notes |
-|-------|--------|-------|
-| @frontend-developer | 9.5/10 | Excellent CSS structure, proper use of variables |
-| @ui-ux-designer | 9.2/10 | Consistent with design system |
-| @code-reviewer | 7.5/10 | Initially raised concerns, resolved with CSS variable refactoring |
-| **Average** | **8.7/10** | Exceeds 8+ threshold |
-
----
-
-#### Fixes Completed (Initial 7/7)
-
-| Fix | Issue | Solution |
-|-----|-------|----------|
-| **Fix 1** | Video thumbnails not displaying | Added flex centering, background fallback, object-fit cover |
-| **Fix 2** | pexels-dropdown-desc in nav | Removed redundant description from base.html |
-| **Fix 3** | thumbnail-more font size | Changed to 18px |
-| **Fix 4** | thumbnail-more small font size | Changed to 15px |
-| **Fix 5** | leaderboard-user gap | Changed to 25px |
-| **Fix 6** | Unfollow button not working | Added {% csrf_token %} for AJAX requests |
-| **Fix 7** | Native select dropdown | Replaced with custom Pexels-style dropdown (CSS variables)
-
----
-
-#### UI Refinement Rounds (5-8) - December 9-11, 2025
-
-After initial fixes, 4 additional rounds of iterative UI polish were performed:
-
-| Round | Date | Key Changes |
-|-------|------|-------------|
-| **Round 5** | Dec 9 | Reduced thumbnails from 5 to 4, added scrollbar padding |
-| **Round 6** | Dec 9 | Fixed scrollbar by removing `justify-content: right` |
-| **Round 7** | Dec 9 | Mobile helper text polish, border-radius on thumbnails |
-| **Round 8** | Dec 9 | Scrollbar always visible, 5 thumbnails on wide desktop (>1700px) |
-| **Final** | Dec 11 | Header spacing, thumbnail width 480px, scrollbar macOS fix |
-
-**Thumbnail Responsive Behavior:**
-- Default (<1700px): Shows 4 thumbnails, 4th has "+X more" overlay
-- Wide desktop (≥1701px): Shows 5 thumbnails, 5th has "+X more" overlay
-
-**Scrollbar Enhancement (macOS Chrome fix):**
-- `overflow-x: scroll` forces scrollbar visibility
-- `-webkit-appearance: none` overrides system overlay scrollbar
-- Background gradient creates always-visible track on macOS
-- Custom colors: `var(--gray-400)` thumb, `var(--gray-200)` track
-
-**Final Commit:** `fix(phase-g): Final leaderboard UI polish`
+| `CLAUDE.md` | Modified | Documentation updates |
 
 ---
 
 #### Technical Implementation Details
+
+**Thumbnail Responsive Behavior:**
+```
+Screen Width        Thumbnails    Overlay Position
+< 1700px            4 visible     4th thumbnail has "+X more"
+≥ 1701px            5 visible     5th thumbnail has "+X more"
+```
+
+**Mobile Layout (≤992px):**
+```
+[Rank] [Avatar] [Name + Stats] [Follow Button]
+       [Thumbnails with horizontal scroll]
+       [Helper text]
+```
 
 **Leaderboard Service Architecture:**
 ```python
@@ -4510,14 +4500,57 @@ class LeaderboardService:
         # Bulk query for follow status (prevents N+1)
 ```
 
-**Ranking Modes:**
-- **Most Viewed:** Total views across all prompts in time period
-- **Most Active:** Engagement scoring (uploads weighted highest)
+**Video Thumbnail Fix:**
+- Changed from string manipulation (`slice:-4.jpg`) to `get_thumbnail_url()` method
+- Cloudinary generates proper thumbnails with transformations
 
-**Time Periods:**
-- Week: Last 7 days
-- Month: Last 30 days
-- All Time: No date filter
+**Stats Color:**
+- Changed from `var(--gray-500)` to `var(--black)` for better readability
+- Contrast ratio improved from 4.5:1 to 21:1
+
+---
+
+#### Agent Validation (Final - December 11, 2025)
+
+| Agent | Rating | Notes |
+|-------|--------|-------|
+| @frontend-developer | 9.2/10 | Excellent CSS structure, cross-browser handling |
+| @ui-ux-designer | 9.0/10 | Consistent with design system |
+| @code-reviewer | 8.5/10 | Clean implementation, proper variable usage |
+| **Average** | **8.9/10** | Exceeds 8+ threshold |
+
+---
+
+#### Known Limitations
+
+**1. macOS Scrollbar Thumb Auto-Hides**
+- **Issue:** On macOS Chrome/Safari with "Show scrollbars: When scrolling" system setting, the scrollbar thumb auto-hides after interaction stops
+- **Mitigation:** Scrollbar track is always visible via CSS background gradient fallback
+- **Impact:** Cosmetic only - scroll functionality works correctly
+- **Status:** Accepted as macOS system limitation (would require JavaScript library to fully override)
+
+**2. Mobile Browsers**
+- **Issue:** iOS Safari and Android Chrome use native scrollbars
+- **Impact:** Expected behavior - custom scrollbar styling not supported on mobile
+- **Status:** By design
+
+**3. Firefox Hover State**
+- **Issue:** Firefox's `scrollbar-width: thin` doesn't support hover pseudo-classes
+- **Impact:** Minor cosmetic difference - thumb color doesn't change on hover
+- **Status:** Accepted (Firefox limitation)
+
+---
+
+#### CSS Variables Used
+
+| Variable | Purpose |
+|----------|---------|
+| `--gray-200` | Scrollbar track, borders |
+| `--gray-400` | Scrollbar thumb, secondary text |
+| `--gray-500` | Scrollbar thumb hover |
+| `--space-12` | Page padding (48px) |
+| `--space-4` | Page padding component (16px) |
+| `--black` | Stats text color |
 
 ---
 

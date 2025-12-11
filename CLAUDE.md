@@ -4632,6 +4632,206 @@ class LeaderboardService:
 
 ---
 
+## 📋 Phase H: Username System (PLANNED)
+
+**Status:** 🔜 PLANNED (Not Started)
+**Priority:** Medium
+**Estimated Effort:** 1-2 weeks
+**Prerequisites:** Phase G Complete ✅
+
+---
+
+### Overview
+
+Comprehensive username system overhaul including:
+1. Username selection during registration (currently auto-generated from first name)
+2. Username editing with rate limits and validation
+3. URL redirect system for changed usernames
+4. Profanity and offensive content filtering
+
+---
+
+### Features Planned
+
+#### 1. Username Selection on Signup
+
+**Current State:** Username auto-generated from user's first name
+**Desired State:** User chooses their own username during registration
+
+**Requirements:**
+- Username field on registration form
+- Real-time availability checking (AJAX)
+- Uniqueness validation
+- Profanity filter integration
+- Format rules: 3-30 characters, alphanumeric + underscores only
+
+---
+
+#### 2. Username Editing
+
+**Rules:**
+- Maximum 2 username changes per week (rate limiting)
+- Changes tracked in `UsernameHistory` model
+- Profanity filter blocks offensive names
+- User warned about SEO/branding implications before change
+
+**Blocked Content:**
+- Profanity (use existing `profanity_filter.py` service)
+- Offensive terms
+- Demonic/occult references
+- Impersonation attempts (admin, moderator, support, etc.)
+
+---
+
+#### 3. URL Redirect System
+
+**Database Model:**
+```python
+class UsernameHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='username_history')
+    old_username = models.CharField(max_length=150, db_index=True)
+    new_username = models.CharField(max_length=150)
+    changed_at = models.DateTimeField(auto_now_add=True)
+    redirect_active = models.BooleanField(default=True)
+    grace_period_ends = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['old_username', 'redirect_active']),
+        ]
+```
+
+**URL Handling Logic:**
+```
+User visits /users/<username>/
+
+1. Check if username exists in User model
+   → YES: Show that user's profile
+   → NO: Continue to step 2
+
+2. Check UsernameHistory for old_username where redirect_active=True
+   → FOUND: 301 redirect to new username URL
+   → NOT FOUND: Return 404
+```
+
+**Scenarios:**
+
+| Scenario | Old URL Behavior |
+|----------|------------------|
+| User "alice" → "alice_design", old name unclaimed | `/users/alice/` → 301 redirect → `/users/alice_design/` |
+| User "alice" → "alice_design", then "bob" claims "alice" | `/users/alice/` → Shows bob's profile (redirect deactivated) |
+| User changes name, within 3-day grace period | Old name reserved, redirect active |
+| User changes name, after grace period | Old name available for others |
+
+---
+
+#### 4. SEO Considerations
+
+**Implemented:**
+- 301 redirects preserve link equity (SEO juice)
+- Sitemap automatically updated (existing implementation)
+- Canonical URLs point to current username
+
+**User Warnings:**
+- Modal confirmation before username change
+- Explain: "Your old profile URL will redirect to your new one"
+- Explain: "If someone else claims your old username, the redirect will stop"
+- Explain: "External links and @mentions may break"
+
+---
+
+### Database Changes Required
+
+**New Model:** `UsernameHistory` (as shown above)
+
+**Modified Model:** `UserProfile`
+```python
+class UserProfile(models.Model):
+    # ... existing fields ...
+    username_changes_this_week = models.PositiveIntegerField(default=0)
+    last_username_change = models.DateTimeField(null=True, blank=True)
+```
+
+---
+
+### Implementation Phases
+
+| Sub-Phase | Description | Effort |
+|-----------|-------------|--------|
+| H.1 | Username selection on signup | 2-3 hours |
+| H.2 | Profanity filter integration for usernames | 1-2 hours |
+| H.3 | UsernameHistory model + migrations | 2-3 hours |
+| H.4 | Username edit form with rate limiting | 3-4 hours |
+| H.5 | URL redirect middleware/view | 3-4 hours |
+| H.6 | User warnings and confirmation UI | 2-3 hours |
+| H.7 | Testing + edge cases | 3-4 hours |
+
+**Total Estimated Effort:** 16-23 hours (1-2 weeks)
+
+---
+
+### Edge Cases to Handle
+
+1. **User tries to change back to previous username**
+   - Allow if within grace period and name not claimed
+   - Count as one of their 2 weekly changes
+
+2. **User deletes account**
+   - Deactivate all redirects for their old usernames
+   - Old usernames become available immediately
+
+3. **Case sensitivity**
+   - Usernames are case-insensitive for uniqueness
+   - Display preserves user's chosen case
+   - URLs are lowercase
+
+4. **Reserved usernames**
+   - Block: admin, administrator, moderator, support, help, api, www, etc.
+   - Block: promptfinder, promptflow (brand protection)
+
+5. **Username squatting**
+   - Consider: Reclaim inactive usernames after 1+ year of no activity
+   - Future consideration, not Phase H scope
+
+---
+
+### Technical Dependencies
+
+- Existing `profanity_filter.py` service ✅
+- Django caching (for rate limit tracking) ✅
+- URL routing system ✅
+- User authentication ✅
+
+---
+
+### Success Criteria
+
+- [ ] Users can choose username during registration
+- [ ] Users can change username (max 2x/week)
+- [ ] Profanity filter blocks offensive usernames
+- [ ] Old URLs redirect to new profile (301)
+- [ ] Redirects deactivate when old name is claimed
+- [ ] Admin can view username change history
+- [ ] SEO preserved through proper redirects
+
+---
+
+### Notes
+
+**Why rate limit to 2x/week?**
+- Usernames are part of personal branding
+- Followers/community recognize usernames
+- Prevents abuse and confusion
+- 2x/week allows corrections without encouraging constant changes
+
+**Why 3-day grace period?**
+- Gives time for user to notify followers of change
+- Protects users from immediate username theft
+- Short enough that usernames cycle back to availability quickly
+- Balances user protection with username availability
+
+---
+
 ## 📚 Documentation Archive Structure
 
 **Created:** November 3, 2025

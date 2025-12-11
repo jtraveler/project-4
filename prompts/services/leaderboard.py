@@ -26,6 +26,10 @@ class LeaderboardService:
     MAX_LIMIT = 100  # Prevent resource exhaustion
     THUMBNAIL_LIMIT = 5  # Round 8 Fix 3: Back to 5 for wide desktop support
 
+    # Valid parameter values for input validation
+    VALID_METRICS = ('views', 'active')
+    VALID_PERIODS = ('week', 'month', 'all')
+
     @classmethod
     def _validate_limit(cls, limit):
         """Validate and sanitize limit parameter."""
@@ -297,9 +301,23 @@ class LeaderboardService:
 
         Returns:
             int: 1-indexed rank position, or None if user not ranked
+
+        Raises:
+            ValueError: If metric or period is invalid
         """
         if not user:
             return None
+
+        # Validate inputs to prevent unexpected behavior
+        if metric not in cls.VALID_METRICS:
+            raise ValueError(
+                f"Invalid metric '{metric}'. Must be one of: {cls.VALID_METRICS}"
+            )
+
+        if period not in cls.VALID_PERIODS:
+            raise ValueError(
+                f"Invalid period '{period}'. Must be one of: {cls.VALID_PERIODS}"
+            )
 
         # Use higher limit for rank lookup to find users not in top 25
         limit = 1000

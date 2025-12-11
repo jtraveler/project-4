@@ -2420,26 +2420,57 @@ def user_profile(request, username, active_tab=None):
     total_likes = profile.get_total_likes()
 
     # Calculate profile metrics (Phase G enhancement)
-    # Import here to avoid circular imports
+    # Uses 5-minute caching to improve performance (same TTL as leaderboard)
+    from django.core.cache import cache
     from .models import PromptView
     from .services.leaderboard import LeaderboardService
 
-    # Total Views: Sum of all unique views across user's prompts
-    total_views = PromptView.objects.filter(prompt__author=profile_user).count()
+    # Check cache first for profile stats
+    cache_key = f'profile_stats_{profile_user.id}'
+    cached_stats = cache.get(cache_key)
 
-    # All-time Rank: Position on Most Viewed leaderboard (all time)
-    all_time_rank = LeaderboardService.get_user_rank(
-        user=profile_user,
-        metric='views',
-        period='all'
-    )
+    if cached_stats:
+        # Use cached values
+        total_views = cached_stats.get('total_views', 0)
+        all_time_rank = cached_stats.get('all_time_rank')
+        thirty_day_rank = cached_stats.get('thirty_day_rank')
+    else:
+        # Compute stats with error handling for each metric
+        # Total Views: Sum of all unique views across user's prompts
+        try:
+            total_views = PromptView.objects.filter(prompt__author=profile_user).count()
+        except Exception as e:
+            logger.error(f"Failed to get total views for user {profile_user.id}: {e}")
+            total_views = 0
 
-    # 30-day Rank: Position on Most Active leaderboard (past 30 days)
-    thirty_day_rank = LeaderboardService.get_user_rank(
-        user=profile_user,
-        metric='active',
-        period='month'
-    )
+        # All-time Rank: Position on Most Viewed leaderboard (all time)
+        try:
+            all_time_rank = LeaderboardService.get_user_rank(
+                user=profile_user,
+                metric='views',
+                period='all'
+            )
+        except Exception as e:
+            logger.error(f"Failed to get all-time rank for user {profile_user.id}: {e}")
+            all_time_rank = None
+
+        # 30-day Rank: Position on Most Active leaderboard (past 30 days)
+        try:
+            thirty_day_rank = LeaderboardService.get_user_rank(
+                user=profile_user,
+                metric='active',
+                period='month'
+            )
+        except Exception as e:
+            logger.error(f"Failed to get 30-day rank for user {profile_user.id}: {e}")
+            thirty_day_rank = None
+
+        # Cache results for 5 minutes (300 seconds) - aligns with leaderboard cache TTL
+        cache.set(cache_key, {
+            'total_views': total_views,
+            'all_time_rank': all_time_rank,
+            'thirty_day_rank': thirty_day_rank,
+        }, 300)
 
     # Trash tab data (only for owner)
     trash_items = []

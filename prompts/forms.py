@@ -312,49 +312,72 @@ class UserProfileForm(forms.ModelForm):
         return bio
 
     def clean_avatar(self):
-        """Validate avatar upload"""
+        """
+        Validate avatar upload.
+
+        Handles three cases:
+        1. No new file uploaded (avatar is None or False) - keep existing
+        2. Existing CloudinaryResource object - return as-is (no re-validation)
+        3. New file upload (has 'read' method) - validate size, type, dimensions
+        """
         avatar = self.cleaned_data.get('avatar')
 
-        if avatar:
-            # Check file size (5MB limit for avatars)
-            if hasattr(avatar, 'size') and avatar.size > 5 * 1024 * 1024:
-                raise ValidationError('Avatar file size must be under 5MB.')
+        # Case 1: No new file uploaded - keep existing avatar
+        if not avatar:
+            return self.instance.avatar if self.instance else None
 
-            # Check file type
-            if hasattr(avatar, 'name'):
-                filename = avatar.name.lower()
-                valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
-                if not any(filename.endswith(ext) for ext in valid_extensions):
-                    raise ValidationError(
-                        'Invalid file format. Please upload JPG, PNG, or WebP.'
-                    )
+        # Case 2: Already a CloudinaryResource (existing avatar) - don't re-validate
+        # CloudinaryResource objects have 'public_id' attribute
+        if hasattr(avatar, 'public_id'):
+            return avatar
 
-            # Validate dimensions (optional, but recommended)
-            # Note: This requires Pillow to be installed
-            try:
-                from PIL import Image
-                image = Image.open(avatar)
-                width, height = image.size
+        # Case 3: New file upload - validate before saving
+        # New uploads have 'read' method (file-like objects)
+        if not hasattr(avatar, 'read'):
+            # Neither CloudinaryResource nor file - unexpected type
+            return avatar
 
-                # Minimum dimensions (100x100)
-                if width < 100 or height < 100:
-                    raise ValidationError(
-                        'Avatar must be at least 100x100 pixels.'
-                    )
+        # Validate file size (5MB limit for avatars)
+        if hasattr(avatar, 'size') and avatar.size > 5 * 1024 * 1024:
+            raise ValidationError('Avatar file size must be under 5MB.')
 
-                # Maximum dimensions (4000x4000 - prevents huge uploads)
-                if width > 4000 or height > 4000:
-                    raise ValidationError(
-                        'Avatar dimensions cannot exceed 4000x4000 pixels.'
-                    )
+        # Validate file type by extension
+        if hasattr(avatar, 'name'):
+            filename = avatar.name.lower()
+            valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+            if not any(filename.endswith(ext) for ext in valid_extensions):
+                raise ValidationError(
+                    'Invalid file format. Please upload JPG, PNG, or WebP.'
+                )
 
-                # Reset file pointer after reading
-                avatar.seek(0)
-            except ImportError:
-                # Pillow not installed, skip dimension validation
-                pass
-            except Exception as e:
-                raise ValidationError(f'Invalid image file: {str(e)}')
+        # Validate dimensions using Pillow
+        try:
+            from PIL import Image
+            image = Image.open(avatar)
+            width, height = image.size
+
+            # Minimum dimensions (100x100)
+            if width < 100 or height < 100:
+                raise ValidationError(
+                    'Avatar must be at least 100x100 pixels.'
+                )
+
+            # Maximum dimensions (4000x4000 - prevents huge uploads)
+            if width > 4000 or height > 4000:
+                raise ValidationError(
+                    'Avatar dimensions cannot exceed 4000x4000 pixels.'
+                )
+
+            # Reset file pointer after reading for subsequent processing
+            avatar.seek(0)
+        except ImportError:
+            # Pillow not installed, skip dimension validation
+            pass
+        except ValidationError:
+            # Re-raise our own validation errors
+            raise
+        except Exception as e:
+            raise ValidationError(f'Unable to process image file: {str(e)}')
 
         return avatar
 

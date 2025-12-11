@@ -3660,8 +3660,9 @@ def ai_generator_category(request, generator_slug):
     """
     Display prompts for a specific AI generator category.
 
-    URL: /ai/<generator_slug>/
-    Example: /ai/midjourney/
+    URL: /inspiration/ai/<generator_slug>/
+    Example: /inspiration/ai/midjourney/
+    Legacy URL: /ai/<generator_slug>/ (301 redirects to new URL)
 
     Features:
     - Filter by type (image/video)

@@ -1839,6 +1839,7 @@ footer {
     max-width: none;
     margin: 0 auto;
     padding: 0;
+    padding-top: calc(var(--space-12) + var(--space-4));  /* Match About/Contact pages: mt-5 pt-4 = 3rem + 1.5rem */
 }
 
 .leaderboard-header {
@@ -2199,7 +2200,7 @@ footer {
     /* Round 4 Fix 2: REMOVED flex-shrink: 0 - was preventing scrollbar! */
     overflow: hidden;  /* Clips content, enables child scrollbar */
     min-width: 0;      /* Allows flex child to shrink below content size */
-    flex: 1 380px;     /* Round 5 Fix 2: Minimum 380px, grows with available space */
+    flex: 1 480px;     /* Final Fix: Increased from 380px to 480px for wider thumbnails */
 }
 
 .leaderboard-thumbnails-link:focus {
@@ -2315,35 +2316,38 @@ footer {
    LEADERBOARD RESPONSIVE STYLES
    ═══════════════════════════════════════════════════════════════ */
 
-/* Round 8 Fix 1-2: Scrollbar ALWAYS visible with custom styling */
+/* Final Scrollbar Fix: ALWAYS visible with custom styling */
 .leaderboard-thumbnails {
-    overflow-x: scroll;  /* Changed from 'auto' to 'scroll' - forces scrollbar */
+    overflow-x: scroll;  /* Forces scrollbar to always show */
     overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--gray-400) var(--gray-200);
     scrollbar-gutter: stable;  /* Reserve space for scrollbar */
+    /* macOS fix: ensure scrollbar track is visible */
+    background-image: linear-gradient(to top, var(--gray-200) 10px, transparent 10px);
+    background-position: bottom;
+    background-repeat: no-repeat;
 }
 
-/* Webkit browsers - Custom scrollbar styling */
+/* Webkit browsers (Chrome, Safari, Edge) - Custom scrollbar styling */
 .leaderboard-thumbnails::-webkit-scrollbar {
-    height: 10px;  /* Increased for better visibility */
-    display: block !important;  /* Force display */
-    -webkit-appearance: none;   /* Override system styling */
+    height: 10px;
+    background: var(--gray-200);  /* Fallback background */
+    -webkit-appearance: none;  /* Override system overlay scrollbar */
 }
 
 .leaderboard-thumbnails::-webkit-scrollbar-track {
     background: var(--gray-200);
     border-radius: 10px;
     -webkit-appearance: none;
-    visibility: visible !important;  /* Prevent auto-hide */
 }
 
 .leaderboard-thumbnails::-webkit-scrollbar-thumb {
     background-color: var(--gray-400);
-    border-radius: 10px;  /* Pill/oval shape */
+    border-radius: 10px;
     min-width: 40px;
+    border: 2px solid var(--gray-200);  /* Creates visual gap between thumb and track */
     -webkit-appearance: none;
-    visibility: visible !important;  /* Prevent auto-hide */
 }
 
 .leaderboard-thumbnails::-webkit-scrollbar-thumb:hover {

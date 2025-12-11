@@ -4450,7 +4450,7 @@ BOT_USER_AGENT_PATTERNS = [
 
 ---
 
-#### Fixes Completed (7/7)
+#### Fixes Completed (Initial 7/7)
 
 | Fix | Issue | Solution |
 |-----|-------|----------|
@@ -4461,6 +4461,32 @@ BOT_USER_AGENT_PATTERNS = [
 | **Fix 5** | leaderboard-user gap | Changed to 25px |
 | **Fix 6** | Unfollow button not working | Added {% csrf_token %} for AJAX requests |
 | **Fix 7** | Native select dropdown | Replaced with custom Pexels-style dropdown (CSS variables)
+
+---
+
+#### UI Refinement Rounds (5-8) - December 9-11, 2025
+
+After initial fixes, 4 additional rounds of iterative UI polish were performed:
+
+| Round | Date | Key Changes |
+|-------|------|-------------|
+| **Round 5** | Dec 9 | Reduced thumbnails from 5 to 4, added scrollbar padding |
+| **Round 6** | Dec 9 | Fixed scrollbar by removing `justify-content: right` |
+| **Round 7** | Dec 9 | Mobile helper text polish, border-radius on thumbnails |
+| **Round 8** | Dec 9 | Scrollbar always visible, 5 thumbnails on wide desktop (>1700px) |
+| **Final** | Dec 11 | Header spacing, thumbnail width 480px, scrollbar macOS fix |
+
+**Thumbnail Responsive Behavior:**
+- Default (<1700px): Shows 4 thumbnails, 4th has "+X more" overlay
+- Wide desktop (≥1701px): Shows 5 thumbnails, 5th has "+X more" overlay
+
+**Scrollbar Enhancement (macOS Chrome fix):**
+- `overflow-x: scroll` forces scrollbar visibility
+- `-webkit-appearance: none` overrides system overlay scrollbar
+- Background gradient creates always-visible track on macOS
+- Custom colors: `var(--gray-400)` thumb, `var(--gray-200)` track
+
+**Final Commit:** `fix(phase-g): Final leaderboard UI polish`
 
 ---
 

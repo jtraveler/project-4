@@ -430,7 +430,7 @@ class RateLimitTemplateTests(TestCase):
         for i in range(5):
             response = self.client.get(url)
             self.assertIn(response.status_code, [200, 404],
-                         f"Request {i+1} should succeed (200 or 404), got {response.status_code}")
+                         f"Request {i + 1} should succeed (200 or 404), got {response.status_code}")
 
         # 6th request should be rate limited
         response = self.client.get(url)
@@ -453,7 +453,7 @@ class RateLimitTemplateTests(TestCase):
         for i in range(5):
             response = self.client.get(invalid_url)
             self.assertIn(response.status_code, [200, 404],
-                         f"Request {i+1} with invalid token should pass through rate limit")
+                         f"Request {i + 1} with invalid token should pass through rate limit")
 
         # 6th request should still be rate limited
         response = self.client.get(invalid_url)

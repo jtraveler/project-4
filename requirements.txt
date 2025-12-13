@@ -6,7 +6,7 @@ cloudinary==1.36.0
 crispy-bootstrap5==2025.6
 dj-database-url==0.5.0
 dj3-cloudinary-storage==0.0.6
-Django==5.2.3
+Django>=5.2.9
 django-csp==3.8
 django-allauth==65.9.0
 django-autocomplete-light==3.12.1
@@ -22,7 +22,7 @@ psycopg2==2.9.10
 requests==2.32.4
 six==1.17.0
 sqlparse==0.5.3
-urllib3==1.26.20
+urllib3>=2.6.0
 webencodings==0.5.1
 whitenoise==6.9.0
 Pillow==10.4.0
@@ -34,4 +34,4 @@ Pillow==10.4.0
 django-ratelimit==4.1.0
 
 # Error Monitoring
-sentry-sdk==1.39.1
+sentry-sdk>=1.45.1

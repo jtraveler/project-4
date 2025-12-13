@@ -91,7 +91,7 @@ def upload_step2(request):
     all_tags = list(Tag.objects.values_list('name', flat=True))
 
     # Run AI analysis to get suggestions (skip for videos)
-    from .services.content_generation import ContentGenerationService
+    from prompts.services.content_generation import ContentGenerationService
     content_service = ContentGenerationService()
 
     # Generate AI suggestions for images only
@@ -111,7 +111,7 @@ def upload_step2(request):
         }
 
     # Separately check image for violations using vision moderation
-    from .services.cloudinary_moderation import VisionModerationService
+    from prompts.services.cloudinary_moderation import VisionModerationService
     vision_service = VisionModerationService()
 
     image_warning = None
@@ -217,7 +217,7 @@ def upload_submit(request):
 
     # For videos, generate title/tags from prompt text if not provided
     if resource_type == 'video':
-        from .services.content_generation import ContentGenerationService
+        from prompts.services.content_generation import ContentGenerationService
         content_gen = ContentGenerationService()
 
         # Check if we need to generate title (session might not have it for videos)
@@ -231,7 +231,7 @@ def upload_submit(request):
                 tags = suggested_tags
 
     # Check for profanity BEFORE creating prompt (now that we have user's content)
-    from .services.profanity_filter import ProfanityFilterService
+    from prompts.services.profanity_filter import ProfanityFilterService
     profanity_service = ProfanityFilterService()
 
     # Check all text fields including user's prompt content

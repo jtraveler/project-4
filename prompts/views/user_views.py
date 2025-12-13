@@ -128,8 +128,8 @@ def user_profile(request, username, active_tab=None):
     # Calculate profile metrics (Phase G enhancement)
     # Uses 5-minute caching to improve performance (same TTL as leaderboard)
     from django.core.cache import cache
-    from .models import PromptView
-    from .services.leaderboard import LeaderboardService
+    from prompts.models import PromptView
+    from prompts.services.leaderboard import LeaderboardService
 
     # Cache key validation function (security hardening)
     # Prevents cache poisoning by validating user_id before key generation
@@ -284,7 +284,7 @@ def edit_profile(request):
         HttpResponse: Rendered edit_profile.html template
     """
     from django.db import transaction
-    from .forms import UserProfileForm
+    from prompts.forms import UserProfileForm
 
     # Get or create user profile (backward compatibility)
     profile, created = UserProfile.objects.get_or_create(user=request.user)
@@ -361,8 +361,8 @@ def email_preferences(request):
     Returns:
         HttpResponse: Rendered settings_notifications.html template
     """
-    from .forms import EmailPreferencesForm
-    from .models import EmailPreferences
+    from prompts.forms import EmailPreferencesForm
+    from prompts.models import EmailPreferences
 
     # Get or create preferences for current user (signal should have created it)
     prefs, created = EmailPreferences.objects.get_or_create(user=request.user)
@@ -419,8 +419,8 @@ def report_prompt(request, slug):
     from django.http import JsonResponse
     from django.core.mail import EmailMessage
     from django.conf import settings
-    from .forms import PromptReportForm
-    from .models import PromptReport
+    from prompts.forms import PromptReportForm
+    from prompts.models import PromptReport
     import logging
 
     logger = logging.getLogger(__name__)

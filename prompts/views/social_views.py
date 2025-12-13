@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -80,6 +80,13 @@ def follow_user(request, username):
 
     except User.DoesNotExist:
         logger.error(f"DEBUG: User not found: {username}")
+        return JsonResponse({
+            'success': False,
+            'error': 'User not found'
+        }, status=404)
+    except Http404:
+        # get_object_or_404 raises Http404, not DoesNotExist
+        logger.error(f"DEBUG: User not found (Http404): {username}")
         return JsonResponse({
             'success': False,
             'error': 'User not found'

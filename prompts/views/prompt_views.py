@@ -142,7 +142,7 @@ class PromptList(generic.ListView):
 
             # Get trending configuration from SiteSettings
             try:
-                from .models import SiteSettings
+                from prompts.models import SiteSettings
                 settings = SiteSettings.objects.first()
                 if settings:
                     like_weight = float(settings.trending_like_weight)
@@ -270,7 +270,7 @@ class PromptList(generic.ListView):
         # View count visibility (Phase G Part B)
         # Determines if view overlay should be shown on prompt cards
         try:
-            from .models import SiteSettings
+            from prompts.models import SiteSettings
             settings = SiteSettings.objects.first()
             visibility = settings.view_count_visibility if settings else 'admin'
         except Exception:
@@ -481,7 +481,7 @@ def prompt_detail(request, slug):
 
             # Check site settings for auto-approve (with defensive error handling)
             try:
-                from .models import SiteSettings
+                from prompts.models import SiteSettings
                 site_settings = SiteSettings.get_settings()
                 comment.approved = site_settings.auto_approve_comments
             except Exception:
@@ -515,7 +515,7 @@ def prompt_detail(request, slug):
     view_created = False
     if prompt.status == 1 and prompt.deleted_at is None:
         try:
-            from .models import PromptView
+            from prompts.models import PromptView
             _, view_created = PromptView.record_view(prompt, request)
         except Exception as e:
             # Don't fail the page load if view tracking fails
@@ -1299,7 +1299,7 @@ def prompt_publish(request, slug):
 
     # If not yet moderated or status unclear, run moderation
     try:
-        from .services.moderation_orchestrator import ModerationOrchestrator
+        from prompts.services.moderation_orchestrator import ModerationOrchestrator
         orchestrator = ModerationOrchestrator()
         moderation_result = orchestrator.moderate_prompt(prompt, force=True)
 

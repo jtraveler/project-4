@@ -1320,6 +1320,18 @@ class Prompt(models.Model):
 
 **Benefits:** Real-time adjustments without code deployments, A/B testing capabilities, responsive user feedback implementation
 
+### 🚀 Pre-Launch Tasks
+
+**To complete before major production launch:**
+
+- [ ] **Squash migrations** - Currently 37 migrations in `prompts/migrations/`. Squash to ~5 for cleaner deployment history.
+  - Run: `python manage.py squashmigrations prompts <start> <end>`
+  - Test thoroughly after squashing
+  - Only do this once, right before launch
+
+- [ ] Final security audit
+- [ ] Performance testing under load
+
 ---
 
 ## ✅ Decisions Made

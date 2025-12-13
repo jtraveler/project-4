@@ -84,8 +84,9 @@ class PromptList(generic.ListView):
             sort_by = 'trending'
 
         # Create secure cache key using hash to prevent injection
+        # usedforsecurity=False: MD5 is used for cache key generation, not security
         cache_params = f"{tag_name}_{search_query}_{tab}_{sort_by}_{page}"
-        cache_key = f"prompt_list_{hashlib.md5(cache_params.encode()).hexdigest()}"
+        cache_key = f"prompt_list_{hashlib.md5(cache_params.encode(), usedforsecurity=False).hexdigest()}"
 
         # Don't cache 'following' filter (user-specific) or search results
         use_cache = not search_query and sort_by != 'following'

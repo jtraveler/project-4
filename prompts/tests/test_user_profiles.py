@@ -188,7 +188,7 @@ class UserProfileMethodTests(TestCase):
     def test_get_avatar_color_index_matches_expected_algorithm(self):
         """Test color index calculation matches documented algorithm."""
         username = self.user.username
-        hash_object = hashlib.md5(username.lower().encode())
+        hash_object = hashlib.md5(username.lower().encode(), usedforsecurity=False)
         hash_int = int(hash_object.hexdigest(), 16)
         expected_index = (hash_int % 8) + 1
 

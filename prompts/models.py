@@ -116,7 +116,8 @@ class UserProfile(models.Model):
             # Always returns 3 for 'john', ensuring consistency
         """
         # Create hash from username (lowercase for consistency)
-        hash_object = hashlib.md5(self.user.username.lower().encode())
+        # usedforsecurity=False: MD5 is used for color selection, not security
+        hash_object = hashlib.md5(self.user.username.lower().encode(), usedforsecurity=False)
         hash_int = int(hash_object.hexdigest(), 16)
 
         # Return color index 1-8

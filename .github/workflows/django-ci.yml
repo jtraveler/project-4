@@ -73,7 +73,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           pip install coverage
-          coverage run --source='prompts' manage.py test prompts -v 2
+          coverage run --source='prompts' manage.py test prompts.tests -v 2
           coverage report --fail-under=50
 
       - name: Upload coverage report
@@ -150,11 +150,11 @@ jobs:
           pip-audit --strict --desc on
 
       - name: Check for Django security issues
+        continue-on-error: true
         run: |
           # Django's built-in security checker for production settings
-          # --fail-level ERROR: Only fail on errors, not warnings (some security
-          # headers may not be set in CI environment)
-          python manage.py check --deploy --fail-level ERROR || true
+          # Warnings are visible but don't block the pipeline
+          python manage.py check --deploy --fail-level WARNING
         env:
           DATABASE_URL: sqlite:///db.sqlite3
           SECRET_KEY: test-secret-key-for-ci-only

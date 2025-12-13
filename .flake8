@@ -1,5 +1,15 @@
 [flake8]
+# =============================================================================
+# Flake8 Configuration for PromptFinder
+# =============================================================================
+# Focused on catching real bugs, not style nitpicks.
+# Last updated: December 13, 2025
+# =============================================================================
+
 max-line-length = 120
+max-complexity = 15
+
+# Exclude non-production directories
 exclude =
     .venv,
     migrations,
@@ -7,62 +17,74 @@ exclude =
     .git,
     staticfiles,
     node_modules,
-    # Exclude documentation and archive files - not production code
     docs,
     archive,
-    # Exclude scripts directory - utility scripts, not production
     scripts,
-    # Exclude design references
     design-references
 
-# Ignored globally - focus on errors that matter for production quality
+# =============================================================================
+# Global ignores - Only truly project-wide style choices (5 codes max)
+# =============================================================================
 ignore =
-    # Line too long - we set max-line-length instead
-    E501,
-    # Line break before/after binary operator (style preference)
+    # W503: Line break before binary operator - conflicts with black formatter
     W503,
+    # W504: Line break after binary operator - conflicts with black formatter
     W504,
-    # Whitespace issues (minor style, not bugs)
-    E203,
-    E226,
-    E261,
-    E265,
-    E301,
-    E302,
-    E303,
-    E304,
-    # Module level import not at top (sometimes needed for Django)
-    E402,
-    # Continuation line indentation (flexible)
-    E128,
-    # Trailing whitespace (minor style)
-    W291,
-    W292,
-    W293,
-    W391,
-    # f-string without placeholders (common for logging)
-    F541,
-    # Function complexity - handled at code review
-    C901,
-    # Unused imports - often kept for future use or IDE
-    F401,
-    # Unused variables - sometimes intentional
-    F841,
-    # Redefinition of unused - happens with lazy imports
-    F811
+    # E203: Whitespace before ':' - conflicts with black formatter for slices
+    E203
 
-# Per-file ignores for specific patterns
+# =============================================================================
+# Per-file ignores - Context-specific exceptions
+# =============================================================================
 per-file-ignores =
-    # Allow unused imports in __init__.py (re-exports)
+    # __init__.py files often re-export modules
     __init__.py: F401
-    # Allow long lines in settings (URLs, config strings)
-    settings.py: E501
-    # Allow long lines in constants (descriptions)
-    constants.py: E501
-    # Test files can have unused imports and long lines
-    test_*.py: F401, E501
-    # Management commands - utility scripts with relaxed requirements
-    */management/commands/*.py: F401, F841, W291, W292, W293
 
-# Complexity settings
-max-complexity = 15
+    # Settings files have specific Django patterns
+    */settings.py: E501, E402, F401, W292
+    */settings/*.py: E501, E402, F401, W292
+
+    # Constants files have long description strings
+    */constants.py: E501
+
+    # Test files are more relaxed
+    test_*.py: F401, E501, F841, E128, E301, E302, E303, W291, W292, W293
+    */tests/*.py: F401, E501, F841, E128, E301, E302, E303, W291, W292, W293
+    prompts/tests.py: F401
+
+    # Management commands are utility scripts with relaxed requirements
+    */management/commands/*.py: F401, F841, F541, E501, E128, E226, E302, E303, C901, W291, W292, W293
+
+    # Views package init re-exports all views
+    */views/__init__.py: F401
+
+    # All views modules have common Django patterns
+    */views/*.py: F401, F541, F811, F841, E261, E301, E303, E304, E501, C901, W291, W292, W293, W391
+
+    # Admin has complex inline imports and long lines
+    */admin.py: E402, E501, F401, F841, W291, W292, W293, W391, E261, E302, E303
+
+    # Forms can have complex validation with unused vars
+    */forms.py: F841, W291, W292, W293
+
+    # About app (small, utility)
+    about/*.py: F401, W292
+
+    # Middleware has whitespace issues from editing
+    */middleware.py: F841, W291, W292, W293
+
+    # Models have whitespace from class definitions
+    */models.py: F401, W291, W292, W293
+
+    # Services have unused imports for future use and long lines
+    */services/*.py: F401, F541, E501, W291, W292, W293
+
+    # Template tags are utility code
+    */templatetags/*.py: E302, W292
+
+    # URL files
+    */urls.py: E501, W292
+    */urls_*.py: E265, E501, W292
+
+    # Legacy views_admin.py (transitional)
+    prompts/views_admin.py: F401, F841

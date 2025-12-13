@@ -22,7 +22,7 @@ from unittest.mock import patch, MagicMock
 import hashlib
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class UserProfileModelTests(TestCase):
     """Test UserProfile model fields, methods, and relationships."""
 
@@ -134,7 +134,7 @@ class UserProfileModelTests(TestCase):
         self.assertGreater(self.profile1.updated_at, original_updated)
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class UserProfileMethodTests(TestCase):
     """Test UserProfile model methods (get_avatar_color_index, get_total_likes)."""
 
@@ -328,11 +328,12 @@ class UserProfileMethodTests(TestCase):
             total_likes = self.profile.get_total_likes()
 
         # Should be exactly 1 query (aggregate with filter)
-        self.assertEqual(len(context.queries), 1)
+        # CaptureQueriesContext uses captured_queries or iterates as list
+        self.assertEqual(len(context.captured_queries), 1)
         self.assertEqual(total_likes, 5)
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class UserProfileSignalTests(TestCase):
     """Test signal handlers that auto-create UserProfile on User creation."""
 
@@ -409,12 +410,14 @@ class UserProfileSignalTests(TestCase):
 
     def test_signal_handles_existing_profile(self):
         """Test signal gracefully handles users who already have profiles."""
-        # Manually create user and profile
+        # Create user (signal auto-creates profile)
         user = User.objects.create(
             username='manualprofile',
             email='manual@example.com'
         )
-        manual_profile = UserProfile.objects.create(user=user)
+        # Profile already exists from signal, verify it
+        self.assertTrue(UserProfile.objects.filter(user=user).exists())
+        original_profile_id = user.userprofile.id
 
         # Count profiles
         profile_count = UserProfile.objects.filter(user=user).count()
@@ -424,9 +427,10 @@ class UserProfileSignalTests(TestCase):
         user.email = 'updated@example.com'
         user.save()
 
-        # Still only 1 profile
+        # Still only 1 profile and same ID
         profile_count = UserProfile.objects.filter(user=user).count()
         self.assertEqual(profile_count, 1)
+        self.assertEqual(user.userprofile.id, original_profile_id)
 
     def test_no_infinite_loop_on_profile_save(self):
         """Test signal does not cause infinite loop when profile is saved."""
@@ -446,7 +450,7 @@ class UserProfileSignalTests(TestCase):
             self.fail('Signal caused infinite recursion on profile.save()')
 
 
-@unittest.skip("Test setup has MagicMock/Cloudinary issues")
+
 class UserProfileViewTests(TestCase):
     """Test user_profile view functionality and edge cases."""
 
@@ -468,12 +472,10 @@ class UserProfileViewTests(TestCase):
                 slug=f'image-prompt-{i}',
                 content=f'Image content {i}',
                 author=cls.user,
-                status=1  # Published
+                status=1,  # Published
+                # Use a placeholder public_id for featured_image (Cloudinary stores as string)
+                featured_image=f'test/image_{i}'
             )
-            # Mock featured_image (don't actually upload to Cloudinary in tests)
-            prompt.featured_image = MagicMock()
-            prompt.featured_image.__bool__ = lambda: True
-            prompt.save()
             cls.image_prompts.append(prompt)
 
         cls.video_prompts = []
@@ -483,12 +485,10 @@ class UserProfileViewTests(TestCase):
                 slug=f'video-prompt-{i}',
                 content=f'Video content {i}',
                 author=cls.user,
-                status=1  # Published
+                status=1,  # Published
+                # Use a placeholder public_id for featured_video (Cloudinary stores as string)
+                featured_video=f'test/video_{i}'
             )
-            # Mock featured_video
-            prompt.featured_video = MagicMock()
-            prompt.featured_video.__bool__ = lambda: True
-            prompt.save()
             cls.video_prompts.append(prompt)
 
         # Create draft prompt (should not appear in profile)
@@ -535,7 +535,7 @@ class UserProfileViewTests(TestCase):
         self.assertIn('total_prompts', response.context)
         self.assertIn('total_likes', response.context)
         self.assertIn('media_filter', response.context)
-        self.assertIn('is_owner', response.context)
+        self.assertIn('is_own_profile', response.context)
 
     def test_profile_view_shows_correct_user(self):
         """Test profile view displays correct user's profile."""
@@ -602,18 +602,18 @@ class UserProfileViewTests(TestCase):
 
         self.assertEqual(response.context['media_filter'], 'all')
 
-    def test_is_owner_true_when_viewing_own_profile(self):
-        """Test is_owner flag is True when authenticated user views own profile."""
+    def test_is_own_profile_true_when_viewing_own_profile(self):
+        """Test is_own_profile flag is True when authenticated user views own profile."""
         # Log in as the user
         self.client.login(username='profileview', password='testpass123')
 
         url = reverse('prompts:user_profile', args=['profileview'])
         response = self.client.get(url)
 
-        self.assertTrue(response.context['is_owner'])
+        self.assertTrue(response.context['is_own_profile'])
 
-    def test_is_owner_false_when_viewing_other_profile(self):
-        """Test is_owner flag is False when viewing another user's profile."""
+    def test_is_own_profile_false_when_viewing_other_profile(self):
+        """Test is_own_profile flag is False when viewing another user's profile."""
         # Create different user and log in
         other_user = User.objects.create_user(
             username='otheruser',
@@ -624,15 +624,15 @@ class UserProfileViewTests(TestCase):
         url = reverse('prompts:user_profile', args=['profileview'])
         response = self.client.get(url)
 
-        self.assertFalse(response.context['is_owner'])
+        self.assertFalse(response.context['is_own_profile'])
 
-    def test_is_owner_false_for_anonymous_users(self):
-        """Test is_owner flag is False for anonymous (not logged in) users."""
+    def test_is_own_profile_false_for_anonymous_users(self):
+        """Test is_own_profile flag is False for anonymous (not logged in) users."""
         # Don't log in
         url = reverse('prompts:user_profile', args=['profileview'])
         response = self.client.get(url)
 
-        self.assertFalse(response.context['is_owner'])
+        self.assertFalse(response.context['is_own_profile'])
 
     def test_username_is_case_sensitive(self):
         """Test username lookup is case-sensitive (Django default behavior)."""
@@ -691,7 +691,7 @@ class UserProfileViewTests(TestCase):
         self.assertEqual(response.context['total_prompts'], 0)
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class UserProfilePaginationTests(TestCase):
     """Test pagination in user profile view."""
 
@@ -758,7 +758,7 @@ class UserProfilePaginationTests(TestCase):
         self.assertIn('page_obj', response.context)
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class UserProfileURLTests(TestCase):
     """Test URL routing for user profile views."""
 
@@ -786,7 +786,7 @@ class UserProfileURLTests(TestCase):
         self.assertEqual(url, '/users/testuser/')
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class UserProfileIntegrationTests(TestCase):
     """Integration tests for complete user profile workflows."""
 
@@ -919,30 +919,26 @@ class UserProfileIntegrationTests(TestCase):
 
         # Create 2 image prompts
         for i in range(2):
-            prompt = Prompt.objects.create(
+            Prompt.objects.create(
                 title=f'Image {i}',
                 slug=f'image-{i}',
                 content='Test',
                 author=user,
-                status=1
+                status=1,
+                # Use a placeholder public_id for featured_image
+                featured_image=f'test/media_image_{i}'
             )
-            # Mock featured_image
-            prompt.featured_image = MagicMock()
-            prompt.featured_image.__bool__ = lambda: True
-            prompt.save()
 
         # Create 1 video prompt
-        video_prompt = Prompt.objects.create(
+        Prompt.objects.create(
             title='Video',
             slug='video',
             content='Test',
             author=user,
-            status=1
+            status=1,
+            # Use a placeholder public_id for featured_video
+            featured_video='test/media_video'
         )
-        # Mock featured_video
-        video_prompt.featured_video = MagicMock()
-        video_prompt.featured_video.__bool__ = lambda: True
-        video_prompt.save()
 
         client = Client()
 

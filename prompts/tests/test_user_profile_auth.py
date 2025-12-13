@@ -29,7 +29,7 @@ from django.urls import reverse
 from prompts.models import UserProfile, Prompt
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class LoginRequiredTests(TestCase):
     """
     Tests for @login_required decorator on user_profile view.
@@ -61,84 +61,61 @@ class LoginRequiredTests(TestCase):
         """Create fresh client for each test."""
         self.client = Client()
 
-    def test_anonymous_user_redirected_to_login(self):
+    def test_anonymous_user_can_view_public_profile(self):
         """
-        Test that anonymous (not logged in) users are redirected to login page.
+        Test that anonymous (not logged in) users can view public profiles.
 
-        Expected behavior with @login_required:
-        - Status code: 302 (redirect)
-        - Redirect location: /accounts/login/?next=/users/testuser/
+        User profiles are public pages - no login required.
+        - Status code: 200 OK
+        - Profile page displayed
         """
         url = reverse('prompts:user_profile', args=['testuser'])
         response = self.client.get(url)
 
-        # Should redirect (302)
+        # Should return 200 (public profiles don't require login)
         self.assertEqual(
             response.status_code,
-            302,
-            "Anonymous user should be redirected to login (302)"
+            200,
+            "Anonymous user should be able to view public profile (200)"
         )
 
-        # Should redirect to login URL
-        self.assertTrue(
-            response.url.startswith('/accounts/login/'),
-            f"Should redirect to login page, got: {response.url}"
-        )
+        # Should render the profile template
+        self.assertTemplateUsed(response, 'prompts/user_profile.html')
 
-    def test_anonymous_redirect_includes_next_parameter(self):
+    def test_profile_displays_username(self):
         """
-        Test that redirect to login includes 'next' parameter with original URL.
+        Test that profile page displays the correct username.
 
-        This allows Django to redirect back to the profile after successful login.
-
-        Expected URL: /accounts/login/?next=/users/testuser/
+        The profile should show the requested user's information.
         """
         url = reverse('prompts:user_profile', args=['testuser'])
         response = self.client.get(url)
 
-        # Extract 'next' parameter from redirect URL
-        expected_next = '/users/testuser/'
-        self.assertIn(
-            f'next={expected_next}',
-            response.url,
-            f"Redirect should include next parameter. Got: {response.url}"
-        )
+        # Username should appear in response
+        self.assertContains(response, 'testuser')
 
-    def test_after_login_redirects_to_original_profile(self):
+    def test_profile_accessible_before_and_after_login(self):
         """
-        Test that after logging in, user is redirected back to the profile page.
+        Test that profiles are publicly accessible before and after login.
 
-        Workflow:
-        1. Anonymous user tries to access /users/testuser/
-        2. Redirected to /accounts/login/?next=/users/testuser/
-        3. User logs in
-        4. Redirected back to /users/testuser/
+        User profiles are public pages - no login required.
+        Both anonymous and authenticated users should see 200 OK.
         """
         profile_url = reverse('prompts:user_profile', args=['testuser'])
-        login_url = reverse('account_login')  # Django allauth login URL
 
-        # Step 1: Try to access profile (not logged in)
+        # Step 1: Anonymous user can access public profile
         response = self.client.get(profile_url)
-        self.assertEqual(response.status_code, 302)
-
-        # Step 2: Log in with 'next' parameter
-        login_response = self.client.post(
-            login_url,
-            {
-                'login': 'testuser',
-                'password': 'testpass123',
-            },
-            follow=False
+        self.assertEqual(
+            response.status_code,
+            200,
+            "Anonymous user should be able to view public profile (200)"
         )
 
-        # Django allauth may use different login mechanism
-        # Alternative: use Django's built-in login
+        # Step 2: Log in
         self.client.login(username='testuser', password='testpass123')
 
-        # Step 3: Access profile again (now logged in)
+        # Step 3: Authenticated user can also access profile
         response = self.client.get(profile_url)
-
-        # Should now return 200 OK (not redirect)
         self.assertEqual(
             response.status_code,
             200,
@@ -180,7 +157,7 @@ class LoginRequiredTests(TestCase):
 
         Expected behavior:
         - Status code: 200 OK
-        - is_owner flag should be True in context
+        - is_own_profile flag should be True in context
         """
         # Log in
         self.client.login(username='testuser', password='testpass123')
@@ -191,8 +168,8 @@ class LoginRequiredTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(
-            response.context['is_owner'],
-            "Viewing own profile should set is_owner=True"
+            response.context['is_own_profile'],
+            "Viewing own profile should set is_own_profile=True"
         )
 
     def test_authenticated_user_can_view_other_profiles(self):
@@ -201,7 +178,7 @@ class LoginRequiredTests(TestCase):
 
         Expected behavior:
         - Status code: 200 OK
-        - is_owner flag should be False in context
+        - is_own_profile flag should be False in context
         """
         # Log in as testuser
         self.client.login(username='testuser', password='testpass123')
@@ -212,8 +189,8 @@ class LoginRequiredTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(
-            response.context['is_owner'],
-            "Viewing another user's profile should set is_owner=False"
+            response.context['is_own_profile'],
+            "Viewing another user's profile should set is_own_profile=False"
         )
         self.assertEqual(
             response.context['profile_user'].username,
@@ -243,36 +220,34 @@ class LoginRequiredTests(TestCase):
             "Non-existent user should return 404, not redirect"
         )
 
-    def test_next_parameter_preserves_query_string(self):
+    def test_query_string_preserved_for_anonymous(self):
         """
-        Test that 'next' parameter preserves query strings like media filters.
+        Test that anonymous users can access profiles with query strings.
 
-        Example: /users/john/?media=photos
-        After login, should redirect to: /users/john/?media=photos (not lose media param)
+        Since profiles are public, anonymous users should be able to access
+        with query strings like ?media=photos and ?page=2 without redirect.
         """
         profile_url = reverse('prompts:user_profile', args=['testuser'])
         full_url = f"{profile_url}?media=photos"
 
-        # Try to access with query string (not logged in)
+        # Anonymous user can access with query string
         response = self.client.get(full_url)
 
-        # Redirect URL should include full original URL with query params
-        # Note: URL encoding may change ? to %3F and = to %3D
-        self.assertIn('next=', response.url)
-
-        # Alternative check: ensure 'media' is preserved somewhere in redirect
-        # (URL encoding makes exact matching difficult)
-        encoded_url = response.url
-        self.assertTrue(
-            'media' in encoded_url or '%3F' in encoded_url,
-            f"Query string should be preserved in redirect. Got: {encoded_url}"
+        # Should return 200 (profiles are public)
+        self.assertEqual(
+            response.status_code,
+            200,
+            "Anonymous user should access profile with query string (200)"
         )
 
-    def test_login_required_works_with_ajax_requests(self):
-        """
-        Test that @login_required works correctly with AJAX requests.
+        # Query string should be processed by view
+        self.assertEqual(response.context.get('media_filter'), 'photos')
 
-        AJAX requests should still receive 302 redirect (not 403).
+    def test_ajax_requests_work_for_anonymous(self):
+        """
+        Test that AJAX requests work for anonymous users.
+
+        Since profiles are public, AJAX requests should return 200.
         """
         url = reverse('prompts:user_profile', args=['testuser'])
 
@@ -282,38 +257,49 @@ class LoginRequiredTests(TestCase):
             HTTP_X_REQUESTED_WITH='XMLHttpRequest'
         )
 
-        # Should still redirect to login (302)
-        self.assertEqual(response.status_code, 302)
+        # Should return 200 (profiles are public)
+        self.assertEqual(response.status_code, 200)
 
-    def test_logout_removes_access(self):
+    def test_logout_changes_is_own_profile_flag(self):
         """
-        Test that logging out prevents access to profile pages.
+        Test that is_own_profile changes based on login state.
+
+        Profiles are PUBLIC, so access is always granted. But the is_own_profile
+        flag should change based on whether the user is logged in as the owner.
 
         Workflow:
-        1. Log in → access profile (200 OK)
+        1. Log in as owner → access profile (is_own_profile=True)
         2. Log out
-        3. Try to access profile → redirect to login (302)
+        3. Access same profile → is_own_profile=False (still 200 OK)
         """
         url = reverse('prompts:user_profile', args=['testuser'])
 
-        # Step 1: Log in and verify access
+        # Step 1: Log in and verify is_own_profile=True
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            response.context['is_own_profile'],
+            "Logged in owner should have is_own_profile=True"
+        )
 
         # Step 2: Log out
         self.client.logout()
 
-        # Step 3: Try to access again (should redirect)
+        # Step 3: Access profile as anonymous - still works but is_own_profile=False
         response = self.client.get(url)
         self.assertEqual(
             response.status_code,
-            302,
-            "After logout, access should be denied (302 redirect)"
+            200,
+            "Anonymous user should still access public profile (200)"
+        )
+        self.assertFalse(
+            response.context['is_own_profile'],
+            "Anonymous user should have is_own_profile=False"
         )
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class PublicAccessTests(TestCase):
     """
     Tests for PUBLIC access to user_profile view (current behavior).
@@ -365,7 +351,7 @@ class PublicAccessTests(TestCase):
         Expected behavior:
         - Profile user in context
         - Prompts displayed
-        - is_owner = False
+        - is_own_profile = False
         """
         url = reverse('prompts:user_profile', args=['publicuser'])
         response = self.client.get(url)
@@ -379,7 +365,7 @@ class PublicAccessTests(TestCase):
             'publicuser'
         )
         self.assertFalse(
-            response.context['is_owner'],
+            response.context['is_own_profile'],
             "Anonymous users should not be marked as owner"
         )
 
@@ -424,7 +410,7 @@ class PublicAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 class LoginRequiredEdgeCaseTests(TestCase):
     """
     Edge case tests for @login_required on user_profile view.
@@ -536,7 +522,7 @@ class LoginRequiredEdgeCaseTests(TestCase):
         self.assertEqual(response_upper.status_code, 404)
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
+
 @override_settings(LOGIN_URL='/custom-login/')
 class CustomLoginURLTests(TestCase):
     """

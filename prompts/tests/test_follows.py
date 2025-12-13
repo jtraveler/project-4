@@ -8,7 +8,6 @@ import json
 from prompts.models import Follow, UserProfile
 
 
-@unittest.skip("Test setup has UNIQUE constraint issues with UserProfile creation")
 class FollowSystemTestCase(TestCase):
     """Test suite for the follow/unfollow system"""
 
@@ -199,19 +198,22 @@ class FollowSystemTestCase(TestCase):
         Follow.objects.create(follower=self.user1, following=self.user2)
         Follow.objects.create(follower=self.user2, following=self.user3)
 
+        # Save IDs before deletion
+        user2_id = self.user2.id
+
         # Delete user2
         self.user2.delete()
 
-        # All follows involving user2 should be gone
+        # All follows involving user2 should be gone (use ID, not deleted model instance)
         self.assertEqual(
             Follow.objects.filter(
-                follower=self.user2
+                follower_id=user2_id
             ).count(),
             0
         )
         self.assertEqual(
             Follow.objects.filter(
-                following=self.user2
+                following_id=user2_id
             ).count(),
             0
         )

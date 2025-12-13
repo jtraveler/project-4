@@ -1,0 +1,68 @@
+[flake8]
+max-line-length = 120
+exclude =
+    .venv,
+    migrations,
+    __pycache__,
+    .git,
+    staticfiles,
+    node_modules,
+    # Exclude documentation and archive files - not production code
+    docs,
+    archive,
+    # Exclude scripts directory - utility scripts, not production
+    scripts,
+    # Exclude design references
+    design-references
+
+# Ignored globally - focus on errors that matter for production quality
+ignore =
+    # Line too long - we set max-line-length instead
+    E501,
+    # Line break before/after binary operator (style preference)
+    W503,
+    W504,
+    # Whitespace issues (minor style, not bugs)
+    E203,
+    E226,
+    E261,
+    E265,
+    E301,
+    E302,
+    E303,
+    E304,
+    # Module level import not at top (sometimes needed for Django)
+    E402,
+    # Continuation line indentation (flexible)
+    E128,
+    # Trailing whitespace (minor style)
+    W291,
+    W292,
+    W293,
+    W391,
+    # f-string without placeholders (common for logging)
+    F541,
+    # Function complexity - handled at code review
+    C901,
+    # Unused imports - often kept for future use or IDE
+    F401,
+    # Unused variables - sometimes intentional
+    F841,
+    # Redefinition of unused - happens with lazy imports
+    F811
+
+# Per-file ignores for specific patterns
+per-file-ignores =
+    # Allow unused imports in __init__.py (re-exports)
+    __init__.py: F401
+    # Allow long lines in settings (URLs, config strings)
+    settings.py: E501
+    # Allow long lines in constants (descriptions)
+    constants.py: E501
+    # Test files can have unused imports and long lines
+    test_*.py: F401, E501
+    # Management commands - utility scripts with relaxed requirements
+    */management/commands/*.py: F401, F841, W291, W292, W293
+
+# Complexity settings
+max-complexity = 15

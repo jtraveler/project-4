@@ -1,0 +1,27 @@
+# Bandit configuration file
+# See https://bandit.readthedocs.io/en/latest/config.html
+
+exclude_dirs:
+  - .venv
+  - migrations
+  - tests
+  - __pycache__
+  - docs
+  - archive
+  - scripts
+  - design-references
+  - staticfiles
+  - node_modules
+
+# Skip certain tests that produce false positives in Django projects
+skips:
+  # B308/B703: mark_safe is used intentionally for admin HTML rendering
+  # Data comes from Cloudinary URLs and internal sources, not user input
+  - B308
+  - B703
+  # B311: random module is used for UI elements (avatars, colors), not security
+  - B311
+  # B104: Binding to 0.0.0.0 is needed for development/containerized environments
+  - B104
+  # B303: MD5 is used for cache keys and avatar colors, not cryptographic purposes
+  - B303

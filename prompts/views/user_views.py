@@ -4,16 +4,13 @@ from django.http import JsonResponse, HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Q, Prefetch, Count
+from django.db.models import Prefetch
 from django.core.paginator import Paginator
-from django.utils.html import escape
-from django.utils import timezone
-from datetime import timedelta
+from django.views.decorators.http import require_POST
 import logging
 
-from prompts.models import Prompt, Comment, UserProfile, EmailPreferences, ContentFlag, PromptView
+from prompts.models import Prompt, Comment, UserProfile
 from prompts.forms import CommentForm
-from prompts.email_utils import should_send_email
 
 logger = logging.getLogger(__name__)
 

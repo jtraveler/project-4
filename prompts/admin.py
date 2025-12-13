@@ -1,10 +1,10 @@
 # prompts/admin.py
 from django.contrib import admin
+from django.contrib.auth.models import User
 from django_summernote.admin import SummernoteModelAdmin
 from django.urls import reverse, path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from django.shortcuts import redirect
 from taggit.models import Tag
 from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView
 

@@ -10,7 +10,7 @@ from django.db.models import Q, Prefetch, Count
 from django.core.cache import cache  # Import cache for performance
 from django.core.paginator import Paginator
 from taggit.models import Tag
-from .models import Prompt, Comment, ContentFlag, UserProfile, EmailPreferences
+from .models import Prompt, Comment, ContentFlag, UserProfile, EmailPreferences, PromptView
 from django.contrib.auth.models import User
 from .forms import CommentForm, CollaborateForm, PromptForm
 from django.http import JsonResponse
@@ -3732,6 +3732,14 @@ def ai_generator_category(request, generator_slug):
     - Sort by recent, popular, trending
     - Pagination (24 prompts per page)
     - SEO optimized with meta tags and structured data
+    - Generator stats (prompt count, view count)
+    - Related generators section
+
+    Phase I.3 Enhancements (December 2025):
+    - Added prompt_count and total_views stats
+    - Added related_generators (top 5 by prompt count)
+    - Enhanced SEO with BreadcrumbList schema
+    - Improved hero section design
     """
     # Get generator info or 404
     generator = AI_GENERATORS.get(generator_slug)
@@ -3744,6 +3752,45 @@ def ai_generator_category(request, generator_slug):
         status=1,  # Published only
         deleted_at__isnull=True  # Not deleted
     ).select_related('author').prefetch_related('tags', 'likes')
+
+    # Get total prompt count for this generator (before filters)
+    prompt_count = prompts.count()
+
+    # Get total views for this generator's prompts
+    # Uses single aggregated query to avoid N+1
+    total_views = PromptView.objects.filter(
+        prompt__ai_generator=generator['choice_value'],
+        prompt__status=1,
+        prompt__deleted_at__isnull=True
+    ).count()
+
+    # Calculate related generators (Phase I.3)
+    # Single aggregated query: Get prompt counts for all generators, exclude current
+    related_generators = []
+    generator_counts = (
+        Prompt.objects
+        .filter(status=1, deleted_at__isnull=True)
+        .values('ai_generator')
+        .annotate(count=models.Count('id'))
+        .order_by('-count')
+    )
+
+    # Build related generators list (excluding current, limit 5)
+    for item in generator_counts:
+        if item['ai_generator'] == generator['choice_value']:
+            continue
+        # Find the generator info by choice_value
+        for slug, gen_data in AI_GENERATORS.items():
+            if gen_data['choice_value'] == item['ai_generator']:
+                related_generators.append({
+                    'name': gen_data['name'],
+                    'slug': slug,
+                    'icon': gen_data.get('icon'),
+                    'prompt_count': item['count'],
+                })
+                break
+        if len(related_generators) >= 5:
+            break
 
     # Validate and filter by type
     prompt_type = request.GET.get('type')
@@ -3795,11 +3842,25 @@ def ai_generator_category(request, generator_slug):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    # SEO fields
+    page_title = f"{generator['name']} Prompts"
+    meta_description = (
+        f"Discover {prompt_count:,} {generator['name']} prompts shared by our community. "
+        f"Browse the best AI art prompts, get inspired, and share your own creations."
+    )
+
     context = {
         'generator': generator,
         'prompts': page_obj,
         'page_obj': page_obj,
         'is_paginated': page_obj.has_other_pages(),
+        # Phase I.3 additions
+        'prompt_count': prompt_count,
+        'total_views': total_views,
+        'related_generators': related_generators,
+        'has_prompts': prompt_count > 0,
+        'page_title': page_title,
+        'meta_description': meta_description,
     }
 
     return render(request, 'prompts/ai_generator_category.html', context)

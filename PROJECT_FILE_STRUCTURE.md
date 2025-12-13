@@ -1,19 +1,38 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** November 30, 2025
+**Last Updated:** December 13, 2025
 **Project:** PromptFinder (Django 4.2.13)
-**Total Tests:** 69+ passing (46 core + 23 rate limiting)
-**Phase:** E Complete, Phase F Complete, Delete System Enhancements Complete (Nov 30, 2025)
+**Current Phase:** Phase I (URL Migration) - Complete
+**Total Tests:** 70+ passing
 
 ---
 
-## Directory Structure
+## Quick Statistics
+
+| Category | Count | Location |
+|----------|-------|----------|
+| **Python Files** | 82 | Various directories |
+| **HTML Templates** | 41 | templates/, prompts/templates/, about/templates/ |
+| **CSS Files** | 4 | static/css/ |
+| **Migrations** | 38 | prompts/migrations/ (37), about/migrations/ (1) |
+| **Test Files** | 13 | prompts/tests/ |
+| **Management Commands** | 17 | prompts/management/commands/ |
+| **Services** | 7 | prompts/services/ |
+| **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
+
+---
+
+## Complete Directory Structure
 
 ```
 live-working-project/
-├── about/                     # About app
-│   ├── migrations/
-│   ├── templates/
+├── .claude/                      # Claude Code settings
+├── .github/                      # GitHub templates
+│   └── ISSUE_TEMPLATE/
+├── about/                        # Secondary Django app (7 files)
+│   ├── migrations/               # 1 migration
+│   ├── templates/about/          # 1 template
+│   │   └── about.html
 │   ├── __init__.py
 │   ├── admin.py
 │   ├── apps.py
@@ -21,520 +40,282 @@ live-working-project/
 │   ├── tests.py
 │   ├── urls.py
 │   └── views.py
-├── docs/                      # Project documentation
+├── archive/                      # Archived documentation (75+ files)
+│   ├── bug-fixes/
+│   ├── feature-implementations/
+│   ├── marked-for-deletion/
+│   ├── needs-review/
+│   ├── phase-e/
+│   └── rate-limiting/
+├── backups/                      # Email preferences backups
+├── design-references/            # UI design assets
+│   └── UI_STYLE_GUIDE.md
+├── docs/                         # Active documentation (33+ files)
 │   ├── bug_reports/
 │   ├── implementation_reports/
+│   ├── reports/                  # Phase/feature reports (16 files)
 │   ├── specifications/
 │   └── CC_COMMUNICATION_PROTOCOL.md
-├── prompts/                   # Main Django app
+├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
-│   │   └── commands/
-│   │       ├── cleanup_deleted_prompts.py
-│   │       ├── detect_orphaned_files.py
-│   │       └── README_*.md
-│   ├── migrations/
-│   ├── templates/
-│   │   └── prompts/
-│   ├── tests/
-│   │   ├── __init__.py
-│   │   ├── test_models.py
-│   │   ├── test_views.py
-│   │   ├── test_forms.py
-│   │   ├── test_rate_limiting.py
-│   │   ├── test_user_profile_header.py
-│   │   └── test_user_profile_javascript.py
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── apps.py
-│   ├── constants.py           # AI generator metadata (Phase 3)
-│   ├── email_utils.py
-│   ├── forms.py
-│   ├── middleware.py
-│   ├── models.py
-│   ├── signals.py
-│   ├── urls.py
-│   └── views.py
-├── prompts_manager/           # Project settings
+│   │   └── commands/             # 17 management commands + __init__.py
+│   ├── migrations/               # 37 migrations + __init__.py
+│   ├── services/                 # 7 service modules
+│   ├── templates/prompts/        # 22 templates
+│   ├── templatetags/             # 3 template tag files
+│   └── tests/                    # 13 test files
+├── prompts_manager/              # Django project settings (7 files)
 │   ├── __init__.py
 │   ├── asgi.py
 │   ├── settings.py
 │   ├── urls.py
 │   └── wsgi.py
-├── reports/                   # Generated reports (CSV)
-│   └── *.csv
-├── staticfiles/               # Collected static files (production)
-├── templates/                 # Global templates
-│   ├── 403.html
-│   ├── 404.html
-│   ├── 429.html
-│   ├── 500.html
-│   ├── account/
-│   ├── base.html
-│   └── index.html
-├── .gitignore
-├── CLAUDE.md
-├── Procfile
-├── PROJECT_FILE_STRUCTURE.md
-├── README.md
-├── manage.py
-├── requirements.txt
-└── runtime.txt
+├── reports/                      # Generated CSV reports
+├── scripts/                      # Utility scripts (7 files)
+├── static/                       # Source static files
+│   └── css/                      # 4 CSS files (101KB total)
+│       ├── components/
+│       ├── pages/
+│       ├── navbar.css
+│       └── style.css
+├── staticfiles/                  # Collected static (production)
+└── templates/                    # Global Django templates (18 files)
+    ├── account/                  # 6 authentication templates
+    ├── admin/                    # 8 admin customization templates
+    ├── registration/             # 1 template
+    ├── base.html                 # Main template (69KB)
+    ├── 404.html
+    └── 429.html
 ```
 
 ---
 
-## Key Files by Category
+## Management Commands (17 total)
 
-### Core Configuration
+| Command | Purpose | Schedule |
+|---------|---------|----------|
+| `cleanup_deleted_prompts` | Automated trash cleanup (5/30 day retention) | Daily 3:00 UTC |
+| `detect_orphaned_files` | Cloudinary orphan + missing image detection | Daily 4:00 UTC |
+| `backup_email_preferences` | Backup user email preferences to JSON | Manual |
+| `restore_email_preferences` | Restore email preferences from backup | Manual |
+| `auto_draft_no_media` | Move prompts without media to draft | Manual |
+| `cleanup_old_tags` | Remove unused tags from database | Manual |
+| `create_bulk_data` | Generate test data for development | Manual |
+| `create_test_users` | Create test user accounts | Manual |
+| `diagnose_media` | Diagnose media file issues | Manual |
+| `fix_admin_avatar` | Fix admin user avatar issues | Manual |
+| `fix_cloudinary_urls` | Repair Cloudinary URL issues | Manual |
+| `fix_ghost_prompts` | Remove ghost/orphan prompt records | Manual |
+| `fix_prompt_order` | Repair prompt ordering | Manual |
+| `generate_slugs` | Generate missing slugs for prompts | Manual |
+| `initialize_prompt_order` | Initialize prompt ordering | Manual |
+| `moderate_prompts` | Run moderation on prompts | Manual |
+| `test_moderation` | Test moderation service | Manual |
 
-#### `prompts_manager/settings.py`
-Django settings including:
-- Database configuration (PostgreSQL)
-- Cloudinary media storage
-- Installed apps (django-allauth, django-ratelimit, etc.)
-- Middleware configuration (security, rate limiting)
-- Authentication settings
-- Static/media file handling
-- Email configuration
-- Rate limiting settings (RATELIMIT_VIEW)
+---
 
-#### `prompts_manager/urls.py`
-Root URL configuration:
-- Admin panel routing
-- App URL includes (prompts, about, accounts)
-- Media file serving (development only)
+## Service Layer Architecture (7 modules)
 
-#### `requirements.txt`
-Python dependencies including:
-- Django 4.2.13
-- cloudinary
-- django-allauth
-- django-ratelimit
-- gunicorn
-- whitenoise
-- psycopg2
+```
+prompts/services/
+├── __init__.py              # Service exports
+├── cloudinary_moderation.py # Cloudinary AI moderation (AWS Rekognition)
+├── content_generation.py    # GPT-4o content generation for uploads
+├── leaderboard.py           # Leaderboard calculations (Phase G)
+├── openai_moderation.py     # OpenAI text moderation API
+├── orchestrator.py          # Moderation orchestration (multi-layer)
+└── profanity_filter.py      # Profanity detection and filtering
+```
 
-#### `Procfile`
-Heroku deployment configuration:
-- Web dyno command (gunicorn)
-- Static file collection
+### Service Descriptions
+
+| Service | Description | Cost |
+|---------|-------------|------|
+| **cloudinary_moderation** | Cloudinary AI Vision for image/video moderation | ~$5-10/1000 images |
+| **content_generation** | GPT-4o-mini for AI-generated titles, descriptions, tags | ~$0.00255/upload |
+| **leaderboard** | User ranking by views, activity, engagement | N/A |
+| **openai_moderation** | OpenAI text moderation API | FREE |
+| **orchestrator** | Multi-layer moderation coordination | Combined |
+| **profanity_filter** | Custom profanity word detection | N/A |
+
+---
+
+## Templates (41 total)
+
+### Global Templates (templates/) - 18 files
+
+| Template | Purpose |
+|----------|---------|
+| `base.html` | Main template with navbar, footer (~2000 lines) |
+| `404.html` | Not found error page |
+| `429.html` | Rate limit error page (WCAG AA) |
+| `account/*.html` | 6 authentication templates (login, signup, logout, password reset) |
+| `admin/*.html` | 8 admin customization templates |
+| `registration/login.html` | Login page override |
+
+### Prompts App Templates (prompts/templates/prompts/) - 22 files
+
+| Template | Purpose |
+|----------|---------|
+| `prompt_list.html` | Homepage with masonry grid (70KB) |
+| `prompt_detail.html` | Single prompt view page |
+| `prompt_edit.html` | Edit prompt form |
+| `ai_generator_category.html` | AI generator landing pages |
+| `inspiration_index.html` | Prompts hub / browse page |
+| `user_profile.html` | User profile with tabs |
+| `upload_step1.html` | Step 1: Drag-and-drop upload |
+| `upload_step2.html` | Step 2: AI-generated details form |
+| `trash_bin.html` | User trash bin |
+| `settings_notifications.html` | Email preferences dashboard |
+| `unsubscribe.html` | Unsubscribe confirmation |
+| `leaderboard.html` | Community leaderboard (Phase G) |
+| `partials/_masonry_grid.html` | Reusable masonry grid partial |
+| `partials/_prompt_card.html` | Reusable prompt card partial |
+| And 8 more... | Confirmation modals, reports, etc. |
+
+### About App Templates (about/templates/about/) - 1 file
+
+| Template | Purpose |
+|----------|---------|
+| `about.html` | About page |
+
+---
+
+## Test Files (13 total, 70+ tests)
+
+| Test File | Tests | Focus Area |
+|-----------|-------|------------|
+| `test_user_profiles.py` | Multiple | User profile CRUD operations |
+| `test_url_cleaning.py` | Multiple | URL validation and cleaning |
+| `test_rate_limiting.py` | 23 | Rate limiting enforcement |
+| `test_generator_page.py` | 24 | AI generator category pages |
+| `test_url_migration.py` | 12 | Phase I URL redirects |
+| `test_prompts_hub.py` | Multiple | Prompts hub functionality |
+| `test_inspiration.py` | 14 | Inspiration page tests |
+| `test_follows.py` | Multiple | Follow system |
+| `test_email_preferences_safety.py` | Multiple | Email preference safety |
+| `test_user_profile_header.py` | Multiple | Profile header UI |
+| `test_user_profile_javascript.py` | Multiple | Profile JavaScript |
+| `test_models.py` | Multiple | Model tests |
+| `test_views.py` | Multiple | View tests |
+
+---
+
+## Core Python Files
+
+### Project Configuration (prompts_manager/)
+
+| File | Purpose |
+|------|---------|
+| `settings.py` | Django settings (database, Cloudinary, middleware) |
+| `urls.py` | Root URL configuration |
+| `wsgi.py` | WSGI application entry point |
+| `asgi.py` | ASGI application entry point |
 
 ### Main Application (prompts/)
 
-#### `prompts/models.py`
-Database models:
-- **Prompt:** Core content model with soft delete (deleted_at, deleted_by, deletion_reason, original_status)
-- **UserProfile:** User profile data (bio, avatar, social links)
-- **EmailPreferences:** Notification preferences (8 toggles)
-- **PromptReport:** Content reporting system
-- **Comment:** User comments on prompts
-- **SiteSettings:** Singleton model for site-wide configuration (Dec 5, 2025)
-  - `auto_approve_comments` - Toggle for automatic comment approval (default: True)
-  - Admin interface at `/admin/prompts/sitesettings/`
-  - Uses `get_settings()` class method with caching
-- Custom managers (PromptManager for active, all_objects for deleted)
-
-#### `prompts/views.py`
-View functions and class-based views:
-- Prompt CRUD operations (create, read, update, delete, restore)
-- Upload flow (step1, step2, submit, cancel, extend)
-- Trash bin management
-- User profile pages
-- Email preferences dashboard
-- Unsubscribe handler
-- Report submission
-- **AI generator category pages (Phase 3):** ai_generator_category view with filtering/sorting
-- Rate limiting error page (ratelimited view)
-- Comment moderation
-- **Draft Mode (Nov 2025):** `prompt_publish` view for publishing drafts
-
-#### `prompts/middleware.py`
-Custom Django middleware:
-- **RatelimitMiddleware:** Intercepts Ratelimited exceptions from django-ratelimit 4.x and returns branded 429.html template
-- Processes exceptions raised by @ratelimit decorator
-- Returns TemplateResponse for testability
-- Required because RATELIMIT_VIEW setting not auto-respected in 4.x
-
-#### `prompts/forms.py`
-Django forms:
-- PromptForm (create/edit prompts)
-- CommentForm (user comments)
-- EmailPreferencesForm (notification settings)
-- UserProfileForm (profile editing)
-- PromptReportForm (content reporting)
-
-#### `prompts/admin.py`
-Django admin configuration:
-- Prompt admin (list display, filters, actions)
-- UserProfile admin (inline editing)
-- EmailPreferences admin (organized fieldsets)
-- PromptReport admin (moderation tools)
-- Comment admin (moderation)
-- **Draft Mode (Nov 2025):** `make_draft` bulk action for marking prompts as drafts
-
-#### `prompts/signals.py`
-Django signals:
-- Auto-create UserProfile on user creation
-- Auto-create EmailPreferences on user creation
-- Cloudinary cleanup on prompt deletion
-
-#### `prompts/constants.py`
-AI generator metadata and validation (Phase 3 SEO):
-- **AI_GENERATORS:** Dictionary mapping 11 AI generators to metadata
-- Generator metadata: name, description, official_website, icon, choice_value
-- Used by ai_generator_category view for validation and display
-- Prevents hardcoding generator data across multiple files
-
-#### `prompts/email_utils.py`
-Email helper functions:
-- should_send_email() - Check user preferences
-- get_unsubscribe_url() - Generate unsubscribe links
-- send_notification_email() - Wrapper for preference-aware emails
-
-#### `prompts/urls.py`
-URL routing for prompts app:
-- Prompt CRUD endpoints
-- Upload flow endpoints
-- Trash bin endpoints
-- User profile endpoints
-- Email preferences endpoints
-- Report endpoints
-- **AI generator category endpoints (Phase 3):** `/ai/<slug:generator_slug>/`
-- Rate limit error page endpoint
-
-### Middleware
-
-#### `prompts/middleware.py`
-**Purpose:** Custom Django middleware for rate limiting exception handling
-
-**Why Needed:** django-ratelimit 4.x raises Ratelimited exceptions that need to be caught and converted to branded 429 responses. The RATELIMIT_VIEW setting is not automatically respected in 4.x, requiring custom middleware.
-
-**Implementation:**
-- Intercepts `Ratelimited` exceptions in `process_exception()`
-- Returns `TemplateResponse` with `templates/429.html`
-- Uses TemplateResponse (not HttpResponse) for testability
-- Must be placed in MIDDLEWARE list after SecurityMiddleware
-
-**Key Code:**
-```python
-class RatelimitMiddleware:
-    def process_exception(self, request, exception):
-        if isinstance(exception, Ratelimited):
-            return TemplateResponse(request, '429.html', status=429)
-```
-
-**Added:** Session 4 (October 26, 2025)
-**Lines:** 67 lines
-
-### Tests
-
-#### `prompts/tests/test_rate_limiting.py`
-**Purpose:** Comprehensive rate limiting test suite
-
-**Coverage:**
-- Decorator application (23 tests)
-- Middleware exception handling
-- 429 template rendering
-- Rate limit enforcement (unsubscribe view)
-- TemplateResponse validation
-- Security headers
-- Edge cases (anonymous users, premium users)
-
-**Key Test Categories:**
-1. Middleware tests (exception handling, 429 responses)
-2. View tests (ratelimited() view rendering)
-3. Integration tests (decorator + middleware + template)
-4. Unsubscribe rate limiting (3/min, 20/hour)
-5. Template content validation
-
-**Statistics:**
-- 23 tests total
-- 100% passing
-- Added in Session 4 (October 26, 2025)
-- Lines: 413 lines
-
-**Why Important:** Ensures rate limiting works correctly after 3 critical bugs were discovered and fixed in Session 2. Tests verify:
-- Decorator placement on correct functions
-- Middleware catches exceptions
-- 429.html template renders correctly
-- Status codes are 429 (not 403)
-
-#### `prompts/tests/test_models.py`
-Tests for database models:
-- Prompt model (CRUD, soft delete, restore, hard delete)
-- UserProfile model (creation, updates)
-- EmailPreferences model (defaults, preferences)
-- Custom managers (objects vs all_objects)
-
-#### `prompts/tests/test_views.py`
-Tests for view functions:
-- Upload flow (step1, step2, submit)
-- Trash bin operations
-- User profile pages
-- Email preferences
-- Report submission
-
-#### `prompts/tests/test_forms.py`
-Tests for form validation:
-- Field validation
-- Clean methods
-- Form rendering
-
-#### `prompts/tests/test_user_profile_header.py`
-Tests for user profile header UI:
-- Tab navigation
-- Overflow arrow visibility
-- Responsive design
-
-#### `prompts/tests/test_user_profile_javascript.py`
-Tests for profile JavaScript:
-- Arrow visibility logic
-- Scroll detection
-- Keyboard navigation
-
-### Templates
-
-#### `templates/429.html`
-**Purpose:** Branded rate limit exceeded error page
-
-**Features:**
-- User-friendly messaging ("Too Many Requests")
-- Context explanation (rate limits maintain site performance)
-- Font Awesome hourglass icon
-- Retry-after information display
-- Primary CTA: Return to Homepage
-- Secondary CTA: Go Back
-- Support link
-- Mobile-responsive Bootstrap 5 layout
-- WCAG 2.1 Level AA compliant
-- Aria labels and screen reader support
-
-**Why Needed:** django-ratelimit 4.x returns generic 429 errors without custom templates. This provides a branded, accessible experience when users hit rate limits.
-
-**Variables Available:**
-- `error_title` (default: "Too Many Requests")
-- `error_message` (default: friendly explanation)
-- `retry_after` (optional: time until retry allowed)
-
-**Added:** Session 4 (October 26, 2025)
-**Lines:** 64 lines
-
-**Key Sections:**
-```html
-<div class="card shadow-sm" role="alert" aria-live="polite">
-    <i class="fas fa-hourglass-half fa-4x text-warning"></i>
-    <h1>{{ error_title|default:"Too Many Requests" }}</h1>
-    <p>{{ error_message|default:"You've made too many requests..." }}</p>
-    {% if retry_after %}
-        <div class="alert alert-info">Please try again in: {{ retry_after }}</div>
-    {% endif %}
-</div>
-```
-
-#### `templates/base.html`
-Base template with:
-- Bootstrap 5 layout
-- Navigation bar
-- Alert messages section
-- Footer
-- Block structure for child templates
-
-#### `templates/account/`
-Django-allauth authentication templates:
-- login.html
-- signup.html
-- logout.html
-- password_reset.html
-
-### Management Commands
-
-#### `prompts/management/commands/cleanup_deleted_prompts.py`
-**Purpose:** Automated trash cleanup (5 days free, 30 days premium)
-
-**Features:**
-- Deletes expired prompts from database
-- Removes Cloudinary assets
-- Email summaries to admins
-- Dry-run mode for testing
-- Comprehensive logging
-
-**Schedule:** Daily at 3:00 AM UTC (Heroku Scheduler)
-**Runtime:** ~10-30 seconds
-**Lines:** 271 lines
-
-#### `prompts/management/commands/detect_orphaned_files.py`
-**Purpose:** Cloudinary orphan and missing image detection
-
-**Features:**
-- Scans for files without database entries (orphans)
-- Scans for prompts without valid Cloudinary files (missing images)
-- Date filtering (--days N or --all)
-- CSV report generation
-- API usage monitoring
-- Two-section reporting (orphans + missing)
-- Differentiates ACTIVE vs DELETED prompts
-
-**Schedule:** Daily at 4:00 AM UTC (Heroku Scheduler)
-**Runtime:** ~10-60 seconds
-**Lines:** 899 lines
-
-### Documentation
-
-#### `CLAUDE.md`
-Comprehensive project documentation:
-- Project overview and goals
-- Technical stack and infrastructure
-- Development phases (A through I)
-- Known issues and technical debt
-- Decisions made
-- Monetization strategy
-- Content moderation policies
-- Upload flow architecture
-- SEO strategy
-- User management
-- Feature specifications
-
-**Updated:** October 26, 2025 (Phase E completion)
-
-#### `docs/CC_COMMUNICATION_PROTOCOL.md`
-Communication standards for Claude Code sessions:
-- Role and responsibilities
-- Reading specifications
-- When to ask questions
-- Reporting results
-- Testing requirements
-- Error handling
-
-#### `docs/bug_reports/`
-Detailed bug reports:
-- phase_e_task3_comment_field_fix.md
-- Other historical bug documentation
-
-#### `docs/specifications/`
-Feature specifications:
-- phase_e_arrow_visibility_spec.md
-- phase_e_arrow_refinements_spec.md
-- PHASE_E_SPEC.md
-
-#### `docs/implementation_reports/`
-Implementation summaries:
-- phase_e_complete_report.md
-- PHASE_E_IMPLEMENTATION_REPORT.md
+| File | Lines | Purpose |
+|------|-------|---------|
+| `views.py` | ~3,929 | All view functions (NEEDS SPLITTING) |
+| `models.py` | ~2,026 | Database models (Prompt, UserProfile, etc.) |
+| `admin.py` | ~500 | Django admin configuration |
+| `forms.py` | ~300 | Django forms |
+| `urls.py` | ~200 | URL routing |
+| `signals.py` | ~100 | Django signals (auto-create profiles) |
+| `middleware.py` | ~67 | RatelimitMiddleware |
+| `constants.py` | ~241 | AI generator metadata |
+| `email_utils.py` | ~100 | Email helper functions |
 
 ---
 
-## Recent Additions - Phase E Rate Limiting (Session 4)
+## CSS Architecture
 
-**Date:** October 26, 2025
-**Purpose:** Fix 3 critical rate limiting bugs discovered in Session 2
+```
+static/css/
+├── navbar.css           # 1,136 lines - Extracted navbar styles
+├── style.css            # 1,789 lines - Main stylesheet
+├── components/
+│   └── masonry-grid.css # 255 lines - Masonry grid component
+└── pages/
+    └── prompt-list.css  # 304 lines - Prompt list page styles
+```
 
-### New Files Created:
-
-1. **prompts/middleware.py** (67 lines)
-   - Custom RatelimitMiddleware class
-   - Intercepts Ratelimited exceptions
-   - Returns branded 429.html template
-   - Required for django-ratelimit 4.x compatibility
-
-2. **templates/429.html** (64 lines)
-   - Branded rate limit error page
-   - User-friendly messaging
-   - Bootstrap 5 responsive design
-   - WCAG 2.1 Level AA accessible
-   - Retry-after information display
-
-3. **prompts/tests/test_rate_limiting.py** (413 lines, 23 tests)
-   - Comprehensive rate limiting test suite
-   - Middleware exception handling tests
-   - View rendering tests (ratelimited view)
-   - Integration tests (decorator + middleware + template)
-   - Unsubscribe rate limit enforcement tests
-   - 100% passing
-
-### Files Modified:
-
-1. **prompts_manager/settings.py**
-   - Added RatelimitMiddleware to MIDDLEWARE list
-   - Added RATELIMIT_VIEW setting (points to prompts:ratelimited)
-
-2. **prompts/views.py**
-   - Created ratelimited() error view
-   - Returns TemplateResponse with 429.html
-
-3. **prompts/urls.py**
-   - Added /rate-limited/ endpoint
-   - Maps to prompts:ratelimited view
-
-### Bugs Fixed:
-
-1. **Missing ratelimited() view** - Created custom error view
-2. **Decorator not triggering** - Created RatelimitMiddleware
-3. **HTTP 403 instead of 429** - Fixed decorator placement and middleware implementation
-
-### Testing Results:
-
-- **Unit Tests:** 23/23 passing (rate limiting suite)
-- **Integration Tests:** 46/46 passing (existing tests)
-- **Total:** 69/69 passing (100% pass rate)
-- **Manual Testing:** 6/6 browser tests passed
-- **Agent Testing:** 9.5/10 average (@django-pro @security @code-quality)
+**Total CSS:** ~3,484 lines across 4 files
 
 ---
 
-## File Statistics
+## Recent Additions (Phase I - December 2025)
 
-**Total Files:** 100+ files across project
-**Core Python Files:** 30+ files
-**Templates:** 20+ HTML files
-**Tests:** 69+ tests across 7 test files
-**Documentation:** 15+ markdown files
-**Management Commands:** 2 commands with READMEs
+### URL Migration Complete
 
-**Lines of Code (Approximate):**
-- Python: 8,000+ lines
-- Templates: 3,000+ lines
-- Tests: 2,000+ lines
-- Documentation: 10,000+ lines
+- `/ai/` URLs redirected to `/prompts/` with 301 status
+- `/inspiration/` URLs redirected to `/prompts/` with 301 status
+- All 70 tests passing
+- SEO preserved with permanent redirects
+
+### Files Modified in Phase I
+
+| File | Changes |
+|------|---------|
+| `prompts/urls.py` | New `/prompts/` namespace + legacy redirects |
+| `prompts/views.py` | Added PromptView import |
+| `templates/base.html` | Updated navigation links |
+| `ai_generator_category.html` | Updated breadcrumbs, Schema.org |
+| `inspiration_index.html` | Updated breadcrumbs, H1 |
+| `prompt_list.html` | Updated platform dropdown link |
+| `test_prompts_hub.py` | NEW - 24 tests |
+| `test_url_migration.py` | Rewritten - 12 tests |
+| `test_inspiration.py` | Rewritten - 14 tests |
+| `test_generator_page.py` | Updated - 24 tests |
+
+---
+
+## Known Critical Issues
+
+### Immediate Attention Required
+
+| Issue | Impact | Recommended Action |
+|-------|--------|-------------------|
+| `views.py` at 147KB (~3,929 lines) | Maintenance difficulty | Split into 8-10 view modules |
+| No CI/CD pipeline | Manual deployments | Set up GitHub Actions |
+| No error monitoring | Blind to production errors | Add Sentry |
+| 37 migrations | Slow migration runs | Squash before launch |
+| Root directory clutter | 30+ MD files, 14 Python scripts | Move to /archive/ and /scripts/ |
+
+---
+
+## Deployment Structure
+
+### Heroku Configuration
+
+| Component | Configuration |
+|-----------|---------------|
+| **Dyno** | Eco dyno ($5/month) |
+| **Database** | Heroku PostgreSQL Mini ($5/month) |
+| **Scheduler** | Heroku Scheduler (free) |
+| **Total Cost** | ~$10/month (covered by credits) |
+
+### Environment Variables
+
+- `DATABASE_URL` - PostgreSQL connection
+- `CLOUDINARY_URL` - Media storage
+- `SECRET_KEY` - Django secret
+- `ADMIN_EMAIL` - Notification recipient
+- `DEBUG` - False in production
+- `IP_HASH_PEPPER` - View tracking security (recommended)
+
+### Scheduled Jobs
+
+| Job | Schedule | Runtime |
+|-----|----------|---------|
+| `cleanup_deleted_prompts` | Daily 3:00 UTC | ~10-30 seconds |
+| `detect_orphaned_files --days 7` | Daily 4:00 UTC | ~10-60 seconds |
 
 ---
 
 ## Testing Overview
 
-### Test Categories:
-
-1. **Model Tests** (test_models.py)
-   - Prompt CRUD operations
-   - Soft delete functionality
-   - Custom managers
-   - User profile creation
-   - Email preferences defaults
-
-2. **View Tests** (test_views.py)
-   - Upload flow endpoints
-   - Trash bin operations
-   - User profile pages
-   - Email preferences
-   - Authentication requirements
-
-3. **Form Tests** (test_forms.py)
-   - Field validation
-   - Clean methods
-   - Form rendering
-
-4. **Rate Limiting Tests** (test_rate_limiting.py)
-   - Middleware exception handling
-   - 429 template rendering
-   - Decorator application
-   - Rate limit enforcement
-   - Security headers
-
-5. **UI Tests** (test_user_profile_header.py, test_user_profile_javascript.py)
-   - Profile header layout
-   - JavaScript functionality
-   - Responsive design
-   - Arrow visibility logic
-
-### Test Execution:
+### Running Tests
 
 ```bash
 # Run all tests
@@ -550,51 +331,30 @@ python manage.py test prompts.tests.test_rate_limiting
 python manage.py test -v 2
 ```
 
-### Coverage Goals:
+### Test Statistics
 
-- **Current:** 69+ tests passing
-- **Coverage:** 70%+ (estimated)
-- **Priority:** Critical paths covered (CRUD, auth, rate limiting)
-- **Future:** Expand to 80%+ coverage in Phase F
+- **Total Tests:** 70+
+- **Pass Rate:** 100%
+- **Coverage:** ~70% (estimated)
+- **Priority Areas:** CRUD, authentication, rate limiting, URL migration
 
 ---
 
-## Deployment Structure
+## Related Documentation
 
-### Heroku Configuration:
-
-**Dynos:**
-- Web: Eco dyno ($5/month)
-- Worker: None (scheduled tasks use web dyno hours)
-
-**Add-ons:**
-- Heroku PostgreSQL Mini ($5/month)
-- Heroku Scheduler (free)
-
-**Environment Variables:**
-- DATABASE_URL (PostgreSQL connection)
-- CLOUDINARY_URL (media storage)
-- SECRET_KEY (Django secret)
-- ADMIN_EMAIL (notification recipient)
-- DEBUG (False in production)
-
-**Scheduled Jobs:**
-1. cleanup_deleted_prompts (daily 3:00 AM UTC)
-2. detect_orphaned_files --days 7 (daily 4:00 AM UTC)
-
-### Static Files:
-
-- Collected by `python manage.py collectstatic`
-- Served by WhiteNoise in production
-- Cloudinary for media files (images/videos)
+| Document | Location | Purpose |
+|----------|----------|---------|
+| CLAUDE.md | Root | Master project documentation |
+| CC_COMMUNICATION_PROTOCOL.md | docs/ | Agent usage requirements |
+| UI_STYLE_GUIDE.md | design-references/ | UI/UX standards |
+| PROJECT_FILE_STRUCTURE_AUDIT_REPORT.md | docs/reports/ | Latest audit findings |
 
 ---
 
 **END OF PROJECT_FILE_STRUCTURE.md**
 
-*This document tracks all project files and their purposes. Update when adding new files or significant changes to structure.*
+*This document is updated after major structural changes. Last audit: December 13, 2025.*
 
-**Version:** 1.1
-**Created:** October 26, 2025
-**Last Updated:** November 30, 2025
+**Version:** 2.0
+**Audit Date:** December 13, 2025
 **Maintained By:** Project Owner

@@ -41,30 +41,28 @@ urlpatterns = [
     path('rate-limited/', views.ratelimited, name='ratelimited'),
     # Report prompt URL (Phase E Task 3)
     path('prompt/<slug:slug>/report/', views.report_prompt, name='report_prompt'),
-    # AI Generator Category Pages (Phase I - Inspiration namespace)
-    # NEW primary URL structure
-    path('inspiration/ai/<slug:generator_slug>/',
+    # Prompts Hub and Generator Category Pages (Phase I URL Migration)
+    # NEW primary URL structure at /prompts/
+    path('prompts/',
+         views.inspiration_index,
+         name='prompts_hub'),
+    path('prompts/<slug:generator_slug>/',
          views.ai_generator_category,
          name='ai_generator_category'),
-    # Legacy URL with 301 permanent redirect (preserves SEO equity)
-    path('ai/<slug:generator_slug>/',
-         RedirectView.as_view(
-             pattern_name='prompts:ai_generator_category',
-             permanent=True,
-             query_string=True,
-         ),
-         name='ai_generator_redirect'),
-    # /ai/ directory redirect to future /inspiration/ hub
-    path('ai/',
-         RedirectView.as_view(
-             url='/inspiration/',
-             permanent=True,
-         ),
-         name='ai_directory_redirect'),
-    # Inspiration hub page (Phase I.2)
+
+    # Legacy redirects (301 permanent) - preserves SEO equity
     path('inspiration/',
-         views.inspiration_index,
-         name='inspiration_index'),
+         RedirectView.as_view(url='/prompts/', permanent=True),
+         name='inspiration_redirect'),
+    path('inspiration/ai/<slug:generator_slug>/',
+         RedirectView.as_view(pattern_name='prompts:ai_generator_category', permanent=True, query_string=True),
+         name='inspiration_ai_redirect'),
+    path('ai/<slug:generator_slug>/',
+         RedirectView.as_view(pattern_name='prompts:ai_generator_category', permanent=True, query_string=True),
+         name='ai_generator_redirect'),
+    path('ai/',
+         RedirectView.as_view(url='/prompts/', permanent=True),
+         name='ai_directory_redirect'),
     # Leaderboard (Phase G Part C)
     path('leaderboard/', views.leaderboard, name='leaderboard'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',

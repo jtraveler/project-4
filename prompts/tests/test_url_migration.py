@@ -1,13 +1,14 @@
 """
-Test URL Migration: Phase I.1
+Test URL Migration: Phase I (Updated)
 
-Tests for the /ai/ to /inspiration/ai/ URL migration with 301 redirects.
+Tests for URL migration to /prompts/ namespace with 301 redirects.
 
 All tests verify:
-1. New URLs return 200 OK
-2. Old URLs return 301 permanent redirect
-3. Query parameters preserved in redirects
-4. Directory redirects work correctly
+1. New /prompts/ URLs return 200 OK
+2. Legacy /ai/ URLs return 301 permanent redirect to /prompts/
+3. Legacy /inspiration/ai/ URLs return 301 permanent redirect to /prompts/
+4. Query parameters preserved in redirects
+5. Directory redirects work correctly
 """
 
 from django.test import TestCase, Client
@@ -15,7 +16,7 @@ from http import HTTPStatus
 
 
 class AIGeneratorURLMigrationTests(TestCase):
-    """Test 301 redirects for AI generator pages from /ai/ to /inspiration/ai/."""
+    """Test 301 redirects for AI generator pages to /prompts/ namespace."""
 
     def setUp(self):
         """Set up test client."""
@@ -29,23 +30,23 @@ class AIGeneratorURLMigrationTests(TestCase):
             'flux',
             'sora',
             'sora2',
-            'veo-3',
+            'veo3',
             'adobe-firefly',
             'bing-image-creator',
         ]
 
     def test_new_url_returns_200(self):
-        """New /inspiration/ai/{generator}/ URLs should return 200 OK."""
+        """New /prompts/{generator}/ URLs should return 200 OK."""
         for generator in self.generators:
             with self.subTest(generator=generator):
-                response = self.client.get(f'/inspiration/ai/{generator}/')
+                response = self.client.get(f'/prompts/{generator}/')
                 self.assertEqual(
                     response.status_code,
                     HTTPStatus.OK,
                     f"New URL for {generator} did not return 200"
                 )
 
-    def test_old_url_returns_301(self):
+    def test_old_ai_url_returns_301(self):
         """Old /ai/{generator}/ URLs should return HTTP 301."""
         for generator in self.generators:
             with self.subTest(generator=generator):
@@ -56,12 +57,41 @@ class AIGeneratorURLMigrationTests(TestCase):
                     f"Generator {generator} did not return 301 status"
                 )
 
-    def test_redirect_destination_correct(self):
-        """Redirects should point to correct new URL."""
+    def test_old_inspiration_ai_url_returns_301(self):
+        """Old /inspiration/ai/{generator}/ URLs should return HTTP 301."""
+        for generator in self.generators:
+            with self.subTest(generator=generator):
+                response = self.client.get(
+                    f'/inspiration/ai/{generator}/',
+                    follow=False
+                )
+                self.assertEqual(
+                    response.status_code,
+                    HTTPStatus.MOVED_PERMANENTLY,
+                    f"Generator {generator} did not return 301 status"
+                )
+
+    def test_ai_redirect_destination_correct(self):
+        """Redirects from /ai/ should point to /prompts/."""
         for generator in self.generators:
             with self.subTest(generator=generator):
                 response = self.client.get(f'/ai/{generator}/', follow=False)
-                expected_location = f'/inspiration/ai/{generator}/'
+                expected_location = f'/prompts/{generator}/'
+                self.assertEqual(
+                    response.url,
+                    expected_location,
+                    f"Generator {generator} redirects to wrong URL"
+                )
+
+    def test_inspiration_ai_redirect_destination_correct(self):
+        """Redirects from /inspiration/ai/ should point to /prompts/."""
+        for generator in self.generators:
+            with self.subTest(generator=generator):
+                response = self.client.get(
+                    f'/inspiration/ai/{generator}/',
+                    follow=False
+                )
+                expected_location = f'/prompts/{generator}/'
                 self.assertEqual(
                     response.url,
                     expected_location,
@@ -88,8 +118,8 @@ class AIGeneratorURLMigrationTests(TestCase):
                     f"Query string '{query_string}' not preserved in redirect"
                 )
 
-    def test_ai_directory_redirects_to_inspiration(self):
-        """/ai/ should 301 redirect to /inspiration/."""
+    def test_ai_directory_redirects_to_prompts(self):
+        """/ai/ should 301 redirect to /prompts/."""
         response = self.client.get('/ai/', follow=False)
         self.assertEqual(
             response.status_code,
@@ -98,17 +128,31 @@ class AIGeneratorURLMigrationTests(TestCase):
         )
         self.assertEqual(
             response.url,
-            '/inspiration/',
-            "/ai/ did not redirect to /inspiration/"
+            '/prompts/',
+            "/ai/ did not redirect to /prompts/"
         )
 
-    def test_inspiration_index_exists(self):
-        """/inspiration/ should return 200 or 302 (temporary placeholder)."""
+    def test_inspiration_redirects_to_prompts(self):
+        """/inspiration/ should 301 redirect to /prompts/."""
         response = self.client.get('/inspiration/', follow=False)
-        self.assertIn(
+        self.assertEqual(
             response.status_code,
-            [HTTPStatus.OK, HTTPStatus.FOUND],
-            "/inspiration/ did not return expected status"
+            HTTPStatus.MOVED_PERMANENTLY,
+            "/inspiration/ did not return 301 status"
+        )
+        self.assertEqual(
+            response.url,
+            '/prompts/',
+            "/inspiration/ did not redirect to /prompts/"
+        )
+
+    def test_prompts_hub_returns_200(self):
+        """/prompts/ should return 200 OK."""
+        response = self.client.get('/prompts/', follow=False)
+        self.assertEqual(
+            response.status_code,
+            HTTPStatus.OK,
+            "/prompts/ did not return 200 OK"
         )
 
     def test_followed_redirect_returns_200(self):
@@ -122,5 +166,5 @@ class AIGeneratorURLMigrationTests(TestCase):
         # Verify we landed at the correct URL
         self.assertEqual(
             response.request['PATH_INFO'],
-            '/inspiration/ai/midjourney/'
+            '/prompts/midjourney/'
         )

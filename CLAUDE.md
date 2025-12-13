@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 11, 2025
-**Project Status:** Pre-Launch Development - Phase E Complete, Phase F Complete, Performance Optimizations Complete, Draft Mode System Complete, CSS Cleanup Phase 1 Complete, Phase G Parts A, B, C Complete
+**Last Updated:** December 13, 2025
+**Project Status:** Pre-Launch Development - Phase I (URL Migration) Complete, Phase G Parts A, B, C Complete, All Core Phases Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -21,8 +21,10 @@
 11. [User Management](#user-management)
 12. [Feature Specifications](#feature-specifications)
 13. [Trash Bin & Orphaned File Management](#phase-d5-trash-bin--orphaned-file-management-)
-14. [Phase I: Inspiration Page & AI Generators](#-phase-i-inspiration-page--ai-generators-planned)
-15. [Unanswered Questions](#unanswered-questions)
+14. [Phase I: URL Migration](#phase-i-url-migration-to-prompts-complete)
+15. [Project Health Checkup Protocol](#-project-health-checkup-protocol)
+16. [Known Technical Debt](#-known-technical-debt)
+17. [Unanswered Questions](#unanswered-questions)
 
 ---
 
@@ -93,7 +95,16 @@
     - ✅ Created `static/css/components/masonry-grid.css` (255 lines)
     - ✅ Created `static/css/pages/prompt-list.css` (304 lines)
   - 📋 **CSS Cleanup Phase 2:** Extract remaining inline styles (17 templates) - FUTURE WORK
-  - 🔜 **Phase G:** Social Features & Activity Feeds - NEXT PRIORITY
+  - ✅ **Phase G:** Homepage Tabs, Sorting & Leaderboard ⭐ **COMPLETE** (December 5-7, 2025)
+    - ✅ Part A: Homepage tabs (Home/All/Photos/Videos) + sorting (Trending/New/Following)
+    - ✅ Part B: Views tracking with configurable trending algorithm
+    - ✅ Part C: Community leaderboard with Most Viewed/Most Active rankings
+    - Agent Rating: 8.7/10 average
+  - ✅ **Phase I:** URL Migration to /prompts/ ⭐ **COMPLETE** (December 12, 2025)
+    - ✅ Migrated /ai/ and /inspiration/ URLs to /prompts/ namespace
+    - ✅ 301 permanent redirects for SEO preservation
+    - ✅ All 70 tests passing
+    - Agent Rating: @django-pro 9.0/10, @code-reviewer 8.5+/10
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
@@ -6924,6 +6935,127 @@ python manage.py migrate
 - [ ] Premium users see unlimited items
 - [ ] Daily cleanup script runs successfully
 - [ ] Notifications work correctly
+
+---
+
+## 🏥 Project Health Checkup Protocol
+
+### Overview
+
+Periodic audits ensure documentation accuracy, codebase organization, and identify technical debt before it accumulates. This protocol establishes standardized health checks for the PromptFinder project.
+
+### Audit Types
+
+| Type | Frequency | Duration | Focus |
+|------|-----------|----------|-------|
+| **Quick Check** | Weekly | 15-30 min | File counts, test status, obvious issues |
+| **Phase Audit** | After each phase | 1-2 hours | Documentation accuracy, phase completion |
+| **Deep Audit** | Monthly/Quarterly | 4-8 hours | Full codebase review, agent validation |
+
+### Quick Check Checklist (Weekly)
+
+- [ ] Run `python manage.py test` - All tests passing?
+- [ ] Check git status - Any uncommitted changes?
+- [ ] Verify Heroku scheduler jobs running (check logs)
+- [ ] Review error monitoring (when Sentry added)
+- [ ] Quick file count sanity check
+
+### Phase Audit Checklist (After Each Phase)
+
+- [ ] Update PROJECT_FILE_STRUCTURE.md with accurate counts
+- [ ] Update CLAUDE.md with phase completion status
+- [ ] Move session/phase documents to archive
+- [ ] Run agent validation (minimum 2 agents, 8+/10 required)
+- [ ] Verify all tests passing
+- [ ] Check for orphaned files in root directory
+- [ ] Update Known Technical Debt section if needed
+
+### Deep Audit Checklist (Monthly/Quarterly)
+
+- [ ] Full file structure audit with agent validation
+- [ ] Performance audit (views.py size, query optimization)
+- [ ] Security audit (dependencies, vulnerabilities)
+- [ ] Documentation accuracy review
+- [ ] Archive cleanup (delete old session files)
+- [ ] Migration squashing assessment
+- [ ] CI/CD pipeline status
+- [ ] Error monitoring review
+
+### Agent Validation Requirements
+
+**Required Agents by Task:**
+
+| Task | Agents | Minimum Rating |
+|------|--------|----------------|
+| Documentation updates | @code-reviewer | 8+/10 |
+| Django changes | @code-reviewer, @django-pro | 8+/10 each |
+| Performance changes | @performance-expert, @code-reviewer | 8+/10 each |
+| Security changes | @security-auditor, @code-reviewer | 9+/10 each |
+| Full audit | 3+ agents | 8+/10 average |
+
+### Last Audit Results
+
+**Date:** December 13, 2025
+**Type:** Deep Audit (Post Phase I)
+**Agent Ratings:**
+- @code-reviewer: 8.2/10
+- @django-pro: 7.5/10
+- @devops-troubleshooter: 7.5/10
+- **Average:** 7.7/10 (below 8+ threshold)
+
+**Critical Issues Identified:**
+1. views.py at 147KB needs splitting
+2. No CI/CD pipeline
+3. No error monitoring (Sentry)
+4. 37 migrations should be squashed
+5. Root directory clutter (resolved in this session)
+
+**Next Audit Due:** January 2026 (or after next major phase)
+
+---
+
+## 📋 Known Technical Debt
+
+### Critical Priority (Address Before Launch)
+
+| Issue | Impact | Effort | Status |
+|-------|--------|--------|--------|
+| `views.py` at 147KB (~3,929 lines) | Maintenance nightmare, slow IDE | 4-8 hours | ⏳ Planned |
+| No CI/CD pipeline | Manual deployments, no automated testing | 2-4 hours | ⏳ Planned |
+| No error monitoring | Blind to production errors | 1 hour | ⏳ Planned |
+
+### High Priority (Address Within 1 Month)
+
+| Issue | Impact | Effort | Status |
+|-------|--------|--------|--------|
+| 37 migrations unsquashed | Slow migration runs | 2 hours | ⏳ Planned |
+| `base.html` inline styles (~2000 lines) | Not cached, maintenance issues | 2-4 hours | ⏳ Planned |
+| CSS Cleanup Phase 2 (17 templates) | Inline styles in templates | 2-3 days | 📋 Documented |
+
+### Medium Priority (Address Within 3 Months)
+
+| Issue | Impact | Effort | Status |
+|-------|--------|--------|--------|
+| Dual upload systems | Maintenance overhead | 2-3 days | 📋 Documented |
+| Missing canonical tags | SEO incomplete | 1 hour | ⏳ Planned |
+| No uptime monitoring | Unaware of outages | 30 min | ⏳ Planned |
+
+### Low Priority (Future Improvements)
+
+| Issue | Impact | Effort | Status |
+|-------|--------|--------|--------|
+| Template file renames | Consistency (inspiration_index → prompts_hub) | 1 hour | 💡 Nice-to-have |
+| View function renames | Consistency (inspiration_index → prompts_hub) | 30 min | 💡 Nice-to-have |
+| Additional test coverage | Quality assurance | Ongoing | 📋 Documented |
+
+### Resolved Technical Debt
+
+| Issue | Resolution | Date |
+|-------|------------|------|
+| Root directory clutter (30+ MD, 14 Python) | Moved to /archive/ and /scripts/ | Dec 13, 2025 |
+| PROJECT_FILE_STRUCTURE.md outdated | Updated with accurate counts | Dec 13, 2025 |
+| Orphaned Cloudinary files | Detection command implemented | Oct 2025 |
+| Missing PromptView import | Fixed in Phase I | Dec 2025 |
 
 ---
 

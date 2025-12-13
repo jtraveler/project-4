@@ -28,3 +28,5 @@ staticfiles/
 
 # Reports (CSV files from management commands)
 reports/*.csvbackups/*.json
+.coverage
+*.backup

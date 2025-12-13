@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
 **Last Updated:** December 13, 2025
-**Project:** PromptFinder (Django 4.2.13)
-**Current Phase:** Phase I (URL Migration) - Complete
-**Total Tests:** 70+ passing
+**Project:** PromptFinder (Django 5.2.9)
+**Current Phase:** Phase I Complete, CI/CD Operational
+**Total Tests:** 234 passing (46% coverage)
 
 ---
 
@@ -11,13 +11,16 @@
 
 | Category | Count | Location |
 |----------|-------|----------|
-| **Python Files** | 82 | Various directories |
+| **Python Files** | 92 | Various directories |
 | **HTML Templates** | 41 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 4 | static/css/ |
+| **JavaScript Files** | 1 | static/js/ |
 | **Migrations** | 38 | prompts/migrations/ (37), about/migrations/ (1) |
-| **Test Files** | 13 | prompts/tests/ |
+| **Test Files** | 12 | prompts/tests/ |
 | **Management Commands** | 17 | prompts/management/commands/ |
 | **Services** | 7 | prompts/services/ |
+| **View Modules** | 11 | prompts/views/ |
+| **CI/CD Config Files** | 3 | .github/workflows/, root |
 | **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
 
 ---
@@ -27,8 +30,12 @@
 ```
 live-working-project/
 ├── .claude/                      # Claude Code settings
-├── .github/                      # GitHub templates
-│   └── ISSUE_TEMPLATE/
+├── .github/                      # GitHub configuration
+│   ├── ISSUE_TEMPLATE/           # Issue templates
+│   └── workflows/
+│       └── django-ci.yml         # CI/CD pipeline (3 jobs)
+├── .flake8                       # Flake8 linting configuration
+├── .bandit                       # Bandit security scan configuration
 ├── about/                        # Secondary Django app (7 files)
 │   ├── migrations/               # 1 migration
 │   ├── templates/about/          # 1 template
@@ -63,7 +70,19 @@ live-working-project/
 │   ├── services/                 # 7 service modules
 │   ├── templates/prompts/        # 22 templates
 │   ├── templatetags/             # 3 template tag files
-│   └── tests/                    # 13 test files
+│   ├── tests/                    # 12 test files
+│   └── views/                    # 11 view modules (refactored)
+│       ├── __init__.py           # Package exports
+│       ├── admin_views.py        # Admin dashboard views
+│       ├── auth_views.py         # Authentication views
+│       ├── comment_views.py      # Comment CRUD operations
+│       ├── core_views.py         # Homepage, detail, list views
+│       ├── leaderboard_views.py  # Leaderboard functionality
+│       ├── moderation_views.py   # Content moderation views
+│       ├── profile_views.py      # User profile views
+│       ├── settings_views.py     # User settings views
+│       ├── social_views.py       # Follow, like, share views
+│       └── upload_views.py       # Upload workflow views
 ├── prompts_manager/              # Django project settings (7 files)
 │   ├── __init__.py
 │   ├── asgi.py
@@ -73,17 +92,19 @@ live-working-project/
 ├── reports/                      # Generated CSV reports
 ├── scripts/                      # Utility scripts (7 files)
 ├── static/                       # Source static files
-│   └── css/                      # 4 CSS files (101KB total)
-│       ├── components/
-│       ├── pages/
-│       ├── navbar.css
-│       └── style.css
+│   ├── css/                      # 4 CSS files (101KB total)
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── navbar.css
+│   │   └── style.css
+│   └── js/
+│       └── navbar.js             # Extracted navbar JavaScript (~650 lines)
 ├── staticfiles/                  # Collected static (production)
 └── templates/                    # Global Django templates (18 files)
     ├── account/                  # 6 authentication templates
     ├── admin/                    # 8 admin customization templates
     ├── registration/             # 1 template
-    ├── base.html                 # Main template (69KB)
+    ├── base.html                 # Main template (~1400 lines after JS extraction)
     ├── 404.html
     └── 429.html
 ```
@@ -140,6 +161,42 @@ prompts/services/
 
 ---
 
+## Views Package Architecture (11 modules)
+
+*Refactored December 2025 - Previously a single 3,929-line views.py file*
+
+```
+prompts/views/
+├── __init__.py           # Package exports (all public views)
+├── admin_views.py        # Admin dashboard, debug pages, bulk actions
+├── auth_views.py         # Login, logout, registration helpers
+├── comment_views.py      # Comment CRUD, moderation actions
+├── core_views.py         # PromptList, prompt_detail, homepage
+├── leaderboard_views.py  # Leaderboard rankings, filters
+├── moderation_views.py   # Content review, appeals, flags
+├── profile_views.py      # User profiles, settings, avatar
+├── settings_views.py     # Notification preferences, account settings
+├── social_views.py       # Follow/unfollow, likes, shares
+└── upload_views.py       # Two-step upload, AI generation, validation
+```
+
+### Module Descriptions
+
+| Module | Functions | Purpose |
+|--------|-----------|---------|
+| **admin_views** | ~15 | Admin dashboards, media issues, trash management |
+| **auth_views** | ~5 | Authentication helpers, session management |
+| **comment_views** | ~8 | Comment CRUD, approval, deletion |
+| **core_views** | ~12 | Homepage, prompt detail, list views, search |
+| **leaderboard_views** | ~4 | Rankings, time filters, user stats |
+| **moderation_views** | ~10 | Review queues, appeals, content flags |
+| **profile_views** | ~8 | Profile pages, edit forms, stats |
+| **settings_views** | ~6 | Email preferences, account settings |
+| **social_views** | ~10 | Follow system, likes, shares, reports |
+| **upload_views** | ~12 | Step 1/2 upload, AI generation, validation |
+
+---
+
 ## Templates (41 total)
 
 ### Global Templates (templates/) - 18 files
@@ -181,12 +238,11 @@ prompts/services/
 
 ---
 
-## Test Files (13 total, 70+ tests)
+## Test Files (12 files, 234 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
 | `test_user_profiles.py` | Multiple | User profile CRUD operations |
-| `test_url_cleaning.py` | Multiple | URL validation and cleaning |
 | `test_rate_limiting.py` | 23 | Rate limiting enforcement |
 | `test_generator_page.py` | 24 | AI generator category pages |
 | `test_url_migration.py` | 12 | Phase I URL redirects |
@@ -198,6 +254,8 @@ prompts/services/
 | `test_user_profile_javascript.py` | Multiple | Profile JavaScript |
 | `test_models.py` | Multiple | Model tests |
 | `test_views.py` | Multiple | View tests |
+
+**Note:** 12 Selenium tests skipped in CI (require browser)
 
 ---
 
@@ -216,7 +274,7 @@ prompts/services/
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `views.py` | ~3,929 | All view functions (NEEDS SPLITTING) |
+| `views/` | ~3,929 | View package (11 modules) ✅ REFACTORED |
 | `models.py` | ~2,026 | Database models (Prompt, UserProfile, etc.) |
 | `admin.py` | ~500 | Django admin configuration |
 | `forms.py` | ~300 | Django forms |
@@ -241,6 +299,57 @@ static/css/
 ```
 
 **Total CSS:** ~3,484 lines across 4 files
+
+---
+
+## CI/CD Configuration
+
+### GitHub Actions Pipeline (`.github/workflows/django-ci.yml`)
+
+**Triggers:** Push to main/develop, Pull requests to main
+
+| Job | Purpose | Timeout |
+|-----|---------|---------|
+| **test** | Django tests with PostgreSQL, coverage ≥45% | 15 min |
+| **lint** | Flake8 code quality checks | 5 min |
+| **security** | Bandit SAST + pip-audit dependency scan | 10 min |
+
+### Configuration Files
+
+| File | Purpose | Key Settings |
+|------|---------|--------------|
+| `.flake8` | Linting rules | max-line-length=120, exclude migrations |
+| `.bandit` | Security scan | Skip B101 (assert), target prompts/ |
+| `django-ci.yml` | Pipeline definition | Python 3.12, PostgreSQL 14 |
+
+### Pipeline Features
+
+- **Parallel Execution:** All 3 jobs run simultaneously
+- **PostgreSQL Service:** Containerized test database
+- **Coverage Artifacts:** Reports uploaded for 5 days
+- **Fail-Fast:** Security issues block deployment
+
+---
+
+## JavaScript Architecture
+
+```
+static/js/
+└── navbar.js             # ~650 lines - Extracted from base.html
+```
+
+### navbar.js Features
+
+| Feature | Lines | Purpose |
+|---------|-------|---------|
+| Dropdown Management | ~150 | Open/close, click outside |
+| Search Functionality | ~200 | Autocomplete, keyboard nav |
+| Mobile Menu | ~100 | Hamburger toggle, responsive |
+| Scroll Behavior | ~80 | Sticky navbar, scroll effects |
+| Event Delegation | ~70 | Performance optimization |
+| Utilities | ~50 | Debounce, focus trap |
+
+**Extraction Benefit:** base.html reduced from ~2000 lines to ~1400 lines
 
 ---
 
@@ -274,13 +383,13 @@ static/css/
 
 ### Immediate Attention Required
 
-| Issue | Impact | Recommended Action |
-|-------|--------|-------------------|
-| `views.py` at 147KB (~3,929 lines) | Maintenance difficulty | Split into 8-10 view modules |
-| No CI/CD pipeline | Manual deployments | Set up GitHub Actions |
-| No error monitoring | Blind to production errors | Add Sentry |
-| 37 migrations | Slow migration runs | Squash before launch |
-| Root directory clutter | 30+ MD files, 14 Python scripts | Move to /archive/ and /scripts/ |
+| Issue | Impact | Status |
+|-------|--------|--------|
+| `views.py` at 147KB (~3,929 lines) | Maintenance difficulty | ✅ RESOLVED - Split into 11 modules |
+| No CI/CD pipeline | Manual deployments | ✅ RESOLVED - GitHub Actions operational |
+| No error monitoring | Blind to production errors | ✅ RESOLVED - Sentry integrated |
+| 37 migrations | Slow migration runs | ⏳ Squash before launch |
+| Root directory clutter | 30+ MD files, 14 Python scripts | ⏳ Move to /archive/ and /scripts/ |
 
 ---
 
@@ -303,6 +412,8 @@ static/css/
 - `ADMIN_EMAIL` - Notification recipient
 - `DEBUG` - False in production
 - `IP_HASH_PEPPER` - View tracking security (recommended)
+- `SENTRY_DSN` - Error monitoring endpoint
+- `DJANGO_ENV` - Environment identifier (production/staging)
 
 ### Scheduled Jobs
 
@@ -333,10 +444,11 @@ python manage.py test -v 2
 
 ### Test Statistics
 
-- **Total Tests:** 70+
-- **Pass Rate:** 100%
-- **Coverage:** ~70% (estimated)
+- **Total Tests:** 234 passing (12 skipped - Selenium)
+- **Pass Rate:** 100% in CI
+- **Coverage:** 46% (enforced minimum: 45%)
 - **Priority Areas:** CRUD, authentication, rate limiting, URL migration
+- **CI Integration:** Tests run on every push/PR via GitHub Actions
 
 ---
 
@@ -355,6 +467,6 @@ python manage.py test -v 2
 
 *This document is updated after major structural changes. Last audit: December 13, 2025.*
 
-**Version:** 2.0
+**Version:** 2.1
 **Audit Date:** December 13, 2025
-**Maintained By:** Project Owner
+**Maintained By:** Mateo Johnson - Prompt Finder

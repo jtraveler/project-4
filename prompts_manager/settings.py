@@ -15,6 +15,8 @@ import os
 import re
 import dj_database_url
 import cloudinary
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 if os.path.isfile('env.py'):
     import env
@@ -44,6 +46,30 @@ ALLOWED_HOSTS = [
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+# ==============================================================================
+# SENTRY ERROR MONITORING
+# ==============================================================================
+# Production-only error tracking with privacy-conscious defaults
+# Required environment variables:
+#   - SENTRY_DSN: Your Sentry project DSN (get from sentry.io)
+#   - DJANGO_ENV: Environment name (production, staging, development)
+# ==============================================================================
+if not DEBUG:
+    sentry_dsn = os.environ.get('SENTRY_DSN', '')
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[DjangoIntegration()],
+            # Performance monitoring: sample 10% of transactions
+            traces_sample_rate=0.1,
+            # Privacy: Don't send personally identifiable information
+            send_default_pii=False,
+            # Environment tagging for filtering in Sentry dashboard
+            environment=os.environ.get('DJANGO_ENV', 'production'),
+            # Release tracking (optional: set via SENTRY_RELEASE env var)
+            release=os.environ.get('SENTRY_RELEASE', None),
+        )
 
 # ENHANCED SECURITY HEADERS FOR LIGHTHOUSE BEST PRACTICES
 SECURE_CONTENT_TYPE_NOSNIFF = True

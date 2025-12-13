@@ -74,7 +74,8 @@ class RateLimitingTestCase(TestCase):
         self.assertFalse(self.email_prefs.notify_likes)
         self.assertFalse(self.email_prefs.notify_mentions)
         self.assertFalse(self.email_prefs.notify_weekly_digest)
-        self.assertFalse(self.email_prefs.notify_updates)
+        # notify_updates stays True - critical platform notifications preserved
+        self.assertTrue(self.email_prefs.notify_updates)
         self.assertFalse(self.email_prefs.notify_marketing)
 
         # Verify return value
@@ -296,7 +297,8 @@ class RateLimitingTestCase(TestCase):
         self.assertFalse(self.email_prefs.notify_likes)
         self.assertFalse(self.email_prefs.notify_mentions)
         self.assertFalse(self.email_prefs.notify_weekly_digest)
-        self.assertFalse(self.email_prefs.notify_updates)
+        # notify_updates stays True - critical platform notifications preserved
+        self.assertTrue(self.email_prefs.notify_updates)
         self.assertFalse(self.email_prefs.notify_marketing)
 
     def test_rate_limit_cache_expires_after_ttl(self):

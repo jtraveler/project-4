@@ -96,7 +96,9 @@ SECURE_PERMISSIONS_POLICY = {
     'usb': [],
 }
 
-# HSTS Headers - Enhanced for production/development
+# HSTS Headers - Production only
+# IMPORTANT: HSTS should NEVER be enabled in development
+# It causes browsers to cache the policy and force HTTPS for localhost
 if not DEBUG:
     # Production HSTS settings (1 year minimum for Lighthouse)
     SECURE_HSTS_SECONDS = 31536000  # 1 year (minimum for Lighthouse)
@@ -107,11 +109,7 @@ if not DEBUG:
 
     # Additional security headers for production
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
-else:
-    # Development HSTS settings (1 year but won't activate over HTTP)
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+# No else block - development should have NO HSTS settings
 
 # Application definition
 
@@ -182,13 +180,22 @@ WSGI_APPLICATION = 'prompts_manager.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # PERFORMANCE OPTIMIZATION: Enhanced database configuration with pooling
-DATABASES = {
-    'default': {
-        **dj_database_url.parse(os.environ.get("DATABASE_URL")),
-        # Connection pooling - keep connections alive for 60 seconds
-        'CONN_MAX_AGE': 60,
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': {
+            **dj_database_url.parse(DATABASE_URL),
+        }
     }
-}
+else:
+    # Fallback for local development without DATABASE_URL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.codeinstitute-ide.net/",

@@ -19,12 +19,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@login_required
 def upload_step1(request):
     """
     Upload screen - Step 1: Drag-and-drop file upload.
 
     Displays upload counter and handles initial file validation.
     After Cloudinary upload completes, redirects to Step 2 (details form).
+
+    Requires authentication - anonymous users redirect to login.
     """
     user = request.user
 

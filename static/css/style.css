@@ -225,7 +225,7 @@ main {
 }
 
 .main-bg {
-  background-color: white;
+  background-color: #f7f7f7;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1326,7 +1326,9 @@ select#id_ai_generator {
 }
 
 footer {
-  box-shadow: -1px -3px 3px rgba(0, 0, 0, 0.1);
+  background: var(--white, #ffffff);
+  box-shadow: none;
+  width: 100%;
 }
 
 /* ===== MODALS ===== */
@@ -2624,7 +2626,7 @@ footer {
     right: 0;
     min-width: 180px;
     background: var(--white);
-    border: 1px solid var(--gray-200);
+    border: 2px solid var(--white);
     border-radius: 12px;
     box-shadow: var(--shadow-dropdown);
     z-index: var(--z-dropdown);

@@ -225,6 +225,8 @@ def ai_generator_category(request, generator_slug):
         'has_prompts': prompt_count > 0,
         'page_title': page_title,
         'meta_description': meta_description,
+        # Full generators list for platform dropdown
+        'ai_generators': AI_GENERATORS,
     }
 
     return render(request, 'prompts/ai_generator_category.html', context)

@@ -685,9 +685,10 @@
                     View All Platforms
                 </a>
                 <div class="gen-dropdown-divider"></div>
-                {% for gen in related_generators %}
-                <a href="{% url 'prompts:ai_generator_category' gen.slug %}" class="gen-dropdown-item" role="menuitem">
+                {% for slug, gen in ai_generators.items %}
+                <a href="{% url 'prompts:ai_generator_category' slug %}" class="gen-dropdown-item {% if slug == generator.slug %}active{% endif %}" role="menuitem">
                     {{ gen.name }}
+                    {% if slug == generator.slug %}<span class="checkmark"><i class="fas fa-check"></i></span>{% endif %}
                 </a>
                 {% endfor %}
             </div>

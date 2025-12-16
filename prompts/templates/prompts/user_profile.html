@@ -195,6 +195,7 @@
 
     flex: 1;  /* Take remaining space in wrapper */
     flex-wrap: nowrap;  /* Prevent tabs from wrapping */
+    padding-bottom: 10px;
 }
 
 /* FIX 2: Hide scrollbar for Chrome/Safari */
@@ -269,10 +270,10 @@
     /* FIX 2: Enhanced gradient with better coverage over dark backgrounds */
     background: linear-gradient(
         to left,
-        #ffffff 0%,
-        rgba(255, 255, 255, 0.95) 20%,
-        rgba(255, 255, 255, 0.7) 50%,
-        rgba(255, 255, 255, 0) 100%
+        #f7f7f7 0%,
+        rgba(247, 247, 247, 0.95) 20%,
+        rgba(247, 247, 247, 0.7) 50%,
+        rgba(247, 247, 247, 0) 100%
     );
 
     /* Position on right edge, full height */
@@ -307,10 +308,10 @@
     /* FIX 2: Enhanced gradient with better coverage over dark backgrounds */
     background: linear-gradient(
         to right,
-        #ffffff 0%,
-        rgba(255, 255, 255, 0.95) 20%,
-        rgba(255, 255, 255, 0.7) 50%,
-        rgba(255, 255, 255, 0) 100%
+        #f7f7f7 0%,
+        rgba(247, 247, 247, 0.95) 20%,
+        rgba(247, 247, 247, 0.7) 50%,
+        rgba(247, 247, 247, 0) 100%
     );
 
     /* Position on left edge, full height */
@@ -401,6 +402,7 @@
 /* Filter controls (now part of navigation row) */
 .profile-filters-container {
     display: flex;
+    flex-direction: row;
     gap: 12px;
     align-items: center;
 }

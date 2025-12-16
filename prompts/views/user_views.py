@@ -75,12 +75,17 @@ def user_profile(request, username, active_tab=None):
     # Get media filter from query params (default: 'all')
     media_filter = request.GET.get('media', 'all')
 
+    # Get sort order from query params (default: 'recency')
+    sort_order = request.GET.get('sort', 'recency')
+
     # Check if viewing user is the profile owner or staff
     is_owner = request.user.is_authenticated and request.user == profile_user
     is_staff = request.user.is_authenticated and request.user.is_staff
 
     # PERFORMANCE OPTIMIZATION: Prefetch all relations to avoid N+1 queries
     # Same pattern as PromptList (homepage) - proven to reduce queries from 55 to 7
+    from django.db.models import Count
+
     base_queryset = Prompt.objects.select_related(
         'author'  # ForeignKey - join User table (avoids N queries for prompt.author)
     ).prefetch_related(
@@ -98,14 +103,14 @@ def user_profile(request, username, active_tab=None):
         prompts = base_queryset.filter(
             author=profile_user,
             deleted_at__isnull=True  # Not in trash
-        ).order_by('-created_on')
+        )
     else:
         # Others see published prompts only
         prompts = base_queryset.filter(
             author=profile_user,
             status=1,  # Published only
             deleted_at__isnull=True  # Not in trash
-        ).order_by('-created_on')
+        )
 
     # Apply media filtering
     if media_filter == 'photos':
@@ -115,6 +120,17 @@ def user_profile(request, username, active_tab=None):
         # Filter for items with featured_video only
         prompts = prompts.filter(featured_video__isnull=False)
     # 'all' shows everything (no additional filtering)
+
+    # Apply sorting
+    if sort_order == 'views':
+        # Sort by view count (most views first)
+        from prompts.models import PromptView
+        prompts = prompts.annotate(
+            views_count=Count('views')
+        ).order_by('-views_count', '-created_on')
+    else:
+        # Default: sort by recency
+        prompts = prompts.order_by('-created_on')
 
     # Calculate stats
     total_prompts = Prompt.objects.filter(
@@ -236,6 +252,7 @@ def user_profile(request, username, active_tab=None):
         'all_time_rank': all_time_rank,  # Phase G: Most Viewed leaderboard position
         'thirty_day_rank': thirty_day_rank,  # Phase G: Most Active leaderboard position (30 days)
         'media_filter': media_filter,
+        'sort_order': sort_order,  # Sort order for profile prompts
         'is_own_profile': is_owner,
         'active_tab': active_tab or 'gallery',
         'trash_items': trash_items,

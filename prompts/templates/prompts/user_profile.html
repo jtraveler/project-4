@@ -15,7 +15,7 @@
 
 /* Overall wrapper */
 .profile-header-wrapper {
-    background: #ffffff;
+    background: transparent;
     width: 100%;
 }
 
@@ -26,7 +26,7 @@
 .profile-identity {
     text-align: center;
     padding: 48px 40px 0;
-    background: #ffffff;
+    background: transparent;
 }
 
 /* Avatar container */
@@ -112,7 +112,7 @@
    ============================================ */
 
 .profile-stats-section {
-    background: #ffffff;
+    background: transparent;
     padding: 24px 40px;
     margin-bottom: 60px;  /* REFINEMENT 3: Add breathing room below stats */
     /* REFINEMENT 2: Removed border-bottom */
@@ -165,7 +165,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0 40px 24px;
-    background: #ffffff;
+    background: transparent;
     /* REFINEMENT 2: Removed border-bottom */
 }
 
@@ -724,6 +724,108 @@
     background-color: rgba(0, 0, 0, 0.02);
     border-radius: 8px;
 }
+
+/* ============================================
+   CUSTOM DROPDOWN STYLING (Pexels-style)
+   ============================================ */
+
+.profile-sort-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.profile-sort-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1a1a1a;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.profile-sort-dropdown-btn:hover {
+    border-color: #666;
+}
+
+.profile-sort-dropdown-btn:focus {
+    outline: none;
+    border-color: #262626;
+    box-shadow: 0 0 0 2px rgba(38, 38, 38, 0.1);
+}
+
+.profile-sort-dropdown-chevron {
+    transition: transform 0.2s ease;
+}
+
+.profile-sort-dropdown.open .profile-sort-dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+.profile-sort-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 160px;
+    padding: 8px 0;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+    z-index: 1000;
+}
+
+.profile-sort-dropdown.open .profile-sort-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.profile-sort-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #1a1a1a;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.profile-sort-dropdown-item:hover {
+    background-color: #f5f5f5;
+    color: #1a1a1a;
+    text-decoration: none;
+}
+
+.profile-sort-dropdown-item.active {
+    font-weight: 600;
+}
+
+.profile-sort-check-icon {
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .profile-sort-dropdown-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .profile-sort-dropdown-menu {
+        min-width: 140px;
+    }
+}
 </style>
 
 <!-- Profile Header - Complete Rebuild -->
@@ -891,27 +993,99 @@
 
         <!-- Right side: Filters -->
         <div class="profile-filters-container">
-            <!-- Media Type Filter with form submit -->
-            <form method="get" id="media-filter-form">
-                <select name="media" id="media-type-filter" class="profile-filter-dropdown" onchange="this.form.submit()">
-                    <option value="all" {% if media_filter == 'all' or not media_filter %}selected{% endif %}>
-                        Photos and videos
-                    </option>
-                    <option value="photos" {% if media_filter == 'photos' %}selected{% endif %}>
+            <!-- Media Type Filter Dropdown -->
+            <div class="profile-sort-dropdown" id="mediaDropdown">
+                <button class="profile-sort-dropdown-btn" id="mediaDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                    {% if media_filter == 'photos' %}
                         Photos only
-                    </option>
-                    <option value="videos" {% if media_filter == 'videos' %}selected{% endif %}>
+                    {% elif media_filter == 'videos' %}
                         Videos only
-                    </option>
-                </select>
-            </form>
+                    {% else %}
+                        Photos and videos
+                    {% endif %}
+                    <svg class="profile-sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <div class="profile-sort-dropdown-menu" id="mediaDropdownMenu" role="menu">
+                    <a href="{% url 'prompts:user_profile' username=profile_user.username %}?media=all{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+                       class="profile-sort-dropdown-item {% if media_filter == 'all' or not media_filter %}active{% endif %}"
+                       role="menuitem">
+                        {% if media_filter == 'all' or not media_filter %}
+                        <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {% else %}
+                        <span style="width: 16px;"></span>
+                        {% endif %}
+                        Photos and videos
+                    </a>
+                    <a href="{% url 'prompts:user_profile' username=profile_user.username %}?media=photos{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+                       class="profile-sort-dropdown-item {% if media_filter == 'photos' %}active{% endif %}"
+                       role="menuitem">
+                        {% if media_filter == 'photos' %}
+                        <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {% else %}
+                        <span style="width: 16px;"></span>
+                        {% endif %}
+                        Photos only
+                    </a>
+                    <a href="{% url 'prompts:user_profile' username=profile_user.username %}?media=videos{% if sort_order %}&sort={{ sort_order }}{% endif %}"
+                       class="profile-sort-dropdown-item {% if media_filter == 'videos' %}active{% endif %}"
+                       role="menuitem">
+                        {% if media_filter == 'videos' %}
+                        <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {% else %}
+                        <span style="width: 16px;"></span>
+                        {% endif %}
+                        Videos only
+                    </a>
+                </div>
+            </div>
 
-            <!-- Sort Order (placeholder for future functionality) -->
-            <select class="profile-filter-dropdown">
-                <option value="recency">Recency</option>
-                <option value="popular">Popular</option>
-                <option value="curated">Curated</option>
-            </select>
+            <!-- Sort Order Dropdown -->
+            <div class="profile-sort-dropdown" id="sortDropdown">
+                <button class="profile-sort-dropdown-btn" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                    {% if sort_order == 'views' %}
+                        Most Views
+                    {% else %}
+                        Recency
+                    {% endif %}
+                    <svg class="profile-sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <div class="profile-sort-dropdown-menu" id="sortDropdownMenu" role="menu">
+                    <a href="{% url 'prompts:user_profile' username=profile_user.username %}?sort=recency{% if media_filter %}&media={{ media_filter }}{% endif %}"
+                       class="profile-sort-dropdown-item {% if sort_order == 'recency' or not sort_order %}active{% endif %}"
+                       role="menuitem">
+                        {% if sort_order == 'recency' or not sort_order %}
+                        <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {% else %}
+                        <span style="width: 16px;"></span>
+                        {% endif %}
+                        Recency
+                    </a>
+                    <a href="{% url 'prompts:user_profile' username=profile_user.username %}?sort=views{% if media_filter %}&media={{ media_filter }}{% endif %}"
+                       class="profile-sort-dropdown-item {% if sort_order == 'views' %}active{% endif %}"
+                       role="menuitem">
+                        {% if sort_order == 'views' %}
+                        <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {% else %}
+                        <span style="width: 16px;"></span>
+                        {% endif %}
+                        Most Views
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1659,6 +1833,61 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+
+// ============================================================================
+// CUSTOM DROPDOWN FUNCTIONALITY (Profile Page)
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdowns = document.querySelectorAll('.profile-sort-dropdown');
+
+    dropdowns.forEach(function(dropdown) {
+        const btn = dropdown.querySelector('.profile-sort-dropdown-btn');
+
+        if (!btn) return;
+
+        // Toggle dropdown on button click
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Close all other dropdowns
+            dropdowns.forEach(function(other) {
+                if (other !== dropdown) {
+                    other.classList.remove('open');
+                    const otherBtn = other.querySelector('.profile-sort-dropdown-btn');
+                    if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            // Toggle current dropdown
+            dropdown.classList.toggle('open');
+            btn.setAttribute('aria-expanded', dropdown.classList.contains('open') ? 'true' : 'false');
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.profile-sort-dropdown')) {
+            dropdowns.forEach(function(dropdown) {
+                dropdown.classList.remove('open');
+                const btn = dropdown.querySelector('.profile-sort-dropdown-btn');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            });
+        }
+    });
+
+    // Close dropdowns on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            dropdowns.forEach(function(dropdown) {
+                dropdown.classList.remove('open');
+                const btn = dropdown.querySelector('.profile-sort-dropdown-btn');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            });
+        }
+    });
 });
 </script>
 

@@ -69,9 +69,6 @@
             {% for gen in generators %}
             <a href="{% url 'prompts:ai_generator_category' gen.slug %}" class="generator-card">
                 <div class="generator-card-inner">
-                    <div class="generator-icon-fallback">
-                        <i class="fas fa-magic"></i>
-                    </div>
                     <div class="generator-info">
                         <h3 class="generator-name">{{ gen.name }}</h3>
                         <span class="generator-count">{{ gen.prompt_count }} prompt{{ gen.prompt_count|pluralize }}</span>
@@ -89,7 +86,7 @@
             <h2 class="section-title mb-0">
                 <i class="fas fa-fire me-2 text-danger"></i>Trending This Week
             </h2>
-            <a href="{% url 'prompts:home' %}?sort=trending" class="btn btn-outline-primary btn-sm">
+            <a href="{% url 'prompts:home' %}?sort=trending" class="btn btn-secondary-outline">
                 View All <i class="fas fa-arrow-right ms-1"></i>
             </a>
         </div>
@@ -192,37 +189,24 @@
     gap: 0.75rem;
 }
 
-.generator-icon-fallback {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
 .generator-info {
     flex: 1;
     min-width: 0;
 }
 
 .generator-name {
-    font-size: 0.95rem;
+    font-size: 1.3rem;
     font-weight: 600;
     margin: 0;
-    color: #1a1a1a;
+    color: var(--black, #1a1a1a);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .generator-count {
-    font-size: 0.8rem;
-    color: #6c757d;
+    font-size: 1rem;
+    color: var(--gray-600, #6c757d);
 }
 
 .generator-arrow {
@@ -245,6 +229,28 @@
 /* Override masonry container padding for this page */
 .trending-section .masonry-container {
     padding: 20px 0;
+}
+
+/* Secondary Outline Button */
+.btn-secondary-outline {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-small, 14px);
+    font-weight: 500;
+    color: var(--gray-700, #495057);
+    background-color: transparent;
+    border: 1px solid var(--gray-300, #dee2e6);
+    border-radius: var(--radius-md, 8px);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary-outline:hover {
+    color: var(--black, #1a1a1a);
+    background-color: var(--gray-100, #f8f9fa);
+    border-color: var(--gray-400, #ced4da);
+    text-decoration: none;
 }
 </style>
 {% endblock %}

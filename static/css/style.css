@@ -2574,3 +2574,8 @@ footer {
 .footer-social-section {
     display: none !important;
 }
+
+/* hidden from public for now - Prompts dropdown in main navigation */
+.nav-dropdown-prompts {
+    display: none !important;
+}

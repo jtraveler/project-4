@@ -5176,6 +5176,12 @@ Before implementation, research needed for:
 4. **Prompt Challenges** - Community challenges with themes
 5. **Generator Reviews** - User ratings/reviews of AI generators
 
+#### UI/UX Features Deferred (December 2025 UI Redesign)
+
+6. **Horizontal Tag Pills on Generator Pages** - Tag pills that scroll horizontally for quick filtering by popular tags. Deferred due to design complexity and need for user research on which tags to surface per generator.
+
+7. **Applied Filters Row** - Visual row showing currently applied filters with "X" remove buttons. Deferred as current UI adequately shows filter state via dropdown selections and active tab highlighting.
+
 ---
 
 ### Notes

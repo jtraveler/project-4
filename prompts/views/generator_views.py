@@ -101,6 +101,9 @@ def ai_generator_category(request, generator_slug):
     if not generator:
         raise Http404("AI generator not found")
 
+    # Add slug to generator dict for template URL generation
+    generator = {**generator, 'slug': generator_slug}
+
     # Base queryset: active prompts for this generator
     prompts = Prompt.objects.filter(
         ai_generator=generator['choice_value'],

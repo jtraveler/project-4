@@ -1,13 +1,4 @@
-{# Generator Dropdown Partial #}
-{#
-   Usage:
-   {% include "prompts/partials/_generator_dropdown.html" with current_generator="midjourney" current_name="Midjourney" %}
-
-   Parameters:
-   - current_generator: slug of currently selected generator (optional, omit for "All Platforms")
-   - current_name: display name of current generator (optional, defaults to "All Platforms")
-   - ai_generators: dict of all generators (required in context)
-#}
+{# Generator Dropdown Partial - Requires: current_generator, current_name, ai_generators in context #}
 
 <div class="gen-dropdown platform-dropdown" id="platformDropdown">
     <button class="gen-dropdown-btn" id="platformDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-label="Select AI platform">

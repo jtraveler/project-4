@@ -13,13 +13,16 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import re
+
+# Import env.py FIRST to set environment variables before other imports
+# This ensures CLOUDINARY_URL, DATABASE_URL etc. are set before libraries read them
+if os.path.isfile('env.py'):
+    import env
+
 import dj_database_url
 import cloudinary
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
-
-if os.path.isfile('env.py'):
-    import env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -315,6 +318,8 @@ else:
     }
 
 # Force Cloudinary to use HTTPS
+# Note: cloudinary.config() automatically reads CLOUDINARY_URL from environment
+# (env.py must be imported BEFORE cloudinary for this to work - see imports at top)
 cloudinary.config(secure=True)
 
 # PERFORMANCE OPTIMIZATION: Enhanced session and cookie security

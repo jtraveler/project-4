@@ -151,6 +151,13 @@
   --tab-text-active: var(--white);
   --tab-border-radius: 20px;
   --tab-padding: 8px 16px;
+
+  /* === FILTER BAR COMPONENT (Phase CSS Consolidation) === */
+  --bg-light: #f7f7f7;
+  --border-light: #c6c6c6;
+  --border-lighter: #e5e7eb;
+  --tab-active-bg: #1a1a1a;
+  --tab-hover-bg: rgba(0, 0, 0, 0.05);
 }
 
 /* ===== FONT FAMILY DECLARATIONS ===== */
@@ -225,10 +232,135 @@ main {
 }
 
 .main-bg {
-  background-color: #f7f7f7;
+  background-color: var(--bg-light);
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+/* ============================================
+   UNIFIED FILTER BAR COMPONENT
+   Consolidated from .homepage-filter-bar and .generator-filter-bar
+   Used on: Homepage, Generator Pages, etc.
+   ============================================ */
+
+/* Base filter bar - shared properties */
+.content-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 40px;
+    margin: 0 auto;
+    max-width: 1600px;
+    width: 100%;
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* Modifier: Solid white background (Homepage) */
+.content-filter-bar--solid {
+    background: var(--white);
+}
+
+/* Modifier: Transparent background (Generator pages) */
+.content-filter-bar--transparent {
+    background: transparent;
+    border-bottom-color: var(--border-lighter);
+}
+
+/* Tabs container */
+.filter-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Individual tab */
+.filter-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--gray-900);
+    background-color: transparent;
+    border: none;
+    border-radius: 50px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.filter-tab:hover {
+    color: var(--gray-900);
+    background-color: var(--tab-hover-bg);
+    text-decoration: none;
+}
+
+/* Active tab - Dark pill style (Pexels-style) */
+.filter-tab.active {
+    color: var(--white);
+    background-color: var(--tab-active-bg);
+    font-weight: 600;
+}
+
+.filter-tab.active:hover {
+    background-color: var(--tab-active-bg);
+    color: var(--white);
+}
+
+/* Focus state for accessibility (WCAG 2.1 Level AA) */
+.filter-tab:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--tab-active-bg);
+}
+
+/* Actions container (dropdowns, buttons) */
+.filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .content-filter-bar {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+        padding: 16px 20px;
+    }
+
+    .filter-tabs {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .filter-tab {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+
+    .filter-actions {
+        justify-content: center;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-filter-bar {
+        padding: 12px 16px;
+    }
+
+    .filter-tabs {
+        gap: 4px;
+    }
+
+    .filter-tab {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
 }
 
 .card {

@@ -317,72 +317,13 @@
 }
 
 /* ============================================
-   GENERATOR FILTER BAR (Matches Homepage)
+   GENERATOR FILTER BAR
+   (Unified styles moved to static/css/style.css)
+   Uses: .content-filter-bar .content-filter-bar--transparent
+         .filter-tabs .filter-tab .filter-actions
    ============================================ */
-.generator-filter-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 40px;
-    margin: 0 auto;
-    max-width: 1600px;
-    width: 100%;
-    background: transparent;
-    border-bottom: 1px solid #e5e7eb;
-}
 
-/* Tab Navigation */
-.generator-tabs {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.generator-tab {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 20px;
-    font-size: 15px;
-    font-weight: 500;
-    color: #666;
-    background-color: transparent;
-    border-radius: 50px;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.generator-tab:hover {
-    color: #1a1a1a;
-    background-color: #f5f5f5;
-    text-decoration: none;
-}
-
-.generator-tab.active {
-    color: #ffffff;
-    background-color: #1a1a1a;
-    font-weight: 600;
-}
-
-.generator-tab.active:hover {
-    background-color: #1a1a1a;
-    color: #ffffff;
-}
-
-.generator-tab:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1a1a1a;
-}
-
-/* Dropdowns Container */
-.generator-dropdowns {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* gen-dropdown styles moved to static/css/style.css for reuse */
+/* gen-dropdown styles in static/css/style.css for reuse */
 
 /* ============================================
    EMPTY STATE
@@ -425,27 +366,12 @@
 }
 
 /* ============================================
-   RESPONSIVE
+   RESPONSIVE (Page-specific only)
+   (Filter bar responsive in static/css/style.css)
    ============================================ */
 @media (max-width: 991px) {
     .generator-header {
         padding: 24px 20px 16px;
-    }
-
-    .generator-filter-bar {
-        padding: 12px 20px;
-        flex-direction: column;
-        gap: 12px;
-        align-items: stretch;
-    }
-
-    .generator-tabs {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .generator-dropdowns {
-        justify-content: center;
     }
 
     .generator-title {
@@ -479,17 +405,6 @@
     .how-to-dropdown {
         width: 100%;
     }
-
-    .generator-filter-bar {
-        padding: 12px 16px;
-    }
-
-    .generator-tab {
-        padding: 8px 16px;
-        font-size: 14px;
-    }
-
-    /* .gen-dropdown-btn responsive styles moved to static/css/style.css */
 }
 </style>
 
@@ -544,23 +459,23 @@
 </div>
 
 <!-- Filter Bar (Homepage Pattern) -->
-<div class="generator-filter-bar">
+<div class="content-filter-bar content-filter-bar--transparent">
     <!-- LEFT: Tab Navigation -->
-    <nav class="generator-tabs" role="tablist" aria-label="Content type filter">
+    <nav class="filter-tabs" role="tablist" aria-label="Content type filter">
         <a href="{% url 'prompts:ai_generator_category' generator.slug %}{% if request.GET.sort %}?sort={{ request.GET.sort }}{% endif %}"
-           class="generator-tab {% if not request.GET.type %}active{% endif %}"
+           class="filter-tab {% if not request.GET.type %}active{% endif %}"
            role="tab"
            aria-selected="{% if not request.GET.type %}true{% else %}false{% endif %}">
             All
         </a>
         <a href="{% url 'prompts:ai_generator_category' generator.slug %}?type=image{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
-           class="generator-tab {% if request.GET.type == 'image' %}active{% endif %}"
+           class="filter-tab {% if request.GET.type == 'image' %}active{% endif %}"
            role="tab"
            aria-selected="{% if request.GET.type == 'image' %}true{% else %}false{% endif %}">
             Photos
         </a>
         <a href="{% url 'prompts:ai_generator_category' generator.slug %}?type=video{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
-           class="generator-tab {% if request.GET.type == 'video' %}active{% endif %}"
+           class="filter-tab {% if request.GET.type == 'video' %}active{% endif %}"
            role="tab"
            aria-selected="{% if request.GET.type == 'video' %}true{% else %}false{% endif %}">
             Videos
@@ -568,7 +483,7 @@
     </nav>
 
     <!-- RIGHT: Dropdowns -->
-    <div class="generator-dropdowns">
+    <div class="filter-actions">
         <!-- Platform Dropdown (using shared partial) -->
         {% include "prompts/partials/_generator_dropdown.html" with current_generator=generator.slug current_name=generator.name %}
 
@@ -599,6 +514,7 @@
         </div>
     </div>
 </div>
+<!-- End Filter Bar -->
 
 {% if has_prompts %}
     <!-- Masonry Grid (reuse homepage partial) -->

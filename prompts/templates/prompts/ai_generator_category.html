@@ -382,105 +382,7 @@
     gap: 12px;
 }
 
-/* Dropdown Styling (matches navbar pattern with proper pointer-events) */
-.gen-dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.gen-dropdown-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    font-size: 15px;
-    font-weight: 500;
-    color: #1a1a1a;
-    background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.gen-dropdown-btn:hover {
-    border-color: #1a1a1a;
-    background-color: #fafafa;
-}
-
-.gen-dropdown-chevron {
-    transition: transform 0.2s ease;
-}
-
-.gen-dropdown.show .gen-dropdown-chevron {
-    transform: rotate(180deg);
-}
-
-/* Dropdown menu - hidden by default with pointer-events: none to prevent click-through */
-.gen-dropdown-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    min-width: 180px;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transform: translateY(-8px);
-    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
-}
-
-/* Dropdown menu - visible state with pointer-events restored */
-.gen-dropdown.show .gen-dropdown-menu {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateY(0);
-}
-
-.gen-dropdown-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    font-size: 14px;
-    color: #1a1a1a;
-    text-decoration: none;
-    transition: background-color 0.15s ease;
-}
-
-.gen-dropdown-item:hover {
-    background-color: #f5f5f5;
-    text-decoration: none;
-    color: #1a1a1a;
-}
-
-.gen-dropdown-item.active {
-    background-color: #f0f0f0;
-    font-weight: 600;
-}
-
-.gen-dropdown-item .checkmark {
-    margin-left: auto;
-    color: #1a1a1a;
-    font-size: 12px;
-}
-
-.gen-dropdown-divider {
-    height: 1px;
-    background-color: #e5e7eb;
-    margin: 4px 0;
-}
-
-/* Platform dropdown has extra width */
-.platform-dropdown .gen-dropdown-menu {
-    min-width: 220px;
-    max-height: 400px;
-    overflow-y: auto;
-}
+/* gen-dropdown styles moved to static/css/style.css for reuse */
 
 /* ============================================
    EMPTY STATE
@@ -587,10 +489,7 @@
         font-size: 14px;
     }
 
-    .gen-dropdown-btn {
-        padding: 8px 12px;
-        font-size: 14px;
-    }
+    /* .gen-dropdown-btn responsive styles moved to static/css/style.css */
 }
 </style>
 
@@ -670,29 +569,8 @@
 
     <!-- RIGHT: Dropdowns -->
     <div class="generator-dropdowns">
-        <!-- Platform Dropdown -->
-        <div class="gen-dropdown platform-dropdown" id="platformDropdown">
-            <button class="gen-dropdown-btn" id="platformDropdownBtn" aria-haspopup="true" aria-expanded="false">
-                <i class="fas fa-robot" style="font-size: 12px;"></i>
-                {{ generator.name }}
-                <svg class="gen-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-            <div class="gen-dropdown-menu" id="platformDropdownMenu" role="menu">
-                <a href="{% url 'prompts:prompts_hub' %}" class="gen-dropdown-item" role="menuitem">
-                    <i class="fas fa-th-large me-2" style="width: 16px;"></i>
-                    View All Platforms
-                </a>
-                <div class="gen-dropdown-divider"></div>
-                {% for slug, gen in ai_generators.items %}
-                <a href="{% url 'prompts:ai_generator_category' slug %}" class="gen-dropdown-item {% if slug == generator.slug %}active{% endif %}" role="menuitem">
-                    {{ gen.name }}
-                    {% if slug == generator.slug %}<span class="checkmark"><i class="fas fa-check"></i></span>{% endif %}
-                </a>
-                {% endfor %}
-            </div>
-        </div>
+        <!-- Platform Dropdown (using shared partial) -->
+        {% include "prompts/partials/_generator_dropdown.html" with current_generator=generator.slug current_name=generator.name %}
 
         <!-- Sort Dropdown - Only Recent and Trending (popular removed) -->
         <div class="gen-dropdown" id="sortDropdown">
@@ -711,13 +589,11 @@
                    class="gen-dropdown-item {% if request.GET.sort == 'recent' or not request.GET.sort %}active{% endif %}"
                    role="menuitem">
                     Recent
-                    {% if request.GET.sort == 'recent' or not request.GET.sort %}<span class="checkmark"><i class="fas fa-check"></i></span>{% endif %}
                 </a>
                 <a href="{% url 'prompts:ai_generator_category' generator.slug %}{% if request.GET.type %}?type={{ request.GET.type }}&{% else %}?{% endif %}sort=trending"
                    class="gen-dropdown-item {% if request.GET.sort == 'trending' or request.GET.sort == 'popular' %}active{% endif %}"
                    role="menuitem">
                     Trending
-                    {% if request.GET.sort == 'trending' or request.GET.sort == 'popular' %}<span class="checkmark"><i class="fas fa-check"></i></span>{% endif %}
                 </a>
             </div>
         </div>

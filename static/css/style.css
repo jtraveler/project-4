@@ -2579,3 +2579,108 @@ footer {
 .nav-dropdown-prompts {
     display: none !important;
 }
+
+/* ========================================
+   GENERATOR DROPDOWN COMPONENT
+   Shared across homepage and generator pages
+   ======================================== */
+.gen-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.gen-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--gray-900);
+    background-color: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gen-dropdown-btn:hover {
+    border-color: var(--gray-900);
+    background-color: var(--gray-50);
+}
+
+.gen-dropdown-chevron {
+    transition: transform 0.2s ease;
+}
+
+.gen-dropdown.show .gen-dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+/* Dropdown menu - hidden by default with pointer-events: none */
+.gen-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 180px;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    box-shadow: var(--shadow-dropdown);
+    z-index: var(--z-dropdown);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+/* Dropdown menu - visible state */
+.gen-dropdown.show .gen-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.gen-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--gray-900);
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.gen-dropdown-item:hover {
+    background-color: var(--gray-100);
+    text-decoration: none;
+    color: var(--gray-900);
+}
+
+.gen-dropdown-item.active {
+    background-color: var(--gray-200);
+    font-weight: 600;
+}
+
+.gen-dropdown-divider {
+    height: 1px;
+    background-color: var(--gray-200);
+    margin: 4px 0;
+}
+
+/* Platform dropdown wider width for generator names */
+.platform-dropdown .gen-dropdown-menu {
+    min-width: 220px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .gen-dropdown-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+}

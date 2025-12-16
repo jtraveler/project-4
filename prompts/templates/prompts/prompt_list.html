@@ -437,33 +437,8 @@ html {
 
     <!-- RIGHT: Dropdowns Container -->
     <div class="homepage-dropdowns">
-        <!-- All Platforms Dropdown (Phase I.2) - Dynamic from AI_GENERATORS constant -->
-        <div class="sort-dropdown" id="platformDropdown">
-            <button class="sort-dropdown-btn" id="platformDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-label="Select AI platform">
-                <i class="fas fa-robot me-1" style="font-size: 12px;"></i>
-                All Platforms
-                <svg class="sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-            <div class="sort-dropdown-menu platform-menu" id="platformDropdownMenu" role="menu">
-                <a href="{% url 'prompts:prompts_hub' %}"
-                   class="sort-dropdown-item"
-                   role="menuitem">
-                    <i class="fas fa-th-large me-2" style="width: 16px;"></i>
-                    View All Platforms
-                </a>
-                <div class="dropdown-divider"></div>
-                {% for slug, gen in ai_generators.items %}
-                <a href="{% url 'prompts:ai_generator_category' slug %}"
-                   class="sort-dropdown-item"
-                   role="menuitem">
-                    <span style="width: 16px;"></span>
-                    {{ gen.name }}
-                </a>
-                {% endfor %}
-            </div>
-        </div>
+        <!-- All Platforms Dropdown (using shared partial) -->
+        {% include "prompts/partials/_generator_dropdown.html" %}
 
         <!-- Sort Dropdown -->
         <div class="sort-dropdown" id="sortDropdown">
@@ -1812,7 +1787,7 @@ function applyOrderDisplayState() {
         // Close platform dropdown when opening sort dropdown
         const platformDropdown = document.getElementById('platformDropdown');
         if (platformDropdown) {
-            platformDropdown.classList.remove('open');
+            platformDropdown.classList.remove('show');
             document.getElementById('platformDropdownBtn')?.setAttribute('aria-expanded', 'false');
         }
     });
@@ -1836,7 +1811,7 @@ function applyOrderDisplayState() {
 })();
 
 // ============================================
-// PLATFORM DROPDOWN FUNCTIONALITY (Phase I.2)
+// PLATFORM DROPDOWN FUNCTIONALITY (using gen-dropdown component)
 // ============================================
 (function() {
     'use strict';
@@ -1849,8 +1824,8 @@ function applyOrderDisplayState() {
     // Toggle dropdown on button click
     dropdownBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        dropdown.classList.toggle('open');
-        const isOpen = dropdown.classList.contains('open');
+        dropdown.classList.toggle('show');
+        const isOpen = dropdown.classList.contains('show');
         dropdownBtn.setAttribute('aria-expanded', isOpen);
 
         // Close sort dropdown when opening platform dropdown
@@ -1864,15 +1839,15 @@ function applyOrderDisplayState() {
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
         if (!dropdown.contains(e.target)) {
-            dropdown.classList.remove('open');
+            dropdown.classList.remove('show');
             dropdownBtn.setAttribute('aria-expanded', 'false');
         }
     });
 
     // Close dropdown on Escape key
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && dropdown.classList.contains('open')) {
-            dropdown.classList.remove('open');
+        if (e.key === 'Escape' && dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
             dropdownBtn.setAttribute('aria-expanded', 'false');
             dropdownBtn.focus();
         }

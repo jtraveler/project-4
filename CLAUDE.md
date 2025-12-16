@@ -1,6 +1,6 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 13, 2025
+**Last Updated:** December 16, 2025
 **Project Status:** Pre-Launch Development - Phase I (URL Migration) Complete, Phase G Parts A, B, C Complete, All Core Phases Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -7198,6 +7198,11 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 
 ## 📝 Changelog
 
+### December 2025 - CI Pipeline Fixes
+- Fixed 5 failing tests in `test_generator_page.py` (class names updated after UI redesign)
+- Changed CI security check from `--fail-level WARNING` to `--fail-level ERROR`
+- Test assertions updated: `generator-hero` → `generator-header`, `stats-pills` → `generator-stats`/`stat-badge`, `filter-bar` → `generator-filter-bar`/`generator-tabs`/`gen-dropdown`
+
 ### January 2025 - Initial CLAUDE.md Creation
 - Documented entire project scope
 - Defined all 4 development phases
@@ -7240,7 +7245,7 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.1
-**Last Updated:** December 13, 2025
+**Version:** 2.2
+**Last Updated:** December 16, 2025
 **Document Owner:** Mateo Johnson
 **Project Status:** Pre-Launch (Phase I Complete, CI/CD Operational)

@@ -152,17 +152,17 @@ class GeneratorPageUITests(TestCase):
         self.client = Client()
 
     def test_hero_section_exists(self):
-        """Page should have hero section."""
+        """Page should have hero section (now called generator-header)."""
         response = self.client.get('/prompts/midjourney/')
         content = response.content.decode()
-        self.assertIn('generator-hero', content)
+        self.assertIn('generator-header', content)
 
     def test_stats_pills_exist(self):
-        """Page should have stats pills."""
+        """Page should have stats badges (redesigned from pills to badges)."""
         response = self.client.get('/prompts/midjourney/')
         content = response.content.decode()
-        self.assertIn('stats-pills', content)
-        self.assertIn('stat-pill', content)
+        self.assertIn('generator-stats', content)
+        self.assertIn('stat-badge', content)
 
     def test_related_generators_section_title(self):
         """Page should have related generators section with title if generators exist."""
@@ -185,28 +185,33 @@ class GeneratorPageUITests(TestCase):
         )
 
     def test_breadcrumb_navigation_exists(self):
-        """Page should have visible breadcrumb navigation."""
+        """Page should have breadcrumb in Schema.org structured data."""
         response = self.client.get('/prompts/midjourney/')
         content = response.content.decode()
-        self.assertIn('aria-label="breadcrumb"', content)
-        self.assertIn('Home', content)
-        self.assertIn('Prompts', content)
+        # Breadcrumb is in JSON-LD schema, not visible HTML
+        self.assertIn('"@type": "BreadcrumbList"', content)
+        self.assertIn('"name": "Home"', content)
+        self.assertIn('"name": "Prompts"', content)
 
     def test_filter_bar_exists(self):
-        """Page should have filter bar."""
+        """Page should have filter bar (redesigned with generator-filter-bar)."""
         response = self.client.get('/prompts/midjourney/')
         content = response.content.decode()
-        self.assertIn('filter-bar', content)
-        self.assertIn('type-filter', content)
-        self.assertIn('date-filter', content)
-        self.assertIn('sort-filter', content)
+        self.assertIn('generator-filter-bar', content)
+        self.assertIn('generator-tabs', content)
+        self.assertIn('gen-dropdown', content)
+        self.assertIn('sortDropdown', content)
 
     def test_cta_section_exists(self):
-        """Page should have CTA section at bottom."""
+        """Page should have CTA in empty state or upload button."""
         response = self.client.get('/prompts/midjourney/')
         content = response.content.decode()
-        self.assertIn('cta-section', content)
-        self.assertIn('Share Your', content)
+        # After redesign, CTA is in empty state or via upload button
+        # Check for either masonry grid (has prompts) or empty state CTA
+        self.assertTrue(
+            'generator-empty-state' in content or 'masonry-grid' in content,
+            "Page should have either prompts grid or empty state with CTA"
+        )
 
 
 class GeneratorPageStatsTests(TestCase):

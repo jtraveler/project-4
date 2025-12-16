@@ -153,8 +153,8 @@ jobs:
         continue-on-error: true
         run: |
           # Django's built-in security checker for production settings
-          # Warnings are visible but don't block the pipeline
-          python manage.py check --deploy --fail-level WARNING
+          # Only fail on ERROR level (SECRET_KEY warning is expected in CI)
+          python manage.py check --deploy --fail-level ERROR
         env:
           DATABASE_URL: sqlite:///db.sqlite3
           SECRET_KEY: test-secret-key-for-ci-only

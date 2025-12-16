@@ -12,6 +12,8 @@ AI_GENERATORS = {
     'midjourney': {
         'name': 'Midjourney',
         'slug': 'midjourney',
+        'seo_subheader': 'AI Art Examples & Creative Ideas',
+        'seo_description': 'Explore our collection of {count} Midjourney prompts shared by our community featuring stunning AI-generated artwork. From photorealistic portraits to fantastical landscapes, discover prompts that unlock Midjourney\'s full creative potential. Each prompt includes the exact text used, making it easy to recreate or adapt for your own projects.',
         'description': '''
             <p>Midjourney is a leading AI image generation tool known for producing stunning, artistic images from text prompts.
             Created by the independent research lab Midjourney, Inc., this powerful AI specializes in creating highly detailed,
@@ -26,11 +28,13 @@ AI_GENERATORS = {
         'icon': 'images/generators/midjourney-icon.png',  # Placeholder
         'choice_value': 'midjourney',
         'supports_images': True,
-        'supports_video': False,
+        'supports_video': True,  # V1 Video launched June 2025
     },
     'dalle3': {
         'name': 'DALL-E 3',
         'slug': 'dalle3',
+        'seo_subheader': 'AI Image Examples & Prompt Ideas',
+        'seo_description': 'Browse {count} DALL-E 3 prompts showcasing OpenAI\'s most advanced image generation capabilities. Find inspiration for product renders, concept art, and creative compositions with proven prompts that deliver stunning results. Perfect for ChatGPT Plus users looking to master DALL-E 3\'s powerful features.',
         'description': '''
             <p>DALL-E 3 is OpenAI's latest and most advanced image generation model, representing a significant leap forward
             in AI art creation. Built on the foundation of its predecessors, DALL-E 3 offers dramatically improved prompt
@@ -49,6 +53,8 @@ AI_GENERATORS = {
     'dalle2': {
         'name': 'DALL-E 2',
         'slug': 'dalle2',
+        'seo_subheader': 'AI Image Generation Examples',
+        'seo_description': 'Discover {count} DALL-E 2 prompts that showcase this groundbreaking AI model\'s unique artistic style. Learn from community-shared prompts featuring inpainting, outpainting, and creative variations. Great for users who appreciate DALL-E 2\'s distinctive interpretation of creative concepts.',
         'description': '''
             <p>DALL-E 2, released by OpenAI in 2022, revolutionized AI image generation with its ability to create realistic
             images and art from natural language descriptions. As the predecessor to DALL-E 3, this model introduced many
@@ -68,6 +74,8 @@ AI_GENERATORS = {
     'stable-diffusion': {
         'name': 'Stable Diffusion',
         'slug': 'stable-diffusion',
+        'seo_subheader': 'Open Source AI Art Examples',
+        'seo_description': 'Explore {count} Stable Diffusion prompts from the open-source AI art community. Find prompts optimized for SDXL, custom models, and ControlNet techniques. Perfect for developers and creators who want full control over their AI image generation workflow.',
         'description': '''
             <p>Stable Diffusion is an open-source AI image generation model developed by Stability AI in collaboration with
             researchers from CompVis, LAION, and Runway. Being open-source sets it apart from competitors, allowing developers
@@ -87,6 +95,8 @@ AI_GENERATORS = {
     'leonardo-ai': {
         'name': 'Leonardo AI',
         'slug': 'leonardo-ai',
+        'seo_subheader': 'AI Art & Game Asset Examples',
+        'seo_description': 'Browse {count} Leonardo AI prompts perfect for game development, character design, and concept art. Discover prompts optimized for Leonardo\'s specialized models and Canvas editing features. Ideal for creators who need consistent, high-quality visual assets.',
         'description': '''
             <p>Leonardo AI is a powerful image generation platform that combines ease of use with professional-grade features.
             Built for creators, designers, and artists, Leonardo AI offers a streamlined interface while providing advanced
@@ -106,6 +116,8 @@ AI_GENERATORS = {
     'flux': {
         'name': 'Flux',
         'slug': 'flux',
+        'seo_subheader': 'High-Quality AI Image Examples',
+        'seo_description': 'Explore {count} Flux prompts showcasing next-generation AI image quality from Black Forest Labs. Find prompts that leverage Flux\'s superior anatomy rendering, realistic lighting, and text generation capabilities. Compare Flux Pro, Dev, and Schnell variants with real examples.',
         'description': '''
             <p>Flux is Black Forest Labs' cutting-edge image generation model, created by the team behind Stable Diffusion.
             Flux represents the next generation of AI image synthesis, offering state-of-the-art quality with exceptional
@@ -125,6 +137,8 @@ AI_GENERATORS = {
     'sora': {
         'name': 'Sora',
         'slug': 'sora',
+        'seo_subheader': 'AI Video & Image Generation Examples',
+        'seo_description': 'Discover {count} Sora prompts demonstrating OpenAI\'s revolutionary text-to-video AI capabilities. Browse cinematic video prompts featuring complex camera motion, realistic physics, and detailed character animations. Learn how to craft prompts that maximize Sora\'s video generation potential.',
         'description': '''
             <p>Sora is OpenAI's groundbreaking text-to-video AI model, capable of generating realistic and imaginative video
             scenes from text descriptions. Announced in February 2024, Sora represents a major advancement in AI video
@@ -145,6 +159,8 @@ AI_GENERATORS = {
     'sora2': {
         'name': 'Sora 2',
         'slug': 'sora2',
+        'seo_subheader': 'Next-Gen AI Video Examples',
+        'seo_description': 'Explore {count} Sora 2 prompts showcasing the latest advancements in AI video generation. Find prompts optimized for improved physics simulation, longer video sequences, and enhanced temporal consistency. Perfect for filmmakers and content creators seeking cutting-edge video AI capabilities.',
         'description': '''
             <p>Sora 2 is the next iteration of OpenAI's revolutionary video generation model, building upon the groundbreaking
             capabilities of the original Sora. This enhanced version offers improved video quality, longer generation times,
@@ -164,6 +180,8 @@ AI_GENERATORS = {
     'veo3': {
         'name': 'Veo 3',
         'slug': 'veo3',
+        'seo_subheader': 'Google AI Video Generation Examples',
+        'seo_description': 'Discover {count} Veo 3 prompts powered by Google DeepMind\'s advanced video AI technology. Browse prompts demonstrating smooth motion, consistent characters, and diverse video styles. Learn prompt techniques for Google\'s answer to AI video generation.',
         'description': '''
             <p>Veo 3 is Google DeepMind's latest advancement in AI video generation technology, competing directly with
             models like OpenAI's Sora. Veo 3 represents Google's push into high-quality, prompt-driven video synthesis,
@@ -183,6 +201,8 @@ AI_GENERATORS = {
     'adobe-firefly': {
         'name': 'Adobe Firefly',
         'slug': 'adobe-firefly',
+        'seo_subheader': 'Creative AI Image Examples',
+        'seo_description': 'Browse {count} Adobe Firefly prompts designed for creative professionals using Adobe Creative Cloud. Find commercially-safe prompts for Generative Fill, Text Effects, and vector artwork. Perfect for designers who need AI-powered enhancement within their existing Adobe workflow.',
         'description': '''
             <p>Adobe Firefly is Adobe's family of generative AI models integrated directly into Adobe Creative Cloud applications
             like Photoshop, Illustrator, and Express. Designed specifically for creative professionals, Firefly emphasizes
@@ -203,6 +223,8 @@ AI_GENERATORS = {
     'bing-image-creator': {
         'name': 'Bing Image Creator',
         'slug': 'bing-image-creator',
+        'seo_subheader': 'Free AI Image Examples',
+        'seo_description': 'Discover {count} free Bing Image Creator prompts powered by DALL-E technology. Find easy-to-use prompts perfect for beginners and casual creators. No subscription required—just a Microsoft account to start creating AI images today.',
         'description': '''
             <p>Bing Image Creator is Microsoft's free AI image generation tool, powered by OpenAI's DALL-E technology.
             Integrated into Microsoft's Bing search engine and Edge browser, it offers accessible AI image generation to
@@ -222,6 +244,8 @@ AI_GENERATORS = {
     'grok': {
         'name': 'Grok',
         'slug': 'grok',
+        'seo_subheader': 'xAI Image & Video Examples',
+        'seo_description': 'Explore {count} Grok prompts from xAI\'s creative AI assistant integrated with X (Twitter). Discover prompts that push creative boundaries while maintaining safety guidelines. Perfect for social media content creation and unique creative explorations.',
         'description': '''
             <p>Grok is xAI's AI assistant that includes powerful image generation capabilities. Developed by Elon Musk's
             artificial intelligence company, Grok combines conversational AI with the ability to create images from
@@ -236,11 +260,13 @@ AI_GENERATORS = {
         'icon': 'images/generators/grok-icon.png',  # Placeholder
         'choice_value': 'grok',
         'supports_images': True,
-        'supports_video': False,
+        'supports_video': True,  # Grok supports video generation
     },
     'wan21': {
         'name': 'WAN 2.1',
         'slug': 'wan21',
+        'seo_subheader': 'Open Source AI Video Examples',
+        'seo_description': 'Browse {count} WAN 2.1 prompts from Alibaba\'s powerful open-source video generation model. Find prompts for creating coherent video sequences with consistent characters and smooth motion. Supports multiple aspect ratios from social media clips to professional productions.',
         'description': '''
             <p>WAN 2.1 is an advanced AI video generation model from Alibaba's Tongyi Wanxiang team. This powerful
             text-to-video model can generate high-quality video content from text prompts, supporting various styles
@@ -259,6 +285,8 @@ AI_GENERATORS = {
     'wan22': {
         'name': 'WAN 2.2',
         'slug': 'wan22',
+        'seo_subheader': 'Advanced AI Video & Image Examples',
+        'seo_description': 'Explore {count} WAN 2.2 prompts showcasing Alibaba\'s latest video generation improvements. Find prompts optimized for enhanced temporal consistency, realistic physics, and dynamic camera work. Perfect for creators seeking advanced AI video capabilities with character consistency.',
         'description': '''
             <p>WAN 2.2 is the latest iteration of Alibaba's Tongyi Wanxiang video generation model, offering enhanced
             video quality, longer generation capabilities, and improved understanding of complex prompts compared to
@@ -277,6 +305,8 @@ AI_GENERATORS = {
     'nano-banana': {
         'name': 'Nano Banana',
         'slug': 'nano-banana',
+        'seo_subheader': 'Google Gemini AI Image Examples',
+        'seo_description': 'Discover {count} Nano Banana prompts for stylized AI image generation powered by Google\'s Gemini. Find prompts that showcase this platform\'s unique artistic approach and distinctive visual style. Perfect for creators seeking visually distinctive AI-generated imagery.',
         'description': '''
             <p>Nano Banana is an emerging AI video generation model that focuses on creating high-quality, stylized
             video content from text prompts. Known for its unique artistic approach, Nano Banana excels at generating
@@ -289,12 +319,14 @@ AI_GENERATORS = {
         'website': 'https://nanobanana.ai',
         'icon': 'images/generators/nano-banana-icon.png',  # Placeholder
         'choice_value': 'nano_banana',
-        'supports_images': False,
-        'supports_video': True,
+        'supports_images': True,  # Nano Banana is image-only
+        'supports_video': False,
     },
     'nano-banana-pro': {
         'name': 'Nano Banana Pro',
         'slug': 'nano-banana-pro',
+        'seo_subheader': 'Professional AI Image Examples',
+        'seo_description': 'Explore {count} Nano Banana Pro prompts for premium AI image generation with higher resolution outputs. Discover prompts optimized for professional-quality imagery with enhanced style controls. Perfect for studios and professional creators demanding the highest quality AI-generated images.',
         'description': '''
             <p>Nano Banana Pro is the premium version of the Nano Banana AI video generation platform, offering enhanced
             capabilities, higher resolution outputs, and advanced features for professional content creation.</p>
@@ -306,8 +338,8 @@ AI_GENERATORS = {
         'website': 'https://nanobanana.ai',
         'icon': 'images/generators/nano-banana-pro-icon.png',  # Placeholder
         'choice_value': 'nano_banana_pro',
-        'supports_images': False,
-        'supports_video': True,
+        'supports_images': True,  # Nano Banana Pro is image-only
+        'supports_video': False,
     },
 }
 

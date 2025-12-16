@@ -103,6 +103,7 @@ def ai_generator_category(request, generator_slug):
         raise Http404("AI generator not found")
 
     # Add slug to generator dict for template URL generation
+    # We'll format seo_description with count after getting prompt_count
     generator = {**generator, 'slug': generator_slug}
 
     # Base queryset: active prompts for this generator
@@ -115,6 +116,10 @@ def ai_generator_category(request, generator_slug):
 
     # Get total prompt count for this generator (before filters)
     prompt_count = prompts.count()
+
+    # Format seo_description with the actual count (FIX 3: Dynamic count in SEO description)
+    if generator.get('seo_description'):
+        generator['seo_description'] = generator['seo_description'].format(count=prompt_count)
 
     # Get total views for this generator's prompts
     # Uses single aggregated query to avoid N+1
@@ -184,16 +189,10 @@ def ai_generator_category(request, generator_slug):
     if sort_by not in VALID_SORT_OPTIONS:
         sort_by = 'recent'  # Default to safe value
 
-    if sort_by == 'popular':
+    if sort_by == 'popular' or sort_by == 'trending':
+        # Both popular and trending now use all-time likes (no date filter)
+        # Removed 7-day filter that was causing "no prompts found" issue
         prompts = prompts.annotate(
-            likes_count=models.Count('likes', distinct=True)
-        ).order_by('-likes_count', '-created_on')
-    elif sort_by == 'trending':
-        # Trending: most likes in last 7 days
-        week_ago = now - timedelta(days=7)
-        prompts = prompts.filter(
-            created_on__gte=week_ago
-        ).annotate(
             likes_count=models.Count('likes', distinct=True)
         ).order_by('-likes_count', '-created_on')
     else:  # recent (default)
@@ -204,11 +203,14 @@ def ai_generator_category(request, generator_slug):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # SEO fields
+    # SEO fields (optimized for search engines)
     page_title = f"{generator['name']} Prompts"
+
+    # Meta description: Under 160 chars with primary keyword and CTA
+    # Format: "Browse X [Generator] prompts for AI art. Find creative examples, copy prompts, and create stunning images. Free to use."
     meta_description = (
-        f"Discover {prompt_count:,} {generator['name']} prompts shared by our community. "
-        f"Browse the best AI art prompts, get inspired, and share your own creations."
+        f"Browse {prompt_count:,} {generator['name']} prompts for AI art. "
+        f"Find creative examples, copy prompts, and create stunning images. Free to use."
     )
 
     context = {

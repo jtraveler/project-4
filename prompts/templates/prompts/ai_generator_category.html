@@ -60,33 +60,102 @@
   }
 }
 </script>
+
+<!-- HowTo Schema for SEO -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Use {{ generator.name }} Prompts",
+  "description": "Learn how to use {{ generator.name }} prompts from PromptFinder to create AI-generated images and videos.",
+  "totalTime": "PT5M",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Browse Prompts",
+      "text": "Browse and select a prompt from our collection of {{ prompt_count }} {{ generator.name }} prompts below."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "View Details",
+      "text": "Click on the prompt to view the full details and copy the text."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Use in {{ generator.name }}",
+      "text": "Paste the prompt into {{ generator.name }} and adjust parameters as needed."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 4,
+      "name": "Share Results",
+      "text": "Share your results with the PromptFinder community!"
+    }
+  ]
+}
+</script>
+
+<!-- Canonical URL -->
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'prompts:ai_generator_category' generator.slug %}">
 {% endblock %}
 
 {% block content %}
+{% load humanize %}
+
+<!-- Breadcrumb Navigation (left-aligned) -->
+<nav aria-label="breadcrumb" class="generator-breadcrumb">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{% url 'prompts:home' %}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'prompts:prompts_hub' %}">Prompts</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ generator.name }}</li>
+    </ol>
+</nav>
+
 <style>
 /* ============================================
+   BREADCRUMB NAVIGATION (Full width, left-aligned)
+   ============================================ */
+.generator-breadcrumb {
+    width: 100%;
+    padding: 16px 0;
+}
+
+@media (max-width: 768px) {
+    .generator-breadcrumb {
+        padding: 12px 16px;
+    }
+}
+
+/* ============================================
    GENERATOR PAGE HEADER (Phase UI Redesign)
-   Matches homepage pattern
+   Two-column layout: content left, CTA right
    ============================================ */
 .generator-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+    width: 100%;
     max-width: 1600px;
     margin: 0 auto;
-    padding: 32px 40px 24px;
+    padding: 32px 0 24px;
 }
 
-.generator-title-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 16px;
-    width: 100%;
-}
-
-.generator-title-section {
+.generator-header-left {
     flex: 1;
-    min-width: 300px;
+    max-width: 950px;
+}
+
+.generator-header-right {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 16px;
+    min-width: 220px;
 }
 
 .generator-title {
@@ -97,64 +166,154 @@
     line-height: 1.2;
 }
 
-.generator-description {
-    font-size: 1rem;
-    color: var(--gray-600, #6c757d);
-    margin: 0 0 12px 0;
-    max-width: 600px;
-    line-height: 1.5;
+/* SEO Subheader */
+.generator-subheader {
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: #666;
+    margin-top: 4px;
+    margin-bottom: 12px;
 }
 
-/* Stats Badges */
+/* Stats Badges - FIX 1: proper spacing */
 .generator-stats {
     display: flex;
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+    margin: 20px 0 10px;
 }
 
+/* ISSUE 3: Restored original stat-badge styling with border and rounded pills */
 .stat-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
     background-color: var(--gray-100, #f8f9fa);
-    border-radius: var(--radius-md, 8px);
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
     font-size: var(--font-size-small, 14px);
     color: var(--gray-700, #495057);
 }
 
 .stat-badge i {
     color: var(--gray-500, #adb5bd);
-    font-size: 12px;
+    font-size: 14px;
 }
 
-.stat-badge strong {
-    font-weight: 600;
-    color: var(--black, #1a1a1a);
+/* SEO Description Block - FIX 2: max-width 950px */
+.generator-seo-description {
+    max-width: 950px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #555;
+    margin-top: 16px;
+    margin-bottom: 0;
 }
 
-/* Visit Button */
-.btn-visit-generator {
+/* CTA Button - matches .pexels-upload-btn styling */
+.generator-cta-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    font-size: var(--font-size-base, 15px);
-    font-weight: 500;
-    color: #ffffff;
-    background-color: var(--black, #1a1a1a);
-    border: none;
-    border-radius: var(--radius-md, 8px);
+    justify-content: center;
+    background: var(--black, #1a1a1a);
+    color: var(--white, #ffffff);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
     text-decoration: none;
+    border: none;
+    cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap;
 }
 
-.btn-visit-generator:hover {
-    background-color: #333;
-    color: #ffffff;
+.generator-cta-btn:hover {
+    background: var(--gray-900, #2d2d2d);
+    color: var(--white, #ffffff);
     text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.generator-cta-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--black, #1a1a1a);
+}
+
+.generator-cta-btn i {
+    margin-right: 8px;
+}
+
+/* ISSUE 5: How-To Dropdown - Fixed width 310px with smooth expand/retract animation */
+.how-to-dropdown {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    width: 310px;
+    overflow: hidden;
+}
+
+.how-to-toggle {
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    color: #333;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    transition: background-color 0.15s ease;
+}
+
+.how-to-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.how-to-toggle::after {
+    content: '+';
+    margin-left: auto;
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: #666;
+    transition: transform 0.25s ease;
+}
+
+.how-to-toggle.expanded::after {
+    content: '−';
+}
+
+/* Smooth expand/retract content wrapper */
+.how-to-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.25s ease-out;
+    opacity: 0;
+}
+
+.how-to-content.expanded {
+    max-height: 500px;  /* Safety buffer for content growth */
+    opacity: 1;
+    transition: max-height 0.3s ease-in, opacity 0.25s ease-in;
+}
+
+.how-to-steps {
+    padding: 0 16px 16px 36px;
+    margin: 0;
+}
+
+.how-to-steps li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+.how-to-steps li:last-child {
+    margin-bottom: 0;
 }
 
 /* ============================================
@@ -223,7 +382,7 @@
     gap: 12px;
 }
 
-/* Dropdown Styling (reuse homepage pattern) */
+/* Dropdown Styling (matches navbar pattern with proper pointer-events) */
 .gen-dropdown {
     position: relative;
     display: inline-block;
@@ -257,6 +416,7 @@
     transform: rotate(180deg);
 }
 
+/* Dropdown menu - hidden by default with pointer-events: none to prevent click-through */
 .gen-dropdown-menu {
     position: absolute;
     top: calc(100% + 4px);
@@ -269,14 +429,16 @@
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transform: translateY(-8px);
-    transition: all 0.2s ease;
-    overflow: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
 }
 
+/* Dropdown menu - visible state with pointer-events restored */
 .gen-dropdown.show .gen-dropdown-menu {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
     transform: translateY(0);
 }
 
@@ -389,27 +551,35 @@
     }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 768px) {
+    /* Two-column header stacks vertically on mobile */
     .generator-header {
-        padding: 20px 16px 12px;
+        flex-direction: column;
+        gap: 24px;
+        padding: 20px 16px 16px;
+    }
+
+    .generator-header-left {
+        max-width: 100%;
+    }
+
+    .generator-header-right {
+        align-items: stretch;
+        width: 100%;
+    }
+
+    /* Mobile CTA button - full width */
+    .generator-cta-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .how-to-dropdown {
+        width: 100%;
     }
 
     .generator-filter-bar {
         padding: 12px 16px;
-    }
-
-    .generator-title-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .generator-title-section {
-        min-width: auto;
-    }
-
-    .btn-visit-generator {
-        width: 100%;
-        justify-content: center;
     }
 
     .generator-tab {
@@ -424,32 +594,53 @@
 }
 </style>
 
-<!-- Generator Page Header -->
+<!-- Generator Page Header (Two-Column Layout) -->
 <div class="generator-header">
-    <div class="generator-title-row">
-        <div class="generator-title-section">
-            <h1 class="generator-title">{{ generator.name }} Prompts</h1>
-            <p class="generator-description">
-                Explore {{ prompt_count|default:0 }} creative {{ generator.name }} prompts shared by our community.
-            </p>
-            <div class="generator-stats">
-                <span class="stat-badge">
-                    <i class="fas fa-image"></i>
-                    <strong>{{ prompt_count|default:0 }}</strong> Prompts
-                </span>
-                <span class="stat-badge">
-                    <i class="fas fa-eye"></i>
-                    <strong>{{ total_views|default:0 }}</strong> Views
-                </span>
-            </div>
+    <!-- LEFT COLUMN: Title, Subheader, Stats, SEO Description -->
+    <div class="generator-header-left">
+        <h1 class="generator-title">{{ generator.name }} Prompts</h1>
+        {% if generator.seo_subheader %}
+        <h2 class="generator-subheader">{{ generator.seo_subheader }}</h2>
+        {% endif %}
+        <div class="generator-stats">
+            <span class="stat-badge">
+                <i class="fas fa-image"></i>
+                <strong>{{ prompt_count|intcomma }}</strong> Prompts
+            </span>
+            <span class="stat-badge">
+                <i class="fas fa-eye"></i>
+                <strong>{{ total_views|intcomma }}</strong> Views
+            </span>
         </div>
+        {% if generator.seo_description %}
+        <p class="generator-seo-description">{{ generator.seo_description }}</p>
+        {% endif %}
+    </div>
 
+    <!-- RIGHT COLUMN: CTA Button + Collapsible How-To -->
+    <div class="generator-header-right">
         {% if generator.website %}
-        <a href="{{ generator.website }}" target="_blank" rel="noopener noreferrer" class="btn-visit-generator">
+        <a href="{{ generator.website }}" target="_blank" rel="noopener noreferrer" class="generator-cta-btn">
             <i class="fas fa-external-link-alt"></i>
-            Visit {{ generator.name }}
+            Create in {{ generator.name }}
         </a>
         {% endif %}
+
+        <!-- Collapsible How-To Dropdown with smooth expand/retract animation -->
+        <div class="how-to-dropdown" id="howToDropdown">
+            <button class="how-to-toggle" id="howToToggle" aria-expanded="false" aria-controls="howToContent">
+                <i class="far fa-question-circle me-2"></i>
+                How to Use These Prompts
+            </button>
+            <div class="how-to-content" id="howToContent">
+                <ol class="how-to-steps">
+                    <li>Browse and select a prompt from our collection below</li>
+                    <li>Click on the prompt to view full details and copy the text</li>
+                    <li>Paste the prompt into {{ generator.name }} and adjust as needed</li>
+                    <li>Share your results with the PromptFinder community!</li>
+                </ol>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -502,12 +693,10 @@
             </div>
         </div>
 
-        <!-- Sort Dropdown -->
+        <!-- Sort Dropdown - Only Recent and Trending (popular removed) -->
         <div class="gen-dropdown" id="sortDropdown">
             <button class="gen-dropdown-btn" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false">
-                {% if request.GET.sort == 'popular' %}
-                    Popular
-                {% elif request.GET.sort == 'trending' %}
+                {% if request.GET.sort == 'trending' or request.GET.sort == 'popular' %}
                     Trending
                 {% else %}
                     Recent
@@ -523,17 +712,11 @@
                     Recent
                     {% if request.GET.sort == 'recent' or not request.GET.sort %}<span class="checkmark"><i class="fas fa-check"></i></span>{% endif %}
                 </a>
-                <a href="{% url 'prompts:ai_generator_category' generator.slug %}{% if request.GET.type %}?type={{ request.GET.type }}&{% else %}?{% endif %}sort=popular"
-                   class="gen-dropdown-item {% if request.GET.sort == 'popular' %}active{% endif %}"
-                   role="menuitem">
-                    Popular
-                    {% if request.GET.sort == 'popular' %}<span class="checkmark"><i class="fas fa-check"></i></span>{% endif %}
-                </a>
                 <a href="{% url 'prompts:ai_generator_category' generator.slug %}{% if request.GET.type %}?type={{ request.GET.type }}&{% else %}?{% endif %}sort=trending"
-                   class="gen-dropdown-item {% if request.GET.sort == 'trending' %}active{% endif %}"
+                   class="gen-dropdown-item {% if request.GET.sort == 'trending' or request.GET.sort == 'popular' %}active{% endif %}"
                    role="menuitem">
                     Trending
-                    {% if request.GET.sort == 'trending' %}<span class="checkmark"><i class="fas fa-check"></i></span>{% endif %}
+                    {% if request.GET.sort == 'trending' or request.GET.sort == 'popular' %}<span class="checkmark"><i class="fas fa-check"></i></span>{% endif %}
                 </a>
             </div>
         </div>
@@ -564,22 +747,54 @@
 (function() {
     'use strict';
 
-    // Generic dropdown toggle function
-    function setupDropdown(dropdownId, btnId, menuId) {
-        const dropdown = document.getElementById(dropdownId);
-        const btn = document.getElementById(btnId);
-        const menu = document.getElementById(menuId);
+    // ============================================
+    // How-To Dropdown (Smooth Expand/Retract)
+    // ============================================
+    var howToToggle = document.getElementById('howToToggle');
+    var howToContent = document.getElementById('howToContent');
 
-        if (!dropdown || !btn || !menu) return;
+    if (howToToggle && howToContent) {
+        howToToggle.addEventListener('click', function() {
+            var isExpanded = howToToggle.classList.contains('expanded');
+
+            if (isExpanded) {
+                // Collapse
+                howToToggle.classList.remove('expanded');
+                howToContent.classList.remove('expanded');
+                howToToggle.setAttribute('aria-expanded', 'false');
+            } else {
+                // Expand
+                howToToggle.classList.add('expanded');
+                howToContent.classList.add('expanded');
+                howToToggle.setAttribute('aria-expanded', 'true');
+            }
+        });
+    }
+
+    // ============================================
+    // Filter Dropdowns (Platform & Sort)
+    // ============================================
+    function setupDropdown(dropdownId, btnId, menuId) {
+        var dropdown = document.getElementById(dropdownId);
+        var btn = document.getElementById(btnId);
+        var menu = document.getElementById(menuId);
+
+        if (!dropdown || !btn || !menu) {
+            // Elements may not exist on all page variations - silent fail
+            return;
+        }
 
         btn.addEventListener('click', function(e) {
+            e.preventDefault();
             e.stopPropagation();
-            const isOpen = dropdown.classList.contains('show');
 
-            // Close all other dropdowns
+            var isOpen = dropdown.classList.contains('show');
+
+            // Close all other dropdowns first
             document.querySelectorAll('.gen-dropdown.show').forEach(function(d) {
                 d.classList.remove('show');
-                d.querySelector('button').setAttribute('aria-expanded', 'false');
+                var dBtn = d.querySelector('.gen-dropdown-btn');
+                if (dBtn) dBtn.setAttribute('aria-expanded', 'false');
             });
 
             // Toggle current dropdown
@@ -595,7 +810,8 @@
         if (!e.target.closest('.gen-dropdown')) {
             document.querySelectorAll('.gen-dropdown.show').forEach(function(d) {
                 d.classList.remove('show');
-                d.querySelector('button').setAttribute('aria-expanded', 'false');
+                var dBtn = d.querySelector('.gen-dropdown-btn');
+                if (dBtn) dBtn.setAttribute('aria-expanded', 'false');
             });
         }
     });
@@ -605,14 +821,23 @@
         if (e.key === 'Escape') {
             document.querySelectorAll('.gen-dropdown.show').forEach(function(d) {
                 d.classList.remove('show');
-                d.querySelector('button').setAttribute('aria-expanded', 'false');
+                var dBtn = d.querySelector('.gen-dropdown-btn');
+                if (dBtn) dBtn.setAttribute('aria-expanded', 'false');
             });
         }
     });
 
-    // Initialize dropdowns
-    setupDropdown('platformDropdown', 'platformDropdownBtn', 'platformDropdownMenu');
-    setupDropdown('sortDropdown', 'sortDropdownBtn', 'sortDropdownMenu');
+    // Initialize dropdowns when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDropdown('platformDropdown', 'platformDropdownBtn', 'platformDropdownMenu');
+            setupDropdown('sortDropdown', 'sortDropdownBtn', 'sortDropdownMenu');
+        });
+    } else {
+        // DOM already loaded
+        setupDropdown('platformDropdown', 'platformDropdownBtn', 'platformDropdownMenu');
+        setupDropdown('sortDropdown', 'sortDropdownBtn', 'sortDropdownMenu');
+    }
 })();
 </script>
 {% endblock %}

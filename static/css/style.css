@@ -244,7 +244,7 @@ main {
    Used on: Homepage, Generator Pages, etc.
    ============================================ */
 
-/* Base filter bar - shared properties */
+/* Base filter bar - shared properties (transparent for all pages) */
 .content-filter-bar {
     display: flex;
     justify-content: space-between;
@@ -253,14 +253,8 @@ main {
     margin: 0 auto;
     max-width: 1600px;
     width: 100%;
-    border-bottom: 1px solid var(--border-light);
-    background: var(--white);
-}
-
-/* Modifier: Transparent background (Generator pages) */
-.content-filter-bar--transparent {
+    border-bottom: 1px solid var(--border-lighter);
     background: transparent;
-    border-bottom-color: var(--border-lighter);
 }
 
 /* Tabs container */

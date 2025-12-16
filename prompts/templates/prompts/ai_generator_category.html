@@ -246,63 +246,52 @@
     margin-right: 8px;
 }
 
-/* ISSUE 5: How-To Dropdown - Fixed width 310px with smooth expand/retract animation */
-.how-to-dropdown {
+/* How-To Accordion - Bootstrap 5 Custom Styling */
+.how-to-accordion {
+    max-width: 350px;
+}
+
+.how-to-accordion .accordion-item {
     background: var(--white, #ffffff);
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    width: 310px;
+    border: 1px solid var(--border-lighter, #e5e7eb);
+    border-radius: 50px;
     overflow: hidden;
 }
 
-.how-to-toggle {
-    padding: 12px 16px;
+.how-to-accordion .accordion-button {
+    background: var(--white, #ffffff);
+    color: var(--gray-900, #171717);
     font-weight: 600;
     font-size: 0.95rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    color: #333;
-    background: transparent;
-    border: none;
-    width: 100%;
-    text-align: left;
-    transition: background-color 0.15s ease;
+    padding: 12px 20px;
+    border-radius: 50px;
+    box-shadow: none;
 }
 
-.how-to-toggle:hover {
-    background-color: rgba(0, 0, 0, 0.03);
+.how-to-accordion .accordion-button:not(.collapsed) {
+    background: var(--white, #ffffff);
+    color: var(--gray-900, #171717);
+    box-shadow: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
-.how-to-toggle::after {
-    content: '+';
-    margin-left: auto;
-    font-size: 1.2rem;
-    font-weight: 400;
-    color: #666;
-    transition: transform 0.25s ease;
+.how-to-accordion .accordion-button:focus {
+    box-shadow: none;
+    border-color: var(--border-lighter, #e5e7eb);
 }
 
-.how-to-toggle.expanded::after {
-    content: '−';
+.how-to-accordion .accordion-button::after {
+    /* Bootstrap's default chevron handles rotation animation */
 }
 
-/* Smooth expand/retract content wrapper */
-.how-to-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out, opacity 0.25s ease-out;
-    opacity: 0;
-}
-
-.how-to-content.expanded {
-    max-height: 500px;  /* Safety buffer for content growth */
-    opacity: 1;
-    transition: max-height 0.3s ease-in, opacity 0.25s ease-in;
+.how-to-accordion .accordion-body {
+    padding: 0 20px 16px;
+    background: var(--white, #ffffff);
 }
 
 .how-to-steps {
-    padding: 0 16px 16px 36px;
+    padding: 0 0 0 20px;
     margin: 0;
 }
 
@@ -310,6 +299,7 @@
     margin-bottom: 8px;
     line-height: 1.5;
     font-size: 0.9rem;
+    color: var(--gray-700, #374151);
 }
 
 .how-to-steps li:last-child {
@@ -319,8 +309,7 @@
 /* ============================================
    GENERATOR FILTER BAR
    (Unified styles moved to static/css/style.css)
-   Uses: .content-filter-bar .content-filter-bar--transparent
-         .filter-tabs .filter-tab .filter-actions
+   Uses: .content-filter-bar .filter-tabs .filter-tab .filter-actions
    ============================================ */
 
 /* gen-dropdown styles in static/css/style.css for reuse */
@@ -440,26 +429,37 @@
         </a>
         {% endif %}
 
-        <!-- Collapsible How-To Dropdown with smooth expand/retract animation -->
-        <div class="how-to-dropdown" id="howToDropdown">
-            <button class="how-to-toggle" id="howToToggle" aria-expanded="false" aria-controls="howToContent">
-                <i class="far fa-question-circle me-2"></i>
-                How to Use These Prompts
-            </button>
-            <div class="how-to-content" id="howToContent">
-                <ol class="how-to-steps">
-                    <li>Browse and select a prompt from our collection below</li>
-                    <li>Click on the prompt to view full details and copy the text</li>
-                    <li>Paste the prompt into {{ generator.name }} and adjust as needed</li>
-                    <li>Share your results with the PromptFinder community!</li>
-                </ol>
+        <!-- How-To Accordion (Bootstrap 5) -->
+        <div class="accordion how-to-accordion" id="howToAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#howToContent"
+                            aria-expanded="false"
+                            aria-controls="howToContent">
+                        <i class="far fa-question-circle me-2"></i>
+                        How to Use These Prompts
+                    </button>
+                </h2>
+                <div id="howToContent" class="accordion-collapse collapse"
+                     data-bs-parent="#howToAccordion">
+                    <div class="accordion-body">
+                        <ol class="how-to-steps">
+                            <li>Browse and select a prompt from our collection below</li>
+                            <li>Click on the prompt to view full details and copy the text</li>
+                            <li>Paste the prompt into {{ generator.name }} and adjust as needed</li>
+                            <li>Share your results with the PromptFinder community!</li>
+                        </ol>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Filter Bar (Homepage Pattern) -->
-<div class="content-filter-bar content-filter-bar--transparent">
+<div class="content-filter-bar">
     <!-- LEFT: Tab Navigation -->
     <nav class="filter-tabs" role="tablist" aria-label="Content type filter">
         <a href="{% url 'prompts:ai_generator_category' generator.slug %}{% if request.GET.sort %}?sort={{ request.GET.sort }}{% endif %}"
@@ -535,34 +535,10 @@
     </div>
 {% endif %}
 
-<!-- Dropdown JavaScript -->
+<!-- Dropdown JavaScript (How-To handled by Bootstrap accordion) -->
 <script>
 (function() {
     'use strict';
-
-    // ============================================
-    // How-To Dropdown (Smooth Expand/Retract)
-    // ============================================
-    var howToToggle = document.getElementById('howToToggle');
-    var howToContent = document.getElementById('howToContent');
-
-    if (howToToggle && howToContent) {
-        howToToggle.addEventListener('click', function() {
-            var isExpanded = howToToggle.classList.contains('expanded');
-
-            if (isExpanded) {
-                // Collapse
-                howToToggle.classList.remove('expanded');
-                howToContent.classList.remove('expanded');
-                howToToggle.setAttribute('aria-expanded', 'false');
-            } else {
-                // Expand
-                howToToggle.classList.add('expanded');
-                howToContent.classList.add('expanded');
-                howToToggle.setAttribute('aria-expanded', 'true');
-            }
-        });
-    }
 
     // ============================================
     // Filter Dropdowns (Platform & Sort)

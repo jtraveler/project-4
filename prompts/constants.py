@@ -25,6 +25,8 @@ AI_GENERATORS = {
         'website': 'https://www.midjourney.com',
         'icon': 'images/generators/midjourney-icon.png',  # Placeholder
         'choice_value': 'midjourney',
+        'supports_images': True,
+        'supports_video': False,
     },
     'dalle3': {
         'name': 'DALL-E 3',
@@ -41,6 +43,8 @@ AI_GENERATORS = {
         'website': 'https://openai.com/dall-e-3',
         'icon': 'images/generators/dalle3-icon.png',  # Placeholder
         'choice_value': 'dalle3',
+        'supports_images': True,
+        'supports_video': False,
     },
     'dalle2': {
         'name': 'DALL-E 2',
@@ -58,6 +62,8 @@ AI_GENERATORS = {
         'website': 'https://openai.com/dall-e-2',
         'icon': 'images/generators/dalle2-icon.png',  # Placeholder
         'choice_value': 'dalle2',
+        'supports_images': True,
+        'supports_video': False,
     },
     'stable-diffusion': {
         'name': 'Stable Diffusion',
@@ -75,6 +81,8 @@ AI_GENERATORS = {
         'website': 'https://stability.ai/stable-diffusion',
         'icon': 'images/generators/stable-diffusion-icon.png',  # Placeholder
         'choice_value': 'stable_diffusion',
+        'supports_images': True,
+        'supports_video': True,
     },
     'leonardo-ai': {
         'name': 'Leonardo AI',
@@ -92,6 +100,8 @@ AI_GENERATORS = {
         'website': 'https://leonardo.ai',
         'icon': 'images/generators/leonardo-icon.png',  # Placeholder
         'choice_value': 'leonardo',
+        'supports_images': True,
+        'supports_video': True,
     },
     'flux': {
         'name': 'Flux',
@@ -109,6 +119,8 @@ AI_GENERATORS = {
         'website': 'https://blackforestlabs.ai',
         'icon': 'images/generators/flux-icon.png',  # Placeholder
         'choice_value': 'flux',
+        'supports_images': True,
+        'supports_video': False,
     },
     'sora': {
         'name': 'Sora',
@@ -127,6 +139,8 @@ AI_GENERATORS = {
         'website': 'https://openai.com/sora',
         'icon': 'images/generators/sora-icon.png',  # Placeholder
         'choice_value': 'sora',
+        'supports_images': True,
+        'supports_video': True,
     },
     'sora2': {
         'name': 'Sora 2',
@@ -144,6 +158,8 @@ AI_GENERATORS = {
         'website': 'https://openai.com/sora',  # Will be updated when official Sora 2 page launches
         'icon': 'images/generators/sora2-icon.png',  # Placeholder
         'choice_value': 'sora2',
+        'supports_images': True,
+        'supports_video': True,
     },
     'veo3': {
         'name': 'Veo 3',
@@ -161,6 +177,8 @@ AI_GENERATORS = {
         'website': 'https://deepmind.google/technologies/veo',
         'icon': 'images/generators/veo3-icon.png',  # Placeholder
         'choice_value': 'veo3',
+        'supports_images': False,
+        'supports_video': True,
     },
     'adobe-firefly': {
         'name': 'Adobe Firefly',
@@ -179,6 +197,8 @@ AI_GENERATORS = {
         'website': 'https://www.adobe.com/products/firefly.html',
         'icon': 'images/generators/firefly-icon.png',  # Placeholder
         'choice_value': 'firefly',
+        'supports_images': True,
+        'supports_video': True,
     },
     'bing-image-creator': {
         'name': 'Bing Image Creator',
@@ -196,6 +216,98 @@ AI_GENERATORS = {
         'website': 'https://www.bing.com/images/create',
         'icon': 'images/generators/bing-icon.png',  # Placeholder
         'choice_value': 'bing',
+        'supports_images': True,
+        'supports_video': False,
+    },
+    'grok': {
+        'name': 'Grok',
+        'slug': 'grok',
+        'description': '''
+            <p>Grok is xAI's AI assistant that includes powerful image generation capabilities. Developed by Elon Musk's
+            artificial intelligence company, Grok combines conversational AI with the ability to create images from
+            text descriptions, offering a unique blend of chat and creative generation in one platform.</p>
+
+            <p>Grok's image generation is known for its willingness to tackle creative prompts that other AI systems
+            might decline, while still maintaining safety guidelines. Integrated into the X (formerly Twitter) platform,
+            Grok offers Premium+ subscribers access to both its conversational AI and image creation features, making it
+            a versatile tool for social media content creation and creative exploration.</p>
+        ''',
+        'website': 'https://x.ai',
+        'icon': 'images/generators/grok-icon.png',  # Placeholder
+        'choice_value': 'grok',
+        'supports_images': True,
+        'supports_video': False,
+    },
+    'wan21': {
+        'name': 'WAN 2.1',
+        'slug': 'wan21',
+        'description': '''
+            <p>WAN 2.1 is an advanced AI video generation model from Alibaba's Tongyi Wanxiang team. This powerful
+            text-to-video model can generate high-quality video content from text prompts, supporting various styles
+            from realistic footage to animated content.</p>
+
+            <p>WAN 2.1 excels at understanding complex scene descriptions and generating coherent video sequences with
+            consistent characters and smooth motion. The model supports multiple aspect ratios and resolutions, making
+            it suitable for various content creation needs from social media clips to professional video production.</p>
+        ''',
+        'website': 'https://tongyi.aliyun.com/wanxiang',
+        'icon': 'images/generators/wan21-icon.png',  # Placeholder
+        'choice_value': 'wan21',
+        'supports_images': True,
+        'supports_video': True,
+    },
+    'wan22': {
+        'name': 'WAN 2.2',
+        'slug': 'wan22',
+        'description': '''
+            <p>WAN 2.2 is the latest iteration of Alibaba's Tongyi Wanxiang video generation model, offering enhanced
+            video quality, longer generation capabilities, and improved understanding of complex prompts compared to
+            its predecessor WAN 2.1.</p>
+
+            <p>This updated model features better temporal consistency, more realistic physics simulation, and enhanced
+            control over video style and composition. WAN 2.2 is particularly strong in generating videos with dynamic
+            camera movements, complex scene transitions, and maintaining character consistency throughout longer sequences.</p>
+        ''',
+        'website': 'https://tongyi.aliyun.com/wanxiang',
+        'icon': 'images/generators/wan22-icon.png',  # Placeholder
+        'choice_value': 'wan22',
+        'supports_images': True,
+        'supports_video': True,
+    },
+    'nano-banana': {
+        'name': 'Nano Banana',
+        'slug': 'nano-banana',
+        'description': '''
+            <p>Nano Banana is an emerging AI video generation model that focuses on creating high-quality, stylized
+            video content from text prompts. Known for its unique artistic approach, Nano Banana excels at generating
+            creative and visually distinctive video sequences.</p>
+
+            <p>The model is particularly popular among content creators looking for video generation with a distinctive
+            aesthetic. Nano Banana supports various video styles and offers intuitive controls for adjusting the
+            visual style, motion dynamics, and overall composition of generated videos.</p>
+        ''',
+        'website': 'https://nanobanana.ai',
+        'icon': 'images/generators/nano-banana-icon.png',  # Placeholder
+        'choice_value': 'nano_banana',
+        'supports_images': False,
+        'supports_video': True,
+    },
+    'nano-banana-pro': {
+        'name': 'Nano Banana Pro',
+        'slug': 'nano-banana-pro',
+        'description': '''
+            <p>Nano Banana Pro is the premium version of the Nano Banana AI video generation platform, offering enhanced
+            capabilities, higher resolution outputs, and advanced features for professional content creation.</p>
+
+            <p>The Pro version includes extended video duration support, improved motion quality, and additional style
+            controls that allow for more precise creative direction. Nano Banana Pro is designed for professional
+            creators and studios who need higher-quality outputs and more control over their AI-generated video content.</p>
+        ''',
+        'website': 'https://nanobanana.ai',
+        'icon': 'images/generators/nano-banana-pro-icon.png',  # Placeholder
+        'choice_value': 'nano_banana_pro',
+        'supports_images': False,
+        'supports_video': True,
     },
 }
 

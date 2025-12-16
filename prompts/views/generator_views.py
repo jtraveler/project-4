@@ -36,7 +36,8 @@ def inspiration_index(request):
     ).values('ai_generator').annotate(
         count=models.Count('id')
     )
-    count_map = {item['ai_generator']: item['count'] for item in generator_counts}
+    # Build case-insensitive count map (handles 'Midjourney' vs 'midjourney')
+    count_map = {item['ai_generator'].lower(): item['count'] for item in generator_counts}
 
     generators_with_counts = []
     for slug, data in AI_GENERATORS.items():
@@ -45,7 +46,7 @@ def inspiration_index(request):
             'slug': slug,
             'description': data.get('description', ''),
             'icon': data.get('icon', ''),
-            'prompt_count': count_map.get(data['choice_value'], 0),
+            'prompt_count': count_map.get(data['choice_value'].lower(), 0),
         })
 
     # Sort by prompt count (most prompts first)
@@ -105,8 +106,9 @@ def ai_generator_category(request, generator_slug):
     generator = {**generator, 'slug': generator_slug}
 
     # Base queryset: active prompts for this generator
+    # Use __iexact for case-insensitive matching (handles 'Midjourney' vs 'midjourney')
     prompts = Prompt.objects.filter(
-        ai_generator=generator['choice_value'],
+        ai_generator__iexact=generator['choice_value'],
         status=1,  # Published only
         deleted_at__isnull=True  # Not deleted
     ).select_related('author').prefetch_related('tags', 'likes')
@@ -116,8 +118,9 @@ def ai_generator_category(request, generator_slug):
 
     # Get total views for this generator's prompts
     # Uses single aggregated query to avoid N+1
+    # Use __iexact for case-insensitive matching
     total_views = PromptView.objects.filter(
-        prompt__ai_generator=generator['choice_value'],
+        prompt__ai_generator__iexact=generator['choice_value'],
         prompt__status=1,
         prompt__deleted_at__isnull=True
     ).count()
@@ -134,12 +137,13 @@ def ai_generator_category(request, generator_slug):
     )
 
     # Build related generators list (excluding current, limit 5)
+    # Use case-insensitive comparison (handles 'Midjourney' vs 'midjourney')
     for item in generator_counts:
-        if item['ai_generator'] == generator['choice_value']:
+        if item['ai_generator'].lower() == generator['choice_value'].lower():
             continue
-        # Find the generator info by choice_value
+        # Find the generator info by choice_value (case-insensitive)
         for slug, gen_data in AI_GENERATORS.items():
-            if gen_data['choice_value'] == item['ai_generator']:
+            if gen_data['choice_value'].lower() == item['ai_generator'].lower():
                 related_generators.append({
                     'name': gen_data['name'],
                     'slug': slug,

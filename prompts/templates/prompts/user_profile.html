@@ -164,7 +164,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 40px 24px;
+    padding: 0 0 24px;
+    gap: 20px;
     background: transparent;
     /* REFINEMENT 2: Removed border-bottom */
 }
@@ -174,9 +175,8 @@
     position: relative;  /* Arrows position absolute to this */
     display: flex;
     align-items: center;
-    width: 100%;  /* Take full width of left side */
     min-width: 0;  /* FIX: Allow flex item to shrink below content width */
-    flex-shrink: 1;  /* FIX: Explicitly allow shrinking to prevent horizontal scroll */
+    flex: 1;  /* Take available space */
 }
 
 .profile-tabs-container {
@@ -732,6 +732,7 @@
 .profile-sort-dropdown {
     position: relative;
     display: inline-block;
+    min-width: fit-content;
 }
 
 .profile-sort-dropdown-btn {

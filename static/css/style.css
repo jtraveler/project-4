@@ -254,10 +254,6 @@ main {
     max-width: 1600px;
     width: 100%;
     border-bottom: 1px solid var(--border-light);
-}
-
-/* Modifier: Solid white background (Homepage) */
-.content-filter-bar--solid {
     background: var(--white);
 }
 

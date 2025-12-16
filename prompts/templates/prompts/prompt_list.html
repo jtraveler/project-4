@@ -305,7 +305,7 @@ html {
 </style>
 
 <!-- Homepage Filter Bar (Phase G Part A): Tabs LEFT, Dropdown RIGHT -->
-<div class="content-filter-bar content-filter-bar--solid">
+<div class="content-filter-bar">
     <!-- LEFT: Tab Navigation (Pexels-style pills) -->
     <nav class="filter-tabs" role="tablist" aria-label="Content filter">
         <a href="{% url 'prompts:home' %}?tab=home{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"

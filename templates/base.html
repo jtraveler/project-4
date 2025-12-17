@@ -289,9 +289,8 @@
             {% endif %}
 
             <!-- Upload Button -->
-            <a href="{% if user.is_authenticated %}{% url 'prompts:prompt_create' %}{% else %}{% url 'account_login' %}{% endif %}"
-               class="pexels-upload-btn"
-               {% if user.is_authenticated %}onclick="createNewPrompt(); return false;"{% endif %}>
+            <a href="{% if user.is_authenticated %}{% url 'prompts:upload_step1' %}{% else %}{% url 'account_login' %}{% endif %}"
+               class="pexels-upload-btn">
                 Upload
             </a>
         </div>
@@ -488,17 +487,6 @@
 <!-- External Navbar JavaScript -->
 <script src="{% static 'js/navbar.js' %}"></script>
 
-<!-- Inline JavaScript requiring Django template tags -->
-<script>
-// Create new prompt function - requires Django template tags
-function createNewPrompt() {
-    {% if user.is_authenticated %}
-        window.location.href = '{% url "prompts:prompt_create" %}';
-    {% else %}
-        window.location.href = '{% url "account_login" %}';
-    {% endif %}
-}
-</script>
 
 
 {# ========================================== #}

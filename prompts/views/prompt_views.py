@@ -67,6 +67,7 @@ class PromptList(generic.ListView):
         # Get and validate request parameters
         tag_name = self.request.GET.get('tag')
         search_query = self.request.GET.get('search')
+        search_type = self.request.GET.get('type', '')  # Media type filter for search
         tab = self.request.GET.get('tab', 'home')
         sort_by = self.request.GET.get('sort', 'trending')
         page = self.request.GET.get('page', 1)
@@ -85,7 +86,7 @@ class PromptList(generic.ListView):
 
         # Create secure cache key using hash to prevent injection
         # usedforsecurity=False: MD5 is used for cache key generation, not security
-        cache_params = f"{tag_name}_{search_query}_{tab}_{sort_by}_{page}"
+        cache_params = f"{tag_name}_{search_query}_{search_type}_{tab}_{sort_by}_{page}"
         cache_key = f"prompt_list_{hashlib.md5(cache_params.encode(), usedforsecurity=False).hexdigest()}"
 
         # Don't cache 'following' filter (user-specific) or search results
@@ -117,14 +118,18 @@ class PromptList(generic.ListView):
             queryset = queryset.filter(tags__name=tag_name)
 
         # Apply search filter if present
+        # Search ONLY prompt (content) and description (excerpt) fields
         if search_query:
             queryset = queryset.filter(
-                Q(title__icontains=search_query) |
                 Q(content__icontains=search_query) |
-                Q(excerpt__icontains=search_query) |
-                Q(author__username__icontains=search_query) |
-                Q(tags__name__icontains=search_query)
+                Q(excerpt__icontains=search_query)
             ).distinct()
+
+            # Apply media type filter from search form (type parameter)
+            if search_type == 'images':
+                queryset = queryset.filter(featured_image__isnull=False)
+            elif search_type == 'videos':
+                queryset = queryset.filter(featured_video__isnull=False)
 
         # Apply sort filter (Phase G)
         if sort_by == 'following':

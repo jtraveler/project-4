@@ -7,7 +7,10 @@ app_name = 'prompts'
 
 urlpatterns = [
     path('', views.PromptList.as_view(), name='home'),
-    path('create-prompt/', views.prompt_create, name='prompt_create'),
+    # 301 redirect: /create-prompt/ → /upload/ (SEO preservation)
+    path('create-prompt/',
+         RedirectView.as_view(pattern_name='prompts:upload_step1', permanent=True),
+         name='prompt_create'),
     path('collaborate/', views.collaborate_request, name='collaborate'),
     # Upload flow (Phase C & D)
     path('upload/', views.upload_step1, name='upload_step1'),

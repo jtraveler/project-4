@@ -7198,10 +7198,50 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 
 ## 📝 Changelog
 
-### December 2025 - CI Pipeline Fixes
-- Fixed 5 failing tests in `test_generator_page.py` (class names updated after UI redesign)
-- Changed CI security check from `--fail-level WARNING` to `--fail-level ERROR`
-- Test assertions updated: `generator-hero` → `generator-header`, `stats-pills` → `generator-stats`/`stat-badge`, `filter-bar` → `generator-filter-bar`/`generator-tabs`/`gen-dropdown`
+### December 2025 - Session 17 (Dec 17, 2025)
+
+**Generator Pages Overhaul & CI Pipeline Fixes**
+
+Session 17 completed two major commits:
+
+**Commit 1: Generator Pages Overhaul** (5857542)
+- Fixed case sensitivity bug in AI generator URL routing (`Midjourney` vs `midjourney`)
+- Unified CSS architecture: `.content-filter-bar` now shared between generator pages and user profiles
+- Removed 7 deprecated CSS classes: `.generator-filter-bar`, `.generator-tabs`, `.gen-dropdown`, `.generator-filter-tabs`, `.generator-tab-link`, `.generator-sort-dropdown`, `.generator-sort-btn`
+- Added 5 new AI generators: Grok, WAN 2.1, WAN 2.2, Nano Banana, Nano Banana Pro
+- Updated `prompts/constants.py` with new generator metadata
+- Updated `ai_generator_category.html` template to use unified filter bar
+
+**Commit 2: CI Pipeline Fixes** (current session)
+- Security: Upgraded django-allauth 65.9.0 → 65.13.0 (CVE-2025-65430, CVE-2025-65431)
+- Fixed 4 failing tests that checked for old HTML structure:
+  - `test_filter_bar_exists` in test_generator_page.py
+  - `test_filter_form_renders` in test_user_profile_header.py
+  - `test_filter_form_preserves_selection` in test_user_profile_header.py
+  - `test_media_filter_form_has_responsive_structure` in test_user_profile_header.py
+- Test assertions updated: `generator-tabs` → `filter-tabs`, old dropdown selectors → new Pexels-style dropdown selectors
+- All 59 tests passing
+
+**Files Modified:**
+- `requirements.txt` - django-allauth version bump
+- `prompts/tests/test_generator_page.py` - Updated test assertions
+- `prompts/tests/test_user_profile_header.py` - Updated 3 test methods
+- `prompts/constants.py` - 5 new AI generators
+- `prompts/templates/prompts/ai_generator_category.html` - Unified filter bar
+- `static/css/style.css` - Removed deprecated generator-specific CSS
+
+**CSS Architecture Change:**
+Before: Separate `.generator-filter-bar` and `.content-filter-bar` (duplication)
+After: Single `.content-filter-bar` shared across all pages (DRY principle)
+
+**New AI Generators Added:**
+| Generator | Type | Category |
+|-----------|------|----------|
+| Grok | Image | xAI |
+| WAN 2.1 | Video | Alibaba |
+| WAN 2.2 | Video | Alibaba |
+| Nano Banana | Image | Community |
+| Nano Banana Pro | Image | Community |
 
 ### January 2025 - Initial CLAUDE.md Creation
 - Documented entire project scope

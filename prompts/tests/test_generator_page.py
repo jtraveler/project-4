@@ -194,11 +194,11 @@ class GeneratorPageUITests(TestCase):
         self.assertIn('"name": "Prompts"', content)
 
     def test_filter_bar_exists(self):
-        """Page should have filter bar (redesigned with generator-filter-bar)."""
+        """Page should have filter bar (unified content-filter-bar component)."""
         response = self.client.get('/prompts/midjourney/')
         content = response.content.decode()
-        self.assertIn('generator-filter-bar', content)
-        self.assertIn('generator-tabs', content)
+        self.assertIn('content-filter-bar', content)
+        self.assertIn('filter-tabs', content)
         self.assertIn('gen-dropdown', content)
         self.assertIn('sortDropdown', content)
 

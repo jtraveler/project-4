@@ -198,22 +198,15 @@ class MediaFilterFormTestCase(TestCase):
             )
 
     def test_filter_form_renders(self):
-        """Media filter form should render with correct structure"""
+        """Media filter dropdown should render with correct structure"""
         response = self.client.get(reverse('prompts:user_profile', args=['testuser']))
 
         self.assertEqual(response.status_code, 200)
 
-        # Check form exists
-        self.assertContains(response, 'id="media-filter-form"')
-        self.assertContains(response, 'method="get"')
-
-        # Check media dropdown exists (actual template uses name="media")
-        self.assertContains(response, 'name="media"')
-
-        # Check options (actual template values)
-        self.assertContains(response, 'value="all"')
-        self.assertContains(response, 'value="photos"')
-        self.assertContains(response, 'value="videos"')
+        # New Pexels-style dropdown structure
+        self.assertContains(response, 'id="mediaDropdown"')
+        self.assertContains(response, 'profile-sort-dropdown')
+        self.assertContains(response, 'mediaDropdownBtn')
 
     def test_filter_by_media_photos(self):
         """Filter should show only images when 'photos' selected"""
@@ -262,17 +255,16 @@ class MediaFilterFormTestCase(TestCase):
 
     def test_filter_form_preserves_selection(self):
         """Form should preserve selected filter value"""
+        # Request with videos filter
         response = self.client.get(
             reverse('prompts:user_profile', args=['testuser']),
             {'media': 'videos'}
         )
-
         self.assertEqual(response.status_code, 200)
-
-        # Check videos option is marked as selected
-        self.assertContains(response, 'value="videos"')
-        # Verify context has the filter value
-        self.assertEqual(response.context.get('media_filter'), 'videos')
+        # New dropdown shows "Videos only" as active and in button text
+        self.assertContains(response, 'Videos only')
+        # The active item should have the 'active' class
+        self.assertContains(response, 'media=videos')
 
 
 
@@ -289,16 +281,12 @@ class MobileResponsivenessTestCase(TestCase):
         )
 
     def test_media_filter_form_has_responsive_structure(self):
-        """Media filter form should have responsive structure"""
+        """Media filter dropdown should have responsive structure"""
         response = self.client.get(reverse('prompts:user_profile', args=['mobileuser']))
-
         self.assertEqual(response.status_code, 200)
-
-        # Check form has responsive structure
-        self.assertContains(response, 'id="media-filter-form"')
-
-        # Check filter container exists
+        # New dropdown structure with responsive container
         self.assertContains(response, 'profile-filters-container')
+        self.assertContains(response, 'profile-sort-dropdown')
 
     def test_mobile_css_media_queries_present(self):
         """Check that mobile CSS media queries are present in template"""

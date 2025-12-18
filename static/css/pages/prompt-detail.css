@@ -1,14 +1,15 @@
 /**
  * Prompt Detail Page Styles
  *
- * Phase J.1: PromptHero-inspired Layout Restructure
- * - Full-width hero section at top
- * - 7/5 two-column layout (left content, right rail)
+ * Phase J.1 FIX: PromptHero-inspired Side-by-Side Layout
+ * - Image in LEFT column (col-lg-7), NOT full-width hero
+ * - Right rail (col-lg-5) at SAME level as image
+ * - True side-by-side layout from the very top
  * - Organized card-based right rail
  *
  * @file static/css/pages/prompt-detail.css
  * @author PromptFinder Team
- * @version 2.0.0
+ * @version 2.1.0
  * @date December 2025
  */
 
@@ -29,20 +30,14 @@
 }
 
 /* ==========================================================================
-   Hero Section
-   Full-width image/video display at top of page
+   Media Container
+   Image/video display in LEFT column (not full-width hero)
    ========================================================================== */
 
-.prompt-hero {
-    margin-bottom: var(--spacing-xl);
-    padding-top: var(--spacing-lg);
-}
-
-.prompt-hero-media {
+.prompt-media-container {
     position: relative;
     width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
+    margin-bottom: var(--spacing-lg);
     background: var(--light-blue, #f0f4f8);
     border-radius: 12px;
     overflow: hidden;
@@ -86,11 +81,12 @@
 
 /* ==========================================================================
    Content Wrapper
-   Main container for 7/5 two-column layout below hero
+   Main container for 7/5 side-by-side layout
    ========================================================================== */
 
 .prompt-content-wrapper {
-    padding-top: var(--spacing-md);
+    padding-top: var(--spacing-lg);
+    padding-bottom: var(--spacing-xl);
 }
 
 /* ==========================================================================
@@ -673,12 +669,7 @@
 
 /* Tablet and below */
 @media (max-width: 991.98px) {
-    .prompt-hero {
-        padding-top: var(--spacing-md);
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .prompt-hero-media {
+    .prompt-media-container {
         border-radius: 8px;
     }
 
@@ -708,11 +699,7 @@
 
 /* Mobile */
 @media (max-width: 575.98px) {
-    .prompt-hero {
-        padding-top: var(--spacing-sm);
-    }
-
-    .prompt-hero-media {
+    .prompt-media-container {
         border-radius: 0;
         margin-left: -12px;
         margin-right: -12px;

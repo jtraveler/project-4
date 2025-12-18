@@ -35,69 +35,64 @@
 {# Draft banner handled in base.html notification container #}
 
 <!-- ============================================================
-     HERO SECTION - Full Width Featured Media
-     ============================================================ -->
-<section class="prompt-hero">
-    <div class="container">
-        <div class="prompt-hero-media">
-            {% if prompt.is_video and prompt.featured_video %}
-                <!-- Video Display -->
-                <video controls class="hero-video"
-                    poster="{{ prompt.get_thumbnail_url }}"
-                    preload="metadata"
-                    autoplay
-                    loop
-                    muted>
-                    <source src="{{ prompt.featured_video.url }}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-            {% elif prompt.featured_image %}
-                <!-- Image Display -->
-                {% if "placeholder" in prompt.featured_image.url %}
-                    <img src="{% static 'images/placeholder-prompt.svg' %}"
-                         class="hero-image"
-                         alt="{{ prompt.title }} - No image available"
-                         loading="eager"
-                         style="background-color: #f0f0f0; object-fit: contain;">
-                {% else %}
-                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}"
-                         class="hero-image"
-                         alt="{{ prompt.title }}"
-                         loading="eager">
-                {% endif %}
-            {% else %}
-                <!-- No media available -->
-                <div class="alert alert-warning mb-3" role="alert">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Media Missing</strong>
-                    <p class="mb-2">This prompt is missing its image or video.</p>
-                    {% if user.is_authenticated and user == prompt.author %}
-                        <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="btn btn-sm btn-primary">
-                            <i class="fas fa-edit"></i> Edit Prompt to Add Media
-                        </a>
-                    {% endif %}
-                </div>
-                <img src="{% static 'images/placeholder-prompt.svg' %}"
-                     class="hero-image"
-                     alt="{{ prompt.title }} - No image available"
-                     loading="eager"
-                     style="background-color: #f0f0f0; object-fit: contain;">
-            {% endif %}
-        </div>
-    </div>
-</section>
-
-<!-- ============================================================
-     TWO-COLUMN CONTENT LAYOUT (7/5 Split)
-     Left: Actions, Title, Description, Comments
-     Right: Author Card, Stats, Details, Prompt, Tags
+     SIDE-BY-SIDE LAYOUT (PromptHero Style)
+     Left Column: Image, Actions, Title, Description, Comments
+     Right Rail: Author Card, Stats, Details, Prompt, Tags
      ============================================================ -->
 <div class="container prompt-content-wrapper">
     <div class="row">
         <!-- ========================================
              LEFT COLUMN (col-lg-7)
+             Image at TOP, then content below
              ======================================== -->
         <div class="col-lg-7 prompt-left-column">
+
+            <!-- Featured Media (Image/Video) - NOW IN LEFT COLUMN -->
+            <div class="prompt-media-container">
+                {% if prompt.is_video and prompt.featured_video %}
+                    <!-- Video Display -->
+                    <video controls class="hero-video"
+                        poster="{{ prompt.get_thumbnail_url }}"
+                        preload="metadata"
+                        autoplay
+                        loop
+                        muted>
+                        <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                {% elif prompt.featured_image %}
+                    <!-- Image Display -->
+                    {% if "placeholder" in prompt.featured_image.url %}
+                        <img src="{% static 'images/placeholder-prompt.svg' %}"
+                             class="hero-image"
+                             alt="{{ prompt.title }} - No image available"
+                             loading="eager"
+                             style="background-color: #f0f0f0; object-fit: contain;">
+                    {% else %}
+                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}"
+                             class="hero-image"
+                             alt="{{ prompt.title }}"
+                             loading="eager">
+                    {% endif %}
+                {% else %}
+                    <!-- No media available -->
+                    <div class="alert alert-warning mb-3" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Media Missing</strong>
+                        <p class="mb-2">This prompt is missing its image or video.</p>
+                        {% if user.is_authenticated and user == prompt.author %}
+                            <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-edit"></i> Edit Prompt to Add Media
+                            </a>
+                        {% endif %}
+                    </div>
+                    <img src="{% static 'images/placeholder-prompt.svg' %}"
+                         class="hero-image"
+                         alt="{{ prompt.title }} - No image available"
+                         loading="eager"
+                         style="background-color: #f0f0f0; object-fit: contain;">
+                {% endif %}
+            </div>
 
             <!-- Action Icons Row -->
             <div class="prompt-actions">
@@ -262,6 +257,7 @@
 
         <!-- ========================================
              RIGHT RAIL (col-lg-5)
+             Starts at SAME level as image
              ======================================== -->
         <div class="col-lg-5 prompt-right-rail">
 

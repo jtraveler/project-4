@@ -20,7 +20,7 @@
     <!-- Preload the hero image for LCP optimization -->
     {% if prompt.featured_image and not "placeholder" in prompt.featured_image.url %}
         <link rel="preload" as="image"
-          href="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}" />
+          href="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}" />
     {% endif %}
 {% endif %}
 
@@ -29,219 +29,176 @@
 {% endblock %}
 
 {% block content %}
+<div class="prompt-detail-page">
 <h1 class="visually-hidden">{{ prompt.title }} - AI Prompt Details</h1>
 
-{# Draft banner moved to base.html notification container (lines 1213-1242) #}
+{# Draft banner handled in base.html notification container #}
 
-<!-- Head Section -->
-<header class="position-relative pt-5">
-    <div class="col-lg-12">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-8">
-                    <h2 class="hero-title">
-                        {{ prompt.title }}
-                        {% if prompt.is_video %}
-                        <span class="media-type-indicator">
-                            <i class="fas fa-video"></i>
-                            Video
-                        </span>
-                        {% endif %}
-                    </h2>
-                    <p class="hero-meta">
-                        <span class="author-badge">
-                            By <a href="{% url 'prompts:user_profile' prompt.author.username %}"
-                                  class="text-decoration-none text-primary profile-link">
-                                @{{ prompt.author }}
-                            </a>
-                        </span>
-                    </p>
-                </div>
-                <div class="col-lg-4">
-                    <div class="action-buttons mb-4">
-                        <div class="button-group d-flex gap-2 align-items-center">
-                            
-                            <!-- Comment Button -->
-                            <button class="action-btn btn-comment" onclick="scrollToComments()" aria-label="Scroll to comments section">
-                                <i class="fas fa-comment" aria-hidden="true"></i>
-                            </button>
-                            
-                            <!-- Edit Button (only for prompt author) -->
-                            {% if user.is_authenticated and prompt.author == user %}
-                            <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-btn btn-edit" aria-label="Edit this prompt">
-                                <i class="fas fa-edit" aria-hidden="true"></i>
-                            </a>
-                            {% endif %}
-                            
-                            <!-- Delete Button (only for prompt author) -->
-                            {% if user.is_authenticated and prompt.author == user %}
-                            <button class="action-btn btn-delete" 
-                                    onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
-                                    aria-label="Delete this prompt">
-                                <i class="fas fa-trash" aria-hidden="true"></i>
-                            </button>
-                            {% endif %}
-                            
-                            <!-- Like Button -->
-                            {% if user.is_authenticated %}
-                                <button class="action-btn btn-like {% if prompt_is_liked %}liked{% endif %}" 
-                                        data-prompt-slug="{{ prompt.slug }}"
-                                        onclick="toggleLike(this)"
-                                        aria-label="{% if prompt_is_liked %}Unlike this prompt{% else %}Like this prompt{% endif %}">
-                                    <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart me-2" aria-hidden="true"></i>
-                                    <span class="like-text">Like</span>
-                                    <span class="like-count">{{ number_of_likes }}</span>
-                                </button>
-                            {% else %}
-                                <a href="{% url 'account_login' %}?next={{ request.path }}" class="action-btn btn-like" aria-label="Log in to like this prompt">
-                                    <i class="far fa-heart me-2" aria-hidden="true"></i>
-                                    <span class="like-text">Like</span>
-                                    <span class="like-count">{{ number_of_likes }}</span>
-                                </a>
-                            {% endif %}
-
-                            <!-- View Count (Phase G Part B) - Visibility controlled by SiteSettings -->
-                            {% if can_see_views %}
-                            <span class="action-btn btn-views" aria-label="View count" style="cursor: default;">
-                                <i class="fas fa-eye me-2" aria-hidden="true"></i>
-                                <span class="view-count">{{ view_count }}</span>
-                            </span>
-                            {% endif %}
-
-                            <!-- Report Button (only for authenticated users, not author) -->
-                            {% if user.is_authenticated and prompt.author != user %}
-                            <button class="action-btn btn-report"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#reportModal"
-                                    aria-label="Report this prompt">
-                                <i class="fas fa-flag" aria-hidden="true"></i>
-                            </button>
-                            {% endif %}
-
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</header>
-
-<!-- Main Content Area -->
-<div class="container mt-5">
-    <div class="row">
-        <!-- Media Display Area -->
-        <div class="col-lg-8 pb-5">
-            <div class="hero-image-shell">
-                {% if prompt.is_video and prompt.featured_video %}
-                    <!-- Video Display -->
-                    <video controls class="hero-video"
-                        poster="{{ prompt.get_thumbnail_url }}"
-                        preload="metadata"
-                        autoplay
-                        loop
-                        muted>
-                        <source src="{{ prompt.featured_video.url }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                {% elif prompt.featured_image %}
-                    <!-- Image Display -->
-                    {% if "placeholder" in prompt.featured_image.url %}
-                        <img src="{% static 'images/placeholder-prompt.svg' %}"
-                             class="hero-image"
-                             alt="{{ prompt.title }} - No image available"
-                             loading="eager"
-                             style="background-color: #f0f0f0; object-fit: contain;">
-                    {% else %}
-                        <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_824,c_limit,f_webp,q_90' }}"
-                             class="hero-image"
-                             alt="{{ prompt.title }}"
-                             loading="eager">
-                    {% endif %}
-                {% else %}
-                    <!-- No media available -->
-                    <div class="alert alert-warning" role="alert">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Media Missing</strong>
-                        <p class="mb-2">This prompt is missing its image or video.</p>
-                        {% if user.is_authenticated and user == prompt.author %}
-                            <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="btn btn-sm btn-primary">
-                                <i class="fas fa-edit"></i> Edit Prompt to Add Media
-                            </a>
-                        {% endif %}
-                    </div>
+<!-- ============================================================
+     HERO SECTION - Full Width Featured Media
+     ============================================================ -->
+<section class="prompt-hero">
+    <div class="container">
+        <div class="prompt-hero-media">
+            {% if prompt.is_video and prompt.featured_video %}
+                <!-- Video Display -->
+                <video controls class="hero-video"
+                    poster="{{ prompt.get_thumbnail_url }}"
+                    preload="metadata"
+                    autoplay
+                    loop
+                    muted>
+                    <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            {% elif prompt.featured_image %}
+                <!-- Image Display -->
+                {% if "placeholder" in prompt.featured_image.url %}
                     <img src="{% static 'images/placeholder-prompt.svg' %}"
                          class="hero-image"
                          alt="{{ prompt.title }} - No image available"
                          loading="eager"
                          style="background-color: #f0f0f0; object-fit: contain;">
+                {% else %}
+                    <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}"
+                         class="hero-image"
+                         alt="{{ prompt.title }}"
+                         loading="eager">
+                {% endif %}
+            {% else %}
+                <!-- No media available -->
+                <div class="alert alert-warning mb-3" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Media Missing</strong>
+                    <p class="mb-2">This prompt is missing its image or video.</p>
+                    {% if user.is_authenticated and user == prompt.author %}
+                        <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-edit"></i> Edit Prompt to Add Media
+                        </a>
+                    {% endif %}
+                </div>
+                <img src="{% static 'images/placeholder-prompt.svg' %}"
+                     class="hero-image"
+                     alt="{{ prompt.title }} - No image available"
+                     loading="eager"
+                     style="background-color: #f0f0f0; object-fit: contain;">
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     TWO-COLUMN CONTENT LAYOUT (7/5 Split)
+     Left: Actions, Title, Description, Comments
+     Right: Author Card, Stats, Details, Prompt, Tags
+     ============================================================ -->
+<div class="container prompt-content-wrapper">
+    <div class="row">
+        <!-- ========================================
+             LEFT COLUMN (col-lg-7)
+             ======================================== -->
+        <div class="col-lg-7 prompt-left-column">
+
+            <!-- Action Icons Row -->
+            <div class="prompt-actions">
+                <!-- Comment Button -->
+                <button class="prompt-action-btn" onclick="scrollToComments()" aria-label="Scroll to comments section" title="Comments">
+                    <i class="fas fa-comment" aria-hidden="true"></i>
+                </button>
+
+                <!-- Edit Button (only for prompt author) -->
+                {% if user.is_authenticated and prompt.author == user %}
+                <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="prompt-action-btn" aria-label="Edit this prompt" title="Edit">
+                    <i class="fas fa-edit" aria-hidden="true"></i>
+                </a>
+                {% endif %}
+
+                <!-- Delete Button (only for prompt author) -->
+                {% if user.is_authenticated and prompt.author == user %}
+                <button class="prompt-action-btn"
+                        onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
+                        aria-label="Delete this prompt" title="Delete">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
+                </button>
+                {% endif %}
+
+                <!-- Like Button -->
+                {% if user.is_authenticated %}
+                    <button class="prompt-action-btn {% if prompt_is_liked %}liked{% endif %}"
+                            data-prompt-slug="{{ prompt.slug }}"
+                            onclick="toggleLike(this)"
+                            aria-label="{% if prompt_is_liked %}Unlike this prompt{% else %}Like this prompt{% endif %}"
+                            title="Like">
+                        <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart" aria-hidden="true"></i>
+                        <span class="like-count">{{ number_of_likes }}</span>
+                    </button>
+                {% else %}
+                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="prompt-action-btn" aria-label="Log in to like this prompt" title="Like">
+                        <i class="far fa-heart" aria-hidden="true"></i>
+                        <span class="like-count">{{ number_of_likes }}</span>
+                    </a>
+                {% endif %}
+
+                <!-- View Count (Phase G Part B) - Visibility controlled by SiteSettings -->
+                {% if can_see_views %}
+                <span class="prompt-action-btn views-display" aria-label="View count" title="Views">
+                    <i class="fas fa-eye" aria-hidden="true"></i>
+                    <span class="view-count">{{ view_count }}</span>
+                </span>
+                {% endif %}
+
+                <!-- Report Button (only for authenticated users, not author) -->
+                {% if user.is_authenticated and prompt.author != user %}
+                <button class="prompt-action-btn"
+                        data-bs-toggle="modal"
+                        data-bs-target="#reportModal"
+                        aria-label="Report this prompt" title="Report">
+                    <i class="fas fa-flag" aria-hidden="true"></i>
+                </button>
                 {% endif %}
             </div>
-        </div>
-        
-        <!-- Sidebar -->
-        <div class="col-lg-4 ps-lg-4">
-            <div class="sidebar">
-                <!-- Prompt Description Card -->
-                <div class="mb-5">
-                    <h3 class="sidebar-title">Prompt Description</h3>
-                    {% if prompt.excerpt %}
-                        <p>{{ prompt.excerpt }}</p>
-                    {% else %}
-                        <p class="prompt-description text-muted">No description provided for this prompt.</p>
-                    {% endif %}
-                </div>
 
-                <!-- The prompt content -->
-                <div class="sidebar-card mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h3 class="sidebar-title mb-0">Prompt Used</h3>
-                            <button class="btn btn-outline-primary btn-sm copy-btn" onclick="copyPromptText()" id="copyButton">
-                                <i class="fas fa-copy me-1"></i>
-                                <span id="copyButtonText">Copy</span>
-                            </button>
-                        </div>
-                        <div class="prompt-content" id="promptContent">
-                            {{ prompt.content|safe }}
-                        </div>
-                    
-                </div>
-                
-                <div class="prompt-metadata mb-5">
-                    <div class="metadata-item">
-                        <i class="fas fa-robot me-2"></i>
-                        <span>{{ prompt.get_ai_generator_display|default:"Not specified" }}</span>
-                    </div>
-                    <div class="metadata-item">
-                        <i class="fas fa-calendar-alt me-2"></i>
-                        <span>Created <span class="date-text">{{ prompt.created_on|date:"F d, Y" }}</span></span>
-                    </div>
-                    {% if prompt.is_video %}
-                    <div class="metadata-item">
-                        <i class="fas fa-video me-2"></i>
-                        <span>Video Content</span>
-                    </div>
-                    {% endif %}
-                </div>
+            <!-- Title -->
+            <h2 class="prompt-title">
+                {{ prompt.title }}
+                {% if prompt.is_video %}
+                <span class="media-type-indicator">
+                    <i class="fas fa-video"></i>
+                    Video
+                </span>
+                {% endif %}
+            </h2>
 
-                <div class="mb-5">
-                    {% if prompt.tags.all %}
-                        <h3 class="sidebar-title">Tags</h3>
-                        <div class="tags-container">
-                            {% for tag in prompt.tags.all %}
-                                <span class="tag-badge" data-tag="{{ tag.name }}">{{ tag.name }}</span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+            <!-- Description -->
+            {% if prompt.excerpt %}
+            <div class="prompt-description">
+                <p>{{ prompt.excerpt }}</p>
             </div>
-        </div>
+            {% endif %}
 
-        <!-- Comments Section - Rest remains the same -->
-        <div class="col-lg-8">
+            <!-- Spacer -->
+            <hr class="my-4">
+
             <!-- Comments Section -->
-            <div class="comments-section">
-                <h3 class="sidebar-title">Comments ({{ comment_count }})</h3>
-                
+            <div class="comments-section" id="comments">
+                <h3 class="section-title">Comments ({{ comment_count }})</h3>
+
+                <!-- Comment Form (Authenticated Users) -->
+                {% if user.is_authenticated %}
+                <div class="comment-form-wrapper mb-4">
+                    {% load crispy_forms_tags %}
+                    <form id="commentForm" method="post" class="comment-form">
+                        {% csrf_token %}
+                        {{ comment_form|crispy }}
+                        <button id="submitButton" type="submit" class="btn btn-primary mt-3">Submit Comment</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="login-prompt mb-4">
+                    <p><a href="{% url 'account_login' %}?next={{ request.path }}">Log in</a> to leave a comment.</p>
+                </div>
+                {% endif %}
+
                 <!-- Comments List -->
                 <div class="comments-list">
                     {% for comment in comments %}
@@ -269,11 +226,11 @@
                                 <button class="btn btn-small btn-primary" onclick="toggleEditForm({{ comment.id }})">
                                     <i class="fas fa-edit"></i>&nbsp; Edit
                                 </button>
-                                <button type="button" class="btn btn-small btn-primary" 
+                                <button type="button" class="btn btn-small btn-primary"
                                         onclick="confirmDelete('{% url 'prompts:comment_delete' prompt.slug comment.id %}')">
                                     <i class="fas fa-trash"></i>&nbsp; Delete
                                 </button>
-                                
+
                                 <!-- Hidden inline edit form -->
                                 <div id="editForm{{ comment.id }}" style="display: none;" class="mt-3">
                                     <form method="post" action="{% url 'prompts:comment_edit' prompt.slug comment.id %}">
@@ -302,24 +259,115 @@
                 </div>
             </div>
         </div>
-        
-        <div class="col-lg-4 ps-lg-4">
-            {% if user.is_authenticated %}
-            <div>
-                <h3 class="sidebar-title">Leave a comment</h3>
-                {% load crispy_forms_tags %}
-                <form id="commentForm" method="post" class="comment-form">
-                    {% csrf_token %}
-                    {{ comment_form|crispy }}
-                    <button id="submitButton" type="submit" class="btn btn-primary w-100 mt-3">Submit Comment</button>
-                </form>
+
+        <!-- ========================================
+             RIGHT RAIL (col-lg-5)
+             ======================================== -->
+        <div class="col-lg-5 prompt-right-rail">
+
+            <!-- Author Card -->
+            <div class="rail-card author-card-wrapper">
+                <div class="author-card">
+                    <div class="author-avatar">
+                        {% if prompt.author.userprofile.avatar %}
+                            <img src="{{ prompt.author.userprofile.avatar.url }}" alt="{{ prompt.author.username }}'s avatar" class="avatar-img">
+                        {% else %}
+                            <span class="avatar-letter">{{ prompt.author.username|first|upper }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="author-info">
+                        <a href="{% url 'prompts:user_profile' prompt.author.username %}" class="author-name">
+                            @{{ prompt.author.username }}
+                        </a>
+                        <span class="post-time">Posted {{ prompt.created_on|timesince }} ago</span>
+                    </div>
+                </div>
+                <!-- Follow button placeholder (for future implementation) -->
+                <button class="btn btn-outline-primary btn-sm follow-btn" disabled title="Coming Soon">
+                    <i class="fas fa-user-plus me-1"></i> Follow
+                </button>
             </div>
-            {% else %}
-            <div class="sidebar-card">
-                <h3 class="sidebar-title">Join the Discussion</h3>
-                <p>Please <a href="{% url 'account_login' %}">log in</a> to leave a comment.</p>
+
+            <!-- Stats Card -->
+            <div class="rail-card">
+                <h4 class="rail-card-title">Stats</h4>
+                <div class="stats-grid">
+                    {% if can_see_views %}
+                    <div class="stat-item">
+                        <i class="fas fa-eye"></i>
+                        <span class="stat-value">{{ view_count }}</span>
+                        <span class="stat-label">views</span>
+                    </div>
+                    {% endif %}
+                    <div class="stat-item">
+                        <i class="fas fa-heart"></i>
+                        <span class="stat-value">{{ number_of_likes }}</span>
+                        <span class="stat-label">likes</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-comment"></i>
+                        <span class="stat-value">{{ comment_count }}</span>
+                        <span class="stat-label">comments</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Card -->
+            <div class="rail-card">
+                <h4 class="rail-card-title">Details</h4>
+                <div class="details-list">
+                    <div class="detail-item">
+                        <i class="fas fa-robot"></i>
+                        <span>{{ prompt.get_ai_generator_display|default:"Not specified" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>{{ prompt.created_on|date:"F d, Y" }}</span>
+                    </div>
+                    {% if prompt.is_video %}
+                    <div class="detail-item">
+                        <i class="fas fa-video"></i>
+                        <span>Video Content</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Prompt Text Card -->
+            <div class="rail-card prompt-card">
+                <div class="prompt-card-header">
+                    <h4 class="rail-card-title">Prompt</h4>
+                    {% if user.is_authenticated %}
+                    <button class="btn btn-primary btn-sm copy-btn-prominent" onclick="copyPromptText()" id="copyButton">
+                        <i class="fas fa-copy me-1"></i>
+                        <span id="copyButtonText">Copy Prompt</span>
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="prompt-text-content" id="promptContent">
+                    {{ prompt.content|safe }}
+                </div>
+                {% if not user.is_authenticated %}
+                <div class="login-to-copy">
+                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-sign-in-alt me-1"></i> Log in to copy prompt
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Tags Card -->
+            {% if prompt.tags.all %}
+            <div class="rail-card">
+                <h4 class="rail-card-title">Tags</h4>
+                <div class="tags-container">
+                    {% for tag in prompt.tags.all %}
+                        <span class="tag-badge" data-tag="{{ tag.name }}">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
+
         </div>
     </div>
 </div>
@@ -421,6 +469,7 @@
         </div>
     </div>
 </div>
+</div><!-- .prompt-detail-page -->
 
 {% endblock content %}
 

@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 16, 2025
-**Project Status:** Pre-Launch Development - Phase I (URL Migration) Complete, Phase G Parts A, B, C Complete, All Core Phases Complete
+**Last Updated:** December 18, 2025
+**Project Status:** Pre-Launch Development - Phase J (Prompt Detail Redesign) IN PROGRESS, All Core Phases Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -22,9 +22,10 @@
 12. [Feature Specifications](#feature-specifications)
 13. [Trash Bin & Orphaned File Management](#phase-d5-trash-bin--orphaned-file-management-)
 14. [Phase I: URL Migration](#phase-i-url-migration-to-prompts-complete)
-15. [Project Health Checkup Protocol](#-project-health-checkup-protocol)
-16. [Known Technical Debt](#-known-technical-debt)
-17. [Unanswered Questions](#unanswered-questions)
+15. [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-current-priority) **← CURRENT**
+16. [Project Health Checkup Protocol](#-project-health-checkup-protocol)
+17. [Known Technical Debt](#-known-technical-debt)
+18. [Unanswered Questions](#unanswered-questions)
 
 ---
 
@@ -113,6 +114,11 @@
     - ✅ Test suite: 234 tests passing, 46% coverage
     - ✅ Security: Django 5.2.9, urllib3 2.6.0+, sentry-sdk 1.45.1+
     - Agent Rating: 9.17/10 average (@code-reviewer 8.5, @django-pro 9.5, @devops-troubleshooter 9.5)
+  - 🔄 **Phase J:** Prompt Detail Page Redesign ⭐ **IN PROGRESS** (December 2025) **← CURRENT PRIORITY**
+    - ✅ Phase 0: Baseline Analysis Complete (`docs/PROMPT_DETAIL_ANALYSIS.md`)
+    - 📋 Phase 1-8: CSS/JS extraction, 60/40 layout, comments relocation
+    - Target: Improve maintainability from 6/10 to 8+/10
+    - See: [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-current-priority)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
@@ -5540,6 +5546,509 @@ path('ai/<slug:generator>/', RedirectView.as_view(
 - [ ] Contact Midjourney about affiliate program
 - [ ] Evaluate adding 8 new generators
 - [ ] Expand content depth on generator pages
+
+---
+
+## 🎨 Phase J: Prompt Detail Page Redesign (CURRENT PRIORITY)
+
+**Status:** 🔄 IN PROGRESS (December 2025)
+**Priority:** HIGH - Core user experience improvement
+**Estimated Effort:** 8-12 hours across 8 phases
+**Baseline Analysis:** `docs/PROMPT_DETAIL_ANALYSIS.md` (477 lines, completed Dec 18, 2025)
+**Current Template:** `prompts/templates/prompts/prompt_detail.html` (818 lines)
+
+---
+
+### Overview
+
+Transform the prompt detail page from a functional but cluttered layout into a modern, PromptHero-inspired design that prioritizes the visual content while improving code maintainability. This redesign addresses the 6/10 maintainability score identified in Phase 0 analysis.
+
+### Why This Redesign?
+
+**Current Pain Points (from Phase 0 Analysis):**
+- 63 lines of inline CSS (not cached separately)
+- 325 lines of inline JavaScript (not minified/cached)
+- Fixed 8/4 layout regardless of content type
+- Action buttons clustered away from content
+- Copy button buried in sidebar
+- All comments loaded at once (no pagination)
+- 6/10 maintainability score
+
+**Target Improvements:**
+- External CSS/JS for caching and maintainability
+- 60/40 media-focused layout (PromptHero-inspired)
+- Action buttons positioned near content
+- Prominent copy functionality
+- Comments below media (not in sidebar)
+- 8+/10 maintainability score
+
+---
+
+### Design Decisions
+
+#### 1. Layout Structure: 60/40 Two-Column
+
+**Decision:** Media on left (60%), metadata/prompt on right (40%)
+
+**Rationale:**
+- Follows PromptHero's proven UX pattern
+- Prioritizes the visual content (what users come for)
+- Provides adequate space for prompt text without scrolling
+- Better responsive collapse to single column on mobile
+
+**Current vs Target:**
+```
+CURRENT (8/4 Bootstrap):
+┌─────────────────────────────────────────────────────────────┐
+│  col-lg-8 (66.7%)      │  col-lg-4 (33.3%)                  │
+│  • Media               │  • Description                      │
+│                        │  • Prompt Content + Copy            │
+│                        │  • Metadata                         │
+│                        │  • Tags                             │
+└─────────────────────────────────────────────────────────────┘
+
+TARGET (60/40):
+┌─────────────────────────────────────────────────────────────┐
+│  col-lg-7 (60%)        │  col-lg-5 (40%)                    │
+│  • Media (larger)      │  • Title + Author                   │
+│  • Action Bar          │  • Prompt Content + Copy            │
+│                        │  • Description                      │
+│                        │  • Metadata + Tags                  │
+└─────────────────────────────────────────────────────────────┘
+│                    Comments Section (Full Width)             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 2. Comments Placement: Below Media (Full Width)
+
+**Decision:** Move comments from sidebar to full-width section below media
+
+**Rationale:**
+- Comments deserve more horizontal space for readability
+- Sidebar was cramped for longer discussions
+- Full-width allows better threading visualization
+- Matches modern platform patterns (Instagram, ArtStation)
+- Separates "content viewing" from "engagement" sections
+
+#### 3. Action Buttons: Floating on Media
+
+**Decision:** Position key actions (Like, Copy, Share) as floating overlay on media
+
+**Rationale:**
+- Immediate access without scrolling
+- PromptHero-inspired pattern
+- Visual hierarchy emphasizes actions
+- Works for both image and video content
+
+#### 4. Copy Button: Prominent Position
+
+**Decision:** Large, visible copy button near prompt content (not buried)
+
+**Rationale:**
+- Core user action (copying the prompt)
+- Should be 1-click accessible
+- Visual feedback on copy (checkmark animation)
+- PromptHero places this prominently
+
+---
+
+### Target Layout Structure
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         HEADER BAR                                   │
+│  [← Back to Browse]              [Edit] [Delete] [Report]           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────────────────────┐  ┌─────────────────────────────┐  │
+│  │                             │  │  TITLE                       │  │
+│  │                             │  │  by @author • Dec 18, 2025   │  │
+│  │                             │  │                              │  │
+│  │     MEDIA CONTAINER         │  │  ─────────────────────────   │  │
+│  │     (60% width)             │  │                              │  │
+│  │                             │  │  THE PROMPT                  │  │
+│  │     [Image or Video]        │  │  "A cyberpunk cityscape..."  │  │
+│  │                             │  │                              │  │
+│  │                             │  │  [📋 Copy Prompt]            │  │
+│  │  ┌─────────────────────┐   │  │                              │  │
+│  │  │ ♡ 42  💬 5  👁 128  │   │  │  ─────────────────────────   │  │
+│  │  └─────────────────────┘   │  │                              │  │
+│  └─────────────────────────────┘  │  DESCRIPTION                 │  │
+│                                   │  This prompt creates...      │  │
+│                                   │                              │  │
+│                                   │  ─────────────────────────   │  │
+│                                   │                              │  │
+│                                   │  AI Generator: Midjourney    │  │
+│                                   │  Type: Image                 │  │
+│                                   │                              │  │
+│                                   │  Tags: #cyberpunk #neon      │  │
+│                                   │        #cityscape            │  │
+│                                   └─────────────────────────────┘  │
+│                                                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                         COMMENTS SECTION                             │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │  💬 Comments (5)                            [Write a comment]  │  │
+│  ├───────────────────────────────────────────────────────────────┤  │
+│  │  @user1 • 2 hours ago                                         │  │
+│  │  "This is amazing! What settings did you use?"                │  │
+│  │                                                [Reply] [Like]  │  │
+│  ├───────────────────────────────────────────────────────────────┤  │
+│  │  @author • 1 hour ago                                         │  │
+│  │  "Thanks! I used stylize 750 and chaos 20"                    │  │
+│  │                                                [Reply] [Like]  │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│                         [Load More Comments]                         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Implementation Phases
+
+#### Phase 0: Baseline Analysis ✅ COMPLETE
+
+**Status:** ✅ Complete (December 18, 2025)
+**Document:** `docs/PROMPT_DETAIL_ANALYSIS.md`
+
+**Deliverables:**
+- ✅ Template structure analysis (819 lines mapped)
+- ✅ CSS inventory (63 lines inline, external dependencies identified)
+- ✅ JavaScript inventory (325 lines, 8+ functions documented)
+- ✅ Context variables documented (7 variables from view)
+- ✅ Mobile responsiveness assessment
+- ✅ Complexity metrics (6/10 maintainability)
+- ✅ Redesign recommendations
+
+---
+
+#### Phase 1: CSS Extraction (2-3 hours)
+
+**Status:** 📋 Planned
+**Goal:** Move 63 lines of inline CSS to external file
+
+**Tasks:**
+- [ ] Create `static/css/pages/prompt-detail.css`
+- [ ] Extract critical CSS from `{% block extra_head %}`
+- [ ] Resolve `.sidebar-title` duplication (inline vs style.css)
+- [ ] Add CSS file to template `{% block extra_css %}`
+- [ ] Test all visual elements unchanged
+- [ ] Verify no CSS specificity conflicts
+
+**Files to Create:**
+- `static/css/pages/prompt-detail.css` (~100 lines with organization)
+
+**Files to Modify:**
+- `prompts/templates/prompts/prompt_detail.html` (remove inline styles)
+- `templates/base.html` (ensure extra_css block exists)
+
+**Success Criteria:**
+- Zero inline `<style>` tags in template
+- All visual elements identical to before
+- CSS file properly cached by browser
+- No console errors
+
+---
+
+#### Phase 2: JavaScript Extraction (2-3 hours)
+
+**Status:** 📋 Planned
+**Goal:** Move 325 lines of inline JS to external file
+
+**Tasks:**
+- [ ] Create `static/js/prompt-detail.js`
+- [ ] Extract all functions from `{% block extras %}`
+- [ ] Ensure CSRF token handling works externally
+- [ ] Verify all event listeners bind correctly
+- [ ] Test all interactive features:
+  - Like button toggle
+  - Comment form submission
+  - Copy to clipboard
+  - Delete confirmation modal
+  - Report modal
+  - Edit comment toggle
+- [ ] Add JS file to template with `defer` attribute
+
+**Files to Create:**
+- `static/js/prompt-detail.js` (~350 lines with organization)
+
+**Files to Modify:**
+- `prompts/templates/prompts/prompt_detail.html` (remove inline scripts)
+
+**Success Criteria:**
+- Zero inline `<script>` tags in template (except CSRF token)
+- All interactions work identically
+- JS file properly cached
+- No console errors
+
+---
+
+#### Phase 3: Layout Restructure - Grid Change (1-2 hours)
+
+**Status:** 📋 Planned
+**Goal:** Change from 8/4 to 7/5 (60/40) column split
+
+**Tasks:**
+- [ ] Update Bootstrap grid classes (`col-lg-8` → `col-lg-7`, `col-lg-4` → `col-lg-5`)
+- [ ] Adjust media container max-width (824px → 900px)
+- [ ] Test responsive breakpoints
+- [ ] Verify mobile stacking behavior
+
+**Files to Modify:**
+- `prompts/templates/prompts/prompt_detail.html`
+- `static/css/pages/prompt-detail.css`
+
+**Success Criteria:**
+- 60/40 split on desktop (lg+)
+- Proper stacking on mobile
+- Media displays larger
+- No horizontal overflow
+
+---
+
+#### Phase 4: Comments Section Relocation (2-3 hours)
+
+**Status:** 📋 Planned
+**Goal:** Move comments from sidebar to full-width section below
+
+**Tasks:**
+- [ ] Create new full-width comments container after media row
+- [ ] Move comment list HTML to new location
+- [ ] Move comment form to new location
+- [ ] Update CSS for full-width comment cards
+- [ ] Preserve all comment functionality (edit, delete, submit)
+- [ ] Update JavaScript selectors if needed
+- [ ] Test comment AJAX submission
+
+**Files to Modify:**
+- `prompts/templates/prompts/prompt_detail.html`
+- `static/css/pages/prompt-detail.css`
+- `static/js/prompt-detail.js` (if selectors change)
+
+**Success Criteria:**
+- Comments display full-width below media
+- All comment features work (add, edit, delete)
+- Proper spacing and visual hierarchy
+- Mobile responsive
+
+---
+
+#### Phase 5: Action Bar Implementation (1-2 hours)
+
+**Status:** 📋 Planned
+**Goal:** Create floating action bar on media
+
+**Tasks:**
+- [ ] Design action bar component (like, views, comments count)
+- [ ] Position as overlay on media container
+- [ ] Implement hover/focus states
+- [ ] Ensure accessibility (keyboard navigation, ARIA labels)
+- [ ] Handle video controls conflict
+
+**Files to Modify:**
+- `prompts/templates/prompts/prompt_detail.html`
+- `static/css/pages/prompt-detail.css`
+- `static/js/prompt-detail.js`
+
+**Success Criteria:**
+- Action bar visible on media
+- Doesn't interfere with video controls
+- Accessible via keyboard
+- Responsive positioning
+
+---
+
+#### Phase 6: Copy Button Enhancement (1 hour)
+
+**Status:** 📋 Planned
+**Goal:** Make copy button prominent and add feedback
+
+**Tasks:**
+- [ ] Redesign copy button (larger, more visible)
+- [ ] Add copy success animation (checkmark)
+- [ ] Add tooltip feedback ("Copied!")
+- [ ] Position near prompt content (not buried)
+
+**Files to Modify:**
+- `prompts/templates/prompts/prompt_detail.html`
+- `static/css/pages/prompt-detail.css`
+- `static/js/prompt-detail.js`
+
+**Success Criteria:**
+- Copy button immediately visible
+- Visual feedback on click
+- Works on all browsers
+- Accessible
+
+---
+
+#### Phase 7: Header & Navigation Polish (1 hour)
+
+**Status:** 📋 Planned
+**Goal:** Clean header with clear navigation
+
+**Tasks:**
+- [ ] Add "Back to Browse" link
+- [ ] Reorganize edit/delete/report buttons
+- [ ] Ensure breadcrumb integration
+- [ ] Polish title and author display
+
+**Files to Modify:**
+- `prompts/templates/prompts/prompt_detail.html`
+- `static/css/pages/prompt-detail.css`
+
+**Success Criteria:**
+- Clear navigation back
+- Logical button placement
+- Professional header appearance
+
+---
+
+#### Phase 8: Testing & Polish (1-2 hours)
+
+**Status:** 📋 Planned
+**Goal:** Comprehensive testing and final adjustments
+
+**Tasks:**
+- [ ] Cross-browser testing (Chrome, Firefox, Safari, Edge)
+- [ ] Mobile testing (iOS Safari, Android Chrome)
+- [ ] Accessibility audit (WAVE, axe)
+- [ ] Performance check (Lighthouse)
+- [ ] Visual regression comparison
+- [ ] Agent validation (@code-reviewer, @ui-ux-designer)
+
+**Success Criteria:**
+- No visual regressions
+- Lighthouse score ≥90
+- WCAG AA compliance
+- Agent ratings 8+/10
+
+---
+
+### Features to Preserve
+
+**From Phase 0 Analysis - Must Keep Working:**
+
+| Feature | Location | Notes |
+|---------|----------|-------|
+| Like button AJAX | Header actions | Toggle with optimistic UI |
+| Copy to clipboard | Sidebar | With fallback for older browsers |
+| Delete confirmation | Modal | Dynamic title/message |
+| Report modal | Modal | AJAX submission |
+| Comment edit toggle | Comment list | Inline edit form |
+| Comment form validation | Comment section | Character counter |
+| Video autoplay/loop | Media container | With controls |
+| Draft mode banner | Top of page | For unpublished prompts |
+| Owner-only controls | Header | Edit/Delete buttons |
+| View count badge | Header | Conditional visibility |
+
+---
+
+### Features to Add
+
+**PromptHero-Inspired Improvements:**
+
+| Feature | Priority | Phase |
+|---------|----------|-------|
+| Floating action bar on media | High | Phase 5 |
+| Prominent copy button | High | Phase 6 |
+| Full-width comments | High | Phase 4 |
+| Copy success animation | Medium | Phase 6 |
+| Back to browse link | Medium | Phase 7 |
+| Improved mobile layout | Medium | Phase 8 |
+
+---
+
+### Future Features Backlog
+
+**Deferred to Future Phases (Not in Scope):**
+
+| Feature | Complexity | Notes |
+|---------|------------|-------|
+| Image lightbox/zoom | Medium | Click to enlarge |
+| Related prompts section | Medium | Same tags/author |
+| Comment pagination | Low | Load more pattern |
+| Comment threading | High | Reply nesting |
+| Social sharing buttons | Low | Twitter, Pinterest |
+| Prompt versioning | High | Edit history |
+| Download button | Low | High-res download |
+| Favorite/bookmark | Medium | Save to collection |
+
+---
+
+### Technical Dependencies
+
+**Required Before Starting:**
+- Phase 0 analysis complete ✅
+- CSS Cleanup Phase 1 patterns established ✅
+- External JS patterns from navbar extraction ✅
+
+**Files That Will Change:**
+- `prompts/templates/prompts/prompt_detail.html` (major)
+- `static/css/pages/prompt-detail.css` (new)
+- `static/js/prompt-detail.js` (new)
+- `prompts/views/prompt_views.py` (minor, if context changes)
+
+**No Changes Required:**
+- Database models (no schema changes)
+- URL patterns (same routes)
+- View logic (same context variables)
+
+---
+
+### Agent Validation Requirements
+
+**Per Phase Completion:**
+- Minimum 2 agents per phase
+- Required: @code-reviewer (8+/10)
+- Recommended: @ui-ux-designer for visual phases
+- Recommended: @frontend-developer for JS phases
+
+**Final Phase 8:**
+- @code-reviewer: Code quality
+- @ui-ux-designer: Visual design
+- @frontend-developer: JS implementation
+- @security-auditor: If any user input handling changes
+- **Average required: 8+/10**
+
+---
+
+### Success Metrics
+
+**Quantitative:**
+- [ ] Maintainability score: 6/10 → 8+/10
+- [ ] Inline CSS: 63 lines → 0 lines
+- [ ] Inline JS: 325 lines → 0 lines
+- [ ] Lighthouse Performance: ≥90
+- [ ] Lighthouse Accessibility: ≥90
+
+**Qualitative:**
+- [ ] PromptHero-inspired visual appearance
+- [ ] Improved user experience for copying prompts
+- [ ] Better mobile experience
+- [ ] Cleaner codebase for future maintenance
+
+---
+
+### Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| CSS extraction breaks styling | Medium | High | Test each element, use browser dev tools |
+| JS extraction breaks functionality | Medium | High | Test each feature individually |
+| Layout change affects mobile | Low | Medium | Test responsive breakpoints |
+| Comment relocation breaks AJAX | Low | High | Update selectors carefully |
+
+---
+
+### Reference Documents
+
+- **Baseline Analysis:** `docs/PROMPT_DETAIL_ANALYSIS.md` (477 lines)
+- **Current Template:** `prompts/templates/prompts/prompt_detail.html` (818 lines)
+- **View Function:** `prompts/views/prompt_views.py` (lines 303-561)
+- **CSS Patterns:** `static/css/navbar.css` (extraction reference)
+- **JS Patterns:** `static/js/navbar.js` (extraction reference)
 
 ---
 

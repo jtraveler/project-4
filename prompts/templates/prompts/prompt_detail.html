@@ -94,65 +94,6 @@
                 {% endif %}
             </div>
 
-            <!-- Action Icons Row -->
-            <div class="prompt-actions">
-                <!-- Comment Button -->
-                <button class="prompt-action-btn" onclick="scrollToComments()" aria-label="Scroll to comments section" title="Comments">
-                    <i class="fas fa-comment" aria-hidden="true"></i>
-                </button>
-
-                <!-- Edit Button (only for prompt author) -->
-                {% if user.is_authenticated and prompt.author == user %}
-                <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="prompt-action-btn" aria-label="Edit this prompt" title="Edit">
-                    <i class="fas fa-edit" aria-hidden="true"></i>
-                </a>
-                {% endif %}
-
-                <!-- Delete Button (only for prompt author) -->
-                {% if user.is_authenticated and prompt.author == user %}
-                <button class="prompt-action-btn"
-                        onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
-                        aria-label="Delete this prompt" title="Delete">
-                    <i class="fas fa-trash" aria-hidden="true"></i>
-                </button>
-                {% endif %}
-
-                <!-- Like Button -->
-                {% if user.is_authenticated %}
-                    <button class="prompt-action-btn {% if prompt_is_liked %}liked{% endif %}"
-                            data-prompt-slug="{{ prompt.slug }}"
-                            onclick="toggleLike(this)"
-                            aria-label="{% if prompt_is_liked %}Unlike this prompt{% else %}Like this prompt{% endif %}"
-                            title="Like">
-                        <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart" aria-hidden="true"></i>
-                        <span class="like-count">{{ number_of_likes }}</span>
-                    </button>
-                {% else %}
-                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="prompt-action-btn" aria-label="Log in to like this prompt" title="Like">
-                        <i class="far fa-heart" aria-hidden="true"></i>
-                        <span class="like-count">{{ number_of_likes }}</span>
-                    </a>
-                {% endif %}
-
-                <!-- View Count (Phase G Part B) - Visibility controlled by SiteSettings -->
-                {% if can_see_views %}
-                <span class="prompt-action-btn views-display" aria-label="View count" title="Views">
-                    <i class="fas fa-eye" aria-hidden="true"></i>
-                    <span class="view-count">{{ view_count }}</span>
-                </span>
-                {% endif %}
-
-                <!-- Report Button (only for authenticated users, not author) -->
-                {% if user.is_authenticated and prompt.author != user %}
-                <button class="prompt-action-btn"
-                        data-bs-toggle="modal"
-                        data-bs-target="#reportModal"
-                        aria-label="Report this prompt" title="Report">
-                    <i class="fas fa-flag" aria-hidden="true"></i>
-                </button>
-                {% endif %}
-            </div>
-
             <!-- Title -->
             <h2 class="prompt-title">
                 {{ prompt.title }}
@@ -261,64 +202,94 @@
              ======================================== -->
         <div class="col-lg-5 prompt-right-rail">
 
-            <!-- Author Card -->
+            <!-- Author Card with Action Icons (PromptHero Style) -->
             <div class="rail-card author-card-wrapper">
-                <div class="author-card">
-                    <div class="author-avatar">
-                        {% if prompt.author.userprofile.avatar %}
-                            <img src="{{ prompt.author.userprofile.avatar.url }}" alt="{{ prompt.author.username }}'s avatar" class="avatar-img">
-                        {% else %}
-                            <span class="avatar-letter">{{ prompt.author.username|first|upper }}</span>
-                        {% endif %}
+                <div class="author-row">
+                    <div class="author-card">
+                        <div class="author-avatar">
+                            {% if prompt.author.userprofile.avatar %}
+                                <img src="{{ prompt.author.userprofile.avatar.url }}" alt="{{ prompt.author.username }}'s avatar" class="avatar-img">
+                            {% else %}
+                                <span class="avatar-letter">{{ prompt.author.username|first|upper }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="author-info">
+                            <a href="{% url 'prompts:user_profile' prompt.author.username %}" class="author-name">
+                                @{{ prompt.author.username }}
+                            </a>
+                            <span class="post-time">Posted {{ prompt.created_on|timesince }} ago</span>
+                        </div>
                     </div>
-                    <div class="author-info">
-                        <a href="{% url 'prompts:user_profile' prompt.author.username %}" class="author-name">
-                            @{{ prompt.author.username }}
-                        </a>
-                        <span class="post-time">Posted {{ prompt.created_on|timesince }} ago</span>
-                    </div>
+                    <!-- Follow button (outlined style) -->
+                    <button class="follow-btn" disabled title="Coming Soon">
+                        Follow
+                    </button>
                 </div>
-                <!-- Follow button placeholder (for future implementation) -->
-                <button class="btn btn-outline-primary btn-sm follow-btn" disabled title="Coming Soon">
-                    <i class="fas fa-user-plus me-1"></i> Follow
-                </button>
-            </div>
+                <!-- Action Icons Row (right-aligned) -->
+                <div class="author-card-actions">
+                    <!-- Comment Button -->
+                    <button class="action-icon-btn" onclick="scrollToComments()" aria-label="Scroll to comments" title="Comments">
+                        <i class="fas fa-comment" aria-hidden="true"></i>
+                    </button>
 
-            <!-- Stats Card -->
-            <div class="rail-card">
-                <h4 class="rail-card-title">Stats</h4>
-                <div class="stats-grid">
-                    {% if can_see_views %}
-                    <div class="stat-item">
-                        <i class="fas fa-eye"></i>
-                        <span class="stat-value">{{ view_count }}</span>
-                        <span class="stat-label">views</span>
-                    </div>
+                    <!-- Like Button -->
+                    {% if user.is_authenticated %}
+                        <button class="action-icon-btn {% if prompt_is_liked %}liked{% endif %}"
+                                data-prompt-slug="{{ prompt.slug }}"
+                                onclick="toggleLike(this)"
+                                aria-label="{% if prompt_is_liked %}Unlike{% else %}Like{% endif %}"
+                                title="Like">
+                            <i class="{% if prompt_is_liked %}fas{% else %}far{% endif %} fa-heart" aria-hidden="true"></i>
+                            <span class="action-count like-count">{{ number_of_likes }}</span>
+                        </button>
+                    {% else %}
+                        <a href="{% url 'account_login' %}?next={{ request.path }}" class="action-icon-btn" aria-label="Log in to like" title="Like">
+                            <i class="far fa-heart" aria-hidden="true"></i>
+                            <span class="action-count like-count">{{ number_of_likes }}</span>
+                        </a>
                     {% endif %}
-                    <div class="stat-item">
-                        <i class="fas fa-heart"></i>
-                        <span class="stat-value">{{ number_of_likes }}</span>
-                        <span class="stat-label">likes</span>
-                    </div>
-                    <div class="stat-item">
-                        <i class="fas fa-comment"></i>
-                        <span class="stat-value">{{ comment_count }}</span>
-                        <span class="stat-label">comments</span>
-                    </div>
+
+                    <!-- View Count -->
+                    {% if can_see_views %}
+                    <span class="action-icon-btn views-display" aria-label="Views" title="Views">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                        <span class="action-count view-count">{{ view_count }}</span>
+                    </span>
+                    {% endif %}
+
+                    <!-- Edit Button (only for author) -->
+                    {% if user.is_authenticated and prompt.author == user %}
+                    <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-icon-btn" aria-label="Edit" title="Edit">
+                        <i class="fas fa-edit" aria-hidden="true"></i>
+                    </a>
+
+                    <!-- Delete Button (only for author) -->
+                    <button class="action-icon-btn"
+                            onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
+                            aria-label="Delete" title="Delete">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                    </button>
+                    {% endif %}
+
+                    <!-- Report Button (authenticated, not author) -->
+                    {% if user.is_authenticated and prompt.author != user %}
+                    <button class="action-icon-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#reportModal"
+                            aria-label="Report" title="Report">
+                        <i class="fas fa-flag" aria-hidden="true"></i>
+                    </button>
+                    {% endif %}
                 </div>
             </div>
 
             <!-- Details Card -->
-            <div class="rail-card">
+            <div class="rail-card details-card">
                 <h4 class="rail-card-title">Details</h4>
                 <div class="details-list">
                     <div class="detail-item">
                         <i class="fas fa-robot"></i>
                         <span>{{ prompt.get_ai_generator_display|default:"Not specified" }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>{{ prompt.created_on|date:"F d, Y" }}</span>
                     </div>
                     {% if prompt.is_video %}
                     <div class="detail-item">
@@ -331,24 +302,19 @@
 
             <!-- Prompt Text Card -->
             <div class="rail-card prompt-card">
-                <div class="prompt-card-header">
-                    <h4 class="rail-card-title">Prompt</h4>
-                    {% if user.is_authenticated %}
-                    <button class="btn btn-primary btn-sm copy-btn-prominent" onclick="copyPromptText()" id="copyButton">
-                        <i class="fas fa-copy me-1"></i>
-                        <span id="copyButtonText">Copy Prompt</span>
-                    </button>
-                    {% endif %}
-                </div>
+                <h4 class="rail-card-title">Prompt</h4>
                 <div class="prompt-text-content" id="promptContent">
                     {{ prompt.content|safe }}
                 </div>
-                {% if not user.is_authenticated %}
-                <div class="login-to-copy">
-                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn btn-outline-primary btn-sm w-100">
-                        <i class="fas fa-sign-in-alt me-1"></i> Log in to copy prompt
-                    </a>
-                </div>
+                {% if user.is_authenticated %}
+                <button class="copy-btn" onclick="copyPromptText()" id="copyButton">
+                    <i class="fas fa-copy"></i>
+                    <span id="copyButtonText">Copy</span>
+                </button>
+                {% else %}
+                <a href="{% url 'account_login' %}?next={{ request.path }}" class="copy-btn copy-btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Log in to copy
+                </a>
                 {% endif %}
             </div>
 

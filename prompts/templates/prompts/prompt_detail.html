@@ -202,9 +202,10 @@
              ======================================== -->
         <div class="col-lg-5 prompt-right-rail">
 
-            <!-- Author Card with Action Icons (PromptHero Style) -->
-            <div class="rail-card author-card-wrapper">
-                <div class="author-row">
+            <!-- Author + Details Combined Row (PromptHero Style) -->
+            <div class="rail-card author-details-combined">
+                <div class="author-details-row">
+                    <!-- Author Info (Left Side) -->
                     <div class="author-card">
                         <div class="author-avatar">
                             {% if prompt.author.userprofile.avatar %}
@@ -220,13 +221,27 @@
                             <span class="post-time">Posted {{ prompt.created_on|timesince }} ago</span>
                         </div>
                     </div>
+                    <!-- Details Info (Right Side) -->
+                    <div class="details-inline">
+                        <span class="detail-inline-item">
+                            <i class="fas fa-robot"></i>
+                            {{ prompt.get_ai_generator_display|default:"Not specified" }}
+                        </span>
+                        {% if prompt.is_video %}
+                        <span class="detail-inline-item">
+                            <i class="fas fa-video"></i>
+                            Video
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- Action Icons Row -->
+                <div class="author-card-actions">
                     <!-- Follow button (outlined style) -->
                     <button class="follow-btn" disabled title="Coming Soon">
                         Follow
                     </button>
-                </div>
-                <!-- Action Icons Row (right-aligned) -->
-                <div class="author-card-actions">
+
                     <!-- Comment Button -->
                     <button class="action-icon-btn" onclick="scrollToComments()" aria-label="Scroll to comments" title="Comments">
                         <i class="fas fa-comment" aria-hidden="true"></i>
@@ -283,39 +298,24 @@
                 </div>
             </div>
 
-            <!-- Details Card -->
-            <div class="rail-card details-card">
-                <h4 class="rail-card-title">Details</h4>
-                <div class="details-list">
-                    <div class="detail-item">
-                        <i class="fas fa-robot"></i>
-                        <span>{{ prompt.get_ai_generator_display|default:"Not specified" }}</span>
-                    </div>
-                    {% if prompt.is_video %}
-                    <div class="detail-item">
-                        <i class="fas fa-video"></i>
-                        <span>Video Content</span>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
             <!-- Prompt Text Card -->
             <div class="rail-card prompt-card">
-                <h4 class="rail-card-title">Prompt</h4>
+                <div class="prompt-card-header">
+                    <h4 class="rail-card-title">Prompt</h4>
+                    {% if user.is_authenticated %}
+                    <button class="copy-btn" onclick="copyPromptText()" id="copyButton">
+                        <i class="fas fa-copy"></i>
+                        <span id="copyButtonText">Copy</span>
+                    </button>
+                    {% else %}
+                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="copy-btn copy-btn-login">
+                        <i class="fas fa-sign-in-alt"></i> Log in
+                    </a>
+                    {% endif %}
+                </div>
                 <div class="prompt-text-content" id="promptContent">
                     {{ prompt.content|safe }}
                 </div>
-                {% if user.is_authenticated %}
-                <button class="copy-btn" onclick="copyPromptText()" id="copyButton">
-                    <i class="fas fa-copy"></i>
-                    <span id="copyButtonText">Copy</span>
-                </button>
-                {% else %}
-                <a href="{% url 'account_login' %}?next={{ request.path }}" class="copy-btn copy-btn-login">
-                    <i class="fas fa-sign-in-alt"></i> Log in to copy
-                </a>
-                {% endif %}
             </div>
 
             <!-- Tags Card -->

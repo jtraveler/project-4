@@ -1,0 +1,100 @@
+/**
+ * Prompt Detail Page Styles
+ *
+ * Extracted from prompt_detail.html as part of Phase J.0.5
+ * CSS Architecture Cleanup
+ *
+ * @file static/css/pages/prompt-detail.css
+ * @author PromptFinder Team
+ * @version 1.0.0
+ * @date December 2025
+ */
+
+/* ==========================================================================
+   Hero Image Shell
+   Container for the main media display (image or video)
+   ========================================================================== */
+
+.hero-image-shell {
+    position: relative;
+    width: 100%;
+    max-width: 824px;
+    background: var(--light-blue);
+    height: 100%;
+    border-radius: 1.5rem;
+    padding: 1rem;
+}
+
+/* ==========================================================================
+   Hero Image
+   Styling for images in the detail page
+   ========================================================================== */
+
+.hero-image {
+    width: 100%;
+    max-width: 100%;
+    max-height: 800px;
+    height: auto;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    display: block;
+    object-fit: scale-down;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* ==========================================================================
+   Hero Video
+   Styling for videos in the detail page
+   ========================================================================== */
+
+.hero-video {
+    width: auto;
+    max-width: 100%;
+    max-height: 800px;
+    height: auto;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    display: block;
+    object-fit: cover;
+}
+
+/* ==========================================================================
+   Action Buttons
+   Container for the like, edit, delete, report buttons
+   ========================================================================== */
+
+.action-buttons {
+    margin-bottom: 1.5rem;
+}
+
+/* ==========================================================================
+   Sidebar Title
+   Section headers in the sidebar
+   ========================================================================== */
+
+.sidebar-title {
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* ==========================================================================
+   Media Type Indicator
+   Badge showing video/image type next to title
+   ========================================================================== */
+
+.media-type-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--light-blue);
+    color: var(--main-blue);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-left: 1rem;
+}

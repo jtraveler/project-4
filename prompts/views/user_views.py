@@ -78,9 +78,8 @@ def user_profile(request, username, active_tab=None):
     # Get sort order from query params (default: 'recency')
     sort_order = request.GET.get('sort', 'recency')
 
-    # Check if viewing user is the profile owner or staff
+    # Check if viewing user is the profile owner
     is_owner = request.user.is_authenticated and request.user == profile_user
-    is_staff = request.user.is_authenticated and request.user.is_staff
 
     # PERFORMANCE OPTIMIZATION: Prefetch all relations to avoid N+1 queries
     # Same pattern as PromptList (homepage) - proven to reduce queries from 55 to 7
@@ -97,15 +96,17 @@ def user_profile(request, username, active_tab=None):
         )
     )
 
-    # Base queryset: Show drafts to owner and staff, published to everyone else
-    if is_owner or is_staff:
-        # Owner and staff see all prompts (published and draft, exclude deleted)
+    # Base queryset: Show drafts ONLY to owner, published to everyone else
+    # Note: Staff/admins should NOT see drafts on other users' profiles
+    # (they would get 404 on detail view anyway - keep UI consistent)
+    if is_owner:
+        # Owner sees all their prompts (published and draft, exclude deleted)
         prompts = base_queryset.filter(
             author=profile_user,
             deleted_at__isnull=True  # Not in trash
         )
     else:
-        # Others see published prompts only
+        # Everyone else (including staff) sees published prompts only
         prompts = base_queryset.filter(
             author=profile_user,
             status=1,  # Published only

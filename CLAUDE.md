@@ -7632,6 +7632,53 @@ Periodic audits ensure documentation accuracy, codebase organization, and identi
 | PROJECT_FILE_STRUCTURE.md outdated | Updated with accurate counts | Dec 13, 2025 |
 | Orphaned Cloudinary files | Detection command implemented | Oct 2025 |
 | Missing PromptView import | Fixed in Phase I | Dec 2025 |
+| Avatar orphaned files (Cloudinary) | AvatarChangeLog audit trail + signals | Dec 19, 2025 |
+
+### Future Feature: Admin Dashboard for Avatar Analytics
+
+**Status:** 📋 DOCUMENTED (Infrastructure Ready)
+**Added:** December 19, 2025
+**Priority:** Low (Phase 4+)
+**Effort:** 2-3 days
+
+**Infrastructure Completed:**
+- ✅ `AvatarChangeLog` model tracks all avatar changes
+- ✅ `AvatarChangeLogAdmin` provides read-only audit interface
+- ✅ Signal handlers create log entries automatically
+- ✅ Database index on `(user, -created_at)` for efficient queries
+
+**Future Dashboard Features:**
+When this dashboard is implemented, it could leverage the `AvatarChangeLog` data for:
+
+| Feature | Data Source | Description |
+|---------|-------------|-------------|
+| Avatar Activity Chart | `AvatarChangeLog.created_at` | Line chart showing avatar changes over time |
+| Action Distribution | `AvatarChangeLog.action` | Pie chart: uploads vs replacements vs deletions |
+| Failed Deletions Alert | `action='delete_failed'` | List of Cloudinary sync issues needing attention |
+| User Avatar History | Filter by `user` | Timeline of a specific user's avatar changes |
+| Orphan Detection | `old_public_id` analysis | Cross-reference with Cloudinary for orphans |
+
+**Query Examples for Dashboard:**
+```python
+# Total avatar changes by action type
+AvatarChangeLog.objects.values('action').annotate(count=Count('id'))
+
+# Failed deletions requiring attention
+AvatarChangeLog.objects.filter(action='delete_failed').select_related('user')
+
+# Avatar changes in last 30 days
+AvatarChangeLog.objects.filter(created_at__gte=timezone.now() - timedelta(days=30))
+
+# Most active avatar changers
+AvatarChangeLog.objects.values('user__username').annotate(
+    changes=Count('id')
+).order_by('-changes')[:10]
+```
+
+**Implementation Notes:**
+- Consider Chart.js or similar for visualizations
+- Add to existing Django admin or create custom dashboard view
+- May integrate with broader "Admin Analytics" feature
 
 ### CI/CD Annotations (Non-Critical)
 

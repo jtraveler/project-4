@@ -40,6 +40,7 @@
   --link-color: #007bff;                    /* Bootstrap primary blue */
   --link-color-hover: #0056b3;               /* Darker blue for hover */
   --notification-red: #ef4444;               /* Notification badge red */
+  --color-liked: #ff3a78;                    /* Liked heart pink/red */
   --hover-bg-light: rgba(0, 0, 0, 0.05);    /* Light hover background */
 
   /* === SPACING SYSTEM (8px base) === */

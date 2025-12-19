@@ -207,13 +207,13 @@
             const textToCopy = promptContent.textContent || promptContent.innerText;
             await navigator.clipboard.writeText(textToCopy);
 
-            copyIcon.className = 'fas fa-check me-1';
+            copyIcon.className = 'fas fa-check';
             copyButtonText.textContent = 'Copied!';
             copyButton.classList.remove('btn-outline-primary');
             copyButton.classList.add('btn-success');
 
             setTimeout(() => {
-                copyIcon.className = 'fas fa-copy me-1';
+                copyIcon.className = 'far fa-copy';
                 copyButtonText.textContent = 'Copy';
                 copyButton.classList.remove('btn-success');
                 copyButton.classList.add('btn-outline-primary');

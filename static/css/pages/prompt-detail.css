@@ -479,9 +479,9 @@
 }
 
 .action-icon-btn.liked {
-    background-color: #fff0f0;
+    background-color: #fff0f3;
     border-color: #ffcdd2;
-    color: #e53935;
+    color: var(--color-liked);
 }
 
 .action-icon-btn.liked:hover {
@@ -500,7 +500,11 @@
 
 .action-count {
     font-weight: 500;
-    font-size: 0.8125rem;
+    font-size: 0.9125rem;
+    font-family: inherit;
+    min-width: 1.25rem;
+    text-align: center;
+    display: inline-block;
 }
 
 /* Focus states for accessibility (WCAG 2.1) */

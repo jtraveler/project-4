@@ -126,30 +126,28 @@ def ensure_email_preferences_exist(sender, instance, created, **kwargs):
 
 
 @receiver(pre_save, sender=UserProfile)
-def delete_old_avatar_on_change(sender, instance, **kwargs):
+def store_old_avatar_reference(sender, instance, **kwargs):
     """
-    Delete old Cloudinary avatar when user uploads a new one.
+    Store reference to old avatar before save for cleanup after successful save.
 
-    This signal fires BEFORE saving the UserProfile, allowing us to:
+    This signal fires BEFORE saving the UserProfile to:
     1. Check if this is an update (not a new profile creation)
     2. Compare the old avatar with the new avatar
-    3. Delete the old avatar from Cloudinary if they differ
+    3. Store the old avatar's public_id for deletion AFTER successful save
 
-    Benefits:
-    - Prevents orphaned Cloudinary files
-    - Saves storage space
-    - Keeps Cloudinary clean
-
-    Error Handling:
-    - Catches and logs all errors without blocking save operation
-    - UserProfile will save even if Cloudinary deletion fails
+    WHY post_save deletion (not pre_save):
+    - If we delete in pre_save and the save fails, we lose the old avatar forever
+    - By storing the reference and deleting in post_save, we only delete after
+      the new avatar is successfully saved
+    - This prevents orphaned database references when uploads fail
 
     Example:
-        User uploads new avatar → pre_save signal → delete old avatar → save new avatar
+        User uploads new avatar → pre_save stores old ref → save succeeds →
+        post_save deletes old avatar
     """
     # Skip if this is a new profile (no pk yet)
     if not instance.pk:
-        logger.debug(f"Skipping avatar cleanup for new profile: {instance.user.username}")
+        instance._old_avatar_to_delete = None
         return
 
     try:
@@ -158,29 +156,56 @@ def delete_old_avatar_on_change(sender, instance, **kwargs):
 
         # Check if avatar changed
         if old_profile.avatar and old_profile.avatar != instance.avatar:
-            # Delete old avatar from Cloudinary
-            try:
-                cloudinary.uploader.destroy(
-                    old_profile.avatar.public_id,
-                    resource_type='image'
-                )
-                logger.info(
-                    f"✅ Deleted old avatar for user: {instance.user.username} "
-                    f"(public_id: {old_profile.avatar.public_id})"
-                )
-            except Exception as cloudinary_error:
-                logger.warning(
-                    f"⚠️ Failed to delete old avatar from Cloudinary for {instance.user.username}: "
-                    f"{cloudinary_error}. Continuing with save."
-                )
+            # Store the public_id for deletion after successful save
+            instance._old_avatar_to_delete = old_profile.avatar.public_id
+            logger.debug(
+                f"Stored old avatar reference for deletion: {old_profile.avatar.public_id}"
+            )
+        else:
+            instance._old_avatar_to_delete = None
 
     except UserProfile.DoesNotExist:
-        # Should not happen (we checked pk), but handle gracefully
-        logger.warning(f"UserProfile not found in database during pre_save: {instance.pk}")
-        pass
+        instance._old_avatar_to_delete = None
     except Exception as e:
-        # Catch any other unexpected errors
         logger.error(
-            f"❌ Unexpected error in avatar cleanup for {instance.user.username}: {e}",
+            f"❌ Error storing old avatar reference for {instance.user.username}: {e}",
             exc_info=True
         )
+        instance._old_avatar_to_delete = None
+
+
+@receiver(post_save, sender=UserProfile)
+def delete_old_avatar_after_save(sender, instance, **kwargs):
+    """
+    Delete old avatar from Cloudinary AFTER new one is successfully saved.
+
+    This signal fires AFTER saving the UserProfile to:
+    1. Check if we have an old avatar reference to delete
+    2. Delete the old avatar from Cloudinary
+    3. Clear the reference to prevent duplicate deletions
+
+    Benefits:
+    - Only deletes old avatar after new one is successfully saved
+    - Prevents orphaned database references if save fails
+    - Prevents data loss on upload failures
+
+    Error Handling:
+    - Catches and logs all errors
+    - Clears reference even on failure to prevent duplicate attempts
+    """
+    old_avatar_public_id = getattr(instance, '_old_avatar_to_delete', None)
+
+    if old_avatar_public_id:
+        try:
+            cloudinary.uploader.destroy(old_avatar_public_id, resource_type='image')
+            logger.info(
+                f"✅ Deleted old avatar for user: {instance.user.username} "
+                f"(public_id: {old_avatar_public_id})"
+            )
+        except Exception as e:
+            logger.warning(
+                f"⚠️ Failed to delete old avatar {old_avatar_public_id}: {e}"
+            )
+        finally:
+            # Clear the reference to prevent duplicate deletion attempts
+            instance._old_avatar_to_delete = None

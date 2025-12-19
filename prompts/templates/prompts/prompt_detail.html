@@ -206,29 +206,32 @@
             <!-- Author Card (PromptHero Style - Two Column Layout) -->
             <div class="rail-card author-details-combined">
                 <div class="author-details-row">
-                    <!-- Left Column: Avatar + Info -->
-                    <div class="author-card">
-                        <div class="author-avatar">
-                            {% if prompt.author.userprofile.avatar %}
-                                <img src="{{ prompt.author.userprofile.avatar.url }}" alt="{{ prompt.author.username }}'s avatar" class="avatar-img">
-                            {% else %}
-                                <span class="avatar-letter">{{ prompt.author.username|first|upper }}</span>
-                            {% endif %}
+                    <!-- First Row: Avatar + Follow Button (flex container) -->
+                    <div class="author-first-row">
+                        <!-- Left Column: Avatar + Info -->
+                        <div class="author-card">
+                            <div class="author-avatar">
+                                {% if prompt.author.userprofile.avatar %}
+                                    <img src="{{ prompt.author.userprofile.avatar.url }}" alt="{{ prompt.author.username }}'s avatar" class="avatar-img">
+                                {% else %}
+                                    <span class="avatar-letter">{{ prompt.author.username|first|upper }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="author-info">
+                                <a href="{% url 'prompts:user_profile' prompt.author.username %}" class="author-name">
+                                    @{{ prompt.author.username }}
+                                </a>
+                                <span class="post-time">{{ prompt.created_on|simple_timesince }}</span>
+                            </div>
                         </div>
-                        <div class="author-info">
-                            <a href="{% url 'prompts:user_profile' prompt.author.username %}" class="author-name">
-                                @{{ prompt.author.username }}
-                            </a>
-                            <span class="post-time">{{ prompt.created_on|simple_timesince }}</span>
+                        <!-- Right Column: Follow Button -->
+                        <div class="author-card-right">
+                            <button class="follow-btn" disabled title="Coming Soon">
+                                Follow
+                            </button>
                         </div>
                     </div>
-                    <!-- Right Column: Follow Button -->
-                    <div class="author-card-right">
-                        <button class="follow-btn" disabled title="Coming Soon">
-                            Follow
-                        </button>
-                    </div>
-                    <!-- Views Row (inside author-details-row, at bottom) -->
+                    <!-- Views Row (block-level sibling, naturally on new line) -->
                     {% if can_see_views %}
                     <div class="views-row">
                         <span class="views-count" aria-label="Views" title="Views">

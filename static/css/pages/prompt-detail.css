@@ -263,19 +263,22 @@
     gap: var(--spacing-sm);
 }
 
+/* Author details container - simple block layout */
 .author-details-row {
-    display: flex;
-    align-items: start;
-    justify-content: space-between;
-    gap: var(--spacing-md);
-    flex-wrap: wrap;
-    width: 100%;
+    display: block;
 }
 
-/* Views Row - Dedicated row below author card */
+/* First row: Avatar + Follow - flex container */
+.author-first-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+/* Views Row - Block sibling, naturally on new line */
 .views-row {
-    width: 100%;
-    margin-top: 0.75rem;
+    margin-top: 0.5rem;
     font-size: 0.875rem;
     color: #6b7280;
 }

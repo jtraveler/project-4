@@ -530,6 +530,15 @@ def prompt_detail(request, slug):
     view_count = prompt.get_view_count()
     can_see_views = prompt.can_see_view_count(request.user)
 
+    # Check if current user follows the prompt author (for Follow button)
+    is_following_author = False
+    if request.user.is_authenticated and request.user != prompt.author:
+        from prompts.models import Follow
+        is_following_author = Follow.objects.filter(
+            follower=request.user,
+            following=prompt.author
+        ).exists()
+
     end_time = time.time()
     logger.warning(
         f"DEBUG: prompt_detail view took {end_time - start_time:.3f} seconds"
@@ -550,6 +559,7 @@ def prompt_detail(request, slug):
             "prompt_is_liked": liked,
             "view_count": view_count,
             "can_see_views": can_see_views,
+            "is_following_author": is_following_author,
         },
     )
 

@@ -374,6 +374,92 @@
     }
 
     /* ==========================================================================
+       Follow Button Toggle
+       Handles AJAX follow/unfollow functionality for prompt author
+       ========================================================================== */
+
+    function initFollowButton() {
+        const followBtn = document.querySelector('.follow-btn[data-username]');
+        if (!followBtn) return;
+
+        followBtn.addEventListener('click', function(event) {
+            event.preventDefault();
+            if (this.disabled) return;
+
+            const username = this.dataset.username;
+            const isFollowing = this.dataset.following === 'true';
+            const spinner = this.querySelector('.spinner-border');
+            const btnText = this.querySelector('.btn-text');
+
+            // Disable button and show spinner
+            this.disabled = true;
+            if (spinner) spinner.classList.remove('d-none');
+
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                              document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                this.disabled = false;
+                if (spinner) spinner.classList.add('d-none');
+                return;
+            }
+
+            const url = isFollowing
+                ? `/users/${username}/unfollow/`
+                : `/users/${username}/follow/`;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Toggle state
+                    const newFollowing = !isFollowing;
+                    this.dataset.following = newFollowing.toString();
+                    if (btnText) btnText.textContent = newFollowing ? 'Following' : 'Follow';
+                    this.classList.toggle('following', newFollowing);
+                    this.setAttribute('aria-label', (newFollowing ? 'Unfollow ' : 'Follow ') + username);
+                } else {
+                    console.error('Follow action failed:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                this.disabled = false;
+                if (spinner) spinner.classList.add('d-none');
+            });
+        });
+
+        // Hover effects for following button
+        followBtn.addEventListener('mouseenter', function() {
+            if (this.classList.contains('following')) {
+                const btnText = this.querySelector('.btn-text');
+                if (btnText) btnText.textContent = 'Unfollow';
+                this.classList.add('hover-unfollow');
+            }
+        });
+
+        followBtn.addEventListener('mouseleave', function() {
+            if (this.classList.contains('following')) {
+                const btnText = this.querySelector('.btn-text');
+                if (btnText) btnText.textContent = 'Following';
+                this.classList.remove('hover-unfollow');
+            }
+        });
+    }
+
+    /* ==========================================================================
        Tag Badge Click Handler
        Makes tag badges clickable to filter by tag
        ========================================================================== */
@@ -408,6 +494,9 @@
 
         // Initialize report form
         initReportForm();
+
+        // Initialize follow button
+        initFollowButton();
     }
 
     // Initialize when DOM is ready

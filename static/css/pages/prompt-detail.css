@@ -53,7 +53,8 @@
     display: block;
     margin: 0 auto;
     object-fit: contain;
-    background-color: var(--gray-100);
+    background-color: var(--gray-200);
+    padding: 30px;
 }
 
 /* Hero Video Styling */
@@ -412,6 +413,19 @@
     cursor: not-allowed;
 }
 
+.follow-btn.following {
+    background: var(--white);
+    color: var(--gray-700);
+    border-color: var(--gray-300);
+}
+
+.follow-btn.following:hover,
+.follow-btn.hover-unfollow {
+    background: var(--error-light);
+    color: var(--error);
+    border-color: var(--error);
+}
+
 /* Action Icons Row */
 .author-card-actions {
     display: flex;
@@ -665,8 +679,8 @@
 .tag-badge {
     display: inline-block;
     padding: 0.375rem 0.75rem;
-    background: #e5e7eb;
-    color: #374151;
+    background: var(--gray-200);
+    color: var(--gray-700);
     border-radius: 50px;
     font-size: 0.8rem;
     font-weight: 500;
@@ -676,8 +690,8 @@
 }
 
 .tag-badge:hover {
-    background: #d1d5db;
-    color: #1f2937;
+    background: var(--gray-300);
+    color: var(--gray-900);
 }
 
 /* ==========================================================================

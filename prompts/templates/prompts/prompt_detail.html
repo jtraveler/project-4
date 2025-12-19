@@ -226,9 +226,19 @@
                         </div>
                         <!-- Right Column: Follow Button -->
                         <div class="author-card-right">
-                            <button class="follow-btn" disabled title="Coming Soon">
-                                Follow
+                            {% if user.is_authenticated and user != prompt.author %}
+                            <button class="follow-btn {% if is_following_author %}following{% endif %}"
+                                    data-username="{{ prompt.author.username }}"
+                                    data-following="{{ is_following_author|yesno:'true,false' }}"
+                                    aria-label="{% if is_following_author %}Unfollow{% else %}Follow{% endif %} {{ prompt.author.username }}">
+                                <span class="btn-text">{% if is_following_author %}Following{% else %}Follow{% endif %}</span>
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                             </button>
+                            {% elif not user.is_authenticated %}
+                            <a href="{% url 'account_login' %}?next={{ request.path }}" class="follow-btn" aria-label="Log in to follow">
+                                Follow
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                     <!-- Views Row (block-level sibling, naturally on new line) -->

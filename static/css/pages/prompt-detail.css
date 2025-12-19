@@ -43,9 +43,12 @@
     overflow: hidden;
 }
 
-/* Remove container background when containing a video (prevents grey bars on sides) */
+/* Video container: shrink to fit video's natural size, center horizontally */
 .prompt-media-container:has(.hero-video) {
     background: transparent;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Hero Image & Video Styling (shared properties) */
@@ -67,11 +70,13 @@
     padding: 30px;
 }
 
-/* Video-specific styling: no padding/background (video player has own frame) */
+/* Video-specific styling: display at natural size, no stretching */
 .hero-video {
+    width: auto;              /* Override width: 100% - use natural size */
+    max-width: 100%;          /* Don't exceed column width */
     background-color: transparent;
     padding: 0;
-    object-fit: cover; /* Fill container for videos */
+    object-fit: contain;      /* Preserve aspect ratio, no cropping */
 }
 
 /* Placeholder Image */

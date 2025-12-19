@@ -103,7 +103,7 @@
 
 .tag-pill .remove-tag {
     margin-left: 8px;
-    color: #9ca3af;
+    color: var(--gray-400);
     cursor: pointer;
     font-weight: bold;
 }
@@ -237,7 +237,7 @@
             <!-- Tags -->
             <div class="mb-4">
                 <label class="form-label">
-                    Tags <span style="color: #9ca3af;">(optional)</span>
+                    Tags <span style="color: var(--gray-400);">(optional)</span>
                 </label>
                 <p class="helper-text mb-2">
                     {% if resource_type == 'video' %}Add relevant tags to describe your video{% else %}Suggested tags (you can edit or add your own){% endif %}
@@ -322,7 +322,7 @@
                 <button type="button" class="btn-delete" id="delete-upload">
                     <i class="fas fa-trash me-2"></i> Delete this upload
                 </button>
-                <span style="color: #9ca3af;">(1/1)</span>
+                <span style="color: var(--gray-400);">(1/1)</span>
                 <button type="submit" class="btn-submit">
                     Submit your content
                 </button>

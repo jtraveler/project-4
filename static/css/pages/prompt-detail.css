@@ -727,8 +727,19 @@
 }
 
 /* ==========================================================================
+   Comments Column
+   Separate column that spans 7 cols on desktop, full width on mobile
+   ========================================================================== */
+
+.comments-column {
+    /* On desktop (lg+), limit to 7 columns width to align with left column */
+    flex: 0 0 58.333333%;
+    max-width: 58.333333%;
+}
+
+/* ==========================================================================
    Comments Section
-   Comment list and form in left column
+   Comment list and form
    ========================================================================== */
 
 .comments-section {
@@ -929,6 +940,33 @@
         min-width: 44px;
         min-height: 44px;
         justify-content: center;
+    }
+
+    /* Reorder columns on mobile/tablet: Left → Comments → Right Rail
+       UX rationale: Users read content, discuss, then see metadata
+       WCAG 1.3.2: Visual order matches logical reading flow */
+    .prompt-content-wrapper > .row {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .prompt-content-wrapper > .row > .prompt-left-column {
+        order: 1;
+    }
+
+    .prompt-content-wrapper > .row > .comments-column {
+        order: 2;
+    }
+
+    .prompt-content-wrapper > .row > .prompt-right-rail {
+        order: 3;
+    }
+
+    /* Comments column: full width and proper spacing on mobile */
+    .comments-column {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-top: var(--spacing-md, 1rem);
     }
 }
 

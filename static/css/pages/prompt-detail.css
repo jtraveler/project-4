@@ -43,8 +43,9 @@
     overflow: hidden;
 }
 
-/* Hero Image Styling */
-.hero-image {
+/* Hero Image & Video Styling (shared properties) */
+.hero-image,
+.hero-video {
     width: 100%;
     max-width: 100%;
     max-height: 800px;
@@ -55,19 +56,6 @@
     object-fit: contain;
     background-color: var(--gray-200);
     padding: 30px;
-}
-
-/* Hero Video Styling */
-.hero-video {
-    width: 100%;
-    max-width: 100%;
-    max-height: 800px;
-    height: auto;
-    border-radius: 12px;
-    display: block;
-    margin: 0 auto;
-    object-fit: contain;
-    background-color: #000;
 }
 
 /* Placeholder Image */

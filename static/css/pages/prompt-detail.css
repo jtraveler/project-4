@@ -44,9 +44,11 @@
     overflow: hidden;
 }
 
-/* Video container: remove width: fit-content, keep same padding/background as images */
+/* Video container: shrink to fit video's natural size, centered */
 .prompt-media-container:has(.hero-video) {
-    /* Inherits background and padding from .prompt-media-container */
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Hero Image & Video Styling (shared properties) */

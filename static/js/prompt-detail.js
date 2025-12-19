@@ -67,10 +67,10 @@
 
             if (data.liked) {
                 button.classList.add('liked');
-                heartIcon.className = 'fas fa-heart me-2';
+                heartIcon.className = 'fas fa-heart';
             } else {
                 button.classList.remove('liked');
-                heartIcon.className = 'far fa-heart me-2';
+                heartIcon.className = 'far fa-heart';
             }
         })
         .catch(error => {

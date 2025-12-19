@@ -261,7 +261,7 @@
                 <div class="author-card-actions">
                     <!-- Comment Button -->
                     <button class="action-icon-btn" onclick="scrollToComments()" aria-label="Scroll to comments" title="Comments">
-                        <i class="fas fa-comment" aria-hidden="true"></i>
+                        <i class="far fa-comment" aria-hidden="true"></i>
                     </button>
 
                     <!-- Like Button -->
@@ -284,14 +284,14 @@
                     <!-- Edit Button (only for author) -->
                     {% if user.is_authenticated and prompt.author == user %}
                     <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-icon-btn" aria-label="Edit" title="Edit">
-                        <i class="fas fa-edit" aria-hidden="true"></i>
+                        <i class="far fa-edit" aria-hidden="true"></i>
                     </a>
 
                     <!-- Delete Button (only for author) -->
                     <button class="action-icon-btn"
                             onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
                             aria-label="Delete" title="Delete">
-                        <i class="fas fa-trash" aria-hidden="true"></i>
+                        <i class="far fa-trash-alt" aria-hidden="true"></i>
                     </button>
                     {% endif %}
 
@@ -301,7 +301,7 @@
                             data-bs-toggle="modal"
                             data-bs-target="#reportModal"
                             aria-label="Report" title="Report">
-                        <i class="fas fa-flag" aria-hidden="true"></i>
+                        <i class="far fa-flag" aria-hidden="true"></i>
                     </button>
                     {% endif %}
                 </div>

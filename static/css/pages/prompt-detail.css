@@ -452,18 +452,21 @@
 .action-icon-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.25rem;
-    color: #6b7280;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    color: var(--gray-600);
     font-size: 0.875rem;
-    background: none;
-    border: none;
-    padding: 0.25rem;
     cursor: pointer;
     text-decoration: none;
-    transition: color 0.15s ease;
+    transition: background-color 0.2s ease;
 }
 
 .action-icon-btn:hover {
+    background-color: var(--gray-200);
     color: var(--text-dark);
 }
 
@@ -472,10 +475,13 @@
 }
 
 .action-icon-btn.liked {
+    background-color: #fff0f0;
+    border-color: #ffcdd2;
     color: #e53935;
 }
 
 .action-icon-btn.liked:hover {
+    background-color: #ffebee;
     color: #c62828;
 }
 
@@ -484,7 +490,8 @@
 }
 
 .action-icon-btn.views-display:hover {
-    color: #6b7280;
+    background-color: var(--gray-100);
+    color: var(--gray-600);
 }
 
 .action-count {
@@ -494,9 +501,13 @@
 
 /* Focus states for accessibility (WCAG 2.1) */
 .follow-btn:focus,
-.copy-btn:focus,
-.action-icon-btn:focus {
+.copy-btn:focus {
     outline: 2px solid var(--main-blue, #1976d2);
+    outline-offset: 2px;
+}
+
+.action-icon-btn:focus {
+    outline: 2px solid var(--gray-400);
     outline-offset: 2px;
 }
 

@@ -222,8 +222,14 @@
                             <span class="post-time">{{ prompt.created_on|simple_timesince }}</span>
                         </div>
                     </div>
-                    <!-- Right Column: Follow Button -->
-                    <div class="author-card-right">
+                    <!-- Right Column: Views + Follow Button -->
+                    <div class="author-card-right details-inline">
+                        {% if can_see_views %}
+                        <span class="detail-inline-item" aria-label="Views" title="Views">
+                            <i class="fas fa-eye" aria-hidden="true"></i>
+                            <span class="view-count">{{ view_count }}</span>
+                        </span>
+                        {% endif %}
                         <button class="follow-btn" disabled title="Coming Soon">
                             Follow
                         </button>
@@ -251,14 +257,6 @@
                             <i class="far fa-heart" aria-hidden="true"></i>
                             <span class="action-count like-count">{{ number_of_likes }}</span>
                         </a>
-                    {% endif %}
-
-                    <!-- View Count -->
-                    {% if can_see_views %}
-                    <span class="action-icon-btn views-display" aria-label="Views" title="Views">
-                        <i class="fas fa-eye" aria-hidden="true"></i>
-                        <span class="action-count view-count">{{ view_count }}</span>
-                    </span>
                     {% endif %}
 
                     <!-- Edit Button (only for author) -->

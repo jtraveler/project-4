@@ -455,8 +455,11 @@
     justify-content: center;
     gap: 0.25rem;
     padding: 0.5rem 0.75rem;
-    background-color: var(--gray-100);
-    border: 1px solid var(--gray-200);
+    min-height: 36px;
+    min-width: 36px;
+    box-sizing: border-box;
+    background-color: var(--white);
+    border: 1px solid var(--gray-300);
     border-radius: 6px;
     color: var(--gray-600);
     font-size: 0.875rem;
@@ -471,7 +474,8 @@
 }
 
 .action-icon-btn i {
-    font-size: 1rem;
+    font-size: 1.125rem;
+    line-height: 1;
 }
 
 .action-icon-btn.liked {
@@ -490,7 +494,7 @@
 }
 
 .action-icon-btn.views-display:hover {
-    background-color: var(--gray-100);
+    background-color: var(--white);
     color: var(--gray-600);
 }
 

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load cloudinary_tags %}
+{% load prompt_tags %}
 
 {% block extra_head %}
 <!-- DNS prefetch for external resources -->
@@ -203,7 +204,6 @@
         <div class="col-lg-5 prompt-right-rail">
 
             <!-- Author Card (PromptHero Style - Two Column Layout) -->
-            {% load prompt_tags %}
             <div class="rail-card author-details-combined">
                 <div class="author-details-row">
                     <!-- Left Column: Avatar + Info -->

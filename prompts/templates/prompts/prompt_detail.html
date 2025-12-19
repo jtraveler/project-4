@@ -228,16 +228,16 @@
                             Follow
                         </button>
                     </div>
+                    <!-- Views Row (inside author-details-row, at bottom) -->
+                    {% if can_see_views %}
+                    <div class="views-row">
+                        <span class="views-count" aria-label="Views" title="Views">
+                            <i class="fas fa-eye" aria-hidden="true"></i>
+                            {{ view_count }} views
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
-                <!-- Views Row (dedicated row below author-card) -->
-                {% if can_see_views %}
-                <div class="views-row">
-                    <span class="views-count" aria-label="Views" title="Views">
-                        <i class="fas fa-eye" aria-hidden="true"></i>
-                        {{ view_count }} views
-                    </span>
-                </div>
-                {% endif %}
                 <!-- Action Icons Row -->
                 <div class="author-card-actions">
                     <!-- Comment Button -->

@@ -30,17 +30,26 @@
 }
 
 /* ==========================================================================
-   Media Container
-   Image/video display in LEFT column (not full-width hero)
+   Media Container Shell (outer wrapper)
+   Provides background and padding for the media container
+   ========================================================================== */
+
+.prompt-media-container-shell {
+    background: var(--gray-200);
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: var(--spacing-lg);
+    overflow: hidden; /* Clip inner content to border-radius */
+}
+
+/* ==========================================================================
+   Media Container (inner wrapper)
+   Handles the actual media display
    ========================================================================== */
 
 .prompt-media-container {
     position: relative;
     width: 100%;
-    margin-bottom: var(--spacing-lg);
-    background: var(--gray-200);
-    padding: 30px;
-    border-radius: 12px;
     overflow: hidden;
 }
 
@@ -64,14 +73,14 @@
     object-fit: contain;
 }
 
-/* Image-specific styling: container handles padding/background now */
+/* Image-specific styling */
 .hero-image {
-    /* Padding and background handled by .prompt-media-container */
+    /* Padding and background handled by .prompt-media-container-shell */
 }
 
-/* Video-specific styling: container handles padding/background now */
+/* Video-specific styling */
 .hero-video {
-    /* Padding and background handled by .prompt-media-container */
+    /* Padding and background handled by .prompt-media-container-shell */
 }
 
 /* Placeholder Image */

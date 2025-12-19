@@ -865,6 +865,111 @@ class UserProfileAdmin(admin.ModelAdmin):
     has_avatar.short_description = "Avatar"
 
 
+# Import AvatarChangeLog model for admin registration
+from .models import AvatarChangeLog
+
+
+@admin.register(AvatarChangeLog)
+class AvatarChangeLogAdmin(admin.ModelAdmin):
+    """
+    Admin interface for Avatar Change Logs.
+
+    Read-only audit trail for avatar changes. Supports debugging
+    Cloudinary sync issues and tracking avatar upload patterns.
+
+    Features:
+    - List view with user, action, timestamp
+    - Filtering by action type, date
+    - Search by username, public IDs
+    - All fields read-only (audit log, no editing)
+    """
+    list_display = [
+        "id", "user_link", "action_badge", "old_public_id_short",
+        "new_public_id_short", "created_at"
+    ]
+    list_filter = ["action", "created_at"]
+    search_fields = [
+        "user__username", "old_public_id", "new_public_id", "notes"
+    ]
+    readonly_fields = [
+        "user", "action", "old_public_id", "new_public_id",
+        "old_url", "new_url", "created_at", "notes"
+    ]
+    list_per_page = 50
+    date_hierarchy = "created_at"
+    ordering = ["-created_at"]
+
+    fieldsets = (
+        ("User Information", {
+            "fields": ("user", "action", "created_at")
+        }),
+        ("Avatar Details", {
+            "fields": (
+                "old_public_id", "new_public_id",
+                "old_url", "new_url"
+            )
+        }),
+        ("Notes", {
+            "fields": ("notes",),
+            "classes": ("collapse",)
+        }),
+    )
+
+    def has_add_permission(self, request):
+        """Prevent manual creation - logs created by signals only"""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Prevent editing - audit logs are immutable"""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Allow deletion for cleanup of old logs"""
+        return True
+
+    def user_link(self, obj):
+        """Link to user's profile in admin"""
+        url = reverse("admin:auth_user_change", args=[obj.user.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.user.username)
+    user_link.short_description = "User"
+    user_link.admin_order_field = "user__username"
+
+    def action_badge(self, obj):
+        """Display action with color-coded badge"""
+        colors = {
+            "upload": "#28a745",       # Green - new upload
+            "replace": "#007bff",      # Blue - replacement
+            "delete": "#6c757d",       # Gray - deletion
+            "delete_failed": "#dc3545", # Red - failed deletion
+        }
+        color = colors.get(obj.action, "#6c757d")
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; '
+            'border-radius: 3px; font-size: 11px;">{}</span>',
+            color, obj.get_action_display()
+        )
+    action_badge.short_description = "Action"
+    action_badge.admin_order_field = "action"
+
+    def old_public_id_short(self, obj):
+        """Truncate old public ID for display"""
+        if obj.old_public_id:
+            if len(obj.old_public_id) > 30:
+                return f"...{obj.old_public_id[-27:]}"
+            return obj.old_public_id
+        return "-"
+    old_public_id_short.short_description = "Old ID"
+
+    def new_public_id_short(self, obj):
+        """Truncate new public ID for display"""
+        if obj.new_public_id:
+            if len(obj.new_public_id) > 30:
+                return f"...{obj.new_public_id[-27:]}"
+            return obj.new_public_id
+        return "-"
+    new_public_id_short.short_description = "New ID"
+
+
 @admin.register(PromptReport)
 class PromptReportAdmin(admin.ModelAdmin):
     """

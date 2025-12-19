@@ -196,6 +196,91 @@ class UserProfile(models.Model):
         ).exists()
 
 
+class AvatarChangeLog(models.Model):
+    """
+    Audit log for avatar changes.
+
+    Tracks all avatar uploads, replacements, and deletions for user profiles.
+    Used for debugging Cloudinary sync issues and future admin dashboard analytics.
+
+    Attributes:
+        user (ForeignKey): The user whose avatar was changed
+        action (CharField): Type of change (upload/replace/delete/delete_failed)
+        old_public_id (CharField): Previous Cloudinary public ID (nullable)
+        new_public_id (CharField): New Cloudinary public ID (nullable)
+        old_url (URLField): Previous avatar URL (nullable)
+        new_url (URLField): New avatar URL (nullable)
+        created_at (DateTimeField): When the change occurred
+        notes (TextField): Optional notes (e.g., error messages)
+
+    Example:
+        AvatarChangeLog.objects.create(
+            user=user,
+            action='replace',
+            old_public_id='avatars/old_123',
+            new_public_id='avatars/new_456'
+        )
+    """
+
+    ACTION_CHOICES = [
+        ('upload', 'Initial Upload'),
+        ('replace', 'Replaced Avatar'),
+        ('delete', 'Deleted Avatar'),
+        ('delete_failed', 'Delete Failed'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='avatar_changes'
+    )
+    action = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES
+    )
+    old_public_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='Previous Cloudinary public ID'
+    )
+    new_public_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='New Cloudinary public ID'
+    )
+    old_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text='Previous avatar URL'
+    )
+    new_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text='New avatar URL'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Additional notes (e.g., error messages)'
+    )
+
+    class Meta:
+        verbose_name = 'Avatar Change Log'
+        verbose_name_plural = 'Avatar Change Logs'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at'], name='avatar_log_user_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_action_display()} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
 class PromptReport(models.Model):
     """
     User reports of inappropriate prompts.

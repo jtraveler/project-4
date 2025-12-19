@@ -43,6 +43,11 @@
     overflow: hidden;
 }
 
+/* Remove container background when containing a video (prevents grey bars on sides) */
+.prompt-media-container:has(.hero-video) {
+    background: transparent;
+}
+
 /* Hero Image & Video Styling (shared properties) */
 .hero-image,
 .hero-video {
@@ -54,8 +59,19 @@
     display: block;
     margin: 0 auto;
     object-fit: contain;
+}
+
+/* Image-specific styling: "picture frame" effect with padding and background */
+.hero-image {
     background-color: var(--gray-200);
     padding: 30px;
+}
+
+/* Video-specific styling: no padding/background (video player has own frame) */
+.hero-video {
+    background-color: transparent;
+    padding: 0;
+    object-fit: cover; /* Fill container for videos */
 }
 
 /* Placeholder Image */

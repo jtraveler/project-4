@@ -125,7 +125,6 @@
 
   /* === LEGACY SUPPORT (for existing styles) === */
   --main-blue: var(--gray-800);
-  --light-blue: #f5f5f5;
   --main-blue-hover: var(--gray-900);
   --accent-primary: var(--gray-800);  /* Alias for backward compatibility */
 
@@ -228,7 +227,7 @@ main {
 }
 
 .alert-success {
-  background-color: var(--light-blue);
+  background-color: var(--gray-100);
 }
 
 .main-bg {
@@ -878,7 +877,7 @@ main {
   border-radius: 12px;
   font-size: 16px;
   font-family: inherit;
-  background: var(--light-blue);
+  background: var(--gray-100);
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
@@ -977,7 +976,7 @@ main {
   font-size: 14px;
   padding: 10px 10px;
   min-width: 96px;
-  background-color: var(--light-blue);
+  background-color: var(--gray-100);
   color: var(--main-blue-hover);
 }
 
@@ -1004,7 +1003,7 @@ main {
 }
 
 .tag-option {
-  background: var(--light-blue);
+  background: var(--gray-100);
   color: var(--main-blue);
   padding: 6px 12px;
   border-radius: 20px;
@@ -1131,7 +1130,7 @@ main {
 
 .file-upload-label:hover {
   border-color: var(--main-blue);
-  background: var(--light-blue);
+  background: var(--gray-100);
   color: var(--main-blue);
 }
 
@@ -1177,7 +1176,7 @@ select#id_ai_generator {
 
 /* ===== TAG FILTER HEADER STYLES ===== */
 .tag-filter-header {
-  background: var(--light-blue);
+  background: var(--gray-100);
   padding: 2rem 0;
   margin-bottom: 2rem;
   border-bottom: 1px solid #e9ecef;

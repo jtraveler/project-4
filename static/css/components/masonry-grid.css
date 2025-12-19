@@ -150,16 +150,7 @@
     opacity: 0 !important;
 }
 
-/* Video in detail page */
-.hero-video {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    border-radius: 1rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin: 0 auto;
-    display: block;
-}
+/* .hero-video styles moved to static/css/pages/prompt-detail.css for better organization */
 
 /* Video loading state */
 .video-loading {

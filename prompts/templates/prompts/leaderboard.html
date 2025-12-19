@@ -92,11 +92,15 @@ Discover the most popular content creators on PromptFinder. See who has the most
 
             <div class="leaderboard-user">
                 <a href="{% url 'prompts:user_profile' creator.username %}" class="user-avatar-link">
-                    {% if creator.userprofile.avatar %}
+                    {% if creator.userprofile.avatar and creator.userprofile.avatar.url %}
                     <img src="{{ creator.userprofile.avatar.url }}"
                          alt="{{ creator.username }}'s avatar"
                          class="leaderboard-avatar"
-                         loading="lazy">
+                         loading="lazy"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="leaderboard-avatar-placeholder" style="display: none; background: var(--avatar-gradient-{{ creator.userprofile.get_avatar_color_index }}, var(--main-blue));">
+                        {{ creator.username|first|upper }}
+                    </div>
                     {% else %}
                     <div class="leaderboard-avatar-placeholder"
                          style="background: var(--avatar-gradient-{{ creator.userprofile.get_avatar_color_index }}, var(--main-blue));">

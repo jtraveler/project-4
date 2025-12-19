@@ -211,8 +211,12 @@
                         <!-- Left Column: Avatar + Info -->
                         <div class="author-card">
                             <div class="author-avatar">
-                                {% if prompt.author.userprofile.avatar %}
-                                    <img src="{{ prompt.author.userprofile.avatar.url }}" alt="{{ prompt.author.username }}'s avatar" class="avatar-img">
+                                {% if prompt.author.userprofile.avatar and prompt.author.userprofile.avatar.url %}
+                                    <img src="{{ prompt.author.userprofile.avatar.url }}"
+                                         alt="{{ prompt.author.username }}'s avatar"
+                                         class="avatar-img"
+                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                                    <span class="avatar-letter" style="display: none;">{{ prompt.author.username|first|upper }}</span>
                                 {% else %}
                                     <span class="avatar-letter">{{ prompt.author.username|first|upper }}</span>
                                 {% endif %}

@@ -202,10 +202,11 @@
              ======================================== -->
         <div class="col-lg-5 prompt-right-rail">
 
-            <!-- Author + Details Combined Row (PromptHero Style) -->
+            <!-- Author Card (PromptHero Style - Two Column Layout) -->
+            {% load prompt_tags %}
             <div class="rail-card author-details-combined">
                 <div class="author-details-row">
-                    <!-- Author Info (Left Side) -->
+                    <!-- Left Column: Avatar + Info -->
                     <div class="author-card">
                         <div class="author-avatar">
                             {% if prompt.author.userprofile.avatar %}
@@ -218,30 +219,18 @@
                             <a href="{% url 'prompts:user_profile' prompt.author.username %}" class="author-name">
                                 @{{ prompt.author.username }}
                             </a>
-                            <span class="post-time">Posted {{ prompt.created_on|timesince }} ago</span>
+                            <span class="post-time">{{ prompt.created_on|simple_timesince }}</span>
                         </div>
                     </div>
-                    <!-- Details Info (Right Side) -->
-                    <div class="details-inline">
-                        <span class="detail-inline-item">
-                            <i class="fas fa-robot"></i>
-                            {{ prompt.get_ai_generator_display|default:"Not specified" }}
-                        </span>
-                        {% if prompt.is_video %}
-                        <span class="detail-inline-item">
-                            <i class="fas fa-video"></i>
-                            Video
-                        </span>
-                        {% endif %}
+                    <!-- Right Column: Follow Button -->
+                    <div class="author-card-right">
+                        <button class="follow-btn" disabled title="Coming Soon">
+                            Follow
+                        </button>
                     </div>
                 </div>
                 <!-- Action Icons Row -->
                 <div class="author-card-actions">
-                    <!-- Follow button (outlined style) -->
-                    <button class="follow-btn" disabled title="Coming Soon">
-                        Follow
-                    </button>
-
                     <!-- Comment Button -->
                     <button class="action-icon-btn" onclick="scrollToComments()" aria-label="Scroll to comments" title="Comments">
                         <i class="fas fa-comment" aria-hidden="true"></i>
@@ -294,6 +283,23 @@
                             aria-label="Report" title="Report">
                         <i class="fas fa-flag" aria-hidden="true"></i>
                     </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- MODEL USED Section (Separate Card) -->
+            <div class="rail-card model-used-card">
+                <h4 class="rail-card-title">Model Used</h4>
+                <div class="model-used-content">
+                    <span class="model-name">
+                        <i class="fas fa-robot"></i>
+                        {{ prompt.get_ai_generator_display|default:"Not specified" }}
+                    </span>
+                    {% if prompt.is_video %}
+                    <span class="model-type">
+                        <i class="fas fa-video"></i>
+                        Video
+                    </span>
                     {% endif %}
                 </div>
             </div>

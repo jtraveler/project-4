@@ -571,10 +571,7 @@ main {
   height: fit-content;
 }
 
-.prompt-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-}
+/* .prompt-card:hover removed per Phase J.1 Round 5 - flat design, no hover effects */
 
 /* Image wrapper */
 .image-wrapper {
@@ -621,9 +618,7 @@ main {
   transition: opacity 0.3s ease;
 }
 
-.prompt-card:hover .card-overlay {
-  opacity: 1;
-}
+/* .prompt-card:hover .card-overlay removed per Phase J.1 Round 5 - flat design */
 
 /* Overlay content */
 .overlay-top {

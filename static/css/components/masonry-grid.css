@@ -55,9 +55,12 @@
     height: fit-content;
 }
 
-.prompt-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+/* .prompt-card:hover removed per Phase J.1 Round 5 - flat design, no hover effects */
+
+/* Focus state for keyboard navigation (WCAG 2.1) */
+.prompt-card:focus-within {
+    outline: 2px solid #6b7280;
+    outline-offset: 2px;
 }
 
 /* Image wrappers */

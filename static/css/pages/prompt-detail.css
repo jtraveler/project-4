@@ -38,7 +38,7 @@
     position: relative;
     width: 100%;
     margin-bottom: var(--spacing-lg);
-    background: var(--light-blue, #f0f4f8);
+    background: var(--light-blue, #f5f5f5);
     border-radius: 12px;
     overflow: hidden;
 }
@@ -53,7 +53,7 @@
     display: block;
     margin: 0 auto;
     object-fit: contain;
-    background-color: var(--light-blue, #f0f4f8);
+    background-color: var(--light-blue, #f5f5f5);
 }
 
 /* Hero Video Styling */
@@ -190,8 +190,8 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: var(--light-blue, #e3f2fd);
-    color: var(--main-blue, #1976d2);
+    background: var(--light-blue, #f5f5f5);
+    color: var(--text-muted, #6b7280);
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.875rem;
@@ -265,10 +265,25 @@
 
 .author-details-row {
     display: flex;
-    align-items: center;
+    align-items: start;
     justify-content: space-between;
     gap: var(--spacing-md);
     flex-wrap: wrap;
+    width: 100%;
+}
+
+/* Views Row - Dedicated row below author card */
+.views-row {
+    width: 100%;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.views-row .views-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 /* Right column with Follow button */
@@ -944,7 +959,7 @@
     position: relative;
     width: 100%;
     max-width: 1200px;
-    background: var(--light-blue, #f0f4f8);
+    background: var(--light-blue, #f5f5f5);
     border-radius: 12px;
     padding: 1rem;
     margin: 0 auto;

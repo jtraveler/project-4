@@ -6,10 +6,11 @@
  *
  * @file static/js/prompt-detail.js
  * @author PromptFinder Team
- * @version 1.0.0
+ * @version 1.1.0
  * @date December 2025
  *
  * Features:
+ * - Conditional sticky right rail (Phase J.2)
  * - Smooth scroll to comments
  * - Like toggle with AJAX
  * - Comment edit form toggle
@@ -21,6 +22,136 @@
 
 (function() {
     'use strict';
+
+    /* ==========================================================================
+       Conditional Sticky Right Rail (Phase J.2)
+       Applies sticky only if content fits within viewport
+       No max-height, no overflow, no scrollbars, no content cropping
+       ========================================================================== */
+
+    function initConditionalSticky() {
+        var sidebar = document.querySelector('.prompt-right-rail');
+        if (!sidebar) {
+            return;
+        }
+
+        // Constants for calculation
+        var NAVBAR_HEIGHT = 80;   // Height of fixed navbar
+        var TOP_OFFSET = 100;     // Distance from top when sticky (navbar + padding)
+
+        /**
+         * Measures content height and applies sticky only if content fits
+         * Uses requestAnimationFrame for accurate DOM measurement
+         */
+        function updateStickyBehavior() {
+            // Skip if mobile viewport (CSS handles it with !important)
+            if (window.innerWidth <= 991.98) {
+                sidebar.style.position = '';
+                sidebar.style.top = '';
+                sidebar.style.alignSelf = '';
+                return;
+            }
+
+            // Use requestAnimationFrame for accurate layout measurement
+            requestAnimationFrame(function() {
+                // CRITICAL: Set flex-start FIRST to get natural content height (not stretched!)
+                // In flexbox, 'auto' means STRETCH to match siblings - we need true content height
+                sidebar.style.alignSelf = 'flex-start';
+                sidebar.style.position = 'relative';
+                sidebar.style.top = 'auto';
+
+                // Wait another frame for layout recalculation
+                requestAnimationFrame(function() {
+                    // Measure the sidebar content height using getBoundingClientRect for accuracy
+                    var sidebarHeight = sidebar.getBoundingClientRect().height;
+
+                    // Calculate available viewport space
+                    var viewportHeight = window.innerHeight;
+                    var availableHeight = viewportHeight - TOP_OFFSET - 20; // 20px bottom buffer
+
+                    // Apply sticky only if content fits within available space
+                    if (sidebarHeight <= availableHeight) {
+                        sidebar.style.position = 'sticky';
+                        sidebar.style.top = TOP_OFFSET + 'px';
+                        sidebar.style.alignSelf = 'flex-start'; // Critical for sticky in flexbox
+                    } else {
+                        // Content too tall - leave as relative (normal document flow)
+                        sidebar.style.position = 'relative';
+                        sidebar.style.top = 'auto';
+                        sidebar.style.alignSelf = 'auto';
+                    }
+                });
+            });
+        }
+
+        /**
+         * Wait for all images in sidebar to load before calculating height
+         * This ensures accurate height measurement
+         */
+        function waitForImagesAndApply() {
+            var images = sidebar.querySelectorAll('img');
+            var totalImages = images.length;
+            var loadedCount = 0;
+            var fallbackTimer = null;
+
+            // If no images, apply immediately
+            if (totalImages === 0) {
+                updateStickyBehavior();
+                return;
+            }
+
+            function checkComplete() {
+                loadedCount++;
+                if (loadedCount >= totalImages) {
+                    // Clear fallback timer since all images loaded
+                    if (fallbackTimer) {
+                        clearTimeout(fallbackTimer);
+                        fallbackTimer = null;
+                    }
+                    updateStickyBehavior();
+                }
+            }
+
+            images.forEach(function(img) {
+                if (img.complete) {
+                    loadedCount++;
+                } else {
+                    img.addEventListener('load', checkComplete, { once: true });
+                    img.addEventListener('error', checkComplete, { once: true });
+                }
+            });
+
+            // If all images were already complete
+            if (loadedCount >= totalImages) {
+                updateStickyBehavior();
+            } else {
+                // Fallback: apply after 2 seconds (only if images still loading)
+                fallbackTimer = setTimeout(updateStickyBehavior, 2000);
+            }
+        }
+
+        // Initial calculation - wait for images in sidebar to load
+        if (document.readyState === 'complete') {
+            waitForImagesAndApply();
+        } else {
+            window.addEventListener('load', waitForImagesAndApply, { once: true });
+        }
+
+        // Debounced resize handler
+        var resizeTimeout;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                if (window.innerWidth <= 991.98) {
+                    sidebar.style.position = '';
+                    sidebar.style.top = '';
+                    sidebar.style.alignSelf = '';
+                } else {
+                    updateStickyBehavior();
+                }
+            }, 200);
+        });
+    }
 
     /* ==========================================================================
        Scroll to Comments
@@ -482,6 +613,9 @@
        ========================================================================== */
 
     function init() {
+        // Initialize conditional sticky right rail (Phase J.2)
+        initConditionalSticky();
+
         // Initialize comment form
         var commentForm = document.getElementById('commentForm');
         if (commentForm) {

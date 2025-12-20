@@ -539,6 +539,31 @@ def prompt_detail(request, slug):
             following=prompt.author
         ).exists()
 
+    # Phase J.2: Get more prompts from this author (up to 4 most popular)
+    # Ordered by likes count, excludes current prompt, only published prompts
+    # Note: Count is already imported at top of file
+    more_from_author = list(Prompt.objects.filter(
+        author=prompt.author,
+        status=1,
+        deleted_at__isnull=True
+    ).exclude(
+        id=prompt.id
+    ).annotate(
+        likes_count=Count('likes')
+    ).order_by('-likes_count', '-created_on')[:4])
+
+    # Phase J.2 Fix 3: Track count for placeholder logic in template
+    more_from_author_count = len(more_from_author)
+
+    # Phase J.2 Fix 4: Total count of author's other prompts for "+N more" overlay
+    author_total_prompts = Prompt.objects.filter(
+        author=prompt.author,
+        status=1,
+        deleted_at__isnull=True
+    ).exclude(id=prompt.id).count()
+    # Calculate remaining count beyond the 4 shown
+    author_remaining_count = max(0, author_total_prompts - 4)
+
     end_time = time.time()
     logger.warning(
         f"DEBUG: prompt_detail view took {end_time - start_time:.3f} seconds"
@@ -560,6 +585,9 @@ def prompt_detail(request, slug):
             "view_count": view_count,
             "can_see_views": can_see_views,
             "is_following_author": is_following_author,
+            "more_from_author": more_from_author,
+            "more_from_author_count": more_from_author_count,
+            "author_remaining_count": author_remaining_count,
         },
     )
 

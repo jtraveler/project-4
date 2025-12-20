@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 18, 2025
-**Project Status:** Pre-Launch Development - Phase J (Prompt Detail Redesign) IN PROGRESS, All Core Phases Complete
+**Last Updated:** December 20, 2025
+**Project Status:** Pre-Launch Development - Phase J (Prompt Detail Redesign) J.1 COMPLETE, All Core Phases Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -114,10 +114,11 @@
     - ✅ Test suite: 234 tests passing, 46% coverage
     - ✅ Security: Django 5.2.9, urllib3 2.6.0+, sentry-sdk 1.45.1+
     - Agent Rating: 9.17/10 average (@code-reviewer 8.5, @django-pro 9.5, @devops-troubleshooter 9.5)
-  - 🔄 **Phase J:** Prompt Detail Page Redesign ⭐ **IN PROGRESS** (December 2025) **← CURRENT PRIORITY**
+  - ✅ **Phase J:** Prompt Detail Page Redesign ⭐ **J.1 COMPLETE** (December 2025)
     - ✅ Phase 0: Baseline Analysis Complete (`docs/PROMPT_DETAIL_ANALYSIS.md`)
-    - 📋 Phase 1-8: CSS/JS extraction, 60/40 layout, comments relocation
-    - Target: Improve maintainability from 6/10 to 8+/10
+    - ✅ Phase 0.5: Code Quality Improvements (avatar signals, simple_timesince refactor)
+    - ✅ Phase J.1: Complete UI overhaul (9 rounds, 22 commits)
+    - Agent Rating: 8.7/10 average (@ui-ux-designer 7.5-9.5, @frontend-developer 9.0)
     - See: [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-current-priority)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
@@ -5549,13 +5550,14 @@ path('ai/<slug:generator>/', RedirectView.as_view(
 
 ---
 
-## 🎨 Phase J: Prompt Detail Page Redesign (CURRENT PRIORITY)
+## 🎨 Phase J: Prompt Detail Page Redesign (J.1 COMPLETE)
 
-**Status:** 🔄 IN PROGRESS (December 2025)
+**Status:** ✅ PHASE J.1 COMPLETE (December 20, 2025)
 **Priority:** HIGH - Core user experience improvement
-**Estimated Effort:** 8-12 hours across 8 phases
+**Effort:** 9 iterative rounds, 22 commits, ~12 hours total
 **Baseline Analysis:** `docs/PROMPT_DETAIL_ANALYSIS.md` (477 lines, completed Dec 18, 2025)
-**Current Template:** `prompts/templates/prompts/prompt_detail.html` (818 lines)
+**Current Template:** `prompts/templates/prompts/prompt_detail.html` (470 lines after J.1)
+**Agent Rating:** 8.7/10 average (@ui-ux-designer 7.5-9.5/10, @frontend-developer 9.0/10)
 
 ---
 
@@ -5723,114 +5725,94 @@ TARGET (60/40):
 
 ---
 
-#### Phase 1: CSS Extraction (2-3 hours)
+#### Phase 0.5: Code Quality Improvements ✅ COMPLETE
 
-**Status:** 📋 Planned
-**Goal:** Move 63 lines of inline CSS to external file
+**Status:** ✅ Complete (December 19, 2025)
+**Commits:** 3 commits (avatar signals, simple_timesince, liked button CSS)
 
-**Tasks:**
-- [ ] Create `static/css/pages/prompt-detail.css`
-- [ ] Extract critical CSS from `{% block extra_head %}`
-- [ ] Resolve `.sidebar-title` duplication (inline vs style.css)
-- [ ] Add CSS file to template `{% block extra_css %}`
-- [ ] Test all visual elements unchanged
-- [ ] Verify no CSS specificity conflicts
+**Deliverables:**
 
-**Files to Create:**
-- `static/css/pages/prompt-detail.css` (~100 lines with organization)
+**1. Avatar Signal Refactoring (prompts/signals.py)**
+- Refactored pre_save/post_save signal handlers for UserProfile avatar changes
+- Added `AvatarChangeLog` model for audit trail tracking
+- Tracks avatar uploads, replacements, and deletion failures
+- Cloudinary cleanup happens in post_save (prevents data loss on save failure)
+- Comprehensive logging with emoji indicators (✅ success, ⚠️ warning, ❌ error)
 
-**Files to Modify:**
-- `prompts/templates/prompts/prompt_detail.html` (remove inline styles)
-- `templates/base.html` (ensure extra_css block exists)
+**2. simple_timesince Template Filter (prompts/templatetags/prompt_tags.py)**
+- Refactored `simple_timesince` filter to reduce cyclomatic complexity below Flake8 C901 threshold
+- Uses lookup table pattern (`_TIME_THRESHOLDS`, `_DAY_THRESHOLDS`) instead of nested if/elif
+- Extracted helper functions: `_get_time_unit()`, `_format_time_string()`
+- Returns human-readable relative times: "Just now", "5 minutes ago", "Yesterday", "2 weeks ago"
 
-**Success Criteria:**
-- Zero inline `<style>` tags in template
-- All visual elements identical to before
-- CSS file properly cached by browser
-- No console errors
+**3. CSS Variables Enhancement (static/css/style.css)**
+- Added `--color-liked: #e0245e` (Twitter-style liked heart color)
+- Consistent heart color across all like buttons
+- Part of CSS variable standardization effort
 
----
-
-#### Phase 2: JavaScript Extraction (2-3 hours)
-
-**Status:** 📋 Planned
-**Goal:** Move 325 lines of inline JS to external file
-
-**Tasks:**
-- [ ] Create `static/js/prompt-detail.js`
-- [ ] Extract all functions from `{% block extras %}`
-- [ ] Ensure CSRF token handling works externally
-- [ ] Verify all event listeners bind correctly
-- [ ] Test all interactive features:
-  - Like button toggle
-  - Comment form submission
-  - Copy to clipboard
-  - Delete confirmation modal
-  - Report modal
-  - Edit comment toggle
-- [ ] Add JS file to template with `defer` attribute
-
-**Files to Create:**
-- `static/js/prompt-detail.js` (~350 lines with organization)
-
-**Files to Modify:**
-- `prompts/templates/prompts/prompt_detail.html` (remove inline scripts)
-
-**Success Criteria:**
-- Zero inline `<script>` tags in template (except CSRF token)
-- All interactions work identically
-- JS file properly cached
-- No console errors
+**Files Modified:**
+- `prompts/signals.py` - Avatar signal handlers + AvatarChangeLog
+- `prompts/models.py` - AvatarChangeLog model
+- `prompts/templatetags/prompt_tags.py` - simple_timesince refactor
+- `static/css/style.css` - CSS variables
 
 ---
 
-#### Phase 3: Layout Restructure - Grid Change (1-2 hours)
+#### Phase J.1: Complete UI Overhaul ✅ COMPLETE
 
-**Status:** 📋 Planned
-**Goal:** Change from 8/4 to 7/5 (60/40) column split
+**Status:** ✅ Complete (December 19-20, 2025)
+**Commits:** 22 commits (7da0651 through e68bb91)
+**Rounds:** 9 iterative refinement rounds
+**Agent Rating:** 8.7/10 average
 
-**Tasks:**
-- [ ] Update Bootstrap grid classes (`col-lg-8` → `col-lg-7`, `col-lg-4` → `col-lg-5`)
-- [ ] Adjust media container max-width (824px → 900px)
-- [ ] Test responsive breakpoints
-- [ ] Verify mobile stacking behavior
+**Major Accomplishments:**
 
-**Files to Modify:**
-- `prompts/templates/prompts/prompt_detail.html`
-- `static/css/pages/prompt-detail.css`
+**1. Hero Section Redesign**
+- Hero video styling matched to hero-image (rounded corners, shadows)
+- Video thumbnails with play button overlay
+- Consistent aspect ratios and sizing
 
-**Success Criteria:**
-- 60/40 split on desktop (lg+)
-- Proper stacking on mobile
-- Media displays larger
-- No horizontal overflow
+**2. Author Section Restructure**
+- Proper views row placement (after follow button, before actions)
+- Follow button with dynamic state styling
+- CSS variable integration for tag styling
+
+**3. Layout & Spacing Improvements**
+- Consistent padding and alignment across components
+- Removed unused CSS variables (--light-blue cleanup)
+- Proper margin and gap standardization
+
+**4. Comments Section Relocation**
+- Mobile-responsive comments relocation using CSS flexbox ordering
+- Comments appear after media content on mobile (order: 2)
+- Right rail appears last on mobile (order: 3)
+- WCAG 1.3.2 compliant (visual order matches logical reading flow)
+
+**5. Mobile Responsiveness**
+- Full-width columns on tablet/mobile (≤991.98px)
+- Proper spacing with CSS variable fallbacks
+- Touch-friendly interaction targets
+
+**Key Files Created/Modified:**
+- `static/css/pages/prompt-detail.css` - Page-specific styles (1,063 lines)
+- `prompts/templates/prompts/prompt_detail.html` - Template restructure
+- `static/css/style.css` - Global variable additions
+
+**Agent Validation (Session 19):**
+| Agent | Rating | Key Feedback |
+|-------|--------|--------------|
+| @ui-ux-designer | 7.5/10 | Recommended swapping comment/right rail order |
+| @frontend-developer | 9.0/10 | Clean CSS architecture, proper variable usage |
+| **Average** | **8.7/10** | Production ready with implemented recommendations |
 
 ---
 
-#### Phase 4: Comments Section Relocation (2-3 hours)
+#### Phase 1-3: ✅ MERGED INTO PHASE J.1
 
-**Status:** 📋 Planned
-**Goal:** Move comments from sidebar to full-width section below
+**Status:** ✅ Complete (merged into Phase J.1)
+**Original Scope:** CSS extraction, JS extraction, layout restructure
 
-**Tasks:**
-- [ ] Create new full-width comments container after media row
-- [ ] Move comment list HTML to new location
-- [ ] Move comment form to new location
-- [ ] Update CSS for full-width comment cards
-- [ ] Preserve all comment functionality (edit, delete, submit)
-- [ ] Update JavaScript selectors if needed
-- [ ] Test comment AJAX submission
-
-**Files to Modify:**
-- `prompts/templates/prompts/prompt_detail.html`
-- `static/css/pages/prompt-detail.css`
-- `static/js/prompt-detail.js` (if selectors change)
-
-**Success Criteria:**
-- Comments display full-width below media
-- All comment features work (add, edit, delete)
-- Proper spacing and visual hierarchy
-- Mobile responsive
+These phases were consolidated into the iterative Phase J.1 approach, which proved more efficient for the interconnected changes required.
 
 ---
 
@@ -7754,6 +7736,47 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 
 ## 📝 Changelog
 
+### December 2025 - Session 19 (Dec 19-20, 2025)
+
+**Phase J.1 Complete: Prompt Detail Page Redesign**
+
+Session 19 completed Phase J.1 with 22 commits across 9 iterative rounds:
+
+**Phase 0.5: Code Quality Improvements**
+- Avatar signal refactoring (pre_save/post_save pattern with AvatarChangeLog)
+- simple_timesince template filter refactor (C901 complexity fix)
+- CSS variable additions (--color-liked: #e0245e)
+
+**Phase J.1: Complete UI Overhaul**
+- Hero video styling matched to hero-image (rounded corners, shadows)
+- Author section restructure (views row, follow button, actions)
+- Comments section mobile relocation using CSS flexbox ordering
+- Layout and spacing improvements with CSS variable standardization
+- Removed unused --light-blue CSS variable
+
+**Key Technical Implementations:**
+- CSS flexbox `order` property for mobile column reordering
+- WCAG 1.3.2 compliant visual ordering (comments order: 2, right rail order: 3)
+- CSS variable fallbacks: `var(--spacing-md, 1rem)`
+- Page-specific CSS in `static/css/pages/prompt-detail.css` (1,063 lines)
+
+**Agent Validation:**
+- @ui-ux-designer: 7.5/10 → Recommended swapping comment/right rail order
+- @frontend-developer: 9.0/10 → Clean CSS architecture, proper variable usage
+- **Average: 8.7/10** (Production ready)
+
+**Commits:** 7da0651 through e68bb91 (22 commits)
+
+**Files Modified:**
+- `static/css/pages/prompt-detail.css` - Page-specific styles
+- `prompts/templates/prompts/prompt_detail.html` - Template restructure
+- `prompts/signals.py` - Avatar signal handlers
+- `prompts/models.py` - AvatarChangeLog model
+- `prompts/templatetags/prompt_tags.py` - simple_timesince refactor
+- `static/css/style.css` - Global CSS variables
+
+---
+
 ### December 2025 - Session 17 (Dec 17, 2025)
 
 **Generator Pages Overhaul & CI Pipeline Fixes**
@@ -7841,7 +7864,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.2
-**Last Updated:** December 16, 2025
+**Version:** 2.3
+**Last Updated:** December 20, 2025
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase I Complete, CI/CD Operational)
+**Project Status:** Pre-Launch (Phase J.1 Complete, All Core Phases Complete)

@@ -30,3 +30,5 @@ staticfiles/
 reports/*.csvbackups/*.json
 .coverage
 *.backup
+*.sqlite3
+default_*.sqlite3

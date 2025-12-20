@@ -37,8 +37,8 @@
   --arrow-color: #767676;       /* Dropdown arrows - WCAG 2.1 AA compliant (4.5:1 contrast) */
 
   /* === ACTION COLORS === */
-  --link-color: #007bff;                    /* Bootstrap primary blue */
-  --link-color-hover: #0056b3;               /* Darker blue for hover */
+  --link-color: #191919;                     /* Dark near-black for links (Phase J.2) */
+  --link-color-hover: #000000;               /* Black for hover */
   --notification-red: #ef4444;               /* Notification badge red */
   --color-liked: #ff3a78;                    /* Liked heart pink/red */
   --hover-bg-light: rgba(0, 0, 0, 0.05);    /* Light hover background */

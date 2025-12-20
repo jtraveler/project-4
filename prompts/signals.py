@@ -234,8 +234,8 @@ def delete_old_avatar_after_save(sender, instance, **kwargs):
         try:
             new_public_id = instance.avatar.public_id
             new_url = _get_avatar_url(instance.avatar)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to get new avatar info: {e}")
 
     # Handle avatar replacement (old avatar exists, new avatar uploaded)
     if old_avatar_public_id:

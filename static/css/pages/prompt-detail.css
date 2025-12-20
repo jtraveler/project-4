@@ -226,14 +226,18 @@
    Card-based sidebar with author, stats, details, prompt, tags
    ========================================================================== */
 
+/* Right rail default positioning:
+   - JavaScript handles conditional sticky via initConditionalSticky()
+   - If content fits viewport: sticky applied via JS
+   - If content too tall: normal document flow (no sticky)
+   - NO max-height, NO overflow, NO scrollbars, NO content cropping */
 .prompt-right-rail {
-    position: sticky;
-    top: 100px;
+    position: relative; /* Default - JS may override to sticky if content fits */
 }
 
 @media (max-width: 991.98px) {
     .prompt-right-rail {
-        position: static;
+        position: static !important; /* Force static on mobile, override any JS */
     }
 }
 
@@ -578,6 +582,67 @@
     font-size: 0.875rem;
 }
 
+/* Model Used Row: Flex layout with affiliate button */
+.model-used-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.model-used-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+/* Affiliate Button: "Create this on [Generator]" */
+.btn-affiliate {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--gray-900, #1a1a1a);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+}
+
+.btn-affiliate:hover {
+    background-color: var(--gray-800, #333333);
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.btn-affiliate:focus,
+.btn-affiliate:focus-visible {
+    outline: 2px solid var(--main-blue, #1976d2);
+    outline-offset: 2px;
+}
+
+.btn-affiliate i {
+    font-size: 0.75rem;
+}
+
+/* Mobile: Stack affiliate button below model info */
+@media (max-width: 575.98px) {
+    .model-used-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .btn-affiliate {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 /* ==========================================================================
    Details Card
    AI generator, date, media type info
@@ -625,8 +690,7 @@
     font-family: inherit;
     font-size: 0.9375rem;
     color: var(--text-dark);
-    max-height: 300px;
-    overflow-y: auto;
+    /* Phase J.2 Fix: Removed max-height to show full prompt text */
     padding: var(--spacing-md);
     background: #ffffff;
     border: solid 1px var(--gray-300);
@@ -942,23 +1006,32 @@
         justify-content: center;
     }
 
-    /* Reorder columns on mobile/tablet: Left → Comments → Right Rail
-       UX rationale: Users read content, discuss, then see metadata
-       WCAG 1.3.2: Visual order matches logical reading flow */
+    /* Mobile/Tablet: Reorder for optimal reading flow
+       Content → Metadata → Comments (LAST)
+       This matches PromptHero's mobile pattern
+
+       UX Rationale:
+       1. Users follow "consume first, engage second" pattern
+       2. Primary intent: view/copy prompt (not read comments)
+       3. 70%+ of mobile users just want to copy - don't make them scroll past comments
+       4. Industry standard: PromptHero, Lexica, CivitAI all put comments last */
     .prompt-content-wrapper > .row {
         display: flex;
         flex-direction: column;
     }
 
+    /* Left column: Media, Title, Description */
     .prompt-content-wrapper > .row > .prompt-left-column {
         order: 1;
     }
 
-    .prompt-content-wrapper > .row > .comments-column {
+    /* Right rail: Author, Prompt, Tags, More From */
+    .prompt-content-wrapper > .row > .prompt-right-rail {
         order: 2;
     }
 
-    .prompt-content-wrapper > .row > .prompt-right-rail {
+    /* Comments: ALWAYS LAST on mobile */
+    .prompt-content-wrapper > .row > .comments-column {
         order: 3;
     }
 
@@ -1015,7 +1088,6 @@
     }
 
     .prompt-text-content {
-        max-height: 200px;
         font-size: 0.85rem;
     }
 }
@@ -1036,6 +1108,174 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+/* ==========================================================================
+   More from Author Section (Phase J.2)
+   Single row of 4 thumbnails from same author
+   ========================================================================== */
+
+.more-from-author-card {
+    margin-top: var(--space-4, 16px);
+}
+
+.more-from-author-card .rail-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.more-from-author-card .author-link {
+    color: var(--link-color, #191919);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color var(--transition-fast, 0.15s ease);
+}
+
+.more-from-author-card .author-link:hover,
+.more-from-author-card .author-link:focus {
+    color: var(--link-hover-color, #000000);
+    text-decoration: underline;
+}
+
+/* Thumbnail Container - Single Row */
+.more-from-author-thumbnails {
+    display: flex;
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-3, 12px);
+}
+
+/* Individual Thumbnail Link */
+.author-thumbnail-link {
+    flex: 1 1 0;
+    min-width: 0;
+    text-decoration: none;
+    display: block;
+}
+
+.author-thumbnail-link:focus {
+    outline: 2px solid var(--link-color, #191919);
+    outline-offset: 2px;
+    border-radius: var(--radius-md, 8px);
+}
+
+/* Thumbnail Wrapper with Overlay */
+.author-thumbnail-wrapper {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%; /* 1:1 aspect ratio */
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+    background: var(--gray-100, #f5f5f5);
+}
+
+.author-thumbnail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-normal, 0.2s ease);
+}
+
+/* Hover Overlay */
+.author-thumbnail-overlay {
+    position: absolute;
+    /* Safari 14.0 fallback (inset not supported until Safari 14.1) */
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0);
+    transition: background-color var(--transition-fast, 0.15s ease);
+    pointer-events: none;
+}
+
+.author-thumbnail-link:hover .author-thumbnail-overlay,
+.author-thumbnail-link:focus .author-thumbnail-overlay {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.author-thumbnail-link:hover .author-thumbnail {
+    transform: scale(1.05);
+}
+
+/* Phase J.2 Fix 4: "+N See all prompts" Overlay on 4th Thumbnail */
+.author-thumbnail-count-overlay {
+    position: absolute;
+    /* Safari 14.0 fallback */
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    text-align: center;
+    transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.author-thumbnail-more:hover .author-thumbnail-count-overlay,
+.author-thumbnail-more:focus .author-thumbnail-count-overlay {
+    background-color: rgba(0, 0, 0, 0.75);
+}
+
+.author-more-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.author-more-text {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 2px;
+    opacity: 0.9;
+}
+
+/* Phase J.2 Fix 3: Grey Placeholder for Empty Slots */
+.author-thumbnail-placeholder {
+    flex: 1 1 0;
+    min-width: 0;
+    position: relative;
+    padding-bottom: calc(100% / 4 - var(--space-2, 8px) * 3 / 4);
+    /* Match aspect ratio calculation */
+    aspect-ratio: 1 / 1;
+    background: var(--gray-200, #e5e5e5);
+    border-radius: var(--radius-md, 8px);
+}
+
+/* Medium screens (992px - 1199px): Show 3 thumbnails instead of 4
+   The right rail is narrower on medium screens, so 3 thumbnails fit better.
+   Note: The "+N more" overlay is only rendered on the 4th thumbnail in the template,
+   so it will be hidden along with the thumbnail. Users can still click any thumbnail
+   or the "More from @username" heading to see the full profile. */
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    /* Hide the 4th thumbnail and 4th placeholder */
+    .more-from-author-thumbnails > .author-thumbnail-link:nth-child(4),
+    .more-from-author-thumbnails > .author-thumbnail-placeholder:nth-child(4) {
+        display: none;
+    }
+}
+
+/* Mobile Responsive - Stack to 2x2 grid */
+@media (max-width: 576px) {
+    .more-from-author-thumbnails {
+        flex-wrap: wrap;
+    }
+
+    .author-thumbnail-link,
+    .author-thumbnail-placeholder {
+        flex: 1 1 calc(50% - var(--space-2, 8px) / 2);
+        max-width: calc(50% - var(--space-2, 8px) / 2);
+    }
 }
 
 /* ==========================================================================

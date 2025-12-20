@@ -948,7 +948,35 @@ class Prompt(models.Model):
             prompt.get_ai_generator_display_name()  # Returns 'DALL-E 3'
         """
         return dict(AI_GENERATOR_CHOICES).get(self.ai_generator, 'Unknown')
-    
+
+    def get_generator_url(self):
+        """
+        Get the official website URL for the AI generator.
+
+        Returns:
+            str: URL of the AI generator's website, or None if not found
+
+        Example:
+            prompt.ai_generator = 'midjourney'
+            prompt.get_generator_url()  # Returns 'https://www.midjourney.com'
+        """
+        from .constants import AI_GENERATORS
+
+        if not self.ai_generator:
+            return None
+
+        # Try direct lookup first (e.g., 'midjourney' -> 'midjourney')
+        generator_key = self.ai_generator.lower().replace('_', '-')
+        if generator_key in AI_GENERATORS:
+            return AI_GENERATORS[generator_key].get('website')
+
+        # Fallback: try without dashes (e.g., 'stable_diffusion' -> 'stable-diffusion')
+        for key, data in AI_GENERATORS.items():
+            if data.get('choice_value') == self.ai_generator:
+                return data.get('website')
+
+        return None
+
     def is_video(self):
         """
         Check if this prompt contains a video instead of an image.

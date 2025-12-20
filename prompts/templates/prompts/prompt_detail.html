@@ -228,16 +228,28 @@
             <!-- MODEL USED Section (Separate Card) -->
             <div class="rail-card model-used-card">
                 <h4 class="rail-card-title">Model Used</h4>
-                <div class="model-used-content">
-                    <span class="model-name">
-                        <i class="fas fa-robot"></i>
-                        {{ prompt.get_ai_generator_display|default:"Not specified" }}
-                    </span>
-                    {% if prompt.is_video %}
-                    <span class="model-type">
-                        <i class="fas fa-video"></i>
-                        Video
-                    </span>
+                <div class="model-used-row">
+                    <div class="model-used-info">
+                        <span class="model-name">
+                            <i class="fas fa-robot"></i>
+                            {{ prompt.get_ai_generator_display|default:"Not specified" }}
+                        </span>
+                        {% if prompt.is_video %}
+                        <span class="model-type">
+                            <i class="fas fa-video"></i>
+                            Video
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% if prompt.get_generator_url %}
+                    <a href="{{ prompt.get_generator_url }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="btn-affiliate"
+                       aria-label="Create this on {{ prompt.get_ai_generator_display }} (opens in new tab)">
+                        Create this on {{ prompt.get_ai_generator_display }}
+                        <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -270,6 +282,76 @@
                     {% for tag in prompt.tags.all %}
                         <span class="tag-badge" data-tag="{{ tag.name }}">{{ tag.name }}</span>
                     {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- More from Author Section (Phase J.2) -->
+            <!-- Only show if author has at least 1 other published prompt -->
+            {% if more_from_author_count >= 1 %}
+            <div class="rail-card more-from-author-card">
+                <h4 class="rail-card-title">
+                    More from
+                    <a href="{% url 'prompts:user_profile' prompt.author.username %}"
+                       class="author-link">@{{ prompt.author.username }}</a>
+                </h4>
+                <div class="more-from-author-thumbnails">
+                    {% for author_prompt in more_from_author %}
+                    {# Phase J.2 Fix 4: 4th thumbnail gets "+N more" overlay if author has 5+ prompts #}
+                    {% if forloop.counter == 4 and author_remaining_count > 0 %}
+                    <a href="{% url 'prompts:user_profile' prompt.author.username %}"
+                       class="author-thumbnail-link author-thumbnail-more"
+                       aria-label="See all prompts from {{ prompt.author.username }}">
+                        <div class="author-thumbnail-wrapper">
+                            {% if author_prompt.featured_image %}
+                            <img src="{{ author_prompt.featured_image.url }}"
+                                 alt="{{ author_prompt.title }}"
+                                 class="author-thumbnail"
+                                 loading="lazy">
+                            {% else %}
+                            <img src="{{ author_prompt.get_thumbnail_url }}"
+                                 alt="{{ author_prompt.title }}"
+                                 class="author-thumbnail"
+                                 loading="lazy">
+                            {% endif %}
+                            <div class="author-thumbnail-count-overlay">
+                                <span class="author-more-count">+{{ author_remaining_count }}</span>
+                                <span class="author-more-text">See all prompts</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% else %}
+                    <a href="{% url 'prompts:prompt_detail' author_prompt.slug %}"
+                       class="author-thumbnail-link"
+                       aria-label="View {{ author_prompt.title }}">
+                        <div class="author-thumbnail-wrapper">
+                            {% if author_prompt.featured_image %}
+                            <img src="{{ author_prompt.featured_image.url }}"
+                                 alt="{{ author_prompt.title }}"
+                                 class="author-thumbnail"
+                                 loading="lazy">
+                            {% else %}
+                            <img src="{{ author_prompt.get_thumbnail_url }}"
+                                 alt="{{ author_prompt.title }}"
+                                 class="author-thumbnail"
+                                 loading="lazy">
+                            {% endif %}
+                            <div class="author-thumbnail-overlay" aria-hidden="true"></div>
+                        </div>
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                    {# Phase J.2 Fix 3: Add grey placeholders for empty slots #}
+                    {% if more_from_author_count == 1 %}
+                    <div class="author-thumbnail-placeholder" aria-hidden="true"></div>
+                    <div class="author-thumbnail-placeholder" aria-hidden="true"></div>
+                    <div class="author-thumbnail-placeholder" aria-hidden="true"></div>
+                    {% elif more_from_author_count == 2 %}
+                    <div class="author-thumbnail-placeholder" aria-hidden="true"></div>
+                    <div class="author-thumbnail-placeholder" aria-hidden="true"></div>
+                    {% elif more_from_author_count == 3 %}
+                    <div class="author-thumbnail-placeholder" aria-hidden="true"></div>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

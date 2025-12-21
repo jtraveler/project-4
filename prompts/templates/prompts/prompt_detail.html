@@ -151,7 +151,7 @@
                         <!-- Right Column: Follow Button -->
                         <div class="author-card-right">
                             {% if user.is_authenticated and user != prompt.author %}
-                            <button class="follow-btn {% if is_following_author %}following{% endif %}"
+                            <button class="btn-outline-standard follow-btn {% if is_following_author %}following{% endif %}"
                                     data-username="{{ prompt.author.username }}"
                                     data-following="{{ is_following_author|yesno:'true,false' }}"
                                     aria-label="{% if is_following_author %}Unfollow{% else %}Follow{% endif %} {{ prompt.author.username }}">
@@ -159,7 +159,7 @@
                                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                             </button>
                             {% elif not user.is_authenticated %}
-                            <a href="{% url 'account_login' %}?next={{ request.path }}" class="follow-btn" aria-label="Log in to follow">
+                            <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn-outline-standard follow-btn" aria-label="Log in to follow">
                                 Follow
                             </a>
                             {% endif %}
@@ -245,7 +245,7 @@
                     <a href="{{ prompt.get_generator_url }}"
                        target="_blank"
                        rel="noopener noreferrer"
-                       class="btn-affiliate"
+                       class="btn-outline-standard btn-affiliate"
                        aria-label="Try in {{ prompt.get_ai_generator_display }} (opens in new tab)">
                         <i class="fas fa-external-link-alt" aria-hidden="true"></i>
                         Try in {{ prompt.get_ai_generator_display }}
@@ -259,12 +259,12 @@
                 <div class="prompt-card-header">
                     <h4 class="rail-card-title">Prompt</h4>
                     {% if user.is_authenticated %}
-                    <button class="copy-btn" onclick="copyPromptText()" id="copyButton">
+                    <button class="btn-outline-standard copy-btn" onclick="copyPromptText()" id="copyButton">
                         <i class="far fa-copy"></i>
                         <span id="copyButtonText">Copy</span>
                     </button>
                     {% else %}
-                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="copy-btn copy-btn-login">
+                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn-outline-standard copy-btn copy-btn-login">
                         <i class="fas fa-sign-in-alt"></i> Log in
                     </a>
                     {% endif %}

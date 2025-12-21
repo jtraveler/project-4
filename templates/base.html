@@ -264,11 +264,13 @@
                 </div>
             </div>
 
-            <!-- Bell Icon (Notifications) -->
+            <!-- Bell Icon (Notifications) - Only show for logged-in users -->
+            {% if user.is_authenticated %}
             <button class="pexels-icon-btn" aria-label="Notifications">
                 <i class="far fa-bell" aria-hidden="true"></i>
                 <!-- <span class="notification-badge"></span> --> <!-- Uncomment when notifications active -->
             </button>
+            {% endif %}
 
             <!-- Profile Button -->
             {% if user.is_authenticated %}

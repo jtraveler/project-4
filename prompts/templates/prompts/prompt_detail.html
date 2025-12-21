@@ -234,12 +234,15 @@
                             <i class="fas fa-robot"></i>
                             {{ prompt.get_ai_generator_display|default:"Not specified" }}
                         </span>
-                        {% if prompt.is_video %}
                         <span class="model-type">
+                            {% if prompt.is_video %}
                             <i class="fas fa-video"></i>
                             Video
+                            {% else %}
+                            <i class="fas fa-image"></i>
+                            Image
+                            {% endif %}
                         </span>
-                        {% endif %}
                     </div>
                     {% if prompt.get_generator_url %}
                     <a href="{{ prompt.get_generator_url }}"
@@ -264,8 +267,9 @@
                         <span id="copyButtonText">Copy</span>
                     </button>
                     {% else %}
-                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn-outline-standard copy-btn copy-btn-login">
-                        <i class="fas fa-sign-in-alt"></i> Log in
+                    <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn-outline-standard copy-btn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Login to Copy
                     </a>
                     {% endif %}
                 </div>

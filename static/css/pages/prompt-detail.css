@@ -440,28 +440,14 @@
     justify-content: flex-end;
 }
 
+/* Action Icon Buttons - Uses shared .btn-outline-standard from style.css
+   Only contains overrides for icon-specific sizing */
 .action-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
+    /* Smaller padding for icon buttons */
     padding: 0.3rem 0.75rem;
+    gap: 0.25rem;
     min-height: 36px;
     min-width: 36px;
-    box-sizing: border-box;
-    background-color: var(--white);
-    border: 1px solid var(--gray-300);
-    border-radius: 6px;
-    color: var(--gray-800);
-    font-size: 0.875rem;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.2s ease;
-}
-
-.action-icon-btn:hover {
-    background-color: var(--gray-100);
-    color: var(--text-dark);
 }
 
 .action-icon-btn i {

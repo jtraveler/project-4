@@ -178,13 +178,13 @@
                 <!-- Action Icons Row -->
                 <div class="author-card-actions">
                     <!-- Comment Button -->
-                    <button class="action-icon-btn" onclick="scrollToComments()" aria-label="Scroll to comments" title="Comments">
+                    <button class="btn-outline-standard action-icon-btn" onclick="scrollToComments()" aria-label="Scroll to comments" title="Comments">
                         <i class="far fa-comment" aria-hidden="true"></i>
                     </button>
 
                     <!-- Like Button -->
                     {% if user.is_authenticated %}
-                        <button class="action-icon-btn {% if prompt_is_liked %}liked{% endif %}"
+                        <button class="btn-outline-standard action-icon-btn {% if prompt_is_liked %}liked{% endif %}"
                                 data-prompt-slug="{{ prompt.slug }}"
                                 onclick="toggleLike(this)"
                                 aria-label="{% if prompt_is_liked %}Unlike{% else %}Like{% endif %}"
@@ -193,7 +193,7 @@
                             <span class="action-count like-count">{{ number_of_likes }}</span>
                         </button>
                     {% else %}
-                        <a href="{% url 'account_login' %}?next={{ request.path }}" class="action-icon-btn" aria-label="Log in to like" title="Like">
+                        <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn-outline-standard action-icon-btn" aria-label="Log in to like" title="Like">
                             <i class="far fa-heart" aria-hidden="true"></i>
                             <span class="action-count like-count">{{ number_of_likes }}</span>
                         </a>
@@ -201,12 +201,12 @@
 
                     <!-- Edit Button (only for author) -->
                     {% if user.is_authenticated and prompt.author == user %}
-                    <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="action-icon-btn" aria-label="Edit" title="Edit">
+                    <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="btn-outline-standard action-icon-btn" aria-label="Edit" title="Edit">
                         <i class="far fa-edit" aria-hidden="true"></i>
                     </a>
 
                     <!-- Delete Button (only for author) -->
-                    <button class="action-icon-btn"
+                    <button class="btn-outline-standard action-icon-btn"
                             onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
                             aria-label="Delete" title="Delete">
                         <i class="far fa-trash-alt" aria-hidden="true"></i>
@@ -215,7 +215,7 @@
 
                     <!-- Report Button (authenticated, not author) -->
                     {% if user.is_authenticated and prompt.author != user %}
-                    <button class="action-icon-btn"
+                    <button class="btn-outline-standard action-icon-btn"
                             data-bs-toggle="modal"
                             data-bs-target="#reportModal"
                             aria-label="Report" title="Report">

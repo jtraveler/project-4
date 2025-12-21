@@ -597,26 +597,27 @@
     gap: 1rem;
 }
 
-/* Affiliate Button: "Create this on [Generator]" */
+/* Affiliate Button: "Try in [Generator]" - Outlined style matching Copy button */
 .btn-affiliate {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
     padding: 0.5rem 1rem;
-    background-color: var(--gray-900, #1a1a1a);
-    color: #ffffff;
-    border: none;
+    background-color: transparent;
+    color: var(--text-dark, #212529);
+    border: 1px solid var(--gray-300, #d1d5db);
     border-radius: 6px;
     font-size: 0.8125rem;
     font-weight: 500;
     text-decoration: none;
     white-space: nowrap;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .btn-affiliate:hover {
-    background-color: var(--gray-800, #333333);
-    color: #ffffff;
+    background-color: var(--gray-100, #f3f4f6);
+    border-color: var(--gray-400, #9ca3af);
+    color: var(--text-dark, #212529);
     text-decoration: none;
 }
 
@@ -1252,16 +1253,18 @@
     border-radius: var(--radius-md, 8px);
 }
 
-/* Medium screens (992px - 1199px): Show 3 thumbnails instead of 4
-   The right rail is narrower on medium screens, so 3 thumbnails fit better.
-   Note: The "+N more" overlay is only rendered on the 4th thumbnail in the template,
-   so it will be hidden along with the thumbnail. Users can still click any thumbnail
-   or the "More from @username" heading to see the full profile. */
+/* Medium screens (992px - 1199px): 2x2 grid layout
+   The right rail is narrower on medium screens, so 2x2 grid fits better.
+   The "+N more" overlay remains visible on the 4th thumbnail. */
 @media (min-width: 992px) and (max-width: 1199.98px) {
-    /* Hide the 4th thumbnail and 4th placeholder */
-    .more-from-author-thumbnails > .author-thumbnail-link:nth-child(4),
-    .more-from-author-thumbnails > .author-thumbnail-placeholder:nth-child(4) {
-        display: none;
+    .more-from-author-thumbnails {
+        flex-wrap: wrap;
+    }
+
+    .more-from-author-thumbnails > .author-thumbnail-link,
+    .more-from-author-thumbnails > .author-thumbnail-placeholder {
+        flex: 1 1 calc(50% - var(--space-2, 8px) / 2);
+        max-width: calc(50% - var(--space-2, 8px) / 2);
     }
 }
 

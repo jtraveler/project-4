@@ -347,10 +347,12 @@
                 <i class="fas fa-search" aria-hidden="true"></i>
             </button>
 
-            <!-- Bell Icon (Notifications) -->
+            <!-- Bell Icon (Notifications) - Only show for logged-in users -->
+            {% if user.is_authenticated %}
             <button class="pexels-mobile-icon-btn mobile-bell-btn" aria-label="Notifications">
                 <i class="far fa-bell" aria-hidden="true"></i>
             </button>
+            {% endif %}
 
             <!-- Upload Button - Dark background with white arrow icon -->
             <button class="pexels-mobile-icon-btn mobile-upload-btn"

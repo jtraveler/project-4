@@ -1274,6 +1274,12 @@
     .author-thumbnail-link:hover .video-thumbnail-container .thumbnail-video {
         transform: scale(1.05);
     }
+
+    /* On hover: DISABLE dark overlay for video thumbnails (video should play clearly) */
+    .author-thumbnail-link:hover .video-thumbnail-container .author-thumbnail-overlay,
+    .author-thumbnail-link:focus .video-thumbnail-container .author-thumbnail-overlay {
+        background-color: rgba(0, 0, 0, 0) !important;
+    }
 }
 
 /* ==========================================================================

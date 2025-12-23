@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseRedirect, Http404
@@ -10,6 +12,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from prompts.forms import CollaborateForm
 import json
+
+logger = logging.getLogger(__name__)
 
 
 def collaborate_request(request):
@@ -56,6 +60,8 @@ def collaborate_request(request):
 
 
 
+@login_required
+@require_POST
 def prompt_like(request, slug):
     """
     Handle AJAX requests to like/unlike AI prompts.
@@ -213,25 +219,19 @@ def bulk_reorder_prompts(request):
     Handle bulk reordering of prompts via drag-and-drop.
     Only available to staff users.
     """
-    print(f"DEBUG: bulk_reorder_prompts called - Method: {request.method}")
-    print(f"DEBUG: User is staff: {request.user.is_staff}")
-    print(f"DEBUG: Request body: {request.body}")
-    
     if not request.user.is_staff:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         changes = data.get('changes', [])
-        
-        print(f"DEBUG: Parsed changes: {changes}")
-        
+
         if not changes:
             return JsonResponse({'error': 'No changes provided'}, status=400)
-        
+
         # Update all prompts in a single transaction
         from django.db import transaction
         with transaction.atomic():
@@ -239,41 +239,38 @@ def bulk_reorder_prompts(request):
             for change in changes:
                 slug = change.get('slug')
                 new_order = float(change.get('order'))
-                
-                print(f"DEBUG: Updating {slug} to order {new_order}")
-                
+
                 try:
                     prompt = Prompt.objects.get(slug=slug)
                     prompt.order = new_order
                     prompt.save(update_fields=['order'])
                     updated_count += 1
-                    print(f"DEBUG: Successfully updated {slug}")
                 except Prompt.DoesNotExist:
-                    print(f"DEBUG: Prompt {slug} not found")
+                    logger.warning(f"Prompt not found during reorder: {slug}")
                     continue
-        
+
         # Clear caches after bulk update
         for page in range(1, 10):
             cache.delete(f"prompt_list_None_None_{page}")
             # Clear tag-filtered caches too
             for tag in ['art', 'portrait', 'landscape', 'photography']:
                 cache.delete(f"prompt_list_{tag}_None_{page}")
-        
-        response_data = {
+
+        return JsonResponse({
             'success': True,
             'updated_count': updated_count,
             'message': f'Successfully updated {updated_count} prompts'
-        }
-        print(f"DEBUG: Sending response: {response_data}")
-        
-        return JsonResponse(response_data)
-        
+        })
+
     except (ValueError, json.JSONDecodeError) as e:
-        print(f"DEBUG: JSON decode error: {e}")
+        logger.warning(f"Invalid data format in bulk_reorder_prompts: {e}")
         return JsonResponse({'error': 'Invalid data format'}, status=400)
     except Exception as e:
-        print(f"DEBUG: Unexpected error: {e}")
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.exception(f"Unexpected error in bulk_reorder_prompts: {e}")
+        return JsonResponse(
+            {'error': 'An unexpected error occurred. Please try again.'},
+            status=500
+        )
 
 
 

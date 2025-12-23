@@ -66,11 +66,12 @@
 .btn .icon,
 button .icon,
 a .icon {
-    margin-right: 0.375rem;
+    margin-right: 0;
 }
 
 /* Icon-only buttons */
-.btn-icon .icon {
+.btn-icon .icon,
+.action-icon-btn .icon {
     margin-right: 0;
 }
 

@@ -1,0 +1,95 @@
+/**
+ * SVG Icon System
+ *
+ * Base styles for SVG sprite icons
+ * Replaces Font Awesome icons with custom SVG sprites
+ *
+ * Usage: <svg class="icon icon-sm"><use href="...#icon-name"/></svg>
+ */
+
+/* ==========================================================================
+   Base Icon Styles
+   ========================================================================== */
+
+.icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em; /* Align with text baseline */
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Icon Sizes
+   ========================================================================== */
+
+/* Extra Small - 12px */
+.icon-xs {
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+/* Small - 22px (default for nav) */
+.icon-sm {
+    width: 1.4rem;
+    height: 1.4rem;
+}
+
+/* Medium - 24px (default) */
+.icon-md {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* Large - 24px */
+.icon-lg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* Extra Large - 24px */
+.icon-xl {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* ==========================================================================
+   Icon in Buttons
+   ========================================================================== */
+
+/* Icon spacing in buttons with text */
+.btn .icon,
+button .icon,
+a .icon {
+    margin-right: 0.375rem;
+}
+
+/* Icon-only buttons */
+.btn-icon .icon {
+    margin-right: 0;
+}
+
+/* ==========================================================================
+   Icon Colors (inherits from parent by default via currentColor)
+   ========================================================================== */
+
+.icon-muted {
+    stroke: var(--text-muted, #6b7280);
+}
+
+.icon-primary {
+    stroke: var(--primary, #0066cc);
+}
+
+.icon-danger {
+    stroke: var(--danger, #dc3545);
+}
+
+.icon-success {
+    stroke: var(--success, #28a745);
+}

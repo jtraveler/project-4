@@ -362,7 +362,7 @@
     background: var(--white);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-dropdown);
-    min-width: 240px;
+    min-width: 200px;
     padding: var(--space-2) 0;
     /* SEO-friendly visibility (allows crawling) */
     opacity: 0;
@@ -524,9 +524,10 @@
 }
 
 .pexels-dropdown-icon {
-    font-size: 18px;
-    color: var(--gray-700);  /* Primary body text color */
+    color: var(--gray-700);    /* For Font Awesome icons */
+    stroke: var(--gray-700);   /* For SVG sprite icons (direct color for <use> compatibility) */
     width: 20px;
+    height: 20px;
     flex-shrink: 0;
     margin-top: 2px;
 }
@@ -597,6 +598,15 @@
     margin-top: 2px;  /* Added for visual alignment */
 }
 
+.search-dropdown-item .icon,
+.search-dropdown-item svg {
+    stroke: var(--gray-700);  /* SVG icons use stroke, not color */
+    width: 20px;  /* Match i element width */
+    height: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
 .search-dropdown-item span {
     font-size: 15px;  /* Changed from 14px to match dropdown titles */
     color: var(--gray-600);  /* Secondary text color */
@@ -607,6 +617,14 @@
 .search-dropdown-item[aria-selected="true"] i,
 .search-dropdown-item.selected i {
     color: var(--accent-color-for-text-icons);  /* Darker green (#16ba31) - better text contrast than primary bright green */
+}
+
+.search-dropdown-item[aria-selected="true"] .icon,
+.search-dropdown-item[aria-selected="true"] svg,
+.search-dropdown-item.selected .icon,
+.search-dropdown-item.selected svg {
+    color: var(--accent-color-for-text-icons);  /* Set color for currentColor inheritance */
+    stroke: var(--accent-color-for-text-icons);  /* SVG icons use stroke - Darker green (#16ba31) */
 }
 
 .search-dropdown-item[aria-selected="true"] span,

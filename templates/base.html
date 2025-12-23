@@ -55,6 +55,7 @@
 
         <!-- Component CSS (reusable across pages) -->
         <link rel="stylesheet" href="{% static 'css/components/masonry-grid.css' %}">
+        <link rel="stylesheet" href="{% static 'css/components/icons.css' %}">
 
         <!-- Favicon - Inline SVG for "P" (PromptFinder) -->
         <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%232563eb' rx='4'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='20' font-weight='bold' fill='white' font-family='system-ui'%3EP%3C/text%3E%3C/svg%3E">
@@ -89,7 +90,7 @@
                             aria-expanded="false"
                             aria-controls="searchTypeMenu"
                             aria-label="Select search type">
-                        <i class="fas fa-image search-type-icon" id="searchTypeIcon" aria-hidden="true"></i>
+                        <svg class="icon icon-sm search-type-icon" id="searchTypeIcon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
                         <span class="search-type-text" id="searchTypeText">Images</span>
                         <i class="fas fa-chevron-down search-type-arrow" aria-hidden="true"></i>
                     </button>
@@ -99,11 +100,11 @@
                          onmouseenter="keepDropdownOpen('searchTypeMenu')"
                          onmouseleave="hideDropdown('searchTypeMenu', document.querySelector('[aria-controls=searchTypeMenu]'))">
                         <button type="button" class="search-dropdown-item" onclick="selectSearchType('images')" role="menuitem">
-                            <i class="fas fa-image" aria-hidden="true"></i>
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
                             <span>Images</span>
                         </button>
                         <button type="button" class="search-dropdown-item" onclick="selectSearchType('videos')" role="menuitem">
-                            <i class="fas fa-video" aria-hidden="true"></i>
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-video"/></svg>
                             <span>Videos</span>
                         </button>
                     </div>
@@ -122,7 +123,7 @@
 
                     <!-- Search Icon -->
                     <button type="submit" class="pexels-search-icon-btn" aria-label="Search">
-                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-search"/></svg>
                     </button>
                 </div>
             </form>
@@ -154,13 +155,13 @@
                     </div>
                 </a>
                 <a href="{% url 'prompts:leaderboard' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                    <i class="fas fa-trophy pexels-dropdown-icon"></i>
+                    <svg class="icon icon-lg pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trophy"/></svg>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Leaderboard</div>
                     </div>
                 </a>
                 <a href="{% url 'prompts:prompts_hub' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                    <i class="fas fa-lightbulb pexels-dropdown-icon"></i>
+                    <svg class="icon icon-lg pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-lightbulb"/></svg>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Prompts</div>
                     </div>
@@ -192,14 +193,14 @@
                  onmouseleave="hideDropdown('promptsDropdown', document.querySelector('[onmouseenter*=promptsDropdown]'))"
                  role="menu" aria-label="Prompts options">
                 <a href="{% url 'prompts:home' %}?type=image" class="pexels-dropdown-item" role="menuitem" tabindex="0">
-                    <i class="fas fa-image pexels-dropdown-icon"></i>
+                    <svg class="icon icon-lg pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Image Prompts</div>
                         <div class="pexels-dropdown-subtitle">Midjourney, Stable Diffusion & More!</div>
                     </div>
                 </a>
                 <a href="{% url 'prompts:home' %}?type=video" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                    <i class="fas fa-video pexels-dropdown-icon"></i>
+                    <svg class="icon icon-lg pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-video"/></svg>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Video Prompts</div>
                         <div class="pexels-dropdown-subtitle">Midjourney, Veo & More!</div>
@@ -225,38 +226,32 @@
                  onmouseleave="hideDropdown('threeDotsDropdown', document.querySelector('[onmouseenter*=threeDotsDropdown]'))"
                  role="menu" aria-label="More options">
                 <a href="{% url 'about' %}#api" class="pexels-dropdown-item" role="menuitem" tabindex="0">
-                    <i class="fas fa-chart-line pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Image & Video API</div>
                     </div>
                 </a>
                 <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                    <i class="fas fa-info-circle pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Help Center</div>
                     </div>
                 </a>
                 <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                    <i class="fas fa-flag pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Report Content</div>
                     </div>
                 </a>
                 <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                    <i class="fas fa-file-alt pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Imprint & Terms</div>
                     </div>
                 </a>
                 <div class="pexels-dropdown-divider"></div>
                 <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                    <i class="fas fa-info-circle pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">About</div>
                     </div>
                 </a>
                 <a href="{% url 'prompts:collaborate' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                    <i class="fas fa-envelope pexels-dropdown-icon"></i>
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">Contact</div>
                     </div>
@@ -346,7 +341,7 @@
                     aria-expanded="false"
                     aria-controls="mobileSearchOverlay"
                     id="mobileSearchToggle">
-                <i class="fas fa-search" aria-hidden="true"></i>
+                <svg class="icon icon-md" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-search"/></svg>
             </button>
 
             <!-- Bell Icon (Notifications) - Only show for logged-in users -->
@@ -402,15 +397,15 @@
             <span>Home</span>
         </a>
         <a href="{% url 'prompts:home' %}?type=image" class="pexels-mobile-item">
-            <i class="fas fa-image"></i>
+            <svg class="icon icon-md" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
             <span>Image Prompts</span>
         </a>
         <a href="{% url 'prompts:home' %}?type=video" class="pexels-mobile-item">
-            <i class="fas fa-video"></i>
+            <svg class="icon icon-md" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-video"/></svg>
             <span>Video Prompts</span>
         </a>
         <a href="{% url 'prompts:leaderboard' %}" class="pexels-mobile-item">
-            <i class="fas fa-trophy"></i>
+            <svg class="icon icon-md" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trophy"/></svg>
             <span>Leaderboard</span>
         </a>
         {% if user.is_authenticated %}
@@ -450,7 +445,7 @@
                     aria-expanded="false"
                     aria-controls="mobileSearchTypeMenu"
                     aria-label="Select search type">
-                <i class="fas fa-image search-type-icon" id="mobileSearchTypeIcon" aria-hidden="true"></i>
+                <svg class="icon icon-sm search-type-icon" id="mobileSearchTypeIcon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
                 <span class="search-type-text" id="mobileSearchTypeText">Images</span>
                 <i class="fas fa-chevron-down search-type-arrow" aria-hidden="true"></i>
             </button>
@@ -458,11 +453,11 @@
             <!-- Dropdown Menu for Search Type -->
             <div class="search-dropdown-menu" id="mobileSearchTypeMenu" role="menu" aria-label="Search type options">
                 <button type="button" class="search-dropdown-item" onclick="selectMobileSearchType('images')" role="menuitem">
-                    <i class="fas fa-image" aria-hidden="true"></i>
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
                     <span>Images</span>
                 </button>
                 <button type="button" class="search-dropdown-item" onclick="selectMobileSearchType('videos')" role="menuitem">
-                    <i class="fas fa-video" aria-hidden="true"></i>
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-video"/></svg>
                     <span>Videos</span>
                 </button>
             </div>
@@ -482,7 +477,7 @@
 
             <!-- Search Submit Button -->
             <button type="submit" class="pexels-search-icon-btn" aria-label="Search">
-                <i class="fas fa-search" aria-hidden="true"></i>
+                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-search"/></svg>
             </button>
         </div>
     </form>

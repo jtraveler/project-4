@@ -133,8 +133,16 @@ function selectSearchType(type) {
         item.setAttribute('aria-selected', 'false');
     });
 
+    // Get the sprite base URL from the existing use element
+    const useElement = icon.querySelector('use');
+    const currentHref = useElement ? useElement.getAttribute('href') : '';
+    const spriteBase = currentHref.substring(0, currentHref.lastIndexOf('#'));
+
     if (type === 'images') {
-        icon.className = 'fas fa-image search-type-icon';
+        // Update SVG icon reference
+        if (useElement) {
+            useElement.setAttribute('href', spriteBase + '#icon-image');
+        }
         text.textContent = 'Images';
         input.value = 'images';
 
@@ -142,7 +150,10 @@ function selectSearchType(type) {
         const imagesItem = menu.querySelector('[onclick*="images"]');
         if (imagesItem) imagesItem.setAttribute('aria-selected', 'true');
     } else if (type === 'videos') {
-        icon.className = 'fas fa-video search-type-icon';
+        // Update SVG icon reference
+        if (useElement) {
+            useElement.setAttribute('href', spriteBase + '#icon-video');
+        }
         text.textContent = 'Videos';
         input.value = 'videos';
 
@@ -342,14 +353,25 @@ function selectMobileSearchType(type) {
         item.setAttribute('aria-selected', 'false');
     });
 
+    // Get the sprite base URL from the existing use element
+    const useElement = icon.querySelector('use');
+    const currentHref = useElement ? useElement.getAttribute('href') : '';
+    const spriteBase = currentHref.substring(0, currentHref.lastIndexOf('#'));
+
     if (type === 'images') {
-        icon.className = 'fas fa-image search-type-icon';
+        // Update SVG icon reference
+        if (useElement) {
+            useElement.setAttribute('href', spriteBase + '#icon-image');
+        }
         text.textContent = 'Images';
         input.value = 'images';
         const imagesItem = menu.querySelector('[onclick*="images"]');
         if (imagesItem) imagesItem.setAttribute('aria-selected', 'true');
     } else if (type === 'videos') {
-        icon.className = 'fas fa-video search-type-icon';
+        // Update SVG icon reference
+        if (useElement) {
+            useElement.setAttribute('href', spriteBase + '#icon-video');
+        }
         text.textContent = 'Videos';
         input.value = 'videos';
         const videosItem = menu.querySelector('[onclick*="videos"]');

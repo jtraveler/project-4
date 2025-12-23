@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** December 13, 2025
+**Last Updated:** December 23, 2025
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase I Complete, CI/CD Operational
+**Current Phase:** Phase J.1 & J.2 Complete, SVG Icon System Implemented
 **Total Tests:** 234 passing (46% coverage)
 
 ---
@@ -13,8 +13,9 @@
 |----------|-------|----------|
 | **Python Files** | 92 | Various directories |
 | **HTML Templates** | 41 | templates/, prompts/templates/, about/templates/ |
-| **CSS Files** | 4 | static/css/ |
-| **JavaScript Files** | 1 | static/js/ |
+| **CSS Files** | 6 | static/css/ |
+| **JavaScript Files** | 3 | static/js/ |
+| **SVG Icons** | 16 | static/icons/sprite.svg |
 | **Migrations** | 38 | prompts/migrations/ (37), about/migrations/ (1) |
 | **Test Files** | 12 | prompts/tests/ |
 | **Management Commands** | 17 | prompts/management/commands/ |
@@ -92,13 +93,21 @@ live-working-project/
 ├── reports/                      # Generated CSV reports
 ├── scripts/                      # Utility scripts (7 files)
 ├── static/                       # Source static files
-│   ├── css/                      # 4 CSS files (101KB total)
+│   ├── css/                      # 6 CSS files (~105KB total)
 │   │   ├── components/
+│   │   │   ├── icons.css         # SVG icon system styles
+│   │   │   └── masonry-grid.css
 │   │   ├── pages/
+│   │   │   ├── prompt-detail.css # Prompt detail page styles (1,063 lines)
+│   │   │   └── prompt-list.css
 │   │   ├── navbar.css
 │   │   └── style.css
-│   └── js/
-│       └── navbar.js             # Extracted navbar JavaScript (~650 lines)
+│   ├── icons/                    # SVG icon sprite (Phase J.2)
+│   │   └── sprite.svg            # 16 icons from Lucide Icons
+│   └── js/                       # 3 JavaScript files
+│       ├── like-button.js        # Centralized like button handler
+│       ├── navbar.js             # Extracted navbar JavaScript (~650 lines)
+│       └── prompt-detail.js      # Prompt detail page interactions
 ├── staticfiles/                  # Collected static (production)
 └── templates/                    # Global Django templates (18 files)
     ├── account/                  # 6 authentication templates
@@ -293,12 +302,14 @@ static/css/
 ├── navbar.css           # 1,136 lines - Extracted navbar styles
 ├── style.css            # 1,789 lines - Main stylesheet
 ├── components/
+│   ├── icons.css        # ~250 lines - SVG icon system (Phase J.2)
 │   └── masonry-grid.css # 255 lines - Masonry grid component
 └── pages/
-    └── prompt-list.css  # 304 lines - Prompt list page styles
+    ├── prompt-detail.css # 1,063 lines - Prompt detail page (Phase J.1)
+    └── prompt-list.css   # 304 lines - Prompt list page styles
 ```
 
-**Total CSS:** ~3,484 lines across 4 files
+**Total CSS:** ~4,797 lines across 6 files
 
 ---
 
@@ -335,8 +346,18 @@ static/css/
 
 ```
 static/js/
-└── navbar.js             # ~650 lines - Extracted from base.html
+├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
+├── navbar.js             # ~650 lines - Extracted from base.html
+└── prompt-detail.js      # ~400 lines - Prompt detail interactions (Phase J.1)
 ```
+
+### JavaScript Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| **navbar.js** | ~650 | Dropdowns, search, mobile menu, scroll |
+| **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
+| **like-button.js** | ~155 | Centralized like handler with optimistic UI |
 
 ### navbar.js Features
 
@@ -349,7 +370,64 @@ static/js/
 | Event Delegation | ~70 | Performance optimization |
 | Utilities | ~50 | Debounce, focus trap |
 
+**Total JavaScript:** ~1,205 lines across 3 files
 **Extraction Benefit:** base.html reduced from ~2000 lines to ~1400 lines
+
+---
+
+## SVG Icon System (Phase J.2)
+
+PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome for improved performance and consistency.
+
+### Files
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `sprite.svg` | static/icons/ | SVG sprite with 16 icon definitions |
+| `icons.css` | static/css/components/ | Icon utility classes |
+
+### Available Icons (16 total)
+
+**Phase 1 Icons (Navigation):**
+- `icon-image` - Photos filter indicator
+- `icon-video` - Videos filter indicator
+- `icon-search` - Search dropdown icon
+- `icon-trophy` - Leaderboard dropdown icon
+- `icon-lightbulb` - Prompts dropdown icon
+
+**Phase 2 Icons (Actions):**
+- `icon-comment` - Comment indicator
+- `icon-heart` - Heart outline (unliked state)
+- `icon-heart-filled` - Solid pink heart (liked state)
+- `icon-flag` - Report prompt
+- `icon-edit` - Edit prompt
+- `icon-trash` - Delete prompt
+- `icon-external-link` - External links
+- `icon-calendar` - Date indicators
+- `icon-copy` - Copy to clipboard
+- `icon-login` - Sign in/out
+- `icon-bell` - Notifications
+
+### Usage Pattern
+
+```html
+<svg class="icon icon-sm">
+  <use href="{% static 'icons/sprite.svg' %}#icon-name"/>
+</svg>
+```
+
+### Size Classes
+
+| Class | Size | Use Case |
+|-------|------|----------|
+| `.icon-xs` | 12px (0.75rem) | Inline text |
+| `.icon-sm` | 22px (1.4rem) | Navigation (default) |
+| `.icon-md` | 24px (1.5rem) | Action buttons |
+| `.icon-lg` | 24px (1.5rem) | Larger contexts |
+
+### Icon Source
+
+All icons from [Lucide Icons](https://lucide.dev) - MIT License
 
 ---
 
@@ -465,8 +543,8 @@ python manage.py test -v 2
 
 **END OF PROJECT_FILE_STRUCTURE.md**
 
-*This document is updated after major structural changes. Last audit: December 13, 2025.*
+*This document is updated after major structural changes. Last audit: December 23, 2025.*
 
-**Version:** 2.1
-**Audit Date:** December 13, 2025
+**Version:** 2.2
+**Audit Date:** December 23, 2025
 **Maintained By:** Mateo Johnson - Prompt Finder

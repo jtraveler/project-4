@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 20, 2025
-**Project Status:** Pre-Launch Development - Phase J (Prompt Detail Redesign) J.1 COMPLETE, All Core Phases Complete
+**Last Updated:** December 23, 2025
+**Project Status:** Pre-Launch Development - Phase J (Prompt Detail Redesign) J.1 & J.2 COMPLETE, All Core Phases Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -353,6 +353,48 @@ Improves @django-expert rating from 7.5 → 9.0/10
 - Bootstrap 5
 - Custom CSS
 - Vanilla JavaScript
+
+### SVG Icon System (Phase J.2)
+
+**Status:** ✅ COMPLETE (December 23, 2025)
+
+PromptFinder uses a custom SVG sprite system for navigation icons, replacing Font Awesome for better performance and consistency.
+
+**Files:**
+- `static/icons/sprite.svg` - SVG sprite with all icon definitions
+- `static/css/components/icons.css` - Icon utility classes
+
+**Current Icons (5):**
+| Icon ID | Source | Usage |
+|---------|--------|-------|
+| `icon-image` | Lucide | Photos filter, media type indicator |
+| `icon-video` | Lucide | Videos filter, media type indicator |
+| `icon-search` | Lucide | Search dropdown icon |
+| `icon-trophy` | Lucide | Leaderboard dropdown icon |
+| `icon-lightbulb` | Lucide | Prompts dropdown icon |
+
+**Usage Pattern:**
+```html
+<svg class="icon icon-sm">
+  <use href="{% static 'icons/sprite.svg' %}#icon-name"/>
+</svg>
+```
+
+**Size Classes:**
+- `.icon-xs` - 12px (0.75rem)
+- `.icon-sm` - 22px (1.4rem) - Default for navigation
+- `.icon-md` - 24px (1.5rem)
+- `.icon-lg` - 24px (1.5rem)
+
+**Dropdown Icon Styling:**
+SVG icons in dropdowns require direct CSS variable assignment (not `currentColor`) due to `<use>` shadow DOM boundaries:
+```css
+.pexels-dropdown-icon {
+    stroke: var(--gray-700);  /* Direct color for <use> compatibility */
+}
+```
+
+**Icon Source:** Lucide Icons (https://lucide.dev) - MIT License
 
 ### Backend
 - Django 4.2.13
@@ -5550,11 +5592,11 @@ path('ai/<slug:generator>/', RedirectView.as_view(
 
 ---
 
-## 🎨 Phase J: Prompt Detail Page Redesign (J.1 COMPLETE)
+## 🎨 Phase J: Prompt Detail Page Redesign (J.1 & J.2 COMPLETE)
 
-**Status:** ✅ PHASE J.1 COMPLETE (December 20, 2025)
+**Status:** ✅ PHASE J.1 & J.2 COMPLETE (December 23, 2025)
 **Priority:** HIGH - Core user experience improvement
-**Effort:** 9 iterative rounds, 22 commits, ~12 hours total
+**Effort:** 9 iterative rounds (J.1), + Session 20 (J.2), ~14 hours total
 **Baseline Analysis:** `docs/PROMPT_DETAIL_ANALYSIS.md` (477 lines, completed Dec 18, 2025)
 **Current Template:** `prompts/templates/prompts/prompt_detail.html` (470 lines after J.1)
 **Agent Rating:** 8.7/10 average (@ui-ux-designer 7.5-9.5/10, @frontend-developer 9.0/10)
@@ -7736,6 +7778,47 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 
 ## 📝 Changelog
 
+### December 2025 - Session 20 (Dec 23, 2025)
+
+**Phase J.2 Complete: SVG Icon System & Unified Button Styling**
+
+Session 20 implemented core infrastructure improvements for icons and button consistency:
+
+**Phase J.2: SVG Icon System**
+- Created `static/icons/sprite.svg` with 5 Lucide icons (image, video, search, trophy, lightbulb)
+- Created `static/css/components/icons.css` with icon utility classes
+- Replaced Font Awesome icons in Explore dropdown with SVG sprites
+- Fixed SVG `<use>` shadow DOM issue: `stroke: var(--gray-700)` instead of `currentColor`
+- Updated `static/js/navbar.js` for dynamic icon switching
+
+**Unified Button Styling System**
+- Standardized action icons across prompt detail and cards
+- Copy button cleanup and login button styling improvements
+- Model type indicators for all media types
+
+**Technical Details:**
+- SVG icons use Lucide Icons (MIT License)
+- Direct CSS variable assignment bypasses `<use>` shadow DOM color inheritance issues
+- Icon sizes: `.icon-xs` (12px), `.icon-sm` (22px), `.icon-md/.icon-lg` (24px)
+
+**Bug Fixes:**
+- Fixed dropdown icons not displaying (stroke property for SVG vs color for FA)
+- Updated `.pexels-dropdown` min-width from 240px to 200px
+
+**Agent Validation:**
+- @frontend-developer: 9.0/10 → SVG CSS fix matches proven search dropdown pattern
+
+**Files Created:**
+- `static/icons/sprite.svg` - SVG sprite definitions
+- `static/css/components/icons.css` - Icon utility classes
+
+**Files Modified:**
+- `templates/base.html` - SVG icon implementation in dropdowns
+- `static/css/navbar.css` - Dropdown icon styling (stroke fix, min-width)
+- `static/js/navbar.js` - Icon switching logic
+
+---
+
 ### December 2025 - Session 19 (Dec 19-20, 2025)
 
 **Phase J.1 Complete: Prompt Detail Page Redesign**
@@ -7864,7 +7947,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.3
-**Last Updated:** December 20, 2025
+**Version:** 2.4
+**Last Updated:** December 23, 2025
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase J.1 Complete, All Core Phases Complete)
+**Project Status:** Pre-Launch (Phase J.1 & J.2 Complete, All Core Phases Complete)

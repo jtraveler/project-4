@@ -81,6 +81,11 @@ a .icon {
     height: 1.2rem;
 }
 
+/* Text spacing in action icon buttons (exclude like count) */
+.action-icon-btn span:not(.like-count):not(.action-count) {
+    margin-left: 5px;
+}
+
 /* ==========================================================================
    Icon Colors (inherits from parent by default via currentColor)
    ========================================================================== */

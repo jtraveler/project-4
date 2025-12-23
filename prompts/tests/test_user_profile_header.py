@@ -111,7 +111,7 @@ class ProfileHeaderVisibilityTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Trash')
-        self.assertContains(response, 'fa-trash')  # Trash icon
+        self.assertContains(response, 'icon-trash')  # Trash icon (SVG)
         # Check trash URL is present
         trash_url = reverse('prompts:user_profile_trash', args=['profileowner'])
         self.assertContains(response, trash_url)

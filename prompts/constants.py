@@ -26,7 +26,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://www.midjourney.com',
         'icon': 'images/generators/midjourney-icon.png',  # Placeholder
-        'choice_value': 'midjourney',
+        'choice_value': 'Midjourney',  # Must match database values (case-insensitive)
         'supports_images': True,
         'supports_video': True,  # V1 Video launched June 2025
     },
@@ -46,7 +46,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://openai.com/dall-e-3',
         'icon': 'images/generators/dalle3-icon.png',  # Placeholder
-        'choice_value': 'dalle3',
+        'choice_value': 'DALL-E 3',  # Must match database values (case-insensitive)
         'supports_images': True,
         'supports_video': False,
     },
@@ -67,7 +67,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://openai.com/dall-e-2',
         'icon': 'images/generators/dalle2-icon.png',  # Placeholder
-        'choice_value': 'dalle2',
+        'choice_value': 'DALL-E 2',  # Must match database display values
         'supports_images': True,
         'supports_video': False,
     },
@@ -88,7 +88,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://stability.ai/stable-diffusion',
         'icon': 'images/generators/stable-diffusion-icon.png',  # Placeholder
-        'choice_value': 'stable_diffusion',
+        'choice_value': 'Stable Diffusion',  # Must match database display values
         'supports_images': True,
         'supports_video': True,
     },
@@ -109,7 +109,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://leonardo.ai',
         'icon': 'images/generators/leonardo-icon.png',  # Placeholder
-        'choice_value': 'leonardo',
+        'choice_value': 'Leonardo AI',  # Must match database display values
         'supports_images': True,
         'supports_video': True,
     },
@@ -130,7 +130,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://blackforestlabs.ai',
         'icon': 'images/generators/flux-icon.png',  # Placeholder
-        'choice_value': 'flux',
+        'choice_value': 'Flux',  # Must match database display values
         'supports_images': True,
         'supports_video': False,
     },
@@ -152,7 +152,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://openai.com/sora',
         'icon': 'images/generators/sora-icon.png',  # Placeholder
-        'choice_value': 'sora',
+        'choice_value': 'Sora',  # Must match database display values
         'supports_images': True,
         'supports_video': True,
     },
@@ -173,7 +173,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://openai.com/sora',  # Will be updated when official Sora 2 page launches
         'icon': 'images/generators/sora2-icon.png',  # Placeholder
-        'choice_value': 'sora2',
+        'choice_value': 'Sora 2',  # Must match database display values
         'supports_images': True,
         'supports_video': True,
     },
@@ -194,7 +194,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://deepmind.google/technologies/veo',
         'icon': 'images/generators/veo3-icon.png',  # Placeholder
-        'choice_value': 'veo3',
+        'choice_value': 'Veo 3',  # Must match database display values
         'supports_images': False,
         'supports_video': True,
     },
@@ -216,7 +216,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://www.adobe.com/products/firefly.html',
         'icon': 'images/generators/firefly-icon.png',  # Placeholder
-        'choice_value': 'firefly',
+        'choice_value': 'Adobe Firefly',  # Must match database display values
         'supports_images': True,
         'supports_video': True,
     },
@@ -237,7 +237,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://www.bing.com/images/create',
         'icon': 'images/generators/bing-icon.png',  # Placeholder
-        'choice_value': 'bing',
+        'choice_value': 'Bing Image Creator',  # Must match database display values
         'supports_images': True,
         'supports_video': False,
     },
@@ -258,7 +258,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://x.ai',
         'icon': 'images/generators/grok-icon.png',  # Placeholder
-        'choice_value': 'grok',
+        'choice_value': 'Grok',  # Must match database display values
         'supports_images': True,
         'supports_video': True,  # Grok supports video generation
     },
@@ -278,7 +278,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://tongyi.aliyun.com/wanxiang',
         'icon': 'images/generators/wan21-icon.png',  # Placeholder
-        'choice_value': 'wan21',
+        'choice_value': 'WAN 2.1',  # Must match database display values
         'supports_images': True,
         'supports_video': True,
     },
@@ -298,7 +298,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://tongyi.aliyun.com/wanxiang',
         'icon': 'images/generators/wan22-icon.png',  # Placeholder
-        'choice_value': 'wan22',
+        'choice_value': 'WAN 2.2',  # Must match database display values
         'supports_images': True,
         'supports_video': True,
     },
@@ -318,7 +318,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://nanobanana.ai',
         'icon': 'images/generators/nano-banana-icon.png',  # Placeholder
-        'choice_value': 'nano_banana',
+        'choice_value': 'Nano Banana',  # Must match database display values
         'supports_images': True,  # Nano Banana is image-only
         'supports_video': False,
     },
@@ -337,7 +337,7 @@ AI_GENERATORS = {
         ''',
         'website': 'https://nanobanana.ai',
         'icon': 'images/generators/nano-banana-pro-icon.png',  # Placeholder
-        'choice_value': 'nano_banana_pro',
+        'choice_value': 'Nano Banana Pro',  # Must match database display values
         'supports_images': True,  # Nano Banana Pro is image-only
         'supports_video': False,
     },

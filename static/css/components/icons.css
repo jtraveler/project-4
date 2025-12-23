@@ -75,6 +75,12 @@ a .icon {
     margin-right: 0;
 }
 
+/* Action icon button - icon sizing */
+.action-icon-btn .icon-sm {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
 /* ==========================================================================
    Icon Colors (inherits from parent by default via currentColor)
    ========================================================================== */

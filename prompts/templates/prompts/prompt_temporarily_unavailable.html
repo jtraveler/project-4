@@ -46,7 +46,7 @@
                                     </p>
                                     <div class="d-flex justify-content-between align-items-center text-muted small">
                                         <span>
-                                            <i class="fas fa-heart"></i> {{ prompt.likes.count }}
+                                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg> {{ prompt.likes.count }}
                                         </span>
                                         <span>
                                             <i class="fas fa-tag"></i> {{ prompt.ai_generator|default:"AI" }}

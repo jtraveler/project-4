@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block content %}
@@ -112,7 +113,7 @@
                     <i class="fas fa-user-circle"></i> &nbsp; Sign In
                 </a>
                 <button type="submit" class="btn-primary">
-                    <i class="fas fa-sign-out-alt me-2"></i> Create Account
+                    <svg class="icon icon-sm me-2" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-login"/></svg> Create Account
                 </button>
             </div>
         </form>

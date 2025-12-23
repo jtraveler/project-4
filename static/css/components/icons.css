@@ -93,3 +93,158 @@ a .icon {
 .icon-success {
     stroke: var(--success, #28a745);
 }
+
+/* ==========================================================================
+   Like Button - Background Toggle Approach (Pexels Style)
+   ========================================================================== */
+
+/*
+ * Like button uses background color toggle instead of heart fill.
+ * Heart stays white always, button background toggles pink when liked.
+ * This approach works reliably with SVG sprites.
+ *
+ * Supported elements:
+ * - .like-section (homepage cards in card-overlay)
+ * - .action-icon-btn (prompt detail page)
+ */
+
+/* ==========================================================================
+   Homepage Cards - Like Section in Card Overlay
+   ========================================================================== */
+
+/* Like section - default (heart outline, no background) */
+.card-overlay .like-section {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+}
+
+/* Like section - hover state */
+.card-overlay .like-section:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Like section - liked state (pink background) */
+.card-overlay .like-section.liked {
+    background-color: #ff3a78;
+}
+
+/* Like section - liked hover (darker pink) */
+.card-overlay .like-section.liked:hover {
+    background-color: #e0245e;
+}
+
+/* Heart icon in card overlay - always white */
+.card-overlay .heart-icon {
+    stroke: white;
+    fill: none;
+    transition: none;
+}
+
+/* ==========================================================================
+   Generic Like Button (Future Use)
+   ========================================================================== */
+
+/* Like button container - base styles */
+.like-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 8px;
+    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Like button - hover state */
+.like-btn:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Like button - liked state (pink background) */
+.like-btn.liked {
+    background-color: #ff3a78;
+}
+
+/* Like button - liked hover (slightly darker pink) */
+.like-btn.liked:hover {
+    background-color: #e0245e;
+}
+
+/* Heart icon inside like button - always white outline */
+.like-btn .heart-icon,
+.like-btn .icon {
+    stroke: white;
+    fill: none;
+}
+
+/* Like count text - always white */
+.like-btn .like-count,
+.like-section .like-count {
+    color: white;
+    margin-right: 5px;
+}
+
+/* ==========================================================================
+   Like Button - Processing/Disabled State
+   ========================================================================== */
+
+/*
+ * Like button processing state - prevents double-clicks during AJAX request.
+ * No visual change (no opacity/cursor) for instant-feeling UI.
+ * The optimistic UI update already shows the change immediately.
+ */
+
+/* Disabled state for button elements - just prevent clicks */
+.like-btn:disabled,
+.action-icon-btn:disabled {
+    pointer-events: none;
+}
+
+/* Processing state for non-button elements (like-section uses data attribute) */
+.like-section[data-processing="true"] {
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   Detail Page Like Button - Clean Implementation
+   ========================================================================== */
+
+/* Heart icon toggle - outline vs filled */
+.like-btn-detail .heart-outline {
+    display: inline-block;
+}
+.like-btn-detail .heart-filled {
+    display: none;
+}
+.like-btn-detail.liked .heart-outline {
+    display: none;
+}
+.like-btn-detail.liked .heart-filled {
+    display: inline-block;
+}
+
+/* Solid heart must have fill (override base .icon fill:none) */
+.heart-filled {
+    fill: #ff3a78 !important;
+    stroke: none !important;
+}
+
+/* Hover hint on unliked - outline turns pink */
+.like-btn-detail:not(.liked):hover .heart-outline {
+    color: #ff3a78;
+}
+
+/* Liked state - match hover styling (gray, not pink) */
+.like-btn-detail.liked {
+    background-color: var(--gray-50, #fafafa) !important;
+    border-color: var(--gray-400, #a3a3a3) !important;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;
+}
+
+/* Hover on liked - slightly darker */
+.like-btn-detail.liked:hover {
+    background-color: var(--gray-100, #f0f0f0) !important;
+}

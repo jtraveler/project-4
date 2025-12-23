@@ -59,7 +59,7 @@
                         class="btn btn-danger btn-sm"
                         data-bs-toggle="modal"
                         data-bs-target="#deleteModal{{ prompt.id }}">
-                        <i class="fas fa-trash"></i>
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
                     </button>
                 </div>
             </div>
@@ -87,7 +87,7 @@
                     <form method="post" action="{% url 'prompts:prompt_permanent_delete' prompt.slug %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash"></i> Delete Forever
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Delete Forever
                         </button>
                     </form>
                 </div>
@@ -219,13 +219,13 @@
                         </span>
                         <span class="heart-counter">
                             {% if user.is_authenticated %}
-                                <small class="like-section"
+                                <small class="like-section{% if user in prompt.likes.all %} liked{% endif %}"
                                        data-prompt-slug="{{ prompt.slug }}"
                                        style="cursor: pointer; user-select: none;">
                                     {% if user in prompt.likes.all %}
-                                        <i class="fas fa-heart me-1" style="color: white;"></i>
+                                        <svg class="icon icon-sm heart-icon liked me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
                                     {% else %}
-                                        <i class="far fa-heart me-1" style="color: white;"></i>
+                                        <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
                                     {% endif %}
                                     <span class="like-count">{{ prompt.number_of_likes }}</span>
                                     like<span class="like-plural">{% if prompt.number_of_likes != 1 %}s{% endif %}</span>
@@ -235,7 +235,7 @@
                                    class="text-decoration-none"
                                    style="color: white;">
                                     <small>
-                                        <i class="far fa-heart me-1"></i>
+                                        <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
                                         <span>{{ prompt.number_of_likes }}</span>
                                         like{% if prompt.number_of_likes != 1 %}s{% endif %}
                                     </small>

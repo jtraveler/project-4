@@ -175,16 +175,31 @@
        ========================================================================== */
 
     window.toggleLike = function(button) {
+        // Prevent rapid clicks - ignore if already processing
+        if (button.disabled) return;
+        button.disabled = true;
+
         const promptSlug = button.getAttribute('data-prompt-slug');
-        const heartIcon = button.querySelector('i');
         const likeCount = button.querySelector('.like-count');
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
 
+        // INSTANT toggle - do this FIRST (optimistic UI)
+        button.classList.toggle('liked');
+        const isLiked = button.classList.contains('liked');
+
+        // Update count instantly
+        if (likeCount) {
+            let count = parseInt(likeCount.textContent) || 0;
+            likeCount.textContent = isLiked ? count + 1 : Math.max(0, count - 1);
+        }
+
         if (!csrfToken) {
             console.error('CSRF token not found');
+            button.disabled = false;
             return;
         }
 
+        // Then do AJAX (sync with server, don't block UI)
         fetch('/prompt/' + promptSlug + '/like/', {
             method: 'POST',
             headers: {
@@ -195,19 +210,27 @@
         })
         .then(response => response.json())
         .then(data => {
+            // Sync with server's authoritative state
             likeCount.textContent = data.like_count;
 
             if (data.liked) {
                 button.classList.add('liked');
-                heartIcon.className = 'fas fa-heart';
             } else {
                 button.classList.remove('liked');
-                heartIcon.className = 'far fa-heart';
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Something went wrong. Please try again.');
+            // Revert optimistic update on error
+            button.classList.toggle('liked');
+            if (likeCount) {
+                let count = parseInt(likeCount.textContent) || 0;
+                likeCount.textContent = button.classList.contains('liked') ? count + 1 : Math.max(0, count - 1);
+            }
+        })
+        .finally(() => {
+            // Re-enable button after request completes
+            button.disabled = false;
         });
     };
 

@@ -447,7 +447,7 @@
     <div class="generator-header-right">
         {% if generator.website %}
         <a href="{{ generator.website }}" target="_blank" rel="noopener noreferrer" class="generator-cta-btn">
-            <i class="fas fa-external-link-alt"></i>
+            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-external-link"/></svg>
             Create in {{ generator.name }}
         </a>
         {% endif %}

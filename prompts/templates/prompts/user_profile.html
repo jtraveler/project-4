@@ -862,7 +862,7 @@
 
         <!-- Member Since Date -->
         <p class="profile-meta text-muted" style="font-size: 15px; margin: 8px 0 16px; color: #6b7280;">
-            <i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>
+            <svg class="icon icon-sm" aria-hidden="true" style="margin-right: 6px; vertical-align: -0.125em;"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"/></svg>
             Member since {{ profile.created_at|date:"F Y" }}
         </p>
 
@@ -981,7 +981,7 @@
                 <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}"
                    class="profile-tab {% if active_tab == 'trash' %}profile-tab-active{% endif %}"
                    style="text-decoration: none;">
-                    <i class="fas fa-trash-alt" style="margin-right: 6px; font-size: 15px;"></i>
+                    <svg class="icon icon-sm" aria-hidden="true" style="margin-right: 6px;"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
                     Trash
                     <span class="profile-tab-count stat-badge">{{ trash_count|default:0 }}</span>
                 </a>
@@ -1110,7 +1110,7 @@
         <!-- Empty Trash Button -->
         <div class="mb-4">
             <button type="button" class="trash-btn-empty" onclick="openEmptyTrashModal()">
-                <i class="fas fa-trash-alt" aria-hidden="true"></i> Empty Trash ({{ trash_count }})
+                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Empty Trash ({{ trash_count }})
             </button>
         </div>
 
@@ -1167,7 +1167,7 @@
                                 </div>
                             {% else %}
                                 <p class="trash-card-info">
-                                    <i class="fas fa-calendar" aria-hidden="true"></i> {{ prompt.days_until_permanent_deletion }} days remaining
+                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"/></svg> {{ prompt.days_until_permanent_deletion }} days remaining
                                 </p>
                             {% endif %}
                         </div>
@@ -1190,7 +1190,7 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="restore_as" value="draft">
                                 <button type="submit" class="trash-btn-action" title="Restore as draft for editing">
-                                    <i class="fas fa-edit" aria-hidden="true"></i> Restore as Draft
+                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-edit"/></svg> Restore as Draft
                                 </button>
                             </form>
 
@@ -1198,7 +1198,7 @@
                             <button type="button" class="trash-btn-delete"
                                     data-bs-toggle="modal"
                                     data-bs-target="#deleteModal{{ prompt.id }}">
-                                <i class="fas fa-trash" aria-hidden="true"></i> Delete Forever
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Delete Forever
                             </button>
                         </div>
                     </div>
@@ -1229,7 +1229,7 @@
                         <form method="post" action="{% url 'prompts:prompt_permanent_delete' prompt.slug %}" class="d-inline">
                             {% csrf_token %}
                             <button type="submit" class="trash-modal-btn-confirm">
-                                <i class="fas fa-trash" aria-hidden="true"></i> Delete Forever
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Delete Forever
                             </button>
                         </form>
                     </div>
@@ -1258,7 +1258,7 @@
                     {% csrf_token %}
                     <div class="trash-modal-actions">
                         <button type="submit" class="trash-modal-btn-confirm">
-                            <i class="fas fa-trash" aria-hidden="true"></i>
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
                             Yes, Empty Trash
                         </button>
                         <button type="button" class="trash-modal-btn-cancel" onclick="closeEmptyTrashModal()">
@@ -1272,7 +1272,7 @@
     {% else %}
         <!-- Empty Trash State -->
         <div class="empty-profile">
-            <i class="fas fa-trash-alt"></i>
+            <svg class="icon" aria-hidden="true" style="width: 4rem; height: 4rem;"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
             <h3>Trash is Empty</h3>
             <p>Items you delete will appear here for 5 days before being permanently removed.</p>
         </div>
@@ -1467,6 +1467,11 @@
 
     console.log('✅ Overflow arrows + keyboard navigation registered');
 })();
+
+// ============================================================================
+// LIKE BUTTON FUNCTIONALITY - Now centralized in static/js/like-button.js
+// Loaded in base.html - auto-attaches to all .like-section elements
+// ============================================================================
 
 // ============================================================================
 // FOLLOW/UNFOLLOW FUNCTIONALITY (Phase F Day 1)

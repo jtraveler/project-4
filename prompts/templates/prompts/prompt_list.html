@@ -36,7 +36,7 @@
     </p>
     <div>
         <a href="/admin/prompts/prompt/" target="_blank" class="btn btn-sm">
-            <i class="fas fa-external-link-alt"></i> Open Admin Panel
+            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-external-link"/></svg> Open Admin Panel
         </a>
         <button onclick="toggleOrderDisplay()" class="btn btn-sm" id="toggle-order-btn">
             <i class="fas fa-eye"></i> Show Order Numbers
@@ -995,68 +995,8 @@ function initVideoObserver() {
     const initialItems = Array.from(itemsContainer.querySelectorAll('[data-item]'));
     distributeItems(initialItems, false, false);
     
-    // Heart functionality
-    function attachHeartFunctionality(container = document) {
-        const likeSections = container.querySelectorAll('.like-section');
-        
-        likeSections.forEach(function(section) {
-            if (section.dataset.listenerAttached) return;
-            
-            section.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const promptSlug = this.getAttribute('data-prompt-slug');
-                const heartIcon = this.querySelector('i');
-                const likeCount = this.querySelector('.like-count');
-                const likePlural = this.querySelector('.like-plural');
-
-                // Store original state for potential rollback
-                const originalCount = parseInt(likeCount.textContent) || 0;
-                const wasLiked = heartIcon.classList.contains('fas');
-
-                // Optimistic UI update - immediately show the change
-                const newLiked = !wasLiked;
-                const newCount = newLiked ? originalCount + 1 : originalCount - 1;
-
-                heartIcon.className = newLiked ? 'fas fa-heart me-1' : 'far fa-heart me-1';
-                heartIcon.style.color = 'white';
-                likeCount.textContent = newCount;
-                likePlural.textContent = newCount === 1 ? '' : 's';
-
-                fetch('/prompt/' + promptSlug + '/like/', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                        'Content-Type': 'application/json',
-                    },
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error('Request failed');
-                    return response.json();
-                })
-                .then(data => {
-                    // Sync with server's authoritative count (handles race conditions)
-                    likeCount.textContent = data.like_count;
-                    likePlural.textContent = data.like_count === 1 ? '' : 's';
-                    heartIcon.className = data.liked ? 'fas fa-heart me-1' : 'far fa-heart me-1';
-                })
-                .catch(error => {
-                    // Rollback to original state on error
-                    console.error('Error:', error);
-                    heartIcon.className = wasLiked ? 'fas fa-heart me-1' : 'far fa-heart me-1';
-                    heartIcon.style.color = 'white';
-                    likeCount.textContent = originalCount;
-                    likePlural.textContent = originalCount === 1 ? '' : 's';
-                });
-            });
-            
-            section.dataset.listenerAttached = 'true';
-        });
-    }
-    
-    attachHeartFunctionality();
+    // Heart functionality now handled by centralized like-button.js (loaded in base.html)
+    // It auto-attaches on DOMContentLoaded and exports window.attachLikeHandlers() for dynamic content
     
     // Load More functionality
     const loadMoreBtn = document.getElementById('load-more-btn');
@@ -1134,13 +1074,15 @@ function initVideoObserver() {
                         throw e;
                     }
 
-                    // Attach heart functionality to new items
+                    // Attach heart functionality to new items (using centralized like-button.js)
                     console.log('  → Attaching heart functionality...');
                     try {
-                        attachHeartFunctionality();
+                        if (typeof window.attachLikeHandlers === 'function') {
+                            window.attachLikeHandlers();
+                        }
                         console.log('  ✓ Heart functionality attached');
                     } catch (e) {
-                        console.error('  ❌ Error in attachHeartFunctionality:', e);
+                        console.error('  ❌ Error in attachLikeHandlers:', e);
                         throw e;
                     }
 

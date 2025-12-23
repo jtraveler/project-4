@@ -455,16 +455,7 @@
     line-height: 1;
 }
 
-.action-icon-btn.liked {
-    background-color: #fff0f3;
-    border-color: #ffcdd2;
-    color: var(--color-liked);
-}
-
-.action-icon-btn.liked:hover {
-    background-color: #ffebee;
-    color: #c62828;
-}
+/* Note: .like-btn-detail.liked styles are in icons.css */
 
 .action-icon-btn.views-display {
     cursor: default;

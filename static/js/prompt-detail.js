@@ -6,11 +6,12 @@
  *
  * @file static/js/prompt-detail.js
  * @author PromptFinder Team
- * @version 1.1.0
+ * @version 1.2.0
  * @date December 2025
  *
  * Features:
  * - Conditional sticky right rail (Phase J.2)
+ * - Video thumbnail hover autoplay (Phase J.3)
  * - Smooth scroll to comments
  * - Like toggle with AJAX
  * - Comment edit form toggle
@@ -608,6 +609,49 @@
     }
 
     /* ==========================================================================
+       Video Thumbnail Hover Autoplay (Phase J.3)
+       Handles hover-to-play behavior for video thumbnails in "More from Author" section.
+       Only activates on devices with true hover capability (not touch devices).
+       ========================================================================== */
+
+    function initVideoThumbnailHover() {
+        // Only enable on devices with hover capability (not touch devices)
+        if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            return;
+        }
+
+        var container = document.querySelector('.more-from-author-thumbnails');
+        if (!container) return;
+
+        // Handle mouseenter - play video
+        container.addEventListener('mouseenter', function(e) {
+            var videoContainer = e.target.closest('.video-thumbnail-container');
+            if (!videoContainer) return;
+
+            var video = videoContainer.querySelector('.thumbnail-video');
+            if (!video) return;
+
+            // Play video, fail silently if autoplay is blocked
+            video.play().catch(function(error) {
+                // Autoplay was prevented (common on some browsers)
+                console.debug('Video autoplay prevented:', error.message);
+            });
+        }, true); // Use capture phase for event delegation
+
+        // Handle mouseleave - pause and reset
+        container.addEventListener('mouseleave', function(e) {
+            var videoContainer = e.target.closest('.video-thumbnail-container');
+            if (!videoContainer) return;
+
+            var video = videoContainer.querySelector('.thumbnail-video');
+            if (!video) return;
+
+            video.pause();
+            video.currentTime = 0;
+        }, true); // Use capture phase for event delegation
+    }
+
+    /* ==========================================================================
        Initialize All Features
        Called when DOM is ready
        ========================================================================== */
@@ -631,6 +675,9 @@
 
         // Initialize follow button
         initFollowButton();
+
+        // Initialize video thumbnail hover autoplay (Phase J.3)
+        initVideoThumbnailHover();
     }
 
     // Initialize when DOM is ready

@@ -329,18 +329,37 @@
                        class="author-thumbnail-link"
                        aria-label="View {{ author_prompt.title }}">
                         <div class="author-thumbnail-wrapper">
-                            {% if author_prompt.featured_image %}
+                            {# Phase J.3: Video thumbnails get play icon and hover autoplay #}
+                            {% if author_prompt.is_video %}
+                            <div class="video-thumbnail-container">
+                                <img src="{{ author_prompt.get_thumbnail_url }}"
+                                     alt="{{ author_prompt.title }}"
+                                     class="author-thumbnail"
+                                     loading="lazy">
+                                <video class="thumbnail-video" muted loop playsinline preload="none">
+                                    <source src="{{ author_prompt.get_video_url }}" type="video/mp4">
+                                </video>
+                                <div class="play-icon-overlay" aria-hidden="true">
+                                    <svg class="play-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="24" cy="24" r="24" fill="rgba(0,0,0,0.6)"/>
+                                        <path d="M20 16L32 24L20 32V16Z" fill="white"/>
+                                    </svg>
+                                </div>
+                                <div class="author-thumbnail-overlay" aria-hidden="true"></div>
+                            </div>
+                            {% elif author_prompt.featured_image %}
                             <img src="{{ author_prompt.featured_image.url }}"
                                  alt="{{ author_prompt.title }}"
                                  class="author-thumbnail"
                                  loading="lazy">
+                            <div class="author-thumbnail-overlay" aria-hidden="true"></div>
                             {% else %}
                             <img src="{{ author_prompt.get_thumbnail_url }}"
                                  alt="{{ author_prompt.title }}"
                                  class="author-thumbnail"
                                  loading="lazy">
-                            {% endif %}
                             <div class="author-thumbnail-overlay" aria-hidden="true"></div>
+                            {% endif %}
                         </div>
                     </a>
                     {% endif %}

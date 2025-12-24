@@ -299,19 +299,19 @@
              onmouseleave="hideDropdown('profileDropdown', document.querySelector('[onmouseenter*=profileDropdown]'))"
              role="menu" aria-label="User account options">
             <a href="{% url 'prompts:user_profile' username=user.username %}" class="pexels-dropdown-item" role="menuitem" tabindex="0">
-                <i class="fas fa-user pexels-dropdown-icon"></i>
+                <svg class="icon icon-sm pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-user"/></svg>
                 <div class="pexels-dropdown-content">
                     <div class="pexels-dropdown-title">View Profile</div>
                 </div>
             </a>
             <a href="{% url 'prompts:edit_profile' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                <i class="fas fa-user-edit pexels-dropdown-icon"></i>
+                <svg class="icon icon-sm pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-user-pen"/></svg>
                 <div class="pexels-dropdown-content">
                     <div class="pexels-dropdown-title">Edit Profile</div>
                 </div>
             </a>
             <a href="{% url 'prompts:email_preferences' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
-                <svg class="icon icon-sm pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+                <svg class="icon icon-sm pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-mail"/></svg>
                 <div class="pexels-dropdown-content">
                     <div class="pexels-dropdown-title">Email Preferences</div>
                 </div>

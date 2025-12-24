@@ -10,6 +10,7 @@
   Phase 1: icon-image, icon-video, icon-search, icon-trophy, icon-lightbulb
   Phase 2: icon-comment, icon-heart, icon-heart-filled, icon-flag, icon-edit, icon-trash,
            icon-external-link, icon-calendar, icon-copy, icon-login, icon-bell
+  Phase 3: icon-user, icon-user-pen, icon-mail
 -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
 
@@ -144,6 +145,30 @@
   <symbol id="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
     <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+  </symbol>
+
+  <!-- ============================================
+       PHASE 3 ICONS - Added December 24, 2025
+       Source: Lucide Icons (https://lucide.dev)
+       ============================================ -->
+
+  <!-- Icon: user -->
+  <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </symbol>
+
+  <!-- Icon: user-pen (edit profile) -->
+  <symbol id="icon-user-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 21a8 8 0 0 1 10.821-7.487"/>
+    <path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>
+    <circle cx="10" cy="8" r="5"/>
+  </symbol>
+
+  <!-- Icon: mail (email preferences) -->
+  <symbol id="icon-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/>
+    <rect x="2" y="4" width="20" height="16" rx="2"/>
   </symbol>
 
 </svg>

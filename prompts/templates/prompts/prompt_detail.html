@@ -233,7 +233,7 @@
                 <h4 class="rail-card-title">Model Used</h4>
                 <div class="model-used-row">
                     <div class="model-used-info">
-                        <a href="{% url 'prompts:ai_generator_category' prompt.ai_generator %}" class="model-name">
+                        <a href="{% url 'prompts:ai_generator_category' prompt.ai_generator|lower %}" class="model-name">
                             <i class="fas fa-robot"></i>
                             {{ prompt.get_ai_generator_display|default:"Not specified" }}
                         </a>

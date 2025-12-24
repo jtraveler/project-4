@@ -212,6 +212,11 @@ a {
   color: var(--text-primary);
 }
 
+a:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
 /* Main button color */
 .btn-primary {
   background-color: var(--gray-800);

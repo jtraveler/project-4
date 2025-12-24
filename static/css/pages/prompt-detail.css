@@ -548,6 +548,16 @@
     font-size: 0.875rem;
 }
 
+/* Model name as link - inherit colors, underline on hover */
+a.model-name {
+    color: inherit;
+    text-decoration: none;
+}
+
+a.model-name:hover {
+    text-decoration: underline;
+}
+
 /* Model Used Row: Flex layout with affiliate button */
 .model-used-row {
     display: flex;

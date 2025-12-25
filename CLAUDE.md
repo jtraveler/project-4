@@ -6090,8 +6090,9 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
 
 ## 🗂️ Phase K: Collections Feature (CURRENT PRIORITY)
 
-**Status:** 🚧 IN PROGRESS (~15% Complete)
+**Status:** 🚧 IN PROGRESS (~40% Complete)
 **Started:** December 25, 2025
+**Last Updated:** December 26, 2025 (Session 25)
 **Priority:** HIGH - Competitive advantage feature
 **Estimated Effort:** 2-3 weeks
 **Competitive Advantage:** PromptHero (main competitor) does NOT have this feature!
@@ -6105,7 +6106,7 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
 
 **Solution:** Break into micro-specs with:
 - One file per spec maximum
-- ~10-20 lines of code per spec
+- ~10-50 lines of code per spec
 - Explicit "DO NOT" lists
 - User manual verification before next spec
 - No CC self-verification trusted
@@ -6115,19 +6116,34 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
 ### Progress Tracking
 
 #### Completed Micro-Specs ✅
+
+**UI Foundation (Phase K.1):**
 - **Micro-Spec #1:** Save button on prompt detail page ✅
 - **Micro-Spec #2:** Save button on prompt cards (positioned right of heart) ✅
 - **Micro-Spec #2.5:** Save button hover effect + Modal CSS scaffolding ✅
 
+**Backend Infrastructure (Phase K.2):**
+- **Micro-Spec #3:** Collection + CollectionItem models ✅
+- **Micro-Spec #3.5:** Model enhancements (deleted_by, indexes) ✅
+- **Micro-Spec #5a:** Old migration cleanup ✅
+- **Micro-Spec #5b:** Fresh migration with correct fields ✅
+- **Micro-Spec #4:** Admin registration (CollectionAdmin, CollectionItemAdmin) ✅
+
+**Modal Core (Phase K.3):**
+- **Micro-Spec #6:** Modal HTML template ✅
+- **Micro-Spec #7:** Include modal in base.html ✅
+- **Micro-Spec #8:** Modal JavaScript (open/close) ✅
+- **Debug Fix:** Script tag placement issue resolved ✅
+- **CSS Foundation:** 284 lines of modal CSS added ✅
+
 #### Remaining Micro-Specs ❌
-- **Micro-Spec #3:** Collection + CollectionItem models
-- **Micro-Spec #4:** Collections modal HTML
-- **Micro-Spec #5:** Collections JavaScript (open modal, fetch collections)
-- **Micro-Spec #6:** Create collection sub-modal
-- **Micro-Spec #7:** Add/remove from collection API
-- **Micro-Spec #8:** Collections list page
-- **Micro-Spec #9:** Collection detail page
-- **Micro-Spec #10:** Profile tab integration
+- **Micro-Spec #9:** Collections API - List endpoint
+- **Micro-Spec #10:** Collections API - Create endpoint
+- **Micro-Spec #11:** Collections API - Toggle (add/remove prompt)
+- **Micro-Spec #12:** Wire JavaScript to API
+- **Micro-Spec #13:** Collections list page
+- **Micro-Spec #14:** Collection detail page
+- **Micro-Spec #15:** Profile tab integration
 
 ---
 
@@ -6151,12 +6167,16 @@ Collections allow users to save prompts into organized folders they create, incr
 #### Phase K.1: MVP Collections (Priority)
 - ✅ Save button on prompt cards and detail page
 - ✅ Collections CSS scaffolding
-- ❌ Collection and CollectionItem models
-- ❌ Collections modal (add/remove prompts)
-- ❌ Create collection sub-modal
+- ✅ Collection and CollectionItem models (with deleted_by, indexes)
+- ✅ Database migration (0039_add_collection_models.py)
+- ✅ Admin registration (CollectionAdmin, CollectionItemAdmin)
+- ✅ Collections modal HTML template
+- ✅ Modal JavaScript (open/close functionality)
+- ✅ Modal CSS (284 lines - backdrop, grid, cards, states)
+- 🚧 Collections API endpoints
+- ❌ Wire JavaScript to API
 - ❌ Collections profile tab
 - ❌ Individual collection page
-- ❌ Basic CRUD operations
 
 #### Phase K.2: Enhanced Features
 - Download tracking + "Your Downloads" virtual collection
@@ -8138,6 +8158,61 @@ Session 24 marked a significant pivot in development methodology after multiple 
 - `prompts/templates/prompts/prompt_detail.html` - Save button
 - `prompts/templates/prompts/partials/_prompt_card.html` - Save button with positioning
 - `static/css/style.css` - Hover effects and modal CSS scaffolding
+
+---
+
+### December 2025 - Session 25 (Dec 26, 2025)
+
+**Phase K Collections Infrastructure Complete**
+
+Session 25 completed the backend infrastructure and modal core for the Collections feature:
+
+**Backend Infrastructure (Micro-Specs #3-5b, #4):**
+- Created Collection + CollectionItem models with soft delete support
+- Added `deleted_by` ForeignKey and `db_index=True` on `is_deleted`
+- Created migration `0039_add_collection_models.py`
+- Registered CollectionAdmin with bulk actions (make public/private, soft delete)
+- CollectionItemInline for nested editing in admin
+
+**Modal Core (Micro-Specs #6-8):**
+- Created `_collection_modal.html` template with all states:
+  - Collection grid (4/3/2 column responsive)
+  - Loading spinner state
+  - Empty state ("You haven't created any collections yet")
+  - Error state with alert
+  - Create collection sub-panel with form
+- Created `collections.js` with modal open/close functionality:
+  - Escape key and backdrop click to close
+  - Create panel toggle
+  - Body scroll lock when modal open
+  - Public API: `CollectionsModal.open()`, `.close()`, `.isOpen()`
+
+**Critical Fixes:**
+- Moved script tag outside `{% if user.is_authenticated %}` block (was preventing JS load)
+- Added 284 lines of modal CSS (modal was completely unstyled, appearing at page bottom)
+- Fixed CSS: proper fixed backdrop, centered modal, styled grid/cards
+
+**Collections Progress:** ~40% complete (was 15%)
+
+**Commits:**
+- `32ee84b` feat(phase-k): Complete collections modal with models, views, and CSS fix
+
+**Files Created:**
+- `prompts/migrations/0039_add_collection_models.py` - Database migration
+- `prompts/templates/prompts/partials/_collection_modal.html` - Modal template
+- `prompts/views/collection_views.py` - Collection API views (440 lines)
+- `static/js/collections.js` - Modal JavaScript (273 lines)
+
+**Files Modified:**
+- `prompts/models.py` - Added Collection, CollectionItem models (+103 lines)
+- `prompts/admin.py` - Added CollectionAdmin, CollectionItemAdmin (+121 lines)
+- `static/css/style.css` - Added 284 lines of modal CSS
+- `templates/base.html` - Added modal include + script tag
+- `static/icons/sprite.svg` - Added icon-plus
+
+**Next Steps:**
+- Wire JavaScript to API endpoints (Micro-Specs #9-12)
+- Collections list page and profile tab integration (Micro-Specs #13-15)
 
 ---
 

@@ -977,6 +977,38 @@ class Prompt(models.Model):
 
         return None
 
+    def get_generator_url_slug(self):
+        """
+        Get the URL-safe slug for the AI generator category page.
+
+        Maps the database value (e.g., 'dall-e-3') to the URL slug (e.g., 'dalle3')
+        used in AI_GENERATORS dictionary keys.
+
+        Returns:
+            str: URL slug for the generator, or None if not found
+
+        Example:
+            prompt.ai_generator = 'dall-e-3'
+            prompt.get_generator_url_slug()  # Returns 'dalle3'
+        """
+        from .constants import AI_GENERATORS
+
+        if not self.ai_generator:
+            return None
+
+        # Try direct lookup first (works for 'midjourney', 'flux', etc.)
+        generator_key = self.ai_generator.lower().replace('_', '-')
+        if generator_key in AI_GENERATORS:
+            return generator_key
+
+        # Fallback: find by choice_value match
+        for key, data in AI_GENERATORS.items():
+            if data.get('choice_value', '').lower() == self.ai_generator.lower():
+                return key
+
+        # Last resort: return slugified version
+        return self.ai_generator.lower().replace(' ', '-')
+
     def is_video(self):
         """
         Check if this prompt contains a video instead of an image.

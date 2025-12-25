@@ -177,6 +177,19 @@
                 </div>
                 <!-- Action Icons Row -->
                 <div class="author-card-actions">
+                    <!-- Save to Collection Button -->
+                    {% if user.is_authenticated %}
+                    <button type="button"
+                            class="btn-outline-standard action-icon-btn"
+                            id="savePromptBtn"
+                            data-prompt-id="{{ prompt.id }}"
+                            title="Save to collection">
+                        <svg class="icon icon-sm" aria-hidden="true">
+                            <use href="{% static 'icons/sprite.svg' %}#icon-bookmark"/>
+                        </svg>
+                    </button>
+                    {% endif %}
+
                     <!-- Comment Button -->
                     <button class="btn-outline-standard action-icon-btn" onclick="scrollToComments()" aria-label="Scroll to comments" title="Comments">
                         <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-comment"/></svg>

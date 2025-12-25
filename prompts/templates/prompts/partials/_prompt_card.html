@@ -217,30 +217,44 @@
                                 {{ prompt.author }}
                             </a>
                         </span>
-                        <span class="heart-counter">
+                        <span class="card-actions-group" style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                            <!-- Save to Collection Button -->
                             {% if user.is_authenticated %}
-                                <small class="like-section{% if user in prompt.likes.all %} liked{% endif %}"
-                                       data-prompt-slug="{{ prompt.slug }}"
-                                       style="cursor: pointer; user-select: none;">
-                                    {% if user in prompt.likes.all %}
-                                        <svg class="icon icon-sm heart-icon liked me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
-                                    {% else %}
-                                        <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
-                                    {% endif %}
-                                    <span class="like-count">{{ prompt.number_of_likes }}</span>
-                                    like<span class="like-plural">{% if prompt.number_of_likes != 1 %}s{% endif %}</span>
-                                </small>
-                            {% else %}
-                                <a href="{% url 'account_login' %}?next={{ request.path }}"
-                                   class="text-decoration-none"
-                                   style="color: white;">
-                                    <small>
-                                        <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
-                                        <span>{{ prompt.number_of_likes }}</span>
-                                        like{% if prompt.number_of_likes != 1 %}s{% endif %}
-                                    </small>
-                                </a>
+                            <span class="save-to-collection-btn"
+                                  data-prompt-id="{{ prompt.id }}"
+                                  data-action="open-collections-modal"
+                                  title="Save to collection"
+                                  style="cursor: pointer; color: white;">
+                                <svg class="icon icon-sm" aria-hidden="true" style="stroke: currentColor; fill: none;">
+                                    <use href="{% static 'icons/sprite.svg' %}#icon-bookmark"/>
+                                </svg>
+                            </span>
                             {% endif %}
+                            <span class="heart-counter">
+                                {% if user.is_authenticated %}
+                                    <small class="like-section{% if user in prompt.likes.all %} liked{% endif %}"
+                                           data-prompt-slug="{{ prompt.slug }}"
+                                           style="cursor: pointer; user-select: none;">
+                                        {% if user in prompt.likes.all %}
+                                            <svg class="icon icon-sm heart-icon liked me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
+                                        {% else %}
+                                            <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
+                                        {% endif %}
+                                        <span class="like-count">{{ prompt.number_of_likes }}</span>
+                                        like<span class="like-plural">{% if prompt.number_of_likes != 1 %}s{% endif %}</span>
+                                    </small>
+                                {% else %}
+                                    <a href="{% url 'account_login' %}?next={{ request.path }}"
+                                       class="text-decoration-none"
+                                       style="color: white;">
+                                        <small>
+                                            <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
+                                            <span>{{ prompt.number_of_likes }}</span>
+                                            like{% if prompt.number_of_likes != 1 %}s{% endif %}
+                                        </small>
+                                    </a>
+                                {% endif %}
+                            </span>
                         </span>
                     </div>
                 </div>

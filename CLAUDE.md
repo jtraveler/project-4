@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 23, 2025
-**Project Status:** Pre-Launch Development - Phase J (Prompt Detail Redesign) J.1 & J.2 COMPLETE, All Core Phases Complete
+**Last Updated:** December 25, 2025
+**Project Status:** Pre-Launch Development - Phase K (Collections Feature) IN PROGRESS, All Core Phases Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -22,10 +22,11 @@
 12. [Feature Specifications](#feature-specifications)
 13. [Trash Bin & Orphaned File Management](#phase-d5-trash-bin--orphaned-file-management-)
 14. [Phase I: URL Migration](#phase-i-url-migration-to-prompts-complete)
-15. [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-current-priority) **← CURRENT**
-16. [Project Health Checkup Protocol](#-project-health-checkup-protocol)
-17. [Known Technical Debt](#-known-technical-debt)
-18. [Unanswered Questions](#unanswered-questions)
+15. [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-complete) ✅
+16. [Phase K: Collections Feature](#-phase-k-collections-feature-current-priority) **← CURRENT**
+17. [Project Health Checkup Protocol](#-project-health-checkup-protocol)
+18. [Known Technical Debt](#-known-technical-debt)
+19. [Unanswered Questions](#unanswered-questions)
 
 ---
 
@@ -114,14 +115,21 @@
     - ✅ Test suite: 234 tests passing, 46% coverage
     - ✅ Security: Django 5.2.9, urllib3 2.6.0+, sentry-sdk 1.45.1+
     - Agent Rating: 9.17/10 average (@code-reviewer 8.5, @django-pro 9.5, @devops-troubleshooter 9.5)
-  - ✅ **Phase J:** Prompt Detail Page Redesign ⭐ **J.1, J.2, J.3 COMPLETE** (December 2025)
+  - ✅ **Phase J:** Prompt Detail Page Redesign ⭐ **100% COMPLETE** (December 2025)
     - ✅ Phase 0: Baseline Analysis Complete (`docs/PROMPT_DETAIL_ANALYSIS.md`)
     - ✅ Phase 0.5: Code Quality Improvements (avatar signals, simple_timesince refactor)
     - ✅ Phase J.1: Complete UI overhaul (9 rounds, 22 commits)
     - ✅ Phase J.2: SVG icon system for navigation (5 icons)
     - ✅ Phase J.3: Phase 2 icons (11 icons), video hover autoplay, like button redesign
+    - ✅ Session 22-23: Security remediation, generator pages fix, SVG expansion
     - Agent Rating: 8.7/10 average (@ui-ux-designer 7.5-9.5, @frontend-developer 9.0)
-    - See: [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-current-priority)
+    - Agent Rating (Session 22-23): @security-auditor 9.2/10, @django-pro 9.0/10
+    - See: [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-complete)
+  - 🚧 **Phase K:** Collections ("Saves") Feature ⭐ **IN PROGRESS** (December 2025 - )
+    - ❌ Phase K.1: MVP Collections (models, modal, CRUD)
+    - ❌ Phase K.2: Enhanced Features (download tracking, virtual collections)
+    - ❌ Phase K.3: Premium Features (limits, upsells)
+    - See: [Phase K: Collections Feature](#-phase-k-collections-feature-current-priority)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
@@ -6078,6 +6086,270 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
 
 ---
 
+## 🗂️ Phase K: Collections Feature (CURRENT PRIORITY)
+
+**Status:** 🚧 IN PROGRESS (Started December 25, 2025)
+**Priority:** HIGH - Competitive advantage feature
+**Estimated Effort:** 2-3 weeks
+**Competitive Advantage:** PromptHero (main competitor) does NOT have this feature!
+
+---
+
+### Overview
+
+Collections allow users to save prompts into organized folders they create, increasing user investment and engagement with "dwelling-style" features. This is a key differentiator from PromptHero.
+
+### User Flow
+
+1. **Save Button Trigger:** User clicks bookmark icon on prompt card or detail page
+2. **Collections Modal:** Shows existing collections + "Create new collection" option
+3. **Add to Collection:** Click collection thumbnail to add (shows checkmark overlay)
+4. **Remove from Collection:** Click again to remove (shows minus overlay with red)
+5. **Create New Collection:** Sub-modal with name input + public/private toggle
+6. **Collections Page:** User profile tab showing all collections
+
+---
+
+### Phase Breakdown
+
+#### Phase K.1: MVP Collections (Priority)
+- Collection and CollectionItem models
+- Collections modal (add/remove prompts)
+- Create collection sub-modal
+- Save button on prompt cards and detail page
+- Collections profile tab
+- Individual collection page
+- Basic CRUD operations
+
+#### Phase K.2: Enhanced Features
+- Download tracking + "Your Downloads" virtual collection
+- "Your Likes" virtual collection
+- Edit collection modal
+- Delete collection (soft delete → trash)
+- Share collection link
+
+#### Phase K.3: Premium Features
+- Collection limits enforcement
+- Private collection limits (2 free, unlimited paid)
+- Upgrade prompts/upsell UI
+
+---
+
+### Database Models
+
+```python
+class Collection(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collections')
+    title = models.CharField(max_length=50)
+    slug = models.CharField(max_length=60, unique=True)  # title-slug + random suffix
+    is_private = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_deleted = models.BooleanField(default=False)  # Soft delete for trash
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+class CollectionItem(models.Model):
+    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='items')
+    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['collection', 'prompt']
+        ordering = ['-added_at']
+
+# NEW: Download Tracking for "Your Downloads" virtual collection
+class Download(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='downloads')
+    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE)
+    downloaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'prompt']  # One record per user-prompt pair
+```
+
+---
+
+### UI Components
+
+#### 1. Collections Modal (Main)
+- **Layout:** 4 columns desktop, 3 tablet, 2 mobile
+- **Header:** "Add to collection(s)" with soft grey X close button
+- **Grid Items:** "Create new collection" card (+ icon, grey border) + existing collections
+- **Footer:** "Your collections →" button (dark style like generator CTA)
+
+#### 2. Collection Thumbnail Preview Rules
+- **3+ items:** Left column = most recent (tall), right column = 2nd & 3rd (stacked)
+- **2 items:** 50/50 split width
+- **1 item:** Full width cropped thumbnail
+
+#### 3. Collection Card Structure
+- Thumbnail preview area (rounded corners)
+- Below thumbnail: Two columns
+  - Left (~80%): Collection title (max 35 chars displayed, ellipsis overflow)
+  - Right (~20%): Public/Private eye icon
+
+#### 4. Overlay States
+- **Already in collection:** Accent color overlay + circle-check icon
+- **Hover to remove:** Red overlay + circle-minus icon
+- **Hover to add:** Accent color overlay + plus icon
+
+#### 5. Create Collection Sub-Modal
+- Back arrow (←) to return to main modal
+- "Collection name" input (50 char limit)
+- Public/Private radio buttons (Public default)
+- "Back" button + "Create new collection" button (disabled until 1+ char entered)
+
+#### 6. Collections Profile Page
+- URL: `/@{username}/collections/`
+- Same thumbnail grid style as modal (but larger)
+- Sort dropdown: "Recency" | "A-Z"
+- Each card shows: thumbnail + title + item count + public/private icon
+
+#### 7. Individual Collection Page
+- URL: `/@{username}/collections/{collection-slug-xxxxx}/`
+- Header: Collection name, item count (X photos / Y videos)
+- "Edit collection" button + "Share" button
+- Standard prompt grid with save button overlay on each item
+
+#### 8. Edit Collection Modal
+- Title input (50 char max)
+- "Make the collection private" checkbox
+- "Update Collection" + "Delete" buttons
+
+---
+
+### System Collections (Virtual)
+
+These are NOT stored as Collection objects - they're virtual/computed:
+- **Your Likes** - All prompts user has liked
+- **Your Downloads** - All prompts user has downloaded (requires download tracking)
+
+---
+
+### Premium Tier Strategy
+
+| Feature | Free | Mid Tier | Top Tier |
+|---------|------|----------|----------|
+| Collections limit | 10 | 30 | Unlimited |
+| Private collections | 2 | Unlimited | Unlimited |
+| Items per collection | Unlimited | Unlimited | Unlimited |
+| Collaboration | ❌ | ❌ | Future |
+
+**Upsell Triggers:**
+1. When user hits 10 collections → "Upgrade for more collections"
+2. When user tries 3rd private collection → "Upgrade to make more collections private"
+3. Show upgrade prompt in modal when limits reached
+
+---
+
+### URL Structure
+
+**Format:** Slugified name + 5-char random suffix for uniqueness
+
+```
+/@username/collections/                      # Collections list page
+/@username/collections/headshots-x7k2m/      # Individual collection
+```
+
+**Why:**
+- Human-readable (keywords in URL)
+- Unique (random suffix prevents collisions)
+- User can rename without breaking links
+- SEO-friendly if we decide to index
+
+---
+
+### SEO Strategy
+
+**Recommendation: NO indexing by default (simplest)**
+
+Reasons:
+- Can't trust user-entered titles/descriptions
+- Collections are disposable (users delete anytime)
+- AI-generated descriptions add complexity
+- Low SEO value vs effort
+
+**If deleted:** 301 redirect to `/@username/collections/`
+
+---
+
+### New Icons (Phase K)
+
+11 new icons added to `static/icons/sprite.svg`:
+
+| Icon ID | Purpose |
+|---------|---------|
+| `icon-bookmark` | Save button (outline) |
+| `icon-bookmark-filled` | Saved state |
+| `icon-circle-check` | Already in collection |
+| `icon-circle-minus` | Remove from collection |
+| `icon-eye` | Public collection |
+| `icon-eye-off` | Private collection |
+| `icon-x` | Soft close button |
+| `icon-arrow-left` | Back navigation |
+| `icon-arrow-right` | Forward navigation |
+| `icon-download` | Download button |
+| `icon-share` | Share/copy link |
+
+---
+
+### Technical Dependencies
+
+**Required Before Starting:**
+- Phase J complete ✅
+- SVG icon system established ✅
+- Modal patterns from existing UI ✅
+
+**Files That Will Change/Create:**
+
+**New Files:**
+- `prompts/models/collection.py` - Collection, CollectionItem models
+- `prompts/models/download.py` - Download model
+- `prompts/views/collection_views.py` - Collection CRUD views
+- `prompts/templates/prompts/collections_modal.html` - Modal template
+- `prompts/templates/prompts/collection_list.html` - Collections page
+- `prompts/templates/prompts/collection_detail.html` - Single collection page
+- `static/js/collections.js` - Collection modal JavaScript
+- `static/css/components/collections.css` - Collection-specific styles
+
+**Modified Files:**
+- `prompts/models/__init__.py` - Import new models
+- `prompts/urls.py` - Add collection routes
+- `prompts/templates/prompts/prompt_card.html` - Add save button
+- `prompts/templates/prompts/prompt_detail.html` - Add save button
+- `prompts/templates/prompts/user_profile.html` - Add collections tab
+- `static/icons/sprite.svg` - Add 11 new icons ✅ DONE
+- `prompts/admin.py` - Add Collection admin
+
+---
+
+### Decisions Made
+
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| Default visibility | Public | Users must opt-in to private |
+| Collection name limit | 50 chars stored, 35 displayed | Balance between expressiveness and UI |
+| Empty state text | "{First name} has no collections yet 😔" | Friendly, personal |
+| Delete behavior | Soft delete → trash | Consistent with prompts |
+| Modal columns | 4 desktop, 3 tablet, 2 mobile | Responsive grid |
+| URL structure | slug + 5-char random suffix | SEO + uniqueness |
+| SEO indexing | No indexing | Low value, high complexity |
+
+---
+
+### Future Enhancements (Not MVP)
+
+- Collaboration on collections
+- Following other users' collections
+- AI-generated collection descriptions (if SEO becomes priority)
+- Collection covers (custom thumbnails)
+- Collection categories/tags
+
+---
+
 ## 📚 Documentation Archive Structure
 
 **Created:** November 3, 2025
@@ -7788,6 +8060,69 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 
 ## 📝 Changelog
 
+### December 2025 - Session 22-23 (Dec 24-25, 2025)
+
+**Security Remediation + Generator Pages Fix + SVG Icons Phase 3 + Phase K Icons**
+
+Session 22-23 completed critical security fixes, resolved a major bug affecting all generator pages, expanded the SVG icon system, and added Phase K collection icons:
+
+**OWASP Security Remediation (Critical)**
+- Removed `|safe` filter from `prompt.content` to prevent stored XSS
+- Added `@login_required` to `prompt_like` view for auth enforcement
+- Added `@require_POST` to `prompt_like` view for method restriction
+- Fixed template debug mode: `'debug': True` → `DEBUG` variable
+- Removed 9 debug print statements from `bulk_reorder_prompts`
+- Replaced exception exposure with generic error + logging
+- Agent validation: @security-auditor 9.2/10, @django-pro 9.0/10
+
+**Generator Pages Fix (Critical Bug)**
+- Fixed all 16 generators showing 0 prompts
+- Root cause: `choice_value` in constants used URL slugs ('dalle3') but database stores display names ('DALL-E 3')
+- Updated all `choice_value` entries to match database values
+- Verified: Midjourney page now shows 55 prompts (was 0)
+- Fixed generator link case sensitivity with `|lower` filter on template URL
+
+**SVG Icon System Expansion (Phase 3)**
+- Added 3 new icons to sprite.svg: `icon-user`, `icon-user-pen`, `icon-mail`
+- Updated profile dropdown in `base.html` to use SVG icons
+- Updated test assertion: `fa-trash` → `icon-trash`
+
+**Phase K Icons Added (11 new icons for Collections)**
+- `icon-bookmark` - Save button (outline)
+- `icon-bookmark-filled` - Saved state (pink fill)
+- `icon-circle-check` - Already in collection
+- `icon-circle-minus` - Remove from collection
+- `icon-eye` - Public collection
+- `icon-eye-off` - Private collection
+- `icon-x` - Soft close button
+- `icon-arrow-left` - Back navigation
+- `icon-arrow-right` - Forward navigation
+- `icon-download` - Download button
+- `icon-share` - Share/copy link
+
+**Button Styling Consistency**
+- Added `action-icon-btn` class to affiliate, copy, and login-to-copy buttons
+- Wrapped button text in `<span>` for CSS margin styling
+- Updated `.generator-cta-btn` sizing to match `action-icon-btn`
+- Linked generator name on prompt detail page to generator page
+
+**CSS Fixes**
+- Profile tab hover text stays white on dark background
+- Updated `a:hover` to use `text-primary` color and underline
+
+**Tests:** 234/234 passing
+**Total Icons:** 30 (19 previous + 11 Phase K)
+
+**Files Modified:**
+- `prompts/views/prompt_views.py` - Security decorators, removed debug prints
+- `prompts/templates/prompts/prompt_detail.html` - Removed |safe filter
+- `prompts/constants.py` - Fixed generator choice_value entries
+- `static/icons/sprite.svg` - Added 3 Phase 3 icons + 11 Phase K icons
+- `templates/base.html` - SVG icons in profile dropdown
+- `static/css/style.css` - CSS fixes
+
+---
+
 ### December 2025 - Session 22 (Dec 23, 2025)
 
 **Bug Fix: Solid Heart Icon Display**
@@ -8036,7 +8371,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.4
-**Last Updated:** December 23, 2025
+**Version:** 2.5
+**Last Updated:** December 25, 2025
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase J.1 & J.2 Complete, All Core Phases Complete)
+**Project Status:** Pre-Launch (Phase K: Collections In Progress, All Core Phases Complete)

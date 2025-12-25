@@ -15,7 +15,7 @@
 | **HTML Templates** | 41 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 3 | static/js/ |
-| **SVG Icons** | 16 | static/icons/sprite.svg |
+| **SVG Icons** | 30 | static/icons/sprite.svg |
 | **Migrations** | 38 | prompts/migrations/ (37), about/migrations/ (1) |
 | **Test Files** | 12 | prompts/tests/ |
 | **Management Commands** | 17 | prompts/management/commands/ |
@@ -103,7 +103,7 @@ live-working-project/
 │   │   ├── navbar.css
 │   │   └── style.css
 │   ├── icons/                    # SVG icon sprite (Phase J.2)
-│   │   └── sprite.svg            # 16 icons from Lucide Icons
+│   │   └── sprite.svg            # 30 icons from Lucide Icons
 │   └── js/                       # 3 JavaScript files
 │       ├── like-button.js        # Centralized like button handler
 │       ├── navbar.js             # Extracted navbar JavaScript (~650 lines)
@@ -383,19 +383,19 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `sprite.svg` | static/icons/ | SVG sprite with 16 icon definitions |
+| `sprite.svg` | static/icons/ | SVG sprite with 30 icon definitions |
 | `icons.css` | static/css/components/ | Icon utility classes |
 
-### Available Icons (16 total)
+### Available Icons (30 total)
 
-**Phase 1 Icons (Navigation):**
+**Phase 1 Icons (Navigation) - 5 icons:**
 - `icon-image` - Photos filter indicator
 - `icon-video` - Videos filter indicator
 - `icon-search` - Search dropdown icon
 - `icon-trophy` - Leaderboard dropdown icon
 - `icon-lightbulb` - Prompts dropdown icon
 
-**Phase 2 Icons (Actions):**
+**Phase 2 Icons (Actions) - 11 icons:**
 - `icon-comment` - Comment indicator
 - `icon-heart` - Heart outline (unliked state)
 - `icon-heart-filled` - Solid pink heart (liked state)
@@ -407,6 +407,24 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 - `icon-copy` - Copy to clipboard
 - `icon-login` - Sign in/out
 - `icon-bell` - Notifications
+
+**Phase 3 Icons (Profile) - 3 icons:**
+- `icon-user` - User profile
+- `icon-user-pen` - Edit profile
+- `icon-mail` - Email/contact
+
+**Phase K Icons (Collections) - 11 icons:**
+- `icon-bookmark` - Save button (outline)
+- `icon-bookmark-filled` - Saved state (pink fill)
+- `icon-circle-check` - Already in collection
+- `icon-circle-minus` - Remove from collection
+- `icon-eye` - Public collection
+- `icon-eye-off` - Private collection
+- `icon-x` - Soft close button
+- `icon-arrow-left` - Back navigation
+- `icon-arrow-right` - Forward navigation
+- `icon-download` - Download button
+- `icon-share` - Share/copy link
 
 ### Usage Pattern
 

@@ -13,7 +13,7 @@
   Phase 3: icon-user, icon-user-pen, icon-mail
   Phase K: icon-bookmark, icon-bookmark-filled, icon-circle-check, icon-circle-minus,
            icon-eye, icon-eye-off, icon-x, icon-arrow-left, icon-arrow-right,
-           icon-download, icon-share
+           icon-download, icon-share, icon-plus
 -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
 
@@ -246,6 +246,12 @@
     <circle cx="18" cy="19" r="3"/>
     <line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/>
     <line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>
+  </symbol>
+
+  <!-- icon-plus (Add/Create new) -->
+  <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" x2="12" y1="5" y2="19"/>
+    <line x1="5" x2="19" y1="12" y2="12"/>
   </symbol>
 
 </svg>

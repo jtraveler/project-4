@@ -2945,3 +2945,287 @@ footer {
         font-size: 14px;
     }
 }
+
+/* =============================================================================
+   COLLECTIONS MODAL (Phase K)
+   ============================================================================= */
+
+/* Backdrop - covers entire screen with dark overlay */
+.collection-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+/* Modal container */
+.collection-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    position: relative;
+}
+
+/* Modal header */
+.collection-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.collection-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: #111;
+}
+
+/* Close button */
+.collection-modal-close {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: #6b7280;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.collection-modal-close:hover {
+    background-color: #f3f4f6;
+    color: #111;
+}
+
+/* Modal body */
+.collection-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Collection grid - 4 columns on desktop, 3 tablet, 2 mobile */
+.collection-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .collection-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .collection-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Collection card */
+.collection-card {
+    background: none;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.collection-card:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Create new collection card - dashed border */
+.collection-card-create {
+    border-style: dashed;
+    border-color: #d1d5db;
+}
+
+.collection-card-create:hover {
+    border-color: #9ca3af;
+    background-color: #f9fafb;
+}
+
+/* Card thumbnail area */
+.collection-card-thumbnail {
+    aspect-ratio: 1;
+    background-color: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.collection-card-thumbnail-dashed {
+    background-color: #fafafa;
+}
+
+/* Icon inside thumbnail */
+.collection-card-icon {
+    color: #9ca3af;
+    width: 32px;
+    height: 32px;
+}
+
+.collection-card-create .collection-card-icon {
+    color: #6b7280;
+}
+
+/* Card title */
+.collection-card-title {
+    display: block;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Card item count */
+.collection-card-count {
+    display: block;
+    padding: 0 0.5rem 0.5rem;
+    font-size: 0.625rem;
+    color: #9ca3af;
+}
+
+/* Overlay states (saved/hover) */
+.collection-card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 8px 8px 0 0;
+}
+
+.collection-card-overlay-saved {
+    background-color: rgba(34, 197, 94, 0.8);
+}
+
+.collection-card-overlay-saved .icon {
+    color: white;
+}
+
+/* Modal footer */
+.collection-modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: center;
+}
+
+/* "Your collections" link button */
+.btn-collections-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background-color: #111;
+    color: #fff;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.15s;
+}
+
+.btn-collections-link:hover {
+    background-color: #333;
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Loading state */
+.collection-modal-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+/* Empty state */
+.collection-modal-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+/* Error state */
+.collection-modal-error {
+    padding: 1rem 0;
+}
+
+/* Create collection panel */
+.collection-create-panel {
+    padding: 1.5rem;
+}
+
+.collection-create-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.collection-create-back {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: #6b7280;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collection-create-back:hover {
+    background-color: #f3f4f6;
+    color: #111;
+}
+
+.collection-create-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Visibility animation */
+.collection-modal-backdrop.is-visible {
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

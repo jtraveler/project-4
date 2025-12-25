@@ -794,5 +794,10 @@
     <!-- Extra JavaScript block for page-specific scripts -->
     {% block extras %}
     {% endblock %}
+
+    {% if user.is_authenticated %}
+        {% include "prompts/partials/_collection_modal.html" %}
+    {% endif %}
+    <script src="{% static 'js/collections.js' %}"></script>
 </body>
 </html>

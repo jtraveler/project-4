@@ -5,6 +5,7 @@ from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.core.cache import cache
+from django.urls import reverse
 from cloudinary.models import CloudinaryField
 from taggit.managers import TaggableManager
 import cloudinary.uploader
@@ -2170,3 +2171,105 @@ class PromptView(models.Model):
             )
 
         return view, created
+
+
+# =============================================================================
+# COLLECTION MODELS (Phase K)
+# =============================================================================
+
+class Collection(models.Model):
+    """
+    User-created collection of saved prompts.
+
+    Allows users to organize prompts into named collections for easy access.
+    Supports private collections (only visible to owner) and soft delete.
+
+    Attributes:
+        user (ForeignKey): Owner of the collection
+        title (CharField): Collection name (max 50 characters)
+        slug (SlugField): URL-friendly identifier
+        is_private (BooleanField): If True, only owner can see the collection
+        created_at (DateTimeField): When collection was created
+        updated_at (DateTimeField): Last modification time
+        is_deleted (BooleanField): Soft delete flag
+        deleted_at (DateTimeField): When collection was soft deleted
+        deleted_by (ForeignKey): User who soft deleted the collection (nullable)
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='collections',
+        db_index=True
+    )
+    title = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=60, unique=True)
+    is_private = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Soft delete support
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deleted_collections'
+    )
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.user.username}'s {self.title}"
+
+    def get_absolute_url(self):
+        return reverse('prompts:collection_detail', kwargs={
+            'username': self.user.username,
+            'slug': self.slug
+        })
+
+    @property
+    def item_count(self):
+        """Return count of items in this collection."""
+        return self.items.count()
+
+    @property
+    def preview_prompts(self):
+        """Return up to 3 prompts for thumbnail preview."""
+        return self.items.select_related('prompt')[:3]
+
+
+class CollectionItem(models.Model):
+    """
+    A prompt saved to a collection.
+
+    Represents the many-to-many relationship between collections and prompts.
+    Each prompt can only appear once in each collection (enforced by unique_together).
+
+    Attributes:
+        collection (ForeignKey): The collection this item belongs to
+        prompt (ForeignKey): The saved prompt
+        added_at (DateTimeField): When prompt was added to collection
+        order (PositiveIntegerField): Display order within collection
+    """
+    collection = models.ForeignKey(
+        Collection,
+        on_delete=models.CASCADE,
+        related_name='items'
+    )
+    prompt = models.ForeignKey(
+        'Prompt',
+        on_delete=models.CASCADE,
+        related_name='collection_items'
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-added_at']
+        unique_together = ['collection', 'prompt']
+
+    def __str__(self):
+        return f"{self.prompt.title} in {self.collection.title}"

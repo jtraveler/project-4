@@ -1,0 +1,273 @@
+/**
+ * Collections Modal - Open/Close Functionality
+ * Phase K - PromptFinder
+ *
+ * This script handles:
+ * - Opening the modal when save buttons are clicked
+ * - Closing the modal (X button, backdrop, Escape key)
+ * - Storing the prompt ID being saved
+ * - Body scroll lock when modal is open
+ */
+
+(function() {
+    'use strict';
+
+    console.log('CollectionsModal: Script starting...');
+
+    // =============================================================================
+    // DOM ELEMENTS
+    // =============================================================================
+
+    const modal = document.getElementById('collectionModalBackdrop');
+    const modalContent = modal?.querySelector('.collection-modal');
+    const closeBtn = modal?.querySelector('[data-action="close-modal"]');
+    const promptIdInput = document.getElementById('collectionModalPromptId');
+
+    console.log('CollectionsModal: Modal element found:', !!modal);
+
+    // Early exit if modal doesn't exist (user not authenticated)
+    if (!modal) {
+        console.log('CollectionsModal: Modal not found, exiting early. User may not be authenticated.');
+        return;
+    }
+
+    // =============================================================================
+    // STATE
+    // =============================================================================
+
+    let isOpen = false;
+    let previousActiveElement = null;
+
+    // =============================================================================
+    // MODAL OPEN/CLOSE
+    // =============================================================================
+
+    /**
+     * Open the collections modal
+     * @param {string} promptId - The ID of the prompt being saved
+     */
+    function openModal(promptId) {
+        if (isOpen) return;
+
+        // Store the prompt ID
+        if (promptIdInput) {
+            promptIdInput.value = promptId || '';
+        }
+
+        // Store currently focused element to restore later
+        previousActiveElement = document.activeElement;
+
+        // Show modal
+        modal.style.display = 'flex';
+
+        // Force reflow for transition
+        modal.offsetHeight;
+
+        // Add visible class for animations (if CSS uses it)
+        modal.classList.add('is-visible');
+
+        // Lock body scroll
+        document.body.style.overflow = 'hidden';
+
+        // Set state
+        isOpen = true;
+
+        // Focus the close button for accessibility
+        setTimeout(() => {
+            closeBtn?.focus();
+        }, 100);
+
+        // Dispatch custom event
+        modal.dispatchEvent(new CustomEvent('modal:opened', {
+            detail: { promptId }
+        }));
+    }
+
+    /**
+     * Close the collections modal
+     */
+    function closeModal() {
+        if (!isOpen) return;
+
+        // Hide modal
+        modal.classList.remove('is-visible');
+        modal.style.display = 'none';
+
+        // Restore body scroll
+        document.body.style.overflow = '';
+
+        // Clear prompt ID
+        if (promptIdInput) {
+            promptIdInput.value = '';
+        }
+
+        // Reset to main view (hide create panel if open)
+        const createPanel = document.getElementById('collectionCreatePanel');
+        const gridContainer = document.getElementById('collectionGrid');
+        const footer = modal.querySelector('.collection-modal-footer');
+
+        if (createPanel) createPanel.style.display = 'none';
+        if (gridContainer) gridContainer.style.display = '';
+        if (footer) footer.style.display = '';
+
+        // Set state
+        isOpen = false;
+
+        // Restore focus to previously focused element
+        if (previousActiveElement) {
+            previousActiveElement.focus();
+            previousActiveElement = null;
+        }
+
+        // Dispatch custom event
+        modal.dispatchEvent(new CustomEvent('modal:closed'));
+    }
+
+    // =============================================================================
+    // CREATE PANEL TOGGLE
+    // =============================================================================
+
+    /**
+     * Show the create collection form panel
+     */
+    function showCreatePanel() {
+        const createPanel = document.getElementById('collectionCreatePanel');
+        const gridContainer = document.getElementById('collectionGrid');
+        const footer = modal.querySelector('.collection-modal-footer');
+        const nameInput = document.getElementById('collectionName');
+
+        if (gridContainer) gridContainer.style.display = 'none';
+        if (footer) footer.style.display = 'none';
+        if (createPanel) {
+            createPanel.style.display = 'block';
+            // Focus the name input
+            setTimeout(() => nameInput?.focus(), 100);
+        }
+    }
+
+    /**
+     * Hide the create collection form panel
+     */
+    function hideCreatePanel() {
+        const createPanel = document.getElementById('collectionCreatePanel');
+        const gridContainer = document.getElementById('collectionGrid');
+        const footer = modal.querySelector('.collection-modal-footer');
+        const form = document.getElementById('collectionCreateForm');
+
+        if (createPanel) createPanel.style.display = 'none';
+        if (gridContainer) gridContainer.style.display = '';
+        if (footer) footer.style.display = '';
+
+        // Reset form
+        if (form) form.reset();
+
+        // Disable create button (requires input)
+        const createBtn = document.getElementById('createCollectionBtn');
+        if (createBtn) createBtn.disabled = true;
+    }
+
+    // =============================================================================
+    // EVENT HANDLERS
+    // =============================================================================
+
+    /**
+     * Handle click on save button (open modal)
+     */
+    function handleSaveButtonClick(e) {
+        const saveBtn = e.target.closest('[data-action="open-collections-modal"]');
+        if (!saveBtn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Get prompt ID from data attribute
+        const promptId = saveBtn.dataset.promptId || '';
+
+        openModal(promptId);
+    }
+
+    /**
+     * Handle clicks within the modal
+     */
+    function handleModalClick(e) {
+        const action = e.target.closest('[data-action]')?.dataset.action;
+
+        switch (action) {
+            case 'close-modal':
+                closeModal();
+                break;
+            case 'show-create-form':
+                showCreatePanel();
+                break;
+            case 'hide-create-form':
+                hideCreatePanel();
+                break;
+        }
+    }
+
+    /**
+     * Handle backdrop click (close if clicking outside modal content)
+     */
+    function handleBackdropClick(e) {
+        // Only close if clicking directly on backdrop, not modal content
+        if (e.target === modal) {
+            closeModal();
+        }
+    }
+
+    /**
+     * Handle keyboard events
+     */
+    function handleKeydown(e) {
+        if (!isOpen) return;
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeModal();
+        }
+    }
+
+    /**
+     * Handle input on collection name field (enable/disable create button)
+     */
+    function handleNameInput(e) {
+        const createBtn = document.getElementById('createCollectionBtn');
+        if (createBtn) {
+            createBtn.disabled = !e.target.value.trim();
+        }
+    }
+
+    // =============================================================================
+    // EVENT LISTENERS
+    // =============================================================================
+
+    // Use event delegation for save buttons (they may be dynamically added)
+    document.addEventListener('click', handleSaveButtonClick);
+
+    // Modal internal clicks
+    modal.addEventListener('click', handleModalClick);
+
+    // Backdrop click
+    modal.addEventListener('click', handleBackdropClick);
+
+    // Keyboard (Escape to close)
+    document.addEventListener('keydown', handleKeydown);
+
+    // Collection name input (enable/disable create button)
+    const nameInput = document.getElementById('collectionName');
+    if (nameInput) {
+        nameInput.addEventListener('input', handleNameInput);
+    }
+
+    // =============================================================================
+    // PUBLIC API (for future specs to use)
+    // =============================================================================
+
+    window.CollectionsModal = {
+        open: openModal,
+        close: closeModal,
+        isOpen: () => isOpen,
+        getPromptId: () => promptIdInput?.value || null
+    };
+
+})();

@@ -6,7 +6,7 @@ from django.urls import reverse, path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem
 
 
 @admin.register(Prompt)
@@ -1241,6 +1241,125 @@ class EmailPreferencesAdmin(admin.ModelAdmin):
     class Meta:
         verbose_name = "Email Preference"
         verbose_name_plural = "⚠️ Email Preferences (User Data - Handle with Care)"
+
+
+# =============================================================================
+# COLLECTION ADMIN (Phase K)
+# =============================================================================
+
+
+class CollectionItemInline(admin.TabularInline):
+    """Inline admin for collection items."""
+    model = CollectionItem
+    extra = 0
+    raw_id_fields = ('prompt',)
+    readonly_fields = ('added_at',)
+    ordering = ('-added_at',)
+
+
+@admin.register(Collection)
+class CollectionAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for Collection model.
+
+    Features:
+    - List view with item count, privacy status, soft delete status
+    - Filter by privacy and deletion status
+    - Search by title, username, email
+    - Inline editing of collection items
+    - Bulk actions for privacy and soft delete
+    """
+    list_display = (
+        'title',
+        'user',
+        'item_count',
+        'is_private',
+        'is_deleted',
+        'created_at',
+        'updated_at',
+    )
+    list_filter = (
+        'is_private',
+        'is_deleted',
+        'created_at',
+    )
+    search_fields = (
+        'title',
+        'user__username',
+        'user__email',
+    )
+    list_select_related = ('user',)
+    raw_id_fields = ('user', 'deleted_by')
+    readonly_fields = ('created_at', 'updated_at', 'deleted_at', 'slug')
+    prepopulated_fields = {}  # Don't prepopulate slug - it needs random suffix
+    ordering = ('-updated_at',)
+    date_hierarchy = 'created_at'
+    inlines = [CollectionItemInline]
+    list_per_page = 50
+    actions = ['make_public', 'make_private', 'soft_delete_selected']
+
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'title', 'slug', 'is_private')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+        ('Soft Delete', {
+            'fields': ('is_deleted', 'deleted_at', 'deleted_by'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_queryset(self, request):
+        """Optimize queries with select_related and Count annotation."""
+        from django.db.models import Count
+        return super().get_queryset(request).annotate(
+            _item_count=Count('items')
+        ).select_related('user', 'deleted_by')
+
+    @admin.display(description='Items', ordering='_item_count')
+    def item_count(self, obj):
+        """Display number of items in collection."""
+        return getattr(obj, '_item_count', obj.items.count())
+
+    # Bulk Actions
+    def make_public(self, request, queryset):
+        """Make selected collections public."""
+        updated = queryset.update(is_private=False)
+        self.message_user(request, f'{updated} collection(s) made public.')
+    make_public.short_description = 'Make selected collections public'
+
+    def make_private(self, request, queryset):
+        """Make selected collections private."""
+        updated = queryset.update(is_private=True)
+        self.message_user(request, f'{updated} collection(s) made private.')
+    make_private.short_description = 'Make selected collections private'
+
+    def soft_delete_selected(self, request, queryset):
+        """Soft delete selected collections."""
+        from django.utils import timezone
+        updated = queryset.update(
+            is_deleted=True,
+            deleted_at=timezone.now(),
+            deleted_by=request.user
+        )
+        self.message_user(request, f'{updated} collection(s) moved to trash.')
+    soft_delete_selected.short_description = 'Move to trash'
+
+
+@admin.register(CollectionItem)
+class CollectionItemAdmin(admin.ModelAdmin):
+    """Admin configuration for CollectionItem model."""
+    list_display = ('prompt', 'collection', 'added_at', 'order')
+    list_filter = ('collection', 'added_at')
+    search_fields = ('prompt__title', 'collection__title')
+    list_select_related = ('collection', 'prompt')
+    raw_id_fields = ('collection', 'prompt')
+    readonly_fields = ('added_at',)
+    ordering = ('-added_at',)
+    list_per_page = 50
 
 
 # ============================================================================

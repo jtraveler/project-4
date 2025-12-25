@@ -1,0 +1,142 @@
+{# Collection Modal - Save prompt to collection(s) #}
+{# Included in base.html, shown via JavaScript #}
+{% load static %}
+
+<div class="collection-modal-backdrop" id="collectionModalBackdrop" style="display: none;">
+    <div class="collection-modal" role="dialog" aria-labelledby="collectionModalTitle" aria-modal="true">
+
+        {# Modal Header #}
+        <div class="collection-modal-header">
+            <h2 class="collection-modal-title" id="collectionModalTitle">Add to collection(s)</h2>
+            <button type="button" class="collection-modal-close" aria-label="Close modal" data-action="close-modal">
+                <svg class="icon" width="24" height="24" aria-hidden="true">
+                    <use href="{% static 'icons/sprite.svg' %}#icon-x"></use>
+                </svg>
+            </button>
+        </div>
+
+        {# Modal Body - Collection Grid #}
+        <div class="collection-modal-body">
+            <div class="collection-grid" id="collectionGrid">
+
+                {# Create New Collection Card - Always First #}
+                <button type="button" class="collection-card collection-card-create" data-action="show-create-form">
+                    <div class="collection-card-thumbnail collection-card-thumbnail-dashed">
+                        <svg class="icon collection-card-icon" width="48" height="48" aria-hidden="true">
+                            <use href="{% static 'icons/sprite.svg' %}#icon-plus"></use>
+                        </svg>
+                    </div>
+                    <span class="collection-card-title">Create new collection</span>
+                </button>
+
+                {# Collection Cards Container - Populated by JavaScript #}
+                {# Example static card for template reference: #}
+                <!--
+                <button type="button" class="collection-card" data-collection-id="1" data-action="toggle-collection">
+                    <div class="collection-card-thumbnail">
+                        <svg class="icon collection-card-icon" width="48" height="48" aria-hidden="true">
+                            <use href="{% static 'icons/sprite.svg' %}#icon-image"></use>
+                        </svg>
+                    </div>
+                    <span class="collection-card-title">My collection</span>
+                    <span class="collection-card-count">0 items</span>
+
+                    {# Overlay for states - added by JavaScript #}
+                    <div class="collection-card-overlay collection-card-overlay-saved" style="display: none;">
+                        <svg class="icon" width="32" height="32" aria-hidden="true">
+                            <use href="{% static 'icons/sprite.svg' %}#icon-circle-check"></use>
+                        </svg>
+                    </div>
+                </button>
+                -->
+
+            </div>
+
+            {# Loading State #}
+            <div class="collection-modal-loading" id="collectionModalLoading" style="display: none;">
+                <div class="spinner-border text-secondary" role="status">
+                    <span class="visually-hidden">Loading collections...</span>
+                </div>
+            </div>
+
+            {# Empty State - No collections yet #}
+            <div class="collection-modal-empty" id="collectionModalEmpty" style="display: none;">
+                <p>You haven't created any collections yet.</p>
+            </div>
+
+            {# Error State #}
+            <div class="collection-modal-error" id="collectionModalError" style="display: none;">
+                <div class="alert alert-danger" role="alert">
+                    <span id="collectionModalErrorText">Something went wrong. Please try again.</span>
+                </div>
+            </div>
+        </div>
+
+        {# Modal Footer #}
+        <div class="collection-modal-footer">
+            <a href="#" class="btn-collections-link" id="collectionsLink">
+                Your collections
+                <svg class="icon" width="16" height="16" aria-hidden="true">
+                    <use href="{% static 'icons/sprite.svg' %}#icon-arrow-right"></use>
+                </svg>
+            </a>
+        </div>
+
+        {# Create Collection Sub-Panel (Hidden by default) #}
+        <div class="collection-create-panel" id="collectionCreatePanel" style="display: none;">
+            <div class="collection-create-header">
+                <button type="button" class="collection-create-back" data-action="hide-create-form" aria-label="Back to collections">
+                    <svg class="icon" width="20" height="20" aria-hidden="true">
+                        <use href="{% static 'icons/sprite.svg' %}#icon-arrow-left"></use>
+                    </svg>
+                </button>
+                <h3 class="collection-create-title">Create new collection</h3>
+            </div>
+
+            <form class="collection-create-form" id="collectionCreateForm">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="collectionName" class="form-label">Name</label>
+                    <input type="text"
+                           class="form-control"
+                           id="collectionName"
+                           name="title"
+                           maxlength="50"
+                           placeholder="Enter collection name"
+                           required>
+                    <div class="form-text">Maximum 50 characters</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label d-block">Visibility</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="is_private" id="visibilityPublic" value="false" checked>
+                        <label class="form-check-label" for="visibilityPublic">
+                            <svg class="icon me-1" width="16" height="16" aria-hidden="true">
+                                <use href="{% static 'icons/sprite.svg' %}#icon-eye"></use>
+                            </svg>
+                            Public
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="is_private" id="visibilityPrivate" value="true">
+                        <label class="form-check-label" for="visibilityPrivate">
+                            <svg class="icon me-1" width="16" height="16" aria-hidden="true">
+                                <use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use>
+                            </svg>
+                            Private
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-dark w-100" id="createCollectionBtn" disabled>
+                    Create collection
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+{# Hidden input to store current prompt ID when modal opens #}
+<input type="hidden" id="collectionModalPromptId" value="">

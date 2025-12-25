@@ -125,10 +125,12 @@
     - Agent Rating: 8.7/10 average (@ui-ux-designer 7.5-9.5, @frontend-developer 9.0)
     - Agent Rating (Session 22-23): @security-auditor 9.2/10, @django-pro 9.0/10
     - See: [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-complete)
-  - 🚧 **Phase K:** Collections ("Saves") Feature ⭐ **IN PROGRESS** (December 2025 - )
-    - ❌ Phase K.1: MVP Collections (models, modal, CRUD)
+  - 🚧 **Phase K:** Collections ("Saves") Feature ⭐ **IN PROGRESS** (~15% Complete, December 2025)
+    - ✅ Micro-Specs #1, #2, #2.5: Save buttons + CSS scaffolding
+    - ❌ Phase K.1: MVP Collections (models, modal, CRUD) - In Progress
     - ❌ Phase K.2: Enhanced Features (download tracking, virtual collections)
     - ❌ Phase K.3: Premium Features (limits, upsells)
+    - **Approach:** Micro-Spec methodology (adopted Session 24)
     - See: [Phase K: Collections Feature](#-phase-k-collections-feature-current-priority)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
@@ -6088,10 +6090,44 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
 
 ## 🗂️ Phase K: Collections Feature (CURRENT PRIORITY)
 
-**Status:** 🚧 IN PROGRESS (Started December 25, 2025)
+**Status:** 🚧 IN PROGRESS (~15% Complete)
+**Started:** December 25, 2025
 **Priority:** HIGH - Competitive advantage feature
 **Estimated Effort:** 2-3 weeks
 **Competitive Advantage:** PromptHero (main competitor) does NOT have this feature!
+**Approach:** Micro-Spec Methodology (adopted Session 24)
+
+---
+
+### Development Approach: Micro-Specs
+
+**Why:** Comprehensive specs (1000+ lines) were repeatedly ignored by CC, resulting in broken code with 9.2/10 ratings.
+
+**Solution:** Break into micro-specs with:
+- One file per spec maximum
+- ~10-20 lines of code per spec
+- Explicit "DO NOT" lists
+- User manual verification before next spec
+- No CC self-verification trusted
+
+---
+
+### Progress Tracking
+
+#### Completed Micro-Specs ✅
+- **Micro-Spec #1:** Save button on prompt detail page ✅
+- **Micro-Spec #2:** Save button on prompt cards (positioned right of heart) ✅
+- **Micro-Spec #2.5:** Save button hover effect + Modal CSS scaffolding ✅
+
+#### Remaining Micro-Specs ❌
+- **Micro-Spec #3:** Collection + CollectionItem models
+- **Micro-Spec #4:** Collections modal HTML
+- **Micro-Spec #5:** Collections JavaScript (open modal, fetch collections)
+- **Micro-Spec #6:** Create collection sub-modal
+- **Micro-Spec #7:** Add/remove from collection API
+- **Micro-Spec #8:** Collections list page
+- **Micro-Spec #9:** Collection detail page
+- **Micro-Spec #10:** Profile tab integration
 
 ---
 
@@ -6113,13 +6149,14 @@ Collections allow users to save prompts into organized folders they create, incr
 ### Phase Breakdown
 
 #### Phase K.1: MVP Collections (Priority)
-- Collection and CollectionItem models
-- Collections modal (add/remove prompts)
-- Create collection sub-modal
-- Save button on prompt cards and detail page
-- Collections profile tab
-- Individual collection page
-- Basic CRUD operations
+- ✅ Save button on prompt cards and detail page
+- ✅ Collections CSS scaffolding
+- ❌ Collection and CollectionItem models
+- ❌ Collections modal (add/remove prompts)
+- ❌ Create collection sub-modal
+- ❌ Collections profile tab
+- ❌ Individual collection page
+- ❌ Basic CRUD operations
 
 #### Phase K.2: Enhanced Features
 - Download tracking + "Your Downloads" virtual collection
@@ -8059,6 +8096,50 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 ---
 
 ## 📝 Changelog
+
+### December 2025 - Session 24 (Dec 25, 2025)
+
+**Phase K Collections: Micro-Spec Approach Adoption**
+
+Session 24 marked a significant pivot in development methodology after multiple failed comprehensive implementations:
+
+**Critical Reset:**
+- Hard reset to commit `6d620df` after multiple broken Collections implementations
+- Previous attempts with 1000+ line specs resulted in broken code with misleading 9.2/10 agent ratings
+- Adopted MICRO-SPEC APPROACH for remaining Collections work
+
+**Micro-Specs Completed:**
+- **Micro-Spec #1:** Save button on prompt detail page
+  - File: `prompts/templates/prompts/prompt_detail.html` (lines 180-191)
+  - Positioned first in action row before Comment button
+  - Uses `icon-bookmark` SVG sprite
+
+- **Micro-Spec #2:** Save button on prompt cards
+  - File: `prompts/templates/prompts/partials/_prompt_card.html` (lines 220-258)
+  - Positioned bottom-right, LEFT of heart button
+  - Wrapped save + heart in `card-actions-group` with `margin-left: auto`
+  - White icon with `stroke: currentColor; fill: none;` styling
+
+- **Micro-Spec #2.5:** Save button hover effect + Modal CSS
+  - File: `static/css/style.css` (lines 700-793)
+  - Hover effect: semi-transparent white background
+  - Collections modal grid: 4/3/2 columns responsive
+  - Collection card thumbnails and styling
+  - Create new collection card styling
+
+**Lesson Learned:** Comprehensive specs get ignored by CC; micro-specs with manual verification work better.
+
+**Collections Progress:** ~15% complete
+
+**Commits:**
+- `763ffff` feat(collections): Add save-to-collection buttons and modal CSS
+
+**Files Modified:**
+- `prompts/templates/prompts/prompt_detail.html` - Save button
+- `prompts/templates/prompts/partials/_prompt_card.html` - Save button with positioning
+- `static/css/style.css` - Hover effects and modal CSS scaffolding
+
+---
 
 ### December 2025 - Session 22-23 (Dec 24-25, 2025)
 

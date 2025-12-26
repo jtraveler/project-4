@@ -2,7 +2,7 @@
 {# Included in base.html, shown via JavaScript #}
 {% load static %}
 
-<div class="collection-modal-backdrop" id="collectionModalBackdrop" style="display: none;">
+<div class="collection-modal-backdrop" id="collectionModalBackdrop">
     <div class="collection-modal" role="dialog" aria-labelledby="collectionModalTitle" aria-modal="true">
 
         {# Modal Header #}
@@ -21,9 +21,9 @@
 
                 {# Create New Collection Card - Always First #}
                 <button type="button" class="collection-card collection-card-create" data-action="show-create-form">
-                    <div class="collection-card-thumbnail collection-card-thumbnail-dashed">
-                        <svg class="icon collection-card-icon" width="48" height="48" aria-hidden="true">
-                            <use href="{% static 'icons/sprite.svg' %}#icon-plus"></use>
+                    <div class="collection-card-thumbnail collection-card-thumbnail-create">
+                        <svg class="icon collection-card-icon-circle-plus" width="48" height="48" aria-hidden="true">
+                            <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
                         </svg>
                     </div>
                     <span class="collection-card-title">Create new collection</span>

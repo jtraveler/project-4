@@ -2950,7 +2950,7 @@ footer {
    COLLECTIONS MODAL (Phase K)
    ============================================================================= */
 
-/* Backdrop - covers entire screen with dark overlay */
+/* Backdrop - covers entire screen with dark overlay - Micro-Spec #8.5b */
 .collection-modal-backdrop {
     position: fixed;
     top: 0;
@@ -2963,6 +2963,15 @@ footer {
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    /* Pure opacity fade - no transform */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease-out, visibility 0.15s ease-out;
+}
+
+.collection-modal-backdrop.is-visible {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* Modal container */
@@ -3090,25 +3099,21 @@ footer {
     height: 32px;
 }
 
-.collection-card-create .collection-card-icon {
-    color: #6b7280;
-}
-
-/* Circular plus icon for "Create new collection" card - Micro-Spec #8.5 */
-.collection-card-create .collection-card-thumbnail-dashed .collection-card-icon {
+/* Circle-plus icon for "Create new collection" - Micro-Spec #8.5b */
+.collection-card-icon-circle-plus {
     width: 48px;
     height: 48px;
     color: #9ca3af;
-    /* Create circular ring effect */
-    border: 2px solid #d1d5db;
-    border-radius: 50%;
-    padding: 10px;
-    box-sizing: border-box;
 }
 
-.collection-card-create:hover .collection-card-thumbnail-dashed .collection-card-icon {
+.collection-card-create:hover .collection-card-icon-circle-plus {
     color: #6b7280;
-    border-color: #9ca3af;
+}
+
+/* Simple background for create card thumbnail */
+.collection-card-thumbnail-create {
+    background-color: #f9fafb;
+    border: 2px dashed #d1d5db;
 }
 
 /* Card title */
@@ -3202,16 +3207,16 @@ footer {
     padding: 1rem 0;
 }
 
-/* Create collection panel */
+/* Create collection panel - Micro-Spec #8.5b compact layout */
 .collection-create-panel {
-    padding: 1.5rem;
+    padding: 1rem 1.5rem 1.5rem;
 }
 
 .collection-create-header {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .collection-create-back {
@@ -3237,26 +3242,16 @@ footer {
     margin: 0;
 }
 
-/* Visibility animation */
-.collection-modal-backdrop.is-visible {
-    animation: fadeIn 0.15s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
 /* ================================================
    COLLECTIONS MODAL ENHANCEMENTS (Micro-Spec #8.5)
    Green accent colors, custom form styling
    ================================================ */
 
-/* Create panel form styling */
+/* Create panel form styling - Micro-Spec #8.5b compact */
 .collection-create-form {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
 }
 
 .collection-form-group {
@@ -3317,12 +3312,12 @@ footer {
     color: #374151;
 }
 
-/* Custom GREEN radio buttons */
+/* Custom GREEN radio buttons - Micro-Spec #8.5b (16px) */
 .collection-radio-input {
     appearance: none;
     -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border: 2px solid #d1d5db;
     border-radius: 50%;
     cursor: pointer;
@@ -3342,8 +3337,8 @@ footer {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     background-color: white;
     border-radius: 50%;
 }
@@ -3368,17 +3363,17 @@ footer {
     flex-shrink: 0;
 }
 
-/* Two-button footer layout */
+/* Two-button footer layout - Micro-Spec #8.5b */
 .collection-create-actions {
     display: flex;
     gap: 0.75rem;
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
 }
 
 .btn-collection-back {
     flex: 0 0 auto;
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9375rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
     font-weight: 500;
     color: #374151;
     background-color: #fff;
@@ -3394,9 +3389,9 @@ footer {
 }
 
 .btn-collection-create {
-    flex: 1;
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9375rem;
+    flex: 0 1 auto;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
     font-weight: 500;
     color: #fff;
     background-color: #16ba31;

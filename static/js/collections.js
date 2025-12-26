@@ -37,6 +37,7 @@
 
     let isOpen = false;
     let previousActiveElement = null;
+    let mouseDownTarget = null; // Track mousedown target for drag-release fix (Micro-Spec #8.5b)
 
     // =============================================================================
     // MODAL OPEN/CLOSE
@@ -57,13 +58,7 @@
         // Store currently focused element to restore later
         previousActiveElement = document.activeElement;
 
-        // Show modal
-        modal.style.display = 'flex';
-
-        // Force reflow for transition
-        modal.offsetHeight;
-
-        // Add visible class for animations (if CSS uses it)
+        // Show modal using visibility class (Micro-Spec #8.5b - no display toggle)
         modal.classList.add('is-visible');
 
         // Lock body scroll
@@ -89,9 +84,8 @@
     function closeModal() {
         if (!isOpen) return;
 
-        // Hide modal
+        // Hide modal using visibility class (Micro-Spec #8.5b)
         modal.classList.remove('is-visible');
-        modal.style.display = 'none';
 
         // Restore body scroll
         document.body.style.overflow = '';
@@ -206,13 +200,23 @@
     }
 
     /**
-     * Handle backdrop click (close if clicking outside modal content)
+     * Track mousedown target (Micro-Spec #8.5b - drag-release fix)
+     */
+    function handleBackdropMouseDown(e) {
+        mouseDownTarget = e.target;
+    }
+
+    /**
+     * Handle backdrop click - only close if BOTH mousedown AND mouseup on backdrop
+     * Fixes drag-release bug where click inside modal, release outside closes modal
+     * (Micro-Spec #8.5b)
      */
     function handleBackdropClick(e) {
-        // Only close if clicking directly on backdrop, not modal content
-        if (e.target === modal) {
+        // Only close if both mousedown AND mouseup occurred on backdrop
+        if (mouseDownTarget === modal && e.target === modal) {
             closeModal();
         }
+        mouseDownTarget = null;
     }
 
     /**
@@ -247,7 +251,10 @@
     // Modal internal clicks
     modal.addEventListener('click', handleModalClick);
 
-    // Backdrop click
+    // Backdrop mousedown tracking (Micro-Spec #8.5b - drag-release fix)
+    modal.addEventListener('mousedown', handleBackdropMouseDown);
+
+    // Backdrop click (checks both mousedown and mouseup targets)
     modal.addEventListener('click', handleBackdropClick);
 
     // Keyboard (Escape to close)

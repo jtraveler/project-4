@@ -54,9 +54,17 @@
     // =============================================================================
 
     /**
-     * Get CSRF token from cookie for POST requests
+     * Get CSRF token for POST requests
+     * Priority: 1) meta tag (most reliable) 2) cookie (fallback)
      */
     function getCSRFToken() {
+        // Try meta tag first (most reliable for fetch requests)
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) {
+            return metaTag.getAttribute('content');
+        }
+
+        // Fallback to cookie
         const name = 'csrftoken';
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -386,9 +394,9 @@
             img.loading = 'lazy';
             thumbnail.appendChild(img);
         } else {
-            // Empty placeholder icon
+            // Empty placeholder icon - no hardcoded sizes, CSS controls via variables
             thumbnail.innerHTML = `
-                <svg class="icon collection-card-icon" width="48" height="48" aria-hidden="true">
+                <svg class="icon" aria-hidden="true">
                     <use href="${getIconUrl('icon-image')}"></use>
                 </svg>
             `;
@@ -408,15 +416,23 @@
         count.textContent = `${collection.item_count} ${collection.item_count === 1 ? 'item' : 'items'}`;
         card.appendChild(count);
 
-        // Overlay for saved state (checkmark when has_prompt)
+        // Overlay for saved state - contains ALL THREE icons (plus, check, minus)
+        // CSS controls which is visible based on hover state and has-prompt class
+        // IMPORTANT: Overlay must be INSIDE thumbnail div for proper positioning
         const overlay = document.createElement('div');
         overlay.className = 'collection-card-overlay';
         overlay.innerHTML = `
-            <svg class="icon" width="32" height="32" aria-hidden="true">
+            <svg class="icon icon-plus" aria-hidden="true">
+                <use href="${getIconUrl('icon-circle-plus')}"></use>
+            </svg>
+            <svg class="icon icon-check" aria-hidden="true">
                 <use href="${getIconUrl('icon-circle-check')}"></use>
             </svg>
+            <svg class="icon icon-minus" aria-hidden="true">
+                <use href="${getIconUrl('icon-circle-minus')}"></use>
+            </svg>
         `;
-        card.appendChild(overlay);
+        thumbnail.appendChild(overlay);  // Append to thumbnail, not card
 
         return card;
     }

@@ -86,6 +86,15 @@
   --z-modal: 3000;                           /* Modal z-index (future use) */
   --z-skip-link: 9999;                       /* Skip to main content link */
 
+  /* === COLLECTIONS MODAL === */
+  --collection-icon-size: 3.2em;             /* Large icons (create card, empty state) */
+  --collection-icon-size-sm: 2em;            /* Overlay icons (check, minus) */
+  --collection-modal-padding: 2em;           /* Modal body padding */
+  --collection-card-gap: 1rem;               /* Grid gap between cards */
+  --collection-overlay-saved: rgba(22, 163, 74, 0.75);   /* Green - saved state */
+  --collection-overlay-remove: rgba(239, 68, 68, 0.75);  /* Red - hover to remove */
+  --collection-overlay-add: rgba(0, 0, 0, 0.6);          /* Dark - hover to add */
+
   /* === LAYOUT DIMENSIONS === */
   --navbar-height: 70px;                     /* Desktop navbar height */
   --navbar-height-mobile: 64px;              /* Mobile navbar height */
@@ -2970,12 +2979,12 @@ footer {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.7);
     z-index: 1050;
     display: flex;
-    align-items: center;
     justify-content: center;
     padding: 1rem;
+    overflow: auto;
     /* Pure opacity fade - no transform */
     opacity: 0;
     visibility: hidden;
@@ -2992,8 +3001,8 @@ footer {
     background: var(--white);
     border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 750px;
-    max-height: 80vh;
+    max-width: 850px;
+    height: fit-content;
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-lg);
@@ -3057,7 +3066,7 @@ footer {
     gap: 1rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1199px) {
     .collection-grid {
         grid-template-columns: repeat(3, 1fr);
     }
@@ -3075,10 +3084,11 @@ footer {
     border: none;
     padding: 0;
     cursor: pointer;
-    text-align: center;
+    text-align: left;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 /* Create new collection card */
@@ -3094,24 +3104,18 @@ footer {
     justify-content: center;
     position: relative;
     border-radius: var(--radius-md);
+    overflow: hidden; /* Contain overlay within thumbnail bounds */
 }
 
 .collection-card-thumbnail-dashed {
     background-color: var(--gray-50);
 }
 
-/* Icon inside thumbnail */
-.collection-card-icon {
+/* Icon inside thumbnail - uses CSS variables for consistent sizing */
+.collection-card-thumbnail .icon {
     color: var(--gray-400);
-    width: 32px;
-    height: 32px;
-}
-
-/* Circle-plus icon for "Create new collection" - Micro-Spec #8.5b, #8.5d */
-.collection-card-create .collection-card-icon-circle-plus {
-    width: 3.5em;
-    height: 3.5em;
-    color: var(--gray-400);
+    width: var(--collection-icon-size);
+    height: var(--collection-icon-size);
 }
 
 /* Simple background for create card thumbnail */
@@ -3124,6 +3128,7 @@ footer {
 .collection-card-title {
     display: block;
     color: var(--gray-700);
+    text-align: left;
 }
 
 /* Card item count */
@@ -3132,6 +3137,7 @@ footer {
     padding: 0 0.5rem 0.5rem;
     font-size: 0.625rem;
     color: var(--gray-400);
+    text-align: left;
 }
 
 /* Overlay states (saved/hover) */
@@ -3141,19 +3147,73 @@ footer {
     left: 0;
     right: 0;
     bottom: 0;
-    display: flex;
+    display: none;  /* Hidden by default */
     align-items: center;
     justify-content: center;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-radius: var(--radius-md);
+    z-index: 2;
 }
 
-.collection-card-overlay-saved {
-    background-color: rgba(34, 197, 94, 0.8);
+/* Icons inside overlay - WHITE and properly sized using variables */
+.collection-card-overlay .icon {
+    width: var(--collection-icon-size);
+    height: var(--collection-icon-size);
+    color: var(--white);
+    stroke: var(--white);
+    fill: none;
 }
 
-.collection-card-overlay-saved .icon {
-    color: white;
+/* All overlay icons hidden by default */
+.collection-card-overlay .icon-plus,
+.collection-card-overlay .icon-check,
+.collection-card-overlay .icon-minus {
+    display: none;
+}
+
+/* ============================================
+   STATE 1: Card does NOT have prompt (default)
+   - Overlay hidden
+   - On hover: show dark overlay with PLUS icon
+   ============================================ */
+
+/* Show overlay with plus on hover for cards WITHOUT prompt */
+.collection-card:not(.has-prompt):not(.collection-card-create):hover .collection-card-overlay {
+    display: flex;
+    background-color: var(--collection-overlay-add);
+}
+
+.collection-card:not(.has-prompt):not(.collection-card-create):hover .collection-card-overlay .icon-plus {
+    display: block;
+}
+
+/* ============================================
+   STATE 2: Card HAS prompt (saved)
+   - Show green overlay with CHECK icon
+   - On hover: show red overlay with MINUS icon
+   ============================================ */
+
+/* Show overlay when card has the prompt */
+.collection-card.has-prompt .collection-card-overlay {
+    display: flex;
+    background-color: var(--collection-overlay-saved);
+}
+
+/* Show check icon when saved (not hovering) */
+.collection-card.has-prompt .collection-card-overlay .icon-check {
+    display: block;
+}
+
+/* Hover: switch to minus icon and red overlay */
+.collection-card.has-prompt:hover .collection-card-overlay {
+    background-color: var(--collection-overlay-remove);
+}
+
+.collection-card.has-prompt:hover .collection-card-overlay .icon-check {
+    display: none;
+}
+
+.collection-card.has-prompt:hover .collection-card-overlay .icon-minus {
+    display: block;
 }
 
 /* Modal footer */
@@ -3346,6 +3406,7 @@ footer {
 /* Two-button footer layout - Micro-Spec #8.5b */
 .collection-create-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 0.75rem;
     margin-top: 2em;
@@ -3389,4 +3450,27 @@ footer {
 .btn-collection-create:disabled {
     background-color: var(--gray-400);
     cursor: not-allowed;
+}
+
+/* ================================================
+   COLLECTIONS MODAL - RESPONSIVE STYLES
+   ================================================ */
+
+/* Tablets and smaller (768px and below) */
+@media (max-width: 768px) {
+    .collection-modal-backdrop {
+        padding: 1.8rem 0;
+    }
+
+    .collection-modal {
+        padding: 2em;
+        margin-bottom: 50px;
+    }
+}
+
+/* Very small screens (below 370px) */
+@media (max-width: 369px) {
+    .collection-grid {
+        grid-template-columns: 1fr;  /* Single column */
+    }
 }

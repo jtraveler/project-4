@@ -8,6 +8,8 @@ This module provides:
 
 import json
 import logging
+import random
+import string
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -16,6 +18,7 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.db.models import Count
 from django.urls import reverse
+from django.utils.text import slugify
 
 from ..models import Collection, CollectionItem, Prompt
 
@@ -146,9 +149,24 @@ def api_collection_create(request):
         is_private = is_private.lower() == 'true'
     prompt_id = data.get('prompt_id')
 
+    # Generate unique slug from title
+    base_slug = slugify(title)
+    if not base_slug:
+        base_slug = 'collection'
+
+    # Add random suffix for uniqueness (5 characters)
+    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
+    slug = f"{base_slug}-{random_suffix}"
+
+    # Ensure slug is unique (in rare collision case)
+    while Collection.objects.filter(slug=slug).exists():
+        random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
+        slug = f"{base_slug}-{random_suffix}"
+
     # Create the collection
     collection = Collection.objects.create(
         title=title,
+        slug=slug,
         user=request.user,
         is_private=is_private
     )

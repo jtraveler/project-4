@@ -29,6 +29,9 @@
         
         <!-- Security Headers-->
         <meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+        <!-- CSRF Token for JavaScript fetch requests -->
+        <meta name="csrf-token" content="{{ csrf_token }}">
         
         <!-- Preconnect for Performance -->
         <link rel="preconnect" href="https://fonts.googleapis.com">

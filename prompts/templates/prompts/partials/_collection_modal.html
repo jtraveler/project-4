@@ -20,9 +20,10 @@
             <div class="collection-grid" id="collectionGrid">
 
                 {# Create New Collection Card - Always First #}
+                {# Icon sizing controlled by CSS variables, no hardcoded width/height #}
                 <button type="button" class="collection-card collection-card-create" data-action="show-create-form">
                     <div class="collection-card-thumbnail collection-card-thumbnail-create">
-                        <svg class="icon collection-card-icon-circle-plus" width="48" height="48" aria-hidden="true">
+                        <svg class="icon" aria-hidden="true">
                             <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
                         </svg>
                     </div>
@@ -30,23 +31,30 @@
                 </button>
 
                 {# Collection Cards Container - Populated by JavaScript #}
-                {# Example static card for template reference: #}
+                {# Example static card for template reference (icon sizes via CSS variables): #}
                 <!--
                 <button type="button" class="collection-card" data-collection-id="1" data-action="toggle-collection">
                     <div class="collection-card-thumbnail">
-                        <svg class="icon collection-card-icon" width="48" height="48" aria-hidden="true">
+                        <svg class="icon" aria-hidden="true">
                             <use href="{% static 'icons/sprite.svg' %}#icon-image"></use>
                         </svg>
+
+                        {# Overlay contains ALL THREE icons - CSS controls visibility #}
+                        {# plus = hover to add, check = saved, minus = hover to remove #}
+                        <div class="collection-card-overlay">
+                            <svg class="icon icon-plus" aria-hidden="true">
+                                <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
+                            </svg>
+                            <svg class="icon icon-check" aria-hidden="true">
+                                <use href="{% static 'icons/sprite.svg' %}#icon-circle-check"></use>
+                            </svg>
+                            <svg class="icon icon-minus" aria-hidden="true">
+                                <use href="{% static 'icons/sprite.svg' %}#icon-circle-minus"></use>
+                            </svg>
+                        </div>
                     </div>
                     <span class="collection-card-title">My collection</span>
                     <span class="collection-card-count">0 items</span>
-
-                    {# Overlay for states - added by JavaScript #}
-                    <div class="collection-card-overlay collection-card-overlay-saved" style="display: none;">
-                        <svg class="icon" width="32" height="32" aria-hidden="true">
-                            <use href="{% static 'icons/sprite.svg' %}#icon-circle-check"></use>
-                        </svg>
-                    </div>
                 </button>
                 -->
 

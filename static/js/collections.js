@@ -1,11 +1,13 @@
 /**
- * Collections Modal - Open/Close Functionality
+ * Collections Modal - Full Functionality
  * Phase K - PromptFinder
  *
  * This script handles:
  * - Opening the modal when save buttons are clicked
  * - Closing the modal (X button, backdrop, Escape key)
- * - Storing the prompt ID being saved
+ * - Fetching and displaying user's collections from API
+ * - Adding/removing prompts from collections
+ * - Creating new collections
  * - Body scroll lock when modal is open
  */
 
@@ -22,6 +24,12 @@
     const modalContent = modal?.querySelector('.collection-modal');
     const closeBtn = modal?.querySelector('[data-action="close-modal"]');
     const promptIdInput = document.getElementById('collectionModalPromptId');
+    const collectionGrid = document.getElementById('collectionGrid');
+    const loadingState = document.getElementById('collectionModalLoading');
+    const emptyState = document.getElementById('collectionModalEmpty');
+    const errorState = document.getElementById('collectionModalError');
+    const errorText = document.getElementById('collectionModalErrorText');
+    const createForm = document.getElementById('collectionCreateForm');
 
     console.log('CollectionsModal: Modal element found:', !!modal);
 
@@ -38,6 +46,55 @@
     let isOpen = false;
     let previousActiveElement = null;
     let mouseDownTarget = null; // Track mousedown target for drag-release fix (Micro-Spec #8.5b)
+    let currentPromptId = null; // The prompt being saved
+    let collectionsData = []; // Cached collections data
+
+    // =============================================================================
+    // UTILITY FUNCTIONS
+    // =============================================================================
+
+    /**
+     * Get CSRF token from cookie for POST requests
+     */
+    function getCSRFToken() {
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    /**
+     * Escape HTML to prevent XSS attacks
+     */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Get static URL for icons
+     */
+    function getIconUrl(iconName) {
+        // Get the sprite URL from an existing icon in the modal
+        const existingIcon = modal.querySelector('.icon use');
+        if (existingIcon) {
+            const href = existingIcon.getAttribute('href');
+            const baseUrl = href.split('#')[0];
+            return baseUrl + '#' + iconName;
+        }
+        // Fallback
+        return '/static/icons/sprite.svg#' + iconName;
+    }
 
     // =============================================================================
     // MODAL OPEN/CLOSE
@@ -51,6 +108,7 @@
         if (isOpen) return;
 
         // Store the prompt ID
+        currentPromptId = promptId;
         if (promptIdInput) {
             promptIdInput.value = promptId || '';
         }
@@ -66,6 +124,9 @@
 
         // Set state
         isOpen = true;
+
+        // Fetch collections from API
+        fetchCollections();
 
         // Focus the close button for accessibility
         setTimeout(() => {
@@ -208,6 +269,309 @@
     }
 
     // =============================================================================
+    // API FUNCTIONS
+    // =============================================================================
+
+    /**
+     * Fetch user's collections from API
+     */
+    async function fetchCollections() {
+        // Show loading state
+        showState('loading');
+
+        try {
+            const url = currentPromptId
+                ? `/api/collections/?prompt_id=${currentPromptId}`
+                : '/api/collections/';
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Failed to fetch collections');
+            }
+
+            collectionsData = data.collections || [];
+            renderCollections(collectionsData);
+
+        } catch (error) {
+            console.error('CollectionsModal: Error fetching collections:', error);
+            showState('error', error.message);
+        }
+    }
+
+    /**
+     * Show a specific state in the modal (loading, empty, error, or content)
+     */
+    function showState(state, errorMessage = '') {
+        // Hide all states first
+        if (loadingState) loadingState.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
+        if (errorState) errorState.style.display = 'none';
+
+        // Hide collection cards (except the create card)
+        const existingCards = collectionGrid?.querySelectorAll('.collection-card:not(.collection-card-create)');
+        existingCards?.forEach(card => card.remove());
+
+        switch (state) {
+            case 'loading':
+                if (loadingState) loadingState.style.display = 'block';
+                break;
+            case 'empty':
+                if (emptyState) emptyState.style.display = 'block';
+                break;
+            case 'error':
+                if (errorState) errorState.style.display = 'block';
+                if (errorText) errorText.textContent = errorMessage || 'Something went wrong. Please try again.';
+                break;
+            // 'content' state - cards are rendered separately
+        }
+    }
+
+    /**
+     * Render collections in the grid
+     */
+    function renderCollections(collections) {
+        if (!collectionGrid) return;
+
+        // Remove existing collection cards (keep create card)
+        const existingCards = collectionGrid.querySelectorAll('.collection-card:not(.collection-card-create)');
+        existingCards.forEach(card => card.remove());
+
+        // Show empty state if no collections
+        if (!collections || collections.length === 0) {
+            showState('empty');
+            return;
+        }
+
+        // Hide loading/empty/error states
+        showState('content');
+
+        // Add collection cards after the create card
+        const createCard = collectionGrid.querySelector('.collection-card-create');
+
+        collections.forEach(collection => {
+            const card = createCollectionCard(collection);
+            if (createCard) {
+                createCard.after(card);
+            } else {
+                collectionGrid.appendChild(card);
+            }
+        });
+    }
+
+    /**
+     * Create a collection card element
+     */
+    function createCollectionCard(collection) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'collection-card';
+        card.dataset.collectionId = collection.id;
+        card.dataset.action = 'toggle-collection';
+
+        // Add 'has-prompt' class if prompt is already in this collection
+        if (collection.has_prompt) {
+            card.classList.add('has-prompt');
+        }
+
+        // Thumbnail
+        const thumbnail = document.createElement('div');
+        thumbnail.className = 'collection-card-thumbnail';
+
+        if (collection.thumbnail_url) {
+            const img = document.createElement('img');
+            img.src = collection.thumbnail_url;
+            img.alt = escapeHtml(collection.title);
+            img.loading = 'lazy';
+            thumbnail.appendChild(img);
+        } else {
+            // Empty placeholder icon
+            thumbnail.innerHTML = `
+                <svg class="icon collection-card-icon" width="48" height="48" aria-hidden="true">
+                    <use href="${getIconUrl('icon-image')}"></use>
+                </svg>
+            `;
+        }
+
+        card.appendChild(thumbnail);
+
+        // Title
+        const title = document.createElement('span');
+        title.className = 'collection-card-title';
+        title.textContent = collection.title;
+        card.appendChild(title);
+
+        // Item count
+        const count = document.createElement('span');
+        count.className = 'collection-card-count';
+        count.textContent = `${collection.item_count} ${collection.item_count === 1 ? 'item' : 'items'}`;
+        card.appendChild(count);
+
+        // Overlay for saved state (checkmark when has_prompt)
+        const overlay = document.createElement('div');
+        overlay.className = 'collection-card-overlay';
+        overlay.innerHTML = `
+            <svg class="icon" width="32" height="32" aria-hidden="true">
+                <use href="${getIconUrl('icon-circle-check')}"></use>
+            </svg>
+        `;
+        card.appendChild(overlay);
+
+        return card;
+    }
+
+    /**
+     * Handle collection card toggle (add/remove prompt)
+     */
+    async function handleCollectionToggle(card) {
+        const collectionId = card.dataset.collectionId;
+        if (!collectionId || !currentPromptId) return;
+
+        const hasPrompt = card.classList.contains('has-prompt');
+        const endpoint = hasPrompt
+            ? `/api/collections/${collectionId}/remove/`
+            : `/api/collections/${collectionId}/add/`;
+
+        // Optimistic UI update
+        card.classList.toggle('has-prompt');
+        card.classList.add('loading');
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ prompt_id: currentPromptId }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Failed to update collection');
+            }
+
+            // Update item count if provided
+            if (data.collection && typeof data.collection.item_count !== 'undefined') {
+                const countEl = card.querySelector('.collection-card-count');
+                if (countEl) {
+                    const count = data.collection.item_count;
+                    countEl.textContent = `${count} ${count === 1 ? 'item' : 'items'}`;
+                }
+            }
+
+            // Update save button state on the page
+            updateSaveButtonState(currentPromptId, !hasPrompt);
+
+        } catch (error) {
+            console.error('CollectionsModal: Error toggling collection:', error);
+            // Revert optimistic update on error
+            card.classList.toggle('has-prompt');
+        } finally {
+            card.classList.remove('loading');
+        }
+    }
+
+    /**
+     * Handle create collection form submission
+     */
+    async function handleCreateCollection(e) {
+        e.preventDefault();
+
+        const nameInput = document.getElementById('collectionName');
+        const privateRadio = document.getElementById('visibilityPrivate');
+        const submitBtn = document.getElementById('createCollectionBtn');
+
+        const title = nameInput?.value.trim();
+        if (!title) return;
+
+        const isPrivate = privateRadio?.checked ?? true;
+
+        // Disable submit button while processing
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+        }
+
+        try {
+            const response = await fetch('/api/collections/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({
+                    title: title,
+                    is_private: isPrivate,
+                    prompt_id: currentPromptId,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Failed to create collection');
+            }
+
+            // Add new collection to the grid
+            if (data.collection) {
+                // Add has_prompt: true since prompt was added
+                const newCollection = {
+                    ...data.collection,
+                    has_prompt: data.prompt_added || false,
+                    thumbnail_url: null, // New collection has no thumbnail yet
+                };
+
+                // Add to beginning of collectionsData
+                collectionsData.unshift(newCollection);
+
+                // Re-render collections
+                renderCollections(collectionsData);
+
+                // Update save button if prompt was added
+                if (data.prompt_added && currentPromptId) {
+                    updateSaveButtonState(currentPromptId, true);
+                }
+            }
+
+            // Hide create panel and show main view
+            hideCreatePanel();
+
+        } catch (error) {
+            console.error('CollectionsModal: Error creating collection:', error);
+            alert(error.message || 'Failed to create collection. Please try again.');
+        } finally {
+            // Re-enable submit button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create new collection';
+            }
+        }
+    }
+
+    /**
+     * Update save button visual state on the page
+     * @param {string} promptId - The prompt ID
+     * @param {boolean} isSaved - Whether the prompt is now saved in any collection
+     */
+    function updateSaveButtonState(promptId, isSaved) {
+        // Find save buttons for this prompt
+        const saveButtons = document.querySelectorAll(
+            `[data-action="open-collections-modal"][data-prompt-id="${promptId}"]`
+        );
+
+        saveButtons.forEach(btn => {
+            if (isSaved) {
+                btn.classList.add('is-saved');
+            } else {
+                btn.classList.remove('is-saved');
+            }
+        });
+    }
+
+    // =============================================================================
     // EVENT HANDLERS
     // =============================================================================
 
@@ -231,7 +595,10 @@
      * Handle clicks within the modal
      */
     function handleModalClick(e) {
-        const action = e.target.closest('[data-action]')?.dataset.action;
+        const actionEl = e.target.closest('[data-action]');
+        if (!actionEl) return;
+
+        const action = actionEl.dataset.action;
 
         switch (action) {
             case 'close-modal':
@@ -242,6 +609,9 @@
                 break;
             case 'hide-create-form':
                 hideCreatePanel();
+                break;
+            case 'toggle-collection':
+                handleCollectionToggle(actionEl);
                 break;
         }
     }
@@ -355,6 +725,11 @@
             }
         });
     });
+
+    // Create collection form submission
+    if (createForm) {
+        createForm.addEventListener('submit', handleCreateCollection);
+    }
 
     // =============================================================================
     // PUBLIC API (for future specs to use)

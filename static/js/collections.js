@@ -95,14 +95,8 @@
             promptIdInput.value = '';
         }
 
-        // Reset to main view (hide create panel if open)
-        const createPanel = document.getElementById('collectionCreatePanel');
-        const gridContainer = document.getElementById('collectionGrid');
-        const footer = modal.querySelector('.collection-modal-footer');
-
-        if (createPanel) createPanel.style.display = 'none';
-        if (gridContainer) gridContainer.style.display = '';
-        if (footer) footer.style.display = '';
+        // Reset modal to default state (main view visible, create panel hidden)
+        resetModalState();
 
         // Set state
         isOpen = false;
@@ -117,6 +111,59 @@
         modal.dispatchEvent(new CustomEvent('modal:closed'));
     }
 
+    /**
+     * Reset modal to default state (main view visible, create panel hidden)
+     * Called when modal closes to ensure clean state on next open
+     */
+    function resetModalState() {
+        const modalBody = modal.querySelector('.collection-modal-body');
+        const createPanel = document.getElementById('collectionCreatePanel');
+        const footer = modal.querySelector('.collection-modal-footer');
+        const form = document.getElementById('collectionCreateForm');
+        const createBtn = document.getElementById('createCollectionBtn');
+        const visibilityHint = document.getElementById('visibilityHint');
+        const privateRadio = document.getElementById('visibilityPrivate');
+
+        // Show main view, hide create panel
+        if (modalBody) {
+            modalBody.style.display = '';
+        }
+        if (createPanel) {
+            createPanel.style.display = 'none';
+        }
+        if (footer) {
+            footer.style.display = '';
+        }
+
+        // Reset form fields
+        if (form) {
+            form.reset();
+        }
+
+        // Disable create button (requires input)
+        if (createBtn) {
+            createBtn.disabled = true;
+        }
+
+        // Ensure Private radio is selected (default)
+        if (privateRadio) {
+            privateRadio.checked = true;
+        }
+
+        // Reset visibility hint to Private state
+        if (visibilityHint) {
+            const iconUse = visibilityHint.querySelector('.icon use');
+            const textSpan = visibilityHint.querySelector('span');
+            if (iconUse) {
+                const href = iconUse.getAttribute('href');
+                iconUse.setAttribute('href', href.replace(/#icon-.*$/, '#icon-eye-off'));
+            }
+            if (textSpan) {
+                textSpan.textContent = 'This collection will only be visible to you';
+            }
+        }
+    }
+
     // =============================================================================
     // CREATE PANEL TOGGLE
     // =============================================================================
@@ -126,11 +173,11 @@
      */
     function showCreatePanel() {
         const createPanel = document.getElementById('collectionCreatePanel');
-        const gridContainer = document.getElementById('collectionGrid');
+        const modalBody = modal.querySelector('.collection-modal-body');
         const footer = modal.querySelector('.collection-modal-footer');
         const nameInput = document.getElementById('collectionName');
 
-        if (gridContainer) gridContainer.style.display = 'none';
+        if (modalBody) modalBody.style.display = 'none';
         if (footer) footer.style.display = 'none';
         if (createPanel) {
             createPanel.style.display = 'block';
@@ -144,12 +191,12 @@
      */
     function hideCreatePanel() {
         const createPanel = document.getElementById('collectionCreatePanel');
-        const gridContainer = document.getElementById('collectionGrid');
+        const modalBody = modal.querySelector('.collection-modal-body');
         const footer = modal.querySelector('.collection-modal-footer');
         const form = document.getElementById('collectionCreateForm');
 
         if (createPanel) createPanel.style.display = 'none';
-        if (gridContainer) gridContainer.style.display = '';
+        if (modalBody) modalBody.style.display = '';
         if (footer) footer.style.display = '';
 
         // Reset form

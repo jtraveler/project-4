@@ -9,7 +9,7 @@
         <div class="collection-modal-header">
             <h2 class="collection-modal-title" id="collectionModalTitle">Add to collection(s)</h2>
             <button type="button" class="collection-modal-close" aria-label="Close modal" data-action="close-modal">
-                <svg class="icon" width="24" height="24" aria-hidden="true">
+                <svg class="icon collection-modal-close-icon" aria-hidden="true">
                     <use href="{% static 'icons/sprite.svg' %}#icon-x"></use>
                 </svg>
             </button>
@@ -74,7 +74,7 @@
 
         {# Modal Footer #}
         <div class="collection-modal-footer">
-            <a href="#" class="btn-collections-link" id="collectionsLink">
+            <a href="#" class="btn-dark-pill" id="collectionsLink">
                 Your collections
                 <svg class="icon" width="16" height="16" aria-hidden="true">
                     <use href="{% static 'icons/sprite.svg' %}#icon-arrow-right"></use>
@@ -105,7 +105,7 @@
                            id="collectionName"
                            name="title"
                            maxlength="50"
-                           placeholder="Portrait Prompts"
+                           placeholder="My Favorite Prompts..."
                            autocomplete="off"
                            required>
                     <span class="collection-form-hint">Maximum 50 characters</span>
@@ -122,9 +122,6 @@
                                    value="true"
                                    id="visibilityPrivate"
                                    checked>
-                            <svg class="icon" width="16" height="16" aria-hidden="true">
-                                <use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use>
-                            </svg>
                             Private
                         </label>
                         <label class="collection-radio-label">
@@ -133,9 +130,6 @@
                                    name="is_private"
                                    value="false"
                                    id="visibilityPublic">
-                            <svg class="icon" width="16" height="16" aria-hidden="true">
-                                <use href="{% static 'icons/sprite.svg' %}#icon-eye"></use>
-                            </svg>
                             Public
                         </label>
                     </div>

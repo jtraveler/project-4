@@ -228,6 +228,27 @@ a:hover {
   border-color: var(--gray-900);
 }
 
+/* Dark pill button - reusable pill-shaped dark button */
+.btn-dark-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background-color: var(--gray-900);
+    color: var(--white);
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.15s;
+}
+
+.btn-dark-pill:hover {
+    background-color: var(--gray-700);
+    color: var(--white);
+    text-decoration: none;
+}
+
 main {
   margin-bottom: 100px;
 }
@@ -734,10 +755,6 @@ main {
   transition: transform 0.15s ease;
 }
 
-.collection-card:hover {
-  transform: translateY(-2px);
-}
-
 .collection-thumbnail {
   aspect-ratio: 1;
   border-radius: 12px;
@@ -766,10 +783,6 @@ main {
 .collection-card-create .collection-thumbnail {
   border: 2px dashed #d1d5db;
   background: #f9fafb;
-}
-
-.collection-card-create:hover .collection-thumbnail {
-  border-color: #ff3a78;
 }
 
 /* Modal footer button */
@@ -2976,15 +2989,16 @@ footer {
 
 /* Modal container */
 .collection-modal {
-    background: #fff;
-    border-radius: 12px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 600px;
+    max-width: 750px;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-lg);
     position: relative;
+    padding: 3em;
 }
 
 /* Modal header */
@@ -2992,8 +3006,8 @@ footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 0;
+    padding-bottom: 2em;
 }
 
 .collection-modal-title {
@@ -3009,8 +3023,8 @@ footer {
     border: none;
     padding: 0.5rem;
     cursor: pointer;
-    color: #6b7280;
-    border-radius: 6px;
+    color: var(--gray-500);
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3018,13 +3032,20 @@ footer {
 }
 
 .collection-modal-close:hover {
-    background-color: #f3f4f6;
-    color: #111;
+    background-color: var(--gray-100);
+    color: var(--gray-900);
+}
+
+/* Close button icon - Micro-Spec #8.5d */
+.collection-modal-close-icon {
+    width: 1.25em;
+    height: 1.25em;
+    color: inherit;
 }
 
 /* Modal body */
 .collection-modal-body {
-    padding: 1.5rem;
+    padding: 0;
     overflow-y: auto;
     flex: 1;
 }
@@ -3051,81 +3072,58 @@ footer {
 /* Collection card */
 .collection-card {
     background: none;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: none;
     padding: 0;
     cursor: pointer;
     text-align: center;
-    transition: border-color 0.15s, box-shadow 0.15s;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-.collection-card:hover {
-    border-color: #9ca3af;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-/* Create new collection card - dashed border */
+/* Create new collection card */
 .collection-card-create {
-    border-style: dashed;
-    border-color: #d1d5db;
-}
-
-.collection-card-create:hover {
-    border-color: #9ca3af;
-    background-color: #f9fafb;
 }
 
 /* Card thumbnail area */
 .collection-card-thumbnail {
     aspect-ratio: 1;
-    background-color: #f3f4f6;
+    background-color: var(--gray-100);
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
+    border-radius: var(--radius-md);
 }
 
 .collection-card-thumbnail-dashed {
-    background-color: #fafafa;
+    background-color: var(--gray-50);
 }
 
 /* Icon inside thumbnail */
 .collection-card-icon {
-    color: #9ca3af;
+    color: var(--gray-400);
     width: 32px;
     height: 32px;
 }
 
-/* Circle-plus icon for "Create new collection" - Micro-Spec #8.5b */
-.collection-card-icon-circle-plus {
-    width: 48px;
-    height: 48px;
-    color: #9ca3af;
-}
-
-.collection-card-create:hover .collection-card-icon-circle-plus {
-    color: #6b7280;
+/* Circle-plus icon for "Create new collection" - Micro-Spec #8.5b, #8.5d */
+.collection-card-create .collection-card-icon-circle-plus {
+    width: 3.5em;
+    height: 3.5em;
+    color: var(--gray-400);
 }
 
 /* Simple background for create card thumbnail */
 .collection-card-thumbnail-create {
-    background-color: #f9fafb;
-    border: 2px dashed #d1d5db;
+    background-color: var(--gray-50);
+    border-radius: var(--radius-md);
 }
 
 /* Card title */
 .collection-card-title {
     display: block;
-    padding: 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #374151;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: var(--gray-700);
 }
 
 /* Card item count */
@@ -3133,7 +3131,7 @@ footer {
     display: block;
     padding: 0 0.5rem 0.5rem;
     font-size: 0.625rem;
-    color: #9ca3af;
+    color: var(--gray-400);
 }
 
 /* Overlay states (saved/hover) */
@@ -3147,7 +3145,7 @@ footer {
     align-items: center;
     justify-content: center;
     background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 8px 8px 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .collection-card-overlay-saved {
@@ -3160,32 +3158,13 @@ footer {
 
 /* Modal footer */
 .collection-modal-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
+    padding: 0;
+    padding-top: 1rem;
     display: flex;
     justify-content: center;
 }
 
-/* "Your collections" link button */
-.btn-collections-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    background-color: #111;
-    color: #fff;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: background-color 0.15s;
-}
-
-.btn-collections-link:hover {
-    background-color: #333;
-    color: #fff;
-    text-decoration: none;
-}
+/* "Your collections" link button - now uses global .btn-dark-pill */
 
 /* Loading state */
 .collection-modal-loading {
@@ -3199,7 +3178,7 @@ footer {
 .collection-modal-empty {
     text-align: center;
     padding: 2rem;
-    color: #6b7280;
+    color: var(--gray-500);
 }
 
 /* Error state */
@@ -3209,7 +3188,7 @@ footer {
 
 /* Create collection panel - Micro-Spec #8.5b compact layout */
 .collection-create-panel {
-    padding: 1rem 1.5rem 1.5rem;
+    padding: 0;
 }
 
 .collection-create-header {
@@ -3222,18 +3201,18 @@ footer {
 .collection-create-back {
     background: none;
     border: none;
-    padding: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5rem 0;
     cursor: pointer;
-    color: #6b7280;
-    border-radius: 6px;
+    color: var(--gray-500);
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .collection-create-back:hover {
-    background-color: #f3f4f6;
-    color: #111;
+    background-color: var(--gray-100);
+    color: var(--gray-900);
 }
 
 .collection-create-title {
@@ -3263,7 +3242,7 @@ footer {
 .collection-form-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--gray-700);
 }
 
 /* Input with GREEN focus state */
@@ -3271,8 +3250,8 @@ footer {
     width: 100%;
     padding: 0.75rem 1rem;
     font-size: 1rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -3283,12 +3262,12 @@ footer {
 }
 
 .collection-form-input::placeholder {
-    color: #9ca3af;
+    color: var(--gray-400);
 }
 
 .collection-form-hint {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--gray-500);
 }
 
 /* Visibility radio group */
@@ -3296,6 +3275,7 @@ footer {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    margin-top: 1em;
 }
 
 .collection-visibility-options {
@@ -3309,7 +3289,7 @@ footer {
     gap: 0.5rem;
     cursor: pointer;
     font-size: 0.9375rem;
-    color: #374151;
+    color: var(--gray-700);
 }
 
 /* Custom GREEN radio buttons - Micro-Spec #8.5b (16px) */
@@ -3318,7 +3298,7 @@ footer {
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
-    border: 2px solid #d1d5db;
+    border: 2px solid var(--gray-300);
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.15s;
@@ -3354,7 +3334,7 @@ footer {
     align-items: center;
     gap: 0.5rem;
     font-size: 0.8125rem;
-    color: #6b7280;
+    color: var(--gray-500);
 }
 
 .collection-visibility-hint .icon {
@@ -3366,8 +3346,9 @@ footer {
 /* Two-button footer layout - Micro-Spec #8.5b */
 .collection-create-actions {
     display: flex;
+    justify-content: center;
     gap: 0.75rem;
-    margin-top: 0.75rem;
+    margin-top: 2em;
 }
 
 .btn-collection-back {
@@ -3375,17 +3356,17 @@ footer {
     padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #374151;
-    background-color: #fff;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+    color: var(--gray-700);
+    background-color: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.15s;
 }
 
 .btn-collection-back:hover {
-    background-color: #f3f4f6;
-    border-color: #9ca3af;
+    background-color: var(--gray-100);
+    border-color: var(--gray-400);
 }
 
 .btn-collection-create {
@@ -3393,10 +3374,10 @@ footer {
     padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #fff;
+    color: var(--white);
     background-color: #16ba31;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.15s;
 }
@@ -3406,6 +3387,6 @@ footer {
 }
 
 .btn-collection-create:disabled {
-    background-color: #9ca3af;
+    background-color: var(--gray-400);
     cursor: not-allowed;
 }

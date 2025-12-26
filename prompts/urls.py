@@ -68,6 +68,18 @@ urlpatterns = [
          name='ai_directory_redirect'),
     # Leaderboard (Phase G Part C)
     path('leaderboard/', views.leaderboard, name='leaderboard'),
+
+    # Collections API (Phase K)
+    path('api/collections/', views.api_collections_list, name='api_collections_list'),
+    path('api/collections/create/', views.api_collection_create, name='api_collection_create'),
+    path('api/collections/<int:collection_id>/add/', views.api_collection_add_prompt, name='api_collection_add_prompt'),
+    path('api/collections/<int:collection_id>/remove/', views.api_collection_remove_prompt, name='api_collection_remove_prompt'),
+
+    # Collections pages (Phase K)
+    path('collections/', views.collections_list, name='collections_list'),
+    path('collections/<slug:slug>/', views.collection_detail, name='collection_detail'),
+    path('collections/<slug:slug>/edit/', views.collection_edit, name='collection_edit'),
+    path('collections/<slug:slug>/delete/', views.collection_delete, name='collection_delete'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',
          views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',

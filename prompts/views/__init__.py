@@ -82,6 +82,18 @@ from .leaderboard_views import (
     leaderboard,
 )
 
+# Import collection views (Phase K)
+from .collection_views import (
+    api_collections_list,
+    api_collection_create,
+    api_collection_add_prompt,
+    api_collection_remove_prompt,
+    collections_list,
+    collection_detail,
+    collection_edit,
+    collection_delete,
+)
+
 # Import utility views
 from .utility_views import (
     get_client_ip,
@@ -153,6 +165,16 @@ __all__ = [
 
     # Leaderboard views
     'leaderboard',
+
+    # Collection views (Phase K)
+    'api_collections_list',
+    'api_collection_create',
+    'api_collection_add_prompt',
+    'api_collection_remove_prompt',
+    'collections_list',
+    'collection_detail',
+    'collection_edit',
+    'collection_delete',
 
     # Utility views
     'get_client_ip',

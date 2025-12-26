@@ -259,6 +259,49 @@
         nameInput.addEventListener('input', handleNameInput);
     }
 
+    // Back button in form footer (Micro-Spec #8.5)
+    const backBtn = document.getElementById('collectionBackBtn');
+    if (backBtn) {
+        backBtn.addEventListener('click', function() {
+            hideCreatePanel();
+        });
+    }
+
+    // Toggle visibility hint text based on radio selection (Micro-Spec #8.5)
+    const visibilityRadios = document.querySelectorAll('input[name="is_private"]');
+    const visibilityHint = document.getElementById('visibilityHint');
+
+    visibilityRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (visibilityHint) {
+                const iconUse = visibilityHint.querySelector('.icon use');
+                const textSpan = visibilityHint.querySelector('span');
+
+                if (this.value === 'true') {
+                    // Private selected
+                    if (iconUse) {
+                        // Use regex to safely replace the icon fragment (avoids substring matching bug)
+                        const href = iconUse.getAttribute('href');
+                        iconUse.setAttribute('href', href.replace(/#icon-.*$/, '#icon-eye-off'));
+                    }
+                    if (textSpan) {
+                        textSpan.textContent = 'This collection will only be visible to you';
+                    }
+                } else {
+                    // Public selected
+                    if (iconUse) {
+                        // Use regex to safely replace the icon fragment
+                        const href = iconUse.getAttribute('href');
+                        iconUse.setAttribute('href', href.replace(/#icon-.*$/, '#icon-eye'));
+                    }
+                    if (textSpan) {
+                        textSpan.textContent = 'Anyone can see this collection';
+                    }
+                }
+            }
+        });
+    });
+
     // =============================================================================
     // PUBLIC API (for future specs to use)
     // =============================================================================

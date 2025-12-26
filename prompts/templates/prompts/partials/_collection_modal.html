@@ -90,48 +90,73 @@
                         <use href="{% static 'icons/sprite.svg' %}#icon-arrow-left"></use>
                     </svg>
                 </button>
-                <h3 class="collection-create-title">Create new collection</h3>
+                <h3 class="collection-create-title">New collection</h3>
             </div>
 
+            {# Enhanced Form - Micro-Spec #8.5 #}
             <form class="collection-create-form" id="collectionCreateForm">
                 {% csrf_token %}
-                <div class="mb-3">
-                    <label for="collectionName" class="form-label">Name</label>
+
+                {# Collection Name #}
+                <div class="collection-form-group">
+                    <label for="collectionName" class="collection-form-label">Collection name</label>
                     <input type="text"
-                           class="form-control"
+                           class="collection-form-input"
                            id="collectionName"
                            name="title"
                            maxlength="50"
-                           placeholder="Enter collection name"
+                           placeholder="Portrait Prompts"
+                           autocomplete="off"
                            required>
-                    <div class="form-text">Maximum 50 characters</div>
+                    <span class="collection-form-hint">Maximum 50 characters</span>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label d-block">Visibility</label>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="is_private" id="visibilityPublic" value="false" checked>
-                        <label class="form-check-label" for="visibilityPublic">
-                            <svg class="icon me-1" width="16" height="16" aria-hidden="true">
+                {# Visibility - Private is DEFAULT #}
+                <div class="collection-visibility-group">
+                    <span class="collection-form-label">Visibility</span>
+                    <div class="collection-visibility-options">
+                        <label class="collection-radio-label">
+                            <input type="radio"
+                                   class="collection-radio-input"
+                                   name="is_private"
+                                   value="true"
+                                   id="visibilityPrivate"
+                                   checked>
+                            <svg class="icon" width="16" height="16" aria-hidden="true">
+                                <use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use>
+                            </svg>
+                            Private
+                        </label>
+                        <label class="collection-radio-label">
+                            <input type="radio"
+                                   class="collection-radio-input"
+                                   name="is_private"
+                                   value="false"
+                                   id="visibilityPublic">
+                            <svg class="icon" width="16" height="16" aria-hidden="true">
                                 <use href="{% static 'icons/sprite.svg' %}#icon-eye"></use>
                             </svg>
                             Public
                         </label>
                     </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="is_private" id="visibilityPrivate" value="true">
-                        <label class="form-check-label" for="visibilityPrivate">
-                            <svg class="icon me-1" width="16" height="16" aria-hidden="true">
-                                <use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use>
-                            </svg>
-                            Private
-                        </label>
+                    {# Helper text that updates based on selection #}
+                    <div class="collection-visibility-hint" id="visibilityHint">
+                        <svg class="icon" width="16" height="16" aria-hidden="true">
+                            <use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use>
+                        </svg>
+                        <span>This collection will only be visible to you</span>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-dark w-100" id="createCollectionBtn" disabled>
-                    Create collection
-                </button>
+                {# Two-button layout: Back + Create #}
+                <div class="collection-create-actions">
+                    <button type="button" class="btn-collection-back" id="collectionBackBtn">
+                        Back
+                    </button>
+                    <button type="submit" class="btn-collection-create" id="createCollectionBtn" disabled>
+                        Create new collection
+                    </button>
+                </div>
             </form>
         </div>
 

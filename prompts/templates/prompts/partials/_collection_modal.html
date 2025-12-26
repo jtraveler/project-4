@@ -5,14 +5,18 @@
 <div class="collection-modal-backdrop" id="collectionModalBackdrop">
     <div class="collection-modal" role="dialog" aria-labelledby="collectionModalTitle" aria-modal="true">
 
-        {# Modal Header #}
-        <div class="collection-modal-header">
-            <h2 class="collection-modal-title" id="collectionModalTitle">Add to collection(s)</h2>
+        {# Close Button Row - Own row, positioned right #}
+        <div class="collection-modal-close-row">
             <button type="button" class="collection-modal-close" aria-label="Close modal" data-action="close-modal">
                 <svg class="icon collection-modal-close-icon" aria-hidden="true">
                     <use href="{% static 'icons/sprite.svg' %}#icon-x"></use>
                 </svg>
             </button>
+        </div>
+
+        {# Modal Header - Title only #}
+        <div class="collection-modal-header">
+            <h2 class="collection-modal-title" id="collectionModalTitle">Add to collection(s)</h2>
         </div>
 
         {# Modal Body - Collection Grid #}

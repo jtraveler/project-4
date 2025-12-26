@@ -50,7 +50,7 @@ def api_collections_list(request):
             user=user,
             is_deleted=False
         ).annotate(
-            item_count=Count('items')
+            items_count=Count('items')
         ).order_by('-updated_at')
 
         # If prompt_id provided, get set of collection IDs that contain it
@@ -85,7 +85,7 @@ def api_collections_list(request):
                 'title': collection.title,
                 'slug': collection.slug,
                 'is_private': collection.is_private,
-                'item_count': collection.item_count,
+                'item_count': collection.items_count,
                 'thumbnail_url': thumbnail_url,
                 'has_prompt': collection.id in collections_with_prompt,
             })
@@ -342,7 +342,7 @@ def collections_list(request):
         user=user,
         is_deleted=False
     ).annotate(
-        item_count=Count('items')
+        items_count=Count('items')
     ).order_by('-updated_at')
 
     # Pagination

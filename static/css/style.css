@@ -88,7 +88,7 @@
 
   /* === COLLECTIONS MODAL === */
   --collection-icon-size: 3.2em;             /* Large icons (create card, empty state) */
-  --collection-icon-size-sm: 2em;            /* Overlay icons (check, minus) */
+  --collection-icon-size-sm: 1.5em;            /* Overlay icons (check, minus) */
   --collection-modal-padding: 2em;           /* Modal body padding */
   --collection-card-gap: 1rem;               /* Grid gap between cards */
   --collection-overlay-saved: rgba(22, 163, 74, 0.75);   /* Green - saved state */
@@ -3007,7 +3007,7 @@ footer {
     flex-direction: column;
     box-shadow: var(--shadow-lg);
     position: relative;
-    padding: 3em;
+    padding: 2em 3em 3em;
 }
 
 /* Close button row - positions X button to the right */
@@ -3036,9 +3036,9 @@ footer {
 .collection-modal-close {
     background: none;
     border: none;
-    padding: 0.5rem;
+    padding: 0;
     cursor: pointer;
-    color: var(--gray-500);
+    color: var(--gray-400);
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
@@ -3047,8 +3047,7 @@ footer {
 }
 
 .collection-modal-close:hover {
-    background-color: var(--gray-100);
-    color: var(--gray-900);
+    color: var(--gray-800);
 }
 
 /* Close button icon - uses parent selector for specificity (no !important) */
@@ -3481,7 +3480,6 @@ footer {
     }
 
     .collection-modal {
-        padding: 2em;
         margin-bottom: 50px;
     }
 }

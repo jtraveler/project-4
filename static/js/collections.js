@@ -361,8 +361,8 @@
         // Add collection cards after the create card
         const createCard = collectionGrid.querySelector('.collection-card-create');
 
-        collections.forEach(collection => {
-            const card = createCollectionCard(collection);
+        collections.forEach((collection, index) => {
+            const card = createCollectionCard(collection, index);
             if (createCard) {
                 createCard.after(card);
             } else {
@@ -375,12 +375,16 @@
      * Create a collection card element
      * Uses dynamic thumbnail grid layouts based on item count
      */
-    function createCollectionCard(collection) {
+    function createCollectionCard(collection, index = 0) {
         const card = document.createElement('button');
         card.type = 'button';
         card.className = 'collection-card';
         card.dataset.collectionId = collection.id;
         card.dataset.action = 'toggle-collection';
+
+        // Add staggered animation (Micro-Spec #9)
+        card.style.setProperty('--card-index', index);
+        card.classList.add('collection-card-animate');
 
         // Add 'has-prompt' class if prompt is already in this collection
         if (collection.has_prompt) {
@@ -440,11 +444,28 @@
         title.textContent = collection.title;
         card.appendChild(title);
 
+        // Meta container: item count + visibility icon (Micro-Spec #9)
+        const meta = document.createElement('div');
+        meta.className = 'collection-card-meta';
+
         // Item count
         const count = document.createElement('span');
         count.className = 'collection-card-count';
         count.textContent = `${collection.item_count} ${collection.item_count === 1 ? 'item' : 'items'}`;
-        card.appendChild(count);
+        meta.appendChild(count);
+
+        // Visibility icon (public/private)
+        const visibilityIcon = document.createElement('span');
+        visibilityIcon.className = 'collection-card-visibility-icon';
+        visibilityIcon.innerHTML = `
+            <svg class="icon" aria-hidden="true">
+                <use href="${getIconUrl(collection.is_private ? 'icon-eye-off' : 'icon-eye')}"></use>
+            </svg>
+        `;
+        visibilityIcon.title = collection.is_private ? 'Private collection' : 'Public collection';
+        meta.appendChild(visibilityIcon);
+
+        card.appendChild(meta);
 
         // Overlay for saved state - contains ALL THREE icons (plus, check, minus)
         // CSS controls which is visible based on hover state and has-prompt class

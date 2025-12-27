@@ -3232,6 +3232,61 @@ footer {
     text-align: left;
 }
 
+/* Meta container: item count + visibility icon (Micro-Spec #9) */
+.collection-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 0.5rem 0.5rem 0;
+}
+
+.collection-card-meta .collection-card-count {
+    padding: 0;  /* Reset padding when inside meta container */
+}
+
+/* Visibility icon (public/private) */
+.collection-card-visibility-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collection-card-visibility-icon .icon {
+    width: 16px;
+    height: 16px;
+    color: var(--gray-400);
+    stroke: var(--gray-400);
+    fill: none;
+}
+
+/* Staggered fade-in animation (Micro-Spec #9) */
+.collection-card-animate {
+    animation: collectionCardFadeIn 0.3s ease-out forwards;
+    animation-delay: calc(var(--card-index, 0) * 50ms);
+    opacity: 0;
+}
+
+@keyframes collectionCardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .collection-card-animate {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
 /* Overlay states (saved/hover) - uses opacity for smooth transitions */
 .collection-card-overlay {
     position: absolute;

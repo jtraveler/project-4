@@ -669,7 +669,14 @@
 
         // Block exact duplicates
         if (validation.isDuplicate) {
-            if (nameInput) nameInput.classList.add('is-invalid');
+            if (nameInput) {
+                nameInput.classList.add('is-invalid');
+                // Micro-Spec #9.6: Add shake animation
+                nameInput.classList.add('shake');
+                nameInput.addEventListener('animationend', () => {
+                    nameInput.classList.remove('shake');
+                }, { once: true });
+            }
             if (errorEl) {
                 errorEl.textContent = `A collection named "${validation.similarName}" already exists.`;
                 errorEl.style.display = 'block';
@@ -680,9 +687,9 @@
         // Warn on similar names (requires confirmation)
         if (validation.isSimilar && !submitBtn?.dataset.confirmed) {
             if (warningEl) {
-                // Micro-Spec #9.5: Two-button layout - Don't Create + Create Anyway
+                // Micro-Spec #9.6: Same-row layout with bold collection name
                 warningEl.innerHTML = `
-                    <span class="collection-warning-text">Similar to existing: "${escapeHtml(validation.similarName)}"</span>
+                    <span class="collection-warning-text">Similar to existing: <strong>${escapeHtml(validation.similarName)}</strong></span>
                     <div class="collection-warning-buttons">
                         <button type="button" class="collection-warning-cancel">Don't Create</button>
                         <button type="button" class="collection-warning-confirm">Create Anyway</button>

@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** December 23, 2025
+**Last Updated:** December 27, 2025
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase J.1 & J.2 Complete, SVG Icon System Implemented
+**Current Phase:** Phase K Collections (~60% Complete)
 **Total Tests:** 234 passing (46% coverage)
 
 ---
@@ -12,15 +12,15 @@
 | Category | Count | Location |
 |----------|-------|----------|
 | **Python Files** | 92 | Various directories |
-| **HTML Templates** | 41 | templates/, prompts/templates/, about/templates/ |
+| **HTML Templates** | 42 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
-| **JavaScript Files** | 3 | static/js/ |
+| **JavaScript Files** | 4 | static/js/ |
 | **SVG Icons** | 30 | static/icons/sprite.svg |
-| **Migrations** | 38 | prompts/migrations/ (37), about/migrations/ (1) |
+| **Migrations** | 40 | prompts/migrations/ (39), about/migrations/ (1) |
 | **Test Files** | 12 | prompts/tests/ |
 | **Management Commands** | 17 | prompts/management/commands/ |
 | **Services** | 7 | prompts/services/ |
-| **View Modules** | 11 | prompts/views/ |
+| **View Modules** | 12 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
 | **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
 
@@ -67,15 +67,20 @@ live-working-project/
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 17 management commands + __init__.py
-│   ├── migrations/               # 37 migrations + __init__.py
+│   ├── migrations/               # 39 migrations + __init__.py
 │   ├── services/                 # 7 service modules
-│   ├── templates/prompts/        # 22 templates
+│   ├── templates/prompts/        # 23 templates
+│   │   └── partials/             # Partial templates
+│   │       ├── _masonry_grid.html
+│   │       ├── _prompt_card.html
+│   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
 │   ├── tests/                    # 12 test files
-│   └── views/                    # 11 view modules (refactored)
+│   └── views/                    # 12 view modules (refactored)
 │       ├── __init__.py           # Package exports
 │       ├── admin_views.py        # Admin dashboard views
 │       ├── auth_views.py         # Authentication views
+│       ├── collection_views.py   # Collection API and page views (Phase K)
 │       ├── comment_views.py      # Comment CRUD operations
 │       ├── core_views.py         # Homepage, detail, list views
 │       ├── leaderboard_views.py  # Leaderboard functionality
@@ -104,7 +109,8 @@ live-working-project/
 │   │   └── style.css
 │   ├── icons/                    # SVG icon sprite (Phase J.2)
 │   │   └── sprite.svg            # 30 icons from Lucide Icons
-│   └── js/                       # 3 JavaScript files
+│   └── js/                       # 4 JavaScript files
+│       ├── collections.js        # Collections modal interactions (Phase K, ~760 lines)
 │       ├── like-button.js        # Centralized like button handler
 │       ├── navbar.js             # Extracted navbar JavaScript (~650 lines)
 │       └── prompt-detail.js      # Prompt detail page interactions
@@ -170,7 +176,7 @@ prompts/services/
 
 ---
 
-## Views Package Architecture (11 modules)
+## Views Package Architecture (12 modules)
 
 *Refactored December 2025 - Previously a single 3,929-line views.py file*
 
@@ -179,6 +185,7 @@ prompts/views/
 ├── __init__.py           # Package exports (all public views)
 ├── admin_views.py        # Admin dashboard, debug pages, bulk actions
 ├── auth_views.py         # Login, logout, registration helpers
+├── collection_views.py   # Collection API and page views (Phase K)
 ├── comment_views.py      # Comment CRUD, moderation actions
 ├── core_views.py         # PromptList, prompt_detail, homepage
 ├── leaderboard_views.py  # Leaderboard rankings, filters
@@ -195,6 +202,7 @@ prompts/views/
 |--------|-----------|---------|
 | **admin_views** | ~15 | Admin dashboards, media issues, trash management |
 | **auth_views** | ~5 | Authentication helpers, session management |
+| **collection_views** | ~8 | Collection CRUD, API endpoints (add/remove prompts) |
 | **comment_views** | ~8 | Comment CRUD, approval, deletion |
 | **core_views** | ~12 | Homepage, prompt detail, list views, search |
 | **leaderboard_views** | ~4 | Rankings, time filters, user stats |
@@ -206,7 +214,7 @@ prompts/views/
 
 ---
 
-## Templates (41 total)
+## Templates (42 total)
 
 ### Global Templates (templates/) - 18 files
 
@@ -219,7 +227,7 @@ prompts/views/
 | `admin/*.html` | 8 admin customization templates |
 | `registration/login.html` | Login page override |
 
-### Prompts App Templates (prompts/templates/prompts/) - 22 files
+### Prompts App Templates (prompts/templates/prompts/) - 23 files
 
 | Template | Purpose |
 |----------|---------|
@@ -237,6 +245,7 @@ prompts/views/
 | `leaderboard.html` | Community leaderboard (Phase G) |
 | `partials/_masonry_grid.html` | Reusable masonry grid partial |
 | `partials/_prompt_card.html` | Reusable prompt card partial |
+| `partials/_collection_modal.html` | Collections modal (Phase K) |
 | And 8 more... | Confirmation modals, reports, etc. |
 
 ### About App Templates (about/templates/about/) - 1 file
@@ -346,6 +355,7 @@ static/css/
 
 ```
 static/js/
+├── collections.js        # ~760 lines - Collections modal (Phase K)
 ├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
 ├── navbar.js             # ~650 lines - Extracted from base.html
 └── prompt-detail.js      # ~400 lines - Prompt detail interactions (Phase J.1)
@@ -355,6 +365,7 @@ static/js/
 
 | File | Lines | Purpose |
 |------|-------|---------|
+| **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
 | **navbar.js** | ~650 | Dropdowns, search, mobile menu, scroll |
 | **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
 | **like-button.js** | ~155 | Centralized like handler with optimistic UI |
@@ -370,7 +381,19 @@ static/js/
 | Event Delegation | ~70 | Performance optimization |
 | Utilities | ~50 | Debounce, focus trap |
 
-**Total JavaScript:** ~1,205 lines across 3 files
+### collections.js Features (Phase K)
+
+| Feature | Lines | Purpose |
+|---------|-------|---------|
+| Modal State Management | ~100 | Open, close, escape key, body scroll lock |
+| Collection Grid Rendering | ~200 | Dynamic thumbnail grids (1, 2, 3+ items) |
+| API Integration | ~150 | Fetch collections, create, add/remove prompts |
+| Create Panel | ~100 | Create collection form, validation |
+| Visibility Toggle | ~50 | Public/private icons and hints |
+| State Reset | ~60 | Reset modal state on close |
+| Error Handling | ~100 | Loading states, error messages |
+
+**Total JavaScript:** ~1,965 lines across 4 files
 **Extraction Benefit:** base.html reduced from ~2000 lines to ~1400 lines
 
 ---
@@ -446,6 +469,94 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 ### Icon Source
 
 All icons from [Lucide Icons](https://lucide.dev) - MIT License
+
+---
+
+## Collections CSS Variables (Phase K)
+
+CSS custom properties for the Collections feature, defined in `static/css/style.css`:
+
+### Modal Layout Variables
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `--collection-modal-bg` | `#fff` | Modal background |
+| `--collection-modal-padding` | `24px` | Modal inner padding |
+| `--collection-modal-radius` | `16px` | Modal border radius |
+| `--collection-modal-shadow` | `0 25px 50px -12px rgba(0,0,0,0.25)` | Modal drop shadow |
+
+### Grid & Card Variables
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `--collection-grid-gap` | `16px` | Gap between collection cards |
+| `--collection-card-radius` | `12px` | Card border radius |
+| `--collection-thumbnail-height` | `120px` | Thumbnail container height |
+| `--collection-overlay-bg` | `rgba(0,0,0,0.5)` | Thumbnail overlay background |
+
+### State & Interaction Variables
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `--collection-accent` | `var(--brand-primary, #28a745)` | Primary accent color |
+| `--collection-saved-color` | `#28a745` | Saved/added state (green) |
+| `--collection-remove-color` | `#dc3545` | Remove hover state (red) |
+| `--collection-transition` | `0.15s ease` | Standard transition timing |
+
+### Form Variables
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `--collection-input-border` | `#dee2e6` | Input border color |
+| `--collection-input-focus` | `var(--brand-primary)` | Input focus border |
+| `--collection-label-color` | `#6c757d` | Form label color |
+| `--collection-hint-color` | `#6c757d` | Helper text color |
+
+---
+
+## Collections API Endpoints (Phase K)
+
+API endpoints for the Collections feature, defined in `prompts/views/collection_views.py`:
+
+### Public Endpoints (Authentication Required)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `GET /api/collections/` | GET | List user's collections with item counts |
+| `GET /api/collections/?prompt_id=123` | GET | List collections with membership status for prompt |
+| `POST /api/collections/create/` | POST | Create a new collection |
+| `POST /api/collections/<id>/add/` | POST | Add prompt to collection |
+| `POST /api/collections/<id>/remove/` | POST | Remove prompt from collection |
+
+### Page Views
+
+| URL | View | Purpose |
+|-----|------|---------|
+| `/collections/` | `collections_list` | User's collections index |
+| `/collections/<slug>/` | `collection_detail` | View collection contents |
+| `/collections/<slug>/edit/` | `collection_edit` | Edit collection settings |
+| `/collections/<slug>/delete/` | `collection_delete` | Delete collection (soft delete) |
+
+### API Response Format
+
+```json
+// GET /api/collections/?prompt_id=123
+{
+  "success": true,
+  "collections": [
+    {
+      "id": 1,
+      "title": "My Favorites",
+      "slug": "my-favorites-x7k2m",
+      "is_private": false,
+      "item_count": 15,
+      "thumbnails": ["url1", "url2", "url3"],
+      "has_prompt": true
+    }
+  ],
+  "count": 1
+}
+```
 
 ---
 
@@ -561,8 +672,8 @@ python manage.py test -v 2
 
 **END OF PROJECT_FILE_STRUCTURE.md**
 
-*This document is updated after major structural changes. Last audit: December 23, 2025.*
+*This document is updated after major structural changes. Last audit: December 27, 2025.*
 
-**Version:** 2.2
-**Audit Date:** December 23, 2025
+**Version:** 2.3
+**Audit Date:** December 27, 2025
 **Maintained By:** Mateo Johnson - Prompt Finder

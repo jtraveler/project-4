@@ -8216,6 +8216,99 @@ Session 25 completed the backend infrastructure and modal core for the Collectio
 
 ---
 
+### December 2025 - Session 26 (Dec 26-27, 2025)
+
+**Phase K Collections: Modal UI & API Integration**
+
+Session 26 implemented the complete collections modal UI with full API integration:
+
+**Modal UI Implementation:**
+- Pexels-style collections modal with 4/3/2 column responsive grid
+- Dynamic thumbnail grid layouts (1, 2, 3+ images with different arrangements)
+- Collection cards with thumbnail previews and item counts
+- Create collection sub-panel with back navigation
+- Visibility toggle (public/private) with icon indicators
+- Form validation with character counter (50 char limit)
+- Loading, empty, and error states
+
+**API Integration:**
+- Wired collections.js to all API endpoints
+- CSRF token handling for POST requests
+- Optimistic UI updates with error rollback
+- Collection toggle (add/remove) with visual feedback
+- Create collection with auto-add current prompt
+
+**CSS Variables System:**
+- Added 16 `--collection-*` CSS custom properties
+- Modal layout variables (bg, padding, radius, shadow)
+- Grid and card variables (gap, radius, thumbnail-height)
+- State variables (accent, saved-color, remove-color)
+- Form variables (input-border, focus, label-color)
+
+**Critical Fixes:**
+- Fixed CSRF 403 errors on API calls
+- Fixed empty slug causing IntegrityError
+- Fixed modal not closing after collection created
+- Fixed thumbnail grid not updating after changes
+
+**Collections Progress:** ~55% complete (was 40%)
+
+**Commits:**
+- `237b31a` feat(phase-k): Enhance collections modal UI with Pexels-style design
+
+**Files Modified:**
+- `static/js/collections.js` - Full API integration (~760 lines total)
+- `static/css/style.css` - CSS variables + modal styling enhancements
+- `prompts/templates/prompts/partials/_collection_modal.html` - UI improvements
+
+---
+
+### December 2025 - Session 27 (Dec 27, 2025)
+
+**Phase K Collections: Modal Bug Fixes & Documentation**
+
+Session 27 focused on fixing critical modal bugs and updating project documentation:
+
+**Modal Bug Fixes (Micro-Spec #8.5b):**
+- Fixed drag-release close bug (mousedown target tracking)
+- Fixed modal closing when drag starts inside and ends on backdrop
+- Added restore link to success messages with direct navigation
+- Protected alerts section with Django comments to prevent CC relocation
+
+**Documentation Updates:**
+- Updated PROJECT_FILE_STRUCTURE.md v2.3 with Phase K additions:
+  - Added `collection_views.py` to views package (12 modules)
+  - Added `collections.js` to JavaScript architecture (~760 lines)
+  - Added `_collection_modal.html` to templates (42 total)
+  - Added Collections CSS Variables section (16 variables)
+  - Added Collections API Endpoints section (5 endpoints + 4 page views)
+  - Updated statistics: JS 3→4, Templates 41→42, Views 11→12
+
+**Agent Validation:**
+- @ui-ux-designer: 9.2/10 - Modal interactions improved
+- @frontend-developer: 9.5/10 - Clean JavaScript architecture
+- @debugger: 8.75/10 - All identified bugs resolved
+- **Average: 9.15/10** (exceeds 8+ threshold)
+
+**Collections Progress:** ~60% complete (was 55%)
+
+**Commits:**
+- `866c3d4` fix(collections): Micro-Spec #8.5b - Modal UI bug fixes
+
+**Files Modified:**
+- `prompts/templates/prompts/partials/_collection_modal.html` - UI fixes
+- `static/css/style.css` - Alert positioning, transitions
+- `static/js/collections.js` - Drag-release close fix
+- `PROJECT_FILE_STRUCTURE.md` - Documentation updates (v2.3)
+- `CLAUDE.md` - Session 27 entry
+
+**Next Steps:**
+- Wire remaining collection toggle functionality (Micro-Spec #9)
+- Collections list page (Micro-Spec #13)
+- Profile tab integration (Micro-Spec #15)
+
+---
+
 ### December 2025 - Session 22-23 (Dec 24-25, 2025)
 
 **Security Remediation + Generator Pages Fix + SVG Icons Phase 3 + Phase K Icons**

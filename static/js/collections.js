@@ -90,6 +90,74 @@
     }
 
     /**
+     * Calculate Levenshtein distance between two strings
+     * Micro-Spec #9.4: Used for duplicate name detection
+     */
+    function levenshteinDistance(str1, str2) {
+        const s1 = str1.toLowerCase();
+        const s2 = str2.toLowerCase();
+        const len1 = s1.length;
+        const len2 = s2.length;
+
+        // Create matrix
+        const matrix = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));
+
+        // Initialize first row and column
+        for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+        for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+
+        // Fill matrix
+        for (let i = 1; i <= len1; i++) {
+            for (let j = 1; j <= len2; j++) {
+                const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j] + 1,      // deletion
+                    matrix[i][j - 1] + 1,      // insertion
+                    matrix[i - 1][j - 1] + cost // substitution
+                );
+            }
+        }
+
+        return matrix[len1][len2];
+    }
+
+    /**
+     * Check for duplicate or similar collection names
+     * Micro-Spec #9.4: Duplicate Name Prevention
+     * @returns {Object} { isDuplicate, isSimilar, similarName }
+     */
+    function checkDuplicateName(newName) {
+        const trimmed = newName.trim().toLowerCase();
+        let result = { isDuplicate: false, isSimilar: false, similarName: null };
+
+        // Check against cached collections
+        if (!collectionsData || collectionsData.length === 0) {
+            return result;
+        }
+
+        for (const collection of collectionsData) {
+            const existingName = collection.title.toLowerCase();
+
+            // Exact match (case-insensitive)
+            if (existingName === trimmed) {
+                result.isDuplicate = true;
+                result.similarName = collection.title;
+                return result;
+            }
+
+            // Similar name (Levenshtein distance <= 2)
+            const distance = levenshteinDistance(trimmed, existingName);
+            if (distance <= 2 && distance > 0) {
+                result.isSimilar = true;
+                result.similarName = collection.title;
+                // Don't return - keep checking for exact duplicates
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Get static URL for icons
      */
     function getIconUrl(iconName) {
@@ -373,11 +441,9 @@
         // Hide loading/empty/error states
         showState('content');
 
-        // Pass totalCount for reverse animation (Micro-Spec #9.1 - Bug 1)
         // Use appendChild - CSS order: -1 keeps "Create new" card first (Micro-Spec #9.3)
-        const totalCount = collections.length;
         collections.forEach((collection, index) => {
-            const card = createCollectionCard(collection, index, totalCount);
+            const card = createCollectionCard(collection, index);
             collectionGrid.appendChild(card);
         });
     }
@@ -386,17 +452,16 @@
      * Create a collection card element
      * Uses dynamic thumbnail grid layouts based on item count
      */
-    function createCollectionCard(collection, index = 0, totalCount = 1) {
+    function createCollectionCard(collection, index = 0) {
         const card = document.createElement('button');
         card.type = 'button';
         card.className = 'collection-card';
         card.dataset.collectionId = collection.id;
         card.dataset.action = 'toggle-collection';
 
-        // Add staggered animation with REVERSED index (Micro-Spec #9.1 - Bug 1)
-        // Top-left cards animate first (index 0), bottom-right cards animate last
-        const reverseIndex = totalCount - 1 - index;
-        card.style.setProperty('--card-index', reverseIndex);
+        // Animation index - first card in array animates first (top-to-bottom)
+        // Micro-Spec #9.4: Removed reverse index (no longer needed with appendChild)
+        card.style.setProperty('--card-index', index);
         card.classList.add('collection-card-animate');
 
         // Add 'has-prompt' class if prompt is already in this collection
@@ -563,9 +628,49 @@
         const nameInput = document.getElementById('collectionName');
         const privateRadio = document.getElementById('visibilityPrivate');
         const submitBtn = document.getElementById('createCollectionBtn');
+        const errorEl = document.querySelector('.collection-name-error');
+        const warningEl = document.querySelector('.collection-name-warning');
 
         const title = nameInput?.value.trim();
         if (!title) return;
+
+        // Micro-Spec #9.4: Duplicate name validation
+        const validation = checkDuplicateName(title);
+
+        // Block exact duplicates
+        if (validation.isDuplicate) {
+            if (nameInput) nameInput.classList.add('is-invalid');
+            if (errorEl) {
+                errorEl.textContent = `A collection named "${validation.similarName}" already exists.`;
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+
+        // Warn on similar names (requires confirmation)
+        if (validation.isSimilar && !submitBtn?.dataset.confirmed) {
+            if (warningEl) {
+                warningEl.innerHTML = `
+                    <span>Similar to existing: "${escapeHtml(validation.similarName)}"</span>
+                    <button type="button" class="collection-warning-confirm">Create Anyway</button>
+                `;
+                warningEl.style.display = 'flex';
+
+                // Add click handler for confirm button
+                const confirmBtn = warningEl.querySelector('.collection-warning-confirm');
+                if (confirmBtn) {
+                    confirmBtn.addEventListener('click', () => {
+                        if (submitBtn) submitBtn.dataset.confirmed = 'true';
+                        warningEl.style.display = 'none';
+                        submitBtn?.click();
+                    }, { once: true });
+                }
+            }
+            return;
+        }
+
+        // Clear confirmed flag for next submission
+        if (submitBtn) delete submitBtn.dataset.confirmed;
 
         const isPrivate = privateRadio?.checked ?? true;
 
@@ -736,6 +841,16 @@
         if (createBtn) {
             createBtn.disabled = !e.target.value.trim();
         }
+
+        // Micro-Spec #9.4: Clear validation state on input
+        e.target.classList.remove('is-invalid');
+        const errorEl = document.querySelector('.collection-name-error');
+        const warningEl = document.querySelector('.collection-name-warning');
+        if (errorEl) errorEl.style.display = 'none';
+        if (warningEl) warningEl.style.display = 'none';
+
+        // Clear confirmed flag when input changes
+        if (createBtn) delete createBtn.dataset.confirmed;
     }
 
     // =============================================================================

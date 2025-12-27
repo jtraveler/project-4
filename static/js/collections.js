@@ -294,7 +294,6 @@
         const form = document.getElementById('collectionCreateForm');
         const createBtn = document.getElementById('createCollectionBtn');
         const visibilityHint = document.getElementById('visibilityHint');
-        const privateRadio = document.getElementById('visibilityPrivate');
         const nameInput = document.getElementById('collectionName');
 
         // Show main view, hide create panel (using class-based transitions)
@@ -331,21 +330,22 @@
         // Hide any modal-level error messages
         hideError();
 
-        // Ensure Private radio is selected (default)
-        if (privateRadio) {
-            privateRadio.checked = true;
+        // Ensure Public radio is selected (default)
+        const publicRadio = document.getElementById('visibilityPublic');
+        if (publicRadio) {
+            publicRadio.checked = true;
         }
 
-        // Reset visibility hint to Private state
+        // Reset visibility hint to Public state
         if (visibilityHint) {
             const iconUse = visibilityHint.querySelector('.icon use');
             const textSpan = visibilityHint.querySelector('span');
             if (iconUse) {
                 const href = iconUse.getAttribute('href');
-                iconUse.setAttribute('href', href.replace(/#icon-.*$/, '#icon-eye-off'));
+                iconUse.setAttribute('href', href.replace(/#icon-.*$/, '#icon-eye'));
             }
             if (textSpan) {
-                textSpan.textContent = 'This collection will only be visible to you';
+                textSpan.textContent = 'Anyone can see this collection';
             }
         }
     }

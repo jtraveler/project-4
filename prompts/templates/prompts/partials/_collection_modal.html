@@ -126,7 +126,7 @@
                     <span class="collection-form-hint">Maximum 50 characters</span>
                 </div>
 
-                {# Visibility - Private is DEFAULT #}
+                {# Visibility - Public is DEFAULT #}
                 <div class="collection-visibility-group">
                     <span class="collection-form-label">Visibility</span>
                     <div class="collection-visibility-options">
@@ -134,26 +134,26 @@
                             <input type="radio"
                                    class="collection-radio-input"
                                    name="is_private"
-                                   value="true"
-                                   id="visibilityPrivate"
+                                   value="false"
+                                   id="visibilityPublic"
                                    checked>
-                            Private
+                            Public
                         </label>
                         <label class="collection-radio-label">
                             <input type="radio"
                                    class="collection-radio-input"
                                    name="is_private"
-                                   value="false"
-                                   id="visibilityPublic">
-                            Public
+                                   value="true"
+                                   id="visibilityPrivate">
+                            Private
                         </label>
                     </div>
                     {# Helper text that updates based on selection #}
                     <div class="collection-visibility-hint" id="visibilityHint">
                         <svg class="icon" width="16" height="16" aria-hidden="true">
-                            <use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use>
+                            <use href="{% static 'icons/sprite.svg' %}#icon-eye"></use>
                         </svg>
-                        <span>This collection will only be visible to you</span>
+                        <span>Anyone can see this collection</span>
                     </div>
                 </div>
 

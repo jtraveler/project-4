@@ -3372,6 +3372,17 @@ footer {
     display: block;
 }
 
+/* ============================================
+   Micro-Spec #9.7: Scope hover effects to thumbnail only
+   Uses pointer-events: none on title/count so hovering them
+   doesn't trigger the card :hover state. Card remains fully
+   clickable because pointer-events only affects hover detection.
+   ============================================ */
+.collection-card-title,
+.collection-card-count {
+    pointer-events: none;
+}
+
 /* Modal footer */
 .collection-modal-footer {
     padding: 0;
@@ -3654,6 +3665,7 @@ footer {
 
 .collection-warning-text {
     flex: 1;
+    flex-basis: auto;
     min-width: 150px;
 }
 

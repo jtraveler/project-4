@@ -3078,10 +3078,6 @@ footer {
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Thumbnail hover effect */
-.collection-card-thumbnail:hover {
-    transform: scale(1.02);
-}
 
 /* Focus styles for accessibility */
 .collection-card-thumbnail:focus-visible {

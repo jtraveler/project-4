@@ -3115,6 +3115,7 @@ footer {
 
 /* Create new collection card */
 .collection-card-create {
+    order: -1;  /* Micro-Spec #9.3: Keep "Create new" card first regardless of DOM order */
 }
 
 /* Card thumbnail area */
@@ -3415,7 +3416,7 @@ footer {
 /* Create collection panel - Micro-Spec #8.5b compact layout */
 .collection-create-panel {
     padding: 0;
-    min-height: 320px;  /* Micro-Spec #9.2: Match modal body height */
+    /* Micro-Spec #9.3: min-height now set dynamically via JS */
     display: flex;
     flex-direction: column;
     /* Transition for smooth view switching */

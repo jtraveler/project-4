@@ -200,6 +200,8 @@
         }
         if (createPanel) {
             createPanel.classList.add('is-hidden');
+            // Micro-Spec #9.3: Reset dynamic height on modal close
+            createPanel.style.minHeight = '';
         }
         if (footer) {
             footer.classList.remove('is-hidden');
@@ -247,6 +249,12 @@
         const footer = modal.querySelector('.collection-modal-footer');
         const nameInput = document.getElementById('collectionName');
 
+        // Micro-Spec #9.3: Capture current modal body height and apply to create panel
+        if (modalBody && createPanel) {
+            const currentHeight = modalBody.offsetHeight;
+            createPanel.style.minHeight = `${currentHeight}px`;
+        }
+
         // Use class-based transitions instead of inline display
         if (modalBody) modalBody.classList.add('is-hidden');
         if (footer) footer.classList.add('is-hidden');
@@ -255,6 +263,9 @@
             // Focus the name input after transition starts
             setTimeout(() => nameInput?.focus(), 100);
         }
+
+        // Micro-Spec #9.3: Scroll modal to top when showing create panel
+        modal.scrollTop = 0;
     }
 
     /**
@@ -267,7 +278,11 @@
         const form = document.getElementById('collectionCreateForm');
 
         // Use class-based transitions instead of inline display
-        if (createPanel) createPanel.classList.add('is-hidden');
+        if (createPanel) {
+            createPanel.classList.add('is-hidden');
+            // Micro-Spec #9.3: Reset dynamic height when hiding
+            createPanel.style.minHeight = '';
+        }
         if (modalBody) modalBody.classList.remove('is-hidden');
         if (footer) footer.classList.remove('is-hidden');
 
@@ -358,18 +373,12 @@
         // Hide loading/empty/error states
         showState('content');
 
-        // Add collection cards after the create card
-        const createCard = collectionGrid.querySelector('.collection-card-create');
-
         // Pass totalCount for reverse animation (Micro-Spec #9.1 - Bug 1)
+        // Use appendChild - CSS order: -1 keeps "Create new" card first (Micro-Spec #9.3)
         const totalCount = collections.length;
         collections.forEach((collection, index) => {
             const card = createCollectionCard(collection, index, totalCount);
-            if (createCard) {
-                createCard.after(card);
-            } else {
-                collectionGrid.appendChild(card);
-            }
+            collectionGrid.appendChild(card);
         });
     }
 

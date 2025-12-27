@@ -1030,7 +1030,7 @@ body.mobile-menu-open {
     }
 
     .search-type-text {
-        font-size: 14px;
+        font-size: var(--font-size-small);
     }
 
     .pexels-search-input {

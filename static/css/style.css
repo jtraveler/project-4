@@ -94,6 +94,7 @@
   --collection-overlay-saved: rgba(22, 163, 74, 0.75);   /* Green - saved state */
   --collection-overlay-remove: rgba(239, 68, 68, 0.75);  /* Red - hover to remove */
   --collection-overlay-add: rgba(0, 0, 0, 0.6);          /* Dark - hover to add */
+  --collection-thumb-gap: 4px;                          /* Gap between thumbnail images */
 
   /* === LAYOUT DIMENSIONS === */
   --navbar-height: 70px;                     /* Desktop navbar height */
@@ -364,7 +365,7 @@ main {
 
     .filter-tab {
         padding: 8px 16px;
-        font-size: 14px;
+        font-size: var(--font-size-small);
     }
 
     .filter-actions {
@@ -1093,7 +1094,7 @@ main {
 
 /* Small buttons - mainly for the comment form */
 .btn-small {
-  font-size: 14px;
+  font-size: var(--font-size-small);
   padding: 10px 10px;
   min-width: 96px;
   background-color: var(--gray-100);
@@ -2078,7 +2079,7 @@ footer {
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 24px;
-    font-size: 14px;
+    font-size: var(--font-size-small);
     line-height: 1.5;
 }
 
@@ -2717,7 +2718,7 @@ footer {
     .leaderboard-thumbnails-hint {
         display: block !important; /* Round 3 Fix 4: Override desktop display:none with !important */
         width: 100%; /* Full width - own row */
-        font-size: 14px;
+        font-size: var(--font-size-small);
         font-weight: 600; /* Semi-bold for subheader look */
         color: var(--gray-700); /* Darker for visibility */
         margin-top: var(--space-4); /* 16px */
@@ -2817,7 +2818,7 @@ footer {
     }
 
     .leaderboard-stats {
-        font-size: 14px;
+        font-size: var(--font-size-small);
     }
 
     .leaderboard-follow-btn {
@@ -2930,7 +2931,7 @@ footer {
     display: flex;
     align-items: center;
     padding: 12px 16px;
-    font-size: 14px;
+    font-size: var(--font-size-small);
     color: var(--gray-900);
     text-decoration: none;
     transition: background-color 0.15s ease;
@@ -2964,7 +2965,7 @@ footer {
 @media (max-width: 768px) {
     .gen-dropdown-btn {
         padding: 8px 12px;
-        font-size: 14px;
+        font-size: var(--font-size-small);
     }
 }
 
@@ -3001,7 +3002,7 @@ footer {
     background: var(--white);
     border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 850px;
+    max-width: 950px;
     height: fit-content;
     display: flex;
     flex-direction: column;
@@ -3062,6 +3063,19 @@ footer {
     padding: 0;
     overflow-y: auto;
     flex: 1;
+    /* Transition for smooth view switching */
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Hidden state for main view (slides left when create panel opens) */
+.collection-modal-body.is-hidden {
+    opacity: 0;
+    transform: translateX(-20px);
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
 }
 
 /* Collection grid - 4 columns on desktop, 3 tablet, 2 mobile */
@@ -3077,7 +3091,7 @@ footer {
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 680px) {
     .collection-grid {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -3119,6 +3133,69 @@ footer {
     object-fit: cover;
 }
 
+/* =============================================================================
+   THUMBNAIL GRID LAYOUTS (Dynamic based on item count)
+   ============================================================================= */
+
+/* Full-width container for 0-1 items */
+.thumb-full {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.thumb-full img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Grid base styles */
+.thumb-grid {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    gap: var(--collection-thumb-gap);
+}
+
+.thumb-grid img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 2 items: 50/50 side-by-side split */
+.thumb-grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* 3+ items: Tall left (50%) + stacked right (50%) */
+.thumb-grid-3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;  /* Explicit equal row heights */
+}
+
+.thumb-grid-3 .thumb-tall {
+    grid-row: span 2;
+}
+
+.thumb-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--collection-thumb-gap);
+    height: 100%;
+    grid-row: span 2;  /* Span both rows like thumb-tall */
+}
+
+.thumb-stack img {
+    flex: 1;           /* Equal flex growth */
+    width: 100%;
+    min-height: 0;     /* Allow shrinking below content size */
+    object-fit: cover;
+}
+
 .collection-card-thumbnail-dashed {
     background-color: var(--gray-50);
 }
@@ -3146,8 +3223,8 @@ footer {
 /* Card item count */
 .collection-card-count {
     display: block;
-    padding: 0 0.5rem 0.5rem;
-    font-size: 0.625rem;
+    padding: 0 0.5rem 0.5rem 0;
+    font-size: var(--font-size-small);
     color: var(--gray-400);
     text-align: left;
 }
@@ -3239,6 +3316,17 @@ footer {
     padding-top: 1rem;
     display: flex;
     justify-content: center;
+    /* Transition for smooth view switching */
+    opacity: 1;
+    transition: opacity 0.25s ease;
+}
+
+/* Hidden state for footer (fades out when create panel opens) */
+.collection-modal-footer.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
 }
 
 /* "Your collections" link button - now uses global .btn-dark-pill */
@@ -3266,6 +3354,19 @@ footer {
 /* Create collection panel - Micro-Spec #8.5b compact layout */
 .collection-create-panel {
     padding: 0;
+    /* Transition for smooth view switching */
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Hidden state for create panel (slides right when going back) */
+.collection-create-panel.is-hidden {
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
 }
 
 .collection-create-header {

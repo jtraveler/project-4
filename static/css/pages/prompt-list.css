@@ -32,7 +32,7 @@
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: white;
-    font-size: 13px;
+    font-size: var(--font-size-xs);
     padding: 5px 12px;
     margin-right: 8px;
     margin-top: 8px;

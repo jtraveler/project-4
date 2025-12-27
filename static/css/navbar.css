@@ -127,12 +127,12 @@
 }
 
 .search-type-icon {
-    font-size: 18px;
+    font-size: var(--font-size-icon);
     color: var(--gray-600);
 }
 
 .search-type-text {
-    font-size: 15px;
+    font-size: var(--font-size-base);
     font-weight: 500;
     color: var(--gray-700);
 }
@@ -150,7 +150,7 @@
     background: transparent;
     padding: 0 var(--space-4);
     height: var(--input-height);
-    font-size: 15px;
+    font-size: var(--font-size-base);
     color: var(--text-primary);
     outline: none;
 }
@@ -162,7 +162,7 @@
 .pexels-search-icon {
     padding: 0 var(--space-4);
     color: var(--gray-400);
-    font-size: 18px;
+    font-size: var(--font-size-icon);
     cursor: pointer;
 }
 
@@ -171,7 +171,7 @@
     background: transparent;
     padding: 0 var(--space-4);
     color: var(--gray-400);
-    font-size: 18px;
+    font-size: var(--font-size-icon);
     cursor: pointer;
     transition: color var(--transition-base);
     display: flex;
@@ -203,7 +203,7 @@
     padding: var(--space-2) var(--space-4);
     color: var(--text-primary);
     text-decoration: none;
-    font-size: 17px;  /* Updated from 15px */
+    font-size: var(--font-size-nav);
     font-weight: 500;
     border-radius: 50px;  /* Round border-radius */
     cursor: pointer;
@@ -280,7 +280,7 @@
 
 /* Three dots icon specific size */
 .pexels-icon-btn.three-dots {
-    font-size: 18px;
+    font-size: var(--font-size-icon);
 }
 
 .pexels-icon-btn:hover {
@@ -328,7 +328,7 @@
     color: var(--white);
     padding: var(--space-3) var(--space-6);
     border-radius: var(--radius-md);
-    font-size: 15px;
+    font-size: var(--font-size-base);
     font-weight: 600;
     text-decoration: none;
     border: none;
@@ -537,14 +537,14 @@
 }
 
 .pexels-dropdown-title {
-    font-size: 15px;
+    font-size: var(--font-size-base);
     font-weight: 600;
     color: var(--gray-600);  /* Lighter shade */
     margin-bottom: 2px;
 }
 
 .pexels-dropdown-subtitle {
-    font-size: 13px;
+    font-size: var(--font-size-xs);
     color: var(--gray-500);
     line-height: 1.4;
 }
@@ -591,7 +591,7 @@
 }
 
 .search-dropdown-item i {
-    font-size: 18px;  /* Changed from 16px to match other dropdown icons */
+    font-size: var(--font-size-icon);
     color: var(--gray-700);  /* Darker for better contrast */
     width: 20px;  /* Added for consistency */
     flex-shrink: 0;  /* Added to prevent icon squishing */
@@ -608,7 +608,7 @@
 }
 
 .search-dropdown-item span {
-    font-size: 15px;  /* Changed from 14px to match dropdown titles */
+    font-size: var(--font-size-base);
     color: var(--gray-600);  /* Secondary text color */
     font-weight: 600;  /* Changed from 500 for consistency */
 }
@@ -806,7 +806,7 @@
     justify-content: center;
     border: none;
     color: var(--gray-700);
-    font-size: 24px;
+    font-size: var(--font-size-icon-large);
     cursor: pointer;
     border-radius: 50%;  /* Fully rounded circle */
     transition: background var(--transition-base);
@@ -923,7 +923,7 @@ body.mobile-menu-open {
 }
 
 .pexels-mobile-item i {
-    font-size: 18px;
+    font-size: var(--font-size-icon);
     width: 20px;
 }
 
@@ -1020,7 +1020,7 @@ body.mobile-menu-open {
     }
 
     .pexels-logo {
-        font-size: 24px;
+        font-size: var(--font-size-logo-mobile);
     }
 
     .search-type-dropdown {

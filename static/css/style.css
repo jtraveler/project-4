@@ -3213,11 +3213,14 @@ footer {
     border-radius: var(--radius-md);
 }
 
-/* Card title */
+/* Card title - truncated with ellipsis for orderly appearance */
 .collection-card-title {
     display: block;
     color: var(--gray-700);
     text-align: left;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 /* Card item count */

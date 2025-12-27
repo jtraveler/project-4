@@ -646,6 +646,20 @@
         card.classList.toggle('has-prompt');
         card.classList.add('loading');
 
+        // Optimistic count update (increment/decrement immediately)
+        const countEl = card.querySelector('.collection-card-count');
+        let originalCount = 0;
+        if (countEl) {
+            const currentText = countEl.textContent;
+            originalCount = parseInt(currentText.match(/\d+/)?.[0] || '0');
+
+            // Calculate new count (remove = -1, add = +1)
+            const newCount = hasPrompt ? originalCount - 1 : originalCount + 1;
+
+            // Update display immediately
+            countEl.textContent = `${newCount} ${newCount === 1 ? 'item' : 'items'}`;
+        }
+
         try {
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -681,8 +695,13 @@
 
         } catch (error) {
             console.error('CollectionsModal: Error toggling collection:', error);
-            // Revert optimistic update on error
+            // Revert optimistic updates on error
             card.classList.toggle('has-prompt');
+
+            // Revert count to original value
+            if (countEl) {
+                countEl.textContent = `${originalCount} ${originalCount === 1 ? 'item' : 'items'}`;
+            }
         } finally {
             card.classList.remove('loading');
         }

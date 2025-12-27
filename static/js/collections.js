@@ -90,6 +90,30 @@
     }
 
     /**
+     * Show error message in the modal error state element
+     * @param {string} message - Error message to display
+     */
+    function showError(message) {
+        const errorState = document.getElementById('collectionModalError');
+        const errorText = document.getElementById('collectionModalErrorText');
+
+        if (errorState && errorText) {
+            errorText.textContent = message || 'Something went wrong. Please try again.';
+            errorState.style.display = 'block';
+        }
+    }
+
+    /**
+     * Hide error message in the modal
+     */
+    function hideError() {
+        const errorState = document.getElementById('collectionModalError');
+        if (errorState) {
+            errorState.style.display = 'none';
+        }
+    }
+
+    /**
      * Calculate Levenshtein distance between two strings
      * Micro-Spec #9.4: Used for duplicate name detection
      */
@@ -303,6 +327,9 @@
         const warningEl = document.querySelector('.collection-name-warning');
         if (errorEl) errorEl.style.display = 'none';
         if (warningEl) warningEl.style.display = 'none';
+
+        // Hide any modal-level error messages
+        hideError();
 
         // Ensure Private radio is selected (default)
         if (privateRadio) {
@@ -686,10 +713,17 @@
 
         // Warn on similar names (requires confirmation)
         if (validation.isSimilar && !submitBtn?.dataset.confirmed) {
+            // Micro-Spec #9.7: Add shake animation for similar name warning
+            if (nameInput) {
+                nameInput.classList.add('shake');
+                nameInput.addEventListener('animationend', () => {
+                    nameInput.classList.remove('shake');
+                }, { once: true });
+            }
             if (warningEl) {
                 // Micro-Spec #9.6: Same-row layout with bold collection name
                 warningEl.innerHTML = `
-                    <span class="collection-warning-text">Similar to existing: <strong>${escapeHtml(validation.similarName)}</strong></span>
+                    <span class="collection-warning-text">Similar to existing collection: "<strong>${escapeHtml(validation.similarName)}</strong>"</span>
                     <div class="collection-warning-buttons">
                         <button type="button" class="collection-warning-cancel">Don't Create</button>
                         <button type="button" class="collection-warning-confirm">Create Anyway</button>
@@ -784,7 +818,9 @@
 
         } catch (error) {
             console.error('CollectionsModal: Error creating collection:', error);
-            alert(error.message || 'Failed to create collection. Please try again.');
+            // Show error in modal instead of alert - hide create panel first to show error in main view
+            hideCreatePanel();
+            showError(error.message || 'Failed to create collection. Please try again.');
         } finally {
             // Re-enable submit button
             if (submitBtn) {

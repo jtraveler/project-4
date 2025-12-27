@@ -124,6 +124,7 @@
     /**
      * Check for duplicate or similar collection names
      * Micro-Spec #9.4: Duplicate Name Prevention
+     * Micro-Spec #9.5: Find BEST match (lowest distance), not first
      * @returns {Object} { isDuplicate, isSimilar, similarName }
      */
     function checkDuplicateName(newName) {
@@ -135,23 +136,32 @@
             return result;
         }
 
+        // Track best similar match (lowest distance)
+        let bestDistance = Infinity;
+        let bestSimilarName = null;
+
         for (const collection of collectionsData) {
             const existingName = collection.title.toLowerCase();
 
-            // Exact match (case-insensitive)
+            // Exact match (case-insensitive) - highest priority
             if (existingName === trimmed) {
                 result.isDuplicate = true;
                 result.similarName = collection.title;
-                return result;
+                return result;  // Exact match found, no need to continue
             }
 
-            // Similar name (Levenshtein distance <= 2)
+            // Track similar names - find the BEST match (lowest distance)
             const distance = levenshteinDistance(trimmed, existingName);
-            if (distance <= 2 && distance > 0) {
-                result.isSimilar = true;
-                result.similarName = collection.title;
-                // Don't return - keep checking for exact duplicates
+            if (distance <= 2 && distance > 0 && distance < bestDistance) {
+                bestDistance = distance;
+                bestSimilarName = collection.title;
             }
+        }
+
+        // After checking all collections, set the best similar match (if any)
+        if (bestSimilarName !== null) {
+            result.isSimilar = true;
+            result.similarName = bestSimilarName;
         }
 
         return result;
@@ -261,6 +271,7 @@
         const createBtn = document.getElementById('createCollectionBtn');
         const visibilityHint = document.getElementById('visibilityHint');
         const privateRadio = document.getElementById('visibilityPrivate');
+        const nameInput = document.getElementById('collectionName');
 
         // Show main view, hide create panel (using class-based transitions)
         if (modalBody) {
@@ -280,10 +291,18 @@
             form.reset();
         }
 
-        // Disable create button (requires input)
+        // Disable create button (requires input) and clear confirmed flag
         if (createBtn) {
             createBtn.disabled = true;
+            delete createBtn.dataset.confirmed;  // Micro-Spec #9.5: Clear confirmed flag
         }
+
+        // Micro-Spec #9.5: Clear validation state on modal close
+        if (nameInput) nameInput.classList.remove('is-invalid');
+        const errorEl = document.querySelector('.collection-name-error');
+        const warningEl = document.querySelector('.collection-name-warning');
+        if (errorEl) errorEl.style.display = 'none';
+        if (warningEl) warningEl.style.display = 'none';
 
         // Ensure Private radio is selected (default)
         if (privateRadio) {
@@ -344,6 +363,8 @@
         const modalBody = modal.querySelector('.collection-modal-body');
         const footer = modal.querySelector('.collection-modal-footer');
         const form = document.getElementById('collectionCreateForm');
+        const nameInput = document.getElementById('collectionName');
+        const createBtn = document.getElementById('createCollectionBtn');
 
         // Use class-based transitions instead of inline display
         if (createPanel) {
@@ -358,8 +379,17 @@
         if (form) form.reset();
 
         // Disable create button (requires input)
-        const createBtn = document.getElementById('createCollectionBtn');
-        if (createBtn) createBtn.disabled = true;
+        if (createBtn) {
+            createBtn.disabled = true;
+            delete createBtn.dataset.confirmed;  // Micro-Spec #9.5: Clear confirmed flag
+        }
+
+        // Micro-Spec #9.5: Clear validation state when going back
+        if (nameInput) nameInput.classList.remove('is-invalid');
+        const errorEl = document.querySelector('.collection-name-error');
+        const warningEl = document.querySelector('.collection-name-warning');
+        if (errorEl) errorEl.style.display = 'none';
+        if (warningEl) warningEl.style.display = 'none';
     }
 
     // =============================================================================
@@ -650,9 +680,13 @@
         // Warn on similar names (requires confirmation)
         if (validation.isSimilar && !submitBtn?.dataset.confirmed) {
             if (warningEl) {
+                // Micro-Spec #9.5: Two-button layout - Don't Create + Create Anyway
                 warningEl.innerHTML = `
-                    <span>Similar to existing: "${escapeHtml(validation.similarName)}"</span>
-                    <button type="button" class="collection-warning-confirm">Create Anyway</button>
+                    <span class="collection-warning-text">Similar to existing: "${escapeHtml(validation.similarName)}"</span>
+                    <div class="collection-warning-buttons">
+                        <button type="button" class="collection-warning-cancel">Don't Create</button>
+                        <button type="button" class="collection-warning-confirm">Create Anyway</button>
+                    </div>
                 `;
                 warningEl.style.display = 'flex';
 
@@ -663,6 +697,23 @@
                         if (submitBtn) submitBtn.dataset.confirmed = 'true';
                         warningEl.style.display = 'none';
                         submitBtn?.click();
+                    }, { once: true });
+                }
+
+                // Micro-Spec #9.5: Add click handler for cancel button
+                const cancelBtn = warningEl.querySelector('.collection-warning-cancel');
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', () => {
+                        // Clear the input and hide warning
+                        if (nameInput) {
+                            nameInput.value = '';
+                            nameInput.focus();
+                        }
+                        warningEl.style.display = 'none';
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                            delete submitBtn.dataset.confirmed;
+                        }
                     }, { once: true });
                 }
             }

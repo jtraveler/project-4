@@ -54,7 +54,7 @@ def api_collections_list(request):
             is_deleted=False
         ).annotate(
             items_count=Count('items')
-        ).order_by('-updated_at')
+        ).order_by('-created_at')  # Micro-Spec #9.1: Show most recently CREATED first
 
         # If prompt_id provided, get set of collection IDs that contain it
         collections_with_prompt = set()

@@ -361,8 +361,10 @@
         // Add collection cards after the create card
         const createCard = collectionGrid.querySelector('.collection-card-create');
 
+        // Pass totalCount for reverse animation (Micro-Spec #9.1 - Bug 1)
+        const totalCount = collections.length;
         collections.forEach((collection, index) => {
-            const card = createCollectionCard(collection, index);
+            const card = createCollectionCard(collection, index, totalCount);
             if (createCard) {
                 createCard.after(card);
             } else {
@@ -375,15 +377,17 @@
      * Create a collection card element
      * Uses dynamic thumbnail grid layouts based on item count
      */
-    function createCollectionCard(collection, index = 0) {
+    function createCollectionCard(collection, index = 0, totalCount = 1) {
         const card = document.createElement('button');
         card.type = 'button';
         card.className = 'collection-card';
         card.dataset.collectionId = collection.id;
         card.dataset.action = 'toggle-collection';
 
-        // Add staggered animation (Micro-Spec #9)
-        card.style.setProperty('--card-index', index);
+        // Add staggered animation with REVERSED index (Micro-Spec #9.1 - Bug 1)
+        // Top-left cards animate first (index 0), bottom-right cards animate last
+        const reverseIndex = totalCount - 1 - index;
+        card.style.setProperty('--card-index', reverseIndex);
         card.classList.add('collection-card-animate');
 
         // Add 'has-prompt' class if prompt is already in this collection

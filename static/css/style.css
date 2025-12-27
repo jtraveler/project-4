@@ -2984,6 +2984,7 @@ footer {
     z-index: 1050;
     display: flex;
     justify-content: center;
+    align-items: flex-start;  /* Micro-Spec #9.1: Scroll from top when overflows */
     padding: 1rem;
     overflow: auto;
     /* Pure opacity fade - no transform */
@@ -3004,6 +3005,7 @@ footer {
     width: 100%;
     max-width: 950px;
     height: fit-content;
+    margin: auto;  /* Micro-Spec #9.1: Centers modal when content fits viewport */
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-lg);

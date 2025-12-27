@@ -3065,6 +3065,7 @@ footer {
     padding: 0;
     overflow-y: auto;
     flex: 1;
+    min-height: 320px;  /* Micro-Spec #9.2: Consistent height between views */
     /* Transition for smooth view switching */
     opacity: 1;
     transform: translateX(0);
@@ -3264,8 +3265,8 @@ footer {
 
 /* Staggered fade-in animation (Micro-Spec #9) */
 .collection-card-animate {
-    animation: collectionCardFadeIn 0.3s ease-out forwards;
-    animation-delay: calc(var(--card-index, 0) * 50ms);
+    animation: collectionCardFadeIn 0.5s ease-out forwards;
+    animation-delay: calc(var(--card-index, 0) * 80ms);
     opacity: 0;
 }
 
@@ -3414,6 +3415,9 @@ footer {
 /* Create collection panel - Micro-Spec #8.5b compact layout */
 .collection-create-panel {
     padding: 0;
+    min-height: 320px;  /* Micro-Spec #9.2: Match modal body height */
+    display: flex;
+    flex-direction: column;
     /* Transition for smooth view switching */
     opacity: 1;
     transform: translateX(0);
@@ -3469,6 +3473,7 @@ footer {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    flex: 1;  /* Micro-Spec #9.2: Expand to fill available space */
 }
 
 .collection-form-group {
@@ -3587,7 +3592,7 @@ footer {
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.75rem;
-    margin-top: 2em;
+    margin-top: auto;  /* Micro-Spec #9.2: Push to bottom of flex container */
 }
 
 .btn-collection-back {

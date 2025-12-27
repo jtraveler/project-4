@@ -74,14 +74,17 @@ def api_collections_list(request):
         # Build response data
         collections_data = []
         for collection in collections:
-            # Get thumbnail from most recent item
-            thumbnail_url = None
-            latest_item = CollectionItem.objects.filter(
+            # Get up to 3 most recent thumbnails for grid layout
+            thumbnails = []
+            recent_items = CollectionItem.objects.filter(
                 collection=collection
-            ).select_related('prompt').order_by('-added_at').first()
+            ).select_related('prompt').order_by('-added_at')[:3]
 
-            if latest_item and latest_item.prompt:
-                thumbnail_url = latest_item.prompt.get_thumbnail_url(width=300)
+            for item in recent_items:
+                if item.prompt:
+                    thumb_url = item.prompt.get_thumbnail_url(width=300)
+                    if thumb_url:
+                        thumbnails.append(thumb_url)
 
             collections_data.append({
                 'id': collection.id,
@@ -89,7 +92,8 @@ def api_collections_list(request):
                 'slug': collection.slug,
                 'is_private': collection.is_private,
                 'item_count': collection.items_count,
-                'thumbnail_url': thumbnail_url,
+                'thumbnail_url': thumbnails[0] if thumbnails else None,  # Legacy
+                'thumbnails': thumbnails,  # New: array of up to 3
                 'has_prompt': collection.id in collections_with_prompt,
             })
 

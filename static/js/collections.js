@@ -183,6 +183,7 @@
     /**
      * Reset modal to default state (main view visible, create panel hidden)
      * Called when modal closes to ensure clean state on next open
+     * Uses class-based visibility for smooth transitions
      */
     function resetModalState() {
         const modalBody = modal.querySelector('.collection-modal-body');
@@ -193,15 +194,15 @@
         const visibilityHint = document.getElementById('visibilityHint');
         const privateRadio = document.getElementById('visibilityPrivate');
 
-        // Show main view, hide create panel
+        // Show main view, hide create panel (using class-based transitions)
         if (modalBody) {
-            modalBody.style.display = '';
+            modalBody.classList.remove('is-hidden');
         }
         if (createPanel) {
-            createPanel.style.display = 'none';
+            createPanel.classList.add('is-hidden');
         }
         if (footer) {
-            footer.style.display = '';
+            footer.classList.remove('is-hidden');
         }
 
         // Reset form fields
@@ -238,7 +239,7 @@
     // =============================================================================
 
     /**
-     * Show the create collection form panel
+     * Show the create collection form panel (smooth transition)
      */
     function showCreatePanel() {
         const createPanel = document.getElementById('collectionCreatePanel');
@@ -246,17 +247,18 @@
         const footer = modal.querySelector('.collection-modal-footer');
         const nameInput = document.getElementById('collectionName');
 
-        if (modalBody) modalBody.style.display = 'none';
-        if (footer) footer.style.display = 'none';
+        // Use class-based transitions instead of inline display
+        if (modalBody) modalBody.classList.add('is-hidden');
+        if (footer) footer.classList.add('is-hidden');
         if (createPanel) {
-            createPanel.style.display = 'block';
-            // Focus the name input
+            createPanel.classList.remove('is-hidden');
+            // Focus the name input after transition starts
             setTimeout(() => nameInput?.focus(), 100);
         }
     }
 
     /**
-     * Hide the create collection form panel
+     * Hide the create collection form panel (smooth transition)
      */
     function hideCreatePanel() {
         const createPanel = document.getElementById('collectionCreatePanel');
@@ -264,9 +266,10 @@
         const footer = modal.querySelector('.collection-modal-footer');
         const form = document.getElementById('collectionCreateForm');
 
-        if (createPanel) createPanel.style.display = 'none';
-        if (modalBody) modalBody.style.display = '';
-        if (footer) footer.style.display = '';
+        // Use class-based transitions instead of inline display
+        if (createPanel) createPanel.classList.add('is-hidden');
+        if (modalBody) modalBody.classList.remove('is-hidden');
+        if (footer) footer.classList.remove('is-hidden');
 
         // Reset form
         if (form) form.reset();
@@ -370,6 +373,7 @@
 
     /**
      * Create a collection card element
+     * Uses dynamic thumbnail grid layouts based on item count
      */
     function createCollectionCard(collection) {
         const card = document.createElement('button');
@@ -383,22 +387,48 @@
             card.classList.add('has-prompt');
         }
 
-        // Thumbnail
+        // Thumbnail container
         const thumbnail = document.createElement('div');
         thumbnail.className = 'collection-card-thumbnail';
 
-        if (collection.thumbnail_url) {
-            const img = document.createElement('img');
-            img.src = collection.thumbnail_url;
-            img.alt = escapeHtml(collection.title);
-            img.loading = 'lazy';
-            thumbnail.appendChild(img);
-        } else {
-            // Empty placeholder icon - no hardcoded sizes, CSS controls via variables
+        // Use thumbnails array (new) or fall back to thumbnail_url (legacy)
+        const thumbnails = collection.thumbnails || [];
+        const thumbCount = thumbnails.length;
+
+        if (thumbCount === 0) {
+            // 0 items: Placeholder icon
             thumbnail.innerHTML = `
-                <svg class="icon" aria-hidden="true">
-                    <use href="${getIconUrl('icon-image')}"></use>
-                </svg>
+                <div class="thumb-full">
+                    <svg class="icon" aria-hidden="true">
+                        <use href="${getIconUrl('icon-image')}"></use>
+                    </svg>
+                </div>
+            `;
+        } else if (thumbCount === 1) {
+            // 1 item: Full-width cropped image
+            thumbnail.innerHTML = `
+                <div class="thumb-full">
+                    <img src="${thumbnails[0]}" alt="${escapeHtml(collection.title)}" loading="lazy">
+                </div>
+            `;
+        } else if (thumbCount === 2) {
+            // 2 items: 50/50 side-by-side split
+            thumbnail.innerHTML = `
+                <div class="thumb-grid thumb-grid-2">
+                    <img src="${thumbnails[0]}" alt="${escapeHtml(collection.title)}" loading="lazy">
+                    <img src="${thumbnails[1]}" alt="${escapeHtml(collection.title)}" loading="lazy">
+                </div>
+            `;
+        } else {
+            // 3+ items: Tall left + stacked right
+            thumbnail.innerHTML = `
+                <div class="thumb-grid thumb-grid-3">
+                    <img src="${thumbnails[0]}" alt="${escapeHtml(collection.title)}" loading="lazy" class="thumb-tall">
+                    <div class="thumb-stack">
+                        <img src="${thumbnails[1]}" alt="${escapeHtml(collection.title)}" loading="lazy">
+                        <img src="${thumbnails[2]}" alt="${escapeHtml(collection.title)}" loading="lazy">
+                    </div>
+                </div>
             `;
         }
 

@@ -24,21 +24,21 @@
             <div class="collection-grid" id="collectionGrid">
 
                 {# Create New Collection Card - Always First #}
-                {# Icon sizing controlled by CSS variables, no hardcoded width/height #}
-                <button type="button" class="collection-card collection-card-create" data-action="show-create-form">
-                    <div class="collection-card-thumbnail collection-card-thumbnail-create">
+                {# Micro-Spec #9.8: Card is div, only thumbnail is clickable button #}
+                <div class="collection-card collection-card-create">
+                    <button type="button" class="collection-card-thumbnail collection-card-thumbnail-create" data-action="show-create-form" aria-label="Create new collection">
                         <svg class="icon" aria-hidden="true">
                             <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
                         </svg>
-                    </div>
+                    </button>
                     <span class="collection-card-title">Create new collection</span>
-                </button>
+                </div>
 
                 {# Collection Cards Container - Populated by JavaScript #}
-                {# Example static card for template reference (icon sizes via CSS variables): #}
+                {# Micro-Spec #9.8: Card is div, only thumbnail button is clickable #}
                 <!--
-                <button type="button" class="collection-card" data-collection-id="1" data-action="toggle-collection">
-                    <div class="collection-card-thumbnail">
+                <div class="collection-card" data-collection-id="1">
+                    <button type="button" class="collection-card-thumbnail" data-action="toggle-collection" aria-label="Add to My collection">
                         <svg class="icon" aria-hidden="true">
                             <use href="{% static 'icons/sprite.svg' %}#icon-image"></use>
                         </svg>
@@ -56,10 +56,10 @@
                                 <use href="{% static 'icons/sprite.svg' %}#icon-circle-minus"></use>
                             </svg>
                         </div>
-                    </div>
+                    </button>
                     <span class="collection-card-title">My collection</span>
                     <span class="collection-card-count">0 items</span>
-                </button>
+                </div>
                 -->
 
             </div>

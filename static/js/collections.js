@@ -510,11 +510,10 @@
      * Uses dynamic thumbnail grid layouts based on item count
      */
     function createCollectionCard(collection, index = 0) {
-        const card = document.createElement('button');
-        card.type = 'button';
+        // Micro-Spec #9.8: Card is now a div, only thumbnail is clickable
+        const card = document.createElement('div');
         card.className = 'collection-card';
         card.dataset.collectionId = collection.id;
-        card.dataset.action = 'toggle-collection';
 
         // Animation index - first card in array animates first (top-to-bottom)
         // Micro-Spec #9.4: Removed reverse index (no longer needed with appendChild)
@@ -526,9 +525,12 @@
             card.classList.add('has-prompt');
         }
 
-        // Thumbnail container
-        const thumbnail = document.createElement('div');
+        // Micro-Spec #9.8: Thumbnail is now a button for accessibility
+        const thumbnail = document.createElement('button');
+        thumbnail.type = 'button';
         thumbnail.className = 'collection-card-thumbnail';
+        thumbnail.dataset.action = 'toggle-collection';
+        thumbnail.setAttribute('aria-label', `${collection.has_prompt ? 'Remove from' : 'Add to'} ${collection.title}`);
 
         // Use thumbnails array (new) or fall back to thumbnail_url (legacy)
         const thumbnails = collection.thumbnails || [];
@@ -625,8 +627,13 @@
 
     /**
      * Handle collection card toggle (add/remove prompt)
+     * Micro-Spec #9.8: actionEl is now the thumbnail button, find parent card
      */
-    async function handleCollectionToggle(card) {
+    async function handleCollectionToggle(actionEl) {
+        // Find the parent card element (actionEl is now the thumbnail button)
+        const card = actionEl.closest('.collection-card');
+        if (!card) return;
+
         const collectionId = card.dataset.collectionId;
         if (!collectionId || !currentPromptId) return;
 
@@ -663,6 +670,11 @@
                     countEl.textContent = `${count} ${count === 1 ? 'item' : 'items'}`;
                 }
             }
+
+            // Micro-Spec #9.8: Update aria-label to reflect new state
+            const titleEl = card.querySelector('.collection-card-title');
+            const collectionTitle = titleEl ? titleEl.textContent : 'this collection';
+            actionEl.setAttribute('aria-label', `${!hasPrompt ? 'Remove from' : 'Add to'} ${collectionTitle}`);
 
             // Update save button state on the page
             updateSaveButtonState(currentPromptId, !hasPrompt);

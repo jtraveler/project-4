@@ -3100,17 +3100,11 @@ footer {
     }
 }
 
-/* Collection card */
+/* Collection card - Micro-Spec #9.8: Card is now a div, only thumbnail is clickable */
 .collection-card {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    text-align: left;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 /* Create new collection card */
@@ -3118,8 +3112,16 @@ footer {
     order: -1;  /* Micro-Spec #9.3: Keep "Create new" card first regardless of DOM order */
 }
 
-/* Card thumbnail area */
+/* Card thumbnail area - Micro-Spec #9.8: Now a button (only clickable part of card) */
 .collection-card-thumbnail {
+    /* Button reset styles */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    /* Layout styles */
     aspect-ratio: 1;
     background-color: var(--gray-100);
     display: flex;
@@ -3128,6 +3130,18 @@ footer {
     position: relative;
     border-radius: var(--radius-md);
     overflow: hidden; /* Contain overlay within thumbnail bounds */
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Thumbnail hover effect */
+.collection-card-thumbnail:hover {
+    transform: scale(1.02);
+}
+
+/* Focus styles for accessibility */
+.collection-card-thumbnail:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 /* Thumbnail images - fill and crop to fit square */
@@ -3327,24 +3341,26 @@ footer {
 /* ============================================
    STATE 1: Card does NOT have prompt (default)
    - Overlay hidden
-   - On hover: show dark overlay with PLUS icon
+   - On thumbnail hover: show dark overlay with PLUS icon
+   Micro-Spec #9.8: Hover is now on thumbnail (button), not card
    ============================================ */
 
-/* Show overlay with plus on hover for cards WITHOUT prompt */
-.collection-card:not(.has-prompt):not(.collection-card-create):hover .collection-card-overlay {
+/* Show overlay with plus on thumbnail hover for cards WITHOUT prompt */
+.collection-card:not(.has-prompt):not(.collection-card-create) .collection-card-thumbnail:hover .collection-card-overlay {
     opacity: 1;
     pointer-events: auto;
     background-color: var(--collection-overlay-add);
 }
 
-.collection-card:not(.has-prompt):not(.collection-card-create):hover .collection-card-overlay .icon-plus {
+.collection-card:not(.has-prompt):not(.collection-card-create) .collection-card-thumbnail:hover .collection-card-overlay .icon-plus {
     display: block;
 }
 
 /* ============================================
    STATE 2: Card HAS prompt (saved)
    - Show green overlay with CHECK icon
-   - On hover: show red overlay with MINUS icon
+   - On thumbnail hover: show red overlay with MINUS icon
+   Micro-Spec #9.8: Hover is now on thumbnail (button), not card
    ============================================ */
 
 /* Show overlay when card has the prompt */
@@ -3359,28 +3375,17 @@ footer {
     display: block;
 }
 
-/* Hover: switch to minus icon and red overlay */
-.collection-card.has-prompt:hover .collection-card-overlay {
+/* Thumbnail hover: switch to minus icon and red overlay */
+.collection-card.has-prompt .collection-card-thumbnail:hover .collection-card-overlay {
     background-color: var(--collection-overlay-remove);
 }
 
-.collection-card.has-prompt:hover .collection-card-overlay .icon-check {
+.collection-card.has-prompt .collection-card-thumbnail:hover .collection-card-overlay .icon-check {
     display: none;
 }
 
-.collection-card.has-prompt:hover .collection-card-overlay .icon-minus {
+.collection-card.has-prompt .collection-card-thumbnail:hover .collection-card-overlay .icon-minus {
     display: block;
-}
-
-/* ============================================
-   Micro-Spec #9.7: Scope hover effects to thumbnail only
-   Uses pointer-events: none on title/count so hovering them
-   doesn't trigger the card :hover state. Card remains fully
-   clickable because pointer-events only affects hover detection.
-   ============================================ */
-.collection-card-title,
-.collection-card-count {
-    pointer-events: none;
 }
 
 /* Modal footer */

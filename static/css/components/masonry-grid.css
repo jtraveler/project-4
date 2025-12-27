@@ -159,7 +159,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     color: white;
-    font-size: var(--font-size-icon-large);
+    font-size: var(--font-size-lg);
 }
 
 /* ============================================

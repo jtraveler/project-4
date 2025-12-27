@@ -806,7 +806,7 @@
     justify-content: center;
     border: none;
     color: var(--gray-700);
-    font-size: var(--font-size-icon-large);
+    font-size: var(--font-size-lg);
     cursor: pointer;
     border-radius: 50%;  /* Fully rounded circle */
     transition: background var(--transition-base);

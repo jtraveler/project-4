@@ -112,7 +112,7 @@
   --font-size-small: 14px;                   /* Small text size */
   --font-size-xs: 13px;                      /* Extra small text size */
   --font-size-icon: 18px;                    /* Standard icon size */
-  --font-size-icon-large: 24px;              /* Large icon size */
+  --font-size-lg: 24px;                      /* Large text/icon size */
   --letter-spacing-logo: -0.5px;             /* Logo letter spacing */
 
   /* === BUTTON SIZE VARIANTS === */
@@ -1301,7 +1301,7 @@ main {
 }
 
 .file-upload-label i {
-  font-size: var(--font-size-icon-large);
+  font-size: var(--font-size-lg);
   margin-right: 12px;
   color: var(--gray-400);
 }
@@ -2057,7 +2057,7 @@ footer {
 
 .trash-modal-title {
     color: var(--error);
-    font-size: var(--font-size-icon-large);
+    font-size: var(--font-size-lg);
     font-weight: 600;
     margin-bottom: 16px;
     display: flex;
@@ -2565,7 +2565,7 @@ footer {
 
 .thumbnail-overlay-text {
     color: var(--white);
-    font-size: var(--font-size-icon-large);
+    font-size: var(--font-size-lg);
     font-weight: 600;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }

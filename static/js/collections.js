@@ -754,7 +754,7 @@
             if (warningEl) {
                 // Micro-Spec #9.6: Same-row layout with bold collection name
                 warningEl.innerHTML = `
-                    <span class="collection-warning-text">Similar to existing collection: "<strong>${escapeHtml(validation.similarName)}</strong>"</span>
+                    <span class="collection-warning-text">Hmm that title may be similar to existing collection: "<strong>${escapeHtml(validation.similarName)}</strong>"?</span>
                     <div class="collection-warning-buttons">
                         <button type="button" class="collection-warning-cancel">Don't Create</button>
                         <button type="button" class="collection-warning-confirm">Create Anyway</button>

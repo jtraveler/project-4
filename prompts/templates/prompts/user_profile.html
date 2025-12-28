@@ -966,7 +966,11 @@
                     Gallery
                     <span class="profile-tab-count stat-badge">{{ total_prompts|default:0 }}</span>
                 </a>
-                <button class="profile-tab">Collections</button>
+                <a href="{% url 'prompts:user_collections' username=profile_user.username %}"
+                   class="profile-tab"
+                   style="text-decoration: none;">
+                    Collections
+                </a>
                 {% if show_statistics_tab %}<button class="profile-tab">Statistics</button>{% endif %}
                 <button class="profile-tab">
                     Followers

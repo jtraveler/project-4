@@ -3331,6 +3331,39 @@ footer {
     display: block;
 }
 
+/* ============================================
+   Collection Card Link (Profile page - NOT modal)
+   Simple dimmed overlay on hover, no icons
+   ============================================ */
+.collection-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.collection-card-link:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Simple dimmed overlay on hover for profile page collection cards */
+.collection-card-link .collection-card-thumbnail::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0);
+    border-radius: var(--radius-md, 8px);
+    transition: background 0.15s ease;
+    pointer-events: none;
+}
+
+.collection-card-link:hover .collection-card-thumbnail::after {
+    background: rgba(0, 0, 0, 0.1);
+}
+
 /* Modal footer */
 .collection-modal-footer {
     padding: 0;

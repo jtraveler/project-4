@@ -1,0 +1,784 @@
+{% extends "base.html" %}
+{% load static %}
+{% load cloudinary %}
+{% load cloudinary_tags %}
+
+{% block title %}{{ profile_user.username }}'s Collections - PromptFinder{% endblock %}
+
+{% block content %}
+<!-- CSRF Token for AJAX requests -->
+{% csrf_token %}
+
+{# Include profile header styles from user_profile.html inline styles #}
+<style>
+/* ============================================
+   PROFILE HEADER - COPIED FROM user_profile.html
+   ============================================ */
+
+/* Overall wrapper */
+.profile-header-wrapper {
+    background: transparent;
+    width: 100%;
+}
+
+/* SECTION 1: AVATAR & IDENTITY */
+.profile-identity {
+    text-align: center;
+    padding: 48px 40px 0;
+    background: transparent;
+}
+
+.profile-avatar-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.profile-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+/* Avatar color classes */
+.avatar-color-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.avatar-color-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+.avatar-color-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.avatar-color-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+.avatar-color-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+.avatar-color-6 { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+.avatar-color-7 { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
+.avatar-color-8 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
+
+.profile-username {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 16px 0 12px;
+    line-height: 1.2;
+}
+
+.profile-bio {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0 auto 16px;
+    max-width: 600px;
+    line-height: 1.6;
+}
+
+.btn-edit-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #05a081;
+    color: #ffffff;
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    margin: 16px auto 24px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-edit-profile:hover {
+    background: #048c73;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+/* SECTION 2: STATS ROW */
+.profile-stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    align-items: flex-start;
+    margin-top: 1.5rem;
+}
+
+.profile-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.profile-stat:not(:last-child) {
+    border-right: 1px solid #e5e7eb;
+    padding-right: 24px;
+    margin-right: 24px;
+}
+
+.profile-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1;
+}
+
+.profile-stat-label {
+    font-size: 14px;
+    font-weight: 400;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+/* SECTIONS 3 & 4: TAB NAVIGATION + FILTERS */
+.profile-navigation-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 24px;
+    gap: 20px;
+    background: transparent;
+}
+
+.profile-tabs-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    flex: 1;
+}
+
+.profile-tabs-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    -ms-overflow-style: none;
+    flex: 1;
+    flex-wrap: nowrap;
+    padding-bottom: 10px;
+}
+
+.profile-tabs-container::-webkit-scrollbar {
+    display: none;
+}
+
+.profile-tab {
+    padding: 12px 20px;
+    font-size: 17px;
+    font-weight: 500;
+    color: #6b7280;
+    background: transparent;
+    border: none;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.profile-tab:hover:not(.profile-tab-active) {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.profile-tab-active {
+    background: #000000;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.profile-tab-active:hover {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.profile-tab-count {
+    font-size: 17px;
+    opacity: 0.7;
+    margin-left: 5px;
+    display: inline-block;
+    min-width: 40px;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-badge {
+    display: inline-block;
+    min-width: 40px;
+    text-align: center;
+    padding: 0 4px;
+    font-weight: normal;
+    transition: none;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Filter controls */
+.profile-filters-container {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Pexels-style sort dropdown (reusing from profile) */
+.profile-sort-dropdown {
+    position: relative;
+}
+
+.profile-sort-dropdown-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1f2937;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.profile-sort-dropdown-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.profile-sort-dropdown-chevron {
+    transition: transform 0.2s ease;
+}
+
+.profile-sort-dropdown.show .profile-sort-dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+.profile-sort-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-width: 180px;
+    z-index: 100;
+    display: none;
+}
+
+.profile-sort-dropdown.show .profile-sort-dropdown-menu {
+    display: block;
+}
+
+.profile-sort-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #374151;
+    text-decoration: none;
+    transition: background 0.15s ease;
+}
+
+.profile-sort-dropdown-item:hover {
+    background: #f9fafb;
+}
+
+.profile-sort-dropdown-item.active {
+    font-weight: 600;
+    color: #111827;
+}
+
+.profile-sort-check-icon {
+    flex-shrink: 0;
+}
+
+/* ============================================
+   COLLECTIONS PAGE SPECIFIC STYLES
+   ============================================ */
+
+/* Header row for collections page */
+.collections-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 24px;
+    gap: 16px;
+}
+
+/* Create collection button (only for owners) */
+.btn-create-collection {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    background: #16ba31;
+    border: none;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-create-collection:hover {
+    background: #14a82c;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.btn-create-collection .icon {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+}
+
+/* Empty state */
+.collections-empty-state {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.collections-empty-state i,
+.collections-empty-state .icon {
+    font-size: 64px;
+    color: #d1d5db;
+    margin-bottom: 16px;
+}
+
+.collections-empty-state h3 {
+    font-size: 24px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.collections-empty-state p {
+    font-size: 16px;
+    color: var(--gray-400, #9ca3af);
+}
+
+/* Responsive */
+@media (max-width: 990px) {
+    .profile-navigation-row {
+        flex-direction: column;
+        gap: 20px;
+        align-items: stretch;
+    }
+
+    .profile-tabs-wrapper {
+        width: 100%;
+    }
+
+    .collections-header-row {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    .btn-create-collection {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .profile-filters-container {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-identity {
+        padding: 32px 20px 0;
+    }
+
+    .profile-username {
+        font-size: 24px;
+    }
+
+    .profile-avatar,
+    .profile-avatar-placeholder {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
+    }
+
+    .profile-stat:not(:last-child) {
+        padding-right: 16px;
+        margin-right: 16px;
+    }
+
+    .profile-stat-value {
+        font-size: 20px;
+    }
+
+    .profile-stat-label {
+        font-size: 12px;
+    }
+}
+</style>
+
+<!-- ============================================
+     PROFILE HEADER (Same as Gallery page)
+     ============================================ -->
+<div class="profile-header-wrapper">
+    <div class="profile-identity">
+        <!-- Avatar -->
+        <div class="profile-avatar-container">
+            {% if profile.avatar.url %}
+                <img src="{{ profile.avatar.url }}"
+                     alt="{{ profile_user.username }}'s avatar"
+                     class="profile-avatar"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="profile-avatar profile-avatar-placeholder avatar-color-{{ profile.get_avatar_color_index }}" style="display: none;">
+                    {{ profile_user.username|first|upper }}
+                </div>
+            {% else %}
+                <div class="profile-avatar profile-avatar-placeholder avatar-color-{{ profile.get_avatar_color_index }}">
+                    {{ profile_user.username|first|upper }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Username -->
+        <h1 class="profile-username">{{ profile_user.username }}</h1>
+
+        <!-- Bio -->
+        {% if profile_user.userprofile.bio %}
+        <p class="profile-bio">{{ profile_user.userprofile.bio }}</p>
+        {% endif %}
+
+        <!-- Edit Profile Button (Owner Only) -->
+        {% if is_own_profile %}
+            <a href="{% url 'prompts:edit_profile' %}" class="btn-edit-profile">
+                <i class="fas fa-pen"></i>
+                Edit profile
+            </a>
+        {% endif %}
+
+        <!-- Follow Button (Non-Owner Only) -->
+        {% if user.is_authenticated and not is_own_profile %}
+        <div class="follow-button-container mt-3">
+            <button id="follow-btn"
+                    class="btn btn-primary follow-button"
+                    data-username="{{ profile_user.username }}"
+                    data-following="false">
+                <span class="button-text">Follow</span>
+                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+            </button>
+        </div>
+        {% endif %}
+
+        <!-- Profile Metrics Section -->
+        <div class="placeholder-metrics-section" style="margin-top: 32px; padding: 24px 0;">
+            <div class="profile-stats-row">
+                <div class="profile-stat">
+                    <div class="profile-stat-value">{{ total_views|default:0 }}</div>
+                    <div class="profile-stat-label">Total Views</div>
+                </div>
+                <div class="profile-stat">
+                    <div class="profile-stat-value">{% if all_time_rank %}#{{ all_time_rank }}{% else %}-{% endif %}</div>
+                    <div class="profile-stat-label">All-time Rank</div>
+                </div>
+                <div class="profile-stat">
+                    <div class="profile-stat-value">{% if thirty_day_rank %}#{{ thirty_day_rank }}{% else %}-{% endif %}</div>
+                    <div class="profile-stat-label">30-day Rank</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         TABS + FILTERS ROW
+         ============================================ -->
+    <div class="profile-navigation-row">
+        <!-- Left side: Tabs -->
+        <div class="profile-tabs-wrapper">
+            <div class="profile-tabs-container">
+                <a href="{% url 'prompts:user_profile' username=profile_user.username %}"
+                   class="profile-tab"
+                   style="text-decoration: none;">
+                    Gallery
+                    <span class="profile-tab-count stat-badge">{{ total_prompts|default:0 }}</span>
+                </a>
+                <a href="{% url 'prompts:user_collections' username=profile_user.username %}"
+                   class="profile-tab profile-tab-active"
+                   style="text-decoration: none;">
+                    Collections
+                    <span class="profile-tab-count stat-badge">{{ total_collections|default:0 }}</span>
+                </a>
+                <button class="profile-tab">
+                    Followers
+                    <span class="profile-tab-count stat-badge">{{ profile_user.userprofile.follower_count|default:0 }}</span>
+                </button>
+                <button class="profile-tab">
+                    Following
+                    <span class="profile-tab-count stat-badge">{{ profile_user.userprofile.following_count|default:0 }}</span>
+                </button>
+                <button class="profile-tab">
+                    Likes Received
+                    <span class="profile-tab-count stat-badge">{{ total_likes|default:0 }}</span>
+                </button>
+
+                <!-- Trash tab (Owner Only) -->
+                {% if is_own_profile %}
+                <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}"
+                   class="profile-tab"
+                   style="text-decoration: none;">
+                    <svg class="icon icon-sm" aria-hidden="true" style="margin-right: 6px;"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
+                    Trash
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right side: Sort filter (only show if there are collections) -->
+        {% if collections %}
+        <div class="profile-filters-container">
+            <div class="profile-sort-dropdown" id="sortDropdown">
+                <button class="profile-sort-dropdown-btn" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                    {% if sort == 'most' %}
+                        Most Items
+                    {% elif sort == 'fewest' %}
+                        Fewest Items
+                    {% else %}
+                        Recent
+                    {% endif %}
+                    <svg class="profile-sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <div class="profile-sort-dropdown-menu" id="sortDropdownMenu" role="menu">
+                    <a href="{% url 'prompts:user_collections' username=profile_user.username %}?sort=recent"
+                       class="profile-sort-dropdown-item {% if sort == 'recent' or not sort %}active{% endif %}"
+                       role="menuitem">
+                        {% if sort == 'recent' or not sort %}
+                        <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {% else %}
+                        <span style="width: 16px;"></span>
+                        {% endif %}
+                        Recent
+                    </a>
+                    <a href="{% url 'prompts:user_collections' username=profile_user.username %}?sort=most"
+                       class="profile-sort-dropdown-item {% if sort == 'most' %}active{% endif %}"
+                       role="menuitem">
+                        {% if sort == 'most' %}
+                        <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {% else %}
+                        <span style="width: 16px;"></span>
+                        {% endif %}
+                        Most Items
+                    </a>
+                    <a href="{% url 'prompts:user_collections' username=profile_user.username %}?sort=fewest"
+                       class="profile-sort-dropdown-item {% if sort == 'fewest' %}active{% endif %}"
+                       role="menuitem">
+                        {% if sort == 'fewest' %}
+                        <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {% else %}
+                        <span style="width: 16px;"></span>
+                        {% endif %}
+                        Fewest Items
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============================================
+     COLLECTIONS HEADER ROW (Create button for owners)
+     ============================================ -->
+{% if is_own_profile %}
+<div class="collections-header-row">
+    <div></div><!-- Spacer -->
+    <button type="button" class="btn-create-collection" data-action="show-create-form" id="openCreateCollectionBtn">
+        <svg class="icon" aria-hidden="true">
+            <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
+        </svg>
+        Create New Collection
+    </button>
+</div>
+{% endif %}
+
+<!-- ============================================
+     COLLECTIONS GRID (Reusing modal CSS classes)
+     ============================================ -->
+{% if collections %}
+<div class="collection-grid" style="padding: 0 0 40px;">
+    {% for collection in collections %}
+    <a href="{% url 'prompts:collection_detail' slug=collection.slug %}" class="collection-card-link">
+        <div class="collection-card">
+            {# Thumbnail area - reuses modal structure #}
+            <div class="collection-card-thumbnail" style="cursor: pointer;">
+                {% if collection.thumbnails %}
+                    {% if collection.thumbnails|length == 1 %}
+                        {# 1 item: full width #}
+                        <div class="thumb-full">
+                            <img src="{{ collection.thumbnails.0 }}" alt="">
+                        </div>
+                    {% elif collection.thumbnails|length == 2 %}
+                        {# 2 items: 50/50 split #}
+                        <div class="thumb-grid thumb-grid-2">
+                            <img src="{{ collection.thumbnails.0 }}" alt="">
+                            <img src="{{ collection.thumbnails.1 }}" alt="">
+                        </div>
+                    {% else %}
+                        {# 3+ items: Tall left + stacked right #}
+                        <div class="thumb-grid thumb-grid-3">
+                            <img src="{{ collection.thumbnails.0 }}" alt="" class="thumb-tall">
+                            <div class="thumb-stack">
+                                <img src="{{ collection.thumbnails.1 }}" alt="">
+                                <img src="{{ collection.thumbnails.2 }}" alt="">
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    {# No items: placeholder icon #}
+                    <svg class="icon" aria-hidden="true">
+                        <use href="{% static 'icons/sprite.svg' %}#icon-image"></use>
+                    </svg>
+                {% endif %}
+            </div>
+            {# Title #}
+            <span class="collection-card-title">{{ collection.title|truncatechars:35 }}</span>
+            {# Meta: count + visibility #}
+            <div class="collection-card-meta">
+                <span class="collection-card-count">{{ collection.items_count }} item{{ collection.items_count|pluralize }}</span>
+                <span class="collection-card-visibility-icon">
+                    {% if collection.is_private %}
+                    <svg class="icon" aria-hidden="true">
+                        <use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use>
+                    </svg>
+                    {% else %}
+                    <svg class="icon" aria-hidden="true">
+                        <use href="{% static 'icons/sprite.svg' %}#icon-eye"></use>
+                    </svg>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{# Pagination #}
+{% if page_obj.has_other_pages %}
+<nav aria-label="Collections pagination" class="mt-4 mb-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if sort %}&sort={{ sort }}{% endif %}">Previous</a>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item"><a class="page-link" href="?page={{ num }}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if sort %}&sort={{ sort }}{% endif %}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="collections-empty-state">
+    <svg class="icon" style="width: 64px; height: 64px; color: #d1d5db;" aria-hidden="true">
+        <use href="{% static 'icons/sprite.svg' %}#icon-bookmark"></use>
+    </svg>
+    <h3>{% if is_own_profile %}You haven't created any collections yet{% else %}{{ profile_user.first_name|default:profile_user.username }} has no collections yet{% endif %}</h3>
+    <p>{% if is_own_profile %}Create a collection to organize your favorite prompts{% else %}Check back later{% endif %}</p>
+    {% if is_own_profile %}
+    <button type="button" class="btn-create-collection mt-4" data-action="show-create-form" id="openCreateCollectionEmptyBtn">
+        <svg class="icon" aria-hidden="true">
+            <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
+        </svg>
+        Create Your First Collection
+    </button>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ============================================
+     CREATE COLLECTION MODAL (For Owners)
+     ============================================ -->
+{% if is_own_profile %}
+{# Include the collections modal for creating new collections #}
+{% include 'prompts/partials/_collection_modal.html' %}
+{% endif %}
+
+<script>
+(function() {
+    'use strict';
+
+    // Sort dropdown toggle
+    const sortDropdown = document.getElementById('sortDropdown');
+    const sortBtn = document.getElementById('sortDropdownBtn');
+
+    if (sortBtn && sortDropdown) {
+        sortBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            sortDropdown.classList.toggle('show');
+            this.setAttribute('aria-expanded', sortDropdown.classList.contains('show'));
+        });
+
+        // Close on outside click
+        document.addEventListener('click', function(e) {
+            if (!sortDropdown.contains(e.target)) {
+                sortDropdown.classList.remove('show');
+                sortBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    // Create collection buttons - open the modal
+    const createBtns = document.querySelectorAll('[data-action="show-create-form"]');
+    createBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            // Open the collections modal and show create form
+            if (typeof CollectionsModal !== 'undefined') {
+                CollectionsModal.open();
+                // Trigger the create form view
+                setTimeout(function() {
+                    const showCreateBtn = document.querySelector('.collection-card-thumbnail-create');
+                    if (showCreateBtn) {
+                        showCreateBtn.click();
+                    }
+                }, 100);
+            }
+        });
+    });
+})();
+</script>
+
+{% endblock %}

@@ -12,6 +12,7 @@ import random
 import string
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
@@ -20,7 +21,7 @@ from django.db.models import Count
 from django.urls import reverse
 from django.utils.text import slugify
 
-from ..models import Collection, CollectionItem, Prompt
+from ..models import Collection, CollectionItem, Prompt, UserProfile, PromptView
 
 logger = logging.getLogger(__name__)
 
@@ -484,3 +485,174 @@ def collection_delete(request, slug):
     }
 
     return render(request, 'prompts/collection_delete.html', context)
+
+
+def user_collections(request, username):
+    """
+    Display a user's collections on their profile page (Collections tab).
+
+    URL: /@{username}/collections/
+
+    This view renders the Collections tab within the profile shell, showing
+    all of a user's public collections (or all collections if viewing own profile).
+
+    Args:
+        request: HTTP request object
+        username (str): Username of the profile to display
+
+    Query params:
+        sort: Sorting order ('recent', 'most', 'fewest') - default 'recent'
+        page: Page number for pagination
+
+    Context:
+        profile_user: The user whose collections are being viewed
+        profile: UserProfile instance
+        collections: Paginated collection queryset
+        page_obj: Paginator page object
+        total_collections: Total count of visible collections
+        is_own_profile: True if viewing user is the profile owner
+        sort_order: Current sort order
+        total_prompts: User's total published prompts count
+        total_likes: User's total likes received
+        total_views: User's total views received
+        all_time_rank: User's all-time leaderboard rank
+        thirty_day_rank: User's 30-day activity rank
+        trash_count: Count of items in trash (owner only)
+
+    Template:
+        prompts/collections_profile.html
+    """
+    from django.core.cache import cache
+    from prompts.services.leaderboard import LeaderboardService
+
+    # Get the user (404 if not found)
+    profile_user = get_object_or_404(User, username=username)
+
+    # Get user's profile
+    profile = profile_user.userprofile
+
+    # Check if viewing user is the profile owner
+    is_own_profile = request.user.is_authenticated and request.user == profile_user
+
+    # Get sort order from query params (default: 'recent')
+    sort_order = request.GET.get('sort', 'recent')
+
+    # Base queryset: Get collections with item counts
+    collections = Collection.objects.filter(
+        user=profile_user,
+        is_deleted=False
+    ).annotate(
+        items_count=Count('items')
+    )
+
+    # Visibility: Owner sees all, visitors see only public
+    if not is_own_profile:
+        collections = collections.filter(is_private=False)
+
+    # Apply sorting
+    if sort_order == 'most':
+        # Most items first
+        collections = collections.order_by('-items_count', '-updated_at')
+    elif sort_order == 'fewest':
+        # Fewest items first
+        collections = collections.order_by('items_count', '-updated_at')
+    else:
+        # Recent (default): Most recently updated first
+        collections = collections.order_by('-updated_at')
+
+    # Calculate profile stats (same as user_profile view)
+    total_prompts = Prompt.objects.filter(
+        author=profile_user,
+        status=1,
+        deleted_at__isnull=True
+    ).count()
+
+    total_likes = profile.get_total_likes()
+
+    # Cache key for profile stats
+    cache_key = f'pf_profile_stats_v1_{profile_user.id}'
+    cached_stats = cache.get(cache_key)
+
+    if cached_stats and isinstance(cached_stats, dict):
+        total_views = cached_stats.get('total_views', 0)
+        all_time_rank = cached_stats.get('all_time_rank')
+        thirty_day_rank = cached_stats.get('thirty_day_rank')
+    else:
+        # Compute stats
+        try:
+            total_views = PromptView.objects.filter(prompt__author=profile_user).count()
+        except Exception:
+            total_views = 0
+
+        try:
+            all_time_rank = LeaderboardService.get_user_rank(
+                user=profile_user,
+                metric='views',
+                period='all'
+            )
+        except Exception:
+            all_time_rank = None
+
+        try:
+            thirty_day_rank = LeaderboardService.get_user_rank(
+                user=profile_user,
+                metric='active',
+                period='month'
+            )
+        except Exception:
+            thirty_day_rank = None
+
+        # Cache for 5 minutes
+        cache.set(cache_key, {
+            'total_views': total_views,
+            'all_time_rank': all_time_rank,
+            'thirty_day_rank': thirty_day_rank,
+        }, 300)
+
+    # Trash count (owner only)
+    trash_count = 0
+    if is_own_profile:
+        trash_count = Prompt.all_objects.filter(
+            author=profile_user,
+            deleted_at__isnull=False
+        ).count()
+
+    # Attach thumbnails to each collection
+    for collection in collections:
+        thumbnails = []
+        recent_items = CollectionItem.objects.filter(
+            collection=collection
+        ).select_related('prompt').order_by('-added_at')[:3]
+
+        for item in recent_items:
+            if item.prompt:
+                thumb_url = item.prompt.get_thumbnail_url(width=300)
+                if thumb_url:
+                    thumbnails.append(thumb_url)
+
+        collection.thumbnails = thumbnails
+
+    # Pagination (12 collections per page)
+    paginator = Paginator(collections, 12)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'profile_user': profile_user,
+        'profile': profile,
+        'collections': page_obj,
+        'page_obj': page_obj,
+        'total_collections': paginator.count,
+        'is_own_profile': is_own_profile,
+        'sort_order': sort_order,
+        'active_tab': 'collections',
+        # Profile stats
+        'total_prompts': total_prompts,
+        'total_likes': total_likes,
+        'total_views': total_views,
+        'all_time_rank': all_time_rank,
+        'thirty_day_rank': thirty_day_rank,
+        'trash_count': trash_count,
+    }
+
+    return render(request, 'prompts/collections_profile.html', context)

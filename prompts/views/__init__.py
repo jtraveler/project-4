@@ -92,6 +92,7 @@ from .collection_views import (
     collection_detail,
     collection_edit,
     collection_delete,
+    user_collections,
 )
 
 # Import utility views
@@ -175,6 +176,7 @@ __all__ = [
     'collection_detail',
     'collection_edit',
     'collection_delete',
+    'user_collections',
 
     # Utility views
     'get_client_ip',

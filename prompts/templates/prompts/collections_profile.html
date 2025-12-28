@@ -633,7 +633,7 @@
      COLLECTIONS GRID (Reusing modal CSS classes)
      ============================================ -->
 {% if collections %}
-<div class="collection-grid" style="max-width: 1600px; margin: 0 auto; padding: 0 40px 40px;">
+<div class="collection-grid" id="collectionsGrid">
     {% for collection in collections %}
     <a href="{% url 'prompts:collection_detail' slug=collection.slug %}" class="collection-card-link">
         <div class="collection-card">
@@ -690,7 +690,19 @@
     {% endfor %}
 </div>
 
-{# Micro-Spec #11.6 Bug #3: Pagination removed - Load More can be added in future if needed #}
+<!-- Micro-Spec #11.8: Load More Button -->
+{% if page_obj.has_next %}
+<div class="load-more-container" style="width: 100%; max-width: 1600px; margin: 0 auto; padding: 20px 40px 40px; text-align: center;">
+    <button type="button"
+            class="btn-outline-standard action-icon-btn"
+            id="loadMoreCollectionsBtn"
+            data-next-page="{{ page_obj.next_page_number }}"
+            data-username="{{ profile_user.username }}"
+            data-sort="{{ sort }}">
+        <span>Load More Collections</span>
+    </button>
+</div>
+{% endif %}
 
 {% else %}
 <!-- Empty State -->
@@ -761,6 +773,75 @@
             }
         });
     });
+
+    // Micro-Spec #11.8: Load More Collections functionality
+    const loadMoreBtn = document.getElementById('loadMoreCollectionsBtn');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function() {
+            const btn = this;
+            const nextPage = btn.dataset.nextPage;
+            const username = btn.dataset.username;
+            const sort = btn.dataset.sort;
+
+            // Disable button and show loading state
+            btn.disabled = true;
+            const originalText = btn.querySelector('span').textContent;
+            btn.querySelector('span').textContent = 'Loading...';
+
+            // Fetch next page
+            const url = `/users/${username}/collections/?page=${nextPage}&sort=${sort}`;
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                // Parse the HTML response
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Get new collection cards from the response
+                const newCards = doc.querySelectorAll('.collection-grid .collection-card-link');
+                const grid = document.getElementById('collectionsGrid');
+
+                // Safety check for grid element
+                if (!grid) {
+                    console.error('Collection grid not found');
+                    btn.disabled = false;
+                    btn.querySelector('span').textContent = originalText;
+                    return;
+                }
+
+                // Append new cards to the grid
+                newCards.forEach(card => {
+                    grid.appendChild(card.cloneNode(true));
+                });
+
+                // Check if there's a next page in the response
+                const newLoadMoreBtn = doc.getElementById('loadMoreCollectionsBtn');
+                if (newLoadMoreBtn) {
+                    // Update button with new page number
+                    btn.dataset.nextPage = newLoadMoreBtn.dataset.nextPage;
+                    btn.disabled = false;
+                    btn.querySelector('span').textContent = originalText;
+                } else {
+                    // No more pages - remove the button container
+                    btn.parentElement.remove();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading more collections:', error);
+                btn.disabled = false;
+                btn.querySelector('span').textContent = originalText;
+            });
+        });
+    }
 
     // Micro-Spec #11.5 Fix #4: Listen for new collection creation and insert card
     document.addEventListener('collection:created', function(e) {

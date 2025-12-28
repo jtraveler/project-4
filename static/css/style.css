@@ -3027,21 +3027,59 @@ footer {
 }
 
 /* Collection grid - 4 columns on desktop, 3 tablet, 2 mobile */
+/* Micro-Spec #11.8: Container styles moved from inline to CSS */
 .collection-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1rem;
+    align-items: start; /* Prevent cards from stretching to match tallest sibling */
+    /* Container layout (moved from inline styles) */
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 40px 40px;
 }
 
 @media (max-width: 1199px) {
     .collection-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 680px) {
     .collection-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Micro-Spec #11.6: Animation for newly created collection cards */
+@keyframes collection-card-appear {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Micro-Spec #11.7: Jiggle animation for attention */
+@keyframes collection-card-jiggle {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+.collection-card-new {
+    animation: collection-card-appear 0.3s ease-out, collection-card-jiggle 0.4s ease-out 0.35s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .collection-card-new {
+        animation: none;
     }
 }
 
@@ -3066,8 +3104,9 @@ footer {
     cursor: pointer;
     text-align: left;
     font: inherit;
-    /* Layout styles */
-    aspect-ratio: 1;
+    /* Layout styles - Micro-Spec #11.4: Consistent square aspect ratio for all cards */
+    width: 100%;
+    aspect-ratio: 1 / 1;
     background-color: var(--gray-100);
     display: flex;
     align-items: center;
@@ -3144,8 +3183,10 @@ footer {
     display: flex;
     flex-direction: column;
     gap: var(--collection-thumb-gap);
-    height: 100%;
     grid-row: span 2;  /* Span both rows like thumb-tall */
+    /* Micro-Spec #11.5 Fix #1: Remove height: 100% - let grid handle sizing */
+    min-height: 0;     /* Allow shrinking within grid cell */
+    overflow: hidden;  /* Prevent content breaking out of aspect-ratio container */
 }
 
 .thumb-stack img {
@@ -3450,6 +3491,14 @@ footer {
     color: var(--gray-900);
 }
 
+/* Create-only mode: Hide back buttons when opened from collections profile page
+   The createOnly mode opens directly to create panel with no way to go back
+   NOTE: .create-only-mode is added to .collection-modal-backdrop (the modal variable in JS) */
+.collection-modal-backdrop.create-only-mode .collection-create-back,
+.collection-modal-backdrop.create-only-mode .btn-collection-back {
+    display: none !important;
+}
+
 .collection-create-title {
     font-size: 1rem;
     font-weight: 600;
@@ -3749,6 +3798,6 @@ footer {
 /* Very small screens (below 370px) */
 @media (max-width: 369px) {
     .collection-grid {
-        grid-template-columns: 1fr;  /* Single column */
+        grid-template-columns: minmax(0, 1fr);  /* Single column */
     }
 }

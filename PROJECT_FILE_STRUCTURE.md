@@ -512,6 +512,55 @@ CSS custom properties for the Collections feature, defined in `static/css/style.
 | `--collection-label-color` | `#6c757d` | Form label color |
 | `--collection-hint-color` | `#6c757d` | Helper text color |
 
+### Validation State Variables (Session 28)
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `--collection-error-color` | `#dc3545` | Error state border/text (blocking) |
+| `--collection-warning-color` | `#ffc107` | Warning state border (confirmable) |
+| `--collection-warning-bg` | `#fff3cd` | Warning background tint |
+| `--collection-success-color` | `#28a745` | Success state (auto-clear) |
+
+### Animation Variables (Session 28)
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `--collection-card-animation-duration` | `150ms` | Card fade-in duration |
+| `--collection-card-animation-delay` | `50ms` | Staggered delay per card |
+| `--collection-input-shake-duration` | `400ms` | Input shake animation duration |
+| `--collection-thumbnail-size` | `120px` | Thumbnail container height |
+
+### Keyframe Animations
+
+```css
+/* Card Entrance Animation */
+@keyframes collectionCardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Input Validation Shake */
+@keyframes inputShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
+}
+```
+
+**Usage Pattern (Staggered Cards):**
+```css
+.collection-card {
+    animation: collectionCardFadeIn var(--collection-card-animation-duration) ease-out forwards;
+    animation-delay: calc(var(--card-index, 0) * var(--collection-card-animation-delay));
+}
+```
+
 ---
 
 ## Collections API Endpoints (Phase K)

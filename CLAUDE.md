@@ -8303,9 +8303,115 @@ Session 27 focused on fixing critical modal bugs and updating project documentat
 - `CLAUDE.md` - Session 27 entry
 
 **Next Steps:**
-- Wire remaining collection toggle functionality (Micro-Spec #9)
 - Collections list page (Micro-Spec #13)
 - Profile tab integration (Micro-Spec #15)
+
+---
+
+### December 2025 - Session 28 (Dec 27-28, 2025)
+
+**Phase K Collections: Complete Modal Functionality & Validation System**
+
+Session 28 completed the Collections modal functionality with 11 micro-specs across 13+ commits. This session established key UI patterns that serve as reference implementations for future features.
+
+**Micro-Specs Completed (11 total):**
+
+| Micro-Spec | Description | Key Files |
+|------------|-------------|-----------|
+| #9.1 | API integration for collections list | `collections.js` |
+| #9.2 | Toggle collection (add/remove prompt) | `collections.js`, `collection_views.py` |
+| #9.3 | Create collection form submission | `collections.js`, `_collection_modal.html` |
+| #9.4 | Real-time name validation with Levenshtein distance | `collections.js` |
+| #9.5 | Validation warnings vs errors (confirmable states) | `collections.js`, `style.css` |
+| #9.6 | Staggered card animations (50ms delay) | `style.css` |
+| #9.7 | Thumbnail grid layouts (0/1/2/3+ items) | `_collection_modal.html`, `style.css` |
+| #9.8 | Card structure refinement | `_collection_modal.html` |
+| #9.9 | Success state handling (auto-refresh) | `collections.js` |
+| #9.10 | Default visibility: Public (was Private) | `_collection_modal.html` |
+| #9.11 | Optimistic item count updates | `collections.js` |
+
+**CSS Variables Established (8 new):**
+- `--collection-error-color: #dc3545` - Error state red
+- `--collection-warning-color: #ffc107` - Warning state amber
+- `--collection-warning-bg: #fff3cd` - Warning background
+- `--collection-success-color: #28a745` - Success state green
+- `--collection-card-animation-duration: 150ms` - Card fade-in duration
+- `--collection-card-animation-delay: 50ms` - Staggered delay per card
+- `--collection-input-shake-duration: 400ms` - Input shake animation
+- `--collection-thumbnail-size: 120px` - Thumbnail container height
+
+**Keyframe Animations (2 new):**
+1. `collectionCardFadeIn` - Opacity 0→1, translateY 10px→0 for card entrance
+2. `inputShake` - Horizontal shake pattern (0%, -10px, 10px, -10px, 10px, 0%) for validation errors
+
+**JavaScript Architecture (20 functions in CollectionsModal):**
+
+| Category | Functions |
+|----------|-----------|
+| Modal Control | `open()`, `close()`, `isOpen()` |
+| Data Loading | `loadCollections()`, `renderCollections()`, `updateThumbnailGrid()` |
+| Card Rendering | `renderCollectionCard()`, `renderCreateCard()` |
+| Toggle Actions | `toggleCollection()`, `addToCollection()`, `removeFromCollection()` |
+| Create Form | `showCreateForm()`, `hideCreateForm()`, `createCollection()` |
+| Validation | `validateCollectionName()`, `checkSimilarNames()`, `levenshteinDistance()` |
+| State Management | `updateOptimisticCount()`, `revertOptimisticCount()` |
+| Utilities | `showError()`, `init()` |
+
+**UI Patterns Established (Reference Implementation):**
+
+1. **Validation States Pattern:**
+   - Error (blocking): Red border, error message, form disabled
+   - Warning (confirmable): Amber border, warning message, user can proceed
+   - Success: Green border, checkmark icon, auto-clear
+
+2. **Staggered Animation Pattern:**
+   - Each card animates with `animation-delay: calc(index * 50ms)`
+   - Duration: 150ms ease-out
+   - Transform: translateY(10px) → translateY(0)
+
+3. **Thumbnail Grid Pattern:**
+   - 0 items: Placeholder icon
+   - 1 item: Full-width thumbnail
+   - 2 items: 50/50 horizontal split
+   - 3+ items: Left column (60%), right column stacked (40%)
+
+4. **Optimistic UI Pattern:**
+   - Update count immediately on click
+   - Revert on API failure
+   - Visual feedback (count flashes)
+
+**Accessibility Improvements:**
+- ARIA live regions for validation messages
+- Focus management on modal open/close
+- Keyboard navigation (Escape to close)
+- Button reset styles for icon-only buttons
+- Dynamic `aria-expanded` on visibility toggle
+
+**Agent Validation:**
+- @frontend-developer: 9.5/10 - Clean JavaScript architecture
+- @ui-ux-designer: 9.0/10 - Consistent interaction patterns
+- **Average: 9.25/10** (exceeds 8+ threshold)
+
+**Collections Progress:** ~75% complete (was 60%)
+
+**Commits (13+):**
+- Multiple micro-spec commits throughout session
+- Final: `abcaf25` feat(phase-k): Default to public visibility
+- Final: `c48d98d` perf(phase-k): Add optimistic item count updates
+
+**Files Modified:**
+- `static/js/collections.js` - Complete modal JavaScript (~950 lines)
+- `static/css/style.css` - CSS variables + animations (~100 lines added)
+- `prompts/templates/prompts/partials/_collection_modal.html` - Full UI structure
+- `prompts/views/collection_views.py` - API endpoints refinements
+- `prompts/urls.py` - URL patterns
+
+**Future Enhancements (Phase K.2+):**
+- Profanity filter integration for collection names
+- "Your Likes" virtual collection
+- "Your Downloads" virtual collection with download tracking
+- Premium limits enforcement (10 collections free, unlimited paid)
+- Collection sharing and collaboration
 
 ---
 

@@ -230,56 +230,67 @@
     align-items: center;
 }
 
-/* Pexels-style sort dropdown (reusing from profile) */
+/* Dropdown Styles - Copied from user_profile.html */
 .profile-sort-dropdown {
     position: relative;
+    display: inline-block;
+    min-width: fit-content;
 }
 
 .profile-sort-dropdown-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
     font-size: 15px;
     font-weight: 500;
-    color: #1f2937;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    color: #1a1a1a;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.15s ease;
-    white-space: nowrap;
+    transition: all 0.2s ease;
 }
 
 .profile-sort-dropdown-btn:hover {
-    background: #f3f4f6;
-    border-color: #d1d5db;
+    border-color: #666;
+}
+
+.profile-sort-dropdown-btn:focus {
+    outline: none;
+    border-color: #262626;
+    box-shadow: 0 0 0 2px rgba(38, 38, 38, 0.1);
 }
 
 .profile-sort-dropdown-chevron {
     transition: transform 0.2s ease;
 }
 
-.profile-sort-dropdown.show .profile-sort-dropdown-chevron {
+.profile-sort-dropdown.open .profile-sort-dropdown-chevron {
     transform: rotate(180deg);
 }
 
 .profile-sort-dropdown-menu {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 4px);
     right: 0;
-    margin-top: 8px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    min-width: 160px;
+    padding: 8px 0;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    min-width: 180px;
-    z-index: 100;
-    display: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+    z-index: 1000;
 }
 
-.profile-sort-dropdown.show .profile-sort-dropdown-menu {
-    display: block;
+.profile-sort-dropdown.open .profile-sort-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
 }
 
 .profile-sort-dropdown-item {
@@ -288,66 +299,44 @@
     gap: 8px;
     padding: 10px 16px;
     font-size: 14px;
-    color: #374151;
+    color: #1a1a1a;
     text-decoration: none;
-    transition: background 0.15s ease;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
 }
 
 .profile-sort-dropdown-item:hover {
-    background: #f9fafb;
+    background-color: #f5f5f5;
+    color: #1a1a1a;
+    text-decoration: none;
 }
 
 .profile-sort-dropdown-item.active {
     font-weight: 600;
-    color: #111827;
 }
 
 .profile-sort-check-icon {
     flex-shrink: 0;
 }
 
+@media (max-width: 768px) {
+    .profile-sort-dropdown-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .profile-sort-dropdown-menu {
+        min-width: 140px;
+    }
+}
+
 /* ============================================
    COLLECTIONS PAGE SPECIFIC STYLES
    ============================================ */
 
-/* Header row for collections page */
-.collections-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 0 24px;
-    gap: 16px;
-}
-
-/* Create collection button (only for owners) */
-.btn-create-collection {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #ffffff;
-    background: #16ba31;
-    border: none;
-    border-radius: 40px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-    text-decoration: none;
-}
-
-.btn-create-collection:hover {
-    background: #14a82c;
-    color: #ffffff;
-    text-decoration: none;
-}
-
-.btn-create-collection .icon {
-    width: 18px;
-    height: 18px;
-    stroke: currentColor;
-    fill: none;
-}
+/* NOTE: .collections-header-row and .btn-create-collection are DEPRECATED
+   The Create button now uses .btn-outline-standard from global styles
+   and is positioned inside .profile-filters-container */
 
 /* Empty state */
 .collections-empty-state {
@@ -385,20 +374,11 @@
         width: 100%;
     }
 
-    .collections-header-row {
-        flex-direction: column;
-        gap: 16px;
-        align-items: stretch;
-    }
-
-    .btn-create-collection {
-        width: 100%;
-        justify-content: center;
-    }
-
     .profile-filters-container {
         width: 100%;
         justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 12px;
     }
 }
 
@@ -458,9 +438,38 @@
         <!-- Username -->
         <h1 class="profile-username">{{ profile_user.username }}</h1>
 
-        <!-- Bio -->
-        {% if profile_user.userprofile.bio %}
-        <p class="profile-bio">{{ profile_user.userprofile.bio }}</p>
+        <!-- Member Since -->
+        <p class="profile-meta text-muted" style="font-size: 15px; margin: 8px 0 16px; color: #6b7280;">
+            <svg class="icon icon-sm" aria-hidden="true" style="margin-right: 6px; vertical-align: -0.125em;"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"/></svg>
+            Member since {{ profile.created_at|date:"F Y" }}
+        </p>
+
+        <!-- Bio (if exists) - BEFORE Social Links to match Gallery -->
+        {% if profile.bio %}
+            <p class="profile-bio">{{ profile.bio }}</p>
+        {% endif %}
+
+        <!-- Social Links (if any exist) - AFTER Bio to match Gallery -->
+        {% if profile.twitter_url or profile.instagram_url or profile.website_url %}
+            <div class="profile-social-links" style="display: flex; gap: 12px; justify-content: center; margin-top: 16px;">
+                {% if profile.twitter_url %}
+                    <a href="{{ profile.twitter_url }}" target="_blank" rel="noopener noreferrer" class="social-link" style="color: #1DA1F2; font-size: 24px;" title="Twitter">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                {% endif %}
+
+                {% if profile.instagram_url %}
+                    <a href="{{ profile.instagram_url }}" target="_blank" rel="noopener noreferrer" class="social-link" style="color: #E4405F; font-size: 24px;" title="Instagram">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                {% endif %}
+
+                {% if profile.website_url %}
+                    <a href="{{ profile.website_url }}" target="_blank" rel="noopener noreferrer" class="social-link" style="color: #6b7280; font-size: 24px;" title="Website">
+                        <i class="fas fa-globe"></i>
+                    </a>
+                {% endif %}
+            </div>
         {% endif %}
 
         <!-- Edit Profile Button (Owner Only) -->
@@ -547,9 +556,21 @@
             </div>
         </div>
 
-        <!-- Right side: Sort filter (only show if there are collections) -->
-        {% if collections %}
+        <!-- Right side: Create button + Sort filter -->
+        {% if collections or is_own_profile %}
         <div class="profile-filters-container">
+            <!-- Create New Collection button (owner only, LEFT of dropdown) -->
+            {% if is_own_profile %}
+            <button type="button" class="btn-outline-standard action-icon-btn" data-action="show-create-form" id="openCreateCollectionBtn">
+                <svg class="icon" aria-hidden="true">
+                    <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
+                </svg>
+                <span>Create New</span>
+            </button>
+            {% endif %}
+
+            <!-- Sort dropdown (only show if there are collections) -->
+            {% if collections %}
             <div class="profile-sort-dropdown" id="sortDropdown">
                 <button class="profile-sort-dropdown-btn" id="sortDropdownBtn" aria-haspopup="true" aria-expanded="false">
                     {% if sort == 'most' %}
@@ -602,31 +623,17 @@
                     </a>
                 </div>
             </div>
+            {% endif %}
         </div>
         {% endif %}
     </div>
 </div>
 
 <!-- ============================================
-     COLLECTIONS HEADER ROW (Create button for owners)
-     ============================================ -->
-{% if is_own_profile %}
-<div class="collections-header-row">
-    <div></div><!-- Spacer -->
-    <button type="button" class="btn-create-collection" data-action="show-create-form" id="openCreateCollectionBtn">
-        <svg class="icon" aria-hidden="true">
-            <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
-        </svg>
-        Create New Collection
-    </button>
-</div>
-{% endif %}
-
-<!-- ============================================
      COLLECTIONS GRID (Reusing modal CSS classes)
      ============================================ -->
 {% if collections %}
-<div class="collection-grid" style="padding: 0 0 40px;">
+<div class="collection-grid" style="max-width: 1600px; margin: 0 auto; padding: 0 40px 40px;">
     {% for collection in collections %}
     <a href="{% url 'prompts:collection_detail' slug=collection.slug %}" class="collection-card-link">
         <div class="collection-card">
@@ -683,32 +690,7 @@
     {% endfor %}
 </div>
 
-{# Pagination #}
-{% if page_obj.has_other_pages %}
-<nav aria-label="Collections pagination" class="mt-4 mb-4">
-    <ul class="pagination justify-content-center">
-        {% if page_obj.has_previous %}
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if sort %}&sort={{ sort }}{% endif %}">Previous</a>
-        </li>
-        {% endif %}
-
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-            <li class="page-item"><a class="page-link" href="?page={{ num }}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a></li>
-            {% endif %}
-        {% endfor %}
-
-        {% if page_obj.has_next %}
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if sort %}&sort={{ sort }}{% endif %}">Next</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+{# Micro-Spec #11.6 Bug #3: Pagination removed - Load More can be added in future if needed #}
 
 {% else %}
 <!-- Empty State -->
@@ -719,11 +701,11 @@
     <h3>{% if is_own_profile %}You haven't created any collections yet{% else %}{{ profile_user.first_name|default:profile_user.username }} has no collections yet{% endif %}</h3>
     <p>{% if is_own_profile %}Create a collection to organize your favorite prompts{% else %}Check back later{% endif %}</p>
     {% if is_own_profile %}
-    <button type="button" class="btn-create-collection mt-4" data-action="show-create-form" id="openCreateCollectionEmptyBtn">
+    <button type="button" class="btn-outline-standard action-icon-btn mt-4" data-action="show-create-form" id="openCreateCollectionEmptyBtn">
         <svg class="icon" aria-hidden="true">
             <use href="{% static 'icons/sprite.svg' %}#icon-circle-plus"></use>
         </svg>
-        Create Your First Collection
+        <span>Create Your First Collection</span>
     </button>
     {% endif %}
 </div>
@@ -741,42 +723,98 @@
 (function() {
     'use strict';
 
-    // Sort dropdown toggle
+    // Sort dropdown toggle - uses 'open' class to match CSS (same as user_profile.html)
     const sortDropdown = document.getElementById('sortDropdown');
     const sortBtn = document.getElementById('sortDropdownBtn');
 
     if (sortBtn && sortDropdown) {
         sortBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            sortDropdown.classList.toggle('show');
-            this.setAttribute('aria-expanded', sortDropdown.classList.contains('show'));
+            sortDropdown.classList.toggle('open');
+            this.setAttribute('aria-expanded', sortDropdown.classList.contains('open'));
         });
 
         // Close on outside click
         document.addEventListener('click', function(e) {
             if (!sortDropdown.contains(e.target)) {
-                sortDropdown.classList.remove('show');
+                sortDropdown.classList.remove('open');
+                sortBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                sortDropdown.classList.remove('open');
                 sortBtn.setAttribute('aria-expanded', 'false');
             }
         });
     }
 
-    // Create collection buttons - open the modal
+    // Create collection buttons - open the modal in createOnly mode
+    // This opens directly to create panel with back buttons hidden
     const createBtns = document.querySelectorAll('[data-action="show-create-form"]');
     createBtns.forEach(function(btn) {
         btn.addEventListener('click', function() {
-            // Open the collections modal and show create form
             if (typeof CollectionsModal !== 'undefined') {
-                CollectionsModal.open();
-                // Trigger the create form view
-                setTimeout(function() {
-                    const showCreateBtn = document.querySelector('.collection-card-thumbnail-create');
-                    if (showCreateBtn) {
-                        showCreateBtn.click();
-                    }
-                }, 100);
+                CollectionsModal.open({ createOnly: true });
             }
         });
+    });
+
+    // Micro-Spec #11.5 Fix #4: Listen for new collection creation and insert card
+    document.addEventListener('collection:created', function(e) {
+        const collection = e.detail.collection;
+        if (!collection) return;
+
+        // Get sprite URL from a known icon on page, or construct it
+        const existingIcon = document.querySelector('svg.icon use');
+        const spriteBase = existingIcon ? existingIcon.getAttribute('href').split('#')[0] : "{% static 'icons/sprite.svg' %}";
+
+        // Create the card HTML (with animation class for Bug #2 fix)
+        const visibilityIcon = collection.is_private ? 'icon-eye-off' : 'icon-eye';
+        const cardHTML = `
+            <a href="${collection.url}" class="collection-card-link">
+                <div class="collection-card collection-card-new">
+                    <div class="collection-card-thumbnail" style="cursor: pointer;">
+                        <svg class="icon" aria-hidden="true">
+                            <use href="${spriteBase}#icon-image"></use>
+                        </svg>
+                    </div>
+                    <span class="collection-card-title">${collection.title.length > 35 ? collection.title.substring(0, 32) + '...' : collection.title}</span>
+                    <div class="collection-card-meta">
+                        <span class="collection-card-count">0 items</span>
+                        <span class="collection-card-visibility-icon">
+                            <svg class="icon" aria-hidden="true">
+                                <use href="${spriteBase}#${visibilityIcon}"></use>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+            </a>
+        `;
+
+        // Find or create the grid
+        let grid = document.querySelector('.collection-grid');
+
+        if (!grid) {
+            // No grid exists (was showing empty state) - need to create one
+            const emptyState = document.querySelector('.collection-empty-state');
+            if (emptyState) {
+                // Create grid container
+                grid = document.createElement('div');
+                grid.className = 'collection-grid';
+                grid.style.padding = '0 0 40px';
+                emptyState.parentNode.insertBefore(grid, emptyState);
+                // Remove empty state
+                emptyState.remove();
+            }
+        }
+
+        if (grid) {
+            // Insert new card at the beginning
+            grid.insertAdjacentHTML('afterbegin', cardHTML);
+        }
     });
 })();
 </script>

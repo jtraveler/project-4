@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 25, 2025
-**Project Status:** Pre-Launch Development - Phase K (Collections Feature) IN PROGRESS, All Core Phases Complete
+**Last Updated:** December 28, 2025
+**Project Status:** Pre-Launch Development - Phase K (Collections Feature) ~80% Complete, All Core Phases Complete
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -6136,14 +6136,24 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
 - **Debug Fix:** Script tag placement issue resolved ✅
 - **CSS Foundation:** 284 lines of modal CSS added ✅
 
+**Modal Polish (Session 28):**
+- **Micro-Spec #9.1-#9.11:** Complete modal functionality ✅
+  - API integration, toggle actions, create form
+  - Real-time validation with Levenshtein distance
+  - Staggered animations, thumbnail grids
+  - Optimistic UI updates, success states
+
+**Profile Tab (Session 29):**
+- **Micro-Spec #11:** Collections profile tab page ✅
+  - Created `collections_profile.html` template (812 lines)
+  - Added `user_collections` view with sorting
+  - Route: `/users/<username>/collections/`
+  - Collections tab link in user profile nav
+
 #### Remaining Micro-Specs ❌
-- **Micro-Spec #9:** Collections API - List endpoint
-- **Micro-Spec #10:** Collections API - Create endpoint
-- **Micro-Spec #11:** Collections API - Toggle (add/remove prompt)
-- **Micro-Spec #12:** Wire JavaScript to API
-- **Micro-Spec #13:** Collections list page
-- **Micro-Spec #14:** Collection detail page
-- **Micro-Spec #15:** Profile tab integration
+- **Collection Detail Page:** Individual collection view
+- **Edit Collection:** Modal for editing title/visibility
+- **Delete Collection:** Soft delete to trash
 
 ---
 
@@ -6164,7 +6174,7 @@ Collections allow users to save prompts into organized folders they create, incr
 
 ### Phase Breakdown
 
-#### Phase K.1: MVP Collections (Priority)
+#### Phase K.1: MVP Collections (Priority) - ~80% Complete
 - ✅ Save button on prompt cards and detail page
 - ✅ Collections CSS scaffolding
 - ✅ Collection and CollectionItem models (with deleted_by, indexes)
@@ -6173,10 +6183,12 @@ Collections allow users to save prompts into organized folders they create, incr
 - ✅ Collections modal HTML template
 - ✅ Modal JavaScript (open/close functionality)
 - ✅ Modal CSS (284 lines - backdrop, grid, cards, states)
-- 🚧 Collections API endpoints
-- ❌ Wire JavaScript to API
-- ❌ Collections profile tab
-- ❌ Individual collection page
+- ✅ Collections API endpoints (list, create, add, remove)
+- ✅ JavaScript wired to API (complete modal functionality)
+- ✅ Collections profile tab (`/users/<username>/collections/`)
+- ❌ Individual collection detail page
+- ❌ Edit collection modal
+- ❌ Delete collection (soft delete)
 
 #### Phase K.2: Enhanced Features
 - Download tracking + "Your Downloads" virtual collection
@@ -8412,6 +8424,60 @@ Session 28 completed the Collections modal functionality with 11 micro-specs acr
 - "Your Downloads" virtual collection with download tracking
 - Premium limits enforcement (10 collections free, unlimited paid)
 - Collection sharing and collaboration
+
+---
+
+### December 2025 - Session 29 (Dec 28, 2025)
+
+**Phase K Collections: Profile Tab Page Implementation**
+
+Session 29 implemented the Collections Profile Tab Page (Micro-Spec #11), completing the core collections feature UI.
+
+**Micro-Spec #11 Completed:**
+- Created `collections_profile.html` template (812 lines)
+- Added `user_collections` view with sorting options (recent/most/fewest items)
+- New route: `/users/<username>/collections/`
+- Collections tab link added to user profile navigation
+- Profile stats integration (prompts, likes, views, ranks)
+- Pagination support (12 collections per page)
+
+**Key Features:**
+- Responsive grid layout matching gallery page design
+- Sorting dropdown: Recent / Most items / Fewest items
+- Empty state handling for users with no collections
+- Visibility icons (public/private) on collection cards
+- Thumbnail preview grids (0/1/2/3+ items layouts)
+- Follow button integration
+- Cloudinary avatar rendering fixed
+
+**Database Fixes:**
+- Fixed Collection ID 1 empty slug issue
+- Generated slug: `test-1-o9bZI` using `slugify()` + `secrets.token_urlsafe()`
+
+**Files Created:**
+- `prompts/templates/prompts/collections_profile.html`
+
+**Files Modified:**
+- `prompts/views/collection_views.py` (+174 lines)
+- `prompts/views/__init__.py` (added user_collections export)
+- `prompts/urls.py` (added user_collections route)
+- `prompts/templates/prompts/user_profile.html` (Collections tab link)
+
+**Technical Implementation:**
+- View uses LeaderboardService for rank calculations
+- Profile stats cached for 5 minutes
+- Thumbnails attached via CollectionItem query with select_related
+- Virtual environment usage: `.venv/bin/python manage.py shell`
+
+**Collections Progress:** ~80% complete (was ~75%)
+
+**Commits:**
+- `8ea3ceb` feat(phase-k): Add Collections profile tab page (Micro-Spec #11)
+
+**Next Steps:**
+- Individual collection detail page
+- Edit collection functionality
+- Delete collection functionality (soft delete)
 
 ---
 

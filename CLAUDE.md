@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 28, 2025
-**Project Status:** Pre-Launch Development - Phase K (Collections Feature) ~80% Complete, All Core Phases Complete
+**Last Updated:** December 29, 2025
+**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) PLANNING, Phase K ON HOLD (95%)
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -23,10 +23,12 @@
 13. [Trash Bin & Orphaned File Management](#phase-d5-trash-bin--orphaned-file-management-)
 14. [Phase I: URL Migration](#phase-i-url-migration-to-prompts-complete)
 15. [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-complete) ✅
-16. [Phase K: Collections Feature](#-phase-k-collections-feature-current-priority) **← CURRENT**
-17. [Project Health Checkup Protocol](#-project-health-checkup-protocol)
-18. [Known Technical Debt](#-known-technical-debt)
-19. [Unanswered Questions](#unanswered-questions)
+16. [Phase K: Collections Feature](#-phase-k-collections-feature) ⏸️ ON HOLD
+17. [Phase L: Media Infrastructure Migration](#-phase-l-media-infrastructure-migration-current-priority) **← CURRENT**
+18. [Future Features Roadmap](#-future-features-roadmap)
+19. [Project Health Checkup Protocol](#-project-health-checkup-protocol)
+20. [Known Technical Debt](#-known-technical-debt)
+21. [Unanswered Questions](#unanswered-questions)
 
 ---
 
@@ -125,13 +127,18 @@
     - Agent Rating: 8.7/10 average (@ui-ux-designer 7.5-9.5, @frontend-developer 9.0)
     - Agent Rating (Session 22-23): @security-auditor 9.2/10, @django-pro 9.0/10
     - See: [Phase J: Prompt Detail Page Redesign](#-phase-j-prompt-detail-page-redesign-complete)
-  - 🚧 **Phase K:** Collections ("Saves") Feature ⭐ **IN PROGRESS** (~15% Complete, December 2025)
-    - ✅ Micro-Specs #1, #2, #2.5: Save buttons + CSS scaffolding
-    - ❌ Phase K.1: MVP Collections (models, modal, CRUD) - In Progress
+  - ⏸️ **Phase K:** Collections ("Saves") Feature ⭐ **ON HOLD** (95% Complete - Paused for Phase L)
+    - ✅ Micro-Specs #1-14: Save buttons, modal, API, profile tab, bug fixes complete
+    - ✅ Phase K.1: MVP Collections (95% Complete)
     - ❌ Phase K.2: Enhanced Features (download tracking, virtual collections)
     - ❌ Phase K.3: Premium Features (limits, upsells)
     - **Approach:** Micro-Spec methodology (adopted Session 24)
-    - See: [Phase K: Collections Feature](#-phase-k-collections-feature-current-priority)
+    - See: [Phase K: Collections Feature](#-phase-k-collections-feature)
+  - 📋 **Phase L:** Media Infrastructure Migration ⭐ **PLANNING** (January 2026)
+    - Cloudinary → Backblaze B2 + Cloudflare migration
+    - 11 sub-features for complete media stack overhaul
+    - ~70% cost reduction at scale
+    - See: [Phase L: Media Infrastructure](#-phase-l-media-infrastructure-migration-current-priority)
 - Transitioning from student project to mainstream monetization platform
 - Building content library for public launch
 
@@ -6011,6 +6018,8 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
 | Download button | Low | High-res download |
 | Favorite/bookmark | Medium | Save to collection |
 
+**📋 For comprehensive planning with timelines and priority tiers, see: [Future Features Roadmap](#-future-features-roadmap)**
+
 ---
 
 ### Technical Dependencies
@@ -6088,15 +6097,24 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
 
 ---
 
-## 🗂️ Phase K: Collections Feature (CURRENT PRIORITY)
+## 🗂️ Phase K: Collections Feature
 
-**Status:** 🚧 IN PROGRESS (~40% Complete)
+**Status:** ⏸️ ON HOLD (95% complete - paused for Phase L priority)
 **Started:** December 25, 2025
-**Last Updated:** December 26, 2025 (Session 25)
+**Paused:** December 29, 2025
+**Resume After:** Phase L completion
 **Priority:** HIGH - Competitive advantage feature
 **Estimated Effort:** 2-3 weeks
 **Competitive Advantage:** PromptHero (main competitor) does NOT have this feature!
 **Approach:** Micro-Spec Methodology (adopted Session 24)
+
+### Why Paused
+
+Phase L (Media Infrastructure Migration) has been prioritized due to:
+1. **Cost Savings:** Cloudinary costs will exceed budget at scale
+2. **Performance:** B2 + Cloudflare offers better global CDN performance
+3. **Foundation:** Media infrastructure affects all future features
+4. **Risk Mitigation:** Better to migrate before large content library exists
 
 ---
 
@@ -6150,6 +6168,16 @@ These phases were consolidated into the iterative Phase J.1 approach, which prov
   - Route: `/users/<username>/collections/`
   - Collections tab link in user profile nav
 
+**Profile Tab Polish (Session 29 continued):**
+- **Micro-Spec #11.1:** Investigation report for collections_profile.html issues ✅
+- **Micro-Spec #11.2:** Added Member since + social icons to header ✅
+- **Micro-Spec #11.3:** Fixed Create button styling (btn-outline-standard) ✅
+- **Micro-Spec #11.4:** Empty state messaging improvements ✅
+- **Micro-Spec #11.5:** Pagination backend integration ✅
+- **Micro-Spec #11.6:** Load More JavaScript fetch pattern ✅
+- **Micro-Spec #11.7:** Grid layout CSS fixes (minmax for proper sizing) ✅
+- **Micro-Spec #11.8:** Style.css consolidation + Load More button styling ✅
+
 #### Remaining Micro-Specs ❌
 - **Collection Detail Page:** Individual collection view
 - **Edit Collection:** Modal for editing title/visibility
@@ -6174,7 +6202,7 @@ Collections allow users to save prompts into organized folders they create, incr
 
 ### Phase Breakdown
 
-#### Phase K.1: MVP Collections (Priority) - ~80% Complete
+#### Phase K.1: MVP Collections (Priority) - ~85% Complete
 - ✅ Save button on prompt cards and detail page
 - ✅ Collections CSS scaffolding
 - ✅ Collection and CollectionItem models (with deleted_by, indexes)
@@ -6186,6 +6214,7 @@ Collections allow users to save prompts into organized folders they create, incr
 - ✅ Collections API endpoints (list, create, add, remove)
 - ✅ JavaScript wired to API (complete modal functionality)
 - ✅ Collections profile tab (`/users/<username>/collections/`)
+- ✅ Profile tab polish (header, sorting, pagination, Load More)
 - ❌ Individual collection detail page
 - ❌ Edit collection modal
 - ❌ Delete collection (soft delete)
@@ -6416,6 +6445,626 @@ Reasons:
 - AI-generated collection descriptions (if SEO becomes priority)
 - Collection covers (custom thumbnails)
 - Collection categories/tags
+
+See also: [Future Features Roadmap](#-future-features-roadmap) for comprehensive planning.
+
+---
+
+## 🚀 Phase L: Media Infrastructure Migration (CURRENT PRIORITY)
+
+**Status:** 📋 PLANNING
+**Target Start:** January 2026
+**Priority:** CRITICAL - Cost and performance foundation
+**Estimated Effort:** 3-4 weeks
+**Cost Impact:** ~70% reduction in media hosting costs at scale
+
+---
+
+### Overview
+
+Migrate from Cloudinary to Backblaze B2 + Cloudflare for media storage and delivery. This migration addresses cost scalability concerns and provides better CDN performance globally.
+
+---
+
+### Why This Migration
+
+| Factor | Cloudinary | B2 + Cloudflare | Winner |
+|--------|------------|-----------------|--------|
+| Storage Cost (100GB) | $45/mo | $0.50/mo | B2 |
+| Bandwidth Cost (500GB) | $45/mo | $0 (Cloudflare) | B2 |
+| Image Transforms | Built-in | Cloudflare Images ($5/mo) | Tie |
+| Video Transcoding | Built-in | Custom (FFmpeg) | Cloudinary |
+| Global CDN | Yes | Yes (better) | Cloudflare |
+| Setup Complexity | Low | Medium | Cloudinary |
+
+**Projected Savings at Scale:**
+- 1,000 users: $50/mo → $15/mo (70% savings)
+- 10,000 users: $500/mo → $100/mo (80% savings)
+- 50,000 users: $2,500/mo → $300/mo (88% savings)
+
+---
+
+### Phase L Features (11 Total)
+
+#### L.1: B2 Bucket Setup
+- Create Backblaze B2 account and bucket
+- Configure bucket settings (public/private, lifecycle)
+- Set up application keys with minimal permissions
+- Estimated: 2 hours
+
+#### L.2: Cloudflare Integration
+- Add B2 bucket as Cloudflare origin
+- Configure caching rules (Cache Everything, edge TTL)
+- Set up custom domain (media.promptfinder.net)
+- Estimated: 3 hours
+
+#### L.3: Django Storage Backend
+- Install django-storages with B2 backend
+- Create custom storage class for PromptFinder
+- Configure settings for B2 credentials
+- Estimated: 4 hours
+
+#### L.4: Upload Flow Migration
+- Replace Cloudinary upload widget with direct B2 upload
+- Implement presigned URLs for secure uploads
+- Add upload progress tracking
+- Estimated: 8 hours
+
+#### L.5: Image Transformation Service
+- Set up Cloudflare Images or custom image proxy
+- Implement thumbnail generation (300x300, 600x600, 1200x1200)
+- Add WebP/AVIF format conversion
+- Estimated: 6 hours
+
+#### L.6: Video Handling
+- Implement FFmpeg-based video processing
+- Add HLS/DASH streaming support
+- Generate video thumbnails
+- Estimated: 12 hours
+
+#### L.7: Migration Script
+- Create script to migrate existing Cloudinary assets
+- Implement batch processing with progress tracking
+- Add rollback capability
+- Estimated: 8 hours
+
+#### L.8: CDN Optimization
+- Configure Cloudflare cache rules per content type
+- Set up Polish (image optimization)
+- Enable Argo (smart routing) if budget allows
+- Estimated: 4 hours
+
+#### L.9: Monitoring & Analytics
+- Set up Cloudflare Analytics dashboard
+- Implement bandwidth tracking
+- Add cache hit ratio monitoring
+- Estimated: 3 hours
+
+#### L.10: Fallback System
+- Keep Cloudinary as fallback for 30 days post-migration
+- Implement automatic failover if B2 unavailable
+- Create health check endpoints
+- Estimated: 4 hours
+
+#### L.11: Documentation & Cleanup
+- Update CLAUDE.md with new architecture
+- Remove Cloudinary dependencies after validation
+- Document troubleshooting procedures
+- Estimated: 2 hours
+
+---
+
+### Technical Architecture
+
+```
+User Upload → Django → Presigned URL → B2 Bucket
+                                          ↓
+User Request → Cloudflare CDN ← ← ← ← ← ← ┘
+                    ↓
+              Cloudflare Images (transforms)
+                    ↓
+              Cached Response → User
+```
+
+---
+
+### Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Migration data loss | Low | Critical | Dual-write during transition, backups |
+| Performance regression | Medium | High | A/B testing, gradual rollout |
+| Video transcoding issues | Medium | Medium | Keep Cloudinary for video initially |
+| Cloudflare outage | Very Low | High | B2 direct access fallback |
+
+---
+
+### Success Criteria
+
+- [ ] All existing media accessible via new infrastructure
+- [ ] Upload latency < 2 seconds (p95)
+- [ ] Image load time < 500ms (cached)
+- [ ] Video streaming starts < 1 second
+- [ ] Zero data loss during migration
+- [ ] Cost reduction ≥ 60% at current scale
+
+---
+
+### Dependencies
+
+- Backblaze B2 account (free tier available)
+- Cloudflare account (free tier sufficient initially)
+- FFmpeg for video processing
+- django-storages library
+
+---
+
+## 🔮 Future Features Roadmap
+
+**Created:** December 29, 2025
+**Purpose:** Comprehensive planning document for post-Phase K features
+**Status:** Planning Phase - Prioritization Complete
+
+---
+
+### Overview
+
+This roadmap contains 17 planned features organized by priority tier, with detailed implementation specifications, revenue projections, and risk assessments. Features are categorized based on user value, technical complexity, and business impact.
+
+---
+
+### Priority Matrix
+
+| Priority | Features | Timeline | Focus |
+|----------|----------|----------|-------|
+| **Tier 1 (Critical)** | 4 features | Q1 2026 | Core user experience, monetization |
+| **Tier 2 (High)** | 6 features | Q2 2026 | Growth features, competitive parity |
+| **Tier 3 (Medium)** | 3 features | Q3 2026 | Polish, differentiation |
+| **Tier 4 (Low)** | 4 features | Q4 2026+ | Nice-to-have, experimental |
+
+---
+
+### Tier 1: Critical Priority (Q1 2026)
+
+#### 1. Premium Tier System
+
+**Description:** Implement paid subscription tiers with collection limits, private collections, and premium features.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 2-3 weeks |
+| **Dependencies** | Phase K Collections (complete) |
+| **Revenue Impact** | Primary monetization - $7/mo target |
+| **Technical Complexity** | Medium (Stripe integration exists) |
+
+**Features:**
+- Free tier: 10 collections, 2 private
+- Premium tier: Unlimited collections, unlimited private
+- Upgrade prompts when limits reached
+- Stripe subscription management
+
+**Success Metrics:**
+- 10% free-to-paid conversion rate
+- $1,000 MRR within 3 months
+
+---
+
+#### 2. Download Tracking + Virtual Collections
+
+**Description:** Track prompt downloads and create "Your Downloads" virtual collection.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 1 week |
+| **Dependencies** | Phase K Collections |
+| **Revenue Impact** | Premium feature, increases stickiness |
+| **Technical Complexity** | Low |
+
+**Features:**
+- Download model tracking user + prompt + timestamp
+- "Your Downloads" virtual collection (not stored as Collection)
+- Download history page
+- "Your Likes" virtual collection
+
+**Database Model:**
+```python
+class Download(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE)
+    downloaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'prompt']
+```
+
+---
+
+#### 3. Comment Pagination
+
+**Description:** Load more pattern for comments to improve page performance.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 2-3 days |
+| **Dependencies** | None |
+| **Revenue Impact** | Indirect (UX improvement) |
+| **Technical Complexity** | Low |
+
+**Implementation:**
+- Initial load: 10 comments
+- "Load more" button for next 10
+- AJAX endpoint for paginated comments
+- Comment count in header
+
+---
+
+#### 4. Social Sharing Buttons
+
+**Description:** Share prompts to Twitter, Pinterest, and copy link functionality.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 1-2 days |
+| **Dependencies** | None |
+| **Revenue Impact** | Viral growth potential |
+| **Technical Complexity** | Low |
+
+**Buttons:**
+- Twitter/X share (with prompt text)
+- Pinterest pin (with image)
+- Copy link
+- Native share API (mobile)
+
+---
+
+### Tier 2: High Priority (Q2 2026)
+
+#### 5. Related Prompts Section
+
+**Description:** "More like this" section on prompt detail page based on tags and author.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 1 week |
+| **Dependencies** | None |
+| **Revenue Impact** | Increased engagement, page views |
+| **Technical Complexity** | Medium |
+
+**Algorithm:**
+- Same tags (weighted by overlap)
+- Same author
+- Same AI generator
+- Exclude current prompt
+
+---
+
+#### 6. Image Lightbox/Zoom
+
+**Description:** Click to enlarge images with keyboard navigation.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 3-4 days |
+| **Dependencies** | None |
+| **Revenue Impact** | UX improvement |
+| **Technical Complexity** | Low-Medium |
+
+**Features:**
+- Click image to open lightbox
+- Keyboard navigation (←→ ESC)
+- Zoom controls
+- Download from lightbox
+
+---
+
+#### 7. Notification System
+
+**Description:** In-app notifications for likes, comments, follows, and system events.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 2 weeks |
+| **Dependencies** | Email preferences (complete) |
+| **Revenue Impact** | Engagement driver |
+| **Technical Complexity** | Medium-High |
+
+**Features:**
+- Bell icon in navbar with unread count
+- Notification types: likes, comments, follows, mentions
+- Mark as read/unread
+- Notification preferences
+- Email digests (weekly)
+
+---
+
+#### 8. Follow System Enhancement
+
+**Description:** Complete follow/unfollow with Following feed tab.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 1 week |
+| **Dependencies** | Current follow button |
+| **Revenue Impact** | Community building |
+| **Technical Complexity** | Medium |
+
+**Features:**
+- Following tab on homepage (shows only followed users' prompts)
+- Followers/following lists on profile
+- Notification on new follow
+- Mutual follow badge
+
+---
+
+#### 9. Search Improvements
+
+**Description:** Advanced search with filters, autocomplete, and search history.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 2 weeks |
+| **Dependencies** | None |
+| **Revenue Impact** | Discoverability |
+| **Technical Complexity** | Medium |
+
+**Features:**
+- Autocomplete suggestions
+- Filter by: AI generator, tags, date, type
+- Search history (authenticated users)
+- "Did you mean" suggestions
+
+---
+
+#### 10. AI Generator Integration (In-App Image Generation)
+
+**Description:** Generate images from prompts directly on PromptFinder using cloud AI APIs.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 4-6 weeks |
+| **Dependencies** | Phase L (media infrastructure) |
+| **Revenue Impact** | Major premium feature, new revenue stream |
+| **Technical Complexity** | Very High |
+
+**Recommended API: Replicate**
+
+| Factor | Replicate | Direct APIs | Winner |
+|--------|-----------|-------------|--------|
+| Multi-model support | 50+ models | 1 per integration | Replicate |
+| Pricing | Pay-per-use | Varies | Tie |
+| Integration complexity | Single API | Multiple APIs | Replicate |
+| Model availability | SDXL, Flux, etc. | Varies | Replicate |
+| Rate limits | Generous | Often restrictive | Replicate |
+
+**Why Replicate:**
+- Single integration covers Stable Diffusion, Flux, SDXL, and future models
+- No need to maintain multiple API integrations
+- Automatic scaling and queueing
+- Transparent pricing ($0.0023-0.05 per image depending on model)
+- Easy model switching as new ones release
+
+**Features:**
+- "Generate" button on any prompt page
+- Model selector (SDXL, Flux, etc.)
+- Queue system for async generation
+- Generation history (premium)
+- Save generated images to library
+- Cost tracking per user
+
+**Pricing Model:**
+- Free tier: 5 generations/month
+- Premium: 50 generations/month included
+- Credits: Buy additional generations
+
+**Technical Notes:**
+- Async job queue (Celery + Redis)
+- Webhook for completion notification
+- Store generations in B2 (Phase L dependency)
+- Cache popular prompt generations
+
+---
+
+### Tier 3: Medium Priority (Q3 2026)
+
+#### 11. Comment Threading
+
+**Description:** Reply to comments with nested threading.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 2 weeks |
+| **Dependencies** | Comment pagination |
+| **Revenue Impact** | Community engagement |
+| **Technical Complexity** | High |
+
+**Features:**
+- Reply button on comments
+- 2-level nesting maximum
+- Collapse/expand threads
+- "View X replies" link
+
+---
+
+#### 12. Prompt Versioning
+
+**Description:** Edit history and version comparison for prompts.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 2-3 weeks |
+| **Dependencies** | None |
+| **Revenue Impact** | Premium feature potential |
+| **Technical Complexity** | High |
+
+**Features:**
+- Save versions on edit
+- View edit history
+- Compare versions side-by-side
+- Restore previous version
+
+---
+
+#### 13. Collection Sharing
+
+**Description:** Share collections via link and embed on external sites.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 1 week |
+| **Dependencies** | Phase K Collections |
+| **Revenue Impact** | Viral growth |
+| **Technical Complexity** | Low-Medium |
+
+**Features:**
+- Share link for public collections
+- Embed code for external sites
+- Share to social media
+- Track share analytics
+
+---
+
+### Tier 4: Low Priority (Q4 2026+)
+
+#### 14. API Access
+
+**Description:** REST API for developers to integrate PromptFinder prompts.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 3-4 weeks |
+| **Dependencies** | Premium tier |
+| **Revenue Impact** | Premium upsell |
+| **Technical Complexity** | High |
+
+**Features:**
+- API key management
+- Rate limiting by tier
+- Endpoints: list, get, search prompts
+- Documentation page
+
+---
+
+#### 15. Bulk Upload
+
+**Description:** Upload multiple prompts at once via CSV or ZIP.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 2-3 weeks |
+| **Dependencies** | Premium tier |
+| **Revenue Impact** | Premium upsell |
+| **Technical Complexity** | High |
+
+**Features:**
+- CSV import (title, prompt, tags, generator)
+- ZIP upload (images + metadata.json)
+- Preview before publish
+- Batch processing with progress
+
+---
+
+#### 16. Blog System
+
+**Description:** Integrated blog for SEO content, tutorials, and prompt engineering guides.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 2-3 weeks |
+| **Dependencies** | None |
+| **Revenue Impact** | SEO traffic, affiliate income |
+| **Technical Complexity** | Medium |
+
+**Features:**
+- Django-based blog with CKEditor
+- Categories: Tutorials, News, Generator Guides, Prompt Engineering
+- SEO-optimized posts with schema markup
+- Author profiles linked to main platform
+- Comment system (reuse existing)
+- RSS feed generation
+
+**SEO Value:**
+- Target long-tail keywords ("how to write midjourney prompts")
+- Build topical authority
+- Internal linking to prompt pages
+- Estimated 10K+ monthly organic visits at maturity
+
+---
+
+#### 17. PromptCast AI Podcast
+
+**Description:** Automated AI-generated podcast discussing trending prompts and AI art news.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 3-4 weeks |
+| **Dependencies** | Blog system (optional) |
+| **Revenue Impact** | Brand awareness, premium upsell |
+| **Technical Complexity** | High |
+
+**Features:**
+- Weekly automated episodes (15-20 minutes)
+- AI voice generation (ElevenLabs or similar)
+- Script generation from trending prompts + news
+- RSS feed for podcast directories
+- Embedded player on site
+- Episode transcripts (SEO)
+
+**Distribution:**
+- Apple Podcasts
+- Spotify
+- Google Podcasts
+- YouTube (audio + visualizer)
+- Website embed
+
+**Content Format:**
+1. Intro (AI-generated jingle)
+2. Trending prompts of the week (5 featured)
+3. AI art news segment
+4. Prompt engineering tip
+5. Community highlight
+6. Outro with CTA
+
+---
+
+### Revenue Projections
+
+| Timeline | MRR Target | Key Drivers |
+|----------|------------|-------------|
+| Q1 2026 | $1,000 | Premium tier launch, collection limits |
+| Q2 2026 | $3,000 | Growth features, viral sharing |
+| Q3 2026 | $7,000 | API access, bulk upload |
+| Q4 2026 | $10,000 | Full feature set, word of mouth |
+
+---
+
+### Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Premium conversion too low | Medium | High | A/B test pricing, feature gating |
+| Technical debt accumulation | Medium | Medium | Regular refactoring sprints |
+| Competitor feature parity | Low | Medium | Focus on unique differentiators |
+| Scope creep | High | Medium | Strict micro-spec discipline |
+
+---
+
+### Implementation Guidelines
+
+**For Each Feature:**
+1. Create micro-spec before implementation
+2. Agent validation required (8+/10 minimum)
+3. Update this roadmap on completion
+4. Add to changelog
+
+**Priority Adjustments:**
+- User feedback may reprioritize features
+- Revenue data may shift focus
+- Technical discoveries may reorder
+
+**Related Sections:**
+- [Phase K: Collections Feature](#-phase-k-collections-feature-current-priority) - Current work
+- [Known Technical Debt](#-known-technical-debt) - Address before new features
+- [Decisions Made](#decisions-made) - Historical context
 
 ---
 
@@ -8427,11 +9076,11 @@ Session 28 completed the Collections modal functionality with 11 micro-specs acr
 
 ---
 
-### December 2025 - Session 29 (Dec 28, 2025)
+### December 2025 - Session 29 (Dec 28-29, 2025)
 
-**Phase K Collections: Profile Tab Page Implementation**
+**Phase K Collections: Profile Tab Page Implementation + Polish**
 
-Session 29 implemented the Collections Profile Tab Page (Micro-Spec #11), completing the core collections feature UI.
+Session 29 implemented the Collections Profile Tab Page (Micro-Spec #11) and polished it with 8 additional micro-specs (#11.1-11.8).
 
 **Micro-Spec #11 Completed:**
 - Created `collections_profile.html` template (812 lines)
@@ -8441,6 +9090,16 @@ Session 29 implemented the Collections Profile Tab Page (Micro-Spec #11), comple
 - Profile stats integration (prompts, likes, views, ranks)
 - Pagination support (12 collections per page)
 
+**Micro-Specs #11.1-11.8 Completed (Profile Tab Polish):**
+- **#11.1:** Investigation report documenting 7 issues in collections_profile.html
+- **#11.2:** Added "Member since" date and social icons to profile header
+- **#11.3:** Fixed Create button styling to use `btn-outline-standard` class
+- **#11.4:** Improved empty state messaging for users with no collections
+- **#11.5:** Backend pagination with Django's Paginator (12 per page)
+- **#11.6:** Load More JavaScript using fetch API with DOMParser
+- **#11.7:** Grid layout CSS fix with `minmax(0, 1fr)` for proper card sizing
+- **#11.8:** Moved inline `.collection-grid` styles to style.css, Load More button styling
+
 **Key Features:**
 - Responsive grid layout matching gallery page design
 - Sorting dropdown: Recent / Most items / Fewest items
@@ -8449,6 +9108,8 @@ Session 29 implemented the Collections Profile Tab Page (Micro-Spec #11), comple
 - Thumbnail preview grids (0/1/2/3+ items layouts)
 - Follow button integration
 - Cloudinary avatar rendering fixed
+- Load More pagination with fetch-based AJAX
+- `collection:created` event for dynamic card insertion
 
 **Database Fixes:**
 - Fixed Collection ID 1 empty slug issue
@@ -8456,23 +9117,30 @@ Session 29 implemented the Collections Profile Tab Page (Micro-Spec #11), comple
 
 **Files Created:**
 - `prompts/templates/prompts/collections_profile.html`
+- `docs/reports/MICRO_SPEC_11_1_INVESTIGATION_REPORT.md`
 
 **Files Modified:**
-- `prompts/views/collection_views.py` (+174 lines)
+- `prompts/views/collection_views.py` (+174 lines, pagination logic)
 - `prompts/views/__init__.py` (added user_collections export)
 - `prompts/urls.py` (added user_collections route)
 - `prompts/templates/prompts/user_profile.html` (Collections tab link)
+- `static/js/collections.js` (`createOnly` mode, `collection:created` event)
+- `static/css/style.css` (`.collection-grid` consolidated from inline)
 
 **Technical Implementation:**
 - View uses LeaderboardService for rank calculations
 - Profile stats cached for 5 minutes
 - Thumbnails attached via CollectionItem query with select_related
-- Virtual environment usage: `.venv/bin/python manage.py shell`
+- CSS grid with `minmax(0, 1fr)` prevents card overflow
+- `collection:created` custom event enables real-time card insertion
 
-**Collections Progress:** ~80% complete (was ~75%)
+**Collections Progress:** ~85% complete (was ~75%)
 
 **Commits:**
 - `8ea3ceb` feat(phase-k): Add Collections profile tab page (Micro-Spec #11)
+- `6bde11e` fix(phase-k): Profile tab header + empty state improvements
+- `07f35da` feat(phase-k): Load More pagination with fetch API
+- `602205d` style(phase-k): Micro-Spec #11.8 + UI improvements to collections page
 
 **Next Steps:**
 - Individual collection detail page
@@ -8792,7 +9460,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.5
-**Last Updated:** December 25, 2025
+**Version:** 2.7
+**Last Updated:** December 29, 2025
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase K: Collections In Progress, All Core Phases Complete)
+**Project Status:** Pre-Launch (Phase L: Media Infrastructure Planning, Phase K ON HOLD at 95%)

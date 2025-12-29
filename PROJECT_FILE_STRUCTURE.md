@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** December 27, 2025
+**Last Updated:** December 29, 2025
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase K Collections (~60% Complete)
+**Current Phase:** Phase K Collections (~85% Complete)
 **Total Tests:** 234 passing (46% coverage)
 
 ---
@@ -12,7 +12,7 @@
 | Category | Count | Location |
 |----------|-------|----------|
 | **Python Files** | 92 | Various directories |
-| **HTML Templates** | 42 | templates/, prompts/templates/, about/templates/ |
+| **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 4 | static/js/ |
 | **SVG Icons** | 30 | static/icons/sprite.svg |
@@ -202,7 +202,7 @@ prompts/views/
 |--------|-----------|---------|
 | **admin_views** | ~15 | Admin dashboards, media issues, trash management |
 | **auth_views** | ~5 | Authentication helpers, session management |
-| **collection_views** | ~8 | Collection CRUD, API endpoints (add/remove prompts) |
+| **collection_views** | ~9 | Collection CRUD, API endpoints, profile tab, pagination |
 | **comment_views** | ~8 | Comment CRUD, approval, deletion |
 | **core_views** | ~12 | Homepage, prompt detail, list views, search |
 | **leaderboard_views** | ~4 | Rankings, time filters, user stats |
@@ -246,6 +246,7 @@ prompts/views/
 | `partials/_masonry_grid.html` | Reusable masonry grid partial |
 | `partials/_prompt_card.html` | Reusable prompt card partial |
 | `partials/_collection_modal.html` | Collections modal (Phase K) |
+| `collections_profile.html` | User collections tab page (Phase K) |
 | And 8 more... | Confirmation modals, reports, etc. |
 
 ### About App Templates (about/templates/about/) - 1 file

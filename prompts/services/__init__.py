@@ -5,6 +5,7 @@ This package contains:
 - AI Moderation Services (OpenAI, Cloudinary, Profanity Filter)
 - Leaderboard Service (community rankings)
 - Image Processing Service (optimization, thumbnails, WebP conversion)
+- B2 Upload Service (upload pipeline to Backblaze B2)
 """
 
 from .openai_moderation import OpenAIModerationService
@@ -24,6 +25,12 @@ from .image_processor import (
     MAX_DIMENSION,
     MAX_PIXELS,
 )
+from .b2_upload_service import (
+    upload_image,
+    delete_image,
+    generate_unique_filename,
+    get_upload_path,
+)
 
 __all__ = [
     'OpenAIModerationService',
@@ -42,4 +49,9 @@ __all__ = [
     'THUMBNAIL_SIZES',
     'MAX_DIMENSION',
     'MAX_PIXELS',
+    # B2 Upload Service
+    'upload_image',
+    'delete_image',
+    'generate_unique_filename',
+    'get_upload_path',
 ]

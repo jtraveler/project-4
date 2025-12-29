@@ -43,3 +43,27 @@ class B2MediaStorage(S3Boto3Storage):
         if self.custom_domain:
             kwargs.setdefault('custom_domain', self.custom_domain)
         super().__init__(**kwargs)
+
+    def url(self, name):
+        """
+        Return the URL for the given file name.
+
+        If B2_CUSTOM_DOMAIN is configured, returns a clean CDN URL.
+        Otherwise, falls back to default S3 URL behavior.
+
+        Args:
+            name: File path relative to storage root.
+
+        Returns:
+            Full CDN URL if B2_CUSTOM_DOMAIN configured,
+            otherwise default S3 signed URL.
+        """
+        if not name:
+            raise ValueError("File name cannot be empty")
+
+        if self.custom_domain:
+            # Normalize: strip leading slashes to avoid double slashes
+            clean_name = name.lstrip('/')
+            return f"https://{self.custom_domain}/{clean_name}"
+        # Fall back to default S3Boto3Storage behavior
+        return super().url(name)

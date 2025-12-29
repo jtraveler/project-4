@@ -219,6 +219,11 @@
     function openModal(promptIdOrOptions, options) {
         if (isOpen) return;
 
+        // Reset modal to default state FIRST (before showing)
+        // This ensures clean state without visual flash on close
+        // Micro-Spec #14: Moved from closeModal() to prevent close animation flash
+        resetModalState();
+
         // Handle flexible parameter signature
         let promptId = null;
         let opts = {};
@@ -299,8 +304,9 @@
             promptIdInput.value = '';
         }
 
-        // Reset modal to default state (main view visible, create panel hidden)
-        resetModalState();
+        // NOTE: resetModalState() is now called in openModal() instead of here
+        // This prevents the list view from flashing during the close animation
+        // (Micro-Spec #14: Modal close flash fix)
 
         // Remove createOnly mode class if present
         modal.classList.remove('create-only-mode');
@@ -338,8 +344,6 @@
         }
         if (createPanel) {
             createPanel.classList.add('is-hidden');
-            // Micro-Spec #9.3: Reset dynamic height on modal close
-            createPanel.style.minHeight = '';
         }
         if (footer) {
             footer.classList.remove('is-hidden');
@@ -399,12 +403,6 @@
         const footer = modal.querySelector('.collection-modal-footer');
         const nameInput = document.getElementById('collectionName');
 
-        // Micro-Spec #9.3: Capture current modal body height and apply to create panel
-        if (modalBody && createPanel) {
-            const currentHeight = modalBody.offsetHeight;
-            createPanel.style.minHeight = `${currentHeight}px`;
-        }
-
         // Use class-based transitions instead of inline display
         if (modalBody) modalBody.classList.add('is-hidden');
         if (footer) footer.classList.add('is-hidden');
@@ -432,8 +430,6 @@
         // Use class-based transitions instead of inline display
         if (createPanel) {
             createPanel.classList.add('is-hidden');
-            // Micro-Spec #9.3: Reset dynamic height when hiding
-            createPanel.style.minHeight = '';
         }
         if (modalBody) modalBody.classList.remove('is-hidden');
         if (footer) footer.classList.remove('is-hidden');

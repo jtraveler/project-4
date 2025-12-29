@@ -526,3 +526,31 @@ if 'test' in sys.argv:
             'NAME': ':memory:',
         }
     }
+
+# ==============================================================================
+# BACKBLAZE B2 STORAGE CONFIGURATION
+# ==============================================================================
+# B2 storage backend for media files (Phase L: Media Infrastructure Migration)
+# Uses S3-compatible API via django-storages
+# NOTE: Cloudinary remains DEFAULT_FILE_STORAGE - B2 is additional, not replacement
+#
+# Required environment variables for production:
+# - B2_ACCESS_KEY_ID: Application Key ID from B2
+# - B2_SECRET_ACCESS_KEY: Application Key from B2
+# - B2_BUCKET_NAME: Bucket name (default: promptfinder-media)
+# - B2_REGION: Region (default: us-east-005)
+# - B2_ENDPOINT_URL: S3-compatible endpoint
+# - B2_CUSTOM_DOMAIN: Optional CDN domain for file URLs
+# ==============================================================================
+B2_BUCKET_NAME = os.environ.get('B2_BUCKET_NAME', 'promptfinder-media')
+B2_REGION = os.environ.get('B2_REGION', 'us-east-005')
+B2_ENDPOINT_URL = os.environ.get(
+    'B2_ENDPOINT_URL',
+    'https://s3.us-east-005.backblazeb2.com'
+)
+B2_ACCESS_KEY_ID = os.environ.get('B2_ACCESS_KEY_ID', '')
+B2_SECRET_ACCESS_KEY = os.environ.get('B2_SECRET_ACCESS_KEY', '')
+B2_CUSTOM_DOMAIN = os.environ.get('B2_CUSTOM_DOMAIN', '')
+
+# Storage backend path - use this when instantiating B2 storage
+B2_STORAGE_BACKEND = 'prompts.storage_backends.B2MediaStorage'

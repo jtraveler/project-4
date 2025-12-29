@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+{% load static %}
+{% load cloudinary %}
+{% load cloudinary_tags %}
+
+{% block title %}{{ collection.title }} - Collection by {{ collection.user.username }} | PromptFinder{% endblock %}
+
+{% block content %}
+<!-- CSRF Token for AJAX requests -->
+{% csrf_token %}
+
+<style>
+/* Collection Detail Header */
+.collection-detail-header {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 48px 40px 24px;
+    text-align: center;
+}
+
+.collection-detail-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 12px;
+}
+
+.collection-detail-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--gray-600);
+    font-size: 15px;
+    margin-bottom: 16px;
+}
+
+.collection-detail-meta a {
+    color: var(--gray-900);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.collection-detail-meta a:hover {
+    text-decoration: underline;
+}
+
+.collection-visibility-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--gray-100);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--gray-600);
+}
+
+.collection-visibility-badge .icon {
+    width: 14px;
+    height: 14px;
+}
+
+.collection-detail-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.btn-edit-collection {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--gray-900);
+    color: #ffffff;
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-edit-collection:hover {
+    background: var(--gray-800);
+    color: #ffffff;
+}
+
+.btn-share-collection {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--gray-700);
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--gray-300);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-share-collection:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+/* Empty collection state */
+.collection-empty-state {
+    max-width: 400px;
+    margin: 80px auto;
+    text-align: center;
+    padding: 40px;
+}
+
+.collection-empty-state .icon {
+    width: 64px;
+    height: 64px;
+    color: var(--gray-300);
+    margin-bottom: 24px;
+}
+
+.collection-empty-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 8px;
+}
+
+.collection-empty-state p {
+    font-size: 15px;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+/* Stats row */
+.collection-stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    color: var(--gray-600);
+    font-size: 14px;
+}
+
+.collection-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.collection-stat .icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Load More button */
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0 60px;
+}
+
+.btn-load-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--gray-900);
+    color: #ffffff;
+    padding: 12px 32px;
+    border-radius: 40px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-load-more:hover {
+    background: var(--gray-800);
+}
+
+.btn-load-more:disabled {
+    background: var(--gray-400);
+    cursor: not-allowed;
+}
+</style>
+
+<!-- Collection Header -->
+<div class="collection-detail-header">
+    <h1 class="collection-detail-title">{{ collection.title }}</h1>
+
+    <div class="collection-detail-meta">
+        <span>by <a href="{% url 'prompts:user_profile' collection.user.username %}">{{ collection.user.username }}</a></span>
+        <span class="collection-visibility-badge">
+            {% if collection.is_private %}
+            <svg class="icon"><use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use></svg>
+            Private
+            {% else %}
+            <svg class="icon"><use href="{% static 'icons/sprite.svg' %}#icon-eye"></use></svg>
+            Public
+            {% endif %}
+        </span>
+    </div>
+
+    <div class="collection-stats">
+        {% with photo_count=items|length video_count=0 %}
+        <span class="collection-stat">
+            <svg class="icon"><use href="{% static 'icons/sprite.svg' %}#icon-image"></use></svg>
+            {{ collection.items.count }} item{{ collection.items.count|pluralize }}
+        </span>
+        {% endwith %}
+    </div>
+
+    {% if can_edit %}
+    <div class="collection-detail-actions">
+        <a href="{% url 'prompts:collection_edit' collection.slug %}" class="btn-edit-collection">
+            <svg class="icon" style="width: 16px; height: 16px;"><use href="{% static 'icons/sprite.svg' %}#icon-edit"></use></svg>
+            Edit Collection
+        </a>
+        <button type="button" class="btn-share-collection" onclick="copyCollectionLink()">
+            <svg class="icon" style="width: 16px; height: 16px;"><use href="{% static 'icons/sprite.svg' %}#icon-share"></use></svg>
+            Share
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+{% if items %}
+<!-- Masonry Grid Container -->
+<div id="browse-prompts" class="masonry-container">
+    <div class="masonry-wrapper">
+        <div class="masonry-grid" id="masonry-grid">
+            <!-- Columns will be created by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Store items in a hidden container for JavaScript to process -->
+    <div id="items-container" style="display: none;">
+        {% for item in items %}
+            {% include 'prompts/partials/_prompt_card.html' with prompt=item.prompt show_trash_actions=False show_admin_controls=False %}
+        {% endfor %}
+    </div>
+
+    <!-- Load More Button (replaces pagination) -->
+    {% if page_obj.has_next %}
+    <div class="load-more-container">
+        <button type="button" class="btn-load-more" id="loadMoreBtn" data-page="{{ page_obj.next_page_number }}">
+            Load More
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="collection-empty-state">
+    <svg class="icon"><use href="{% static 'icons/sprite.svg' %}#icon-bookmark"></use></svg>
+    <h3>No prompts yet</h3>
+    <p>{% if is_owner %}Start saving prompts to this collection.{% else %}This collection is empty.{% endif %}</p>
+</div>
+{% endif %}
+
+<script>
+// Share collection link
+function copyCollectionLink() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(function() {
+        // Show success feedback
+        const btn = document.querySelector('.btn-share-collection');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg class="icon" style="width: 16px; height: 16px;"><use href="{% static 'icons/sprite.svg' %}#icon-circle-check"></use></svg> Copied!';
+        setTimeout(function() {
+            btn.innerHTML = originalHTML;
+        }, 2000);
+    });
+}
+
+// Masonry Grid JavaScript
+(function() {
+    'use strict';
+
+    let columns = [];
+    let currentPage = 1;
+    const collectionSlug = '{{ collection.slug }}';
+
+    function getColumnCount() {
+        const width = window.innerWidth;
+        if (width >= 1700) return 4;
+        if (width >= 1200) return 4;
+        if (width >= 900) return 3;
+        if (width >= 600) return 2;
+        return 1;
+    }
+
+    function createColumns() {
+        const grid = document.getElementById('masonry-grid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        columns = [];
+
+        const newColumnCount = getColumnCount();
+        grid.setAttribute('data-columns', newColumnCount);
+
+        for (let i = 0; i < 4; i++) {
+            const column = document.createElement('div');
+            column.className = 'masonry-column';
+            column.id = `column-${i}`;
+            grid.appendChild(column);
+            columns.push({ element: column, height: 0, items: [] });
+        }
+    }
+
+    function getShortestColumn() {
+        let shortest = 0;
+        let minHeight = columns[0].height;
+        const colCount = getColumnCount();
+
+        for (let i = 1; i < colCount; i++) {
+            if (columns[i].height < minHeight) {
+                minHeight = columns[i].height;
+                shortest = i;
+            }
+        }
+        return shortest;
+    }
+
+    function distributeItems() {
+        const container = document.getElementById('items-container');
+        if (!container) return;
+
+        const items = container.querySelectorAll('.masonry-item');
+        if (!items.length) return;
+
+        items.forEach(function(item) {
+            const shortestIndex = getShortestColumn();
+            const clone = item.cloneNode(true);
+            clone.style.display = 'block';
+            columns[shortestIndex].element.appendChild(clone);
+            columns[shortestIndex].height += item.offsetHeight || 300;
+        });
+    }
+
+    function initMasonry() {
+        createColumns();
+        distributeItems();
+    }
+
+    // Initialize on DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+        initMasonry();
+
+        // Handle window resize
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                initMasonry();
+            }, 250);
+        });
+
+        // Load More button handler
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function() {
+                loadMore();
+            });
+        }
+    });
+
+    // Load More functionality
+    function loadMore() {
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        if (!loadMoreBtn) return;
+
+        const nextPage = loadMoreBtn.dataset.page;
+        if (!nextPage) return;
+
+        // Disable button and show loading
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent = 'Loading...';
+
+        // Fetch next page
+        fetch(`?page=${nextPage}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Parse the response and extract new items
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newItems = doc.querySelectorAll('#items-container .masonry-item');
+            const newLoadMore = doc.getElementById('loadMoreBtn');
+
+            // Add new items to columns
+            newItems.forEach(function(item) {
+                const shortestIndex = getShortestColumn();
+                const clone = item.cloneNode(true);
+                clone.style.display = 'block';
+                columns[shortestIndex].element.appendChild(clone);
+                columns[shortestIndex].height += 300;
+            });
+
+            // Update or remove Load More button
+            if (newLoadMore) {
+                loadMoreBtn.dataset.page = newLoadMore.dataset.page;
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.textContent = 'Load More';
+            } else {
+                loadMoreBtn.parentElement.remove();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading more items:', error);
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.textContent = 'Load More';
+        });
+    }
+})();
+</script>
+
+{% endblock %}

@@ -690,15 +690,17 @@
     {% endfor %}
 </div>
 
-<!-- Micro-Spec #11.8: Load More Button -->
+<!-- Micro-Spec #11.8: Load More Button (Updated #11.9 to match homepage styling) -->
 {% if page_obj.has_next %}
 <div class="load-more-container" style="width: 100%; max-width: 1600px; margin: 0 auto; padding: 20px 40px 40px; text-align: center;">
     <button type="button"
-            class="btn-outline-standard action-icon-btn"
+            class="btn btn-primary btn-lg"
             id="loadMoreCollectionsBtn"
             data-next-page="{{ page_obj.next_page_number }}"
             data-username="{{ profile_user.username }}"
-            data-sort="{{ sort }}">
+            data-sort="{{ sort }}"
+            aria-label="Load more collections">
+        <i class="fas fa-plus-circle me-2"></i>
         <span>Load More Collections</span>
     </button>
 </div>
@@ -783,10 +785,14 @@
             const username = btn.dataset.username;
             const sort = btn.dataset.sort;
 
-            // Disable button and show loading state
+            // Disable button and show loading state with spinner
             btn.disabled = true;
-            const originalText = btn.querySelector('span').textContent;
-            btn.querySelector('span').textContent = 'Loading...';
+            const icon = btn.querySelector('i');
+            const span = btn.querySelector('span');
+            const originalText = span.textContent;
+            const originalIconClass = icon.className;
+            icon.className = 'fas fa-spinner fa-spin me-2';
+            span.textContent = 'Loading...';
 
             // Fetch next page
             const url = `/users/${username}/collections/?page=${nextPage}&sort=${sort}`;
@@ -814,13 +820,18 @@
                 if (!grid) {
                     console.error('Collection grid not found');
                     btn.disabled = false;
-                    btn.querySelector('span').textContent = originalText;
+                    icon.className = originalIconClass;
+                    span.textContent = originalText;
                     return;
                 }
 
-                // Append new cards to the grid
-                newCards.forEach(card => {
-                    grid.appendChild(card.cloneNode(true));
+                // Append new cards to the grid with staggered fade-in animation
+                newCards.forEach((card, index) => {
+                    const clonedCard = card.cloneNode(true);
+                    // Add fade-in animation class with staggered delay
+                    clonedCard.classList.add('collection-card-fade-in');
+                    clonedCard.style.animationDelay = `${index * 0.1}s`;
+                    grid.appendChild(clonedCard);
                 });
 
                 // Check if there's a next page in the response
@@ -829,7 +840,8 @@
                     // Update button with new page number
                     btn.dataset.nextPage = newLoadMoreBtn.dataset.nextPage;
                     btn.disabled = false;
-                    btn.querySelector('span').textContent = originalText;
+                    icon.className = originalIconClass;
+                    span.textContent = originalText;
                 } else {
                     // No more pages - remove the button container
                     btn.parentElement.remove();
@@ -838,7 +850,8 @@
             .catch(error => {
                 console.error('Error loading more collections:', error);
                 btn.disabled = false;
-                btn.querySelector('span').textContent = originalText;
+                icon.className = originalIconClass;
+                span.textContent = originalText;
             });
         });
     }

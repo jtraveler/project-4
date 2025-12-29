@@ -970,6 +970,7 @@
                    class="profile-tab"
                    style="text-decoration: none;">
                     Collections
+                    <span class="profile-tab-count stat-badge">{{ total_collections|default:0 }}</span>
                 </a>
                 {% if show_statistics_tab %}<button class="profile-tab">Statistics</button>{% endif %}
                 <button class="profile-tab">

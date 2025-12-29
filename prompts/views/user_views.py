@@ -9,7 +9,7 @@ from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 import logging
 
-from prompts.models import Prompt, Comment, UserProfile
+from prompts.models import Prompt, Comment, UserProfile, Collection
 from prompts.forms import CommentForm
 
 logger = logging.getLogger(__name__)
@@ -237,6 +237,12 @@ def user_profile(request, username, active_tab=None):
     if active_tab == 'trash' and not is_owner:
         return redirect('prompts:user_profile', username=username)
 
+    # Get total collections count for profile tabs display
+    total_collections = Collection.objects.filter(
+        user=profile_user,
+        is_deleted=False
+    ).count()
+
     # Pagination (18 prompts per page, same as homepage)
     paginator = Paginator(prompts, 18)
     page_number = request.GET.get('page', 1)
@@ -258,6 +264,7 @@ def user_profile(request, username, active_tab=None):
         'active_tab': active_tab or 'gallery',
         'trash_items': trash_items,
         'trash_count': trash_count,
+        'total_collections': total_collections,  # Phase K: Collections count for profile tabs
         'show_statistics_tab': False,  # Phase G: Hidden for future implementation
     }
 

@@ -3031,13 +3031,12 @@ footer {
 .collection-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
+    gap: 1.875rem;
     align-items: start; /* Prevent cards from stretching to match tallest sibling */
     /* Container layout (moved from inline styles) */
     width: 100%;
     max-width: 1600px;
     margin: 0 auto;
-    padding: 0 40px 40px;
 }
 
 @media (max-width: 1199px) {
@@ -3046,7 +3045,7 @@ footer {
     }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 767px) {
     .collection-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -3796,7 +3795,7 @@ footer {
 }
 
 /* Very small screens (below 370px) */
-@media (max-width: 369px) {
+@media (max-width: 400px) {
     .collection-grid {
         grid-template-columns: minmax(0, 1fr);  /* Single column */
     }

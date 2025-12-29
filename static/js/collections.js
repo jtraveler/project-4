@@ -212,10 +212,28 @@
 
     /**
      * Open the collections modal
-     * @param {string} promptId - The ID of the prompt being saved
+     * @param {string|object} promptIdOrOptions - The ID of the prompt being saved, or options object
+     * @param {object} options - Options object (optional if first param is promptId)
+     * @param {boolean} options.createOnly - If true, open directly to create panel and hide back buttons
      */
-    function openModal(promptId) {
+    function openModal(promptIdOrOptions, options) {
         if (isOpen) return;
+
+        // Handle flexible parameter signature
+        let promptId = null;
+        let opts = {};
+
+        if (typeof promptIdOrOptions === 'object' && promptIdOrOptions !== null) {
+            // First param is options object
+            opts = promptIdOrOptions;
+            promptId = opts.promptId || null;
+        } else {
+            // First param is promptId
+            promptId = promptIdOrOptions;
+            opts = options || {};
+        }
+
+        const isCreateOnly = opts.createOnly === true;
 
         // Store the prompt ID
         currentPromptId = promptId;
@@ -229,14 +247,29 @@
         // Show modal using visibility class (Micro-Spec #8.5b - no display toggle)
         modal.classList.add('is-visible');
 
+        // Handle createOnly mode - hide back buttons
+        if (isCreateOnly) {
+            modal.classList.add('create-only-mode');
+        } else {
+            modal.classList.remove('create-only-mode');
+        }
+
         // Lock body scroll
         document.body.style.overflow = 'hidden';
 
         // Set state
         isOpen = true;
 
-        // Fetch collections from API
-        fetchCollections();
+        // Handle createOnly mode - show create panel directly
+        if (isCreateOnly) {
+            // Show create panel immediately for UX
+            showCreatePanel();
+            // Micro-Spec #11.7 Fix: Still fetch collections in background for duplicate name validation
+            fetchCollections();
+        } else {
+            // Fetch collections from API
+            fetchCollections();
+        }
 
         // Focus the close button for accessibility
         setTimeout(() => {
@@ -245,7 +278,7 @@
 
         // Dispatch custom event
         modal.dispatchEvent(new CustomEvent('modal:opened', {
-            detail: { promptId }
+            detail: { promptId, createOnly: isCreateOnly }
         }));
     }
 
@@ -268,6 +301,9 @@
 
         // Reset modal to default state (main view visible, create panel hidden)
         resetModalState();
+
+        // Remove createOnly mode class if present
+        modal.classList.remove('create-only-mode');
 
         // Set state
         isOpen = false;
@@ -844,8 +880,19 @@
                 }
             }
 
-            // Hide create panel and show main view
-            hideCreatePanel();
+            // Micro-Spec #11.5 Fix #4: Close modal and dispatch event in createOnly mode
+            if (modal.classList.contains('create-only-mode')) {
+                // Close modal immediately
+                closeModal();
+
+                // Dispatch event for page to insert the new card
+                document.dispatchEvent(new CustomEvent('collection:created', {
+                    detail: { collection: data.collection }
+                }));
+            } else {
+                // Normal mode: Hide create panel and show main view
+                hideCreatePanel();
+            }
 
         } catch (error) {
             console.error('CollectionsModal: Error creating collection:', error);

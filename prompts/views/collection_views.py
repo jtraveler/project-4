@@ -81,9 +81,11 @@ def api_collections_list(request):
                 collection=collection
             ).select_related('prompt').order_by('-added_at')[:3]
 
-            for item in recent_items:
+            for idx, item in enumerate(recent_items):
                 if item.prompt:
-                    thumb_url = item.prompt.get_thumbnail_url(width=300)
+                    # Micro-Spec #11.7: Use 600px for first thumb (full-width), 300px for grid items
+                    thumb_width = 600 if idx == 0 else 300
+                    thumb_url = item.prompt.get_thumbnail_url(width=thumb_width)
                     if thumb_url:
                         thumbnails.append(thumb_url)
 
@@ -198,6 +200,7 @@ def api_collection_create(request):
             'id': collection.id,
             'title': collection.title,
             'slug': collection.slug,
+            'url': reverse('prompts:collection_detail', kwargs={'slug': collection.slug}),
             'item_count': 1 if prompt_added else 0,
             'is_private': collection.is_private,
         },
@@ -624,9 +627,11 @@ def user_collections(request, username):
             collection=collection
         ).select_related('prompt').order_by('-added_at')[:3]
 
-        for item in recent_items:
+        for idx, item in enumerate(recent_items):
             if item.prompt:
-                thumb_url = item.prompt.get_thumbnail_url(width=300)
+                # Micro-Spec #11.7: Use 600px for first thumb (full-width), 300px for grid items
+                thumb_width = 600 if idx == 0 else 300
+                thumb_url = item.prompt.get_thumbnail_url(width=thumb_width)
                 if thumb_url:
                     thumbnails.append(thumb_url)
 
@@ -644,7 +649,7 @@ def user_collections(request, username):
         'page_obj': page_obj,
         'total_collections': paginator.count,
         'is_own_profile': is_own_profile,
-        'sort_order': sort_order,
+        'sort': sort_order,  # Bug #4 fix: Template expects 'sort' not 'sort_order'
         'active_tab': 'collections',
         # Profile stats
         'total_prompts': total_prompts,

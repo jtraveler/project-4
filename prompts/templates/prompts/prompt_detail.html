@@ -19,10 +19,11 @@
     {% endwith %}
 {% else %}
     <!-- Preload the hero image for LCP optimization -->
-    {% if prompt.featured_image and not "placeholder" in prompt.featured_image.url %}
-        <link rel="preload" as="image"
-          href="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}" />
-    {% endif %}
+    {% with image_url=prompt.display_large_url %}
+        {% if image_url %}
+            <link rel="preload" as="image" href="{{ image_url }}" />
+        {% endif %}
+    {% endwith %}
 {% endif %}
 
 <!-- Prompt Detail Page Styles (extracted to external file) -->
@@ -51,19 +52,31 @@
             <!-- Featured Media (Image/Video) - NOW IN LEFT COLUMN -->
             <div class="prompt-media-container-shell">
                 <div class="prompt-media-container">
-                    {% if prompt.is_video and prompt.featured_video %}
-                        <!-- Video Display -->
+                    {% if prompt.is_video and prompt.display_video_url %}
+                        <!-- Video Display (B2 or Cloudinary) -->
                         <video controls class="hero-video"
-                            poster="{{ prompt.get_thumbnail_url }}"
+                            poster="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}"
                             preload="metadata"
                             autoplay
                             loop
                             muted>
-                            <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                            <source src="{{ prompt.display_video_url }}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
+                    {% elif prompt.display_large_url %}
+                        <!-- Image Display (B2 or Cloudinary) -->
+                        <img src="{{ prompt.display_large_url }}"
+                             srcset="{{ prompt.display_medium_url }} 600w,
+                                     {{ prompt.display_large_url }} 1200w"
+                             sizes="(max-width: 768px) 100vw,
+                                    60vw"
+                             class="hero-image"
+                             alt="{{ prompt.title }}"
+                             loading="eager"
+                             fetchpriority="high"
+                             decoding="async">
                     {% elif prompt.featured_image %}
-                        <!-- Image Display -->
+                        <!-- Fallback: Direct Cloudinary URL -->
                         {% if "placeholder" in prompt.featured_image.url %}
                             <img src="{% static 'images/placeholder-prompt.svg' %}"
                                  class="hero-image"
@@ -74,7 +87,9 @@
                             <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}"
                                  class="hero-image"
                                  alt="{{ prompt.title }}"
-                                 loading="eager">
+                                 loading="eager"
+                                 fetchpriority="high"
+                                 decoding="async">
                         {% endif %}
                     {% else %}
                         <!-- No media available -->
@@ -324,17 +339,23 @@
                        class="author-thumbnail-link author-thumbnail-more"
                        aria-label="See all prompts from {{ prompt.author.username }}">
                         <div class="author-thumbnail-wrapper">
-                            {% if author_prompt.featured_image %}
-                            <img src="{{ author_prompt.featured_image.url }}"
+                            {% with thumb_url=author_prompt.display_thumb_url medium_url=author_prompt.display_medium_url %}
+                            {% if thumb_url %}
+                            <img src="{{ thumb_url }}"
+                                 srcset="{{ thumb_url }} 300w{% if medium_url %}, {{ medium_url }} 600w{% endif %}"
+                                 sizes="120px"
                                  alt="{{ author_prompt.title }}"
                                  class="author-thumbnail"
-                                 loading="lazy">
+                                 loading="lazy"
+                                 decoding="async">
                             {% else %}
                             <img src="{{ author_prompt.get_thumbnail_url }}"
                                  alt="{{ author_prompt.title }}"
                                  class="author-thumbnail"
-                                 loading="lazy">
+                                 loading="lazy"
+                                 decoding="async">
                             {% endif %}
+                            {% endwith %}
                             <div class="author-thumbnail-count-overlay">
                                 <span class="author-more-count">+{{ author_remaining_count }}</span>
                                 <span class="author-more-text">See all prompts</span>
@@ -349,10 +370,15 @@
                             {# Phase J.3: Video thumbnails get play icon and hover autoplay #}
                             {% if author_prompt.is_video %}
                             <div class="video-thumbnail-container">
-                                <img src="{{ author_prompt.get_thumbnail_url }}"
+                                {% with thumb_url=author_prompt.display_video_thumb_url|default:author_prompt.display_thumb_url medium_url=author_prompt.display_medium_url %}
+                                <img src="{{ thumb_url|default:author_prompt.get_thumbnail_url }}"
+                                     {% if thumb_url %}srcset="{{ thumb_url }} 300w{% if medium_url %}, {{ medium_url }} 600w{% endif %}"
+                                     sizes="120px"{% endif %}
                                      alt="{{ author_prompt.title }}"
                                      class="author-thumbnail"
-                                     loading="lazy">
+                                     loading="lazy"
+                                     decoding="async">
+                                {% endwith %}
                                 <video class="thumbnail-video" muted loop playsinline preload="none">
                                     <source src="{{ author_prompt.get_video_url }}" type="video/mp4">
                                 </video>
@@ -364,17 +390,25 @@
                                 </div>
                                 <div class="author-thumbnail-overlay" aria-hidden="true"></div>
                             </div>
-                            {% elif author_prompt.featured_image %}
-                            <img src="{{ author_prompt.featured_image.url }}"
+                            {% else %}
+                            {# Image prompt - use B2 or Cloudinary #}
+                            {% with thumb_url=author_prompt.display_thumb_url medium_url=author_prompt.display_medium_url %}
+                            {% if thumb_url %}
+                            <img src="{{ thumb_url }}"
+                                 srcset="{{ thumb_url }} 300w{% if medium_url %}, {{ medium_url }} 600w{% endif %}"
+                                 sizes="120px"
                                  alt="{{ author_prompt.title }}"
                                  class="author-thumbnail"
-                                 loading="lazy">
-                            <div class="author-thumbnail-overlay" aria-hidden="true"></div>
+                                 loading="lazy"
+                                 decoding="async">
                             {% else %}
                             <img src="{{ author_prompt.get_thumbnail_url }}"
                                  alt="{{ author_prompt.title }}"
                                  class="author-thumbnail"
-                                 loading="lazy">
+                                 loading="lazy"
+                                 decoding="async">
+                            {% endif %}
+                            {% endwith %}
                             <div class="author-thumbnail-overlay" aria-hidden="true"></div>
                             {% endif %}
                         </div>

@@ -78,10 +78,18 @@
                         </video>
                     {% elif prompt.display_medium_url %}
                         {# B2 preferred, Cloudinary fallback #}
-                        <img src="{{ prompt.display_medium_url }}"
+                        <img src="{{ prompt.display_thumb_url|default:prompt.display_medium_url }}"
+                             srcset="{{ prompt.display_thumb_url }} 300w,
+                                     {{ prompt.display_medium_url }} 600w"
+                             sizes="(max-width: 500px) 100vw,
+                                    (max-width: 800px) 50vw,
+                                    (max-width: 1100px) 33vw,
+                                    25vw"
                              class="w-100"
                              style="display: block; border-radius: 12px 12px 0 0;"
                              alt="{{ prompt.title }}"
+                             loading="lazy"
+                             decoding="async"
                              onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         {# Fallback for broken/missing images #}
                         <div class="w-100 bg-secondary align-items-center justify-content-center" style="display: none; height: 300px; border-radius: 12px 12px 0 0;">
@@ -93,6 +101,8 @@
                              class="w-100"
                              style="display: block; border-radius: 12px 12px 0 0;"
                              alt="{{ prompt.title }}"
+                             loading="lazy"
+                             decoding="async"
                              onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         {# Fallback for broken/missing Cloudinary images #}
                         <div class="w-100 bg-secondary align-items-center justify-content-center" style="display: none; height: 300px; border-radius: 12px 12px 0 0;">

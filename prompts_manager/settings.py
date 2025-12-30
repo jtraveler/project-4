@@ -449,6 +449,7 @@ CSP_IMG_SRC = (
     "blob:",
     "https://res.cloudinary.com",
     "https://api.cloudinary.com",
+    "https://media.promptfinder.net",  # B2 CDN
 )
 
 CSP_CONNECT_SRC = (
@@ -474,6 +475,7 @@ CSP_MEDIA_SRC = (
     "'self'",
     "https://res.cloudinary.com",
     "blob:",
+    "https://media.promptfinder.net",  # B2 CDN
 )
 
 CSP_FRAME_SRC = (

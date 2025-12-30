@@ -17,6 +17,7 @@ from datetime import timedelta
 from taggit.models import Tag
 from prompts.forms import CommentForm, PromptForm
 from prompts.services import ModerationOrchestrator
+from prompts.services.b2_upload_service import upload_image as b2_upload_image
 from prompts.constants import AI_GENERATORS
 import time
 import logging
@@ -979,11 +980,53 @@ def prompt_create(request):
 
             if featured_media and detected_media_type:
                 if detected_media_type == 'video':
+                    # Videos continue to use Cloudinary
                     prompt.featured_video = featured_media
                     prompt.featured_image = None
-                else:  # image
-                    prompt.featured_image = featured_media
-                    prompt.featured_video = None
+                else:  # image - upload to B2 storage
+                    # Upload to B2 and get all variant URLs
+                    try:
+                        b2_result = b2_upload_image(featured_media, featured_media.name)
+                    except Exception as e:
+                        logger.error(f"B2 upload exception: {e}", exc_info=True)
+                        b2_result = {'success': False, 'error': str(e)}
+
+                    if b2_result['success']:
+                        urls = b2_result.get('urls', {})
+                        # Validate we got the original URL at minimum
+                        if not urls.get('original'):
+                            logger.warning(
+                                "B2 upload success but missing original URL, "
+                                "falling back to Cloudinary"
+                            )
+                            featured_media.seek(0)
+                            prompt.featured_image = featured_media
+                            prompt.featured_video = None
+                        else:
+                            # Save B2 URLs to model fields
+                            prompt.b2_image_url = urls.get('original', '')
+                            prompt.b2_thumb_url = urls.get('thumb', '')
+                            prompt.b2_medium_url = urls.get('medium', '')
+                            prompt.b2_large_url = urls.get('large', '')
+                            prompt.b2_webp_url = urls.get('webp', '')
+                            # Leave Cloudinary fields empty for new B2 uploads
+                            prompt.featured_image = None
+                            prompt.featured_video = None
+                            logger.info(
+                                f"B2 upload successful for prompt: "
+                                f"{b2_result['filename']}"
+                            )
+                    else:
+                        # B2 upload failed - fall back to Cloudinary
+                        # Reset file pointer before Cloudinary fallback
+                        featured_media.seek(0)
+                        logger.warning(
+                            f"B2 upload failed for '{featured_media.name}', "
+                            f"falling back to Cloudinary: "
+                            f"{b2_result.get('error', 'Unknown error')}"
+                        )
+                        prompt.featured_image = featured_media
+                        prompt.featured_video = None
 
             prompt.save()
             prompt_form.save_m2m()

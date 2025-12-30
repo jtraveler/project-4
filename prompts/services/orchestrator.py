@@ -108,14 +108,20 @@ class ModerationOrchestrator:
                 results['openai'] = {'status': 'flagged', 'error': str(e)}
 
         # Layer 3: OpenAI Vision moderation (synchronous, runs immediately)
-        if self.vision_enabled and (prompt.featured_image or prompt.featured_video):
+        # Check for both Cloudinary fields AND B2 URL fields
+        has_visual_content = (
+            prompt.featured_image or
+            prompt.featured_video or
+            getattr(prompt, 'b2_image_url', None)  # Support B2 uploads
+        )
+        if self.vision_enabled and has_visual_content:
             try:
                 results['openai_vision'] = self._run_vision_moderation(prompt)
             except Exception as e:
                 logger.error(f"Vision moderation failed: {str(e)}", exc_info=True)
                 results['openai_vision'] = {'status': 'flagged', 'error': str(e)}
         else:
-            if not (prompt.featured_image or prompt.featured_video):
+            if not has_visual_content:
                 # No visual content to moderate
                 results['openai_vision'] = {
                     'status': 'approved',

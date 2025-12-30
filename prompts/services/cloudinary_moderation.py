@@ -183,7 +183,9 @@ Be strict but fair. Flag content that violates these policies."""
             - raw_response: dict with full API response
             - explanation: string explaining the decision
         """
-        if not prompt_obj.featured_image and not prompt_obj.featured_video:
+        # Check for any visual content (Cloudinary or B2)
+        has_b2_image = getattr(prompt_obj, 'b2_image_url', None)
+        if not prompt_obj.featured_image and not prompt_obj.featured_video and not has_b2_image:
             logger.warning(f"Prompt {prompt_obj.id} has no media to moderate")
             return {
                 'is_safe': True,
@@ -201,8 +203,13 @@ Be strict but fair. Flag content that violates these policies."""
                 # Extract middle frame from video
                 image_url = self._get_video_frame_url(prompt_obj)
                 media_type = 'video'
+            elif has_b2_image:
+                # Use B2 image URL directly
+                image_url = prompt_obj.b2_image_url
+                media_type = 'image'
+                logger.info(f"Using B2 image URL for moderation: {image_url}")
             else:
-                # Use image URL directly
+                # Use Cloudinary image URL
                 # Handle both CloudinaryResource objects and string URLs
                 if hasattr(prompt_obj.featured_image, 'url'):
                     image_url = prompt_obj.featured_image.url

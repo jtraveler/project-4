@@ -16,6 +16,9 @@
     <!-- Spacing -->
     <div class="mb-5"></div>
 
+    <!-- CSRF token for AJAX requests -->
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
     <!-- Drag-drop upload area -->
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -198,8 +201,8 @@ function handleFileUpload(file) {
     uploadProgress.style.display = 'block';
     dropZone.style.display = 'none';
 
-    // Upload to Cloudinary
-    uploadToCloudinary(file);
+    // Upload to B2
+    uploadToB2(file);
 }
 
 // Validate file size and type
@@ -209,32 +212,147 @@ function validateFile(file) {
 
     if (file.type.startsWith('image/')) {
         if (file.size > maxImageSize) {
-            alert('Image must be under 10MB. Your file is ' + (file.size / 1024 / 1024).toFixed(1) + 'MB');
+            showUploadError('Image must be under 10MB. Your file is ' + (file.size / 1024 / 1024).toFixed(1) + 'MB');
             return false;
         }
     } else if (file.type.startsWith('video/')) {
         if (file.size > maxVideoSize) {
-            alert('Video must be under 100MB. Your file is ' + (file.size / 1024 / 1024).toFixed(1) + 'MB');
+            showUploadError('Video must be under 100MB. Your file is ' + (file.size / 1024 / 1024).toFixed(1) + 'MB');
             return false;
         }
         // Note: Duration check happens after upload (can't check before)
     } else {
-        alert('Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM)');
+        showUploadError('Please upload an image (JPG, PNG, WebP) or video (MP4, MOV, WebM)');
         return false;
     }
 
     return true;
 }
 
-// Upload to Cloudinary
-function uploadToCloudinary(file) {
+// Helper function to get CSRF token (tries multiple sources)
+function getCSRFToken() {
+    // Method 1: Try hidden input first (most reliable in Django)
+    const hiddenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (hiddenInput) {
+        return hiddenInput.value;
+    }
+
+    // Method 2: Try meta tag (if present)
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        return metaTag.getAttribute('content');
+    }
+
+    // Method 3: Fall back to cookie
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === 'csrftoken=') {
+                cookieValue = decodeURIComponent(cookie.substring(10));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Helper function to escape HTML (XSS prevention)
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Show error message to user with inline Bootstrap alert
+function showUploadError(message) {
+    // Hide progress bar if visible
+    uploadProgress.style.display = 'none';
+
+    // Show drop zone
+    dropZone.style.display = 'block';
+
+    // Find or create error element
+    let errorEl = document.getElementById('upload-error-message');
+    if (!errorEl) {
+        errorEl = document.createElement('div');
+        errorEl.id = 'upload-error-message';
+        errorEl.className = 'alert alert-danger mt-3';
+        errorEl.setAttribute('role', 'alert');
+
+        // Insert after the drop zone container
+        const dropZoneContainer = dropZone.closest('.col-md-8');
+        if (dropZoneContainer) {
+            dropZoneContainer.appendChild(errorEl);
+        }
+    }
+
+    // Set error content with close button
+    errorEl.innerHTML = '<strong>Upload Error:</strong> ' + escapeHtml(message) +
+        '<button type="button" class="btn-close float-end" aria-label="Close"></button>';
+    errorEl.style.display = 'block';
+
+    // Add close button handler
+    const closeBtn = errorEl.querySelector('.btn-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            errorEl.style.display = 'none';
+        });
+    }
+
+    // Reset progress bar
+    progressBar.style.width = '0%';
+    progressPercent.textContent = '0%';
+
+    // Reset file input
+    fileInput.value = '';
+}
+
+// Validate B2 API response schema
+function validateB2Response(response) {
+    // Check required top-level fields
+    if (typeof response.success !== 'boolean') {
+        return { valid: false, error: 'Invalid response format' };
+    }
+
+    if (!response.success) {
+        // Error response - just needs error message
+        return { valid: true };
+    }
+
+    // Success response - check required fields
+    if (!response.urls || typeof response.urls !== 'object') {
+        return { valid: false, error: 'Missing URLs in response' };
+    }
+
+    if (!response.urls.original) {
+        return { valid: false, error: 'Missing original URL in response' };
+    }
+
+    if (!response.filename) {
+        return { valid: false, error: 'Missing filename in response' };
+    }
+
+    return { valid: true };
+}
+
+// Upload to B2 via our API
+function uploadToB2(file) {
+    // Determine if this is a video or image
+    const isVideo = file.type.startsWith('video/');
+    const resourceType = isVideo ? 'video' : 'image';
+
+    // Prepare form data
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', '{{ cloudinary_upload_preset }}');
 
-    // Determine resource type
-    const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
-    const uploadUrl = `https://api.cloudinary.com/v1_1/{{ cloudinary_cloud_name }}/${resourceType}/upload`;
+    // Get CSRF token
+    const csrftoken = getCSRFToken();
+    if (!csrftoken) {
+        showUploadError('Session expired. Please refresh the page and try again.');
+        return;
+    }
 
     // Create XMLHttpRequest for progress tracking
     const xhr = new XMLHttpRequest();
@@ -250,34 +368,86 @@ function uploadToCloudinary(file) {
 
     // Success handler
     xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
-            const response = JSON.parse(xhr.responseText);
+        if (xhr.status === 200 || xhr.status === 201) {
+            try {
+                const response = JSON.parse(xhr.responseText);
 
-            // Redirect to Step 2 with Cloudinary data
-            const params = new URLSearchParams({
-                cloudinary_id: response.public_id,
-                resource_type: response.resource_type,
-                secure_url: response.secure_url,
-                format: response.format
-            });
+                // Validate response schema
+                const validation = validateB2Response(response);
+                if (!validation.valid) {
+                    console.error('Invalid B2 response schema:', validation.error);
+                    showUploadError(validation.error || 'Upload failed. Please try again.');
+                    return;
+                }
 
-            window.location.href = `/upload/details?${params.toString()}`;
+                if (response.success) {
+                    // Build redirect URL with B2 data
+                    const params = new URLSearchParams({
+                        resource_type: resourceType,
+                        b2_original: response.urls.original || '',
+                        b2_thumb: response.urls.thumb || '',
+                        b2_medium: response.urls.medium || '',
+                        b2_large: response.urls.large || '',
+                        b2_webp: response.urls.webp || ''
+                    });
+
+                    // For videos, also pass video-specific URLs
+                    if (isVideo) {
+                        // Video endpoint returns urls differently
+                        if (response.urls.original) {
+                            params.set('b2_video', response.urls.original);
+                        }
+                        if (response.urls.thumb) {
+                            params.set('b2_video_thumb', response.urls.thumb);
+                        }
+                        // Pass video metadata if available
+                        if (response.info) {
+                            params.set('video_duration', response.info.duration || '');
+                            params.set('video_width', response.info.width || '');
+                            params.set('video_height', response.info.height || '');
+                        }
+                    }
+
+                    // Also pass the filename for reference
+                    if (response.filename) {
+                        params.set('b2_filename', response.filename);
+                    }
+
+                    window.location.href = `/upload/details?${params.toString()}`;
+                } else {
+                    showUploadError(response.error || 'Upload failed. Please try again.');
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                showUploadError('Upload failed. Please try again.');
+            }
         } else {
-            alert('Upload failed. Please try again.');
-            uploadProgress.style.display = 'none';
-            dropZone.style.display = 'block';
+            // Try to get error message from response
+            try {
+                const response = JSON.parse(xhr.responseText);
+                showUploadError(response.error || 'Upload failed. Please try again.');
+            } catch (e) {
+                showUploadError('Upload failed. Please try again.');
+            }
         }
     });
 
     // Error handler
     xhr.addEventListener('error', () => {
-        alert('Upload failed. Please check your connection and try again.');
-        uploadProgress.style.display = 'none';
-        dropZone.style.display = 'block';
+        showUploadError('Upload failed. Please check your connection and try again.');
     });
 
-    // Send request
-    xhr.open('POST', uploadUrl);
+    // Timeout handler
+    xhr.addEventListener('timeout', () => {
+        showUploadError('Upload timed out. Please try again with a smaller file.');
+    });
+
+    // Set timeout (5 minutes for large videos)
+    xhr.timeout = 300000;
+
+    // Send request to B2 API
+    xhr.open('POST', '/api/upload/b2/');
+    xhr.setRequestHeader('X-CSRFToken', csrftoken);
     xhr.send(formData);
 }
 </script>

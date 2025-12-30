@@ -79,16 +79,81 @@ def upload_step2(request):
     - Prompt Content (their actual prompt text)
     - Tags (optional, with AI suggestions)
     - AI Generator (required)
-    """
-    # Get Cloudinary data from query params
-    cloudinary_id = request.GET.get('cloudinary_id')
-    resource_type = request.GET.get('resource_type', 'image')
-    secure_url = request.GET.get('secure_url')
-    file_format = request.GET.get('format', 'jpg')
 
-    if not cloudinary_id or not secure_url:
-        messages.error(request, 'Upload data missing. Please try again.')
-        return redirect('prompts:upload_step1')
+    Supports both B2 (new) and Cloudinary (legacy) uploads.
+    B2 uploads pass b2_original, b2_thumb, etc. parameters.
+    Cloudinary uploads pass cloudinary_id and secure_url.
+    """
+    # Check for B2 parameters first (new upload path)
+    b2_original = request.GET.get('b2_original')
+    resource_type = request.GET.get('resource_type', 'image')
+
+    # Determine if this is a B2 upload or Cloudinary upload
+    is_b2_upload = bool(b2_original)
+
+    if is_b2_upload:
+        # B2 upload - get all B2 URLs
+        b2_thumb = request.GET.get('b2_thumb', '')
+        b2_medium = request.GET.get('b2_medium', '')
+        b2_large = request.GET.get('b2_large', '')
+        b2_webp = request.GET.get('b2_webp', '')
+        b2_filename = request.GET.get('b2_filename', '')
+
+        # Video-specific B2 parameters
+        b2_video = request.GET.get('b2_video', '')
+        b2_video_thumb = request.GET.get('b2_video_thumb', '')
+        video_duration = request.GET.get('video_duration', '')
+        video_width = request.GET.get('video_width', '')
+        video_height = request.GET.get('video_height', '')
+
+        # Use original URL for preview (or video URL for videos)
+        if resource_type == 'video':
+            preview_url = b2_video or b2_original
+        else:
+            preview_url = b2_original
+
+        # Store B2 URLs in session for upload_submit
+        request.session['upload_b2_original'] = b2_original
+        request.session['upload_b2_thumb'] = b2_thumb
+        request.session['upload_b2_medium'] = b2_medium
+        request.session['upload_b2_large'] = b2_large
+        request.session['upload_b2_webp'] = b2_webp
+        request.session['upload_b2_filename'] = b2_filename
+        request.session['upload_b2_video'] = b2_video
+        request.session['upload_b2_video_thumb'] = b2_video_thumb
+        request.session['upload_video_duration'] = video_duration
+        request.session['upload_video_width'] = video_width
+        request.session['upload_video_height'] = video_height
+        request.session['upload_is_b2'] = True
+        request.session.modified = True
+
+        # For compatibility with existing code paths
+        cloudinary_id = None
+        secure_url = preview_url
+        file_format = b2_original.split('.')[-1] if '.' in b2_original else 'jpg'
+
+    else:
+        # Cloudinary upload (legacy path)
+        cloudinary_id = request.GET.get('cloudinary_id')
+        secure_url = request.GET.get('secure_url')
+        file_format = request.GET.get('format', 'jpg')
+        preview_url = secure_url
+
+        # Clear any B2 session data
+        request.session['upload_is_b2'] = False
+        request.session.modified = True
+
+    # Validate we have required data
+    # For B2: need b2_original (stored in preview_url)
+    # For Cloudinary: need cloudinary_id and secure_url
+    if is_b2_upload:
+        if not b2_original:
+            messages.error(request, 'Upload data missing. Please try again.')
+            return redirect('prompts:upload_step1')
+    else:
+        if not cloudinary_id or not secure_url:
+            messages.error(request, 'Upload data missing. Please try again.')
+            return redirect('prompts:upload_step1')
 
     # Get all tags for autocomplete
     all_tags = list(Tag.objects.values_list('name', flat=True))
@@ -151,8 +216,10 @@ def upload_step2(request):
     # Store upload session data for idle detection
     from datetime import datetime
     request.session['upload_timer'] = {
-        'cloudinary_id': cloudinary_id,
+        'cloudinary_id': cloudinary_id,  # Will be None for B2 uploads
         'resource_type': resource_type,
+        'is_b2': is_b2_upload,
+        'b2_original': b2_original if is_b2_upload else None,
         'started_at': datetime.now().isoformat(),
         'expires_at': (datetime.now() + timedelta(minutes=45)).isoformat()
     }
@@ -162,10 +229,12 @@ def upload_step2(request):
         'cloudinary_id': cloudinary_id,
         'resource_type': resource_type,
         'secure_url': secure_url,
+        'preview_url': preview_url,  # B2 or Cloudinary URL for display
         'file_format': file_format,
         'ai_tags': ai_suggestions.get('suggested_tags', []),
         'all_tags': json.dumps(all_tags),
         'image_warning': image_warning,
+        'is_b2_upload': is_b2_upload,
     }
 
     return render(request, 'prompts/upload_step2.html', context)
@@ -188,6 +257,26 @@ def upload_submit(request):
     tags_json = request.POST.get('tags', '[]')
     save_as_draft = request.POST.get('save_as_draft') == '1'  # Check if "Save as Draft" was checked
 
+    # Check if this is a B2 upload (set by upload_step2)
+    is_b2_upload = request.session.get('upload_is_b2', False)
+
+    # Get B2 URLs from session if this is a B2 upload
+    if is_b2_upload:
+        b2_original = request.session.get('upload_b2_original', '')
+        b2_thumb = request.session.get('upload_b2_thumb', '')
+        b2_medium = request.session.get('upload_b2_medium', '')
+        b2_large = request.session.get('upload_b2_large', '')
+        b2_webp = request.session.get('upload_b2_webp', '')
+        b2_filename = request.session.get('upload_b2_filename', '')
+        # Video-specific B2 URLs
+        b2_video = request.session.get('upload_b2_video', '')
+        b2_video_thumb = request.session.get('upload_b2_video_thumb', '')
+        video_duration = request.session.get('upload_video_duration', '')
+        video_width = request.session.get('upload_video_width', '')
+        video_height = request.session.get('upload_video_height', '')
+
+        logger.info(f"B2 upload detected - original: {b2_original[:50]}..." if b2_original else "B2 upload but no original URL")
+
     # Get AI-generated title/description from session
     ai_title = request.session.get('ai_title') or 'Untitled Prompt'
     ai_description = request.session.get('ai_description') or ''
@@ -201,9 +290,15 @@ def upload_submit(request):
         messages.error(request, 'Please select an AI generator.')
         return redirect(f'/upload/details?cloudinary_id={cloudinary_id}&resource_type={resource_type}')
 
-    if not cloudinary_id:
-        messages.error(request, 'Upload data missing. Please try again.')
-        return redirect('prompts:upload_step1')
+    # Validate upload data - B2 uploads need b2_original, Cloudinary needs cloudinary_id
+    if is_b2_upload:
+        if not b2_original:
+            messages.error(request, 'Upload data missing. Please try again.')
+            return redirect('prompts:upload_step1')
+    else:
+        if not cloudinary_id:
+            messages.error(request, 'Upload data missing. Please try again.')
+            return redirect('prompts:upload_step1')
 
     # Parse tags
     try:
@@ -299,21 +394,36 @@ def upload_submit(request):
         status=0,
     )
 
-    # Use CloudinaryResource to tell Django the file is already uploaded
-    from cloudinary import CloudinaryResource
-
-    if resource_type == 'video':
-        prompt.featured_video = CloudinaryResource(
-            public_id=cloudinary_id,
-            resource_type='video'
-        )
+    # Set media URLs based on upload type (B2 or Cloudinary)
+    if is_b2_upload:
+        # B2 upload - set B2 URL fields
+        if resource_type == 'video':
+            prompt.b2_video_url = b2_video or b2_original
+            prompt.b2_video_thumb_url = b2_video_thumb
+            logger.info(f"Set B2 video URL: {prompt.b2_video_url[:50]}..." if prompt.b2_video_url else "No B2 video URL")
+        else:
+            # Image upload - set all B2 image URL fields
+            prompt.b2_image_url = b2_original
+            prompt.b2_thumb_url = b2_thumb
+            prompt.b2_medium_url = b2_medium
+            prompt.b2_large_url = b2_large
+            prompt.b2_webp_url = b2_webp
+            logger.info(f"Set B2 image URLs - original: {b2_original[:50]}..." if b2_original else "No B2 image URL")
     else:
-        prompt.featured_image = CloudinaryResource(
-            public_id=cloudinary_id,
-            resource_type='image'
-        )
+        # Cloudinary upload (legacy) - use CloudinaryResource
+        from cloudinary import CloudinaryResource
 
-    logger.info(f"Set Cloudinary resource: {cloudinary_id}")
+        if resource_type == 'video':
+            prompt.featured_video = CloudinaryResource(
+                public_id=cloudinary_id,
+                resource_type='video'
+            )
+        else:
+            prompt.featured_image = CloudinaryResource(
+                public_id=cloudinary_id,
+                resource_type='image'
+            )
+        logger.info(f"Set Cloudinary resource: {cloudinary_id}")
 
     # Save to get ID (needed for moderation to access image URL)
     prompt.save()
@@ -427,9 +537,42 @@ def upload_submit(request):
         del request.session['upload_timer']
         request.session.modified = True
 
-    # Clear session data
-    request.session.pop('ai_title', None)
-    request.session.pop('ai_description', None)
+    # Comprehensive session cleanup - clear all upload-related keys
+    # B2 upload keys
+    b2_session_keys = [
+        'upload_is_b2',
+        'upload_b2_original',
+        'upload_b2_thumb',
+        'upload_b2_medium',
+        'upload_b2_large',
+        'upload_b2_webp',
+        'upload_b2_filename',
+        'upload_b2_video',
+        'upload_b2_video_thumb',
+        'upload_video_duration',
+        'upload_video_width',
+        'upload_video_height',
+    ]
+    # Cloudinary/legacy upload keys
+    cloudinary_session_keys = [
+        'upload_cloudinary_id',
+        'upload_secure_url',
+        'upload_resource_type',
+        'upload_format',
+    ]
+    # AI-generated content keys
+    ai_session_keys = [
+        'ai_title',
+        'ai_description',
+        'ai_tags',
+    ]
+
+    # Clear all upload session keys
+    for key in b2_session_keys + cloudinary_session_keys + ai_session_keys:
+        request.session.pop(key, None)
+
+    request.session.modified = True
+    logger.info(f"Cleared all upload session keys for user {request.user.id}")
 
     # Clear list caches when new prompt is created
     for page in range(1, 5):

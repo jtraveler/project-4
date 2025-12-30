@@ -832,6 +832,21 @@ class Prompt(models.Model):
         help_text="B2 CDN URL for WebP version"
     )
 
+    # B2 Video URLs (Phase L6-VIDEO: FFmpeg Video Processing)
+    # Stores video URL and extracted thumbnail for video prompts.
+    b2_video_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="B2 CDN URL for original video"
+    )
+    b2_video_thumb_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="B2 CDN URL for video thumbnail (600x600)"
+    )
+
     # Custom managers
     objects = PromptManager()  # Default: excludes soft-deleted prompts
     all_objects = models.Manager()  # Include deleted prompts
@@ -1164,8 +1179,152 @@ class Prompt(models.Model):
 
     @property
     def has_b2_media(self):
-        """Check if this prompt has B2 media uploaded."""
-        return bool(self.b2_image_url)
+        """Check if this prompt has B2 media (image or video) uploaded."""
+        return bool(self.b2_image_url or self.b2_video_url)
+
+    @property
+    def display_image_url(self):
+        """
+        Get the best image URL for display (B2 preferred, Cloudinary fallback).
+
+        Template usage: {{ prompt.display_image_url }}
+
+        Returns:
+            str: Image URL or None if no image available
+        """
+        return self.get_image_url('original')
+
+    @property
+    def display_thumb_url(self):
+        """
+        Get thumbnail URL for grid displays (B2 preferred, Cloudinary fallback).
+
+        Template usage: {{ prompt.display_thumb_url }}
+
+        Returns:
+            str: Thumbnail URL or None
+        """
+        # Try B2 thumb first
+        if self.b2_thumb_url:
+            return self.b2_thumb_url
+        # Cloudinary fallback with thumbnail transformation
+        if self.featured_image:
+            try:
+                return self.featured_image.build_url(
+                    width=300,
+                    height=300,
+                    crop='fill',
+                    gravity='auto',
+                    quality='auto',
+                    fetch_format='auto'
+                )
+            except Exception:
+                return self.featured_image.url
+        return None
+
+    @property
+    def display_medium_url(self):
+        """
+        Get medium-sized URL for cards (B2 preferred, Cloudinary fallback).
+
+        Template usage: {{ prompt.display_medium_url }}
+
+        Returns:
+            str: Medium image URL or None
+        """
+        # Try B2 medium first
+        if self.b2_medium_url:
+            return self.b2_medium_url
+        # Cloudinary fallback with medium transformation
+        if self.featured_image:
+            try:
+                return self.featured_image.build_url(
+                    width=600,
+                    height=600,
+                    crop='fill',
+                    gravity='auto',
+                    quality='auto',
+                    fetch_format='auto'
+                )
+            except Exception:
+                return self.featured_image.url
+        return None
+
+    @property
+    def display_large_url(self):
+        """
+        Get large URL for detail pages (B2 preferred, Cloudinary fallback).
+
+        Template usage: {{ prompt.display_large_url }}
+
+        Returns:
+            str: Large image URL or None
+        """
+        # Try B2 large first
+        if self.b2_large_url:
+            return self.b2_large_url
+        # Cloudinary fallback - original or optimized
+        if self.featured_image:
+            try:
+                return self.featured_image.build_url(
+                    width=1200,
+                    height=1200,
+                    crop='limit',
+                    quality='auto',
+                    fetch_format='auto'
+                )
+            except Exception:
+                return self.featured_image.url
+        return None
+
+    @property
+    def display_video_thumb_url(self):
+        """
+        Get video thumbnail URL (B2 preferred, Cloudinary fallback).
+
+        For video prompts, returns the extracted thumbnail image.
+        Template usage: {{ prompt.display_video_thumb_url }}
+
+        Returns:
+            str: Video thumbnail URL or None
+        """
+        # Try B2 video thumb first
+        if self.b2_video_thumb_url:
+            return self.b2_video_thumb_url
+        # Cloudinary fallback - generate thumbnail from video
+        if self.featured_video:
+            try:
+                # Cloudinary can extract frame from video
+                return self.featured_video.build_url(
+                    resource_type='video',
+                    format='jpg',
+                    transformation=[
+                        {'width': 600, 'height': 600, 'crop': 'fill', 'gravity': 'auto'},
+                        {'start_offset': '1', 'end_offset': '1'}
+                    ]
+                )
+            except Exception:
+                # Return video URL as last resort (browser will show first frame)
+                return self.featured_video.url if self.featured_video else None
+        return None
+
+    @property
+    def display_video_url(self):
+        """
+        Get video URL for playback (B2 preferred, Cloudinary fallback).
+
+        Template usage: {{ prompt.display_video_url }}
+
+        Returns:
+            str: Video URL or None
+        """
+        # Try B2 video first
+        if self.b2_video_url:
+            return self.b2_video_url
+        # Cloudinary fallback
+        if self.featured_video:
+            return self.featured_video.url
+        return None
 
     # Moderation helper methods
     def is_moderation_approved(self):

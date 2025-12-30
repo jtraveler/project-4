@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from prompts.forms import CollaborateForm
-from prompts.services.b2_upload_service import upload_image
+from prompts.services.b2_upload_service import upload_image, upload_video
 import json
 
 # Rate limiting constants for B2 uploads
@@ -282,7 +282,7 @@ def bulk_reorder_prompts(request):
 @require_POST
 def b2_upload_api(request):
     """
-    API endpoint for uploading images to B2 storage.
+    API endpoint for uploading images and videos to B2 storage.
 
     Rate limited to 20 uploads per hour per user.
 
@@ -290,9 +290,9 @@ def b2_upload_api(request):
     Returns: JSON with B2 URLs or error message
 
     Request:
-        - file: The image file (required)
+        - file: The image or video file (required)
 
-    Response (success):
+    Response (success - image):
         {
             "success": true,
             "filename": "abc123.jpg",
@@ -307,6 +307,22 @@ def b2_upload_api(request):
                 "format": "JPEG",
                 "width": 1920,
                 "height": 1080
+            }
+        }
+
+    Response (success - video):
+        {
+            "success": true,
+            "filename": "vabc123.mp4",
+            "urls": {
+                "original": "https://media.promptfinder.net/...",
+                "thumb": "https://media.promptfinder.net/..."
+            },
+            "info": {
+                "duration": 15.5,
+                "width": 1920,
+                "height": 1080,
+                "codec": "h264"
             }
         }
 
@@ -337,28 +353,46 @@ def b2_upload_api(request):
 
     uploaded_file = request.FILES['file']
 
+    # Define allowed types
+    allowed_image_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    allowed_video_types = ['video/mp4', 'video/webm', 'video/quicktime']
+
+    # Determine file category
+    is_video = uploaded_file.content_type in allowed_video_types
+    is_image = uploaded_file.content_type in allowed_image_types
+
     # Validate file type
-    allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if uploaded_file.content_type not in allowed_types:
+    if not is_image and not is_video:
         return JsonResponse({
             'success': False,
             'error': (
                 f'Invalid file type: {uploaded_file.content_type}. '
-                'Allowed: JPEG, PNG, GIF, WebP'
+                'Allowed: JPEG, PNG, GIF, WebP, MP4, WebM, MOV'
             )
         }, status=400)
 
-    # Validate file size (max 10MB)
-    max_size = 10 * 1024 * 1024  # 10MB
-    if uploaded_file.size > max_size:
-        return JsonResponse({
-            'success': False,
-            'error': 'File too large. Maximum size is 10MB.'
-        }, status=400)
+    # Validate file size based on type
+    if is_image:
+        max_size = 10 * 1024 * 1024  # 10MB for images
+        if uploaded_file.size > max_size:
+            return JsonResponse({
+                'success': False,
+                'error': 'Image too large. Maximum size is 10MB.'
+            }, status=400)
+    else:
+        max_size = 100 * 1024 * 1024  # 100MB for videos
+        if uploaded_file.size > max_size:
+            return JsonResponse({
+                'success': False,
+                'error': 'Video too large. Maximum size is 100MB.'
+            }, status=400)
 
     # Upload to B2
     try:
-        result = upload_image(uploaded_file, uploaded_file.name)
+        if is_video:
+            result = upload_video(uploaded_file, uploaded_file.name)
+        else:
+            result = upload_image(uploaded_file, uploaded_file.name)
 
         if result['success']:
             # Increment rate limit counter on successful upload

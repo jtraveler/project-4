@@ -114,17 +114,20 @@
             <div class="field-group" id="video-upload-section" style="display: none;">
                 <label class="field-label">Featured Video</label>
                 
-                <!-- Current Video Display -->
-                {% if prompt.featured_video %}
+                <!-- Current Video Display (B2 first, Cloudinary fallback) -->
+                {% if prompt.is_video %}
                     <div class="current-video mb-3">
                         <p class="current-video-label">Current video:</p>
-                        <video controls class="current-video-preview" style="max-width: 400px;">
-                            <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                        <video controls class="current-video-preview" style="max-width: 400px;"
+                               poster="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}">
+                            <source src="{{ prompt.display_video_url|default:prompt.get_video_url }}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
-                        <p class="small text-muted mb-2">
-                            {{ prompt.featured_video.public_id }}
-                        </p>
+                        {% if prompt.b2_video_url %}
+                        <p class="small text-muted mb-2">B2 Storage</p>
+                        {% elif prompt.featured_video %}
+                        <p class="small text-muted mb-2">{{ prompt.featured_video.public_id }}</p>
+                        {% endif %}
                     </div>
                 {% endif %}
                 

@@ -67,16 +67,28 @@
         {% for prompt in trashed_prompts %}
         <div class="masonry-item" data-item data-order="{{ forloop.counter }}" data-slug="{{ prompt.slug }}">
             <div class="card prompt-card {% if prompt.is_expiring_soon %}border-danger{% endif %}">
-                {# Thumbnail #}
+                {# Thumbnail (B2 first, Cloudinary fallback) #}
                 <div class="position-relative">
-                    {% if prompt.featured_video %}
+                    {% if prompt.is_video %}
                         <video class="w-100"
                                style="display: block; border-radius: 12px 12px 0 0;"
-                               autoplay loop muted playsinline preload="metadata">
-                            <source src="{{ prompt.featured_video.url }}" type="video/mp4">
+                               autoplay loop muted playsinline preload="metadata"
+                               poster="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}">
+                            <source src="{{ prompt.display_video_url|default:prompt.get_video_url }}" type="video/mp4">
                         </video>
+                    {% elif prompt.display_medium_url %}
+                        {# B2 preferred, Cloudinary fallback #}
+                        <img src="{{ prompt.display_medium_url }}"
+                             class="w-100"
+                             style="display: block; border-radius: 12px 12px 0 0;"
+                             alt="{{ prompt.title }}"
+                             onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        {# Fallback for broken/missing images #}
+                        <div class="w-100 bg-secondary align-items-center justify-content-center" style="display: none; height: 300px; border-radius: 12px 12px 0 0;">
+                            <i class="fas fa-image fa-3x text-white" aria-hidden="true"></i>
+                        </div>
                     {% elif prompt.featured_image %}
-                        {# Use featured_image directly (public_id) instead of .url to avoid CloudinaryResource error #}
+                        {# Direct Cloudinary fallback if no B2 URL #}
                         <img src="{{ prompt.featured_image|cloudinary_transform:'w_440,f_webp,q_90' }}"
                              class="w-100"
                              style="display: block; border-radius: 12px 12px 0 0;"

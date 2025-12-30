@@ -70,6 +70,9 @@ urlpatterns = [
     # Leaderboard (Phase G Part C)
     path('leaderboard/', views.leaderboard, name='leaderboard'),
 
+    # B2 Upload API (Phase L)
+    path('api/upload/b2/', views.b2_upload_api, name='b2_upload_api'),
+
     # Collections API (Phase K)
     path('api/collections/', views.api_collections_list, name='api_collections_list'),
     path('api/collections/create/', views.api_collection_create, name='api_collection_create'),

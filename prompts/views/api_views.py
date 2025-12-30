@@ -11,7 +11,12 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from prompts.forms import CollaborateForm
+from prompts.services.b2_upload_service import upload_image
 import json
+
+# Rate limiting constants for B2 uploads
+B2_UPLOAD_RATE_LIMIT = 20  # Max uploads per hour
+B2_UPLOAD_RATE_WINDOW = 3600  # 1 hour in seconds
 
 logger = logging.getLogger(__name__)
 
@@ -273,5 +278,106 @@ def bulk_reorder_prompts(request):
         )
 
 
+@login_required
+@require_POST
+def b2_upload_api(request):
+    """
+    API endpoint for uploading images to B2 storage.
 
+    Rate limited to 20 uploads per hour per user.
 
+    Accepts: POST with multipart/form-data
+    Returns: JSON with B2 URLs or error message
+
+    Request:
+        - file: The image file (required)
+
+    Response (success):
+        {
+            "success": true,
+            "filename": "abc123.jpg",
+            "urls": {
+                "original": "https://media.promptfinder.net/...",
+                "thumb": "https://media.promptfinder.net/...",
+                "medium": "https://media.promptfinder.net/...",
+                "large": "https://media.promptfinder.net/...",
+                "webp": "https://media.promptfinder.net/..."
+            },
+            "info": {
+                "format": "JPEG",
+                "width": 1920,
+                "height": 1080
+            }
+        }
+
+    Response (error):
+        {
+            "success": false,
+            "error": "Error message here"
+        }
+
+    URL: /api/upload/b2/
+    """
+    # Rate limiting check (20 uploads per hour per user)
+    cache_key = f"b2_upload_rate:{request.user.id}"
+    upload_count = cache.get(cache_key, 0)
+
+    if upload_count >= B2_UPLOAD_RATE_LIMIT:
+        return JsonResponse({
+            'success': False,
+            'error': 'Upload rate limit exceeded. Please try again later.'
+        }, status=429)
+
+    # Check for file in request
+    if 'file' not in request.FILES:
+        return JsonResponse({
+            'success': False,
+            'error': 'No file provided'
+        }, status=400)
+
+    uploaded_file = request.FILES['file']
+
+    # Validate file type
+    allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if uploaded_file.content_type not in allowed_types:
+        return JsonResponse({
+            'success': False,
+            'error': (
+                f'Invalid file type: {uploaded_file.content_type}. '
+                'Allowed: JPEG, PNG, GIF, WebP'
+            )
+        }, status=400)
+
+    # Validate file size (max 10MB)
+    max_size = 10 * 1024 * 1024  # 10MB
+    if uploaded_file.size > max_size:
+        return JsonResponse({
+            'success': False,
+            'error': 'File too large. Maximum size is 10MB.'
+        }, status=400)
+
+    # Upload to B2
+    try:
+        result = upload_image(uploaded_file, uploaded_file.name)
+
+        if result['success']:
+            # Increment rate limit counter on successful upload
+            cache.set(cache_key, upload_count + 1, B2_UPLOAD_RATE_WINDOW)
+
+            return JsonResponse({
+                'success': True,
+                'filename': result['filename'],
+                'urls': result['urls'],
+                'info': result['info']
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': result['error']
+            }, status=500)
+    except Exception as e:
+        logger.exception(f"B2 upload error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'An unexpected error occurred during upload.'
+        }, status=500)

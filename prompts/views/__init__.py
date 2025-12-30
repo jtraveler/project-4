@@ -59,6 +59,7 @@ from .api_views import (
     prompt_move_down,
     prompt_set_order,
     bulk_reorder_prompts,
+    b2_upload_api,
 )
 
 # Import admin utility views
@@ -151,6 +152,7 @@ __all__ = [
     'prompt_move_down',
     'prompt_set_order',
     'bulk_reorder_prompts',
+    'b2_upload_api',
 
     # Admin views
     'media_issues_dashboard',

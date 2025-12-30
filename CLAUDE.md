@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** December 29, 2025
-**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) PLANNING, Phase K ON HOLD (95%)
+**Last Updated:** December 30, 2025
+**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) IN PROGRESS (~60%), Phase K ON HOLD (95%)
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -134,7 +134,7 @@
     - ❌ Phase K.3: Premium Features (limits, upsells)
     - **Approach:** Micro-Spec methodology (adopted Session 24)
     - See: [Phase K: Collections Feature](#-phase-k-collections-feature)
-  - 📋 **Phase L:** Media Infrastructure Migration ⭐ **PLANNING** (January 2026)
+  - 🔄 **Phase L:** Media Infrastructure Migration ⭐ **~80% COMPLETE** (December 2025)
     - Cloudinary → Backblaze B2 + Cloudflare migration
     - 11 sub-features for complete media stack overhaul
     - ~70% cost reduction at scale
@@ -6450,13 +6450,14 @@ See also: [Future Features Roadmap](#-future-features-roadmap) for comprehensive
 
 ---
 
-## 🚀 Phase L: Media Infrastructure Migration (CURRENT PRIORITY)
+## 🚀 Phase L: Media Infrastructure Migration (~80% COMPLETE)
 
-**Status:** 📋 PLANNING
-**Target Start:** January 2026
+**Status:** ✅ L1-L5d COMPLETE | Remaining: L5e, L6, L11
+**Started:** December 2025
 **Priority:** CRITICAL - Cost and performance foundation
 **Estimated Effort:** 3-4 weeks
 **Cost Impact:** ~70% reduction in media hosting costs at scale
+**Agent Rating:** 8.5/10 average (@django-pro, @code-reviewer)
 
 ---
 
@@ -6466,13 +6467,103 @@ Migrate from Cloudinary to Backblaze B2 + Cloudflare for media storage and deliv
 
 ---
 
+### Completed Micro-Specs (December 2025)
+
+| Spec | Description | Status | Files |
+|------|-------------|--------|-------|
+| L1.1 | B2 Storage Backend | ✅ Complete | `prompts/storage_backends.py` |
+| L1.2 | CDN URL Generation | ✅ Complete | `prompts/storage_backends.py` |
+| L3 | Image Optimization (Pillow) | ✅ Complete | `prompts/services/image_processor.py` |
+| L4 | B2 Upload Service | ✅ Complete | `prompts/services/b2_upload_service.py` |
+| L5a | Model Fields (5 B2 URL fields) | ✅ Complete | `prompts/models.py` |
+| L5b | Upload API Endpoint | ✅ Complete | `prompts/views/api_views.py` |
+| L5c | Upload Form Integration | ✅ Complete | `prompts/templates/prompts/upload_step2.html` |
+| L5d | Template Updates (6 templates) | ✅ Complete | Multiple templates |
+
+---
+
+### New B2 URL Fields (Prompt Model)
+
+```python
+# Added in migration 0040/0041
+b2_image_url = models.URLField(max_length=500, blank=True, null=True)
+b2_thumb_url = models.URLField(max_length=500, blank=True, null=True)     # 300x300
+b2_medium_url = models.URLField(max_length=500, blank=True, null=True)    # 600x600
+b2_large_url = models.URLField(max_length=500, blank=True, null=True)     # 1200x1200
+b2_webp_url = models.URLField(max_length=500, blank=True, null=True)      # WebP format
+```
+
+---
+
+### New API Endpoint
+
+**POST /api/upload/b2/**
+- Rate limited: 20 requests/hour per user
+- Authentication: Required
+- Accepts: multipart/form-data with image file
+- Returns: JSON with all B2 URLs (original, thumb, medium, large, webp)
+- Validates: File type, file size (10MB max)
+
+---
+
+### B2 Environment Variables
+
+```bash
+# Required for B2 integration
+B2_APPLICATION_KEY_ID=your_key_id
+B2_APPLICATION_KEY=your_application_key
+B2_BUCKET_NAME=your_bucket_name
+B2_REGION=us-west-002  # or your region
+
+# Cloudflare CDN (optional, for production)
+CLOUDFLARE_CDN_DOMAIN=media.promptfinder.net
+```
+
+---
+
+### Template B2-First Pattern
+
+All templates now use B2-first with Cloudinary fallback:
+```django
+{% if prompt.display_medium_url %}
+    <img src="{{ prompt.display_medium_url }}" ...>
+{% elif prompt.featured_image %}
+    <img src="{{ prompt.featured_image.url }}" ...>
+{% else %}
+    <img src="{% static 'images/placeholder-prompt.svg' %}" ...>
+{% endif %}
+```
+
+**Templates Updated (6 templates with B2-first pattern):**
+1. `_prompt_card.html` - Homepage cards
+2. `prompt_temporarily_unavailable.html` - Soft-deleted prompts
+3. `prompt_gone.html` - Permanently deleted prompts
+4. `prompt_list.html` - Main prompt listing
+5. `trash_bin.html` - Trash view
+6. `user_profile.html` - Profile prompts
+
+---
+
+### Image Processing Pipeline
+
+```
+Upload → Pillow Processing → B2 Storage → Cloudflare CDN
+                ↓
+    ┌───────────┼───────────┬───────────┐
+    ↓           ↓           ↓           ↓
+ Original   Thumbnail    Medium      Large      WebP
+ (as-is)    (300x300)   (600x600)  (1200x1200) (optimized)
+```
+
+---
+
 ### Why This Migration
 
 | Factor | Cloudinary | B2 + Cloudflare | Winner |
 |--------|------------|-----------------|--------|
 | Storage Cost (100GB) | $45/mo | $0.50/mo | B2 |
 | Bandwidth Cost (500GB) | $45/mo | $0 (Cloudflare) | B2 |
-| Image Transforms | Built-in | Cloudflare Images ($5/mo) | Tie |
+| Image Transforms | Built-in | Pillow (server-side) | Tie |
 | Video Transcoding | Built-in | Custom (FFmpeg) | Cloudinary |
 | Global CDN | Yes | Yes (better) | Cloudflare |
 | Setup Complexity | Low | Medium | Cloudinary |
@@ -6484,73 +6575,53 @@ Migrate from Cloudinary to Backblaze B2 + Cloudflare for media storage and deliv
 
 ---
 
-### Phase L Features (11 Total)
+### Remaining Phase L Features (3 remaining)
 
-#### L.1: B2 Bucket Setup
-- Create Backblaze B2 account and bucket
-- Configure bucket settings (public/private, lifecycle)
-- Set up application keys with minimal permissions
-- Estimated: 2 hours
+#### L5e: Edit Form B2 Integration (NOT STARTED)
+- Update prompt_edit.html to display/handle B2 images
+- Add image replacement workflow for B2
+- Estimated: 2-3 hours
 
-#### L.2: Cloudflare Integration
-- Add B2 bucket as Cloudflare origin
-- Configure caching rules (Cache Everything, edge TTL)
-- Set up custom domain (media.promptfinder.net)
-- Estimated: 3 hours
-
-#### L.3: Django Storage Backend
-- Install django-storages with B2 backend
-- Create custom storage class for PromptFinder
-- Configure settings for B2 credentials
-- Estimated: 4 hours
-
-#### L.4: Upload Flow Migration
-- Replace Cloudinary upload widget with direct B2 upload
-- Implement presigned URLs for secure uploads
-- Add upload progress tracking
-- Estimated: 8 hours
-
-#### L.5: Image Transformation Service
-- Set up Cloudflare Images or custom image proxy
-- Implement thumbnail generation (300x300, 600x600, 1200x1200)
-- Add WebP/AVIF format conversion
-- Estimated: 6 hours
-
-#### L.6: Video Handling
+#### L6: Video Handling (NOT STARTED)
 - Implement FFmpeg-based video processing
 - Add HLS/DASH streaming support
 - Generate video thumbnails
 - Estimated: 12 hours
 
-#### L.7: Migration Script
+#### L11: Documentation & Cleanup (PARTIAL)
+- ✅ Update CLAUDE.md with new architecture
+- ✅ Update PROJECT_FILE_STRUCTURE.md
+- ❌ Remove Cloudinary dependencies after validation
+- ❌ Document troubleshooting procedures
+- Estimated: 2 hours
+
+---
+
+### Deferred Phase L Features (Post-Launch)
+
+#### L7: Migration Script (DEFERRED)
 - Create script to migrate existing Cloudinary assets
 - Implement batch processing with progress tracking
 - Add rollback capability
 - Estimated: 8 hours
 
-#### L.8: CDN Optimization
+#### L8: CDN Optimization (DEFERRED)
 - Configure Cloudflare cache rules per content type
 - Set up Polish (image optimization)
 - Enable Argo (smart routing) if budget allows
 - Estimated: 4 hours
 
-#### L.9: Monitoring & Analytics
+#### L9: Monitoring & Analytics (DEFERRED)
 - Set up Cloudflare Analytics dashboard
 - Implement bandwidth tracking
 - Add cache hit ratio monitoring
 - Estimated: 3 hours
 
-#### L.10: Fallback System
-- Keep Cloudinary as fallback for 30 days post-migration
-- Implement automatic failover if B2 unavailable
-- Create health check endpoints
+#### L10: Fallback System (PARTIAL - DEFERRED)
+- ✅ Templates have B2-first with Cloudinary fallback
+- ❌ Automatic failover if B2 unavailable
+- ❌ Health check endpoints
 - Estimated: 4 hours
-
-#### L.11: Documentation & Cleanup
-- Update CLAUDE.md with new architecture
-- Remove Cloudinary dependencies after validation
-- Document troubleshooting procedures
-- Estimated: 2 hours
 
 ---
 
@@ -9460,7 +9531,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.7
-**Last Updated:** December 29, 2025
+**Version:** 2.8
+**Last Updated:** December 30, 2025
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase L: Media Infrastructure Planning, Phase K ON HOLD at 95%)
+**Project Status:** Pre-Launch (Phase L: Media Infrastructure IN PROGRESS ~60%, Phase K ON HOLD at 95%)

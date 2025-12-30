@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** December 29, 2025
+**Last Updated:** December 30, 2025
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase K Collections (~85% Complete)
+**Current Phase:** Phase L Media Infrastructure (Core Complete, ~60%)
 **Total Tests:** 234 passing (46% coverage)
 
 ---
@@ -11,16 +11,16 @@
 
 | Category | Count | Location |
 |----------|-------|----------|
-| **Python Files** | 92 | Various directories |
+| **Python Files** | 96 | Various directories |
 | **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 4 | static/js/ |
 | **SVG Icons** | 30 | static/icons/sprite.svg |
-| **Migrations** | 40 | prompts/migrations/ (39), about/migrations/ (1) |
+| **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 12 | prompts/tests/ |
 | **Management Commands** | 17 | prompts/management/commands/ |
-| **Services** | 7 | prompts/services/ |
-| **View Modules** | 12 | prompts/views/ |
+| **Services** | 8 | prompts/services/ |
+| **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
 | **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
 
@@ -67,8 +67,9 @@ live-working-project/
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 17 management commands + __init__.py
-│   ├── migrations/               # 39 migrations + __init__.py
-│   ├── services/                 # 7 service modules
+│   ├── migrations/               # 40 migrations + __init__.py
+│   ├── services/                 # 8 service modules
+│   ├── storage_backends.py       # B2 storage backend + CDN (Phase L)
 │   ├── templates/prompts/        # 23 templates
 │   │   └── partials/             # Partial templates
 │   │       ├── _masonry_grid.html
@@ -76,19 +77,19 @@ live-working-project/
 │   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
 │   ├── tests/                    # 12 test files
-│   └── views/                    # 12 view modules (refactored)
+│   └── views/                    # 11 view modules (refactored)
 │       ├── __init__.py           # Package exports
 │       ├── admin_views.py        # Admin dashboard views
-│       ├── auth_views.py         # Authentication views
+│       ├── api_views.py          # REST API endpoints (Phase L)
 │       ├── collection_views.py   # Collection API and page views (Phase K)
-│       ├── comment_views.py      # Comment CRUD operations
-│       ├── core_views.py         # Homepage, detail, list views
+│       ├── generator_views.py    # AI generator category pages
 │       ├── leaderboard_views.py  # Leaderboard functionality
-│       ├── moderation_views.py   # Content moderation views
-│       ├── profile_views.py      # User profile views
-│       ├── settings_views.py     # User settings views
+│       ├── prompt_views.py       # Prompt detail, edit, delete views
+│       ├── redirect_views.py     # URL redirects and legacy routes
 │       ├── social_views.py       # Follow, like, share views
-│       └── upload_views.py       # Upload workflow views
+│       ├── upload_views.py       # Upload workflow views
+│       ├── user_views.py         # User profile and settings views
+│       └── utility_views.py      # Utility and helper views
 ├── prompts_manager/              # Django project settings (7 files)
 │   ├── __init__.py
 │   ├── asgi.py
@@ -150,33 +151,40 @@ live-working-project/
 
 ---
 
-## Service Layer Architecture (7 modules)
+## Service Layer Architecture (8 modules)
 
 ```
 prompts/services/
 ├── __init__.py              # Service exports
+├── b2_upload_service.py     # B2 upload orchestration (Phase L)
 ├── cloudinary_moderation.py # Cloudinary AI moderation (AWS Rekognition)
 ├── content_generation.py    # GPT-4o content generation for uploads
+├── image_processor.py       # Pillow image optimization (Phase L)
 ├── leaderboard.py           # Leaderboard calculations (Phase G)
 ├── openai_moderation.py     # OpenAI text moderation API
 ├── orchestrator.py          # Moderation orchestration (multi-layer)
 └── profanity_filter.py      # Profanity detection and filtering
+
+prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app root)
 ```
 
 ### Service Descriptions
 
 | Service | Description | Cost |
 |---------|-------------|------|
+| **b2_upload_service** | Orchestrates B2 uploads with optimization | ~$0.005/GB |
 | **cloudinary_moderation** | Cloudinary AI Vision for image/video moderation | ~$5-10/1000 images |
 | **content_generation** | GPT-4o-mini for AI-generated titles, descriptions, tags | ~$0.00255/upload |
+| **image_processor** | Pillow-based image optimization (thumb, medium, large, webp) | N/A |
 | **leaderboard** | User ranking by views, activity, engagement | N/A |
 | **openai_moderation** | OpenAI text moderation API | FREE |
 | **orchestrator** | Multi-layer moderation coordination | Combined |
 | **profanity_filter** | Custom profanity word detection | N/A |
+| **storage_backends** | B2StorageBackend + Cloudflare CDN URL generation (prompts/) | ~$0.005/GB |
 
 ---
 
-## Views Package Architecture (12 modules)
+## Views Package Architecture (11 modules)
 
 *Refactored December 2025 - Previously a single 3,929-line views.py file*
 
@@ -184,16 +192,16 @@ prompts/services/
 prompts/views/
 ├── __init__.py           # Package exports (all public views)
 ├── admin_views.py        # Admin dashboard, debug pages, bulk actions
-├── auth_views.py         # Login, logout, registration helpers
+├── api_views.py          # REST API endpoints (B2 upload - Phase L)
 ├── collection_views.py   # Collection API and page views (Phase K)
-├── comment_views.py      # Comment CRUD, moderation actions
-├── core_views.py         # PromptList, prompt_detail, homepage
+├── generator_views.py    # AI generator category pages
 ├── leaderboard_views.py  # Leaderboard rankings, filters
-├── moderation_views.py   # Content review, appeals, flags
-├── profile_views.py      # User profiles, settings, avatar
-├── settings_views.py     # Notification preferences, account settings
+├── prompt_views.py       # Prompt detail, edit, delete, list views
+├── redirect_views.py     # URL redirects and legacy routes
 ├── social_views.py       # Follow/unfollow, likes, shares
-└── upload_views.py       # Two-step upload, AI generation, validation
+├── upload_views.py       # Two-step upload, AI generation, validation
+├── user_views.py         # User profiles, settings, avatar
+└── utility_views.py      # Utility and helper views
 ```
 
 ### Module Descriptions
@@ -201,16 +209,16 @@ prompts/views/
 | Module | Functions | Purpose |
 |--------|-----------|---------|
 | **admin_views** | ~15 | Admin dashboards, media issues, trash management |
-| **auth_views** | ~5 | Authentication helpers, session management |
+| **api_views** | ~3 | REST API endpoints for B2 upload, rate-limited (Phase L) |
 | **collection_views** | ~9 | Collection CRUD, API endpoints, profile tab, pagination |
-| **comment_views** | ~8 | Comment CRUD, approval, deletion |
-| **core_views** | ~12 | Homepage, prompt detail, list views, search |
+| **generator_views** | ~5 | AI generator category pages with filtering |
 | **leaderboard_views** | ~4 | Rankings, time filters, user stats |
-| **moderation_views** | ~10 | Review queues, appeals, content flags |
-| **profile_views** | ~8 | Profile pages, edit forms, stats |
-| **settings_views** | ~6 | Email preferences, account settings |
+| **prompt_views** | ~20 | Prompt detail, edit, delete, list, homepage views |
+| **redirect_views** | ~3 | URL redirects, legacy route handling |
 | **social_views** | ~10 | Follow system, likes, shares, reports |
 | **upload_views** | ~12 | Step 1/2 upload, AI generation, validation |
+| **user_views** | ~12 | User profiles, settings, email preferences |
+| **utility_views** | ~8 | Utility and helper views |
 
 ---
 

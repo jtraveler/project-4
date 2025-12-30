@@ -8,7 +8,9 @@
 
 <!-- Only preload the FIRST image for true LCP optimization -->
 {% with first_prompt=prompt_list.0 %}
-    {% if first_prompt and not "placeholder" in first_prompt.featured_image.url %}
+    {% if first_prompt.display_medium_url %}
+        <link rel="preload" as="image" href="{{ first_prompt.display_medium_url }}" />
+    {% elif first_prompt and first_prompt.featured_image and not "placeholder" in first_prompt.featured_image.url %}
         <link rel="preload" as="image" href="{{ first_prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}" />
     {% endif %}
 {% endwith %}

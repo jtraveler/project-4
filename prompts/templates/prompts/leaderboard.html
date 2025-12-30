@@ -149,7 +149,7 @@ Discover the most popular content creators on PromptFinder. See who has the most
                     {% if forloop.counter <= 3 %}
                     {# Round 8: Thumbnails 1-3 - always visible with hover overlay #}
                     <div class="leaderboard-thumbnail-wrapper">
-                        <img src="{% if prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
+                        <img src="{% if prompt.display_thumb_url %}{{ prompt.display_thumb_url }}{% elif prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
                              alt="{{ prompt.title }}"
                              class="leaderboard-thumbnail"
                              loading="lazy">
@@ -158,7 +158,7 @@ Discover the most popular content creators on PromptFinder. See who has the most
                     {% elif forloop.counter == 4 %}
                     {# Round 8: 4th thumbnail - overlay on narrow screens, normal on wide when 5th exists #}
                     <div class="leaderboard-thumbnail-wrapper thumbnail-4th {% if creator.remaining_count > 0 %}has-more{% endif %}">
-                        <img src="{% if prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
+                        <img src="{% if prompt.display_thumb_url %}{{ prompt.display_thumb_url }}{% elif prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
                              alt="{{ prompt.title }}"
                              class="leaderboard-thumbnail"
                              loading="lazy">
@@ -175,7 +175,7 @@ Discover the most popular content creators on PromptFinder. See who has the most
                     {% elif forloop.counter == 5 and creator.remaining_count > 0 %}
                     {# Round 8: 5th thumbnail - only visible on wide desktop (>1700px) with overlay #}
                     <div class="leaderboard-thumbnail-wrapper thumbnail-overlay-container thumbnail-5th">
-                        <img src="{% if prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
+                        <img src="{% if prompt.display_thumb_url %}{{ prompt.display_thumb_url }}{% elif prompt.featured_image %}{{ prompt.featured_image.url }}{% else %}{{ prompt.get_thumbnail_url }}{% endif %}"
                              alt="{{ prompt.title }}"
                              class="leaderboard-thumbnail"
                              loading="lazy">

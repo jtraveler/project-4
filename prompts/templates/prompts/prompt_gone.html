@@ -31,11 +31,22 @@
                     <div class="col-md-4 col-sm-6 mb-4">
                         <div class="card h-100 shadow-sm hover-lift">
                             <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="text-decoration-none">
-                                {% if prompt.featured_image %}
+                                {% if prompt.display_medium_url %}
+                                <img src="{{ prompt.display_medium_url }}"
+                                     class="card-img-top"
+                                     alt="{{ prompt.title }}"
+                                     style="height: 200px; object-fit: cover;"
+                                     onerror="this.onerror=null; this.src='{% static 'images/placeholder-prompt.svg' %}';">
+                                {% elif prompt.featured_image %}
                                 <img src="{{ prompt.featured_image.url }}"
                                      class="card-img-top"
                                      alt="{{ prompt.title }}"
-                                     style="height: 200px; object-fit: cover;">
+                                     style="height: 200px; object-fit: cover;"
+                                     onerror="this.onerror=null; this.src='{% static 'images/placeholder-prompt.svg' %}';">
+                                {% else %}
+                                <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <i class="fas fa-image fa-3x text-white"></i>
+                                </div>
                                 {% endif %}
                                 <div class="card-body">
                                     <h5 class="card-title text-dark">{{ prompt.title|truncatewords:8 }}</h5>

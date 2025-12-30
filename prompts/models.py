@@ -797,6 +797,41 @@ class Prompt(models.Model):
         help_text='Admin notes from manual review'
     )
 
+    # B2 Media URLs (Phase L: Media Infrastructure Migration)
+    # These fields store CDN URLs from Backblaze B2 storage.
+    # Populated for new uploads and during migration from Cloudinary.
+    # Templates should check B2 fields first, fallback to Cloudinary.
+    b2_image_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="B2 CDN URL for original image"
+    )
+    b2_thumb_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="B2 CDN URL for 300x300 thumbnail"
+    )
+    b2_medium_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="B2 CDN URL for 600x600 medium image"
+    )
+    b2_large_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="B2 CDN URL for 1200x1200 large image"
+    )
+    b2_webp_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="B2 CDN URL for WebP version"
+    )
+
     # Custom managers
     objects = PromptManager()  # Default: excludes soft-deleted prompts
     all_objects = models.Manager()  # Include deleted prompts
@@ -1085,6 +1120,52 @@ class Prompt(models.Model):
                 flags='streaming_attachment'
             )
         return None
+
+    # B2 Media helper methods (Phase L)
+    def get_b2_image_url(self, size='original'):
+        """
+        Get the B2 image URL for a specific size.
+
+        Args:
+            size: One of 'original', 'thumb', 'medium', 'large', 'webp'
+
+        Returns:
+            str: The B2 CDN URL or None if not available
+        """
+        b2_urls = {
+            'original': self.b2_image_url,
+            'thumb': self.b2_thumb_url,
+            'medium': self.b2_medium_url,
+            'large': self.b2_large_url,
+            'webp': self.b2_webp_url,
+        }
+        return b2_urls.get(size)
+
+    def get_image_url(self, size='original'):
+        """
+        Get the best available image URL, preferring B2 over Cloudinary.
+
+        Args:
+            size: One of 'original', 'thumb', 'medium', 'large', 'webp'
+
+        Returns:
+            str: The image URL or None
+        """
+        # B2 URLs take priority (new infrastructure)
+        b2_url = self.get_b2_image_url(size)
+        if b2_url:
+            return b2_url
+
+        # Fallback to Cloudinary
+        if self.featured_image:
+            return self.featured_image.url
+
+        return None
+
+    @property
+    def has_b2_media(self):
+        """Check if this prompt has B2 media uploaded."""
+        return bool(self.b2_image_url)
 
     # Moderation helper methods
     def is_moderation_approved(self):

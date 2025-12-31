@@ -11,8 +11,13 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from prompts.forms import CollaborateForm
-from prompts.services.b2_upload_service import upload_image, upload_video
+from prompts.services.b2_upload_service import (
+    upload_image,
+    upload_video,
+    generate_image_variants,
+)
 import json
+import base64
 
 # Rate limiting constants for B2 uploads
 B2_UPLOAD_RATE_LIMIT = 20  # Max uploads per hour
@@ -291,6 +296,8 @@ def b2_upload_api(request):
 
     Request:
         - file: The image or video file (required)
+        - quick: If "true", only upload original + thumbnail for faster response
+                 (use /api/upload/b2/variants/ to generate remaining variants)
 
     Response (success - image):
         {
@@ -299,15 +306,16 @@ def b2_upload_api(request):
             "urls": {
                 "original": "https://media.promptfinder.net/...",
                 "thumb": "https://media.promptfinder.net/...",
-                "medium": "https://media.promptfinder.net/...",
-                "large": "https://media.promptfinder.net/...",
-                "webp": "https://media.promptfinder.net/..."
+                "medium": "https://media.promptfinder.net/...",  // Not in quick mode
+                "large": "https://media.promptfinder.net/...",   // Not in quick mode
+                "webp": "https://media.promptfinder.net/..."     // Not in quick mode
             },
             "info": {
                 "format": "JPEG",
                 "width": 1920,
                 "height": 1080
-            }
+            },
+            "quick_mode": false  // true if quick=true was passed
         }
 
     Response (success - video):
@@ -387,22 +395,34 @@ def b2_upload_api(request):
                 'error': 'Video too large. Maximum size is 100MB.'
             }, status=400)
 
+    # Check for quick mode (images only)
+    quick_mode = request.POST.get('quick', '').lower() == 'true' and is_image
+
     # Upload to B2
     try:
         if is_video:
             result = upload_video(uploaded_file, uploaded_file.name)
         else:
-            result = upload_image(uploaded_file, uploaded_file.name)
+            result = upload_image(uploaded_file, uploaded_file.name, quick_mode=quick_mode)
 
         if result['success']:
             # Increment rate limit counter on successful upload
             cache.set(cache_key, upload_count + 1, B2_UPLOAD_RATE_WINDOW)
 
+            # If quick mode, store image bytes in session for later variant generation
+            if quick_mode and is_image:
+                uploaded_file.seek(0)
+                image_bytes = uploaded_file.read()
+                request.session['pending_variant_image'] = base64.b64encode(image_bytes).decode('utf-8')
+                request.session['pending_variant_filename'] = result['filename']
+                request.session.modified = True
+
             return JsonResponse({
                 'success': True,
                 'filename': result['filename'],
                 'urls': result['urls'],
-                'info': result['info']
+                'info': result['info'],
+                'quick_mode': quick_mode if is_image else False
             })
         else:
             return JsonResponse({
@@ -415,3 +435,114 @@ def b2_upload_api(request):
             'success': False,
             'error': 'An unexpected error occurred during upload.'
         }, status=500)
+
+
+@login_required
+@require_POST
+def b2_generate_variants(request):
+    """
+    Generate remaining image variants (medium, large, webp) in background.
+
+    This endpoint is called after a quick_mode upload to generate the
+    deferred variants while the user fills out the form.
+
+    Accepts: POST
+    Returns: JSON with variant URLs or error message
+
+    Response (success):
+        {
+            "success": true,
+            "urls": {
+                "medium": "https://media.promptfinder.net/.../medium/abc123.jpg",
+                "large": "https://media.promptfinder.net/.../large/abc123.jpg",
+                "webp": "https://media.promptfinder.net/.../webp/abc123.webp"
+            }
+        }
+
+    Response (error):
+        {
+            "success": false,
+            "error": "Error message here"
+        }
+
+    URL: /api/upload/b2/variants/
+    """
+    # Check if there's a pending variant generation
+    image_b64 = request.session.get('pending_variant_image')
+    filename = request.session.get('pending_variant_filename')
+
+    if not image_b64 or not filename:
+        return JsonResponse({
+            'success': False,
+            'error': 'No pending image for variant generation'
+        }, status=400)
+
+    try:
+        # Decode base64 image
+        image_bytes = base64.b64decode(image_b64)
+
+        # Generate variants
+        result = generate_image_variants(image_bytes, filename)
+
+        if result['success']:
+            # Clear session data after successful generation
+            del request.session['pending_variant_image']
+            del request.session['pending_variant_filename']
+            request.session['variant_urls'] = result['urls']
+            request.session['variants_complete'] = True
+            request.session.modified = True
+
+            return JsonResponse({
+                'success': True,
+                'urls': result['urls']
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': result['error']
+            }, status=500)
+
+    except Exception as e:
+        logger.exception(f"Variant generation error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'An unexpected error occurred during variant generation.'
+        }, status=500)
+
+
+@login_required
+def b2_variants_status(request):
+    """
+    Check the status of background variant generation.
+
+    This endpoint is polled by the frontend to check if variant
+    generation is complete.
+
+    Accepts: GET
+    Returns: JSON with completion status and URLs
+
+    Response (pending):
+        {
+            "complete": false,
+            "urls": {}
+        }
+
+    Response (complete):
+        {
+            "complete": true,
+            "urls": {
+                "medium": "https://media.promptfinder.net/.../medium/abc123.jpg",
+                "large": "https://media.promptfinder.net/.../large/abc123.jpg",
+                "webp": "https://media.promptfinder.net/.../webp/abc123.webp"
+            }
+        }
+
+    URL: /api/upload/b2/variants/status/
+    """
+    variants_complete = request.session.get('variants_complete', False)
+    variant_urls = request.session.get('variant_urls', {})
+
+    return JsonResponse({
+        'complete': variants_complete,
+        'urls': variant_urls
+    })

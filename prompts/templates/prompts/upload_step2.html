@@ -323,8 +323,9 @@
                     <svg class="icon icon-sm me-2" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Delete this upload
                 </button>
                 <span style="color: var(--gray-400);">(1/1)</span>
-                <button type="submit" class="btn-submit">
-                    Submit your content
+                <button type="submit" class="btn-submit" id="submit-btn">
+                    <span id="submit-spinner" class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+                    <span id="submit-text">Submit your content</span>
                 </button>
             </div>
         </form>
@@ -431,6 +432,10 @@ let countdownSeconds = 30;
 let navigationWarningActive = false;
 let pausedCountdownSeconds = 0;
 
+// L8-FIX: Variant tracking for submit optimization
+let variantsComplete = {% if not pending_variants %}true{% else %}false{% endif %};
+let variantCheckInProgress = false;
+
 const IDLE_TIME = 1 * 60 * 1000;  // 1 minute for testing
 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
 
@@ -440,6 +445,40 @@ console.log('Variables initialized:', {
     sessionExpired
 });
 console.log('=== END DIAGNOSTIC ===');
+
+// Background variant generation (L8: Upload Performance Optimization)
+// When quick_mode is used, original + thumb are uploaded first for fast redirect.
+// Remaining variants (medium, large, webp) are generated in background while user fills form.
+{% if pending_variants %}
+(function() {
+    console.log('[Variants] Starting background variant generation...');
+
+    fetch('{% url "prompts:b2_generate_variants" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('[Variants] Background generation complete:', data.urls);
+            variantsComplete = true;  // L8-FIX: Mark variants as complete
+        } else {
+            console.warn('[Variants] Generation failed:', data.error);
+            variantsComplete = true;  // L8-FIX: Allow submit even on failure
+            // Non-blocking: user can still submit, variants will be missing
+        }
+    })
+    .catch(error => {
+        console.error('[Variants] Network error:', error);
+        variantsComplete = true;  // L8-FIX: Allow submit even on error
+        // Non-blocking: graceful degradation
+    });
+})();
+{% endif %}
 
 // Restore preserved tags on error
 const preservedTags = document.getElementById('tags-container').dataset.preservedTags;
@@ -538,12 +577,62 @@ document.querySelectorAll('.remove-tag').forEach(btn => {
     });
 });
 
-// On form submit, collect tags
-document.getElementById('upload-form').addEventListener('submit', (e) => {
+// L8-FIX: Enhanced form submit with spinner and variant polling
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+    e.preventDefault();  // Prevent default to handle async
+
+    // Collect tags first
     const tags = Array.from(document.querySelectorAll('.tag-pill'))
         .map(pill => pill.dataset.tag);
     document.getElementById('tags-hidden').value = JSON.stringify(tags);
     hasUnsavedChanges = false;
+    isSubmitting = true;
+
+    // Show spinner
+    const submitBtn = document.getElementById('submit-btn');
+    const spinner = document.getElementById('submit-spinner');
+    const submitText = document.getElementById('submit-text');
+
+    submitBtn.disabled = true;
+    spinner.classList.remove('d-none');
+    // L8-FIX: Context-aware spinner text
+    const isVideo = '{{ resource_type }}' === 'video';
+    submitText.textContent = isVideo ? 'Processing...' :
+                             variantsComplete ? 'Submitting...' : 'Optimizing images...';
+
+    // If variants not complete, poll for up to 5 seconds
+    if (!variantsComplete && !variantCheckInProgress) {
+        variantCheckInProgress = true;
+        const startTime = Date.now();
+        const maxWait = 5000;  // 5 seconds max
+
+        while (!variantsComplete && (Date.now() - startTime) < maxWait) {
+            try {
+                const response = await fetch('{% url "prompts:b2_variants_status" %}', {
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (data.complete) {
+                    variantsComplete = true;
+                    console.log('[Submit] Variants complete via polling');
+                    break;
+                }
+            } catch (error) {
+                console.warn('[Submit] Status check failed:', error);
+            }
+            // Wait 500ms before next check
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (!variantsComplete) {
+            console.log('[Submit] Proceeding without variants (timeout or error)');
+        }
+        variantCheckInProgress = false;
+    }
+
+    // Update text and submit
+    submitText.textContent = 'Submitting...';
+    e.target.submit();  // Actually submit the form
 });
 
 // Delete upload button

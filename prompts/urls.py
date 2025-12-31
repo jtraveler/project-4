@@ -72,6 +72,8 @@ urlpatterns = [
 
     # B2 Upload API (Phase L)
     path('api/upload/b2/', views.b2_upload_api, name='b2_upload_api'),
+    path('api/upload/b2/variants/', views.b2_generate_variants, name='b2_generate_variants'),
+    path('api/upload/b2/variants/status/', views.b2_variants_status, name='b2_variants_status'),
 
     # Collections API (Phase K)
     path('api/collections/', views.api_collections_list, name='api_collections_list'),

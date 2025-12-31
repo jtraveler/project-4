@@ -347,6 +347,12 @@ function uploadToB2(file) {
     const formData = new FormData();
     formData.append('file', file);
 
+    // L8: Enable quick mode for images (deferred variant generation)
+    // Videos don't support quick mode - they process fully on upload
+    if (!isVideo) {
+        formData.append('quick', 'true');
+    }
+
     // Get CSRF token
     const csrftoken = getCSRFToken();
     if (!csrftoken) {

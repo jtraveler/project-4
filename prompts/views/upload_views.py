@@ -225,6 +225,9 @@ def upload_step2(request):
     }
     request.session.modified = True  # Ensure session saves
 
+    # Check if quick_mode was used and variants need to be generated
+    pending_variants = bool(request.session.get('pending_variant_image'))
+
     context = {
         'cloudinary_id': cloudinary_id,
         'resource_type': resource_type,
@@ -235,6 +238,7 @@ def upload_step2(request):
         'all_tags': json.dumps(all_tags),
         'image_warning': image_warning,
         'is_b2_upload': is_b2_upload,
+        'pending_variants': pending_variants,  # True if background variant generation needed
     }
 
     return render(request, 'prompts/upload_step2.html', context)
@@ -274,6 +278,16 @@ def upload_submit(request):
         video_duration = request.session.get('upload_video_duration', '')
         video_width = request.session.get('upload_video_width', '')
         video_height = request.session.get('upload_video_height', '')
+
+        # L8: Check for variant URLs from background generation (quick_mode)
+        # When quick_mode is used, variants are generated in background and stored in variant_urls
+        variant_urls = request.session.get('variant_urls', {})
+        if variant_urls:
+            # Override with background-generated variants (or set if not present)
+            b2_medium = variant_urls.get('medium', b2_medium)
+            b2_large = variant_urls.get('large', b2_large)
+            b2_webp = variant_urls.get('webp', b2_webp)
+            logger.info(f"Using background-generated variants: medium={bool(b2_medium)}, large={bool(b2_large)}, webp={bool(b2_webp)}")
 
         logger.info(f"B2 upload detected - original: {b2_original[:50]}..." if b2_original else "B2 upload but no original URL")
 
@@ -552,6 +566,11 @@ def upload_submit(request):
         'upload_video_duration',
         'upload_video_width',
         'upload_video_height',
+        # L8: Quick mode variant generation keys
+        'pending_variant_image',
+        'pending_variant_filename',
+        'variant_urls',
+        'variants_complete',
     ]
     # Cloudinary/legacy upload keys
     cloudinary_session_keys = [

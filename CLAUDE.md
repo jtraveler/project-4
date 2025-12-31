@@ -6450,14 +6450,14 @@ See also: [Future Features Roadmap](#-future-features-roadmap) for comprehensive
 
 ---
 
-## 🚀 Phase L: Media Infrastructure Migration (~80% COMPLETE)
+## 🚀 Phase L: Media Infrastructure Migration (~90% COMPLETE)
 
-**Status:** ✅ L1-L5d COMPLETE | Remaining: L5e, L6, L11
+**Status:** ✅ L1-L7 COMPLETE | Remaining: L5e, L11
 **Started:** December 2025
 **Priority:** CRITICAL - Cost and performance foundation
 **Estimated Effort:** 3-4 weeks
 **Cost Impact:** ~70% reduction in media hosting costs at scale
-**Agent Rating:** 8.5/10 average (@django-pro, @code-reviewer)
+**Agent Rating:** 9.0/10 average (L6d: 8.85/10, L6f: 9.0/10, L7: 9.2/10)
 
 ---
 
@@ -6479,18 +6479,24 @@ Migrate from Cloudinary to Backblaze B2 + Cloudflare for media storage and deliv
 | L5b | Upload API Endpoint | ✅ Complete | `prompts/views/api_views.py` |
 | L5c | Upload Form Integration | ✅ Complete | `prompts/templates/prompts/upload_step2.html` |
 | L5d | Template Updates (6 templates) | ✅ Complete | Multiple templates |
+| L6 | Video Handling (B2 URLs + Templates) | ✅ Complete | `prompts/services/video_processor.py`, templates |
+| L7 | Responsive Images (srcset/sizes) | ✅ Complete | `_prompt_card.html`, templates |
 
 ---
 
 ### New B2 URL Fields (Prompt Model)
 
 ```python
-# Added in migration 0040/0041
+# Image fields - Added in migration 0040/0041
 b2_image_url = models.URLField(max_length=500, blank=True, null=True)
 b2_thumb_url = models.URLField(max_length=500, blank=True, null=True)     # 300x300
 b2_medium_url = models.URLField(max_length=500, blank=True, null=True)    # 600x600
 b2_large_url = models.URLField(max_length=500, blank=True, null=True)     # 1200x1200
 b2_webp_url = models.URLField(max_length=500, blank=True, null=True)      # WebP format
+
+# Video fields - Added in L6 (Session 32)
+b2_video_url = models.URLField(max_length=500, blank=True, null=True)     # Original video
+b2_video_thumb_url = models.URLField(max_length=500, blank=True, null=True)  # Video thumbnail
 ```
 
 ---
@@ -6575,18 +6581,12 @@ Upload → Pillow Processing → B2 Storage → Cloudflare CDN
 
 ---
 
-### Remaining Phase L Features (3 remaining)
+### Remaining Phase L Features (2 remaining)
 
 #### L5e: Edit Form B2 Integration (NOT STARTED)
 - Update prompt_edit.html to display/handle B2 images
 - Add image replacement workflow for B2
 - Estimated: 2-3 hours
-
-#### L6: Video Handling (NOT STARTED)
-- Implement FFmpeg-based video processing
-- Add HLS/DASH streaming support
-- Generate video thumbnails
-- Estimated: 12 hours
 
 #### L11: Documentation & Cleanup (PARTIAL)
 - ✅ Update CLAUDE.md with new architecture
@@ -6597,10 +6597,67 @@ Upload → Pillow Processing → B2 Storage → Cloudflare CDN
 
 ---
 
+### Recently Completed (Session 32)
+
+#### L6: Video Handling ✅ COMPLETE (Agent Rating: 9.0/10)
+**Completed:** December 2025
+
+| Sub-spec | Description | Status |
+|----------|-------------|--------|
+| L6a | Add B2 video URL fields to Prompt model | ✅ Complete |
+| L6b | Add display properties (display_video_url, display_video_thumb_url) | ✅ Complete |
+| L6c | Update video_processor.py for B2 | ✅ Complete |
+| L6d | Update _prompt_card.html video handling | ✅ Complete (8.85/10) |
+| L6e | Update prompt_detail.html video handling | ✅ Complete |
+| L6f | Update upload_views.py for video B2 URLs | ✅ Complete (9.0/10) |
+
+**Key Changes:**
+- Added `b2_video_url` and `b2_video_thumb_url` fields to Prompt model
+- Templates use B2-first pattern: `{{ prompt.display_video_url|default:prompt.get_video_url }}`
+- Video thumbnails use responsive srcset with B2 fallback
+- Session-based upload stores B2 video URLs before prompt creation
+
+#### L7: Responsive Images ✅ COMPLETE (Agent Rating: 9.2/10)
+**Completed:** December 2025
+
+**Implementation:**
+- Added `srcset` and `sizes` attributes to all prompt card images
+- Responsive breakpoints: 300w (thumb), 600w (medium)
+- LCP optimization with `fetchpriority="high"` for first image
+- Lazy loading (`loading="lazy"`) for below-fold images
+- Template pattern: `sizes="(max-width: 500px) 100vw, (max-width: 800px) 50vw, (max-width: 1100px) 33vw, 25vw"`
+
+**Files Updated:**
+- `_prompt_card.html` - Homepage masonry cards
+- `collection_detail.html` - Collection page cards
+- `trash_bin.html` - Trash view cards
+
+---
+
+### Current Blockers (Session 32)
+
+| Blocker | Impact | Status | Notes |
+|---------|--------|--------|-------|
+| Upload speed ~3-4s | User experience | 🔴 High | Sequential processing; consider parallel/background |
+| Masonry grid squares | Visual consistency | 🟡 Medium | Images appear square instead of natural aspect ratio |
+| Missing video_processor tests | Code coverage | 🟢 Low | Unit tests for video handling not yet written |
+
+**Upload Speed Analysis:**
+- Current: ~3-4 seconds for B2 upload with image optimization
+- Bottleneck: Sequential Pillow processing (thumb → medium → large → webp)
+- Potential fix: Celery background task or parallel ThreadPoolExecutor
+
+**Masonry Grid Issue:**
+- Images in homepage masonry displaying as squares
+- May be CSS `object-fit: cover` on `.masonry-item img`
+- Related file: `static/css/components/masonry-grid.css`
+
+---
+
 ### Deferred Phase L Features (Post-Launch)
 
-#### L7: Migration Script (DEFERRED)
-- Create script to migrate existing Cloudinary assets
+#### L7b: Migration Script (DEFERRED)
+- Create script to migrate existing Cloudinary assets to B2
 - Implement batch processing with progress tracking
 - Add rollback capability
 - Estimated: 8 hours

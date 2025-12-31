@@ -151,7 +151,7 @@ live-working-project/
 
 ---
 
-## Service Layer Architecture (8 modules)
+## Service Layer Architecture (9 modules)
 
 ```
 prompts/services/
@@ -163,7 +163,8 @@ prompts/services/
 ├── leaderboard.py           # Leaderboard calculations (Phase G)
 ├── openai_moderation.py     # OpenAI text moderation API
 ├── orchestrator.py          # Moderation orchestration (multi-layer)
-└── profanity_filter.py      # Profanity detection and filtering
+├── profanity_filter.py      # Profanity detection and filtering
+└── video_processor.py       # FFmpeg video processing (Phase L6)
 
 prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app root)
 ```
@@ -180,6 +181,7 @@ prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app ro
 | **openai_moderation** | OpenAI text moderation API | FREE |
 | **orchestrator** | Multi-layer moderation coordination | Combined |
 | **profanity_filter** | Custom profanity word detection | N/A |
+| **video_processor** | FFmpeg-based video processing and thumbnail extraction (Phase L6) | N/A |
 | **storage_backends** | B2StorageBackend + Cloudflare CDN URL generation (prompts/) | ~$0.005/GB |
 
 ---

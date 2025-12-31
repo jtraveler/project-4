@@ -118,7 +118,7 @@ def upload_to_b2(content_file, path):
         raise ValueError(f"Failed to upload to B2: {str(e)}")
 
 
-def upload_image(image_file, original_filename=None):
+def upload_image(image_file, original_filename=None, quick_mode=False):
     """
     Process and upload an image with all variants to B2.
 
@@ -127,6 +127,9 @@ def upload_image(image_file, original_filename=None):
     Args:
         image_file: A file-like object containing the image
         original_filename: Original filename (optional, for extension detection)
+        quick_mode: If True, only upload original + thumbnail for faster redirect.
+                   Medium, large, and webp variants can be generated later via
+                   generate_image_variants().
 
     Returns:
         dict: {
@@ -135,9 +138,9 @@ def upload_image(image_file, original_filename=None):
             'urls': {
                 'original': 'https://media.promptfinder.net/.../original/abc123.jpg',
                 'thumb': 'https://media.promptfinder.net/.../thumb/abc123.jpg',
-                'medium': 'https://media.promptfinder.net/.../medium/abc123.jpg',
-                'large': 'https://media.promptfinder.net/.../large/abc123.jpg',
-                'webp': 'https://media.promptfinder.net/.../webp/abc123.webp',
+                'medium': 'https://media.promptfinder.net/.../medium/abc123.jpg',  # Not in quick_mode
+                'large': 'https://media.promptfinder.net/.../large/abc123.jpg',    # Not in quick_mode
+                'webp': 'https://media.promptfinder.net/.../webp/abc123.webp',     # Not in quick_mode
             },
             'info': {
                 'format': 'JPEG',
@@ -160,10 +163,12 @@ def upload_image(image_file, original_filename=None):
 
     try:
         # Process the image (validate, compress, thumbnails, webp)
+        # In quick_mode, only generate thumbnail (skip medium, large, webp)
         processed = process_upload(
             image_file,
             generate_thumbnails=True,
-            convert_webp=True
+            convert_webp=not quick_mode,  # Skip webp in quick mode
+            thumbnail_sizes=['thumb'] if quick_mode else None  # Quick mode: thumb only
         )
 
         urls = {}
@@ -172,16 +177,23 @@ def upload_image(image_file, original_filename=None):
         original_path = get_upload_path(filename, 'original')
         urls['original'] = upload_to_b2(processed['original'], original_path)
 
-        # Upload thumbnails
-        for size_name in THUMBNAIL_SIZES:
-            if size_name in processed:
-                path = get_upload_path(filename, size_name)
-                urls[size_name] = upload_to_b2(processed[size_name], path)
+        # In quick_mode, only upload thumbnail
+        if quick_mode:
+            # Upload only the thumbnail
+            if 'thumb' in processed:
+                thumb_path = get_upload_path(filename, 'thumb')
+                urls['thumb'] = upload_to_b2(processed['thumb'], thumb_path)
+        else:
+            # Upload all thumbnails (thumb, medium, large)
+            for size_name in THUMBNAIL_SIZES:
+                if size_name in processed:
+                    path = get_upload_path(filename, size_name)
+                    urls[size_name] = upload_to_b2(processed[size_name], path)
 
-        # Upload WebP version
-        if 'webp' in processed:
-            webp_path = get_upload_path(filename, 'webp')
-            urls['webp'] = upload_to_b2(processed['webp'], webp_path)
+            # Upload WebP version
+            if 'webp' in processed:
+                webp_path = get_upload_path(filename, 'webp')
+                urls['webp'] = upload_to_b2(processed['webp'], webp_path)
 
         return {
             'success': True,
@@ -189,6 +201,7 @@ def upload_image(image_file, original_filename=None):
             'urls': urls,
             'info': processed['info'],
             'error': None,
+            'quick_mode': quick_mode,
         }
 
     except ValueError as e:
@@ -442,6 +455,75 @@ def upload_video(video_file, original_filename=None):
             'filename': None,
             'urls': {},
             'info': None,
+            'error': str(e),
+        }
+
+
+def generate_image_variants(image_bytes, filename):
+    """
+    Generate and upload the remaining image variants (medium, large, webp).
+
+    This is used after a quick_mode upload to generate the deferred variants
+    in the background while the user fills out the form.
+
+    Args:
+        image_bytes: Raw image bytes (base64-decoded from session)
+        filename: The filename generated during quick upload (e.g., 'abc123.jpg')
+
+    Returns:
+        dict: {
+            'success': True/False,
+            'urls': {
+                'medium': 'https://media.promptfinder.net/.../medium/abc123.jpg',
+                'large': 'https://media.promptfinder.net/.../large/abc123.jpg',
+                'webp': 'https://media.promptfinder.net/.../webp/abc123.webp',
+            },
+            'error': None  # or error message if failed
+        }
+    """
+    from io import BytesIO
+
+    try:
+        # Create a file-like object from bytes
+        image_file = BytesIO(image_bytes)
+
+        # Process the image to generate medium, large, and webp variants
+        processed = process_upload(
+            image_file,
+            generate_thumbnails=True,
+            convert_webp=True
+        )
+
+        urls = {}
+
+        # Upload medium variant
+        if 'medium' in processed:
+            medium_path = get_upload_path(filename, 'medium')
+            urls['medium'] = upload_to_b2(processed['medium'], medium_path)
+
+        # Upload large variant
+        if 'large' in processed:
+            large_path = get_upload_path(filename, 'large')
+            urls['large'] = upload_to_b2(processed['large'], large_path)
+
+        # Upload WebP version
+        if 'webp' in processed:
+            webp_path = get_upload_path(filename, 'webp')
+            urls['webp'] = upload_to_b2(processed['webp'], webp_path)
+
+        logger.info(f"Generated variants for {filename}: {list(urls.keys())}")
+
+        return {
+            'success': True,
+            'urls': urls,
+            'error': None,
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to generate variants for {filename}: {e}")
+        return {
+            'success': False,
+            'urls': {},
             'error': str(e),
         }
 

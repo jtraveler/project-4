@@ -231,21 +231,24 @@ def convert_to_webp(image_file, quality=WEBP_QUALITY):
         raise ValueError(f"Failed to convert to WebP: {str(e)}")
 
 
-def process_upload(image_file, generate_thumbnails=True, convert_webp=True):
+def process_upload(image_file, generate_thumbnails=True, convert_webp=True, thumbnail_sizes=None):
     """
     Process an uploaded image with full optimization pipeline.
 
     Args:
         image_file: A file-like object containing image data
-        generate_thumbnails: If True, create all thumbnail sizes
+        generate_thumbnails: If True, create thumbnail sizes
         convert_webp: If True, also create WebP versions
+        thumbnail_sizes: List of sizes to generate, e.g. ['thumb', 'medium', 'large'].
+                        If None (default), generates all sizes in THUMBNAIL_SIZES.
+                        Use ['thumb'] for quick mode to skip medium/large.
 
     Returns:
         dict: Processed images with keys:
             - 'original': Compressed original
-            - 'thumb': 300x300 thumbnail (if generate_thumbnails)
-            - 'medium': 600x600 version (if generate_thumbnails)
-            - 'large': 1200x1200 version (if generate_thumbnails)
+            - 'thumb': 300x300 thumbnail (if in thumbnail_sizes)
+            - 'medium': 600x600 version (if in thumbnail_sizes)
+            - 'large': 1200x1200 version (if in thumbnail_sizes)
             - 'webp': WebP version of original (if convert_webp)
             - 'info': Original image info dict
     """
@@ -262,9 +265,13 @@ def process_upload(image_file, generate_thumbnails=True, convert_webp=True):
 
     # Generate thumbnails
     if generate_thumbnails:
-        for size_name in THUMBNAIL_SIZES:
-            image_file.seek(0)
-            result[size_name] = create_thumbnail(image_file, size_name)
+        # Use specified sizes or default to all
+        sizes_to_generate = thumbnail_sizes if thumbnail_sizes is not None else list(THUMBNAIL_SIZES.keys())
+
+        for size_name in sizes_to_generate:
+            if size_name in THUMBNAIL_SIZES:
+                image_file.seek(0)
+                result[size_name] = create_thumbnail(image_file, size_name)
 
     # Convert to WebP
     if convert_webp:

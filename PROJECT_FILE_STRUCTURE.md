@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** December 30, 2025
+**Last Updated:** December 31, 2025
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase L Media Infrastructure (Core Complete, ~60%)
-**Total Tests:** 234 passing (46% coverage)
+**Current Phase:** Phase L Media Infrastructure (L8 Quick Mode Complete, ~91%)
+**Total Tests:** 276 passing (48% coverage)
 
 ---
 
@@ -615,6 +615,55 @@ API endpoints for the Collections feature, defined in `prompts/views/collection_
     }
   ],
   "count": 1
+}
+```
+
+---
+
+## B2 Upload API Endpoints (Phase L)
+
+API endpoints for B2 image upload and processing, defined in `prompts/views/api_views.py`:
+
+### Upload Endpoints (Authentication Required)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `POST /api/upload/b2/` | POST | Upload image to B2 with all variants (standard mode) |
+| `POST /api/upload/b2/?quick=true` | POST | Upload image with thumbnail only (quick mode) |
+| `POST /api/upload/b2/variants/` | POST | Generate medium, large, WebP variants (background) |
+| `GET /api/upload/b2/variants/status/` | GET | Poll for variant generation completion |
+
+### Quick Mode Session Keys
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `pending_variant_image` | string (base64) | Stored image for deferred variant generation |
+| `pending_variant_filename` | string | Original filename |
+| `variant_urls` | dict | Generated variant URLs (medium, large, webp) |
+| `variants_complete` | boolean | Flag for polling completion |
+
+### API Response Format (Quick Mode)
+
+```json
+// POST /api/upload/b2/?quick=true
+{
+  "success": true,
+  "urls": {
+    "original": "https://cdn.example.com/images/abc123.jpg",
+    "thumb": "https://cdn.example.com/images/abc123_thumb.jpg"
+  },
+  "quick_mode": true,
+  "variants_pending": true
+}
+
+// GET /api/upload/b2/variants/status/
+{
+  "complete": true,
+  "urls": {
+    "medium": "https://cdn.example.com/images/abc123_medium.jpg",
+    "large": "https://cdn.example.com/images/abc123_large.jpg",
+    "webp": "https://cdn.example.com/images/abc123.webp"
+  }
 }
 ```
 

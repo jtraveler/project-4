@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** December 31, 2025
+**Last Updated:** January 1, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase L Media Infrastructure (L8 Quick Mode Complete, ~91%)
-**Total Tests:** 276 passing (48% coverage)
+**Current Phase:** Phase L Media Infrastructure (L8-DIRECT Complete, ~95%)
+**Total Tests:** 298 passing (48% coverage)
 
 ---
 
@@ -17,9 +17,9 @@
 | **JavaScript Files** | 4 | static/js/ |
 | **SVG Icons** | 30 | static/icons/sprite.svg |
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
-| **Test Files** | 12 | prompts/tests/ |
+| **Test Files** | 13 | prompts/tests/ |
 | **Management Commands** | 17 | prompts/management/commands/ |
-| **Services** | 8 | prompts/services/ |
+| **Services** | 10 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
 | **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
@@ -68,7 +68,7 @@ live-working-project/
 │   ├── management/
 │   │   └── commands/             # 17 management commands + __init__.py
 │   ├── migrations/               # 40 migrations + __init__.py
-│   ├── services/                 # 8 service modules
+│   ├── services/                 # 9 service modules
 │   ├── storage_backends.py       # B2 storage backend + CDN (Phase L)
 │   ├── templates/prompts/        # 23 templates
 │   │   └── partials/             # Partial templates
@@ -76,7 +76,7 @@ live-working-project/
 │   │       ├── _prompt_card.html
 │   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
-│   ├── tests/                    # 12 test files
+│   ├── tests/                    # 13 test files
 │   └── views/                    # 11 view modules (refactored)
 │       ├── __init__.py           # Package exports
 │       ├── admin_views.py        # Admin dashboard views
@@ -151,11 +151,12 @@ live-working-project/
 
 ---
 
-## Service Layer Architecture (9 modules)
+## Service Layer Architecture (10 modules)
 
 ```
 prompts/services/
 ├── __init__.py              # Service exports
+├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT) ← NEW
 ├── b2_upload_service.py     # B2 upload orchestration (Phase L)
 ├── cloudinary_moderation.py # Cloudinary AI moderation (AWS Rekognition)
 ├── content_generation.py    # GPT-4o content generation for uploads
@@ -173,6 +174,7 @@ prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app ro
 
 | Service | Description | Cost |
 |---------|-------------|------|
+| **b2_presign_service** | Generates presigned URLs for direct browser-to-B2 uploads (L8-DIRECT) | N/A |
 | **b2_upload_service** | Orchestrates B2 uploads with optimization | ~$0.005/GB |
 | **cloudinary_moderation** | Cloudinary AI Vision for image/video moderation | ~$5-10/1000 images |
 | **content_generation** | GPT-4o-mini for AI-generated titles, descriptions, tags | ~$0.00255/upload |
@@ -211,7 +213,7 @@ prompts/views/
 | Module | Functions | Purpose |
 |--------|-----------|---------|
 | **admin_views** | ~15 | Admin dashboards, media issues, trash management |
-| **api_views** | ~3 | REST API endpoints for B2 upload, rate-limited (Phase L) |
+| **api_views** | ~5 | REST API endpoints for B2 upload + presigned URLs (Phase L, L8-DIRECT) |
 | **collection_views** | ~9 | Collection CRUD, API endpoints, profile tab, pagination |
 | **generator_views** | ~5 | AI generator category pages with filtering |
 | **leaderboard_views** | ~4 | Rankings, time filters, user stats |
@@ -267,10 +269,11 @@ prompts/views/
 
 ---
 
-## Test Files (12 files, 234 tests)
+## Test Files (13 files, 298 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
+| `test_b2_presign.py` | 22 | B2 presigned URL generation (Phase L8-DIRECT) ← NEW |
 | `test_user_profiles.py` | Multiple | User profile CRUD operations |
 | `test_rate_limiting.py` | 23 | Rate limiting enforcement |
 | `test_generator_page.py` | 24 | AI generator category pages |

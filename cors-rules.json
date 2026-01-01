@@ -1,0 +1,15 @@
+[
+  {
+    "corsRuleName": "promptfinder-browser-upload",
+    "allowedOrigins": [
+      "https://mj-project-4-68750ca94690.herokuapp.com",
+      "https://promptfinder.net",
+      "http://localhost:8000",
+      "http://127.0.0.1:8000"
+    ],
+    "allowedOperations": ["s3_put", "s3_get", "s3_head"],
+    "allowedHeaders": ["content-type", "content-length", "x-amz-content-sha256", "x-amz-date", "authorization"],
+    "exposeHeaders": ["ETag", "x-amz-request-id"],
+    "maxAgeSeconds": 3600
+  }
+]

@@ -15,7 +15,18 @@ from prompts.services.b2_upload_service import (
     upload_image,
     upload_video,
     generate_image_variants,
+    get_upload_path,
+    upload_to_b2,
 )
+from prompts.services.b2_presign_service import (
+    generate_presigned_upload_url,
+    verify_upload_exists,
+    ALLOWED_IMAGE_TYPES,
+    ALLOWED_VIDEO_TYPES,
+)
+from prompts.services.image_processor import process_upload
+from io import BytesIO
+import requests
 import json
 import base64
 
@@ -545,4 +556,296 @@ def b2_variants_status(request):
     return JsonResponse({
         'complete': variants_complete,
         'urls': variant_urls
+    })
+
+
+@login_required
+def b2_presign_upload(request):
+    """
+    Generate a presigned URL for direct browser-to-B2 upload.
+
+    This endpoint creates a presigned URL that allows the browser to upload
+    directly to B2, bypassing the Heroku server for the file transfer.
+
+    Accepts: GET with query parameters
+    Parameters:
+        - content_type: MIME type of the file
+        - content_length: Size of the file in bytes
+        - filename: Original filename (optional)
+
+    Returns: JSON with presigned URL and upload metadata
+
+    Response (success):
+        {
+            "success": true,
+            "presigned_url": "https://s3.us-west-002.backblazeb2.com/...",
+            "key": "media/images/2025/12/original/abc123.jpg",
+            "filename": "abc123.jpg",
+            "cdn_url": "https://media.promptfinder.net/...",
+            "expires_in": 3600,
+            "is_video": false
+        }
+
+    Response (error):
+        {
+            "success": false,
+            "error": "Error message here"
+        }
+
+    URL: /api/upload/b2/presign/
+    """
+    # Rate limiting check
+    cache_key = f"b2_upload_rate:{request.user.id}"
+    upload_count = cache.get(cache_key, 0)
+
+    if upload_count >= B2_UPLOAD_RATE_LIMIT:
+        return JsonResponse({
+            'success': False,
+            'error': 'Upload rate limit exceeded. Please try again later.'
+        }, status=429)
+
+    # Get parameters from query string
+    content_type = request.GET.get('content_type')
+    content_length = request.GET.get('content_length')
+    filename = request.GET.get('filename')
+
+    # Validate required parameters
+    if not content_type:
+        return JsonResponse({
+            'success': False,
+            'error': 'content_type is required'
+        }, status=400)
+
+    if not content_length:
+        return JsonResponse({
+            'success': False,
+            'error': 'content_length is required'
+        }, status=400)
+
+    try:
+        content_length = int(content_length)
+    except (ValueError, TypeError):
+        return JsonResponse({
+            'success': False,
+            'error': 'content_length must be a valid integer'
+        }, status=400)
+
+    # Generate presigned URL
+    result = generate_presigned_upload_url(
+        content_type=content_type,
+        content_length=content_length,
+        original_filename=filename
+    )
+
+    if not result['success']:
+        return JsonResponse({
+            'success': False,
+            'error': result['error']
+        }, status=400)
+
+    # Store upload metadata in session for completion verification
+    request.session['pending_direct_upload'] = {
+        'key': result['key'],
+        'filename': result['filename'],
+        'cdn_url': result['cdn_url'],
+        'content_type': content_type,
+        'is_video': result['is_video'],
+    }
+    request.session.modified = True
+
+    # Increment rate limit counter
+    cache.set(cache_key, upload_count + 1, B2_UPLOAD_RATE_WINDOW)
+
+    return JsonResponse({
+        'success': True,
+        'presigned_url': result['presigned_url'],
+        'key': result['key'],
+        'filename': result['filename'],
+        'cdn_url': result['cdn_url'],
+        'expires_in': result['expires_in'],
+        'is_video': result['is_video'],
+    })
+
+
+@login_required
+@require_POST
+def b2_upload_complete(request):
+    """
+    Handle completion of direct browser-to-B2 upload.
+
+    Called after the browser has uploaded directly to B2 using the presigned URL.
+    Verifies the upload exists and triggers variant generation for images.
+
+    Accepts: POST with JSON body
+    Parameters:
+        - key: The S3 key that was uploaded to
+        - generate_variants: Whether to generate image variants (default: true)
+        - quick_mode: Whether to use quick mode (original + thumb only)
+
+    Returns: JSON with upload confirmation and URLs
+
+    Response (success - image):
+        {
+            "success": true,
+            "filename": "abc123.jpg",
+            "urls": {
+                "original": "https://media.promptfinder.net/...",
+                "thumb": "https://media.promptfinder.net/...",
+                "medium": "https://media.promptfinder.net/...",
+                "large": "https://media.promptfinder.net/...",
+                "webp": "https://media.promptfinder.net/..."
+            },
+            "is_video": false
+        }
+
+    Response (success - video):
+        {
+            "success": true,
+            "filename": "vabc123.mp4",
+            "urls": {
+                "original": "https://media.promptfinder.net/...",
+                "thumb": "https://media.promptfinder.net/..."
+            },
+            "is_video": true
+        }
+
+    Response (error):
+        {
+            "success": false,
+            "error": "Error message here"
+        }
+
+    URL: /api/upload/b2/complete/
+    """
+    # Get pending upload from session
+    pending = request.session.get('pending_direct_upload')
+
+    if not pending:
+        return JsonResponse({
+            'success': False,
+            'error': 'No pending upload found. Please start a new upload.'
+        }, status=400)
+
+    key = pending['key']
+    filename = pending['filename']
+    cdn_url = pending['cdn_url']
+    content_type = pending['content_type']
+    is_video = pending['is_video']
+
+    # Verify the upload exists in B2
+    verification = verify_upload_exists(key)
+
+    if not verification['exists']:
+        return JsonResponse({
+            'success': False,
+            'error': verification.get('error', 'Upload verification failed. File not found in storage.')
+        }, status=400)
+
+    # Parse request body for options
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    generate_variants = body.get('generate_variants', True)
+    quick_mode = body.get('quick_mode', False)
+
+    urls = {'original': cdn_url}
+
+    # For images, generate variants if requested
+    if not is_video and generate_variants:
+        try:
+            # Download the uploaded image for processing
+            response = requests.get(cdn_url, timeout=30)
+            response.raise_for_status()
+            image_bytes = response.content
+
+            # Process and generate variants
+            processed = process_upload(
+                BytesIO(image_bytes),
+                generate_thumbnails=True,
+                convert_webp=not quick_mode,
+                thumbnail_sizes=['thumb'] if quick_mode else None
+            )
+
+            # Upload variants to B2
+            if quick_mode:
+                # Quick mode: only thumb
+                if 'thumb' in processed:
+                    thumb_path = get_upload_path(filename, 'thumb')
+                    urls['thumb'] = upload_to_b2(processed['thumb'], thumb_path)
+            else:
+                # Full mode: all variants
+                for size_name in ['thumb', 'medium', 'large']:
+                    if size_name in processed:
+                        path = get_upload_path(filename, size_name)
+                        urls[size_name] = upload_to_b2(processed[size_name], path)
+
+                if 'webp' in processed:
+                    webp_path = get_upload_path(filename, 'webp')
+                    urls['webp'] = upload_to_b2(processed['webp'], webp_path)
+
+        except Exception as e:
+            logger.exception(f"Error generating variants: {e}")
+            # Continue without variants - original is still valid
+
+    # For videos, generate thumbnail
+    if is_video:
+        try:
+            from prompts.services.video_processor import extract_thumbnail
+            import tempfile
+            import os
+
+            # Download video for thumbnail extraction
+            response = requests.get(cdn_url, timeout=60)
+            response.raise_for_status()
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Determine extension
+                ext = '.' + filename.rsplit('.', 1)[1] if '.' in filename else '.mp4'
+                temp_video_path = os.path.join(temp_dir, f'video{ext}')
+                temp_thumb_path = os.path.join(temp_dir, 'thumb.jpg')
+
+                # Write video to temp file
+                with open(temp_video_path, 'wb') as f:
+                    f.write(response.content)
+
+                # Extract thumbnail
+                extract_thumbnail(
+                    temp_video_path,
+                    temp_thumb_path,
+                    timestamp='00:00:01',
+                    size='600x600'
+                )
+
+                # Upload thumbnail
+                if os.path.exists(temp_thumb_path):
+                    from django.core.files.base import ContentFile
+                    from prompts.services.b2_upload_service import get_video_upload_path
+
+                    with open(temp_thumb_path, 'rb') as f:
+                        thumb_content = ContentFile(f.read())
+
+                    thumb_path = get_video_upload_path(filename, 'thumb')
+                    urls['thumb'] = upload_to_b2(thumb_content, thumb_path)
+
+        except Exception as e:
+            logger.exception(f"Error generating video thumbnail: {e}")
+            # Continue without thumbnail - video is still valid
+
+    # Clear pending upload from session
+    del request.session['pending_direct_upload']
+    request.session.modified = True
+
+    # Store URLs in session for form submission
+    request.session['direct_upload_urls'] = urls
+    request.session['direct_upload_filename'] = filename
+    request.session['direct_upload_is_video'] = is_video
+    request.session.modified = True
+
+    return JsonResponse({
+        'success': True,
+        'filename': filename,
+        'urls': urls,
+        'is_video': is_video,
     })

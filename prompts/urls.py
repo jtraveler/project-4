@@ -75,6 +75,10 @@ urlpatterns = [
     path('api/upload/b2/variants/', views.b2_generate_variants, name='b2_generate_variants'),
     path('api/upload/b2/variants/status/', views.b2_variants_status, name='b2_variants_status'),
 
+    # B2 Direct Upload API (Phase L8-DIRECT)
+    path('api/upload/b2/presign/', views.b2_presign_upload, name='b2_presign_upload'),
+    path('api/upload/b2/complete/', views.b2_upload_complete, name='b2_upload_complete'),
+
     # Collections API (Phase K)
     path('api/collections/', views.api_collections_list, name='api_collections_list'),
     path('api/collections/create/', views.api_collection_create, name='api_collection_create'),

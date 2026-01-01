@@ -62,6 +62,8 @@ from .api_views import (
     b2_upload_api,
     b2_generate_variants,
     b2_variants_status,
+    b2_presign_upload,
+    b2_upload_complete,
 )
 
 # Import admin utility views
@@ -157,6 +159,8 @@ __all__ = [
     'b2_upload_api',
     'b2_generate_variants',
     'b2_variants_status',
+    'b2_presign_upload',
+    'b2_upload_complete',
 
     # Admin views
     'media_issues_dashboard',

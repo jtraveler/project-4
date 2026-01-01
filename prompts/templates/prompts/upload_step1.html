@@ -97,9 +97,9 @@
                 </div>
 
                 <!-- Status Message -->
-                <div class="progress-status text-center mt-4">
+                <div class="progress-status text-center mt-4" role="status" aria-live="polite">
                     <h4 id="progress-message" class="mb-2">Preparing your upload...</h4>
-                    <p id="progress-detail" class="text-muted mb-0">Please wait</p>
+                    <p id="progress-detail" class="text-muted mb-0" aria-live="polite">Please wait</p>
                 </div>
 
                 <!-- Upload Progress Bar (shown during B2 upload) -->
@@ -257,6 +257,28 @@
                 top: 10px;
             }
         }
+
+        /* L8-PROGRESS-ANIMATE: Animated dots for finalizing state */
+        .animated-dots::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        /* L8-PROGRESS-ANIMATE: Fade transition for rotating messages */
+        #progress-detail {
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        #progress-detail.fading {
+            opacity: 0;
+        }
     </style>
 
     <!-- Spacing -->
@@ -336,6 +358,11 @@ const ProgressUI = {
     ],
 
     currentStep: 0,
+
+    // L8-PROGRESS-ANIMATE: Properties for animated finalizing state
+    finalizingMessages: ['Almost there!', 'Processing variants...', 'Wrapping up!'],
+    finalizingMessageIndex: 0,
+    finalizingInterval: null,
 
     show() {
         uploadProgress.style.display = 'block';
@@ -419,6 +446,88 @@ const ProgressUI = {
         document.getElementById('progress-detail').textContent = message || 'Please try again';
         document.querySelector('.progress-status').classList.add('error');
         document.getElementById('upload-bar-container').style.display = 'none';
+    },
+
+    // L8-PROGRESS-ANIMATE: Start animated finalizing state with rotating messages
+    startFinalizing() {
+        // Mark steps 1-4 as completed, keep step 5 active (pulsing)
+        document.querySelectorAll('.progress-step').forEach(el => {
+            const elStep = parseInt(el.dataset.step);
+            el.classList.remove('active', 'completed', 'error');
+            if (elStep < 5) {
+                el.classList.add('completed');
+            } else {
+                el.classList.add('active'); // Keep step 5 pulsing
+            }
+        });
+
+        // Set animated "Finalizing" message with CSS animated dots
+        const messageEl = document.getElementById('progress-message');
+        messageEl.textContent = 'Finalizing';
+        messageEl.classList.add('animated-dots');
+
+        // Set initial subtext message
+        this.finalizingMessageIndex = 0;
+        document.getElementById('progress-detail').textContent = this.finalizingMessages[0];
+
+        // Hide progress bar
+        document.getElementById('upload-bar-container').style.display = 'none';
+
+        // Apply success color to message
+        document.querySelector('.progress-status').classList.add('success');
+
+        // Start rotating messages every 2 seconds
+        this.finalizingInterval = setInterval(() => {
+            this.updateFinalizingMessage();
+        }, 2000);
+    },
+
+    // L8-PROGRESS-ANIMATE: Update to next message in rotation
+    updateFinalizingMessage() {
+        this.finalizingMessageIndex = (this.finalizingMessageIndex + 1) % this.finalizingMessages.length;
+        this.fadeAndUpdateMessage(this.finalizingMessages[this.finalizingMessageIndex]);
+    },
+
+    // L8-PROGRESS-ANIMATE: Fade out, change text, fade in
+    fadeAndUpdateMessage(newText) {
+        const detailEl = document.getElementById('progress-detail');
+
+        // Fade out
+        detailEl.classList.add('fading');
+
+        // After fade out, change text and fade in
+        setTimeout(() => {
+            detailEl.textContent = newText;
+            detailEl.classList.remove('fading');
+        }, 300); // Match CSS transition duration
+    },
+
+    // L8-PROGRESS-ANIMATE: Clean up interval and redirect
+    completeAndRedirect(redirectUrl) {
+        // Clear interval to prevent memory leaks
+        if (this.finalizingInterval) {
+            clearInterval(this.finalizingInterval);
+            this.finalizingInterval = null;
+        }
+
+        // Mark all steps as completed
+        document.querySelectorAll('.progress-step').forEach(el => {
+            el.classList.remove('active', 'error');
+            el.classList.add('completed');
+        });
+
+        // Remove animated dots class
+        const messageEl = document.getElementById('progress-message');
+        messageEl.classList.remove('animated-dots');
+        messageEl.textContent = 'Success!';
+
+        // Final message before redirect
+        document.getElementById('progress-detail').textContent = 'Redirecting...';
+
+        // Brief delay then redirect
+        setTimeout(() => {
+            window.location.href = redirectUrl;
+        }, 500);
     }
 };
 
@@ -754,16 +863,23 @@ async function uploadToB2(file) {
             params.set('b2_filename', completeData.filename);
         }
 
-        // Show success state before redirecting
-        ProgressUI.complete();
+        // L8-PROGRESS-ANIMATE: Start animated finalizing state with rotating messages
+        const redirectUrl = `/upload/details?${params.toString()}`;
+        ProgressUI.startFinalizing();
 
-        // Brief delay to show success UI before redirect
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for at least one message rotation cycle (2 seconds) for better UX
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        window.location.href = `/upload/details?${params.toString()}`;
+        // Clean up and redirect
+        ProgressUI.completeAndRedirect(redirectUrl);
 
     } catch (error) {
         console.error('Upload error:', error);
+        // L8-PROGRESS-ANIMATE: Clean up any running intervals on error
+        if (ProgressUI.finalizingInterval) {
+            clearInterval(ProgressUI.finalizingInterval);
+            ProgressUI.finalizingInterval = null;
+        }
         showUploadError(error.message || 'Upload failed. Please try again.');
     }
 }

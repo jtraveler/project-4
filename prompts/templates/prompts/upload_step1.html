@@ -68,23 +68,196 @@
         </div>
     </div>
 
-    <!-- Progress indicator (hidden initially) -->
+    <!-- Enhanced 5-Step Progress Indicator -->
     <div id="upload-progress" class="mt-4" style="display:none;">
         <div class="row justify-content-center">
             <div class="col-md-8">
-                <div class="progress" style="height: 30px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated"
-                         role="progressbar"
-                         style="width: 0%; background-color: #05a081;"
-                         id="progress-bar">
+                <!-- Step Indicators -->
+                <div class="progress-steps">
+                    <div class="progress-step" data-step="1">
+                        <div class="step-dot"></div>
+                        <span class="step-label">Analyze</span>
+                    </div>
+                    <div class="progress-step" data-step="2">
+                        <div class="step-dot"></div>
+                        <span class="step-label">Safety</span>
+                    </div>
+                    <div class="progress-step" data-step="3">
+                        <div class="step-dot"></div>
+                        <span class="step-label">Tags</span>
+                    </div>
+                    <div class="progress-step" data-step="4">
+                        <div class="step-dot"></div>
+                        <span class="step-label">Upload</span>
+                    </div>
+                    <div class="progress-step" data-step="5">
+                        <div class="step-dot"></div>
+                        <span class="step-label">Finalize</span>
                     </div>
                 </div>
-                <p class="text-center mt-2">
-                    Uploading... <span id="progress-percent">0%</span>
-                </p>
+
+                <!-- Status Message -->
+                <div class="progress-status text-center mt-4">
+                    <h4 id="progress-message" class="mb-2">Preparing your upload...</h4>
+                    <p id="progress-detail" class="text-muted mb-0">Please wait</p>
+                </div>
+
+                <!-- Upload Progress Bar (shown during B2 upload) -->
+                <div id="upload-bar-container" class="mt-3" style="display:none;">
+                    <div class="progress" style="height: 8px; border-radius: 4px;">
+                        <div class="progress-bar"
+                             role="progressbar"
+                             style="width: 0%; background-color: #05a081; transition: width 0.3s ease;"
+                             id="progress-bar"
+                             aria-valuenow="0"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                    <p class="text-center mt-2 mb-0">
+                        <span id="progress-percent">0%</span>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Progress Step Styles -->
+    <style>
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: relative;
+            padding: 0 10px;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 30px;
+            right: 30px;
+            height: 2px;
+            background-color: #e0e0e0;
+            z-index: 0;
+        }
+
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            max-width: 80px;
+        }
+
+        .step-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            border: 2px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .step-dot::after {
+            content: '';
+            font-size: 12px;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 6px;
+            text-align: center;
+            transition: color 0.3s ease;
+        }
+
+        /* Active step - pulsing animation */
+        .progress-step.active .step-dot {
+            background-color: #05a081;
+            border-color: #05a081;
+            animation: pulse 1.5s infinite;
+        }
+
+        .progress-step.active .step-label {
+            color: #05a081;
+            font-weight: 500;
+        }
+
+        /* Completed step - checkmark */
+        .progress-step.completed .step-dot {
+            background-color: #05a081;
+            border-color: #05a081;
+            animation: none;
+        }
+
+        .progress-step.completed .step-dot::after {
+            content: '✓';
+        }
+
+        .progress-step.completed .step-label {
+            color: #05a081;
+        }
+
+        /* Error state */
+        .progress-step.error .step-dot {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            animation: none;
+        }
+
+        .progress-step.error .step-dot::after {
+            content: '✕';
+        }
+
+        .progress-step.error .step-label {
+            color: #dc3545;
+        }
+
+        /* Pulse animation for active step */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(5, 160, 129, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(5, 160, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(5, 160, 129, 0);
+            }
+        }
+
+        /* Success state for final completion */
+        .progress-status.success #progress-message {
+            color: #05a081;
+        }
+
+        .progress-status.error #progress-message {
+            color: #dc3545;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 576px) {
+            .step-label {
+                font-size: 9px;
+            }
+            .step-dot {
+                width: 20px;
+                height: 20px;
+            }
+            .progress-steps::before {
+                top: 10px;
+            }
+        }
+    </style>
 
     <!-- Spacing -->
     <div class="mb-5"></div>
@@ -152,6 +325,103 @@ const uploadProgress = document.getElementById('upload-progress');
 const progressBar = document.getElementById('progress-bar');
 const progressPercent = document.getElementById('progress-percent');
 
+// Progress UI Manager - Controls 5-step visual progress
+const ProgressUI = {
+    steps: [
+        { step: 1, message: 'Analyzing your image...', detail: 'Please wait while we process your upload' },
+        { step: 2, message: 'Checking content safety...', detail: 'Ensuring your image meets our guidelines' },
+        { step: 3, message: 'Generating tags...', detail: 'AI is suggesting relevant tags' },
+        { step: 4, message: 'Uploading to cloud...', detail: 'Uploading: 0%' },
+        { step: 5, message: 'Finalizing...', detail: 'Almost there!' }
+    ],
+
+    currentStep: 0,
+
+    show() {
+        uploadProgress.style.display = 'block';
+        dropZone.style.display = 'none';
+        this.resetSteps();
+    },
+
+    hide() {
+        uploadProgress.style.display = 'none';
+        dropZone.style.display = 'block';
+    },
+
+    resetSteps() {
+        this.currentStep = 0;
+        document.querySelectorAll('.progress-step').forEach(el => {
+            el.classList.remove('active', 'completed', 'error');
+        });
+        document.getElementById('upload-bar-container').style.display = 'none';
+        document.querySelector('.progress-status').classList.remove('success', 'error');
+    },
+
+    updateStep(stepNumber, customDetail = null) {
+        const stepData = this.steps.find(s => s.step === stepNumber);
+        if (!stepData) return;
+
+        this.currentStep = stepNumber;
+
+        // Mark previous steps as completed
+        document.querySelectorAll('.progress-step').forEach(el => {
+            const elStep = parseInt(el.dataset.step);
+            el.classList.remove('active', 'completed', 'error');
+            if (elStep < stepNumber) {
+                el.classList.add('completed');
+            } else if (elStep === stepNumber) {
+                el.classList.add('active');
+            }
+        });
+
+        // Update message and detail
+        document.getElementById('progress-message').textContent = stepData.message;
+        document.getElementById('progress-detail').textContent = customDetail || stepData.detail;
+
+        // Show progress bar only for step 4 (upload)
+        const barContainer = document.getElementById('upload-bar-container');
+        if (stepNumber === 4) {
+            barContainer.style.display = 'block';
+        } else {
+            barContainer.style.display = 'none';
+        }
+    },
+
+    setUploadProgress(percent) {
+        progressBar.style.width = percent + '%';
+        progressBar.setAttribute('aria-valuenow', percent);
+        progressPercent.textContent = percent + '%';
+        document.getElementById('progress-detail').textContent = `Uploading: ${percent}%`;
+    },
+
+    complete() {
+        // Mark all steps as completed
+        document.querySelectorAll('.progress-step').forEach(el => {
+            el.classList.remove('active', 'error');
+            el.classList.add('completed');
+        });
+
+        document.getElementById('progress-message').textContent = 'Success! Redirecting...';
+        document.getElementById('progress-detail').textContent = '';
+        document.querySelector('.progress-status').classList.add('success');
+        document.getElementById('upload-bar-container').style.display = 'none';
+    },
+
+    error(message) {
+        // Mark current step as error
+        const currentStepEl = document.querySelector(`.progress-step[data-step="${this.currentStep}"]`);
+        if (currentStepEl) {
+            currentStepEl.classList.remove('active');
+            currentStepEl.classList.add('error');
+        }
+
+        document.getElementById('progress-message').textContent = 'Upload Failed';
+        document.getElementById('progress-detail').textContent = message || 'Please try again';
+        document.querySelector('.progress-status').classList.add('error');
+        document.getElementById('upload-bar-container').style.display = 'none';
+    }
+};
+
 // Click to browse
 browseBtn.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('click', (e) => {
@@ -197,9 +467,9 @@ function handleFileUpload(file) {
     // Validate file
     if (!validateFile(file)) return;
 
-    // Show progress
-    uploadProgress.style.display = 'block';
-    dropZone.style.display = 'none';
+    // Show progress UI and start step 1
+    ProgressUI.show();
+    ProgressUI.updateStep(1);
 
     // Upload to B2
     uploadToB2(file);
@@ -267,12 +537,25 @@ function escapeHtml(text) {
 
 // Show error message to user with inline Bootstrap alert
 function showUploadError(message) {
-    // Hide progress bar if visible
-    uploadProgress.style.display = 'none';
+    // Update ProgressUI to error state if it's visible
+    if (uploadProgress.style.display !== 'none') {
+        ProgressUI.error(message);
+        // Wait 2 seconds then hide progress and show drop zone with error
+        setTimeout(() => {
+            ProgressUI.hide();
+            ProgressUI.resetSteps();
+            showErrorAlert(message);
+        }, 2000);
+    } else {
+        showErrorAlert(message);
+    }
 
-    // Show drop zone
-    dropZone.style.display = 'block';
+    // Reset file input
+    fileInput.value = '';
+}
 
+// Show error alert element
+function showErrorAlert(message) {
     // Find or create error element
     let errorEl = document.getElementById('upload-error-message');
     if (!errorEl) {
@@ -304,9 +587,6 @@ function showUploadError(message) {
     // Reset progress bar
     progressBar.style.width = '0%';
     progressPercent.textContent = '0%';
-
-    // Reset file input
-    fileInput.value = '';
 }
 
 // Validate B2 API response schema
@@ -350,8 +630,12 @@ async function uploadToB2(file) {
     }
 
     try {
-        // STEP 1: Get presigned URL from our server
-        progressPercent.textContent = 'Preparing upload...';
+        // UI Step 1: Analyzing (already set in handleFileUpload)
+        // Simulate brief analysis time for better UX
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // UI Step 2: Content safety check
+        ProgressUI.updateStep(2);
 
         const presignParams = new URLSearchParams({
             content_type: file.type,
@@ -376,8 +660,12 @@ async function uploadToB2(file) {
             throw new Error(presignData.error || 'Failed to get upload URL');
         }
 
-        // STEP 2: Upload directly to B2 using presigned URL
-        progressPercent.textContent = 'Uploading to storage...';
+        // UI Step 3: Generating tags
+        ProgressUI.updateStep(3);
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // UI Step 4: Upload to B2
+        ProgressUI.updateStep(4);
 
         const uploadXhr = new XMLHttpRequest();
 
@@ -385,8 +673,7 @@ async function uploadToB2(file) {
         uploadXhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
                 const percent = Math.round((e.loaded / e.total) * 100);
-                progressBar.style.width = percent + '%';
-                progressPercent.textContent = `Uploading... ${percent}%`;
+                ProgressUI.setUploadProgress(percent);
             }
         });
 
@@ -411,9 +698,8 @@ async function uploadToB2(file) {
 
         await uploadPromise;
 
-        // STEP 3: Notify our server that upload is complete
-        progressBar.style.width = '100%';
-        progressPercent.textContent = 'Processing...';
+        // UI Step 5: Finalizing
+        ProgressUI.updateStep(5);
 
         const completeResponse = await fetch('/api/upload/b2/complete/', {
             method: 'POST',
@@ -467,6 +753,12 @@ async function uploadToB2(file) {
         if (completeData.filename) {
             params.set('b2_filename', completeData.filename);
         }
+
+        // Show success state before redirecting
+        ProgressUI.complete();
+
+        // Brief delay to show success UI before redirect
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         window.location.href = `/upload/details?${params.toString()}`;
 

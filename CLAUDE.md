@@ -9008,6 +9008,55 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 
 ## 📝 Changelog
 
+### January 2026 - Session 34 (Jan 1, 2026)
+
+**Phase L8-DIRECT: Direct Browser-to-B2 Uploads**
+
+Session 34 completed L8-DIRECT implementation, eliminating Heroku as middleman for file uploads:
+
+**Direct Browser-to-B2 Upload System**
+- Created `b2_presign_service.py` (240 lines) - Presigned URL generation for secure direct uploads
+- New API endpoints: `b2_presign_upload`, `b2_upload_complete`, `b2_generate_variants`
+- Browser uploads directly to Backblaze B2 via presigned URLs
+- B2 CORS configuration via `cors-rules.json` for cross-origin browser uploads
+
+**Deferred Variant Generation**
+- `complete/` endpoint simplified to verification only (~1s vs 7-8s before)
+- Image variants (thumb, medium, large, webp) generate in background on Step 2
+- Event-driven submit guard replaces busy-wait polling
+- HTTP status checking added before JSON parsing for robustness
+
+**Performance Improvement**
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Step 1 → Step 2 | ~23 seconds | ~10-11 seconds | **52% faster** |
+| `complete/` endpoint | 7-8 seconds | ~1 second | **85% faster** |
+| Variant generation | Blocking | Background | Non-blocking UX |
+
+**Files Created:**
+- `prompts/services/b2_presign_service.py` - Presigned URL service
+- `prompts/tests/test_b2_presign.py` - 22 comprehensive tests
+- `cors-rules.json` - B2 CORS configuration
+
+**Files Modified:**
+- `prompts/views/api_views.py` - New presign/complete/variants endpoints
+- `prompts/templates/prompts/upload_step1.html` - Direct B2 upload JavaScript
+- `prompts/templates/prompts/upload_step2.html` - Background variants + submit guard
+- `prompts/views/upload_views.py` - pending_variants detection
+- `prompts_manager/settings.py` - CSP updates for B2 domains
+
+**Agent Validation:**
+- @django-pro: 8.8/10
+- @code-reviewer: 7.8/10
+- @frontend-developer: 8.5/10
+- **Average: 8.4/10** ✅
+
+**Commit:** `feat(L8-DIRECT): Implement direct browser-to-B2 uploads with deferred variant generation`
+
+**Key Learning:** L8-INSTANT (instant redirect with IndexedDB) was attempted but reverted due to blob URL navigation issues. Simple performance improvements (deferred variants) proved more reliable than complex architecture changes.
+
+---
+
 ### December 2025 - Session 24 (Dec 25, 2025)
 
 **Phase K Collections: Micro-Spec Approach Adoption**
@@ -9758,7 +9807,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.8
-**Last Updated:** December 30, 2025
+**Version:** 2.9
+**Last Updated:** January 1, 2026
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase L: Media Infrastructure IN PROGRESS ~60%, Phase K ON HOLD at 95%)
+**Project Status:** Pre-Launch (Phase L: Media Infrastructure ~95%, Phase K ON HOLD at 95%)

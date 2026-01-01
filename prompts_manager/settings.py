@@ -460,6 +460,8 @@ CSP_CONNECT_SRC = (
     "https://fonts.googleapis.com",
     "https://fonts.gstatic.com",
     "https://cdn.jsdelivr.net",
+    "https://s3.us-east-005.backblazeb2.com",
+    
 )
 
 CSP_FONT_SRC = (

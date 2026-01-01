@@ -461,21 +461,33 @@ console.log('=== END DIAGNOSTIC ===');
         },
         credentials: 'same-origin'
     })
-    .then(response => response.json())
+    .then(response => {
+        // L8-DIRECT-FIX: Check HTTP status before parsing JSON
+        if (!response.ok) {
+            console.warn('[Variants] HTTP error:', response.status, response.statusText);
+            variantsComplete = true;  // Allow submit on error
+            // Dispatch event for any listeners
+            document.dispatchEvent(new CustomEvent('variantsComplete', { detail: { success: false, error: 'HTTP ' + response.status } }));
+            return null;  // Skip JSON parsing
+        }
+        return response.json();
+    })
     .then(data => {
+        if (!data) return;  // Already handled in status check
         if (data.success) {
             console.log('[Variants] Background generation complete:', data.urls);
-            variantsComplete = true;  // L8-FIX: Mark variants as complete
+            variantsComplete = true;
+            document.dispatchEvent(new CustomEvent('variantsComplete', { detail: { success: true, urls: data.urls } }));
         } else {
             console.warn('[Variants] Generation failed:', data.error);
-            variantsComplete = true;  // L8-FIX: Allow submit even on failure
-            // Non-blocking: user can still submit, variants will be missing
+            variantsComplete = true;  // Allow submit even on failure
+            document.dispatchEvent(new CustomEvent('variantsComplete', { detail: { success: false, error: data.error } }));
         }
     })
     .catch(error => {
         console.error('[Variants] Network error:', error);
-        variantsComplete = true;  // L8-FIX: Allow submit even on error
-        // Non-blocking: graceful degradation
+        variantsComplete = true;  // Allow submit even on error
+        document.dispatchEvent(new CustomEvent('variantsComplete', { detail: { success: false, error: error.message } }));
     });
 })();
 {% endif %}
@@ -600,34 +612,47 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
     submitText.textContent = isVideo ? 'Processing...' :
                              variantsComplete ? 'Submitting...' : 'Optimizing images...';
 
-    // If variants not complete, poll for up to 5 seconds
+    // L8-DIRECT-FIX: Event-driven wait for variants (replaces busy-wait polling)
+    // If variants not complete, wait for the variantsComplete event with timeout
     if (!variantsComplete && !variantCheckInProgress) {
         variantCheckInProgress = true;
-        const startTime = Date.now();
         const maxWait = 5000;  // 5 seconds max
 
-        while (!variantsComplete && (Date.now() - startTime) < maxWait) {
-            try {
-                const response = await fetch('{% url "prompts:b2_variants_status" %}', {
-                    credentials: 'same-origin'
-                });
-                const data = await response.json();
-                if (data.complete) {
-                    variantsComplete = true;
-                    console.log('[Submit] Variants complete via polling');
-                    break;
-                }
-            } catch (error) {
-                console.warn('[Submit] Status check failed:', error);
+        // Create a promise that resolves when variants complete OR timeout
+        await new Promise((resolve) => {
+            // If already complete, resolve immediately
+            if (variantsComplete) {
+                variantCheckInProgress = false;
+                resolve();
+                return;
             }
-            // Wait 500ms before next check
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
 
-        if (!variantsComplete) {
-            console.log('[Submit] Proceeding without variants (timeout or error)');
-        }
-        variantCheckInProgress = false;
+            // Set up timeout
+            const timeoutId = setTimeout(() => {
+                console.log('[Submit] Proceeding without variants (timeout)');
+                document.removeEventListener('variantsComplete', onComplete);
+                variantCheckInProgress = false;
+                resolve();
+            }, maxWait);
+
+            // Listen for the variantsComplete event from background fetch
+            function onComplete(event) {
+                clearTimeout(timeoutId);
+                console.log('[Submit] Variants complete via event:', event.detail);
+                variantCheckInProgress = false;
+                resolve();
+            }
+
+            document.addEventListener('variantsComplete', onComplete, { once: true });
+
+            // Also check current state in case event fired before listener attached
+            if (variantsComplete) {
+                clearTimeout(timeoutId);
+                document.removeEventListener('variantsComplete', onComplete);
+                variantCheckInProgress = false;
+                resolve();
+            }
+        });
     }
 
     // Update text and submit

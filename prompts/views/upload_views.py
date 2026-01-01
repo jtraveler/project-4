@@ -225,8 +225,15 @@ def upload_step2(request):
     }
     request.session.modified = True  # Ensure session saves
 
-    # Check if quick_mode was used and variants need to be generated
-    pending_variants = bool(request.session.get('pending_variant_image'))
+    # L8-DIRECT-FIX: Check if variants need to be generated
+    # Can be triggered by:
+    # 1. Query param from Step 1 redirect (variants_pending=true)
+    # 2. Session key pending_variant_url (new L8-DIRECT approach)
+    # 3. Session key pending_variant_image (legacy quick mode)
+    variants_pending_param = request.GET.get('variants_pending', '').lower() == 'true'
+    has_pending_url = bool(request.session.get('pending_variant_url'))
+    has_pending_image = bool(request.session.get('pending_variant_image'))
+    pending_variants = variants_pending_param or has_pending_url or has_pending_image
 
     context = {
         'cloudinary_id': cloudinary_id,

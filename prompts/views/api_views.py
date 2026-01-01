@@ -452,10 +452,10 @@ def b2_upload_api(request):
 @require_POST
 def b2_generate_variants(request):
     """
-    Generate remaining image variants (medium, large, webp) in background.
+    Generate ALL image variants (thumb, medium, large, webp) in background.
 
-    This endpoint is called after a quick_mode upload to generate the
-    deferred variants while the user fills out the form.
+    L8-DIRECT-FIX: This endpoint now downloads the image from B2 URL and
+    generates ALL variants. Called from Step 2 page load.
 
     Accepts: POST
     Returns: JSON with variant URLs or error message
@@ -464,6 +464,7 @@ def b2_generate_variants(request):
         {
             "success": true,
             "urls": {
+                "thumb": "https://media.promptfinder.net/.../thumb/abc123.jpg",
                 "medium": "https://media.promptfinder.net/.../medium/abc123.jpg",
                 "large": "https://media.promptfinder.net/.../large/abc123.jpg",
                 "webp": "https://media.promptfinder.net/.../webp/abc123.webp"
@@ -478,29 +479,55 @@ def b2_generate_variants(request):
 
     URL: /api/upload/b2/variants/
     """
-    # Check if there's a pending variant generation
-    image_b64 = request.session.get('pending_variant_image')
+    # Check if there's a pending variant generation - support both URL and base64
+    image_url = request.session.get('pending_variant_url')
+    image_b64 = request.session.get('pending_variant_image')  # Legacy support
     filename = request.session.get('pending_variant_filename')
 
-    if not image_b64 or not filename:
+    if not filename:
         return JsonResponse({
             'success': False,
             'error': 'No pending image for variant generation'
         }, status=400)
 
-    try:
-        # Decode base64 image
-        image_bytes = base64.b64decode(image_b64)
+    if not image_url and not image_b64:
+        return JsonResponse({
+            'success': False,
+            'error': 'No pending image URL or data for variant generation'
+        }, status=400)
 
-        # Generate variants
+    try:
+        # Get image bytes - either download from URL or decode base64
+        if image_url:
+            # L8-DIRECT-FIX: Download from B2 URL
+            response = requests.get(image_url, timeout=30)
+            response.raise_for_status()
+            image_bytes = response.content
+        else:
+            # Legacy: Decode base64 image
+            image_bytes = base64.b64decode(image_b64)
+
+        # Generate ALL variants (thumb, medium, large, webp)
         result = generate_image_variants(image_bytes, filename)
 
         if result['success']:
             # Clear session data after successful generation
-            del request.session['pending_variant_image']
-            del request.session['pending_variant_filename']
+            if 'pending_variant_url' in request.session:
+                del request.session['pending_variant_url']
+            if 'pending_variant_image' in request.session:
+                del request.session['pending_variant_image']
+            if 'pending_variant_filename' in request.session:
+                del request.session['pending_variant_filename']
+
+            # Store variant URLs and mark complete
             request.session['variant_urls'] = result['urls']
             request.session['variants_complete'] = True
+
+            # Also update direct_upload_urls with variants
+            direct_urls = request.session.get('direct_upload_urls', {})
+            direct_urls.update(result['urls'])
+            request.session['direct_upload_urls'] = direct_urls
+
             request.session.modified = True
 
             return JsonResponse({
@@ -508,13 +535,30 @@ def b2_generate_variants(request):
                 'urls': result['urls']
             })
         else:
+            # Mark as complete even on failure to unblock form submission
+            request.session['variants_complete'] = True
+            request.session.modified = True
+
             return JsonResponse({
                 'success': False,
                 'error': result['error']
             }, status=500)
 
+    except requests.RequestException as e:
+        logger.exception(f"Error downloading image for variants: {e}")
+        # Mark as complete to unblock submission
+        request.session['variants_complete'] = True
+        request.session.modified = True
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to download image for variant generation.'
+        }, status=500)
+
     except Exception as e:
         logger.exception(f"Variant generation error: {e}")
+        # Mark as complete to unblock submission
+        request.session['variants_complete'] = True
+        request.session.modified = True
         return JsonResponse({
             'success': False,
             'error': 'An unexpected error occurred during variant generation.'
@@ -674,28 +718,27 @@ def b2_upload_complete(request):
     Handle completion of direct browser-to-B2 upload.
 
     Called after the browser has uploaded directly to B2 using the presigned URL.
-    Verifies the upload exists and triggers variant generation for images.
+    Verifies the upload exists and stores URL for deferred variant generation.
+
+    L8-DIRECT-FIX: This endpoint now ONLY verifies the upload and stores the URL.
+    Variant generation is deferred to Step 2 via b2_generate_variants endpoint.
+    This reduces Step 1 time from ~18s to ~3-5s.
 
     Accepts: POST with JSON body
     Parameters:
-        - key: The S3 key that was uploaded to
-        - generate_variants: Whether to generate image variants (default: true)
-        - quick_mode: Whether to use quick mode (original + thumb only)
+        - quick: Whether to defer variant generation (default: true for images)
 
-    Returns: JSON with upload confirmation and URLs
+    Returns: JSON with upload confirmation and original URL
 
     Response (success - image):
         {
             "success": true,
             "filename": "abc123.jpg",
             "urls": {
-                "original": "https://media.promptfinder.net/...",
-                "thumb": "https://media.promptfinder.net/...",
-                "medium": "https://media.promptfinder.net/...",
-                "large": "https://media.promptfinder.net/...",
-                "webp": "https://media.promptfinder.net/..."
+                "original": "https://media.promptfinder.net/..."
             },
-            "is_video": false
+            "is_video": false,
+            "variants_pending": true
         }
 
     Response (success - video):
@@ -706,7 +749,8 @@ def b2_upload_complete(request):
                 "original": "https://media.promptfinder.net/...",
                 "thumb": "https://media.promptfinder.net/..."
             },
-            "is_video": true
+            "is_video": true,
+            "variants_pending": false
         }
 
     Response (error):
@@ -741,55 +785,18 @@ def b2_upload_complete(request):
             'error': verification.get('error', 'Upload verification failed. File not found in storage.')
         }, status=400)
 
-    # Parse request body for options
-    try:
-        body = json.loads(request.body) if request.body else {}
-    except json.JSONDecodeError:
-        body = {}
-
-    generate_variants = body.get('generate_variants', True)
-    quick_mode = body.get('quick_mode', False)
-
     urls = {'original': cdn_url}
+    variants_pending = False
 
-    # For images, generate variants if requested
-    if not is_video and generate_variants:
-        try:
-            # Download the uploaded image for processing
-            response = requests.get(cdn_url, timeout=30)
-            response.raise_for_status()
-            image_bytes = response.content
+    # For images: defer variant generation to Step 2
+    if not is_video:
+        # Store URL for deferred variant generation
+        request.session['pending_variant_url'] = cdn_url
+        request.session['pending_variant_filename'] = filename
+        request.session['variants_complete'] = False
+        variants_pending = True
 
-            # Process and generate variants
-            processed = process_upload(
-                BytesIO(image_bytes),
-                generate_thumbnails=True,
-                convert_webp=not quick_mode,
-                thumbnail_sizes=['thumb'] if quick_mode else None
-            )
-
-            # Upload variants to B2
-            if quick_mode:
-                # Quick mode: only thumb
-                if 'thumb' in processed:
-                    thumb_path = get_upload_path(filename, 'thumb')
-                    urls['thumb'] = upload_to_b2(processed['thumb'], thumb_path)
-            else:
-                # Full mode: all variants
-                for size_name in ['thumb', 'medium', 'large']:
-                    if size_name in processed:
-                        path = get_upload_path(filename, size_name)
-                        urls[size_name] = upload_to_b2(processed[size_name], path)
-
-                if 'webp' in processed:
-                    webp_path = get_upload_path(filename, 'webp')
-                    urls['webp'] = upload_to_b2(processed['webp'], webp_path)
-
-        except Exception as e:
-            logger.exception(f"Error generating variants: {e}")
-            # Continue without variants - original is still valid
-
-    # For videos, generate thumbnail
+    # For videos: generate thumbnail synchronously (required for display)
     if is_video:
         try:
             from prompts.services.video_processor import extract_thumbnail
@@ -848,4 +855,5 @@ def b2_upload_complete(request):
         'filename': filename,
         'urls': urls,
         'is_video': is_video,
+        'variants_pending': variants_pending,
     })

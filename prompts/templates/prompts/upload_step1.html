@@ -437,16 +437,19 @@ async function uploadToB2(file) {
         }
 
         // STEP 4: Redirect to step 2 with B2 URLs
+        // L8-DIRECT-FIX: For images, only pass original URL and variants_pending flag
+        // Variants will be generated in background on Step 2 page load
         const params = new URLSearchParams({
             resource_type: resourceType,
-            b2_original: completeData.urls.original || '',
-            b2_thumb: completeData.urls.thumb || '',
-            b2_medium: completeData.urls.medium || '',
-            b2_large: completeData.urls.large || '',
-            b2_webp: completeData.urls.webp || ''
+            b2_original: completeData.urls.original || ''
         });
 
-        // For videos, pass video-specific URLs
+        // For images: pass variants_pending flag (variants generated on Step 2)
+        if (!isVideo && completeData.variants_pending) {
+            params.set('variants_pending', 'true');
+        }
+
+        // For videos: pass video-specific URLs (thumbnail generated synchronously)
         if (isVideo) {
             if (completeData.urls.original) {
                 params.set('b2_video', completeData.urls.original);

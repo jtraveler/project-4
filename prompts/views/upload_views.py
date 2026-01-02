@@ -16,6 +16,38 @@ from prompts.services import ModerationOrchestrator
 import json
 import logging
 
+# =============================================================================
+# L8-ERRORS: WEEKLY UPLOAD LIMIT DOCUMENTATION
+# =============================================================================
+#
+# This file implements weekly upload limits for users.
+#
+# WEEKLY UPLOAD LIMITS:
+# ---------------------
+# Free users: 100 uploads per week (testing value, production will be 10)
+# Premium users: 999 uploads per week (effectively unlimited)
+#
+# IMPLEMENTATION:
+# ---------------
+# - Checked in upload_step1() view before allowing access
+# - Uses Django ORM query: Prompt.objects.filter(author=user, created_on__gte=week_start)
+# - Rolling 7-day window from current time
+# - If limit exceeded: redirect to home with error message
+#
+# USER-FACING ERROR:
+# ------------------
+# "You have reached your weekly upload limit ({weekly_limit}).
+#  Upgrade to Premium for unlimited uploads."
+#
+# RELATED RATE LIMITS (see api_views.py for details):
+# ---------------------------------------------------
+# - B2 API: 20 uploads/hour (prevents abuse)
+# - OpenAI: Implicit limits from OpenAI's API
+#
+# TODO: Revert weekly_limit from 100 to 10 after testing phase
+#
+# =============================================================================
+
 logger = logging.getLogger(__name__)
 
 

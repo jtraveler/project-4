@@ -16,8 +16,12 @@ import time
 import re
 import logging
 from typing import Dict, List, Optional
-from openai import OpenAI
+from openai import OpenAI, APITimeoutError, APIConnectionError
 from django.conf import settings
+
+# Timeout for OpenAI API calls (seconds)
+# L8-TIMEOUT: Prevents endpoint hanging for 4+ minutes
+OPENAI_TIMEOUT = 30
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +49,10 @@ class ContentGenerationService:
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in settings or environment")
 
-        self.client = OpenAI(api_key=api_key)
+        # L8-TIMEOUT: Configure client with 30-second timeout
+        self.client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
         self._load_tags()
-        logger.info("Content Generation Service initialized")
+        logger.info("Content Generation Service initialized with %ds timeout", OPENAI_TIMEOUT)
 
     def _load_tags(self):
         """Load all available tags from database for AI suggestions."""
@@ -160,6 +165,21 @@ class ContentGenerationService:
                 'suggested_tags': [],
                 'relevance_score': 0.0,
                 'relevance_explanation': 'AI returned invalid response'
+            }
+        except (APITimeoutError, APIConnectionError) as e:
+            # L8-TIMEOUT: Graceful degradation on timeout
+            # Don't block upload - return fallback values so upload can complete
+            logger.warning(f"OpenAI API timeout/connection error: {str(e)}")
+            return {
+                'timeout': True,
+                'violations': [],
+                'title': 'Untitled Upload',
+                'description': '',
+                'suggested_tags': [],
+                'relevance_score': 0.0,
+                'relevance_explanation': 'AI service timed out - using defaults',
+                'seo_filename': self._generate_filename('Untitled Upload', ai_generator),
+                'alt_tag': self._generate_alt_tag('Untitled Upload', ai_generator)
             }
         except Exception as e:
             logger.error(f"Content generation error: {str(e)}", exc_info=True)
@@ -372,6 +392,15 @@ Return ONLY valid JSON:
                     'tags': result.get('tags', [])
                 }
 
+        except (APITimeoutError, APIConnectionError) as e:
+            # L8-TIMEOUT: Graceful degradation on timeout for text-based generation
+            logger.warning(f"OpenAI API timeout in generate_from_text: {str(e)}")
+            return {
+                'timeout': True,
+                'title': f"{prompt_text[:50]} - AI Video Prompt",
+                'description': f"Video prompt: {prompt_text[:150]}",
+                'tags': []
+            }
         except Exception as e:
             logger.error(f"Text-based generation failed: {e}")
             return {

@@ -30,8 +30,43 @@ import requests
 import json
 import base64
 
+# =============================================================================
+# L8-ERRORS: RATE LIMIT DOCUMENTATION
+# =============================================================================
+#
+# This file implements rate limiting for B2 (Backblaze) direct uploads.
+#
+# RATE LIMIT SOURCES IN UPLOAD FLOW:
+# ----------------------------------
+# 1. B2 API Rate Limit (this file):
+#    - Limit: 20 uploads per hour per user
+#    - Window: 3600 seconds (1 hour)
+#    - Cache key: f"b2_upload_rate:{user.id}"
+#    - Error: HTTP 429 "Upload rate limit exceeded. Please try again later."
+#    - Reset: Automatic after 1 hour window expires
+#
+# 2. Weekly Upload Limit (upload_views.py):
+#    - Free users: 100/week (testing) → will be 10/week in production
+#    - Premium users: 999/week (effectively unlimited)
+#    - Check: On upload_step1 page load, redirects if exceeded
+#    - Reset: Rolling 7-day window
+#
+# 3. OpenAI API Limits (implicit):
+#    - Content generation and moderation use OpenAI API
+#    - No explicit limits in code - relies on OpenAI's own rate limits
+#    - See: prompts/services/content_generation.py
+#    - See: prompts/services/cloudinary_moderation.py
+#
+# USER-FACING ERROR MESSAGES:
+# ---------------------------
+# B2 rate limit: "Upload rate limit exceeded. Please try again later."
+# Weekly limit: "You have reached your weekly upload limit (X). Upgrade to Premium..."
+# OpenAI errors: Mapped via ERROR_MESSAGES in upload_step1.html
+#
+# =============================================================================
+
 # Rate limiting constants for B2 uploads
-B2_UPLOAD_RATE_LIMIT = 20  # Max uploads per hour
+B2_UPLOAD_RATE_LIMIT = 20  # Max uploads per hour per user
 B2_UPLOAD_RATE_WINDOW = 3600  # 1 hour in seconds
 
 logger = logging.getLogger(__name__)

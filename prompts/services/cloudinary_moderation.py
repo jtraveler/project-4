@@ -20,8 +20,12 @@ Prompt checks for:
 import logging
 from typing import Dict, Optional
 import os
-from openai import OpenAI
+from openai import OpenAI, APITimeoutError, APIConnectionError
 import requests
+
+# Timeout for OpenAI API calls (seconds)
+# L8-TIMEOUT: Prevents endpoint hanging for 4+ minutes
+OPENAI_TIMEOUT = 30
 from PIL import Image
 from io import BytesIO
 import cloudinary.uploader
@@ -62,8 +66,9 @@ Be strict but fair. Flag content that violates these policies."""
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
 
-        self.client = OpenAI(api_key=api_key)
-        logger.info("Vision Moderation Service initialized")
+        # L8-TIMEOUT: Configure client with 30-second timeout
+        self.client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
+        logger.info("Vision Moderation Service initialized with %ds timeout", OPENAI_TIMEOUT)
 
     def moderate_image_url(self, image_url: str) -> Dict:
         """
@@ -153,6 +158,20 @@ Be strict but fair. Flag content that violates these policies."""
                 'severity': severity,
                 'confidence_score': confidence,
                 'explanation': explanation,
+            }
+
+        except (APITimeoutError, APIConnectionError) as e:
+            # L8-TIMEOUT: Graceful degradation on timeout
+            # Default to "approved" to not block uploads when AI is slow
+            logger.warning(f"Vision moderation timeout: {str(e)}")
+            return {
+                'timeout': True,
+                'is_safe': True,
+                'status': 'approved',
+                'flagged_categories': [],
+                'severity': 'low',
+                'confidence_score': 0.0,
+                'explanation': 'Moderation service timed out - defaulting to approved',
             }
 
         except Exception as e:
@@ -308,6 +327,21 @@ Be strict but fair. Flag content that violates these policies."""
                     'media_type': media_type,
                 },
                 'explanation': explanation,
+            }
+
+        except (APITimeoutError, APIConnectionError) as e:
+            # L8-TIMEOUT: Graceful degradation on timeout
+            # Default to "approved" to not block uploads when AI is slow
+            logger.warning(f"Vision moderation timeout for Prompt {prompt_obj.id}: {str(e)}")
+            return {
+                'timeout': True,
+                'is_safe': True,
+                'status': 'approved',
+                'flagged_categories': [],
+                'severity': 'low',
+                'confidence_score': 0.0,
+                'raw_response': {'timeout': True, 'error': str(e)},
+                'explanation': 'Moderation service timed out - defaulting to approved',
             }
 
         except Exception as e:

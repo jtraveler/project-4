@@ -2,6 +2,11 @@
 {% load static %}
 
 {% block content %}
+<!-- L8-ERRORS: Alert container positioned at TOP for visibility -->
+<div id="top-alert-container" class="container" style="margin-top: 1rem; margin-bottom: 0;">
+    <!-- Dynamic error alerts will be inserted here by JavaScript -->
+</div>
+
 <div class="container mt-5 mb-5">
     <!-- Header -->
     <div class="text-center mb-4">
@@ -612,6 +617,62 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// L8-ERRORS: User-friendly error message mapping
+// Maps technical error messages to user-friendly alternatives
+const ERROR_MESSAGES = {
+    // Rate limiting errors
+    'Rate limit exceeded': 'You\'re uploading too quickly. Please wait a few minutes before trying again.',
+    'Too many requests': 'You\'re uploading too quickly. Please wait a few minutes before trying again.',
+    'rate limit': 'You\'re uploading too quickly. Please wait a few minutes before trying again.',
+
+    // Network/connection errors
+    'Network error': 'Connection lost. Please check your internet and try again.',
+    'Network error during upload': 'Connection lost during upload. Please check your internet and try again.',
+    'Upload timed out': 'The upload took too long. Please try with a smaller file or check your connection.',
+    'Failed to fetch': 'Connection lost. Please check your internet and try again.',
+
+    // Server/processing errors
+    'Failed to prepare upload': 'We couldn\'t start your upload. Please refresh the page and try again.',
+    'Failed to get upload URL': 'We couldn\'t prepare your upload. Please refresh the page and try again.',
+    'Processing failed': 'We couldn\'t process your file. Please try again or use a different file.',
+    'Upload failed': 'Something went wrong. Please try again.',
+
+    // File validation errors (these are already user-friendly, but included for consistency)
+    'Session expired': 'Your session has expired. Please refresh the page and try again.',
+
+    // Content moderation errors
+    'Content flagged': 'This image may not meet our content guidelines. Please review and try a different image.',
+    'Moderation failed': 'We couldn\'t verify this image meets our guidelines. Please try again.',
+
+    // B2/Storage errors
+    'Storage error': 'We\'re having trouble saving your file. Please try again in a few moments.',
+    'Upload failed with status': 'Upload interrupted. Please try again.',
+
+    // L8-TIMEOUT: Processing timeout errors
+    'Processing timed out': 'Processing is taking longer than expected. Your upload will continue with default settings.',
+    'AbortError': 'Processing is taking longer than expected. Please try again.',
+    'The operation was aborted': 'Processing is taking longer than expected. Please try again.',
+    'AI processing timeout': 'Our AI is busy. Your upload succeeded with default settings - you can edit the title and tags on the next page.'
+};
+
+// L8-ERRORS: Get user-friendly error message
+function getUserFriendlyError(technicalError) {
+    if (!technicalError) return 'Something went wrong. Please try again.';
+
+    const errorStr = String(technicalError).toLowerCase();
+
+    // Check for exact matches first (case-insensitive)
+    for (const [key, friendly] of Object.entries(ERROR_MESSAGES)) {
+        if (errorStr.includes(key.toLowerCase())) {
+            return friendly;
+        }
+    }
+
+    // Generic fallback for unknown errors
+    // Don't expose technical details - provide actionable message
+    return 'Something went wrong. Please try again or contact support if the problem persists.';
+}
+
 // Show error message to user with inline Bootstrap alert
 function showUploadError(message) {
     // Update ProgressUI to error state if it's visible
@@ -631,35 +692,48 @@ function showUploadError(message) {
     fileInput.value = '';
 }
 
-// Show error alert element
+// L8-ERRORS: Show error alert at TOP of page for visibility
 function showErrorAlert(message) {
+    // Get user-friendly message
+    const friendlyMessage = getUserFriendlyError(message);
+
+    // Get the top alert container (positioned below navbar)
+    const topContainer = document.getElementById('top-alert-container');
+
     // Find or create error element
     let errorEl = document.getElementById('upload-error-message');
     if (!errorEl) {
         errorEl = document.createElement('div');
         errorEl.id = 'upload-error-message';
-        errorEl.className = 'alert alert-danger mt-3';
+        // Bootstrap dismissible alert with ARIA accessibility
+        errorEl.className = 'alert alert-danger alert-dismissible fade show';
         errorEl.setAttribute('role', 'alert');
+        errorEl.setAttribute('aria-live', 'assertive');
+        errorEl.setAttribute('aria-atomic', 'true');
 
-        // Insert after the drop zone container
-        const dropZoneContainer = dropZone.closest('.col-md-8');
-        if (dropZoneContainer) {
-            dropZoneContainer.appendChild(errorEl);
+        // L8-ERRORS: Insert into TOP container (not after drop zone)
+        if (topContainer) {
+            topContainer.appendChild(errorEl);
+        } else {
+            // Fallback: insert at beginning of content area
+            const contentArea = document.querySelector('.container');
+            if (contentArea) {
+                contentArea.insertBefore(errorEl, contentArea.firstChild);
+            }
         }
     }
 
-    // Set error content with close button
-    errorEl.innerHTML = '<strong>Upload Error:</strong> ' + escapeHtml(message) +
-        '<button type="button" class="btn-close float-end" aria-label="Close"></button>';
+    // Set error content with Bootstrap dismissible close button
+    errorEl.innerHTML = `
+        <strong><i class="fas fa-exclamation-circle me-2"></i>Upload Error</strong>
+        <p class="mb-0 mt-1">${escapeHtml(friendlyMessage)}</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
     errorEl.style.display = 'block';
+    errorEl.classList.add('show');
 
-    // Add close button handler
-    const closeBtn = errorEl.querySelector('.btn-close');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-            errorEl.style.display = 'none';
-        });
-    }
+    // L8-ERRORS: Scroll to top so user sees the error immediately
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Reset progress bar
     progressBar.style.width = '0%';
@@ -778,23 +852,59 @@ async function uploadToB2(file) {
         // UI Step 5: Finalizing
         ProgressUI.updateStep(5);
 
-        const completeResponse = await fetch('/api/upload/b2/complete/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                quick: !isVideo  // Quick mode for images only
-            })
-        });
+        // L8-TIMEOUT: AbortController with progressive feedback
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 65000); // 65 second hard timeout
 
-        if (!completeResponse.ok) {
-            const errorData = await completeResponse.json().catch(() => ({}));
-            throw new Error(errorData.error || `Processing failed (${completeResponse.status})`);
+        // L8-TIMEOUT: 15-second warning timer
+        const warningTimeoutId = setTimeout(() => {
+            ProgressUI.updateStep(5, 'Still processing... This may take a moment.');
+        }, 15000);
+
+        // L8-TIMEOUT: 45-second extended warning
+        const extendedWarningId = setTimeout(() => {
+            ProgressUI.updateStep(5, 'AI processing is taking longer than usual. Please wait...');
+        }, 45000);
+
+        let completeResponse;
+        let completeData;
+
+        try {
+            completeResponse = await fetch('/api/upload/b2/complete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    quick: !isVideo  // Quick mode for images only
+                }),
+                signal: controller.signal
+            });
+
+            // Clear all timeout timers on success
+            clearTimeout(timeoutId);
+            clearTimeout(warningTimeoutId);
+            clearTimeout(extendedWarningId);
+
+            if (!completeResponse.ok) {
+                const errorData = await completeResponse.json().catch(() => ({}));
+                throw new Error(errorData.error || `Processing failed (${completeResponse.status})`);
+            }
+
+            completeData = await completeResponse.json();
+        } catch (fetchError) {
+            // Clear all timeout timers
+            clearTimeout(timeoutId);
+            clearTimeout(warningTimeoutId);
+            clearTimeout(extendedWarningId);
+
+            // L8-TIMEOUT: Handle abort/timeout gracefully
+            if (fetchError.name === 'AbortError') {
+                throw new Error('AI processing timeout - your upload may have succeeded. Please check your uploads.');
+            }
+            throw fetchError;
         }
-
-        const completeData = await completeResponse.json();
         if (!completeData.success) {
             throw new Error(completeData.error || 'Processing failed');
         }

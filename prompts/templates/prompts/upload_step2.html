@@ -558,12 +558,38 @@ tagInput.addEventListener('keydown', (e) => {
     }
 });
 
+// L8-ERRORS: Show warning alert at top of page
+function showWarningAlert(message) {
+    // Remove any existing warning
+    const existingWarning = document.getElementById('step2-warning-alert');
+    if (existingWarning) existingWarning.remove();
+
+    // Create new warning alert
+    const alertEl = document.createElement('div');
+    alertEl.id = 'step2-warning-alert';
+    alertEl.className = 'alert alert-warning alert-dismissible fade show';
+    alertEl.setAttribute('role', 'alert');
+    alertEl.setAttribute('aria-live', 'polite');
+    alertEl.style.marginBottom = '30px';
+    alertEl.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+    // Insert at top of upload container
+    const container = document.querySelector('.upload-container');
+    if (container) {
+        container.insertBefore(alertEl, container.firstChild);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
 // Add tag function
 function addTag(tagName) {
     const currentTags = document.querySelectorAll('.tag-pill').length;
 
     if (currentTags >= 7) {
-        alert('Maximum 7 tags allowed');
+        showWarningAlert('Maximum 7 tags allowed. Remove a tag to add a new one.');
         return;
     }
 

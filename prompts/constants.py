@@ -376,3 +376,13 @@ BOT_USER_AGENT_PATTERNS = [
 
 # Default rate limit for view tracking (views per minute per IP)
 DEFAULT_VIEW_RATE_LIMIT = 10
+
+
+# =============================================================================
+# OPENAI API CONFIGURATION (L8-TIMEOUT Implementation)
+# =============================================================================
+
+# Timeout for OpenAI API calls (seconds)
+# Prevents endpoints from hanging for 4+ minutes when API is slow
+# Used by: cloudinary_moderation.py, content_generation.py
+OPENAI_TIMEOUT = 30

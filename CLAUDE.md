@@ -6485,6 +6485,7 @@ Migrate from Cloudinary to Backblaze B2 + Cloudflare for media storage and deliv
 | L7 | Responsive Images (srcset/sizes) | ✅ Complete | `_prompt_card.html`, templates |
 | L8 | Quick Mode Upload Optimization | ✅ Complete | `image_processor.py`, `b2_upload_service.py`, `api_views.py` |
 | L8-DIRECT | Direct Browser-to-B2 Uploads | ✅ Complete | `b2_presign_service.py`, `api_views.py`, `upload_step1.html` |
+| L8-TIMEOUT | Upload Timeout Handling | ✅ Complete | `cloudinary_moderation.py`, `content_generation.py`, `constants.py` |
 
 ---
 
@@ -6763,6 +6764,22 @@ Browser → B2 (presigned URL, 5-8s) → Heroku (completion callback) = ~5-8s to
   5. ✅ Deferred variant generation (variants created on Step 2)
 - **Test Coverage:** 22 tests in `test_b2_presign.py`
 - **Agent Rating:** 9.0/10 average
+
+#### L8-TIMEOUT: Upload Timeout Handling ✅ COMPLETE
+- **Status:** ✅ IMPLEMENTED (January 2, 2026)
+- **Problem Solved:** OpenAI API calls could hang for 4+ minutes, blocking upload endpoint
+- **Result:** 30-second hard timeout with graceful degradation
+- **Implementation:**
+  1. ✅ `prompts/constants.py` - Central `OPENAI_TIMEOUT = 30` constant
+  2. ✅ `cloudinary_moderation.py` - Client timeout config + `APITimeoutError` handling
+  3. ✅ `content_generation.py` - Client timeout config + `APITimeoutError` handling
+  4. ✅ `upload_step1.html` - Progressive feedback (15s, 45s, 65s abort)
+  5. ✅ `upload_step2.html` - `showWarningAlert()` for timeout warnings
+  6. ✅ `api_views.py` - Rate limit documentation
+  7. ✅ `upload_views.py` - Weekly limit documentation
+- **Security Approach:** Content flagged as `pending_review` on timeout (NOT auto-approved)
+- **Agent Rating:** 8.67/10 average (@frontend-developer 8.5, @backend-architect 9.0, @code-reviewer 8.5)
+- **Full Report:** `docs/reports/L8_TIMEOUT_COMPLETION_REPORT.md`
 
 #### L8-CDN: CDN Optimization (DEFERRED)
 - Configure Cloudflare cache rules per content type

@@ -19,9 +19,8 @@ from typing import Dict, List, Optional
 from openai import OpenAI, APITimeoutError, APIConnectionError
 from django.conf import settings
 
-# Timeout for OpenAI API calls (seconds)
-# L8-TIMEOUT: Prevents endpoint hanging for 4+ minutes
-OPENAI_TIMEOUT = 30
+# Import timeout constant from central constants file (L8-TIMEOUT)
+from prompts.constants import OPENAI_TIMEOUT
 
 logger = logging.getLogger(__name__)
 

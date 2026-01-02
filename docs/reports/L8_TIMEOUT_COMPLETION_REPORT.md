@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This implementation adds comprehensive timeout handling to the upload flow, preventing the endpoint from hanging for 4+ minutes when OpenAI API calls are slow. The solution uses graceful degradation - allowing uploads to succeed with default settings when AI processing times out.
+This implementation adds comprehensive timeout handling to the upload flow, preventing the endpoint from hanging for 4+ minutes when OpenAI API calls are slow. The solution uses graceful degradation - allowing uploads to proceed with default settings when AI processing times out, while flagging content for manual review to maintain security.
 
 ---
 
@@ -22,7 +22,8 @@ This implementation adds comprehensive timeout handling to the upload flow, prev
 - Added `OPENAI_TIMEOUT = 30` constant (30 seconds)
 - Configured OpenAI client with explicit timeout: `OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)`
 - Added exception handling for `APITimeoutError` and `APIConnectionError`
-- Graceful degradation: Returns `'approved'` status on timeout (doesn't block uploads)
+- Graceful degradation: Returns `'pending_review'` status on timeout (flags for manual review)
+- Security-first approach: Content is NOT auto-approved on timeout
 
 **Key Code:**
 ```python
@@ -31,13 +32,14 @@ self.client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
 
 except (APITimeoutError, APIConnectionError) as e:
     # L8-TIMEOUT: Graceful degradation on timeout
+    # Flag for manual review to maintain content safety
     logger.warning(f"Vision moderation timeout: {str(e)}")
     return {
         'timeout': True,
-        'is_safe': True,
-        'status': 'approved',
-        'flagged_categories': [],
-        'explanation': 'Moderation service timed out - defaulting to approved',
+        'is_safe': False,  # Not verified safe
+        'status': 'pending_review',  # Requires manual review
+        'flagged_categories': ['timeout'],
+        'explanation': 'Moderation service timed out - flagged for manual review',
     }
 ```
 
@@ -137,7 +139,7 @@ Browser → Django → OpenAI API
     Upload succeeds with:
     - Default title (if AI timed out)
     - Empty tags (if AI timed out)
-    - Approved moderation (if AI timed out)
+    - Pending review status (if moderation timed out)
     - User can edit on Step 2
 ```
 

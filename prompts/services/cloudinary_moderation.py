@@ -23,9 +23,8 @@ import os
 from openai import OpenAI, APITimeoutError, APIConnectionError
 import requests
 
-# Timeout for OpenAI API calls (seconds)
-# L8-TIMEOUT: Prevents endpoint hanging for 4+ minutes
-OPENAI_TIMEOUT = 30
+# Import timeout constant from central constants file (L8-TIMEOUT)
+from prompts.constants import OPENAI_TIMEOUT
 from PIL import Image
 from io import BytesIO
 import cloudinary.uploader
@@ -162,16 +161,17 @@ Be strict but fair. Flag content that violates these policies."""
 
         except (APITimeoutError, APIConnectionError) as e:
             # L8-TIMEOUT: Graceful degradation on timeout
-            # Default to "approved" to not block uploads when AI is slow
+            # Flag for manual review to maintain content safety (per @backend-architect security review)
+            # Do NOT auto-approve - this would bypass content moderation
             logger.warning(f"Vision moderation timeout: {str(e)}")
             return {
                 'timeout': True,
-                'is_safe': True,
-                'status': 'approved',
-                'flagged_categories': [],
+                'is_safe': False,  # Changed: Not verified safe
+                'status': 'pending_review',  # Changed: Requires manual review
+                'flagged_categories': ['timeout'],
                 'severity': 'low',
                 'confidence_score': 0.0,
-                'explanation': 'Moderation service timed out - defaulting to approved',
+                'explanation': 'Moderation service timed out - flagged for manual review',
             }
 
         except Exception as e:
@@ -331,17 +331,18 @@ Be strict but fair. Flag content that violates these policies."""
 
         except (APITimeoutError, APIConnectionError) as e:
             # L8-TIMEOUT: Graceful degradation on timeout
-            # Default to "approved" to not block uploads when AI is slow
+            # Flag for manual review to maintain content safety (per @backend-architect security review)
+            # Do NOT auto-approve - this would bypass content moderation
             logger.warning(f"Vision moderation timeout for Prompt {prompt_obj.id}: {str(e)}")
             return {
                 'timeout': True,
-                'is_safe': True,
-                'status': 'approved',
-                'flagged_categories': [],
+                'is_safe': False,  # Changed: Not verified safe
+                'status': 'pending_review',  # Changed: Requires manual review
+                'flagged_categories': ['timeout'],
                 'severity': 'low',
                 'confidence_score': 0.0,
                 'raw_response': {'timeout': True, 'error': str(e)},
-                'explanation': 'Moderation service timed out - defaulting to approved',
+                'explanation': 'Moderation service timed out - flagged for manual review',
             }
 
         except Exception as e:

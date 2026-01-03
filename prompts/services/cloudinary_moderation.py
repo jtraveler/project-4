@@ -32,6 +32,53 @@ import cloudinary.uploader
 logger = logging.getLogger(__name__)
 
 
+def _is_ai_refusal(content: str) -> bool:
+    """
+    Detect if the AI response is a refusal to analyze the content.
+
+    GPT models sometimes refuse to analyze explicit content and return
+    phrases like "I'm unable to assist" instead of the requested JSON.
+
+    Args:
+        content: Raw response text from the AI
+
+    Returns:
+        True if the response appears to be a refusal
+    """
+    if not content:
+        return False
+
+    content_lower = content.lower().strip()
+
+    # Common refusal phrases from GPT models
+    refusal_phrases = [
+        "i'm unable to assist",
+        "i cannot assist",
+        "i can't assist",
+        "i'm not able to",
+        "i cannot help",
+        "i can't help",
+        "sorry, but i",
+        "i apologize, but",
+        "i'm sorry, but",
+        "cannot provide",
+        "can't provide",
+        "unable to provide",
+        "cannot analyze",
+        "can't analyze",
+        "unable to analyze",
+        "i cannot process",
+        "i can't process",
+        "against my guidelines",
+        "violates my guidelines",
+        "content policy",
+        "not able to view",
+        "cannot view this",
+    ]
+
+    return any(phrase in content_lower for phrase in refusal_phrases)
+
+
 class VisionModerationService:
     """
     Service for moderating images and videos using OpenAI Vision API.
@@ -43,8 +90,8 @@ class VisionModerationService:
 
     # Moderation prompt for Vision API
     # NSFW Step 1 Blocking: Severity determines blocking vs warning
-    # - critical/high → BLOCKED at Step 1 (rejected)
-    # - medium/low → WARNING at Step 2 (flagged for review)
+    # - critical → BLOCKED at Step 1 (rejected) - explicit nudity/pornography only
+    # - high/medium/low → WARNING at Step 2 (flagged for review)
     MODERATION_PROMPT = """Analyze this image for policy violations. Check for:
 - Sexual content or nudity
 - Violence or gore
@@ -126,13 +173,28 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
                 result = json.loads(content)
                 logger.info(f"[NSFW DEBUG] Raw parsed JSON: {result}")
             except json.JSONDecodeError:
-                logger.error(f"Failed to parse Vision API response as JSON: {content}")
-                result = {
-                    'flagged': False,
-                    'categories': [],
-                    'severity': 'low',
-                    'explanation': content
-                }
+                logger.warning(f"Failed to parse Vision API response as JSON: {content}")
+
+                # SECURITY: Check if this is an AI refusal to analyze explicit content
+                # AI refusals indicate content too explicit for the model to engage with
+                # Treat as REJECTED (fail-closed security pattern)
+                if _is_ai_refusal(content):
+                    logger.warning("[NSFW DEBUG] AI refused to analyze - treating as critical NSFW")
+                    result = {
+                        'flagged': True,
+                        'categories': ['ai_refusal', 'explicit_content'],
+                        'severity': 'critical',
+                        'explanation': 'Content too explicit for AI analysis - automatically rejected.',
+                    }
+                else:
+                    # Non-refusal parse error - flag for manual review (fail-closed)
+                    logger.error("[NSFW DEBUG] JSON parse error (not refusal) - flagging for review")
+                    result = {
+                        'flagged': True,
+                        'categories': ['parse_error'],
+                        'severity': 'high',
+                        'explanation': f'Unable to parse moderation response: {content[:200]}',
+                    }
 
             # Map to our response format
             flagged = result.get('flagged', False)
@@ -148,14 +210,14 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
                 status = 'approved'
                 is_safe = True
                 logger.info("[NSFW DEBUG] Decision: APPROVED (not flagged)")
-            elif severity in ['critical', 'high']:
+            elif severity == 'critical':
                 status = 'rejected'
                 is_safe = False
-                logger.info(f"[NSFW DEBUG] Decision: REJECTED (severity={severity} is critical/high)")
+                logger.info(f"[NSFW DEBUG] Decision: REJECTED (severity={severity} is critical)")
             else:
                 status = 'flagged'
                 is_safe = False
-                logger.info(f"[NSFW DEBUG] Decision: FLAGGED (severity={severity} is medium/low)")
+                logger.info(f"[NSFW DEBUG] Decision: FLAGGED (severity={severity} is high/medium/low)")
 
             # Assign confidence score based on severity
             confidence_map = {
@@ -312,7 +374,7 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
             if not flagged:
                 status = 'approved'
                 is_safe = True
-            elif severity in ['critical', 'high']:
+            elif severity == 'critical':
                 status = 'rejected'
                 is_safe = False
             else:

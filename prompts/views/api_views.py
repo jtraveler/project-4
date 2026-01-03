@@ -17,6 +17,8 @@ from prompts.services.b2_upload_service import (
     generate_image_variants,
     get_upload_path,
     upload_to_b2,
+    delete_image,
+    delete_video,
 )
 from prompts.services.b2_presign_service import (
     generate_presigned_upload_url,
@@ -25,6 +27,7 @@ from prompts.services.b2_presign_service import (
     ALLOWED_VIDEO_TYPES,
 )
 from prompts.services.image_processor import process_upload
+from prompts.services.cloudinary_moderation import VisionModerationService
 from io import BytesIO
 import requests
 import json
@@ -892,3 +895,182 @@ def b2_upload_complete(request):
         'is_video': is_video,
         'variants_pending': variants_pending,
     })
+
+
+# =============================================================================
+# NSFW MODERATION API ENDPOINTS (Step 1 Blocking)
+# =============================================================================
+# These endpoints support the NSFW blocking flow at Step 1:
+# - b2_moderate_upload: Moderates an image URL before allowing redirect to Step 2
+# - b2_delete_upload: Deletes blocked content from B2 storage
+
+
+@login_required
+@require_POST
+def b2_moderate_upload(request):
+    """
+    Moderate an uploaded image at Step 1 before allowing redirect to Step 2.
+
+    This endpoint is called after a successful B2 upload to check for NSFW content.
+    - If REJECTED (hardcore NSFW): Returns error, caller should delete and show red banner
+    - If FLAGGED (borderline): Returns warning, caller stores in session, allows redirect
+    - If APPROVED: Returns success, allows redirect
+
+    Security: Fails CLOSED on errors/timeouts - content is blocked, not approved.
+
+    Request body (JSON):
+        image_url: The B2 URL of the uploaded image to moderate
+
+    Returns:
+        JSON with moderation result:
+        - success: bool
+        - status: 'approved' | 'flagged' | 'rejected'
+        - is_safe: bool
+        - severity: 'low' | 'medium' | 'high' | 'critical'
+        - explanation: str (reason for flagging/rejection)
+        - flagged_categories: list (e.g., ['nudity', 'violence'])
+        - timeout: bool (true if moderation timed out - treated as rejection)
+    """
+    try:
+        # Parse request body
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid JSON in request body',
+            }, status=400)
+
+        image_url = data.get('image_url')
+        if not image_url:
+            return JsonResponse({
+                'success': False,
+                'error': 'image_url is required',
+            }, status=400)
+
+        # Validate URL is from our B2 bucket (security check)
+        # Accept both direct B2 URLs and Cloudflare CDN URLs
+        allowed_domains = [
+            'f002.backblazeb2.com',
+            's3.us-west-002.backblazeb2.com',
+        ]
+        # Also allow configured CDN domain if present
+        import os
+        cdn_domain = os.environ.get('CLOUDFLARE_CDN_DOMAIN', '')
+        if cdn_domain:
+            allowed_domains.append(cdn_domain)
+
+        from urllib.parse import urlparse
+        parsed = urlparse(image_url)
+        if not any(domain in parsed.netloc for domain in allowed_domains):
+            logger.warning(f"Moderation rejected - invalid domain: {parsed.netloc}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid image URL domain',
+            }, status=400)
+
+        # Call VisionModerationService
+        logger.info(f"Moderating image at Step 1: {image_url[:100]}...")
+        service = VisionModerationService()
+        result = service.moderate_image_url(image_url)
+
+        # Log moderation result
+        status = result.get('status', 'unknown')
+        logger.info(f"Moderation result: status={status}, "
+                    f"is_safe={result.get('is_safe')}, "
+                    f"severity={result.get('severity')}, "
+                    f"timeout={result.get('timeout', False)}")
+
+        return JsonResponse({
+            'success': True,
+            'status': result.get('status', 'flagged'),
+            'is_safe': result.get('is_safe', False),
+            'severity': result.get('severity', 'medium'),
+            'explanation': result.get('explanation', ''),
+            'flagged_categories': result.get('flagged_categories', []),
+            'timeout': result.get('timeout', False),
+            'confidence_score': result.get('confidence_score', 0.0),
+        })
+
+    except Exception as e:
+        # SECURITY: Fail closed - if moderation fails, treat as rejection
+        logger.exception(f"Moderation endpoint error: {e}")
+        return JsonResponse({
+            'success': True,  # API call succeeded, but moderation failed closed
+            'status': 'rejected',
+            'is_safe': False,
+            'severity': 'critical',
+            'explanation': 'Moderation service error - content blocked for safety.',
+            'flagged_categories': ['error'],
+            'timeout': False,
+            'confidence_score': 0.0,
+        })
+
+
+@login_required
+@require_POST
+def b2_delete_upload(request):
+    """
+    Delete an uploaded file from B2 storage.
+
+    This endpoint is called when:
+    - Content is rejected by moderation (hardcore NSFW)
+    - User cancels upload
+    - Upload session expires
+
+    Request body (JSON):
+        file_key: The B2 file key/path to delete
+        is_video: bool (optional, defaults to False)
+
+    Returns:
+        JSON with deletion result:
+        - success: bool
+        - message: str
+    """
+    try:
+        # Parse request body
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid JSON in request body',
+            }, status=400)
+
+        file_key = data.get('file_key')
+        if not file_key:
+            return JsonResponse({
+                'success': False,
+                'error': 'file_key is required',
+            }, status=400)
+
+        is_video = data.get('is_video', False)
+
+        # Log deletion request
+        logger.info(f"Deleting B2 file: {file_key}, is_video={is_video}")
+
+        # Call appropriate delete function
+        if is_video:
+            success = delete_video(file_key)
+        else:
+            success = delete_image(file_key)
+
+        if success:
+            logger.info(f"Successfully deleted B2 file: {file_key}")
+            return JsonResponse({
+                'success': True,
+                'message': 'File deleted successfully',
+            })
+        else:
+            logger.warning(f"Failed to delete B2 file: {file_key}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to delete file from storage',
+            }, status=500)
+
+    except Exception as e:
+        logger.exception(f"Delete endpoint error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'An error occurred while deleting the file',
+        }, status=500)

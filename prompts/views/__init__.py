@@ -64,6 +64,8 @@ from .api_views import (
     b2_variants_status,
     b2_presign_upload,
     b2_upload_complete,
+    b2_moderate_upload,
+    b2_delete_upload,
 )
 
 # Import admin utility views

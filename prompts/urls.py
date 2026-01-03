@@ -79,6 +79,10 @@ urlpatterns = [
     path('api/upload/b2/presign/', views.b2_presign_upload, name='b2_presign_upload'),
     path('api/upload/b2/complete/', views.b2_upload_complete, name='b2_upload_complete'),
 
+    # NSFW Moderation API (Step 1 Blocking)
+    path('api/upload/b2/moderate/', views.b2_moderate_upload, name='b2_moderate_upload'),
+    path('api/upload/b2/delete/', views.b2_delete_upload, name='b2_delete_upload'),
+
     # Collections API (Phase K)
     path('api/collections/', views.api_collections_list, name='api_collections_list'),
     path('api/collections/create/', views.api_collection_create, name='api_collection_create'),

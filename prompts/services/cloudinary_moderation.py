@@ -42,12 +42,21 @@ class VisionModerationService:
     """
 
     # Moderation prompt for Vision API
+    # NSFW Step 1 Blocking: Severity determines blocking vs warning
+    # - critical/high → BLOCKED at Step 1 (rejected)
+    # - medium/low → WARNING at Step 2 (flagged for review)
     MODERATION_PROMPT = """Analyze this image for policy violations. Check for:
 - Sexual content or nudity
 - Violence or gore
 - Graphic disturbing content
 - Hate symbols
 - Self-harm content
+
+SEVERITY DEFINITIONS (use these exactly):
+- "critical": Explicit sexual content, full nudity, genitalia, pornography, extreme gore, graphic violence
+- "high": Partial nudity, sexually suggestive poses, significant violence, blood, disturbing imagery
+- "medium": Suggestive content, revealing clothing, mild violence, potentially offensive content
+- "low": Minor concerns, borderline content that may need review
 
 Respond with JSON in this exact format:
 {
@@ -57,7 +66,7 @@ Respond with JSON in this exact format:
     "explanation": "brief explanation"
 }
 
-Be strict but fair. Flag content that violates these policies."""
+Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high". Do not underrate explicit content."""
 
     def __init__(self):
         """Initialize OpenAI client."""
@@ -161,17 +170,17 @@ Be strict but fair. Flag content that violates these policies."""
 
         except (APITimeoutError, APIConnectionError) as e:
             # L8-TIMEOUT: Graceful degradation on timeout
-            # Flag for manual review to maintain content safety (per @backend-architect security review)
-            # Do NOT auto-approve - this would bypass content moderation
+            # SECURITY FIX: Fail closed - reject content when moderation cannot verify safety
+            # This prevents NSFW content from bypassing the gate via timeout
             logger.warning(f"Vision moderation timeout: {str(e)}")
             return {
                 'timeout': True,
-                'is_safe': False,  # Changed: Not verified safe
-                'status': 'pending_review',  # Changed: Requires manual review
+                'is_safe': False,
+                'status': 'rejected',  # SECURITY: Fail closed, not open
                 'flagged_categories': ['timeout'],
-                'severity': 'low',
+                'severity': 'critical',  # Treat as critical for safety
                 'confidence_score': 0.0,
-                'explanation': 'Moderation service timed out - flagged for manual review',
+                'explanation': 'Moderation service timed out - content blocked for safety. Please try again.',
             }
 
         except Exception as e:
@@ -331,18 +340,18 @@ Be strict but fair. Flag content that violates these policies."""
 
         except (APITimeoutError, APIConnectionError) as e:
             # L8-TIMEOUT: Graceful degradation on timeout
-            # Flag for manual review to maintain content safety (per @backend-architect security review)
-            # Do NOT auto-approve - this would bypass content moderation
+            # SECURITY FIX: Fail closed - reject content when moderation cannot verify safety
+            # This prevents NSFW content from bypassing the gate via timeout
             logger.warning(f"Vision moderation timeout for Prompt {prompt_obj.id}: {str(e)}")
             return {
                 'timeout': True,
-                'is_safe': False,  # Changed: Not verified safe
-                'status': 'pending_review',  # Changed: Requires manual review
+                'is_safe': False,
+                'status': 'rejected',  # SECURITY: Fail closed, not open
                 'flagged_categories': ['timeout'],
-                'severity': 'low',
+                'severity': 'critical',  # Treat as critical for safety
                 'confidence_score': 0.0,
                 'raw_response': {'timeout': True, 'error': str(e)},
-                'explanation': 'Moderation service timed out - flagged for manual review',
+                'explanation': 'Moderation service timed out - content blocked for safety. Please try again.',
             }
 
         except Exception as e:

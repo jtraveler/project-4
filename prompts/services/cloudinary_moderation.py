@@ -124,6 +124,7 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
             import json
             try:
                 result = json.loads(content)
+                logger.info(f"[NSFW DEBUG] Raw parsed JSON: {result}")
             except json.JSONDecodeError:
                 logger.error(f"Failed to parse Vision API response as JSON: {content}")
                 result = {
@@ -139,16 +140,22 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
             severity = result.get('severity', 'medium')
             explanation = result.get('explanation', '')
 
+            # NSFW DEBUG: Log parsed values for moderate_image_url
+            logger.info(f"[NSFW DEBUG] moderate_image_url - flagged={flagged}, severity={severity}, categories={categories}")
+
             # Determine status
             if not flagged:
                 status = 'approved'
                 is_safe = True
+                logger.info("[NSFW DEBUG] Decision: APPROVED (not flagged)")
             elif severity in ['critical', 'high']:
                 status = 'rejected'
                 is_safe = False
+                logger.info(f"[NSFW DEBUG] Decision: REJECTED (severity={severity} is critical/high)")
             else:
                 status = 'flagged'
                 is_safe = False
+                logger.info(f"[NSFW DEBUG] Decision: FLAGGED (severity={severity} is medium/low)")
 
             # Assign confidence score based on severity
             confidence_map = {
@@ -158,6 +165,8 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
                 'low': 0.4
             }
             confidence = confidence_map.get(severity, 0.5)
+
+            logger.info(f"[NSFW DEBUG] Final result: status={status}, is_safe={is_safe}, severity={severity}")
 
             return {
                 'is_safe': is_safe,

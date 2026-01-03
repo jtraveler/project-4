@@ -446,6 +446,43 @@ console.log('Variables initialized:', {
 });
 console.log('=== END DIAGNOSTIC ===');
 
+// CC_SPEC_NSFW_STEP1_BLOCKING: Check for content warning from Step 1 moderation
+// If content was flagged (not rejected), show yellow warning banner on Step 2
+(function() {
+    const warningData = sessionStorage.getItem('upload_content_warning');
+    if (warningData) {
+        try {
+            const warning = JSON.parse(warningData);
+            // Build warning message
+            let message = 'Content Notice: ' + (warning.explanation || 'This content may require manual review.');
+            if (warning.categories && warning.categories.length > 0) {
+                message += ' (Flagged for: ' + warning.categories.join(', ') + ')';
+            }
+            // Display warning using existing showWarningAlert function
+            // Note: showWarningAlert is defined later in the script, so we defer execution
+            setTimeout(() => {
+                if (typeof showWarningAlert === 'function') {
+                    showWarningAlert(message);
+                } else {
+                    console.warn('[NSFW] showWarningAlert not available, creating inline warning');
+                    const alertEl = document.createElement('div');
+                    alertEl.className = 'alert alert-warning alert-dismissible fade show';
+                    alertEl.setAttribute('role', 'alert');
+                    alertEl.style.marginBottom = '30px';
+                    alertEl.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+                    const container = document.querySelector('.upload-container');
+                    if (container) container.insertBefore(alertEl, container.firstChild);
+                }
+            }, 100);
+            console.log('[NSFW] Displayed content warning from Step 1:', warning);
+        } catch (e) {
+            console.error('[NSFW] Failed to parse warning data:', e);
+        }
+        // Clear the sessionStorage item after displaying
+        sessionStorage.removeItem('upload_content_warning');
+    }
+})();
+
 // Background variant generation (L8: Upload Performance Optimization)
 // When quick_mode is used, original + thumb are uploaded first for fast redirect.
 // Remaining variants (medium, large, webp) are generated in background while user fills form.

@@ -6925,6 +6925,468 @@ User Request → Cloudflare CDN ← ← ← ← ← ← ┘
 
 ---
 
+## 🎬 Phase M: Video Handling (PLANNED)
+
+**Status:** 📋 PLANNED (Not Started)
+**Priority:** HIGH - Required for video upload functionality
+**Estimated Effort:** 2-3 weeks
+**Dependencies:** Phase L Media Infrastructure (~95% complete)
+**Prerequisites:** L5e (Edit Form B2 Integration), L11 (Documentation & Cleanup)
+
+---
+
+### Overview
+
+Phase M implements comprehensive video handling for the PromptFinder platform, including frame extraction, NSFW moderation, SEO content generation, thumbnail creation, and file validation. This phase builds on Phase L's B2 + Cloudflare infrastructure.
+
+---
+
+### Video Upload Flow
+
+```
+User Upload → Validation (M5) → Frame Extraction (M1) → NSFW Check (M2)
+                                         ↓
+                              Content Generation (M3)
+                                         ↓
+                              Thumbnail Creation (M4)
+                                         ↓
+                              SEO Naming (M6) → B2 Storage → Complete
+```
+
+---
+
+### Micro-Specs
+
+| Spec | Description | Status | Effort | Dependencies |
+|------|-------------|--------|--------|--------------|
+| M1 | Frame Extraction (FFmpeg) | 📋 Planned | 2-3 days | Phase L complete |
+| M2 | Video NSFW Moderation | 📋 Planned | 3-4 days | M1 |
+| M3 | SEO Content Generation | 📋 Planned | 2-3 days | M1 |
+| M4 | Video Thumbnails | 📋 Planned | 1-2 days | M1 |
+| M5 | File Restrictions | 📋 Planned | 1 day | None |
+| M6 | SEO File Naming/Slug | 📋 Planned | 1-2 days | M3 |
+
+---
+
+### M1: Frame Extraction (FFmpeg)
+
+**Purpose:** Extract representative frames from uploaded videos for AI analysis.
+
+**Note:** These functions extend the existing `prompts/services/video_processor.py` created in Phase L6.
+
+**Technical Implementation:**
+```python
+# prompts/services/video_processor.py (extend existing file)
+import subprocess
+import tempfile
+
+def extract_frames(video_path: str, num_frames: int = 5) -> list[str]:
+    """
+    Extract evenly-spaced frames from video for analysis.
+
+    Args:
+        video_path: Path to video file
+        num_frames: Number of frames to extract (default: 5)
+
+    Returns:
+        List of paths to extracted frame images
+    """
+    # Get video duration
+    duration = get_video_duration(video_path)
+
+    # Calculate timestamps for evenly-spaced frames
+    timestamps = [duration * (i + 1) / (num_frames + 1) for i in range(num_frames)]
+
+    frame_paths = []
+    for i, ts in enumerate(timestamps):
+        output_path = tempfile.mktemp(suffix=f'_frame_{i}.jpg')
+        subprocess.run([
+            'ffmpeg', '-ss', str(ts), '-i', video_path,
+            '-frames:v', '1', '-q:v', '2', output_path
+        ], check=True)
+        frame_paths.append(output_path)
+
+    return frame_paths
+```
+
+**Configuration:**
+- `VIDEO_FRAME_COUNT = 5` - Number of frames to extract
+- `VIDEO_FRAME_QUALITY = 2` - JPEG quality (2 = high quality)
+- Frames extracted at 20%, 40%, 60%, 80% of video duration
+
+**Files to Create/Modify:**
+- `prompts/services/video_processor.py` - Frame extraction functions
+- `prompts/constants.py` - Video processing constants
+
+---
+
+### M2: Video NSFW Moderation (OpenAI Vision API)
+
+**Purpose:** Analyze extracted frames for NSFW content using OpenAI Vision API.
+
+**Technical Implementation:**
+```python
+# prompts/services/video_moderation.py
+from openai import OpenAI
+import base64
+
+def moderate_video_frames(frame_paths: list[str]) -> dict:
+    """
+    Analyze video frames for NSFW content.
+
+    Args:
+        frame_paths: List of paths to extracted frames
+
+    Returns:
+        Moderation result with status and confidence
+    """
+    client = OpenAI()
+
+    # Encode frames as base64
+    images = []
+    for path in frame_paths:
+        with open(path, 'rb') as f:
+            images.append(base64.b64encode(f.read()).decode())
+
+    # Build multi-image prompt
+    content = [{"type": "text", "text": VIDEO_MODERATION_PROMPT}]
+    for img in images:
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{img}"}
+        })
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": content}],
+        max_tokens=500
+    )
+
+    return parse_moderation_response(response.choices[0].message.content)
+```
+
+**Moderation Prompt:**
+```
+Analyze these video frames for content moderation. Check for:
+1. Nudity or sexual content (explicit or suggestive)
+2. Violence or gore
+3. Minors in inappropriate contexts
+4. Hate symbols or extremist content
+
+For each category, provide:
+- severity: none/low/medium/high/critical
+- confidence: 0.0-1.0
+- reason: brief explanation if flagged
+
+Return JSON format.
+```
+
+**Thresholds (from existing image moderation):**
+- `critical` → Auto-reject
+- `high` → Pending review
+- `medium` → Pending review
+- `low` → Auto-approve with monitoring
+
+**Files to Create/Modify:**
+- `prompts/services/video_moderation.py` - Video NSFW checking
+- `prompts/constants.py` - Moderation prompts and thresholds
+
+---
+
+### M3: SEO Content Generation
+
+**Purpose:** Generate SEO-optimized title, description, and tags from video frames.
+
+**Technical Implementation:**
+```python
+# prompts/services/video_content.py
+def generate_video_content(frame_paths: list[str], user_prompt: str = "") -> dict:
+    """
+    Generate SEO content from video frames.
+
+    Args:
+        frame_paths: List of extracted frame paths
+        user_prompt: User-provided prompt text (optional)
+
+    Returns:
+        Dict with title, description, tags, excerpt
+    """
+    client = OpenAI()
+
+    # Use middle frame as primary for analysis
+    primary_frame = frame_paths[len(frame_paths) // 2]
+
+    # Include user prompt context if provided
+    prompt = VIDEO_CONTENT_PROMPT
+    if user_prompt:
+        prompt += f"\n\nUser's prompt for this video: {user_prompt}"
+
+    # ... OpenAI Vision API call similar to image content generation
+
+    return {
+        "title": generated_title,
+        "description": generated_description,
+        "tags": suggested_tags,
+        "excerpt": seo_excerpt
+    }
+```
+
+**SEO Requirements:**
+- Title: 50-60 characters, includes AI generator name
+- Description: 150-300 words, keyword-rich
+- Tags: 5 suggestions from 209-tag system
+- Excerpt: 50-100 words for meta description
+
+**Files to Create/Modify:**
+- `prompts/services/video_content.py` - Video content generation
+- Integrate with existing `ContentGenerationService`
+
+---
+
+### M4: Video Thumbnails
+
+**Purpose:** Generate and upload thumbnail images for video prompts.
+
+**Technical Implementation:**
+```python
+# prompts/services/video_processor.py
+def create_video_thumbnail(video_path: str, timestamp: float = None) -> str:
+    """
+    Create thumbnail from video at specified timestamp.
+
+    Args:
+        video_path: Path to video file
+        timestamp: Time in seconds (default: 25% of duration)
+
+    Returns:
+        Path to generated thumbnail image
+    """
+    if timestamp is None:
+        duration = get_video_duration(video_path)
+        timestamp = duration * 0.25  # 25% mark typically good
+
+    output_path = tempfile.mktemp(suffix='_thumb.jpg')
+    subprocess.run([
+        'ffmpeg', '-ss', str(timestamp), '-i', video_path,
+        '-frames:v', '1', '-vf', 'scale=600:600:force_original_aspect_ratio=decrease',
+        '-q:v', '2', output_path
+    ], check=True)
+
+    return output_path
+```
+
+**Thumbnail Sizes (consistent with images):**
+- Thumb: 300x300
+- Medium: 600x600 (primary display)
+- Large: 1200x1200 (detail view)
+
+**Files to Create/Modify:**
+- `prompts/services/video_processor.py` - Thumbnail generation
+- Upload to B2 using existing `b2_upload_service.py`
+
+---
+
+### M5: File Restrictions
+
+**Purpose:** Validate video uploads against platform limits.
+
+**Restrictions:**
+| Constraint | Limit | Error Message |
+|------------|-------|---------------|
+| File size | 100 MB | "Video must be under 100MB" |
+| Duration | 20 seconds | "Video must be 20 seconds or less" |
+| Format | MP4, MOV, WebM | "Supported formats: MP4, MOV, WebM" |
+| Resolution | Min 480p | "Minimum resolution: 480p" |
+| Framerate | 15-60 fps | "Framerate must be 15-60 fps" |
+
+**Technical Implementation:**
+```python
+# prompts/services/video_validator.py
+import subprocess
+import json
+
+def validate_video(video_path: str) -> dict:
+    """
+    Validate video against platform restrictions.
+
+    Returns:
+        {"valid": bool, "errors": list[str], "metadata": dict}
+    """
+    errors = []
+
+    # Get video metadata using ffprobe
+    result = subprocess.run([
+        'ffprobe', '-v', 'quiet', '-print_format', 'json',
+        '-show_format', '-show_streams', video_path
+    ], capture_output=True, text=True)
+
+    metadata = json.loads(result.stdout)
+
+    # Check file size
+    file_size = int(metadata['format']['size'])
+    if file_size > 100 * 1024 * 1024:  # 100MB
+        errors.append("Video must be under 100MB")
+
+    # Check duration
+    duration = float(metadata['format']['duration'])
+    if duration > 20:
+        errors.append("Video must be 20 seconds or less")
+
+    # Check format
+    format_name = metadata['format']['format_name']
+    if not any(fmt in format_name for fmt in ['mp4', 'mov', 'webm']):
+        errors.append("Supported formats: MP4, MOV, WebM")
+
+    # ... additional checks for resolution, framerate
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "metadata": {
+            "duration": duration,
+            "size_mb": file_size / (1024 * 1024),
+            "format": format_name
+        }
+    }
+```
+
+**Files to Create:**
+- `prompts/services/video_validator.py` - Validation logic
+- `prompts/constants.py` - Restriction constants
+
+---
+
+### M6: SEO File Naming/Slug Generation
+
+**Purpose:** Generate SEO-optimized filenames and URL slugs for videos.
+
+**Naming Convention:**
+```
+# Filename format:
+{keywords}-{generator}-video-{timestamp}.{ext}
+
+# Examples:
+cyberpunk-city-neon-midjourney-video-1704367200.mp4
+fantasy-dragon-dalle3-video-1704367200.mp4
+
+# Slug format:
+{keywords}-{generator}-{random_suffix}
+
+# Examples:
+cyberpunk-city-neon-midjourney-xK9mP
+fantasy-dragon-dalle3-q7RnZ
+```
+
+**Technical Implementation:**
+```python
+# prompts/utils/seo_naming.py
+import re
+import secrets
+from django.utils.text import slugify
+
+def generate_video_filename(title: str, generator: str, extension: str) -> str:
+    """Generate SEO-friendly video filename."""
+    # Extract keywords from title
+    keywords = extract_keywords(title, max_words=4)
+    keywords_slug = slugify('-'.join(keywords))
+
+    # Clean generator name
+    generator_slug = slugify(generator)
+
+    # Add timestamp for uniqueness
+    timestamp = int(time.time())
+
+    return f"{keywords_slug}-{generator_slug}-video-{timestamp}.{extension}"
+
+def generate_prompt_slug(title: str, generator: str) -> str:
+    """Generate unique URL slug for prompt."""
+    keywords = extract_keywords(title, max_words=4)
+    keywords_slug = slugify('-'.join(keywords))
+    generator_slug = slugify(generator)
+    random_suffix = secrets.token_urlsafe(4)[:5]
+
+    return f"{keywords_slug}-{generator_slug}-{random_suffix}"
+```
+
+**Files to Create/Modify:**
+- `prompts/utils/seo_naming.py` - SEO naming utilities
+- Integrate with upload flow
+
+---
+
+### Integration Points
+
+**With Phase L (Media Infrastructure):**
+- Use B2 upload service for video storage
+- Use Cloudflare CDN for video delivery
+- Follow B2-first template pattern
+
+**With Existing Moderation:**
+- Integrate with `ModerationOrchestrator`
+- Use consistent severity thresholds
+- Support appeal workflow
+
+**With Content Generation:**
+- Extend `ContentGenerationService` for video
+- Use same 209-tag system
+- Consistent SEO formatting
+
+---
+
+### Environment Variables (New)
+
+```bash
+# Video processing
+VIDEO_MAX_SIZE_MB=100
+VIDEO_MAX_DURATION_SECONDS=60
+VIDEO_FRAME_COUNT=5
+VIDEO_THUMBNAIL_QUALITY=2
+
+# Moderation thresholds
+VIDEO_NSFW_THRESHOLD_REJECT=high
+VIDEO_NSFW_THRESHOLD_REVIEW=medium
+```
+
+---
+
+### Success Criteria
+
+- [ ] Videos validated before processing (M5)
+- [ ] Frames extracted successfully (M1)
+- [ ] NSFW moderation catches inappropriate content (M2)
+- [ ] SEO content generated for all videos (M3)
+- [ ] Thumbnails created at all sizes (M4)
+- [ ] Filenames and slugs are SEO-optimized (M6)
+- [ ] End-to-end upload time < 30 seconds for 60s video
+- [ ] Agent validation: 8+/10 average
+
+---
+
+### Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| FFmpeg not available on Heroku | Low | Critical | Use heroku-buildpack-ffmpeg |
+| OpenAI Vision API rate limits | Medium | High | Implement retry logic, frame sampling |
+| Large video processing timeouts | Medium | High | Async processing with Celery |
+| Storage costs for video | Low | Medium | Enforce size/duration limits |
+
+---
+
+### Files to Create/Extend
+
+| File | Purpose | Lines (Est.) | Notes |
+|------|---------|--------------|-------|
+| `prompts/services/video_processor.py` | Frame extraction, thumbnails | +150 | Extend existing (from L6) |
+| `prompts/services/video_moderation.py` | NSFW checking | 150 | New file |
+| `prompts/services/video_content.py` | SEO content generation | 150 | New file |
+| `prompts/services/video_validator.py` | File validation | 100 | New file |
+| `prompts/utils/seo_naming.py` | Filename/slug generation | 80 | New file |
+
+**Total Estimated:** ~630 lines of new/modified code
+
+---
+
 ## 🔮 Future Features Roadmap
 
 **Created:** December 29, 2025
@@ -6935,7 +7397,7 @@ User Request → Cloudflare CDN ← ← ← ← ← ← ┘
 
 ### Overview
 
-This roadmap contains 17 planned features organized by priority tier, with detailed implementation specifications, revenue projections, and risk assessments. Features are categorized based on user value, technical complexity, and business impact.
+This roadmap contains 19 planned features organized by priority tier, with detailed implementation specifications, revenue projections, and risk assessments. Features are categorized based on user value, technical complexity, and business impact.
 
 ---
 
@@ -6944,9 +7406,9 @@ This roadmap contains 17 planned features organized by priority tier, with detai
 | Priority | Features | Timeline | Focus |
 |----------|----------|----------|-------|
 | **Tier 1 (Critical)** | 4 features | Q1 2026 | Core user experience, monetization |
-| **Tier 2 (High)** | 6 features | Q2 2026 | Growth features, competitive parity |
+| **Tier 2 (High)** | 7 features | Q2 2026 | Growth features, competitive parity |
 | **Tier 3 (Medium)** | 3 features | Q3 2026 | Polish, differentiation |
-| **Tier 4 (Low)** | 4 features | Q4 2026+ | Nice-to-have, experimental |
+| **Tier 4 (Low)** | 5 features | Q4 2026+ | Nice-to-have, experimental |
 
 ---
 
@@ -7190,9 +7652,57 @@ class Download(models.Model):
 
 ---
 
+#### 11. Admin Notification System (Moderation Alerts)
+
+**Description:** Send email notifications to admins when uploads are auto-rejected by the moderation system, enabling oversight and appeal handling.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 3-5 days |
+| **Dependencies** | Content moderation system (complete) |
+| **Revenue Impact** | Platform safety, reduced legal risk |
+| **Technical Complexity** | Low-Medium |
+
+**Features:**
+- Email notifications to configured admin addresses
+- Triggered when moderation auto-rejects uploads (NSFW, violence, etc.)
+- Includes prompt title, author, rejection reason, confidence scores
+- Link to admin panel for review
+- Daily/weekly digest option (batch notifications)
+- Per-category notification thresholds (high-severity only vs all)
+
+**Email Content:**
+```
+Subject: [PromptFinder] Upload Auto-Rejected: {prompt_title}
+
+An upload has been automatically rejected by the moderation system.
+
+Author: {username}
+Title: {prompt_title}
+Reason: {rejection_reason}
+Confidence: {confidence_score}%
+Time: {timestamp}
+
+Review in admin: {admin_url}
+```
+
+**Configuration (SiteSettings):**
+- `admin_notification_emails` - Comma-separated list of recipient emails
+- `notify_on_rejection` - Boolean toggle (default: True)
+- `rejection_notification_threshold` - Minimum severity to trigger (low/medium/high/critical)
+- `enable_daily_digest` - Bundle notifications into daily summary
+
+**Implementation Notes:**
+- Use Django's `send_mail()` with async/Celery for non-blocking
+- Integrate with existing `ModerationOrchestrator` rejection flow
+- Leverage `ADMINS` setting already configured in `settings.py`
+- Consider rate limiting to prevent notification spam
+
+---
+
 ### Tier 3: Medium Priority (Q3 2026)
 
-#### 11. Comment Threading
+#### 12. Comment Threading (moved from #11)
 
 **Description:** Reply to comments with nested threading.
 
@@ -7211,7 +7721,7 @@ class Download(models.Model):
 
 ---
 
-#### 12. Prompt Versioning
+#### 13. Prompt Versioning (moved from #12)
 
 **Description:** Edit history and version comparison for prompts.
 
@@ -7230,7 +7740,7 @@ class Download(models.Model):
 
 ---
 
-#### 13. Collection Sharing
+#### 14. Collection Sharing (moved from #13)
 
 **Description:** Share collections via link and embed on external sites.
 
@@ -7251,7 +7761,7 @@ class Download(models.Model):
 
 ### Tier 4: Low Priority (Q4 2026+)
 
-#### 14. API Access
+#### 15. API Access (moved from #14)
 
 **Description:** REST API for developers to integrate PromptFinder prompts.
 
@@ -7270,7 +7780,7 @@ class Download(models.Model):
 
 ---
 
-#### 15. Bulk Upload
+#### 16. Bulk Upload (moved from #15)
 
 **Description:** Upload multiple prompts at once via CSV or ZIP.
 
@@ -7289,7 +7799,7 @@ class Download(models.Model):
 
 ---
 
-#### 16. Blog System
+#### 17. Blog System (moved from #16)
 
 **Description:** Integrated blog for SEO content, tutorials, and prompt engineering guides.
 
@@ -7316,7 +7826,7 @@ class Download(models.Model):
 
 ---
 
-#### 17. PromptCast AI Podcast
+#### 18. PromptCast AI Podcast (moved from #17)
 
 **Description:** Automated AI-generated podcast discussing trending prompts and AI art news.
 
@@ -7352,7 +7862,7 @@ class Download(models.Model):
 
 ---
 
-#### 18. Manual Mode Fallback (Graceful Degradation)
+#### 19. Manual Mode Fallback (moved from #18)
 
 **Description:** When AI services fail (timeout, API error, refusal), allow users to manually enter title and description instead of blocking the entire upload flow.
 

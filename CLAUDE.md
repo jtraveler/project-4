@@ -1,7 +1,8 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** January 1, 2026
-**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) IN PROGRESS (~95%), Phase K ON HOLD (95%)
+**Last Updated:** January 3, 2026
+**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) IN PROGRESS (~75%), Phase K ON HOLD (95%)
+
 **Owner:** Mateo Johnson - Prompt Finder
 
 ---
@@ -134,7 +135,7 @@
     - ❌ Phase K.3: Premium Features (limits, upsells)
     - **Approach:** Micro-Spec methodology (adopted Session 24)
     - See: [Phase K: Collections Feature](#-phase-k-collections-feature)
-  - 🔄 **Phase L:** Media Infrastructure Migration ⭐ **~95% COMPLETE** (December 2025 - January 2026)
+  - 🔄 **Phase L:** Media Infrastructure Migration ⭐ **~75% COMPLETE** (December 2025 - January 2026)
     - Cloudinary → Backblaze B2 + Cloudflare migration
     - 11 sub-features for complete media stack overhaul
     - ~70% cost reduction at scale
@@ -2033,6 +2034,82 @@ User uploads image/video
 - Bulk actions (remove all prompts from user)
 - IP tracking for ban evasion
 
+
+### 🔄 B2/OpenAI Vision Moderation (Phase L - Active)
+
+**Status:** ✅ ACTIVE (January 2026)
+**Architecture:** Step 1 NSFW Gate - blocks inappropriate content BEFORE user reaches details form
+
+This system replaced Cloudinary moderation for B2-uploaded images, using OpenAI's GPT-4o-mini Vision model for content analysis.
+
+**API Flow:**
+```
+1. User uploads image to B2 via presigned URL
+2. Frontend calls POST /api/upload/b2/moderate/ with CDN URL
+3. Backend fetches image, sends to OpenAI GPT-4o-mini Vision
+4. Response determines outcome:
+   - APPROVED (low severity) → Continue to Step 2
+   - WARNING (high/medium severity) → Show warning banner, allow continue
+   - BLOCKED (critical severity) → Delete from B2, show error
+```
+
+**Severity Levels:**
+
+| Severity | Action | User Experience |
+|----------|--------|-----------------|
+| `critical` | BLOCKED | Upload deleted, error message shown |
+| `high` | WARNING | Warning banner shown, user can continue |
+| `medium` | WARNING | Warning banner shown, user can continue |
+| `low` | APPROVED | No warning, continue normally |
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `prompts/services/cloudinary_moderation.py` | `moderate_b2_image()` - Core moderation logic |
+| `prompts/views/api_views.py` | `b2_moderate_upload` endpoint |
+| `prompts/templates/prompts/upload_step1.html` | Frontend moderation call + UI feedback |
+| `prompts/constants.py` | `OPENAI_TIMEOUT = 30` constant |
+
+**API Endpoints:**
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/upload/b2/moderate/` | POST | Moderate uploaded B2 image |
+| `/api/upload/b2/delete/` | POST | Delete B2 file (on rejection or cancel) |
+
+**Security Features:**
+
+1. **Domain Validation:** Only allows URLs from `ALLOWED_CDN_DOMAINS` list
+2. **Fail-Closed Pattern:** Unknown/error states default to BLOCK (not allow)
+3. **AI Refusal Detection:** `_is_ai_refusal()` detects when GPT refuses to analyze
+4. **30-Second Timeout:** Prevents hanging on slow API responses
+5. **CSRF Protection:** All POST endpoints require valid CSRF token
+
+**AI Refusal Detection:**
+```python
+def _is_ai_refusal(analysis_text):
+    """Detect if GPT-4o-mini refused to analyze the image."""
+    refusal_phrases = [
+        "i cannot", "i can't", "i'm unable", "i am unable",
+        "cannot provide", "can't provide", "unable to provide",
+        "cannot analyze", "can't analyze", "unable to analyze",
+        # ... additional phrases
+    ]
+    return any(phrase in analysis_text.lower() for phrase in refusal_phrases)
+```
+
+**Frontend Integration:**
+- Warning state persisted in `sessionStorage` key `b2_moderation_warning`
+- Warning banner displays: "This image may contain sensitive content..."
+- User can dismiss warning and proceed to Step 2
+- Warning clears on successful form submission
+
+**Error Handling:**
+- Network errors → BLOCK (fail-closed)
+- Timeout errors → BLOCK with "processing took too long" message
+- AI refusal → BLOCK (treat as potentially inappropriate)
+- Invalid domain → BLOCK with "invalid image URL" message
 
 ---
 
@@ -6452,9 +6529,9 @@ See also: [Future Features Roadmap](#-future-features-roadmap) for comprehensive
 
 ---
 
-## 🚀 Phase L: Media Infrastructure Migration (~95% COMPLETE)
+## 🚀 Phase L: Media Infrastructure Migration (~75% COMPLETE)
 
-**Status:** ✅ L1-L8, L8-DIRECT COMPLETE | Remaining: L5e, L11
+**Status:** 🔄 L1-L8, L8-DIRECT COMPLETE | **BLOCKER:** NSFW gate fix needed | Remaining: L5e, L11
 **Started:** December 2025
 **Priority:** CRITICAL - Cost and performance foundation
 **Estimated Effort:** 3-4 weeks
@@ -6714,13 +6791,15 @@ Despite 95% faster processing, total upload time is still ~23 seconds due to net
 
 ---
 
-### Current Blockers (Session 34-35) - UPDATED
+### Current Blockers (Session 36) - UPDATED
 
 | Blocker | Impact | Status | Notes |
 |---------|--------|--------|-------|
 | ~~Network latency (23s uploads)~~ | ~~User experience~~ | ✅ RESOLVED | L8-DIRECT implemented - now ~5-8s uploads |
-| Masonry grid squares | Visual consistency | 🟡 Medium | Images appear square instead of natural aspect ratio |
-| Missing video_processor tests | Code coverage | 🟢 Low | Unit tests for video handling not yet written |
+| NSFW blocking not working | Security | 🔴 HIGH | Timeout handlers return 'pending_review' instead of 'rejected' |
+| Step 2 slow load (~8s) | User experience | 🟡 Medium | Blocking AI calls in view; needs AJAX deferral |
+| Video uploads (95-225s) | User experience | 🟡 Expected | Synchronous FFmpeg processing; documented behavior |
+| Masonry grid squares | Visual consistency | 🟢 Low | Images appear square instead of natural aspect ratio |
 
 **L8-DIRECT: COMPLETE ✅**
 
@@ -7270,6 +7349,46 @@ class Download(models.Model):
 4. Prompt engineering tip
 5. Community highlight
 6. Outro with CTA
+
+---
+
+#### 18. Manual Mode Fallback (Graceful Degradation)
+
+**Description:** When AI services fail (timeout, API error, refusal), allow users to manually enter title and description instead of blocking the entire upload flow.
+
+| Aspect | Details |
+|--------|---------|
+| **Effort** | 1 week |
+| **Dependencies** | None |
+| **Revenue Impact** | Reliability improvement, reduced upload failures |
+| **Technical Complexity** | Medium |
+
+**Features:**
+- Detect AI service failures (timeout, API errors, refusal responses)
+- Show "Manual Mode" form with title and description fields
+- Pre-populate with safe defaults ("Untitled Upload", empty description)
+- Allow users to enter their own metadata
+- Skip AI tag suggestions, allow manual tag selection
+- Log fallback usage for monitoring
+
+**Triggers for Manual Mode:**
+- OpenAI API timeout (>30 seconds)
+- OpenAI API error (rate limit, service unavailable)
+- AI refusal to analyze image
+- Content generation failure
+
+**UX Flow:**
+```
+AI Service Fails → Show "Manual Mode" Banner
+                 → Display title/description form
+                 → User enters metadata manually
+                 → Continue to Step 2 with user-provided data
+```
+
+**Why Tier 4:**
+- Current system handles failures with fallback values + pending_review status
+- Manual mode improves UX but not critical for launch
+- Can be added post-launch based on failure rate monitoring
 
 ---
 
@@ -8875,6 +8994,16 @@ Periodic audits ensure documentation accuracy, codebase organization, and identi
 | Missing canonical tags | SEO incomplete | 1 hour | ⏳ Planned |
 | No uptime monitoring | Unaware of outages | 30 min | ⏳ Planned |
 | Profile page rapid-click bug | Like count desync on fast clicks | 1-2 hours | 📋 Documented |
+| Duplicate title IntegrityError | Upload fails on duplicate AI title | 1-2 hours | 📋 Documented |
+
+**Duplicate Title IntegrityError Bug Details:**
+- **Symptom:** `IntegrityError: duplicate key value violates unique constraint "prompts_prompt_slug_key"`
+- **Root Cause:** AI generates same title for similar images (e.g., "Majestic Lion Portrait"), slug collision occurs
+- **Location:** `upload_views.py` in `upload_submit()` function
+- **Current Workaround:** None - upload fails with 500 error
+- **Proposed Fix:** Add retry logic with title suffix (e.g., "Majestic Lion Portrait 2")
+- **Alternative Fix:** Use UUID suffix for all slugs
+- **Priority:** Medium - affects uploads with common AI-generated titles
 
 **Profile Page Rapid-Click Bug Details:**
 - **Symptom:** On profile page, rapidly clicking the like button can cause count to desync
@@ -9071,6 +9200,152 @@ Session 34 completed L8-DIRECT implementation, eliminating Heroku as middleman f
 **Commit:** `feat(L8-DIRECT): Implement direct browser-to-B2 uploads with deferred variant generation`
 
 **Key Learning:** L8-INSTANT (instant redirect with IndexedDB) was attempted but reverted due to blob URL navigation issues. Simple performance improvements (deferred variants) proved more reliable than complex architecture changes.
+
+---
+
+### January 2026 - Session 35 (Jan 2, 2026)
+
+**L8-PROGRESS, L8-TIMEOUT, L8-ERRORS: Upload UX & Error Handling**
+
+Session 35 completed three L8 sub-specs focused on upload user experience and error handling:
+
+**L8-PROGRESS: Visual Progress Indicator**
+- 5-step progress bar: Uploading → Processing → AI Analysis → Finalizing → Complete
+- Each step updates dynamically during upload flow
+- Visual feedback reduces perceived wait time
+
+**L8-PROGRESS-ANIMATE: Animated Finalizing State**
+- Subtle pulse animation during "Finalizing" step
+- CSS keyframe animation for status text
+- User feedback that system is actively working
+
+**L8-TIMEOUT: OpenAI API Timeout Handling**
+- Added `OPENAI_TIMEOUT = 30` constant to `prompts/constants.py`
+- Configured OpenAI clients with 30-second timeout
+- Graceful degradation: Returns `pending_review` status on timeout (security-first)
+- Content NOT auto-approved on timeout - flagged for manual review
+- Fallback values: "Untitled Upload" title, empty tags
+
+**L8-ERRORS: Rate Limit Documentation**
+- B2 API rate limit: 20 uploads/hour per user
+- Weekly upload limit: 100/week (testing), 10/week (production)
+- Documented in `api_views.py` (lines 33-66) and `upload_views.py` (lines 19-49)
+- User-facing error message mapping
+
+**Files Modified:**
+- `prompts/templates/prompts/upload_step1.html` - Progress bar UI, animation CSS
+- `prompts/constants.py` - Added `OPENAI_TIMEOUT = 30`
+- `prompts/services/cloudinary_moderation.py` - Timeout handling, graceful degradation
+- `prompts/services/content_generation.py` - Timeout handling, fallback values
+- `prompts/views/api_views.py` - Rate limit documentation
+- `prompts/views/upload_views.py` - Weekly limit documentation
+
+**Reports Created:**
+- `docs/reports/L8_TIMEOUT_COMPLETION_REPORT.md` - Comprehensive timeout implementation docs
+- `docs/reports/L8_PROGRESS_ANIMATE_REPORT.md` - Animation implementation details
+- `docs/reports/L8_ERRORS_RATE_LIMIT_REPORT.md` - Rate limiting documentation
+
+**Agent Validation:**
+| Agent | Rating | Verdict | Key Feedback |
+|-------|--------|---------|--------------|
+| @frontend-developer | 8.5/10 | ✅ APPROVED | Progressive feedback excellent, AbortController properly implemented |
+| @backend-architect | 9.0/10 | ✅ APPROVED | Graceful degradation pattern correct, timeout values appropriate |
+| @code-reviewer | 8.5/10 | ✅ APPROVED | Clean implementation, good error handling, proper logging |
+| **Average** | **8.67/10** | ✅ | Exceeds 8.0 threshold |
+
+**Phase L Status:** ~91% complete (L8 error handling complete, L5e and L11 remaining)
+
+---
+
+### January 2026 - Session 36 (Jan 3, 2026)
+
+**L8-TIMING-DIAGNOSTICS: Upload Flow Investigation & NSFW Gate Analysis**
+
+Session 36 investigated the slow Step 1 → Step 2 transition and NSFW blocking issues:
+
+**Upload Timing Investigation:**
+- Step 1 JavaScript: Fast (~4.3 seconds for presign + B2 upload + complete)
+- Step 2 Django: Slow (~8 seconds before HTML returns)
+- Root cause: `upload_step2()` view makes 2 blocking AI API calls before returning HTML
+- Solution path: Defer AI calls to client-side AJAX after page load
+
+**NSFW Gate Investigation:**
+- Root cause identified: L8-TIMEOUT exception handlers return `status: 'pending_review'`
+- Orchestrator blocking logic only checks for `status: 'rejected'`
+- Fix required: Change timeout handlers to return `status: 'rejected'` (fail-closed security)
+- Full report: `docs/reports/NSFW_GATE_INVESTIGATION_REPORT.md`
+
+**New API Endpoints:**
+- `POST /api/upload/b2/moderate/` - NSFW moderation check for uploaded images
+- `DELETE /api/upload/b2/delete/` - Delete B2 object if moderation fails
+
+**New Management Command:**
+- `test_api_latency` - Tests B2 and OpenAI API response times for diagnostics
+
+**Files Modified:**
+- `prompts/views/api_views.py` - Added `b2_moderate_upload()` and `b2_delete_upload()` functions
+- `prompts/services/cloudinary_moderation.py` - NSFW DEBUG logging, severity definitions
+- `prompts/constants.py` - `OPENAI_TIMEOUT = 30` centralized
+
+**Reports Created:**
+- `docs/reports/NSFW_GATE_INVESTIGATION_REPORT.md` - Root cause analysis
+- `docs/reports/L8_TIMING_INVESTIGATION_FINAL_REPORT.md` - Timing diagnostics
+
+**Known Issues (Remaining):**
+- NSFW blocking: Timeout handlers return wrong status (fix identified, not yet applied)
+- Step 2 slow load: 8s due to blocking AI calls (solution: defer to AJAX)
+- Video uploads: 95-225 second delays expected (FFmpeg processing)
+
+**Phase L Status:** ~75% complete (NSFW gate fix needed, Step 2 optimization needed)
+
+---
+
+### January 2026 - Session 37 (Jan 3, 2026)
+
+**NSFW Moderation System Fixes & Security Hardening**
+
+Session 37 completed critical fixes to the B2/OpenAI Vision moderation system:
+
+**CSRF Token Fix:**
+- Fixed 403 Forbidden errors on `/api/upload/b2/moderate/` endpoint
+- Root cause: Frontend wasn't sending CSRF token with moderation request
+- Solution: Added `X-CSRFToken` header using Django's `csrftoken` cookie
+
+**Domain Validation Security:**
+- Added `ALLOWED_CDN_DOMAINS` list to validate image URLs before moderation
+- Prevents SSRF attacks by restricting URLs to known CDN domains
+- Invalid domains return immediate BLOCK response
+
+**AI Refusal Detection:**
+- Added `_is_ai_refusal()` function to detect when GPT refuses to analyze images
+- Common refusal phrases: "i cannot", "unable to provide", "cannot analyze"
+- AI refusals treated as BLOCK (fail-closed security)
+
+**Severity Threshold Adjustment:**
+- Changed blocking logic: Only `critical` severity blocks uploads
+- Previous: `severity in ['critical', 'high']` → blocked too aggressively
+- New: `severity == 'critical'` → only truly explicit content blocked
+- `high` and `medium` severities now show WARNING banner instead
+
+**Files Modified:**
+- `prompts/services/cloudinary_moderation.py` - AI refusal detection, domain validation
+- `prompts/views/api_views.py` - CSRF handling, domain validation
+- `prompts/templates/prompts/upload_step1.html` - CSRF token in fetch request
+- `prompts/constants.py` - `ALLOWED_CDN_DOMAINS` list
+
+**Agent Validation:**
+| Agent | Rating | Key Feedback |
+|-------|--------|--------------|
+| @backend-architect | 9.0/10 | Security patterns correct, fail-closed appropriate |
+| @code-reviewer | 8.5/10 | Clean implementation, proper error handling |
+| @security-auditor | 9.0/10 | Domain validation prevents SSRF, fail-closed is correct |
+| **Average** | **8.85/10** | ✅ Exceeds 8.0 threshold |
+
+**Documentation Updates:**
+- Added B2/OpenAI Vision Moderation section to CLAUDE.md (this session)
+- Documented severity levels, API flow, and security features
+
+**Phase L Status:** ~95% complete (moderation system operational)
 
 ---
 
@@ -9436,7 +9711,7 @@ Session 34-35 implemented direct browser-to-B2 uploads via presigned URLs, elimi
 3. **Event-Driven JS:** CustomEvent for cross-component communication works well
 4. **Presigned URLs:** B2's presigned URL format requires specific authorization headers
 
-**Phase L Progress:** ~91% → ~95% (L8-DIRECT complete)
+**Phase L Progress:** ~91% → ~95% (L8-DIRECT complete, later revised to ~75% in Session 36 due to NSFW gate fix needed)
 
 ---
 
@@ -9824,7 +10099,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.9
-**Last Updated:** January 1, 2026
+**Version:** 2.11
+**Last Updated:** January 3, 2026
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase L: Media Infrastructure ~95%, Phase K ON HOLD at 95%)
+**Project Status:** Pre-Launch (Phase L: Media Infrastructure ~75%, Phase K ON HOLD at 95%)

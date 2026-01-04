@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.core.cache import cache
+from django.db import IntegrityError
 from prompts.models import Prompt
 from taggit.models import Tag
 from django.views.decorators.http import require_POST
@@ -49,6 +50,70 @@ import logging
 # =============================================================================
 
 logger = logging.getLogger(__name__)
+
+
+def _save_with_unique_title(prompt):
+    """
+    Save prompt, handling duplicate title conflicts by appending numeric suffix.
+
+    Catches IntegrityError at save time (race-condition safe) rather than
+    using exists() pre-check. Tries up to 50 numeric suffixes before falling
+    back to timestamp.
+
+    Args:
+        prompt: Prompt model instance to save
+
+    Returns:
+        True if saved successfully
+
+    Raises:
+        IntegrityError: If save fails after all retries (non-title constraint)
+    """
+    import time
+    original_title = prompt.title
+
+    # First attempt - try saving with original title
+    try:
+        prompt.save()
+        return True
+    except IntegrityError as e:
+        if 'prompts_prompt_title_key' not in str(e):
+            raise  # Re-raise if different constraint violated
+
+    # Duplicate detected - try with numeric suffixes
+    logger.warning(
+        f"[DUPLICATE TITLE] Title already exists: '{original_title}'. "
+        f"Attempting to generate unique title. User: {prompt.author.username if prompt.author else 'Unknown'}"
+    )
+
+    for i in range(2, 51):  # Try up to 50 variations
+        prompt.title = f"{original_title} {i}"
+        prompt.slug = ''  # Clear slug so model regenerates it from new title
+        try:
+            prompt.save()
+            logger.info(
+                f"[DUPLICATE TITLE] Resolved: '{original_title}' → '{prompt.title}'"
+            )
+            return True
+        except IntegrityError as e:
+            if 'prompts_prompt_title_key' not in str(e):
+                raise
+            continue
+
+    # Fallback: append timestamp
+    prompt.title = f"{original_title} {int(time.time())}"
+    prompt.slug = ''  # Clear slug so model regenerates it from new title
+    try:
+        prompt.save()
+        logger.warning(
+            f"[DUPLICATE TITLE] Used timestamp fallback: '{prompt.title}'"
+        )
+        return True
+    except IntegrityError:
+        logger.error(
+            f"[DUPLICATE TITLE] Failed to save even with timestamp: '{original_title}'"
+        )
+        raise
 
 
 @login_required
@@ -428,19 +493,13 @@ def upload_submit(request):
 
         return render(request, 'prompts/upload_step2.html', context)
 
-    # Generate unique title to avoid IntegrityError
-    # Ensure we always have a title
-    base_title = ai_title or 'Untitled Prompt'
-    unique_title = base_title
-    counter = 1
-    while Prompt.objects.filter(title=unique_title).exists():
-        unique_title = f'{base_title} {counter}'
-        counter += 1
+    # Use AI-generated title (duplicate handling done at save time)
+    title = ai_title or 'Untitled Prompt'
 
     # Create Prompt object with AI-generated title
     prompt = Prompt(
         author=request.user,
-        title=unique_title,
+        title=title,
         content=content,
         excerpt=ai_description[:200] if ai_description else content[:200],
         ai_generator=ai_generator,
@@ -479,7 +538,8 @@ def upload_submit(request):
         logger.info(f"Set Cloudinary resource: {cloudinary_id}")
 
     # Save to get ID (needed for moderation to access image URL)
-    prompt.save()
+    # Uses _save_with_unique_title to handle duplicate title race conditions
+    _save_with_unique_title(prompt)
 
     # Add tags before moderation
     for tag_name in tags[:7]:

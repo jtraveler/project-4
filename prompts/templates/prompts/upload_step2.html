@@ -180,6 +180,60 @@
     color: #6b7280;
     margin-top: 6px;
 }
+
+/* L8-STEP2-PERF: AI Suggestions Loading States */
+.ai-loading-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background-color: #f3f4f6;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.ai-loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e5e7eb;
+    border-top-color: #05a081;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.ai-loading-text {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.ai-error-container {
+    padding: 12px 16px;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    color: #dc2626;
+    font-size: 14px;
+}
+
+.ai-error-container button {
+    background: none;
+    border: none;
+    color: #dc2626;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    margin-left: 8px;
+}
+
+.ai-error-container button:hover {
+    color: #b91c1c;
+}
 </style>
 {% endblock %}
 
@@ -242,13 +296,24 @@
                 <p class="helper-text mb-2">
                     {% if resource_type == 'video' %}Add relevant tags to describe your video{% else %}Suggested tags (you can edit or add your own){% endif %}
                 </p>
-                <div id="tags-container" class="mb-3" data-preserved-tags="{{ tags_input|default:'' }}">
-                    {% for tag in ai_tags %}
-                    <span class="tag-pill" data-tag="{{ tag }}">
-                        {{ tag }}
-                        <span class="remove-tag">&times;</span>
-                    </span>
-                    {% endfor %}
+
+                <!-- L8-STEP2-PERF: AI Suggestions Loading State -->
+                <div id="ai-suggestions-loading" class="ai-loading-container">
+                    <div class="ai-loading-spinner"></div>
+                    <span class="ai-loading-text">Analyzing your {% if resource_type == 'video' %}video{% else %}image{% endif %} for suggested tags...</span>
+                </div>
+
+                <!-- L8-STEP2-PERF: AI Suggestions Error State (hidden by default) -->
+                <div id="ai-suggestions-error" class="ai-error-container" style="display: none;">
+                    <span id="ai-error-message"></span>
+                    <button type="button" onclick="fetchAISuggestions()">Retry</button>
+                </div>
+
+                <!-- L8-STEP2-PERF: NSFW Warning Container (hidden by default) -->
+                <div id="ai-image-warning" class="alert alert-warning" style="display: none; margin-bottom: 12px;"></div>
+
+                <div id="tags-container" class="mb-3" data-preserved-tags="{{ tags_input|default:'' }}" style="display: none;">
+                    {# Tags will be populated by AJAX - no longer server-rendered #}
                 </div>
                 <div style="position: relative;">
                     <input
@@ -528,6 +593,124 @@ console.log('=== END DIAGNOSTIC ===');
     });
 })();
 {% endif %}
+
+// =============================================================================
+// L8-STEP2-PERF: Fetch AI Suggestions via AJAX
+// =============================================================================
+// Previously these AI calls blocked page load (~8 seconds).
+// Now they run in background while user can start filling form.
+
+let aiSuggestionsComplete = false;
+
+function fetchAISuggestions() {
+    console.log('[AI Suggestions] Starting deferred AI analysis...');
+
+    const loadingEl = document.getElementById('ai-suggestions-loading');
+    const errorEl = document.getElementById('ai-suggestions-error');
+    const tagsContainer = document.getElementById('tags-container');
+    const warningEl = document.getElementById('ai-image-warning');
+
+    // Show loading, hide error and tags
+    loadingEl.style.display = 'flex';
+    errorEl.style.display = 'none';
+    tagsContainer.style.display = 'none';
+    warningEl.style.display = 'none';
+
+    fetch('{% url "prompts:ai_suggestions" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Server error: ' + response.status);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('[AI Suggestions] Response:', data);
+
+        // Hide loading
+        loadingEl.style.display = 'none';
+
+        if (data.success) {
+            aiSuggestionsComplete = true;
+
+            // Show NSFW warning if present
+            if (data.warning) {
+                warningEl.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>' + data.warning;
+                warningEl.style.display = 'block';
+                console.log('[AI Suggestions] NSFW warning displayed');
+            }
+
+            // Populate tags
+            const tags = data.suggestions.tags || [];
+            if (tags.length > 0) {
+                tagsContainer.innerHTML = '';
+                tags.forEach(tag => {
+                    addTag(tag);
+                });
+                tagsContainer.style.display = 'block';
+                console.log('[AI Suggestions] Added', tags.length, 'tags:', tags);
+            } else {
+                // No tags suggested, just show empty container
+                tagsContainer.style.display = 'block';
+                console.log('[AI Suggestions] No tags suggested');
+            }
+
+            // Update hidden original_ai_tags field for form submission
+            const originalTagsField = document.querySelector('input[name="original_ai_tags"]');
+            if (originalTagsField) {
+                originalTagsField.value = tags.join(', ');
+            }
+
+            // Dispatch event for any listeners
+            document.dispatchEvent(new CustomEvent('aiSuggestionsComplete', {
+                detail: { success: true, suggestions: data.suggestions, warning: data.warning }
+            }));
+        } else {
+            throw new Error(data.error || 'Unknown error');
+        }
+    })
+    .catch(error => {
+        console.error('[AI Suggestions] Error:', error);
+
+        // Hide loading, show error
+        loadingEl.style.display = 'none';
+        document.getElementById('ai-error-message').textContent = error.message || 'Failed to analyze image. ';
+        errorEl.style.display = 'block';
+
+        // Still show tags container so user can add manually
+        tagsContainer.style.display = 'block';
+        aiSuggestionsComplete = true;  // Don't block submit on error
+
+        document.dispatchEvent(new CustomEvent('aiSuggestionsComplete', {
+            detail: { success: false, error: error.message }
+        }));
+    });
+}
+
+// Start fetching AI suggestions when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Only fetch if we're not restoring from an error (preserved tags exist)
+    const preservedTagsData = document.getElementById('tags-container').dataset.preservedTags;
+    if (preservedTagsData && preservedTagsData.trim() !== '') {
+        console.log('[AI Suggestions] Skipping - restoring preserved tags from error');
+        // Hide loading, show tags container
+        document.getElementById('ai-suggestions-loading').style.display = 'none';
+        document.getElementById('tags-container').style.display = 'block';
+        aiSuggestionsComplete = true;
+    } else {
+        // Fetch AI suggestions
+        fetchAISuggestions();
+    }
+});
+// =============================================================================
 
 // Restore preserved tags on error
 const preservedTags = document.getElementById('tags-container').dataset.preservedTags;

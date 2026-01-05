@@ -66,6 +66,7 @@ from .api_views import (
     b2_upload_complete,
     b2_moderate_upload,
     b2_delete_upload,
+    ai_suggestions,  # L8-STEP2-PERF: Deferred AI suggestions
 )
 
 # Import admin utility views
@@ -165,6 +166,7 @@ __all__ = [
     'b2_upload_complete',
     'b2_moderate_upload',
     'b2_delete_upload',
+    'ai_suggestions',
 
     # Admin views
     'media_issues_dashboard',

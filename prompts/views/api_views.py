@@ -28,6 +28,7 @@ from prompts.services.b2_presign_service import (
 )
 from prompts.services.image_processor import process_upload
 from prompts.services.cloudinary_moderation import VisionModerationService
+from prompts.services.content_generation import ContentGenerationService
 from io import BytesIO
 import requests
 import json
@@ -1074,4 +1075,120 @@ def b2_delete_upload(request):
         return JsonResponse({
             'success': False,
             'error': 'An error occurred while deleting the file',
+        }, status=500)
+
+
+# =============================================================================
+# L8-STEP2-PERF: AI Suggestions Endpoint
+# =============================================================================
+# This endpoint generates AI suggestions (title, description, tags) and
+# performs NSFW moderation for uploaded media. It is called via AJAX from
+# upload_step2.html to defer these slow operations (~8 seconds) from the
+# initial page load.
+#
+# See: CC SPEC L8-STEP2-PERF for full specification
+# =============================================================================
+
+@login_required
+@require_POST
+def ai_suggestions(request):
+    """
+    Generate AI suggestions (title, description, tags) and NSFW moderation
+    for uploaded media. Called via AJAX from upload_step2.html.
+
+    Reads pending_ai_suggestions from session (set by upload_step2 view).
+    Stores results in session for use by upload_submit.
+
+    Returns:
+        JsonResponse with:
+        - success: bool
+        - suggestions: {title, description, tags} (if success)
+        - warning: NSFW warning message or null (if success)
+        - error: error message (if not success)
+    """
+    try:
+        # Get pending AI suggestions data from session
+        pending_data = request.session.get('pending_ai_suggestions')
+        if not pending_data:
+            logger.warning("ai_suggestions called without pending_ai_suggestions in session")
+            return JsonResponse({
+                'success': False,
+                'error': 'No pending upload found. Please start a new upload.',
+            }, status=400)
+
+        secure_url = pending_data.get('secure_url')
+        cloudinary_id = pending_data.get('cloudinary_id')
+        resource_type = pending_data.get('resource_type', 'image')
+
+        if not secure_url:
+            logger.error("ai_suggestions: secure_url missing from pending_ai_suggestions")
+            return JsonResponse({
+                'success': False,
+                'error': 'Upload URL not found. Please try uploading again.',
+            }, status=400)
+
+        logger.info(f"ai_suggestions: Processing {resource_type}, secure_url={bool(secure_url)}, cloudinary_id={cloudinary_id}")
+
+        # Initialize services
+        content_service = ContentGenerationService()
+        vision_service = VisionModerationService()
+
+        # Generate AI content (title, description, tags)
+        # This takes ~5 seconds
+        # Uses analyze_image_only() - explicit API for image-only analysis
+        # (before user enters prompt text or selects generator)
+        ai_suggestions_result = content_service.analyze_image_only(secure_url)
+
+        # Extract AI suggestions
+        ai_title = ai_suggestions_result.get('title', '')
+        ai_description = ai_suggestions_result.get('description', '')
+        ai_tags = ai_suggestions_result.get('suggested_tags', [])
+
+        logger.info(f"ai_suggestions: Generated title='{ai_title[:50]}...', {len(ai_tags)} tags")
+
+        # Store AI suggestions in session for upload_submit to use
+        request.session['ai_title'] = ai_title
+        request.session['ai_description'] = ai_description
+        request.session['ai_tags'] = ai_tags
+
+        # Perform NSFW moderation check
+        # This takes ~3 seconds
+        image_warning = None
+        try:
+            moderation_result = vision_service.moderate_image_url(secure_url)
+            if moderation_result.get('flagged'):
+                flagged_categories = moderation_result.get('flagged_categories', [])
+                image_warning = (
+                    f"⚠️ This image may contain sensitive content "
+                    f"({', '.join(flagged_categories)}). It will require manual review."
+                )
+                logger.info(f"ai_suggestions: NSFW flagged - {flagged_categories}")
+        except Exception as e:
+            logger.warning(f"ai_suggestions: NSFW check failed, continuing: {e}")
+            # Don't fail the whole request if NSFW check fails
+            # The upload can proceed and be moderated later
+
+        # Store warning in session for reference
+        if image_warning:
+            request.session['ai_image_warning'] = image_warning
+
+        request.session.modified = True
+
+        logger.info(f"ai_suggestions: Completed successfully for {cloudinary_id}")
+
+        return JsonResponse({
+            'success': True,
+            'suggestions': {
+                'title': ai_title,
+                'description': ai_description,
+                'tags': ai_tags,
+            },
+            'warning': image_warning,
+        })
+
+    except Exception as e:
+        logger.exception(f"ai_suggestions error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to generate AI suggestions. Please try again.',
         }, status=500)

@@ -255,60 +255,31 @@ def upload_step2(request):
     # Get all tags for autocomplete
     all_tags = list(Tag.objects.values_list('name', flat=True))
 
-    # Run AI analysis to get suggestions (skip for videos)
-    from prompts.services.content_generation import ContentGenerationService
-    content_service = ContentGenerationService()
+    # ==========================================================================
+    # L8-STEP2-PERF: AI calls deferred to AJAX endpoint for faster page load
+    # ==========================================================================
+    # Previously, this view made blocking AI calls (~8 seconds):
+    # 1. content_service.generate_content() - title, description, tags (~5s)
+    # 2. vision_service.moderate_image_url() - NSFW check (~3s)
+    #
+    # These calls are now deferred to /api/upload/ai-suggestions/ endpoint
+    # which is called via AJAX after the page loads.
+    #
+    # The template shows loading placeholders that are replaced when AJAX completes.
+    # Session storage (ai_title, ai_description, ai_tags) is set by the API endpoint.
+    # ==========================================================================
 
-    # Generate AI suggestions for images only
-    if resource_type == 'image':
-        ai_suggestions = content_service.generate_content(
-            image_url=secure_url,
-            prompt_text="",  # Empty - user will provide
-            ai_generator="",  # Will be selected by user
-            include_moderation=False
-        )
-    else:
-        # Skip AI suggestions for videos
-        ai_suggestions = {
-            'title': '',
-            'description': '',
-            'suggested_tags': []
-        }
+    # Store media info in session for AI suggestions endpoint to use
+    request.session['pending_ai_suggestions'] = {
+        'secure_url': secure_url,
+        'cloudinary_id': cloudinary_id,
+        'resource_type': resource_type,
+    }
+    request.session.modified = True
 
-    # Separately check image for violations using vision moderation
-    from prompts.services.cloudinary_moderation import VisionModerationService
-    vision_service = VisionModerationService()
-
+    # Initialize empty AI data - will be populated by AJAX
+    # (These may already exist from a previous attempt or page refresh)
     image_warning = None
-    try:
-        # For videos, extract frame first
-        if resource_type == 'video':
-            check_url = vision_service.get_video_frame_from_id(cloudinary_id)
-        else:
-            check_url = secure_url
-
-        # Check image only (not text)
-        vision_result = vision_service.moderate_image_url(check_url)
-
-        if vision_result.get('flagged_categories') and vision_result.get('flagged_categories') != ['api_error']:
-            violation_types = ', '.join(vision_result['flagged_categories'])
-            image_warning = (
-                f'⚠️ This image may contain content that violates our guidelines ({violation_types}). '
-                f'If you submit, it will require manual review. '
-                f'<a href="/upload/">Upload a different image</a> for instant approval.'
-            )
-    except Exception as e:
-        logger.error(f"Vision check error: {e}")
-        # Don't show warning on API errors
-
-    # Store AI-generated title and description in session for later use
-    request.session['ai_title'] = ai_suggestions.get('title', '')
-    request.session['ai_description'] = ai_suggestions.get('description', '')
-
-    # Store AI tags in session for profanity error recovery
-    if ai_suggestions and ai_suggestions.get('suggested_tags'):
-        request.session['ai_tags'] = ai_suggestions.get('suggested_tags', [])
-        request.session.modified = True
 
     # Store upload session data for idle detection
     from datetime import datetime
@@ -338,11 +309,12 @@ def upload_step2(request):
         'secure_url': secure_url,
         'preview_url': preview_url,  # B2 or Cloudinary URL for display
         'file_format': file_format,
-        'ai_tags': ai_suggestions.get('suggested_tags', []),
+        'ai_tags': [],  # Empty - will be populated by AJAX call to /api/upload/ai-suggestions/
         'all_tags': json.dumps(all_tags),
         'image_warning': image_warning,
         'is_b2_upload': is_b2_upload,
         'pending_variants': pending_variants,  # True if background variant generation needed
+        'ai_suggestions_pending': True,  # Flag for template to show loading state
     }
 
     return render(request, 'prompts/upload_step2.html', context)

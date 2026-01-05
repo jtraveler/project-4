@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 3, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase L Media Infrastructure (L8-DIRECT Complete, ~95%)
+**Current Phase:** Phase L Media Infrastructure (~75% - NSFW gate fix needed)
 **Total Tests:** 298 passing (48% coverage)
 
 ---
@@ -18,7 +18,7 @@
 | **SVG Icons** | 30 | static/icons/sprite.svg |
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
-| **Management Commands** | 17 | prompts/management/commands/ |
+| **Management Commands** | 18 | prompts/management/commands/ |
 | **Services** | 10 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
@@ -127,7 +127,7 @@ live-working-project/
 
 ---
 
-## Management Commands (17 total)
+## Management Commands (18 total)
 
 | Command | Purpose | Schedule |
 |---------|---------|----------|
@@ -148,6 +148,7 @@ live-working-project/
 | `initialize_prompt_order` | Initialize prompt ordering | Manual |
 | `moderate_prompts` | Run moderation on prompts | Manual |
 | `test_moderation` | Test moderation service | Manual |
+| `test_api_latency` | Test B2 and OpenAI API response times | Manual |
 
 ---
 
@@ -313,7 +314,7 @@ prompts/views/
 | `urls.py` | ~200 | URL routing |
 | `signals.py` | ~100 | Django signals (auto-create profiles) |
 | `middleware.py` | ~67 | RatelimitMiddleware |
-| `constants.py` | ~241 | AI generator metadata |
+| `constants.py` | ~241 | AI generator metadata, OPENAI_TIMEOUT |
 | `email_utils.py` | ~100 | Email helper functions |
 
 ---
@@ -635,6 +636,8 @@ API endpoints for B2 image upload and processing, defined in `prompts/views/api_
 | `POST /api/upload/b2/?quick=true` | POST | Upload image with thumbnail only (quick mode) |
 | `POST /api/upload/b2/variants/` | POST | Generate medium, large, WebP variants (background) |
 | `GET /api/upload/b2/variants/status/` | GET | Poll for variant generation completion |
+| `POST /api/upload/b2/moderate/` | POST | NSFW moderation check for uploaded images |
+| `DELETE /api/upload/b2/delete/` | DELETE | Delete B2 object if moderation fails |
 
 ### Quick Mode Session Keys
 
@@ -779,13 +782,14 @@ python manage.py test -v 2
 | CC_COMMUNICATION_PROTOCOL.md | docs/ | Agent usage requirements |
 | UI_STYLE_GUIDE.md | design-references/ | UI/UX standards |
 | PROJECT_FILE_STRUCTURE_AUDIT_REPORT.md | docs/reports/ | Latest audit findings |
+| L8_TIMEOUT_COMPLETION_REPORT.md | docs/reports/ | L8-TIMEOUT implementation details |
 
 ---
 
 **END OF PROJECT_FILE_STRUCTURE.md**
 
-*This document is updated after major structural changes. Last audit: December 27, 2025.*
+*This document is updated after major structural changes. Last audit: January 2, 2026.*
 
-**Version:** 2.3
-**Audit Date:** December 27, 2025
+**Version:** 2.4
+**Audit Date:** January 2, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder

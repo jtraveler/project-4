@@ -192,6 +192,28 @@ class ContentGenerationService:
                 'relevance_explanation': f'Error: {str(e)}'
             }
 
+    def analyze_image_only(self, image_url: str) -> Dict:
+        """
+        Analyze image without prompt/generator context.
+
+        Used for Step 2 AI suggestions before user enters their prompt text
+        or selects an AI generator. The AI will analyze purely based on
+        visual content.
+
+        Args:
+            image_url: URL to the image (Cloudinary URL or B2 URL)
+
+        Returns:
+            Dict with title, description, suggested_tags, and other metadata.
+            Same structure as generate_content() output.
+        """
+        logger.info("Analyzing image only (no prompt/generator context)")
+        return self.generate_content(
+            image_url=image_url,
+            prompt_text='',
+            ai_generator='Unknown',
+        )
+
     def _build_generation_prompt(self, user_prompt_text: str, include_moderation: bool = False) -> str:
         """
         Build the AI analysis prompt with tag suggestions and optional moderation.

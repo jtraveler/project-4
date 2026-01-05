@@ -998,7 +998,7 @@ async function uploadToB2(file) {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
+                        'X-CSRFToken': csrftoken
                     },
                     body: JSON.stringify({ image_url: imageUrl })
                 });
@@ -1023,7 +1023,7 @@ async function uploadToB2(file) {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrfToken
+                                    'X-CSRFToken': csrftoken
                                 },
                                 body: JSON.stringify({ file_url: imageUrl })
                             });

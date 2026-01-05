@@ -80,16 +80,26 @@
             <div class="field-group" id="image-upload-section">
                 <label class="field-label">Featured Image</label>
                 
-                <!-- Current Image Display -->
-                {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
+                <!-- Current Image Display (B2-first with Cloudinary fallback) -->
+                {% if prompt.display_medium_url or prompt.featured_image %}
                     <div class="current-image">
                         <p class="current-image-label">Current image:</p>
                         <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
-                            <img src="{{ prompt.featured_image.url }}" alt="Current featured image" class="current-image-preview">
+                            {% if prompt.display_medium_url %}
+                                <img src="{{ prompt.display_medium_url }}" alt="{{ prompt.title }}" class="current-image-preview">
+                            {% elif prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
+                                <img src="{{ prompt.featured_image.url }}" alt="{{ prompt.title }}" class="current-image-preview">
+                            {% else %}
+                                <img src="{% static 'images/placeholder-prompt.svg' %}" alt="No image" class="current-image-preview">
+                            {% endif %}
                         </a>
                         <p class="small text-muted mb-2">
                             <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
-                                {{ prompt.featured_image.public_id }}.{{ prompt.featured_image.format }}
+                                {% if prompt.b2_medium_url %}
+                                    B2 Storage
+                                {% elif prompt.featured_image %}
+                                    {{ prompt.featured_image.public_id }}.{{ prompt.featured_image.format }}
+                                {% endif %}
                             </a>
                         </p>
                     </div>
@@ -97,7 +107,7 @@
                 
                 <!-- File Upload -->
                 <div class="file-upload-area">
-                    {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
+                    {% if prompt.display_medium_url or (prompt.featured_image and "placeholder" not in prompt.featured_image.url) %}
                         <div class="mt-4 mb-2">Replace Image:</div>
                     {% else %}
                         <div class="mt-2 field-label mb-3">Upload Image:</div>
@@ -215,8 +225,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                {% if prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
-                    <img src="{{ prompt.featured_image.url }}" alt="Featured image full size" class="img-fluid">
+                {% if prompt.display_large_url %}
+                    <img src="{{ prompt.display_large_url }}" alt="{{ prompt.title }}" class="img-fluid">
+                {% elif prompt.featured_image and "placeholder" not in prompt.featured_image.url %}
+                    <img src="{{ prompt.featured_image.url }}" alt="{{ prompt.title }}" class="img-fluid">
+                {% else %}
+                    <img src="{% static 'images/placeholder-prompt.svg' %}" alt="No image" class="img-fluid">
                 {% endif %}
             </div>
         </div>

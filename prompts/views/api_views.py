@@ -953,16 +953,17 @@ def b2_moderate_upload(request):
         allowed_domains = [
             'f002.backblazeb2.com',
             's3.us-west-002.backblazeb2.com',
+            'media.promptfinder.net',  # Cloudflare CDN (hardcoded for reliability)
         ]
-        # Also allow configured CDN domain if present
+        # Also allow any additional configured CDN domain
         import os
         cdn_domain = os.environ.get('CLOUDFLARE_CDN_DOMAIN', '')
-        if cdn_domain:
+        if cdn_domain and cdn_domain not in allowed_domains:
             allowed_domains.append(cdn_domain)
 
         from urllib.parse import urlparse
         parsed = urlparse(image_url)
-        if not any(domain in parsed.netloc for domain in allowed_domains):
+        if parsed.netloc not in allowed_domains:
             logger.warning(f"Moderation rejected - invalid domain: {parsed.netloc}")
             return JsonResponse({
                 'success': False,

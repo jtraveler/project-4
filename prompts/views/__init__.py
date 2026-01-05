@@ -163,6 +163,8 @@ __all__ = [
     'b2_variants_status',
     'b2_presign_upload',
     'b2_upload_complete',
+    'b2_moderate_upload',
+    'b2_delete_upload',
 
     # Admin views
     'media_issues_dashboard',

@@ -116,6 +116,45 @@ def _save_with_unique_title(prompt):
         raise
 
 
+def clear_upload_session(request):
+    """
+    Clear all upload-related session keys.
+
+    Call at start of new upload and on completion/cancel to prevent
+    data from previous uploads bleeding into new ones.
+
+    Args:
+        request: Django HttpRequest object with session
+
+    Returns:
+        None
+    """
+    upload_session_keys = [
+        # B2 image URLs
+        'upload_b2_original', 'upload_b2_thumb', 'upload_b2_medium',
+        'upload_b2_large', 'upload_b2_webp', 'upload_b2_filename',
+        # B2 video URLs
+        'upload_b2_video', 'upload_b2_video_thumb',
+        'upload_video_duration', 'upload_video_width', 'upload_video_height',
+        # Upload state
+        'upload_is_b2', 'pending_ai_suggestions', 'upload_timer',
+        # Variant generation
+        'pending_variant_image', 'pending_variant_filename', 'pending_variant_url',
+        'variant_urls', 'variants_complete',
+        # Direct upload
+        'direct_upload_urls', 'pending_direct_upload',
+        'direct_upload_filename', 'direct_upload_is_video',
+        # AI suggestions
+        'ai_title', 'ai_description', 'ai_tags', 'ai_image_warning',
+    ]
+
+    for key in upload_session_keys:
+        request.session.pop(key, None)
+
+    # Force session save
+    request.session.modified = True
+
+
 @login_required
 def upload_step1(request):
     """
@@ -127,6 +166,10 @@ def upload_step1(request):
     Requires authentication - anonymous users redirect to login.
     """
     user = request.user
+
+    # Clear any stale session data from previous uploads
+    # This prevents data bleeding between upload sessions
+    clear_upload_session(request)
 
     # Calculate uploads this week
     week_start = timezone.now() - timedelta(days=7)
@@ -299,6 +342,25 @@ def upload_step2(request):
     # 2. Session key pending_variant_url (new L8-DIRECT approach)
     # 3. Session key pending_variant_image (legacy quick mode)
     variants_pending_param = request.GET.get('variants_pending', '').lower() == 'true'
+
+    # FIX: If variants_pending param is set but session doesn't have the URL,
+    # populate session from GET params (fixes race condition where session
+    # keys from b2_upload_complete haven't persisted before redirect).
+    # ROOT CAUSE: Django session middleware uses lazy writes - even with
+    # session.modified=True, the session may not persist to the backend before
+    # the redirect completes. This fallback ensures session keys are set.
+    # SECURITY: b2_original is validated upstream (is_b2_upload check at line 232
+    # ensures it comes from our redirect flow, not arbitrary user input).
+    if variants_pending_param and b2_original and not request.session.get('pending_variant_url'):
+        request.session['pending_variant_url'] = b2_original
+        request.session['pending_variant_filename'] = (
+            b2_filename or b2_original.split('/')[-1] or 'uploaded_file.jpg'
+        )
+        request.session['variants_complete'] = False
+        request.session.modified = True
+        logger.info(f"[Variants] Set pending_variant_url from GET param: {b2_original[:50]}...")
+
+    # Variants pending if: explicit URL param, or session has B2 URL, or session has base64 image
     has_pending_url = bool(request.session.get('pending_variant_url'))
     has_pending_image = bool(request.session.get('pending_variant_image'))
     pending_variants = variants_pending_param or has_pending_url or has_pending_image
@@ -360,10 +422,11 @@ def upload_submit(request):
         variant_urls = request.session.get('variant_urls', {})
         if variant_urls:
             # Override with background-generated variants (or set if not present)
+            b2_thumb = variant_urls.get('thumb', b2_thumb)
             b2_medium = variant_urls.get('medium', b2_medium)
             b2_large = variant_urls.get('large', b2_large)
             b2_webp = variant_urls.get('webp', b2_webp)
-            logger.info(f"Using background-generated variants: medium={bool(b2_medium)}, large={bool(b2_large)}, webp={bool(b2_webp)}")
+            logger.info(f"Using background-generated variants: thumb={bool(b2_thumb)}, medium={bool(b2_medium)}, large={bool(b2_large)}, webp={bool(b2_webp)}")
 
         logger.info(f"B2 upload detected - original: {b2_original[:50]}..." if b2_original else "B2 upload but no original URL")
 
@@ -617,51 +680,8 @@ def upload_submit(request):
             'due to a technical issue.'
         )
 
-    # Clear the upload timer (upload completed successfully)
-    if 'upload_timer' in request.session:
-        del request.session['upload_timer']
-        request.session.modified = True
-
-    # Comprehensive session cleanup - clear all upload-related keys
-    # B2 upload keys
-    b2_session_keys = [
-        'upload_is_b2',
-        'upload_b2_original',
-        'upload_b2_thumb',
-        'upload_b2_medium',
-        'upload_b2_large',
-        'upload_b2_webp',
-        'upload_b2_filename',
-        'upload_b2_video',
-        'upload_b2_video_thumb',
-        'upload_video_duration',
-        'upload_video_width',
-        'upload_video_height',
-        # L8: Quick mode variant generation keys
-        'pending_variant_image',
-        'pending_variant_filename',
-        'variant_urls',
-        'variants_complete',
-    ]
-    # Cloudinary/legacy upload keys
-    cloudinary_session_keys = [
-        'upload_cloudinary_id',
-        'upload_secure_url',
-        'upload_resource_type',
-        'upload_format',
-    ]
-    # AI-generated content keys
-    ai_session_keys = [
-        'ai_title',
-        'ai_description',
-        'ai_tags',
-    ]
-
-    # Clear all upload session keys
-    for key in b2_session_keys + cloudinary_session_keys + ai_session_keys:
-        request.session.pop(key, None)
-
-    request.session.modified = True
+    # Clear all upload-related session keys (upload completed successfully)
+    clear_upload_session(request)
     logger.info(f"Cleared all upload session keys for user {request.user.id}")
 
     # Clear list caches when new prompt is created
@@ -699,9 +719,9 @@ def cancel_upload(request):
             invalidate=True
         )
 
-        # Clear session
-        del request.session['upload_timer']
-        request.session.modified = True
+        # Clear all upload-related session keys
+        clear_upload_session(request)
+        logger.info(f"Cleared all upload session keys after cancel for user {request.user.id if request.user.is_authenticated else 'anonymous'}")
 
         return JsonResponse({
             'success': True,

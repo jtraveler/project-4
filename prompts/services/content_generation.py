@@ -15,6 +15,8 @@ import json
 import time
 import re
 import logging
+import base64
+import requests
 from typing import Dict, List, Optional
 from openai import OpenAI, APITimeoutError, APIConnectionError
 from django.conf import settings
@@ -65,6 +67,48 @@ class ContentGenerationService:
             self.all_tags = []
             self.AVAILABLE_TAGS = []
 
+    def _download_image_as_base64(self, image_url: str) -> Optional[str]:
+        """
+        Download image from URL and convert to base64 data URL.
+
+        This avoids issues with OpenAI's Vision API being unable to
+        fetch images from CDN URLs (rate limiting, propagation delays).
+
+        Args:
+            image_url: URL of the image to download
+
+        Returns:
+            Base64 data URL (data:image/jpeg;base64,...) or None on failure
+        """
+        try:
+            logger.info(f"Downloading image for AI analysis: {image_url[:80]}...")
+            img_response = requests.get(image_url, timeout=10)
+            img_response.raise_for_status()
+
+            # Determine media type from content-type header or URL
+            content_type = img_response.headers.get('content-type', 'image/jpeg')
+            if 'png' in image_url.lower() or 'png' in content_type:
+                media_type = 'image/png'
+            elif 'webp' in image_url.lower() or 'webp' in content_type:
+                media_type = 'image/webp'
+            elif 'gif' in image_url.lower() or 'gif' in content_type:
+                media_type = 'image/gif'
+            else:
+                media_type = 'image/jpeg'
+
+            # Convert to base64
+            image_base64 = base64.b64encode(img_response.content).decode('utf-8')
+            image_data_url = f"data:{media_type};base64,{image_base64}"
+            logger.info(
+                f"Image converted to base64 ({len(image_base64)} chars, {media_type})"
+            )
+
+            return image_data_url
+
+        except requests.RequestException as e:
+            logger.error(f"Failed to download image for AI analysis: {e}")
+            return None
+
     def generate_content(
         self,
         image_url: str,
@@ -95,6 +139,25 @@ class ContentGenerationService:
         """
         logger.info(f"Generating content for prompt: '{prompt_text[:50]}...'")
 
+        # Download image and convert to base64 (avoids OpenAI URL fetch issues)
+        # OpenAI's servers may be rate-limited or blocked by CDN, so we fetch server-side
+        image_data_url = self._download_image_as_base64(image_url)
+        if image_data_url is None:
+            # Graceful degradation: return empty suggestions on download failure
+            logger.warning("Image download failed, returning empty suggestions")
+            return {
+                'timeout': False,
+                'download_failed': True,
+                'violations': [],
+                'title': None,
+                'description': None,
+                'suggested_tags': [],
+                'relevance_score': 0.0,
+                'relevance_explanation': 'Could not download image for analysis',
+                'seo_filename': None,
+                'alt_tag': None
+            }
+
         # Build AI prompt
         system_prompt = self._build_generation_prompt(
             prompt_text,
@@ -102,7 +165,7 @@ class ContentGenerationService:
         )
 
         try:
-            # Call OpenAI Vision API
+            # Call OpenAI Vision API with base64 image data
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{
@@ -112,7 +175,7 @@ class ContentGenerationService:
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": image_url,
+                                "url": image_data_url,  # Base64 data URL
                                 "detail": "low"  # Cost optimization
                             }
                         }

@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 6, 2026
+**Last Updated:** January 8, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase L Media Infrastructure (~96% complete)
+**Current Phase:** Phase L Media Infrastructure (~98% complete)
 **Total Tests:** 298 passing (48% coverage)
 
 ---
@@ -689,8 +689,9 @@ The multi-step upload flow uses Django session storage to pass data between endp
 | `b2_medium_url` | string | `b2_generate_variants` | `upload_submit`, `prompt_edit` | Medium URL (600x600) |
 | `b2_large_url` | string | `b2_generate_variants` | `upload_submit`, `prompt_edit` | Large URL (1200x1200) |
 | `b2_webp_url` | string | `b2_generate_variants` | `upload_submit`, `prompt_edit` | WebP optimized URL |
-| `pending_variant_image` | string (base64) | `b2_upload_complete` | `b2_generate_variants` | Image data for deferred variant generation |
+| `pending_variant_url` | string | `b2_upload_complete` | `b2_generate_variants` | CDN URL for deferred variant generation (preferred) |
 | `pending_variant_filename` | string | `b2_upload_complete` | `b2_generate_variants` | Original filename for variants |
+| `pending_variant_image` | string (base64) | Legacy fallback | `b2_generate_variants` | Base64 image data (deprecated, Session 39) |
 | `variant_urls` | dict | `b2_generate_variants` | `variants_status` | Generated variant URLs |
 | `variants_complete` | boolean | `b2_generate_variants` | `variants_status`, `upload_step2` | Flag for polling completion |
 | `cloudinary_id` | string | Legacy upload | `upload_submit` | Cloudinary public ID (fallback) |
@@ -740,18 +741,19 @@ def clear_upload_session(request):
         request.session.pop(key, None)
 ```
 
-### Known Issue: Variant Race Condition (Session 38)
+### Variant Race Condition (Session 38-39)
 
-**Status:** 🔴 CRITICAL BLOCKER
+**Status:** ✅ RESOLVED (January 8, 2026)
 
-**Problem:** `/api/upload/b2/variants/` returns 400 Bad Request with "No pending upload found in session"
+**Problem:** `/api/upload/b2/variants/` returned 400 Bad Request with "No pending upload found in session"
 
-**Root Cause:** Timing issue in `upload_step2.html` - AJAX call to `variants/` fires before `complete/` endpoint has set the required session keys (`pending_variant_image`, `pending_variant_filename`).
+**Root Cause:** Session data unreliable for passing large image data between endpoints.
 
-**Debug Steps:**
-1. Check browser Network tab for request order
-2. Verify `complete/` endpoint returns success before `variants/` is called
-3. Add console logging to trace session state
+**Solution (Session 39):**
+1. Replaced base64 session storage with URL-based session storage (`pending_variant_url`)
+2. Added base64 encoding for OpenAI Vision API (CDN URLs were failing fetch)
+3. Used hidden form fields to pass variant URLs through POST submission
+4. Deprecated `pending_variant_image` in favor of `pending_variant_url` (legacy fallback retained)
 
 ---
 
@@ -868,8 +870,8 @@ python manage.py test -v 2
 
 **END OF PROJECT_FILE_STRUCTURE.md**
 
-*This document is updated after major structural changes. Last audit: January 2, 2026.*
+*This document is updated after major structural changes. Last audit: January 8, 2026.*
 
-**Version:** 2.4
-**Audit Date:** January 2, 2026
+**Version:** 2.5
+**Audit Date:** January 8, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder

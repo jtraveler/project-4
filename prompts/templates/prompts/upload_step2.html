@@ -288,6 +288,12 @@
             <input type="hidden" name="tags" id="tags-hidden">
             <input type="hidden" name="original_ai_tags" value="{% for tag in ai_tags %}{{ tag }}{% if not forloop.last %}, {% endif %}{% endfor %}">
 
+            <!-- Hidden fields for B2 variant URLs (populated by variants AJAX) -->
+            <input type="hidden" name="variant_thumb_url" id="variant_thumb_url" value="">
+            <input type="hidden" name="variant_medium_url" id="variant_medium_url" value="">
+            <input type="hidden" name="variant_large_url" id="variant_large_url" value="">
+            <input type="hidden" name="variant_webp_url" id="variant_webp_url" value="">
+
             <!-- Tags -->
             <div class="mb-4">
                 <label class="form-label">
@@ -579,6 +585,16 @@ console.log('=== END DIAGNOSTIC ===');
         if (data.success) {
             console.log('[Variants] Background generation complete:', data.urls);
             variantsComplete = true;
+
+            // Populate hidden form fields with variant URLs for reliable POST submission
+            if (data.urls) {
+                if (data.urls.thumb) document.getElementById('variant_thumb_url').value = data.urls.thumb;
+                if (data.urls.medium) document.getElementById('variant_medium_url').value = data.urls.medium;
+                if (data.urls.large) document.getElementById('variant_large_url').value = data.urls.large;
+                if (data.urls.webp) document.getElementById('variant_webp_url').value = data.urls.webp;
+                console.log('[Variants] Hidden form fields populated with variant URLs');
+            }
+
             document.dispatchEvent(new CustomEvent('variantsComplete', { detail: { success: true, urls: data.urls } }));
         } else {
             console.warn('[Variants] Generation failed:', data.error);

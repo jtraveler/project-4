@@ -418,15 +418,30 @@ def upload_submit(request):
         video_height = request.session.get('upload_video_height', '')
 
         # L8: Check for variant URLs from background generation (quick_mode)
-        # When quick_mode is used, variants are generated in background and stored in variant_urls
-        variant_urls = request.session.get('variant_urls', {})
-        if variant_urls:
-            # Override with background-generated variants (or set if not present)
-            b2_thumb = variant_urls.get('thumb', b2_thumb)
-            b2_medium = variant_urls.get('medium', b2_medium)
-            b2_large = variant_urls.get('large', b2_large)
-            b2_webp = variant_urls.get('webp', b2_webp)
-            logger.info(f"Using background-generated variants: thumb={bool(b2_thumb)}, medium={bool(b2_medium)}, large={bool(b2_large)}, webp={bool(b2_webp)}")
+        # Priority: POST data (hidden form fields) > session data
+        # Hidden form fields solve the race condition where session may not persist before POST
+        post_thumb = request.POST.get('variant_thumb_url', '')
+        post_medium = request.POST.get('variant_medium_url', '')
+        post_large = request.POST.get('variant_large_url', '')
+        post_webp = request.POST.get('variant_webp_url', '')
+
+        # Use POST data if available, otherwise fall back to session
+        if post_thumb or post_medium or post_large or post_webp:
+            # Use POST data (more reliable - travels with form submission)
+            b2_thumb = post_thumb or b2_thumb
+            b2_medium = post_medium or b2_medium
+            b2_large = post_large or b2_large
+            b2_webp = post_webp or b2_webp
+            logger.info(f"Using POST variant URLs: thumb={bool(post_thumb)}, medium={bool(post_medium)}, large={bool(post_large)}, webp={bool(post_webp)}")
+        else:
+            # Fallback to session (for backwards compatibility)
+            variant_urls = request.session.get('variant_urls', {})
+            if variant_urls:
+                b2_thumb = variant_urls.get('thumb', b2_thumb)
+                b2_medium = variant_urls.get('medium', b2_medium)
+                b2_large = variant_urls.get('large', b2_large)
+                b2_webp = variant_urls.get('webp', b2_webp)
+                logger.info(f"Using session variant URLs: thumb={bool(b2_thumb)}, medium={bool(b2_medium)}, large={bool(b2_large)}, webp={bool(b2_webp)}")
 
         logger.info(f"B2 upload detected - original: {b2_original[:50]}..." if b2_original else "B2 upload but no original URL")
 

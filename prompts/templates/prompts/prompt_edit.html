@@ -107,23 +107,23 @@
                 
                 <!-- File Upload -->
                 <div class="file-upload-area">
-                    {% if prompt.display_medium_url or (prompt.featured_image and "placeholder" not in prompt.featured_image.url) %}
+                    {% if prompt.display_medium_url or prompt.featured_image %}
                         <div class="mt-4 mb-2">Replace Image:</div>
                     {% else %}
                         <div class="mt-2 field-label mb-3">Upload Image:</div>
                     {% endif %}
                     
-                    <!-- Custom file input -->
+                    <!-- Custom file input - uses unified featured_media field -->
                     <div class="custom-file-input-only mb-4">
-                        {{ prompt_form.featured_image }}
+                        {{ prompt_form.featured_media }}
                     </div>
                 </div>
             </div>
 
-            <!-- Featured Video Field -->
+            <!-- Featured Video Field (preview only - upload uses unified field above) -->
             <div class="field-group" id="video-upload-section" style="display: none;">
                 <label class="field-label">Featured Video</label>
-                
+
                 <!-- Current Video Display (B2 first, Cloudinary fallback) -->
                 {% if prompt.is_video %}
                     <div class="current-video mb-3">
@@ -140,23 +140,9 @@
                         {% endif %}
                     </div>
                 {% endif %}
-                
-                <!-- File Upload -->
-                <div class="file-upload-area">
-                    {% if prompt.featured_video %}
-                        <div class="mt-4 mb-2">Replace Video:</div>
-                    {% else %}
-                        <div class="mt-2 field-label mb-3">Upload Video:</div>
-                    {% endif %}
-                    
-                    <!-- Custom file input -->
-                    <div class="custom-file-input-only mb-4">
-                        {{ prompt_form.featured_video }}
-                    </div>
-                    
-                    <div class="field-help">
-                        {{ prompt_form.featured_video.help_text }}
-                    </div>
+
+                <div class="field-help mt-3">
+                    To replace the video, use the media upload field above (supports both images and videos).
                 </div>
             </div>
 

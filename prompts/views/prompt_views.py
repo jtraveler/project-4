@@ -17,7 +17,10 @@ from datetime import timedelta
 from taggit.models import Tag
 from prompts.forms import CommentForm, PromptForm
 from prompts.services import ModerationOrchestrator
-from prompts.services.b2_upload_service import upload_image as b2_upload_image
+from prompts.services.b2_upload_service import (
+    upload_image as b2_upload_image,
+    upload_video as b2_upload_video,
+)
 from prompts.constants import AI_GENERATORS
 import time
 import logging
@@ -774,17 +777,72 @@ def prompt_edit(request, slug):
                 # Set as draft initially - moderation will publish if approved
                 prompt.status = 0
 
-            # Handle media upload if new media provided
+            # Handle media upload if new media provided (B2 storage)
             featured_media = prompt_form.cleaned_data.get('featured_media')
             detected_media_type = prompt_form.cleaned_data.get('_detected_media_type')
 
             if featured_media and detected_media_type:
-                if detected_media_type == 'video':
-                    prompt.featured_video = featured_media
-                    prompt.featured_image = None
-                else:  # image
-                    prompt.featured_image = featured_media
-                    prompt.featured_video = None
+                try:
+                    # Helper to clear B2 image URLs
+                    def clear_b2_image_urls(p):
+                        p.b2_image_url = None
+                        p.b2_thumb_url = None
+                        p.b2_medium_url = None
+                        p.b2_large_url = None
+                        p.b2_webp_url = None
+
+                    # Helper to clear B2 video URLs
+                    def clear_b2_video_urls(p):
+                        p.b2_video_url = None
+                        p.b2_video_thumb_url = None
+
+                    # Helper to clear Cloudinary fields
+                    def clear_cloudinary_fields(p):
+                        p.featured_image = None
+                        p.featured_video = None
+
+                    if detected_media_type == 'video':
+                        # Upload video to B2
+                        result = b2_upload_video(featured_media, featured_media.name)
+                        if result and result.get('success'):
+                            urls = result.get('urls', {})
+                            # Set B2 video URLs
+                            prompt.b2_video_url = urls.get('original')
+                            prompt.b2_video_thumb_url = urls.get('thumb')
+                            # Clear old fields
+                            clear_cloudinary_fields(prompt)
+                            clear_b2_image_urls(prompt)
+                            prompt.is_video = True
+                        else:
+                            error_msg = result.get('error', 'Unknown error') if result else 'Upload service unavailable'
+                            messages.error(request, f"Video upload failed: {error_msg}")
+                            return render(request, template_name, context)
+                    else:  # image
+                        # Upload image to B2 with all variants
+                        result = b2_upload_image(featured_media, featured_media.name)
+                        if result and result.get('success'):
+                            urls = result.get('urls', {})
+                            # Set B2 image URLs
+                            prompt.b2_image_url = urls.get('original')
+                            prompt.b2_thumb_url = urls.get('thumb')
+                            prompt.b2_medium_url = urls.get('medium')
+                            prompt.b2_large_url = urls.get('large')
+                            prompt.b2_webp_url = urls.get('webp')
+                            # Clear old fields
+                            clear_cloudinary_fields(prompt)
+                            clear_b2_video_urls(prompt)
+                            prompt.is_video = False
+                        else:
+                            error_msg = result.get('error', 'Unknown error') if result else 'Upload service unavailable'
+                            messages.error(request, f"Image upload failed: {error_msg}")
+                            return render(request, template_name, context)
+                except Exception as e:
+                    logger.error(f"B2 upload failed in prompt_edit: {e}")
+                    messages.error(
+                        request,
+                        "Media upload failed. Please try again."
+                    )
+                    return render(request, template_name, context)
 
             prompt.save()
             prompt_form.save_m2m()

@@ -77,9 +77,11 @@ class PromptForm(forms.ModelForm):
     class Meta:
         model = Prompt
         fields = (
-            'title', 'content', 'excerpt', 'featured_media',
+            'title', 'content', 'excerpt',
             'tags', 'ai_generator'
         )
+        # Note: featured_media is a custom FileField (not a model field)
+        # It's handled separately via cleaned_data in the view
         widgets = {
             'tags': TagWidget(attrs={
                 'class': 'form-control modern-tags-input',

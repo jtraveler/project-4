@@ -91,7 +91,8 @@ class VisionModerationService:
     # Moderation prompt for Vision API
     # NSFW Step 1 Blocking: Severity determines blocking vs warning
     # - critical → BLOCKED at Step 1 (rejected) - explicit nudity/pornography only
-    # - high/medium/low → WARNING at Step 2 (flagged for review)
+    # - high → WARNING banner shown (actual nudity but non-sexual/artistic)
+    # - medium/low → APPROVED without warning (suggestive but clothed content)
     MODERATION_PROMPT = """Analyze this image for policy violations. Check for:
 - Sexual content or nudity
 - Violence or gore
@@ -99,11 +100,32 @@ class VisionModerationService:
 - Hate symbols
 - Self-harm content
 
-SEVERITY DEFINITIONS (use these exactly):
-- "critical": Explicit sexual content, full nudity, genitalia, pornography, extreme gore, graphic violence
-- "high": Partial nudity, sexually suggestive poses, significant violence, blood, disturbing imagery
-- "medium": Suggestive content, revealing clothing, mild violence, potentially offensive content
-- "low": Minor concerns, borderline content that may need review
+SEVERITY DEFINITIONS (use these EXACTLY - do not over-classify):
+
+"critical" - ONLY for:
+  • Explicit nudity with genitals visible
+  • Sexual acts or pornography
+  • Extreme gore or graphic violence
+
+"high" - ONLY for:
+  • Actual nudity (breasts, buttocks fully visible) in non-sexual/artistic context
+  • Significant blood or violence
+  • Truly disturbing imagery
+
+"medium" - For suggestive but CLOTHED content:
+  • Lingerie, swimwear, bikinis
+  • Cleavage or form-fitting clothing
+  • Suggestive poses while clothed
+  • Mild violence or potentially offensive content
+
+"low" - For:
+  • Minor concerns
+  • Borderline content that may need review
+  • Normal content with no real issues
+
+IMPORTANT: Do NOT classify lingerie, swimwear, bikinis, or cleavage as "high".
+These are "medium" severity because the person is CLOTHED.
+Reserve "high" for ACTUAL visible nudity only.
 
 Respond with JSON in this exact format:
 {
@@ -113,7 +135,7 @@ Respond with JSON in this exact format:
     "explanation": "brief explanation"
 }
 
-Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high". Do not underrate explicit content."""
+Be accurate with severity classification. Clothed suggestive content = "medium", not "high"."""
 
     def __init__(self):
         """Initialize OpenAI client."""
@@ -205,7 +227,12 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
             # NSFW DEBUG: Log parsed values for moderate_image_url
             logger.info(f"[NSFW DEBUG] moderate_image_url - flagged={flagged}, severity={severity}, categories={categories}")
 
-            # Determine status
+            # Determine status based on severity
+            # Severity mapping (per CC SPECIFICATION):
+            # - critical → rejected (blocked)
+            # - high → flagged (warning banner shown, can continue)
+            # - medium → approved (no warning - legitimate AI art)
+            # - low → approved (no warning)
             if not flagged:
                 status = 'approved'
                 is_safe = True
@@ -214,10 +241,15 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
                 status = 'rejected'
                 is_safe = False
                 logger.info(f"[NSFW DEBUG] Decision: REJECTED (severity={severity} is critical)")
-            else:
+            elif severity == 'high':
                 status = 'flagged'
                 is_safe = False
-                logger.info(f"[NSFW DEBUG] Decision: FLAGGED (severity={severity} is high/medium/low)")
+                logger.info(f"[NSFW DEBUG] Decision: FLAGGED (severity={severity} is high - warning shown)")
+            else:
+                # medium and low severity pass without warning
+                status = 'approved'
+                is_safe = True
+                logger.info(f"[NSFW DEBUG] Decision: APPROVED (severity={severity} is medium/low - no warning)")
 
             # Assign confidence score based on severity
             confidence_map = {
@@ -370,16 +402,25 @@ Be STRICT with severity: explicit nudity/pornography MUST be "critical" or "high
             severity = result.get('severity', 'medium')
             explanation = result.get('explanation', '')
 
-            # Determine status
+            # Determine status based on severity
+            # Severity mapping (per CC SPECIFICATION):
+            # - critical → rejected (blocked)
+            # - high → flagged (warning banner shown, can continue)
+            # - medium → approved (no warning - legitimate AI art)
+            # - low → approved (no warning)
             if not flagged:
                 status = 'approved'
                 is_safe = True
             elif severity == 'critical':
                 status = 'rejected'
                 is_safe = False
-            else:
+            elif severity == 'high':
                 status = 'flagged'
                 is_safe = False
+            else:
+                # medium and low severity pass without warning
+                status = 'approved'
+                is_safe = True
 
             # Assign confidence score based on severity
             confidence_map = {

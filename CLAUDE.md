@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** January 3, 2026
-**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) IN PROGRESS (~75%), Phase K ON HOLD (95%)
+**Last Updated:** January 6, 2026
+**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) IN PROGRESS (~96%), Phase K ON HOLD (95%)
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -135,7 +135,7 @@
     - ❌ Phase K.3: Premium Features (limits, upsells)
     - **Approach:** Micro-Spec methodology (adopted Session 24)
     - See: [Phase K: Collections Feature](#-phase-k-collections-feature)
-  - 🔄 **Phase L:** Media Infrastructure Migration ⭐ **~75% COMPLETE** (December 2025 - January 2026)
+  - 🔄 **Phase L:** Media Infrastructure Migration ⭐ **~96% COMPLETE** (December 2025 - January 2026)
     - Cloudinary → Backblaze B2 + Cloudflare migration
     - 11 sub-features for complete media stack overhaul
     - ~70% cost reduction at scale
@@ -6529,9 +6529,9 @@ See also: [Future Features Roadmap](#-future-features-roadmap) for comprehensive
 
 ---
 
-## 🚀 Phase L: Media Infrastructure Migration (~95% COMPLETE)
+## 🚀 Phase L: Media Infrastructure Migration (~96% COMPLETE)
 
-**Status:** ✅ L1-L8, L8-DIRECT, L8-STEP2-PERF COMPLETE | Remaining: L5e, L11
+**Status:** ✅ L1-L8, L8-DIRECT, L8-STEP2-PERF, L5e COMPLETE | Remaining: L11
 **Started:** December 2025
 **Priority:** CRITICAL - Cost and performance foundation
 **Estimated Effort:** 3-4 weeks
@@ -6564,6 +6564,8 @@ Migrate from Cloudinary to Backblaze B2 + Cloudflare for media storage and deliv
 | L8-DIRECT | Direct Browser-to-B2 Uploads | ✅ Complete | `b2_presign_service.py`, `api_views.py`, `upload_step1.html` |
 | L8-TIMEOUT | Upload Timeout Handling | ✅ Complete | `cloudinary_moderation.py`, `content_generation.py`, `constants.py` |
 | L8-STEP2-PERF | Deferred AI Suggestions (AJAX) | ✅ Complete | `api_views.py`, `content_generation.py`, `upload_step2.html` |
+| L5e-TEMPLATE | Edit Form B2-First Image Display | ✅ Complete | `prompts/templates/prompts/prompt_edit.html` |
+| L5e-VIEW | Edit Form B2 Upload Logic | ✅ Complete | `prompts/views/prompt_views.py` |
 
 ---
 
@@ -6704,12 +6706,7 @@ Upload → Pillow Processing → B2 Storage → Cloudflare CDN
 
 ---
 
-### Remaining Phase L Features (2 remaining)
-
-#### L5e: Edit Form B2 Integration (NOT STARTED)
-- Update prompt_edit.html to display/handle B2 images
-- Add image replacement workflow for B2
-- Estimated: 2-3 hours
+### Remaining Phase L Features (1 remaining)
 
 #### L11: Documentation & Cleanup (PARTIAL)
 - ✅ Update CLAUDE.md with new architecture
@@ -6801,14 +6798,22 @@ Despite 95% faster processing, total upload time is still ~23 seconds due to net
 
 ---
 
-### Current Blockers (Session 37) - UPDATED
+### Current Blockers (Session 38) - UPDATED
 
 | Blocker | Impact | Status | Notes |
 |---------|--------|--------|-------|
 | ~~Network latency (23s uploads)~~ | ~~User experience~~ | ✅ RESOLVED | L8-DIRECT implemented - now ~5-8s uploads |
 | ~~Step 2 slow load (~8s)~~ | ~~User experience~~ | ✅ RESOLVED | L8-STEP2-PERF: AI calls now deferred via AJAX |
+| Variant generation race condition | Upload flow | 🔴 CRITICAL | `/api/upload/b2/variants/` returns 400 - session keys not set before AJAX fires |
 | Video uploads (95-225s) | User experience | 🟡 Expected | Synchronous FFmpeg processing; documented behavior |
 | Masonry grid squares | Visual consistency | 🟢 Low | Images appear square instead of natural aspect ratio |
+
+**Variant Race Condition (Session 38):**
+- **Root Cause:** `upload_step2.html` AJAX calls `/api/upload/b2/variants/` before `complete/` endpoint sets session keys
+- **Symptom:** 400 Bad Request with "No pending upload found in session"
+- **Required Keys:** `pending_variant_image` (base64), `pending_variant_filename`
+- **Fix Required:** Ensure `complete/` endpoint fully populates session before `variants/` is called
+- **Workaround:** None - currently blocks variant generation for B2 uploads
 
 **L8-DIRECT: COMPLETE ✅**
 
@@ -9673,6 +9678,49 @@ A professional, safe, profitable platform where prompt finders discover perfect 
 
 ## 📝 Changelog
 
+### January 2026 - Session 38 (Jan 5-6, 2026)
+
+**L5e Complete + Session Management + Critical Blocker Discovery**
+
+Session 38 completed Phase L5e (Edit Form B2 Integration) and implemented robust session clearing, but discovered a critical variant generation race condition:
+
+**L5e-TEMPLATE: Edit Form B2-First Image Display (9.5/10)**
+- Updated `prompt_edit.html` to use B2-first image display pattern
+- Pattern: `{{ prompt.display_medium_url|default:prompt.featured_image.url }}`
+- Cloudinary fallback ensures backward compatibility
+- File: `prompts/templates/prompts/prompt_edit.html`
+
+**L5e-VIEW: Edit Form B2 Upload Logic (9.0/10)**
+- Added B2 URL assignment in `prompt_edit()` view
+- Retrieves B2 URLs from session keys: `b2_secure_url`, `b2_thumb_url`, `b2_medium_url`, `b2_large_url`, `b2_webp_url`
+- Clears session after successful save
+- File: `prompts/views/prompt_views.py`
+
+**Session Clearing Implementation (8.85/10)**
+- Created `clear_upload_session()` helper function
+- Clears 13 session keys to prevent data bleed between uploads
+- Keys cleared: `b2_secure_url`, `b2_thumb_url`, `b2_medium_url`, `b2_large_url`, `b2_webp_url`, `b2_pending_upload`, `pending_variant_image`, `pending_variant_filename`, `variant_urls`, `variants_complete`, `cloudinary_id`, `cloudinary_secure_url`, `is_video`
+- Applied to: `upload_submit()`, `prompt_edit()` on successful save
+
+**Critical Blocker Discovered: Variant Race Condition**
+- **Symptom:** `/api/upload/b2/variants/` returns 400 Bad Request
+- **Error:** "No pending upload found in session"
+- **Root Cause:** `upload_step2.html` AJAX calls `variants/` before `complete/` sets session keys
+- **Impact:** Blocks all variant generation for B2 uploads
+- **Status:** 🔴 CRITICAL - Requires fix before Phase L can be marked complete
+
+**Agent Ratings:**
+| Component | Agent | Rating |
+|-----------|-------|--------|
+| L5e-TEMPLATE | @frontend-developer | 9.5/10 |
+| L5e-VIEW | @django-pro | 9.0/10 |
+| Session Clearing | @code-reviewer | 8.85/10 |
+| **Average** | | **9.12/10** |
+
+**Phase L Status:** ~96% complete (blocked by variant race condition)
+
+---
+
 ### January 2026 - Session 37 (Jan 5, 2026)
 
 **L8-STEP2-PERF: Deferred AI Suggestions**
@@ -10663,7 +10711,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.12
-**Last Updated:** January 5, 2026
+**Version:** 2.13
+**Last Updated:** January 6, 2026
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase L: Media Infrastructure ~95%, Phase K ON HOLD at 95%)
+**Project Status:** Pre-Launch (Phase L: Media Infrastructure ~96%, Phase K ON HOLD at 95%)

@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 5, 2026
+**Last Updated:** January 6, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase L Media Infrastructure (~95% complete)
+**Current Phase:** Phase L Media Infrastructure (~96% complete)
 **Total Tests:** 298 passing (48% coverage)
 
 ---
@@ -672,6 +672,86 @@ API endpoints for B2 image upload and processing, defined in `prompts/views/api_
   }
 }
 ```
+
+---
+
+## Upload Flow & Session Dependencies (Phase L - January 2026)
+
+The multi-step upload flow uses Django session storage to pass data between endpoints. Understanding session key dependencies is critical for debugging upload issues.
+
+### Complete Session Key Reference
+
+| Key | Type | Set By | Used By | Purpose |
+|-----|------|--------|---------|---------|
+| `b2_pending_upload` | dict | `b2_presign_upload` | `b2_upload_complete` | Pending upload metadata (file_key, filename, content_type) |
+| `b2_secure_url` | string | `b2_upload_complete` | `upload_step2`, `ai_suggestions`, `prompt_edit` | CDN URL for uploaded image |
+| `b2_thumb_url` | string | `b2_upload_complete` | `upload_submit`, `prompt_edit` | Thumbnail URL (300x300) |
+| `b2_medium_url` | string | `b2_generate_variants` | `upload_submit`, `prompt_edit` | Medium URL (600x600) |
+| `b2_large_url` | string | `b2_generate_variants` | `upload_submit`, `prompt_edit` | Large URL (1200x1200) |
+| `b2_webp_url` | string | `b2_generate_variants` | `upload_submit`, `prompt_edit` | WebP optimized URL |
+| `pending_variant_image` | string (base64) | `b2_upload_complete` | `b2_generate_variants` | Image data for deferred variant generation |
+| `pending_variant_filename` | string | `b2_upload_complete` | `b2_generate_variants` | Original filename for variants |
+| `variant_urls` | dict | `b2_generate_variants` | `variants_status` | Generated variant URLs |
+| `variants_complete` | boolean | `b2_generate_variants` | `variants_status`, `upload_step2` | Flag for polling completion |
+| `cloudinary_id` | string | Legacy upload | `upload_submit` | Cloudinary public ID (fallback) |
+| `cloudinary_secure_url` | string | Legacy upload | `ai_suggestions`, `upload_submit` | Cloudinary URL (fallback) |
+| `is_video` | boolean | Upload detection | `upload_submit` | Media type flag |
+
+### Upload Flow Sequence
+
+```
+1. GET /api/upload/b2/presign/
+   └─ Sets: b2_pending_upload (file_key, filename, content_type)
+
+2. Browser uploads directly to B2 via presigned URL
+
+3. POST /api/upload/b2/complete/
+   └─ Reads: b2_pending_upload
+   └─ Sets: b2_secure_url, b2_thumb_url, pending_variant_image, pending_variant_filename
+
+4. POST /api/upload/b2/variants/ (background)
+   └─ Reads: pending_variant_image, pending_variant_filename
+   └─ Sets: b2_medium_url, b2_large_url, b2_webp_url, variant_urls, variants_complete
+
+5. GET /upload/details/ (Step 2 page)
+   └─ Reads: b2_secure_url, variants_complete
+
+6. GET /api/upload/ai-suggestions/
+   └─ Reads: b2_secure_url OR cloudinary_secure_url
+
+7. POST /upload/submit/
+   └─ Reads: All b2_* keys, cloudinary_* keys
+   └─ Clears: All upload session keys via clear_upload_session()
+```
+
+### Session Clearing Helper
+
+**Location:** `prompts/views/upload_views.py`
+
+```python
+def clear_upload_session(request):
+    """Clear all upload-related session keys to prevent data bleed."""
+    keys_to_clear = [
+        'b2_secure_url', 'b2_thumb_url', 'b2_medium_url', 'b2_large_url', 'b2_webp_url',
+        'b2_pending_upload', 'pending_variant_image', 'pending_variant_filename',
+        'variant_urls', 'variants_complete', 'cloudinary_id', 'cloudinary_secure_url', 'is_video'
+    ]
+    for key in keys_to_clear:
+        request.session.pop(key, None)
+```
+
+### Known Issue: Variant Race Condition (Session 38)
+
+**Status:** 🔴 CRITICAL BLOCKER
+
+**Problem:** `/api/upload/b2/variants/` returns 400 Bad Request with "No pending upload found in session"
+
+**Root Cause:** Timing issue in `upload_step2.html` - AJAX call to `variants/` fires before `complete/` endpoint has set the required session keys (`pending_variant_image`, `pending_variant_filename`).
+
+**Debug Steps:**
+1. Check browser Network tab for request order
+2. Verify `complete/` endpoint returns success before `variants/` is called
+3. Add console logging to trace session state
 
 ---
 

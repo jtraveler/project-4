@@ -461,10 +461,10 @@ def upload_video(video_file, original_filename=None):
 
 def generate_image_variants(image_bytes, filename):
     """
-    Generate and upload the remaining image variants (medium, large, webp).
+    Generate and upload image variants (thumb, medium, large, webp).
 
-    This is used after a quick_mode upload to generate the deferred variants
-    in the background while the user fills out the form.
+    This is used after a L8-DIRECT presigned URL upload to generate all
+    variants in the background while the user fills out the form.
 
     Args:
         image_bytes: Raw image bytes (base64-decoded from session)
@@ -474,6 +474,7 @@ def generate_image_variants(image_bytes, filename):
         dict: {
             'success': True/False,
             'urls': {
+                'thumb': 'https://media.promptfinder.net/.../thumb/abc123.jpg',
                 'medium': 'https://media.promptfinder.net/.../medium/abc123.jpg',
                 'large': 'https://media.promptfinder.net/.../large/abc123.jpg',
                 'webp': 'https://media.promptfinder.net/.../webp/abc123.webp',
@@ -487,7 +488,7 @@ def generate_image_variants(image_bytes, filename):
         # Create a file-like object from bytes
         image_file = BytesIO(image_bytes)
 
-        # Process the image to generate medium, large, and webp variants
+        # Process the image to generate all variants (thumb, medium, large, webp)
         processed = process_upload(
             image_file,
             generate_thumbnails=True,
@@ -496,12 +497,17 @@ def generate_image_variants(image_bytes, filename):
 
         urls = {}
 
-        # Upload medium variant
+        # Upload thumb variant (300x300) - required for card displays
+        if 'thumb' in processed:
+            thumb_path = get_upload_path(filename, 'thumb')
+            urls['thumb'] = upload_to_b2(processed['thumb'], thumb_path)
+
+        # Upload medium variant (600x600)
         if 'medium' in processed:
             medium_path = get_upload_path(filename, 'medium')
             urls['medium'] = upload_to_b2(processed['medium'], medium_path)
 
-        # Upload large variant
+        # Upload large variant (1200x1200)
         if 'large' in processed:
             large_path = get_upload_path(filename, 'large')
             urls['large'] = upload_to_b2(processed['large'], large_path)

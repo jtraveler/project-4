@@ -1065,11 +1065,12 @@ async function uploadToB2(file) {
         }
 
         // STEP 4: Redirect to step 2 with B2 URLs
-        // L8-DIRECT-FIX: For images, only pass original URL and variants_pending flag
-        // Variants will be generated in background on Step 2 page load
+        // L8-DIRECT-FIX: Pass original + thumb URLs (thumb generated in quick mode)
+        // Variants (medium, large, webp) will be generated in background on Step 2 page load
         const params = new URLSearchParams({
             resource_type: resourceType,
-            b2_original: completeData.urls.original || ''
+            b2_original: completeData.urls.original || '',
+            b2_thumb: completeData.urls.thumb || ''
         });
 
         // For images: pass variants_pending flag (variants generated on Step 2)

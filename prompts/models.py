@@ -784,6 +784,10 @@ class Prompt(models.Model):
         default=False,
         help_text='Flagged for admin manual review'
     )
+    needs_seo_review = models.BooleanField(
+        default=False,
+        help_text="True if AI failed to generate title/tags/description"
+    )
     reviewed_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

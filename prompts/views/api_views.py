@@ -1114,6 +1114,7 @@ def ai_suggestions(request):
             return JsonResponse({
                 'success': False,
                 'error': 'No pending upload found. Please start a new upload.',
+                'ai_failed': True,
             }, status=400)
 
         secure_url = pending_data.get('secure_url')
@@ -1125,6 +1126,7 @@ def ai_suggestions(request):
             return JsonResponse({
                 'success': False,
                 'error': 'Upload URL not found. Please try uploading again.',
+                'ai_failed': True,
             }, status=400)
 
         logger.info(f"ai_suggestions: Processing {resource_type}, secure_url={bool(secure_url)}, cloudinary_id={cloudinary_id}")
@@ -1176,6 +1178,10 @@ def ai_suggestions(request):
 
         logger.info(f"ai_suggestions: Completed successfully for {cloudinary_id}")
 
+        # Detect if AI failed to generate meaningful content
+        # ai_failed=True if title, description, or tags are empty/missing
+        ai_failed = not ai_title or not ai_description or not ai_tags
+
         return JsonResponse({
             'success': True,
             'suggestions': {
@@ -1184,6 +1190,7 @@ def ai_suggestions(request):
                 'tags': ai_tags,
             },
             'warning': image_warning,
+            'ai_failed': ai_failed,
         })
 
     except Exception as e:
@@ -1191,4 +1198,5 @@ def ai_suggestions(request):
         return JsonResponse({
             'success': False,
             'error': 'Failed to generate AI suggestions. Please try again.',
+            'ai_failed': True,
         }, status=500)

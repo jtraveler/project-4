@@ -887,6 +887,26 @@ def b2_upload_complete(request):
     request.session['direct_upload_urls'] = urls
     request.session['direct_upload_filename'] = filename
     request.session['direct_upload_is_video'] = is_video
+
+    # VIDEO FIX: Set video-specific session keys that upload_submit expects
+    if is_video:
+        request.session['upload_b2_video'] = urls['original']  # Original video URL
+        request.session['upload_b2_video_thumb'] = urls.get('thumb', '')  # Video thumbnail
+        request.session['upload_is_b2'] = True  # Mark as B2 upload
+        logger.info(f"Video upload session keys set - video: {urls['original'][:50]}, thumb: {urls.get('thumb', '')[:50] if urls.get('thumb') else 'None'}")
+
+        # DEBUG LOGGING
+        print(f"[DEBUG b2_upload_complete] is_video: {is_video}")
+        print(f"[DEBUG b2_upload_complete] Session keys set:")
+        print(f"  - upload_b2_video: {request.session.get('upload_b2_video', 'NOT SET')}")
+        print(f"  - upload_b2_video_thumb: {request.session.get('upload_b2_video_thumb', 'NOT SET')}")
+        print(f"  - upload_is_b2: {request.session.get('upload_is_b2', 'NOT SET')}")
+        print(f"  - direct_upload_is_video: {request.session.get('direct_upload_is_video', 'NOT SET')}")
+    else:
+        # For images, set the original URL (variants will be generated on Step 2)
+        request.session['upload_b2_original'] = urls['original']
+        request.session['upload_is_b2'] = True
+
     request.session.modified = True
 
     return JsonResponse({

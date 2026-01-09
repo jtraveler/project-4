@@ -52,7 +52,7 @@
             <!-- Featured Media (Image/Video) - NOW IN LEFT COLUMN -->
             <div class="prompt-media-container-shell">
                 <div class="prompt-media-container">
-                    {% if prompt.is_video and prompt.display_video_url %}
+                    {% if prompt.display_video_url %}
                         <!-- Video Display (B2 or Cloudinary) -->
                         <video controls class="hero-video"
                             poster="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}"

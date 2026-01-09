@@ -254,17 +254,33 @@ def upload_step2(request):
             preview_url = b2_original
 
         # Store B2 URLs in session for upload_submit
+        # Always set original URL (required field)
         request.session['upload_b2_original'] = b2_original
-        request.session['upload_b2_thumb'] = b2_thumb
-        request.session['upload_b2_medium'] = b2_medium
-        request.session['upload_b2_large'] = b2_large
-        request.session['upload_b2_webp'] = b2_webp
-        request.session['upload_b2_filename'] = b2_filename
-        request.session['upload_b2_video'] = b2_video
-        request.session['upload_b2_video_thumb'] = b2_video_thumb
-        request.session['upload_video_duration'] = video_duration
-        request.session['upload_video_width'] = video_width
-        request.session['upload_video_height'] = video_height
+
+        # Only update optional fields if provided (preserves existing session values)
+        if b2_thumb:
+            request.session['upload_b2_thumb'] = b2_thumb
+        if b2_medium:
+            request.session['upload_b2_medium'] = b2_medium
+        if b2_large:
+            request.session['upload_b2_large'] = b2_large
+        if b2_webp:
+            request.session['upload_b2_webp'] = b2_webp
+        if b2_filename:
+            request.session['upload_b2_filename'] = b2_filename
+
+        # Video-specific fields (only for video uploads)
+        if b2_video:
+            request.session['upload_b2_video'] = b2_video
+        if b2_video_thumb:
+            request.session['upload_b2_video_thumb'] = b2_video_thumb
+        if video_duration:
+            request.session['upload_video_duration'] = video_duration
+        if video_width:
+            request.session['upload_video_width'] = video_width
+        if video_height:
+            request.session['upload_video_height'] = video_height
+
         request.session['upload_is_b2'] = True
         request.session.modified = True
 
@@ -391,6 +407,15 @@ def upload_submit(request):
     """Handle form submission - saves AI title/description automatically."""
     if request.method != 'POST':
         return redirect('prompts:upload_step1')
+
+    # DEBUG LOGGING - Session State
+    print(f"[DEBUG upload_submit] === SESSION STATE ===")
+    print(f"  - upload_b2_video: {request.session.get('upload_b2_video', 'NOT SET')}")
+    print(f"  - upload_b2_video_thumb: {request.session.get('upload_b2_video_thumb', 'NOT SET')}")
+    print(f"  - upload_is_b2: {request.session.get('upload_is_b2', 'NOT SET')}")
+    print(f"  - direct_upload_is_video: {request.session.get('direct_upload_is_video', 'NOT SET')}")
+    print(f"  - is_video (form): {request.POST.get('is_video', 'NOT IN POST')}")
+    print(f"  - resource_type (form): {request.POST.get('resource_type', 'NOT IN POST')}")
 
     # Get form data
     cloudinary_id = request.POST.get('cloudinary_id')
@@ -561,6 +586,14 @@ def upload_submit(request):
     if is_b2_upload:
         # B2 upload - set B2 URL fields
         if resource_type == 'video':
+            # DEBUG LOGGING - Before saving
+            print(f"[DEBUG upload_submit] === SAVING VIDEO TO MODEL ===")
+            print(f"  - resource_type: {resource_type}")
+            print(f"  - b2_video: {b2_video}")
+            print(f"  - b2_video_thumb: {b2_video_thumb}")
+            print(f"  - About to save: prompt.b2_video_url = {b2_video or b2_original}")
+            print(f"  - About to save: prompt.b2_video_thumb_url = {b2_video_thumb}")
+
             prompt.b2_video_url = b2_video or b2_original
             prompt.b2_video_thumb_url = b2_video_thumb
             logger.info(f"Set B2 video URL: {prompt.b2_video_url[:50]}..." if prompt.b2_video_url else "No B2 video URL")

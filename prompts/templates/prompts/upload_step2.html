@@ -722,13 +722,33 @@ function fetchAISuggestions() {
     .catch(error => {
         console.error('[AI Suggestions] Error:', error);
 
-        // Hide loading, show error
+        // Hide loading (don't show red error box - user should be oblivious)
         loadingEl.style.display = 'none';
-        document.getElementById('ai-error-message').textContent = error.message || 'Failed to analyze image. ';
-        errorEl.style.display = 'block';
+        // errorEl stays hidden - we don't show scary red errors for AI failures
 
-        // Still show tags container so user can add manually
+        // Set ai_failed flag for SEO review (L10b)
+        const aiFailedFlag = document.getElementById('ai_failed_flag');
+        if (aiFailedFlag) {
+            aiFailedFlag.value = 'true';
+        }
+
+        // Show tags container so user can add manually
         tagsContainer.style.display = 'block';
+
+        // Add subtle message about AI unavailability (L10b-FIX)
+        if (!document.getElementById('ai-failed-message')) {
+            const aiFailedMsg = document.createElement('p');
+            aiFailedMsg.className = 'text-muted small mt-2 mb-0';
+            aiFailedMsg.id = 'ai-failed-message';
+            aiFailedMsg.textContent = 'AI tag suggestions unavailable';
+            aiFailedMsg.setAttribute('role', 'status');
+            aiFailedMsg.setAttribute('aria-live', 'polite');
+            // Insert after tags container
+            if (tagsContainer && tagsContainer.parentNode) {
+                tagsContainer.parentNode.insertBefore(aiFailedMsg, tagsContainer.nextSibling);
+            }
+        }
+
         aiSuggestionsComplete = true;  // Don't block submit on error
 
         document.dispatchEvent(new CustomEvent('aiSuggestionsComplete', {

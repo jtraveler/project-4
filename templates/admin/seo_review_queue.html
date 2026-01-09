@@ -99,34 +99,40 @@
 
     .btn-edit {
         background: #007bff;
-        color: white;
+        color: white !important;
     }
 
     .btn-edit:hover {
         background: #0056b3;
-        color: white;
+        color: white !important;
         text-decoration: none;
     }
 
     .btn-view {
         background: #6c757d;
-        color: white;
+        color: white !important;
     }
 
     .btn-view:hover {
         background: #545b62;
-        color: white;
+        color: white !important;
         text-decoration: none;
     }
 
     .btn-done {
-        background: #28a745;
-        color: white;
+        background: #218838; /* Darkened for WCAG AA contrast (4.52:1) */
+        color: white !important;
     }
 
     .btn-done:hover {
         background: #1e7e34;
-        color: white;
+        color: white !important;
+    }
+
+    /* Focus states for keyboard accessibility */
+    .action-btn:focus {
+        outline: 3px solid currentColor;
+        outline-offset: 2px;
     }
 
     .empty-state {

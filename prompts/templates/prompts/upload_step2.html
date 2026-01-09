@@ -527,38 +527,61 @@ console.log('=== END DIAGNOSTIC ===');
     if (warningData) {
         try {
             const warning = JSON.parse(warningData);
-            // L10b-FIX3: Filter out technical/internal categories from user display
-            // These categories are for internal logging only, not user-facing
-            const technicalCategories = ['api_error', 'timeout', 'processing_error'];
-            const userCategories = (warning.categories || []).filter(
-                cat => !technicalCategories.includes(cat)
-            );
-            // Build warning message
-            let message = 'Content Notice: ' + (warning.explanation || 'This content may require manual review.');
-            if (userCategories.length > 0) {
-                message += ' (Flagged for: ' + userCategories.join(', ') + ')';
-            }
-            // Display warning using existing showWarningAlert function
-            // Note: showWarningAlert is defined later in the script, so we defer execution
-            setTimeout(() => {
-                if (typeof showWarningAlert === 'function') {
-                    showWarningAlert(message);
-                } else {
-                    console.warn('[NSFW] showWarningAlert not available, creating inline warning');
-                    const alertEl = document.createElement('div');
-                    alertEl.className = 'alert alert-warning alert-dismissible fade show';
-                    alertEl.setAttribute('role', 'alert');
-                    alertEl.style.marginBottom = '30px';
-                    alertEl.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
-                    const container = document.querySelector('.upload-container');
-                    if (container) container.insertBefore(alertEl, container.firstChild);
+
+            // L10b-FIX4: WHITELIST APPROACH - Only show banner for actual NSFW content warnings
+            // Processing errors, API errors, timeouts should NOT show any banner to users
+            // These are backend issues - users should be completely oblivious to them
+            const nsfwKeywords = [
+                'nsfw', 'explicit', 'adult', 'violence', 'gore',
+                'nudity', 'sexual', 'suggestive', 'mature', 'sensitive'
+            ];
+
+            // Check if this is an actual content warning (not a processing error)
+            const explanation = (warning.explanation || '').toLowerCase();
+            const categories = (warning.categories || []).map(c => c.toLowerCase());
+
+            // Only show if explanation or categories contain NSFW-related terms
+            const isActualContentWarning =
+                nsfwKeywords.some(keyword => explanation.includes(keyword)) ||
+                nsfwKeywords.some(keyword => categories.some(cat => cat.includes(keyword)));
+
+            if (isActualContentWarning) {
+                // Filter out technical categories from display (defense in depth)
+                const technicalCategories = ['api_error', 'timeout', 'processing_error'];
+                const userCategories = categories.filter(
+                    cat => !technicalCategories.includes(cat)
+                );
+
+                // Build warning message
+                let message = 'Content Notice: ' + (warning.explanation || 'This content may require manual review.');
+                if (userCategories.length > 0) {
+                    message += ' (Flagged for: ' + userCategories.join(', ') + ')';
                 }
-            }, 100);
-            console.log('[NSFW] Displayed content warning from Step 1:', warning);
+
+                // Display warning using existing showWarningAlert function
+                setTimeout(() => {
+                    if (typeof showWarningAlert === 'function') {
+                        showWarningAlert(message);
+                    } else {
+                        console.warn('[NSFW] showWarningAlert not available, creating inline warning');
+                        const alertEl = document.createElement('div');
+                        alertEl.className = 'alert alert-warning alert-dismissible fade show';
+                        alertEl.setAttribute('role', 'alert');
+                        alertEl.style.marginBottom = '30px';
+                        alertEl.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+                        const container = document.querySelector('.upload-container');
+                        if (container) container.insertBefore(alertEl, container.firstChild);
+                    }
+                }, 100);
+                console.log('[NSFW] Displayed content warning from Step 1:', warning);
+            } else {
+                // Processing error or non-NSFW issue - log but don't show banner
+                console.log('[NSFW] Suppressed non-content warning (processing error):', warning);
+            }
         } catch (e) {
             console.error('[NSFW] Failed to parse warning data:', e);
         }
-        // Clear the sessionStorage item after displaying
+        // Clear the sessionStorage item after processing
         sessionStorage.removeItem('upload_content_warning');
     }
 })();

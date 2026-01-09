@@ -290,13 +290,15 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
             # L10b-FIX3: Log full error for debugging, but NEVER expose to user
             # Raw exceptions may contain API keys or sensitive data
             logger.error(f"Vision moderation error: {str(e)}", exc_info=True)
+            # L10b-FIX4: Don't set explanation for processing errors
+            # Users should not see any banner for backend failures
             return {
                 'is_safe': False,
                 'status': 'flagged',
-                'flagged_categories': ['api_error'],
+                'flagged_categories': ['processing_error'],
                 'severity': 'medium',
                 'confidence_score': 0.0,
-                'explanation': 'Content flagged for manual review due to processing error.',
+                # NO explanation field - this prevents user-facing banner
             }
 
     def moderate_visual_content(self, prompt_obj) -> Dict:
@@ -473,14 +475,16 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
             logger.error(f"Vision moderation error for Prompt {prompt_obj.id}: {str(e)}", exc_info=True)
             # L10b-FIX3: On error, flag for manual review (can't verify safety)
             # SECURITY: Never expose raw error messages - may contain API keys
+            # L10b-FIX4: Don't set explanation for processing errors
+            # Users should not see any banner for backend failures
             return {
                 'is_safe': False,
                 'status': 'flagged',
-                'flagged_categories': ['api_error'],
+                'flagged_categories': ['processing_error'],
                 'severity': 'medium',
                 'confidence_score': 0.0,
                 'raw_response': {'error': 'processing_error'},
-                'explanation': 'Content flagged for manual review due to processing error.',
+                # NO explanation field - this prevents user-facing banner
             }
 
     def moderate_with_content_generation(self, prompt_obj) -> Dict:
@@ -575,14 +579,16 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
         except Exception as e:
             logger.error(f"Combined moderation+generation error: {str(e)}", exc_info=True)
             # L10b-FIX3: SECURITY: Never expose raw error messages - may contain API keys
+            # L10b-FIX4: Don't set explanation for processing errors
+            # Users should not see any banner for backend failures
             return {
                 'is_safe': False,
                 'status': 'flagged',
-                'flagged_categories': ['api_error'],
+                'flagged_categories': ['processing_error'],
                 'severity': 'medium',
                 'confidence_score': 0.0,
-                'explanation': 'Content flagged for manual review due to processing error.',
                 'raw_response': {'error': 'processing_error'},
+                # NO explanation field - this prevents user-facing banner
             }
 
     def _get_video_frame_url(self, prompt_obj) -> str:

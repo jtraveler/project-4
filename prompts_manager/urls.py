@@ -7,6 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from prompts.admin import trash_dashboard
 from prompts import views as maintenance_views
+from prompts.views import admin_views
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.views.generic.base import RedirectView
 
@@ -24,6 +25,10 @@ urlpatterns = [
     path('admin/bulk-delete-no-media/', maintenance_views.bulk_delete_no_media, name='bulk_delete_no_media'),
     path('admin/bulk-set-published-no-media/', maintenance_views.bulk_set_published_no_media, name='bulk_set_published_no_media'),
     path('admin/bulk-set-draft-no-media/', maintenance_views.bulk_set_draft_no_media, name='bulk_set_draft_no_media'),
+
+    # SEO Review Queue (L10c)
+    path('admin/seo-review/', admin_views.seo_review_queue, name='admin_seo_review_queue'),
+    path('admin/seo-review/<int:prompt_id>/complete/', admin_views.mark_seo_complete, name='admin_mark_seo_complete'),
 
     # Django admin
     path('admin/', admin.site.urls),

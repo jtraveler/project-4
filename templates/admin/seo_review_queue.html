@@ -1,0 +1,225 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}SEO Review Queue{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .seo-queue-container {
+        padding: 20px;
+    }
+
+    .queue-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .queue-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .queue-count {
+        background: #007bff;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+
+    .queue-count.empty {
+        background: #28a745;
+    }
+
+    .prompt-table {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-collapse: collapse;
+        overflow: hidden;
+    }
+
+    .prompt-table th {
+        background: #f8f9fa;
+        padding: 15px;
+        text-align: left;
+        font-weight: bold;
+        color: #333;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .prompt-table td {
+        padding: 15px;
+        border-bottom: 1px solid #e9ecef;
+        vertical-align: middle;
+    }
+
+    .prompt-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .prompt-table tr:hover {
+        background: #f8f9fa;
+    }
+
+    .prompt-title {
+        font-weight: 500;
+        color: #333;
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .prompt-author {
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    .prompt-date {
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    .action-btn {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        margin-right: 5px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-edit {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-edit:hover {
+        background: #0056b3;
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-view {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-view:hover {
+        background: #545b62;
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-done {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-done:hover {
+        background: #1e7e34;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+
+    .empty-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .empty-text {
+        color: #6c757d;
+        font-size: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="seo-queue-container">
+    <div class="queue-header">
+        <h1 class="queue-title">SEO Review Queue</h1>
+        <span class="queue-count {% if count == 0 %}empty{% endif %}">
+            {{ count }} prompt{{ count|pluralize }} need{{ count|pluralize:"s," }} review
+        </span>
+    </div>
+
+    <p style="color: #6c757d; margin-bottom: 30px;">
+        These prompts have incomplete SEO data (AI failed to generate title, tags, or description).
+        Review and edit each prompt, then mark as complete.
+    </p>
+
+    {% if prompts %}
+    <table class="prompt-table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prompt in prompts %}
+            <tr>
+                <td>
+                    <div class="prompt-title" title="{{ prompt.title }}">{{ prompt.title }}</div>
+                </td>
+                <td class="prompt-author">{{ prompt.author.username }}</td>
+                <td class="prompt-date">{{ prompt.created_on|date:"M d, Y" }}</td>
+                <td>
+                    {% if prompt.status == 1 %}
+                        <span style="color: #28a745;">Published</span>
+                    {% else %}
+                        <span style="color: #ffc107;">Draft</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'admin:prompts_prompt_change' prompt.id %}" class="action-btn btn-edit">
+                        Edit
+                    </a>
+                    <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="action-btn btn-view" target="_blank">
+                        View
+                    </a>
+                    <form method="post" action="{% url 'admin_mark_seo_complete' prompt.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="action-btn btn-done">
+                            Done
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">&#x2705;</div>
+        <div class="empty-title">All caught up!</div>
+        <div class="empty-text">No prompts need SEO review at this time.</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

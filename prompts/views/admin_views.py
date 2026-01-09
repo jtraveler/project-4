@@ -245,6 +245,60 @@ def bulk_set_published_no_media(request):
 
 
 # =============================================================================
+# SEO REVIEW QUEUE (L10c)
+# =============================================================================
+
+
+@staff_member_required
+def seo_review_queue(request):
+    """
+    Display prompts that need SEO review (AI failed to generate title/tags/description).
+
+    Shows prompts where needs_seo_review=True, ordered by most recent first.
+    Staff can edit SEO fields or mark as complete.
+    """
+    from django.contrib.admin.sites import site as admin_site
+
+    # Get prompts needing SEO review
+    prompts = Prompt.objects.filter(
+        needs_seo_review=True
+    ).select_related('author').order_by('-created_on')
+
+    # Get Django admin context for sidebar
+    context = admin_site.each_context(request)
+
+    context.update({
+        'prompts': prompts,
+        'count': prompts.count(),
+        'title': 'SEO Review Queue'
+    })
+
+    return render(request, 'admin/seo_review_queue.html', context)
+
+
+@staff_member_required
+def mark_seo_complete(request, prompt_id):
+    """
+    Mark a prompt's SEO review as complete.
+
+    Sets needs_seo_review=False after admin has reviewed/edited.
+    POST-only for CSRF protection.
+    """
+    from django.views.decorators.http import require_POST
+
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('admin_seo_review_queue')
+
+    prompt = get_object_or_404(Prompt, id=prompt_id)
+    prompt.needs_seo_review = False
+    prompt.save(update_fields=['needs_seo_review'])
+
+    messages.success(request, f'SEO review complete for "{prompt.title}"')
+    return redirect('admin_seo_review_queue')
+
+
+# =============================================================================
 # INSPIRATION HUB (Phase I.2)
 # =============================================================================
 

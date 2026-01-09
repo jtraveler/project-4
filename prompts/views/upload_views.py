@@ -596,6 +596,27 @@ def upload_submit(request):
         tag, _ = Tag.objects.get_or_create(name=tag_name)
         prompt.tags.add(tag)
 
+    # L10b: Set SEO review flag if AI failed or fields are empty
+    ai_failed = request.POST.get('ai_failed', 'false') == 'true'
+    needs_review = False
+
+    if ai_failed:
+        needs_review = True
+        logger.info(f"Prompt {prompt.id}: AI failed flag detected, setting needs_seo_review")
+
+    # Also flag if title is default or tags are empty (partial AI failure)
+    if prompt.title in ('Untitled Prompt', 'Untitled Upload') or not tags:
+        needs_review = True
+        logger.info(
+            f"Prompt {prompt.id}: Partial AI failure detected "
+            f"(title='{prompt.title}', tags_count={len(tags)}), setting needs_seo_review"
+        )
+
+    if needs_review:
+        prompt.needs_seo_review = True
+        prompt.save(update_fields=['needs_seo_review'])
+        logger.info(f"Prompt {prompt.id}: needs_seo_review set to True")
+
     # ALWAYS run moderation for content safety (even for drafts)
     # This prevents users from bypassing moderation by saving as draft
     # COPIED FROM prompt_create - WORKING LOGIC

@@ -527,10 +527,16 @@ console.log('=== END DIAGNOSTIC ===');
     if (warningData) {
         try {
             const warning = JSON.parse(warningData);
+            // L10b-FIX3: Filter out technical/internal categories from user display
+            // These categories are for internal logging only, not user-facing
+            const technicalCategories = ['api_error', 'timeout', 'processing_error'];
+            const userCategories = (warning.categories || []).filter(
+                cat => !technicalCategories.includes(cat)
+            );
             // Build warning message
             let message = 'Content Notice: ' + (warning.explanation || 'This content may require manual review.');
-            if (warning.categories && warning.categories.length > 0) {
-                message += ' (Flagged for: ' + warning.categories.join(', ') + ')';
+            if (userCategories.length > 0) {
+                message += ' (Flagged for: ' + userCategories.join(', ') + ')';
             }
             // Display warning using existing showWarningAlert function
             // Note: showWarningAlert is defined later in the script, so we defer execution

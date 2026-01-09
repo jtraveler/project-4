@@ -287,6 +287,8 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
             }
 
         except Exception as e:
+            # L10b-FIX3: Log full error for debugging, but NEVER expose to user
+            # Raw exceptions may contain API keys or sensitive data
             logger.error(f"Vision moderation error: {str(e)}", exc_info=True)
             return {
                 'is_safe': False,
@@ -294,7 +296,7 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
                 'flagged_categories': ['api_error'],
                 'severity': 'medium',
                 'confidence_score': 0.0,
-                'explanation': f'Error during moderation: {str(e)}',
+                'explanation': 'Content flagged for manual review due to processing error.',
             }
 
     def moderate_visual_content(self, prompt_obj) -> Dict:
@@ -455,6 +457,7 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
             # SECURITY FIX: Fail closed - reject content when moderation cannot verify safety
             # This prevents NSFW content from bypassing the gate via timeout
             logger.warning(f"Vision moderation timeout for Prompt {prompt_obj.id}: {str(e)}")
+            # L10b-FIX3: Never expose raw error in raw_response - may contain API keys
             return {
                 'timeout': True,
                 'is_safe': False,
@@ -462,21 +465,22 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
                 'flagged_categories': ['timeout'],
                 'severity': 'critical',  # Treat as critical for safety
                 'confidence_score': 0.0,
-                'raw_response': {'timeout': True, 'error': str(e)},
+                'raw_response': {'timeout': True},
                 'explanation': 'Moderation service timed out - content blocked for safety. Please try again.',
             }
 
         except Exception as e:
             logger.error(f"Vision moderation error for Prompt {prompt_obj.id}: {str(e)}", exc_info=True)
-            # On error, flag for manual review (can't verify safety)
+            # L10b-FIX3: On error, flag for manual review (can't verify safety)
+            # SECURITY: Never expose raw error messages - may contain API keys
             return {
                 'is_safe': False,
                 'status': 'flagged',
                 'flagged_categories': ['api_error'],
                 'severity': 'medium',
                 'confidence_score': 0.0,
-                'raw_response': {'error': str(e)},
-                'explanation': f'Error during moderation: {str(e)}',
+                'raw_response': {'error': 'processing_error'},
+                'explanation': 'Content flagged for manual review due to processing error.',
             }
 
     def moderate_with_content_generation(self, prompt_obj) -> Dict:
@@ -570,14 +574,15 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
 
         except Exception as e:
             logger.error(f"Combined moderation+generation error: {str(e)}", exc_info=True)
+            # L10b-FIX3: SECURITY: Never expose raw error messages - may contain API keys
             return {
                 'is_safe': False,
                 'status': 'flagged',
                 'flagged_categories': ['api_error'],
                 'severity': 'medium',
                 'confidence_score': 0.0,
-                'explanation': f'Error during analysis: {str(e)}',
-                'raw_response': {'error': str(e)},
+                'explanation': 'Content flagged for manual review due to processing error.',
+                'raw_response': {'error': 'processing_error'},
             }
 
     def _get_video_frame_url(self, prompt_obj) -> str:

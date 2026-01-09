@@ -1,6 +1,6 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 8, 2026
+**Last Updated:** January 9, 2026
 **Project:** PromptFinder (Django 5.2.9)
 **Current Phase:** Phase L Media Infrastructure (~98% complete)
 **Total Tests:** 298 passing (48% coverage)
@@ -213,7 +213,7 @@ prompts/views/
 
 | Module | Functions | Purpose |
 |--------|-----------|---------|
-| **admin_views** | ~15 | Admin dashboards, media issues, trash management |
+| **admin_views** | ~17 | Admin dashboards, media issues, trash management, SEO review queue |
 | **api_views** | ~5 | REST API endpoints for B2 upload + presigned URLs (Phase L, L8-DIRECT) |
 | **collection_views** | ~9 | Collection CRUD, API endpoints, profile tab, pagination |
 | **generator_views** | ~5 | AI generator category pages with filtering |
@@ -237,7 +237,7 @@ prompts/views/
 | `404.html` | Not found error page |
 | `429.html` | Rate limit error page (WCAG AA) |
 | `account/*.html` | 6 authentication templates (login, signup, logout, password reset) |
-| `admin/*.html` | 8 admin customization templates |
+| `admin/*.html` | 9 admin customization templates (incl. `seo_review_queue.html`) |
 | `registration/login.html` | Login page override |
 
 ### Prompts App Templates (prompts/templates/prompts/) - 23 files
@@ -757,6 +757,31 @@ def clear_upload_session(request):
 
 ---
 
+## SEO Review Admin Routes (Phase L10c)
+
+Admin routes for the SEO Review Queue feature, defined in `prompts/views/admin_views.py`:
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/admin/seo-review/` | GET | Admin SEO Review Queue page |
+| `/admin/seo-complete/<id>/` | POST | Mark prompt as SEO reviewed |
+
+### Database Field
+
+**Model:** `Prompt` (in `prompts/models.py`)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `needs_seo_review` | BooleanField | Flag for prompts that failed AI content generation |
+
+### Template
+
+| Template | Location | Purpose |
+|----------|----------|---------|
+| `seo_review_queue.html` | `prompts/templates/admin/` | Admin queue with title/description edit forms |
+
+---
+
 ## Recent Additions (Phase I - December 2025)
 
 ### URL Migration Complete
@@ -870,8 +895,17 @@ python manage.py test -v 2
 
 **END OF PROJECT_FILE_STRUCTURE.md**
 
-*This document is updated after major structural changes. Last audit: January 8, 2026.*
+*This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 2.5
-**Audit Date:** January 8, 2026
+**Version:** 2.6
+**Audit Date:** January 9, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
+
+### Changelog
+
+**v2.6 (January 9, 2026):**
+- Added SEO Review Admin Routes section (Phase L10c)
+- Added `seo_review_queue.html` to admin templates (8 → 9)
+- Updated admin_views.py function count (~15 → ~17)
+- Documented `needs_seo_review` model field
+- Updated version and audit date

@@ -6708,12 +6708,273 @@ Upload → Pillow Processing → B2 Storage → Cloudflare CDN
 
 ### Remaining Phase L Features (1 remaining)
 
+#### L10: SEO Review Infrastructure ✅ COMPLETE (Session 40)
+- ✅ L10a: `needs_seo_review` model field + `ai_failed` API flag
+- ✅ L10b: Silent AI failure UX (users oblivious to failures)
+- ✅ L10c: Admin SEO Review Queue at `/admin/seo-review/`
+- ✅ L10b-FIX: Hide all AI failure UI indicators from users
+- ✅ L10b-FIX3: Remove API key exposure from error messages
+- ✅ L10b-FIX4: Hide content notice banner for processing errors
+- See: [L10 SEO Review Infrastructure](#l10-seo-review-infrastructure-session-40) below
+
 #### L11: Documentation & Cleanup (PARTIAL)
 - ✅ Update CLAUDE.md with new architecture
 - ✅ Update PROJECT_FILE_STRUCTURE.md
 - ❌ Remove Cloudinary dependencies after validation
 - ❌ Document troubleshooting procedures
 - Estimated: 2 hours
+
+---
+
+### Cloudinary Transition Strategy
+
+**Decision Date:** January 9, 2026
+**Status:** ✅ FINALIZED
+
+**Architecture Decision:**
+Cloudinary remains installed as a **read-only fallback** for existing prompts. All new uploads go exclusively to B2.
+
+| Scenario | Storage | Display |
+|----------|---------|---------|
+| New uploads (Jan 2026+) | B2 only | B2 URLs via Cloudflare CDN |
+| Existing prompts (pre-Jan 2026) | Cloudinary | Cloudinary URLs (legacy) |
+| Edit existing prompt (new image) | B2 only | B2 URLs |
+| Template fallback | N/A | `b2_url|default:cloudinary_url` |
+
+**Why Keep Cloudinary (Read-Only):**
+1. **Zero migration risk** - Existing prompts continue working
+2. **No data migration needed** - Cloudinary URLs remain valid
+3. **Gradual transition** - Old content naturally ages out or gets updated
+4. **Cost-efficient** - No storage growth on Cloudinary (new uploads to B2)
+
+**Template Pattern (Already Implemented):**
+```django
+{% if prompt.b2_medium_url %}
+    <img src="{{ prompt.b2_medium_url }}" ...>
+{% elif prompt.featured_image %}
+    <img src="{{ prompt.featured_image.url }}" ...>
+{% endif %}
+```
+
+---
+
+### Cloudinary → B2 Migration Plan (Post-Launch)
+
+**Timeline:** Q2 2026 (after stable launch)
+**Priority:** Low - only if Cloudinary costs become significant
+
+**Migration Approach (When Needed):**
+
+| Phase | Description | Effort |
+|-------|-------------|--------|
+| 1. Inventory | Count prompts with Cloudinary-only images | 1 hour |
+| 2. Script | Create batch migration script | 4-6 hours |
+| 3. Test | Migrate 100 prompts in staging | 2 hours |
+| 4. Execute | Batch migrate all legacy prompts | 4-8 hours |
+| 5. Verify | Confirm all B2 URLs working | 2 hours |
+| 6. Cleanup | Remove Cloudinary package (optional) | 1 hour |
+
+**Migration Script Pseudocode:**
+```python
+# management/commands/migrate_cloudinary_to_b2.py
+for prompt in Prompt.objects.filter(b2_image_url__isnull=True, featured_image__isnull=False):
+    # Download from Cloudinary
+    image_data = download_cloudinary_image(prompt.featured_image.url)
+
+    # Upload to B2 with variants
+    b2_urls = b2_upload_service.process_upload(image_data, prompt.slug)
+
+    # Update prompt
+    prompt.b2_image_url = b2_urls['original']
+    prompt.b2_thumb_url = b2_urls['thumb']
+    prompt.b2_medium_url = b2_urls['medium']
+    prompt.b2_large_url = b2_urls['large']
+    prompt.b2_webp_url = b2_urls['webp']
+    prompt.save()
+```
+
+**Trigger for Migration:**
+- Cloudinary costs exceed $50/month
+- OR Cloudinary announces pricing changes
+- OR We want to fully deprecate Cloudinary dependency
+
+---
+
+### L10 Scope Decision (January 9, 2026)
+
+**Original L10 Spec:** "Fallback System - Automatic failover if B2 unavailable"
+
+**Decision:** Defer automatic B2 failover. Instead, implement:
+
+| Feature | Priority | Effort | Description |
+|---------|----------|--------|-------------|
+| AI Fallback + SEO Review Queue | High | 4-6 hours | When AI times out, save as draft with "Needs SEO Review" flag |
+| Health Endpoint | Medium | 1-2 hours | `/api/health/` for monitoring |
+| NSFW Failure → Draft Mode | High | ✅ Complete | Moderation timeout = draft, not rejection |
+
+**Why Defer B2 Failover:**
+1. B2 has 99.9% uptime SLA
+2. Cloudflare CDN provides edge caching
+3. Failover complexity not justified by risk
+4. Focus on user-impacting features first
+
+**L10 Revised Scope:**
+
+```python
+# L10a: AI Fallback + SEO Review Queue
+class Prompt(models.Model):
+    needs_seo_review = models.BooleanField(default=False)
+    ai_generation_failed = models.BooleanField(default=False)
+
+# L10b: Health Endpoint
+# GET /api/health/
+{
+    "status": "healthy",
+    "b2": "connected",
+    "database": "connected",
+    "timestamp": "2026-01-09T12:00:00Z"
+}
+
+# L10c: NSFW Failure → Draft Mode (Already Implemented)
+# Timeout/error in moderation → status=0 (draft), requires_manual_review=True
+```
+
+---
+
+### L10 SEO Review Infrastructure (Session 40) ✅ COMPLETE
+
+**Status:** ✅ COMPLETE (January 9, 2026)
+**Session:** 40
+**Commits:** 8 commits (e572254, 59959cb, 7a6e365, b5a0860, 8bf4be6, fbddaf5, dcfcba3, 9236e26)
+**Philosophy:** Silent failure pattern - users never see AI failure indicators
+
+---
+
+#### Overview
+
+L10 implements a "silent failure" pattern where AI failures are invisible to users. When OpenAI Vision times out or fails, uploads succeed normally but are flagged for admin SEO review. Users see no error messages, broken UI elements, or indications of AI issues.
+
+---
+
+#### L10a: Model Field + API Flag ✅
+
+**Prompt Model Field:**
+```python
+needs_seo_review = models.BooleanField(default=False)
+```
+
+**API Response Flag:**
+```json
+// GET /api/upload/ai-suggestions/
+{
+    "success": true,
+    "title": "Untitled Upload",
+    "description": "",
+    "suggested_tags": [],
+    "ai_failed": true  // Frontend ignores this, just populates defaults
+}
+```
+
+**Migration:** `0042_prompt_needs_seo_review.py`
+
+---
+
+#### L10b: Silent AI Failure UX ✅
+
+**Principle:** Users remain oblivious to AI failures. No error toasts, no warning banners, no "AI unavailable" messages.
+
+| Fix | Commit | Description |
+|-----|--------|-------------|
+| L10b-FIX | b5a0860 | Improve AI failure UX - hide error details, show subtle message |
+| L10b-FIX2 | 8bf4be6 | Remove all AI failure UI indicators for seamless UX |
+| L10b-FIX3 | fbddaf5 | Remove API key exposure from user-facing error messages |
+| L10b-FIX4 | dcfcba3 | Hide content notice banner for processing errors |
+
+**Key Changes:**
+- `upload_step2.html`: AI suggestion errors populate empty defaults silently
+- `api_views.py`: Error responses use generic messages, no API key/config details
+- Content notice banner: Hidden when `ai_failed=true` (no "AI couldn't analyze" messages)
+
+**Security Fix (L10b-FIX3):**
+- Removed `OPENAI_API_KEY` substring exposure from error messages
+- Generic error: "AI suggestions unavailable" vs detailed API errors
+
+---
+
+#### L10c: Admin SEO Review Queue ✅
+
+**Routes:**
+
+| URL | View | Purpose |
+|-----|------|---------|
+| `/admin/seo-review/` | `seo_review_queue` | List prompts needing SEO review |
+| `/admin/seo-complete/<id>/` | `seo_review_complete` | Mark prompt as SEO-reviewed |
+
+**Template:** `prompts/templates/admin/seo_review_queue.html`
+
+**Workflow:**
+```
+AI Failure → needs_seo_review=True → Admin Queue → Manual Review → Mark Complete
+```
+
+**Admin Queue Features:**
+- Lists all prompts where `needs_seo_review=True`
+- Shows: title, author, created date, AI failure reason
+- "Mark Complete" button clears the flag
+- Staff-only access (`@staff_member_required`)
+
+---
+
+### Video Transcoding Decision (January 9, 2026)
+
+**Decision:** Self-hosted FFmpeg (Phase M), NOT Cloudinary Video API
+
+| Factor | Cloudinary Video | Self-Hosted FFmpeg | Winner |
+|--------|------------------|-------------------|--------|
+| Cost per video | $0.05-0.15 | $0 (Heroku dyno time) | FFmpeg |
+| Processing time | 10-30s | 30-90s | Cloudinary |
+| Quality control | Limited presets | Full control | FFmpeg |
+| Dependency | External API | Local binary | FFmpeg |
+| Complexity | Low | Medium | Cloudinary |
+
+**Why FFmpeg:**
+1. **Cost:** Video uploads are less frequent; dyno time is already paid
+2. **Control:** Full control over compression, codec, thumbnail extraction
+3. **No API dependency:** No external service rate limits or outages
+4. **Already in stack:** FFmpeg used for frame extraction (existing)
+
+**Phase M Implementation:**
+- Video validation (duration, size, format)
+- Frame extraction for AI moderation (5 frames)
+- Thumbnail generation (multiple sizes)
+- Optional: HLS/DASH for adaptive streaming (future)
+
+**Cloudinary Video Use Case (If Any):**
+- Only for complex transformations we can't do with FFmpeg
+- Currently: None identified
+
+---
+
+### Future Phases Reference
+
+**Phase L Completion Criteria:**
+- ✅ L1-L8: Core B2 infrastructure (COMPLETE)
+- ✅ L8-DIRECT: Direct browser uploads (COMPLETE)
+- ⏳ L10: Revised scope (AI Fallback, Health, NSFW Draft) - 1-2 days
+- ⏳ L11: Documentation cleanup - 2 hours
+
+**Post-Phase L:**
+- **Phase M:** Video Handling (FFmpeg-based) - 2-3 weeks
+- **Phase K.2:** Collections enhancements - Resume after L complete
+- **Phase N:** Premium tier + payments - After K.2
+
+**Dependencies Chart:**
+```
+Phase L (Media Infrastructure)
+    └── Phase M (Video Handling) - requires L complete
+    └── Phase K.2 (Collections) - can resume after L
+         └── Phase N (Premium) - requires K.2
+```
 
 ---
 
@@ -9813,6 +10074,57 @@ Session 39 resolved all three critical blockers discovered in Sessions 37-38, co
 
 ---
 
+### January 2026 - Session 40 (Jan 9, 2026)
+
+**L10 SEO Review Infrastructure: Silent AI Failure Pattern ✅ COMPLETE**
+
+Session 40 implemented the L10 SEO Review Infrastructure, establishing a "silent failure" pattern where AI failures are invisible to users. When OpenAI Vision fails, uploads succeed normally but are flagged for admin SEO review.
+
+**L10a: Model Field + API Flag**
+- Added `needs_seo_review` BooleanField to Prompt model
+- Migration: `0042_prompt_needs_seo_review.py`
+- API returns `ai_failed: true` flag (frontend ignores, populates defaults)
+
+**L10b: Silent AI Failure UX (4 fixes)**
+
+| Fix | Commit | Description |
+|-----|--------|-------------|
+| L10b-FIX | b5a0860 | Hide error details, show subtle message |
+| L10b-FIX2 | 8bf4be6 | Remove all AI failure UI indicators |
+| L10b-FIX3 | fbddaf5 | Remove API key exposure from error messages |
+| L10b-FIX4 | dcfcba3 | Hide content notice banner for processing errors |
+
+**L10c: Admin SEO Review Queue**
+- Route: `/admin/seo-review/` - List prompts needing review
+- Route: `/admin/seo-complete/<id>/` - Mark as reviewed
+- Template: `prompts/templates/admin/seo_review_queue.html`
+- Staff-only access with `@staff_member_required`
+
+**Security Fix:**
+- Removed `OPENAI_API_KEY` substring exposure from user-facing error messages
+- Generic error messages replace detailed API errors
+
+**Commits (8 total):**
+- `e572254` - L10a model field
+- `59959cb` - L10a API flag
+- `7a6e365` - L10c admin queue
+- `b5a0860` - L10b-FIX subtle messages
+- `8bf4be6` - L10b-FIX2 remove UI indicators
+- `fbddaf5` - L10b-FIX3 security fix
+- `dcfcba3` - L10b-FIX4 hide banner
+- `9236e26` - L10c admin queue finalization
+
+**Agent Ratings:**
+| Component | Agent | Rating |
+|-----------|-------|--------|
+| Documentation | @doc-writer | 8.5/10 |
+| Code Review | @code-reviewer | 8.5/10 |
+| **Average** | | **8.5/10** |
+
+**Phase L Status:** ~98% complete (L10 complete, only L11 documentation remaining)
+
+---
+
 ### January 2026 - Session 38 (Jan 5-6, 2026)
 
 **L5e Complete + Session Management + Critical Blocker Discovery → RESOLVED in Session 39**
@@ -10846,7 +11158,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.14
-**Last Updated:** January 8, 2026
+**Version:** 2.16
+**Last Updated:** January 9, 2026
 **Document Owner:** Mateo Johnson
 **Project Status:** Pre-Launch (Phase L: Media Infrastructure ~98%, Phase K ON HOLD at 95%)

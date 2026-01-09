@@ -691,19 +691,8 @@ function fetchAISuggestions() {
                 console.log('[AI Suggestions] No tags suggested');
             }
 
-            // L10b: Show subtle message if AI auto-tagging failed (prevent duplicates)
-            if (data.ai_failed && !document.getElementById('ai-failed-message')) {
-                const aiFailedMsg = document.createElement('p');
-                aiFailedMsg.className = 'text-muted small mt-2 mb-0';
-                aiFailedMsg.id = 'ai-failed-message';
-                aiFailedMsg.textContent = 'AI auto-tagging unavailable';
-                aiFailedMsg.setAttribute('role', 'status');
-                aiFailedMsg.setAttribute('aria-live', 'polite');
-                // Insert after tags container
-                if (tagsContainer && tagsContainer.parentNode) {
-                    tagsContainer.parentNode.insertBefore(aiFailedMsg, tagsContainer.nextSibling);
-                }
-            }
+            // L10b-FIX2: No user-facing message - user should be oblivious to AI failures
+            // Hidden ai_failed_flag is already set above for SEO review
 
             // Update hidden original_ai_tags field for form submission
             const originalTagsField = document.querySelector('input[name="original_ai_tags"]');
@@ -735,19 +724,8 @@ function fetchAISuggestions() {
         // Show tags container so user can add manually
         tagsContainer.style.display = 'block';
 
-        // Add subtle message about AI unavailability (L10b-FIX)
-        if (!document.getElementById('ai-failed-message')) {
-            const aiFailedMsg = document.createElement('p');
-            aiFailedMsg.className = 'text-muted small mt-2 mb-0';
-            aiFailedMsg.id = 'ai-failed-message';
-            aiFailedMsg.textContent = 'AI tag suggestions unavailable';
-            aiFailedMsg.setAttribute('role', 'status');
-            aiFailedMsg.setAttribute('aria-live', 'polite');
-            // Insert after tags container
-            if (tagsContainer && tagsContainer.parentNode) {
-                tagsContainer.parentNode.insertBefore(aiFailedMsg, tagsContainer.nextSibling);
-            }
-        }
+        // L10b-FIX2: No user-facing message - user should be oblivious to AI failures
+        // Hidden ai_failed_flag is already set above for SEO review
 
         aiSuggestionsComplete = true;  // Don't block submit on error
 

@@ -386,3 +386,13 @@ DEFAULT_VIEW_RATE_LIMIT = 10
 # Prevents endpoints from hanging for 4+ minutes when API is slow
 # Used by: cloudinary_moderation.py, content_generation.py
 OPENAI_TIMEOUT = 30
+
+
+# =============================================================================
+# AI CONTENT GENERATION DEFAULTS (L10b Implementation)
+# =============================================================================
+
+# Default titles used when AI fails to generate a title
+# Used by: upload_views.py (upload_submit), content_generation.py
+# These indicate AI failure and trigger needs_seo_review flag
+DEFAULT_AI_TITLES = ('Untitled Prompt', 'Untitled Upload')

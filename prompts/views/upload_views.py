@@ -14,6 +14,7 @@ from datetime import timedelta
 from csp.decorators import csp_exempt
 from prompts.forms import PromptForm
 from prompts.services import ModerationOrchestrator
+from prompts.constants import DEFAULT_AI_TITLES
 import json
 import logging
 
@@ -602,12 +603,12 @@ def upload_submit(request):
 
     if ai_failed:
         needs_review = True
-        logger.info(f"Prompt {prompt.id}: AI failed flag detected, setting needs_seo_review")
+        logger.warning(f"Prompt {prompt.id}: AI failed flag detected, setting needs_seo_review")
 
     # Also flag if title is default or tags are empty (partial AI failure)
-    if prompt.title in ('Untitled Prompt', 'Untitled Upload') or not tags:
+    if prompt.title in DEFAULT_AI_TITLES or not tags:
         needs_review = True
-        logger.info(
+        logger.warning(
             f"Prompt {prompt.id}: Partial AI failure detected "
             f"(title='{prompt.title}', tags_count={len(tags)}), setting needs_seo_review"
         )

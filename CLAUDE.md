@@ -1,6 +1,6 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** January 8, 2026
+**Last Updated:** January 9, 2026
 **Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) ~98% COMPLETE, Phase K ON HOLD (95%)
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -6903,14 +6903,21 @@ needs_seo_review = models.BooleanField(default=False)
 
 #### L10c: Admin SEO Review Queue ✅
 
+**Status:** Complete (January 9, 2026)
+
+**Commits:**
+- `9236e26` - L10c: Add Admin SEO Review Queue
+- `cd838b5` - L10c-FIX: SEO Review Queue UX improvements (button styling, admin link)
+- `7b43ef8` - L10c-FIX2: Fix admin index URL error (NoReverseMatch fix)
+
 **Routes:**
 
 | URL | View | Purpose |
 |-----|------|---------|
 | `/admin/seo-review/` | `seo_review_queue` | List prompts needing SEO review |
-| `/admin/seo-complete/<id>/` | `seo_review_complete` | Mark prompt as SEO-reviewed |
+| `/admin/seo-complete/<id>/` | `mark_seo_complete` | Mark prompt as SEO-reviewed |
 
-**Template:** `prompts/templates/admin/seo_review_queue.html`
+**Template:** `templates/admin/seo_review_queue.html`
 
 **Workflow:**
 ```
@@ -6919,9 +6926,13 @@ AI Failure → needs_seo_review=True → Admin Queue → Manual Review → Mark 
 
 **Admin Queue Features:**
 - Lists all prompts where `needs_seo_review=True`
-- Shows: title, author, created date, AI failure reason
-- "Mark Complete" button clears the flag
+- Shows: title, author, created date, status
+- Edit/View/Done action buttons with WCAG AA compliant styling
 - Staff-only access (`@staff_member_required`)
+- Link added to Django admin dashboard index
+
+**Known Issue (Intentional):**
+The "Content Moderation System" banner on the admin dashboard links to `/admin/moderation-dashboard/` which does not exist yet. This is intentionally left broken as a reminder to build the Content Moderation Dashboard in a future phase. See [Content Moderation Dashboard (Planned)](#content-moderation-dashboard-planned) section.
 
 ---
 
@@ -6960,8 +6971,11 @@ AI Failure → needs_seo_review=True → Admin Queue → Manual Review → Mark 
 **Phase L Completion Criteria:**
 - ✅ L1-L8: Core B2 infrastructure (COMPLETE)
 - ✅ L8-DIRECT: Direct browser uploads (COMPLETE)
-- ⏳ L10: Revised scope (AI Fallback, Health, NSFW Draft) - 1-2 days
-- ⏳ L11: Documentation cleanup - 2 hours
+- ✅ L10: AI Fallback + SEO Review Queue (COMPLETE)
+- ⏸️ L10d: Health Endpoint - deferred for Phase M
+- ⏸️ L11: Documentation cleanup - deferred for Phase M
+
+**Decision (January 9, 2026):** L10d and L11 deferred to prioritize Phase M (Video Functionality) for MVP launch.
 
 **Post-Phase L:**
 - **Phase M:** Video Handling (FFmpeg-based) - 2-3 weeks
@@ -8074,9 +8088,46 @@ Review in admin: {admin_url}
 
 ---
 
+#### 12. Content Moderation Dashboard (Planned)
+
+**Description:** Unified dashboard for monitoring and managing content moderation across the platform, replacing the placeholder banner in Django admin.
+
+| Aspect | Details |
+|--------|---------|
+| **Route** | `/admin/moderation-dashboard/` |
+| **Priority** | Medium (Post-MVP) |
+| **Effort** | 4-8 hours |
+| **Dependencies** | Content moderation system (complete) |
+| **Technical Complexity** | Medium |
+
+**Planned Features:**
+- Real-time moderation queue (pending reviews)
+- Flagged content list with bulk actions
+- Moderation statistics and trends
+- User trust scores and history
+- Appeal management interface
+- Profanity word list management
+
+**Existing Infrastructure (Ready to Use):**
+- `ContentFlag` model - Tracks flagged content
+- `ModerationLog` model - Audit trail of moderation actions
+- `PromptReport` model - User-submitted reports
+- `ProfanityWord` model - Custom profanity filter words
+- `ModerationOrchestrator` service - Central moderation logic
+
+**Current Status:**
+The admin dashboard currently shows a "Content Moderation System" banner that links to this planned route (`/admin/moderation-dashboard/`). The link is intentionally broken as a reminder to build this feature.
+
+**Why Deferred:**
+- SEO Review Queue covers immediate moderation needs
+- Admin can use Django admin for individual model management
+- Dashboard is polish/convenience, not MVP-critical
+
+---
+
 ### Tier 3: Medium Priority (Q3 2026)
 
-#### 12. Comment Threading (moved from #11)
+#### 13. Comment Threading (moved from #11)
 
 **Description:** Reply to comments with nested threading.
 
@@ -8095,7 +8146,7 @@ Review in admin: {admin_url}
 
 ---
 
-#### 13. Prompt Versioning (moved from #12)
+#### 14. Prompt Versioning (moved from #12)
 
 **Description:** Edit history and version comparison for prompts.
 
@@ -8114,7 +8165,7 @@ Review in admin: {admin_url}
 
 ---
 
-#### 14. Collection Sharing (moved from #13)
+#### 15. Collection Sharing (moved from #13)
 
 **Description:** Share collections via link and embed on external sites.
 
@@ -8135,7 +8186,7 @@ Review in admin: {admin_url}
 
 ### Tier 4: Low Priority (Q4 2026+)
 
-#### 15. API Access (moved from #14)
+#### 16. API Access (moved from #14)
 
 **Description:** REST API for developers to integrate PromptFinder prompts.
 
@@ -8154,7 +8205,7 @@ Review in admin: {admin_url}
 
 ---
 
-#### 16. Bulk Upload (moved from #15)
+#### 17. Bulk Upload (moved from #15)
 
 **Description:** Upload multiple prompts at once via CSV or ZIP.
 
@@ -8173,7 +8224,7 @@ Review in admin: {admin_url}
 
 ---
 
-#### 17. Blog System (moved from #16)
+#### 18. Blog System (moved from #16)
 
 **Description:** Integrated blog for SEO content, tutorials, and prompt engineering guides.
 
@@ -8200,7 +8251,7 @@ Review in admin: {admin_url}
 
 ---
 
-#### 18. PromptCast AI Podcast (moved from #17)
+#### 19. PromptCast AI Podcast (moved from #17)
 
 **Description:** Automated AI-generated podcast discussing trending prompts and AI art news.
 
@@ -8236,7 +8287,7 @@ Review in admin: {admin_url}
 
 ---
 
-#### 19. Manual Mode Fallback (moved from #18)
+#### 20. Manual Mode Fallback (moved from #18)
 
 **Description:** When AI services fail (timeout, API error, refusal), allow users to manually enter title and description instead of blocking the entire upload flow.
 
@@ -11158,7 +11209,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.16
+**Version:** 2.17
 **Last Updated:** January 9, 2026
 **Document Owner:** Mateo Johnson
 **Project Status:** Pre-Launch (Phase L: Media Infrastructure ~98%, Phase K ON HOLD at 95%)

@@ -1149,7 +1149,34 @@ def ai_suggestions(request):
                 'ai_failed': True,
             }, status=400)
 
-        logger.info(f"ai_suggestions: Processing {resource_type}, secure_url={bool(secure_url)}, cloudinary_id={cloudinary_id}")
+        # M2 FIX: Detect video uploads and use thumbnail URL for OpenAI Vision API
+        # OpenAI Vision only accepts images (png, jpeg, gif, webp), not video files
+        is_video = request.session.get('direct_upload_is_video', False) or resource_type == 'video'
+
+        if is_video:
+            # For videos, use the thumbnail URL for AI analysis
+            video_thumb_url = request.session.get('upload_b2_video_thumb')
+            if video_thumb_url:
+                analysis_url = video_thumb_url
+                logger.info(f"ai_suggestions: Video detected, using thumbnail URL for AI analysis")
+            else:
+                # No thumbnail available - cannot analyze video without thumbnail
+                logger.warning(f"ai_suggestions: Video upload but no thumbnail URL found in session")
+                return JsonResponse({
+                    'success': True,
+                    'suggestions': {
+                        'title': 'Untitled Video',
+                        'description': '',
+                        'tags': [],
+                    },
+                    'warning': None,
+                    'ai_failed': True,
+                })
+        else:
+            # For images, use the standard URL
+            analysis_url = secure_url
+
+        logger.info(f"ai_suggestions: Processing {resource_type}, secure_url={bool(secure_url)}, cloudinary_id={cloudinary_id}, is_video={is_video}")
 
         # Initialize services
         content_service = ContentGenerationService()
@@ -1159,7 +1186,7 @@ def ai_suggestions(request):
         # This takes ~5 seconds
         # Uses analyze_image_only() - explicit API for image-only analysis
         # (before user enters prompt text or selects generator)
-        ai_suggestions_result = content_service.analyze_image_only(secure_url)
+        ai_suggestions_result = content_service.analyze_image_only(analysis_url)
 
         # Extract AI suggestions
         ai_title = ai_suggestions_result.get('title', '')
@@ -1175,9 +1202,10 @@ def ai_suggestions(request):
 
         # Perform NSFW moderation check
         # This takes ~3 seconds
+        # M2 FIX: Use analysis_url (thumbnail for videos) for moderation
         image_warning = None
         try:
-            moderation_result = vision_service.moderate_image_url(secure_url)
+            moderation_result = vision_service.moderate_image_url(analysis_url)
             if moderation_result.get('flagged'):
                 flagged_categories = moderation_result.get('flagged_categories', [])
                 image_warning = (

@@ -7315,7 +7315,7 @@ User Request → Cloudflare CDN ← ← ← ← ← ← ┘
 
 ## 🎬 Phase M: Video Handling (PLANNED)
 
-**Status:** 📋 PLANNED (Not Started)
+**Status:** 🚧 IN PROGRESS - Core video upload working, enhancements planned
 **Priority:** HIGH - Required for video upload functionality
 **Estimated Effort:** 2-3 weeks
 **Dependencies:** Phase L Media Infrastructure (~95% complete)
@@ -7699,6 +7699,40 @@ def generate_prompt_slug(title: str, generator: str) -> str:
 **Files to Create/Modify:**
 - `prompts/utils/seo_naming.py` - SEO naming utilities
 - Integrate with upload flow
+
+---
+
+### Known Issues
+
+#### Video Layout Shift on Prompt Detail Page
+
+**Status:** ⏸️ Deferred (not MVP-blocking)
+
+**Problem:** Videos on prompt detail page experience minor layout shift when loading. The browser doesn't know video dimensions until metadata loads, causing content below to shift.
+
+**Attempted Fixes:**
+- M1-FIX3: Forced 16:9 aspect ratio container with `object-fit: contain`
+- **Result:** Rejected - caused ugly letterboxing for vertical (9:16) videos
+- **Rollback:** Reverted to commit `7fc11b9`
+
+**Proper Solution (Future Task):**
+1. Add fields to Prompt model:
+   ```python
+   video_width = models.PositiveIntegerField(null=True, blank=True)
+   video_height = models.PositiveIntegerField(null=True, blank=True)
+   ```
+2. Extract dimensions during upload via FFmpeg (already running for thumbnail generation)
+3. Save dimensions to database when video uploads
+4. Pass to template: `<video width="{{ prompt.video_width }}" height="{{ prompt.video_height }}">`
+5. Browser reserves correct space upfront → zero layout shift
+
+**Decision:** Accept minor layout shift for MVP. Proper fix requires database migration and upload flow changes. Add to future video enhancement phase.
+
+**Files Involved:**
+- `prompts/models.py` - Add dimension fields
+- `prompts/services/video_processor.py` - Extract dimensions via FFmpeg
+- `prompts/views/upload_views.py` - Save dimensions during upload
+- `prompts/templates/prompts/prompt_detail.html` - Use dimensions in video tag
 
 ---
 

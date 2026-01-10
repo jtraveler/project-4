@@ -697,9 +697,13 @@ The multi-step upload flow uses Django session storage to pass data between endp
 | `cloudinary_id` | string | Legacy upload | `upload_submit` | Cloudinary public ID (fallback) |
 | `cloudinary_secure_url` | string | Legacy upload | `ai_suggestions`, `upload_submit` | Cloudinary URL (fallback) |
 | `is_video` | boolean | Upload detection | `upload_submit` | Media type flag |
+| `b2_video_url` | string | `b2_upload_complete` (video) | `upload_submit` | B2 video CDN URL |
+| `b2_video_thumb_url` | string | `b2_upload_complete` (video) | `upload_submit`, `upload_step2` | Video thumbnail URL |
+| `direct_upload_is_video` | boolean | `b2_upload_complete` | `upload_step2`, `upload_submit` | Video detection flag for direct B2 uploads |
 
 ### Upload Flow Sequence
 
+#### Image Upload Flow
 ```
 1. GET /api/upload/b2/presign/
    └─ Sets: b2_pending_upload (file_key, filename, content_type)
@@ -708,20 +712,46 @@ The multi-step upload flow uses Django session storage to pass data between endp
 
 3. POST /api/upload/b2/complete/
    └─ Reads: b2_pending_upload
-   └─ Sets: b2_secure_url, b2_thumb_url, pending_variant_image, pending_variant_filename
+   └─ Sets: b2_secure_url, b2_thumb_url, pending_variant_url, pending_variant_filename
 
 4. POST /api/upload/b2/variants/ (background)
-   └─ Reads: pending_variant_image, pending_variant_filename
+   └─ Reads: pending_variant_url, pending_variant_filename
    └─ Sets: b2_medium_url, b2_large_url, b2_webp_url, variant_urls, variants_complete
 
 5. GET /upload/details/ (Step 2 page)
-   └─ Reads: b2_secure_url, variants_complete
+   └─ Reads: b2_secure_url, b2_thumb_url, variants_complete
 
 6. GET /api/upload/ai-suggestions/
    └─ Reads: b2_secure_url OR cloudinary_secure_url
+   └─ Note: AI suggestions require b2_thumb_url for image analysis
 
 7. POST /upload/submit/
    └─ Reads: All b2_* keys, cloudinary_* keys
+   └─ Clears: All upload session keys via clear_upload_session()
+```
+
+#### Video Upload Flow
+```
+1. GET /api/upload/b2/presign/
+   └─ Sets: b2_pending_upload (file_key, filename, content_type='video/*')
+
+2. Browser uploads directly to B2 via presigned URL
+
+3. POST /api/upload/b2/complete/
+   └─ Reads: b2_pending_upload
+   └─ Sets: b2_video_url, b2_video_thumb_url, direct_upload_is_video=True
+   └─ Note: No variant generation for videos (stored as-is)
+
+4. GET /upload/details/ (Step 2 page)
+   └─ Reads: b2_video_url, b2_video_thumb_url, direct_upload_is_video
+
+5. GET /api/upload/ai-suggestions/
+   └─ Reads: b2_video_thumb_url (thumbnail used for AI analysis)
+   └─ Fallback: Uses first frame extraction if no thumbnail
+
+6. POST /upload/submit/
+   └─ Reads: b2_video_url, b2_video_thumb_url, direct_upload_is_video
+   └─ Saves: prompt.b2_video_url, prompt.b2_video_thumb_url
    └─ Clears: All upload session keys via clear_upload_session()
 ```
 

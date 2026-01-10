@@ -10210,6 +10210,57 @@ Session 40 implemented the L10 SEO Review Infrastructure, establishing a "silent
 
 ---
 
+### January 2026 - Session 42 (Jan 10, 2026)
+
+**Phase L/M: B2 Video Display Fixes & Layout Shift Investigation**
+
+Session 42 completed critical fixes for video display in the B2 infrastructure and documented a video layout shift issue for future resolution.
+
+**L10c-FIX2: Admin Index URL Error**
+- Fixed NoReverseMatch error on Django admin index page
+- SEO Review Queue link in admin dashboard now works correctly
+
+**M1-FIX: Video Thumbnail URL Session Handling**
+- Added `b2_video_thumb_url` session key in `b2_upload_complete()` view
+- Video thumbnails now properly passed from Step 1 to Step 2 via session storage
+- File: `prompts/views/api_views.py`
+
+**M1-FIX2: B2 Video Display on Prompt Detail Page**
+- Fixed prompt detail page showing Cloudinary video URL instead of B2 URL
+- Updated template to use B2-first pattern: `{{ prompt.display_video_url }}`
+- File: `prompts/templates/prompts/prompt_detail.html`
+
+**Video Layout Shift Investigation (M1-FIX3 - Rejected)**
+- Attempted fix: Forced 16:9 aspect ratio container with `object-fit: contain`
+- Result: Caused ugly letterboxing for vertical (9:16) videos
+- Decision: Reverted to commit `7fc11b9`, accepted minor layout shift for MVP
+
+**Commits (chronological):**
+- `7b43ef8` - fix(phase-l): Fix admin index URL error (L10c-FIX2)
+- `0bf7e43` - docs: Update CLAUDE.md for L10c completion (v2.17)
+- `fc2ffa0` - fix(phase-l): Fix B2 video display on prompt detail page (M1-FIX2)
+- `7fc11b9` - docs: Add M1-FIX2 investigation and completion reports
+- `3ce8938` - docs(phase-m): Document video layout shift known issue
+
+**Files Modified:**
+- `prompts/views/api_views.py` - Video thumbnail session handling
+- `prompts/templates/prompts/prompt_detail.html` - B2-first video display
+- `CLAUDE.md` - Documentation updates
+- `docs/reports/` - Investigation and completion reports
+
+**Agent Ratings:**
+| Component | Agent | Rating |
+|-----------|-------|--------|
+| M1-FIX session handling | @django-pro | 8.5/10 |
+| M1-FIX2 template fix | @frontend-developer | 9.0/10 |
+| Documentation | @doc-writer | 8.5/10 |
+| **Average** | | **8.7/10** |
+
+**Phase L Status:** ~98% complete (L11 documentation remaining)
+**Phase M Status:** Video uploads functional, layout shift documented as known issue
+
+---
+
 ### January 2026 - Session 38 (Jan 5-6, 2026)
 
 **L5e Complete + Session Management + Critical Blocker Discovery → RESOLVED in Session 39**
@@ -11243,7 +11294,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.17
-**Last Updated:** January 9, 2026
+**Version:** 2.19
+**Last Updated:** January 10, 2026
 **Document Owner:** Mateo Johnson
 **Project Status:** Pre-Launch (Phase L: Media Infrastructure ~98%, Phase K ON HOLD at 95%)

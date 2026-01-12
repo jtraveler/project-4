@@ -59,7 +59,12 @@
                             preload="metadata"
                             autoplay
                             loop
-                            muted>
+                            muted
+                            {% if prompt.video_width and prompt.video_height %}
+                            style="aspect-ratio: {{ prompt.video_width }} / {{ prompt.video_height }};"
+                            width="{{ prompt.video_width }}"
+                            height="{{ prompt.video_height }}"
+                            {% endif %}>
                             <source src="{{ prompt.display_video_url }}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>

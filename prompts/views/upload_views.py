@@ -596,7 +596,11 @@ def upload_submit(request):
 
             prompt.b2_video_url = b2_video or b2_original
             prompt.b2_video_thumb_url = b2_video_thumb
-            logger.info(f"Set B2 video URL: {prompt.b2_video_url[:50]}..." if prompt.b2_video_url else "No B2 video URL")
+            # Phase M5: Save video dimensions to model
+            if video_width and video_height:
+                prompt.video_width = video_width
+                prompt.video_height = video_height
+            logger.info(f"Set B2 video URL: {prompt.b2_video_url[:50]}..., dimensions: {video_width}x{video_height}" if prompt.b2_video_url else "No B2 video URL")
         else:
             # Image upload - set all B2 image URL fields
             prompt.b2_image_url = b2_original

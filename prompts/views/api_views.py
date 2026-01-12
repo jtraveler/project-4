@@ -838,7 +838,7 @@ def b2_upload_complete(request):
     # For videos: generate thumbnail synchronously (required for display)
     if is_video:
         try:
-            from prompts.services.video_processor import extract_thumbnail
+            from prompts.services.video_processor import extract_thumbnail, get_video_metadata
             import tempfile
             import os
 
@@ -855,6 +855,17 @@ def b2_upload_complete(request):
                 # Write video to temp file
                 with open(temp_video_path, 'wb') as f:
                     f.write(response.content)
+
+                # Phase M5: Extract video dimensions for CLS prevention
+                video_width = None
+                video_height = None
+                try:
+                    metadata = get_video_metadata(temp_video_path)
+                    video_width = metadata.get('width')
+                    video_height = metadata.get('height')
+                    logger.info(f"Extracted video dimensions: {video_width}x{video_height}")
+                except Exception as e:
+                    logger.warning(f"Failed to extract video dimensions: {e}")
 
                 # Extract thumbnail
                 extract_thumbnail(
@@ -893,7 +904,10 @@ def b2_upload_complete(request):
         request.session['upload_b2_video'] = urls['original']  # Original video URL
         request.session['upload_b2_video_thumb'] = urls.get('thumb', '')  # Video thumbnail
         request.session['upload_is_b2'] = True  # Mark as B2 upload
-        logger.info(f"Video upload session keys set - video: {urls['original'][:50]}, thumb: {urls.get('thumb', '')[:50] if urls.get('thumb') else 'None'}")
+        # Phase M5: Store video dimensions in session
+        request.session['upload_video_width'] = video_width
+        request.session['upload_video_height'] = video_height
+        logger.info(f"Video upload session keys set - video: {urls['original'][:50]}, thumb: {urls.get('thumb', '')[:50] if urls.get('thumb') else 'None'}, dimensions: {video_width}x{video_height}")
 
         # DEBUG LOGGING
         print(f"[DEBUG b2_upload_complete] is_video: {is_video}")
@@ -915,6 +929,8 @@ def b2_upload_complete(request):
         'urls': urls,
         'is_video': is_video,
         'variants_pending': variants_pending,
+        'video_width': video_width if is_video else None,
+        'video_height': video_height if is_video else None,
     })
 
 

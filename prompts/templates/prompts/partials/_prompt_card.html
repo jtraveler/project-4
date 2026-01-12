@@ -133,8 +133,14 @@
                            loop
                            playsinline
                            preload="none"
+                           {% if prompt.video_width and prompt.video_height %}
+                           style="aspect-ratio: {{ prompt.video_width }} / {{ prompt.video_height }};"
+                           width="{{ prompt.video_width }}"
+                           height="{{ prompt.video_height }}"
+                           {% else %}
                            width="440"
                            height="auto"
+                           {% endif %}
                            data-src="{{ prompt.display_video_url|default:prompt.get_video_url }}">
                         <source data-src="{{ prompt.display_video_url|default:prompt.get_video_url }}" type="video/mp4">
                     </video>
@@ -149,8 +155,14 @@
                                 (max-width: 1100px) 33vw,
                                 25vw"
                          alt="{{ prompt.title }}"
+                         {% if prompt.video_width and prompt.video_height %}
+                         style="aspect-ratio: {{ prompt.video_width }} / {{ prompt.video_height }};"
+                         width="{{ prompt.video_width }}"
+                         height="{{ prompt.video_height }}"
+                         {% else %}
                          width="440"
                          height="auto"
+                         {% endif %}
                          {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %}
                          decoding="async">
 

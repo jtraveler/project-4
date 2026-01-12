@@ -1067,11 +1067,12 @@ class Prompt(models.Model):
     def is_video(self):
         """
         Check if this prompt contains a video instead of an image.
-        
+
         Returns:
             bool: True if this prompt has a video, False otherwise
         """
-        return bool(self.featured_video)
+        # B2-first pattern: check B2 storage, fall back to Cloudinary
+        return bool(self.b2_video_url) or bool(self.featured_video)
     
     def get_media_url(self):
         """
@@ -1201,8 +1202,9 @@ class Prompt(models.Model):
     @property
     def display_thumb_url(self):
         """
-        Get thumbnail URL for grid displays (B2 preferred, Cloudinary fallback).
+        Get thumbnail URL for grid displays (B2 preferred, video thumb, Cloudinary fallback).
 
+        Fallback order: B2 image thumb -> B2 video thumb -> Cloudinary image.
         Template usage: {{ prompt.display_thumb_url }}
 
         Returns:
@@ -1211,6 +1213,9 @@ class Prompt(models.Model):
         # Try B2 thumb first
         if self.b2_thumb_url:
             return self.b2_thumb_url
+        # Video thumbnail fallback for video prompts
+        if self.b2_video_thumb_url:
+            return self.b2_video_thumb_url
         # Cloudinary fallback with thumbnail transformation
         if self.featured_image:
             try:
@@ -1229,8 +1234,9 @@ class Prompt(models.Model):
     @property
     def display_medium_url(self):
         """
-        Get medium-sized URL for cards (B2 preferred, Cloudinary fallback).
+        Get medium-sized URL for cards (B2 preferred, video thumb, Cloudinary fallback).
 
+        Fallback order: B2 medium image -> B2 video thumb -> Cloudinary image.
         Template usage: {{ prompt.display_medium_url }}
 
         Returns:
@@ -1239,6 +1245,9 @@ class Prompt(models.Model):
         # Try B2 medium first
         if self.b2_medium_url:
             return self.b2_medium_url
+        # Video thumbnail fallback for video prompts
+        if self.b2_video_thumb_url:
+            return self.b2_video_thumb_url
         # Cloudinary fallback with medium transformation
         if self.featured_image:
             try:
@@ -1257,8 +1266,9 @@ class Prompt(models.Model):
     @property
     def display_large_url(self):
         """
-        Get large URL for detail pages (B2 preferred, Cloudinary fallback).
+        Get large URL for detail pages (B2 preferred, video thumb, Cloudinary fallback).
 
+        Fallback order: B2 large image -> B2 video thumb -> Cloudinary image.
         Template usage: {{ prompt.display_large_url }}
 
         Returns:
@@ -1267,6 +1277,9 @@ class Prompt(models.Model):
         # Try B2 large first
         if self.b2_large_url:
             return self.b2_large_url
+        # Video thumbnail fallback for video prompts
+        if self.b2_video_thumb_url:
+            return self.b2_video_thumb_url
         # Cloudinary fallback - original or optimized
         if self.featured_image:
             try:

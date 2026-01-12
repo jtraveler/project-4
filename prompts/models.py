@@ -851,6 +851,19 @@ class Prompt(models.Model):
         help_text="B2 CDN URL for video thumbnail (600x600)"
     )
 
+    # Video dimension fields (Phase M5: Layout Shift Prevention)
+    # Stores video dimensions extracted during upload for CLS optimization.
+    video_width = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Video width in pixels (extracted during upload)"
+    )
+    video_height = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Video height in pixels (extracted during upload)"
+    )
+
     # Custom managers
     objects = PromptManager()  # Default: excludes soft-deleted prompts
     all_objects = models.Manager()  # Include deleted prompts

@@ -1216,14 +1216,12 @@ class Prompt(models.Model):
         # Video thumbnail fallback for video prompts
         if self.b2_video_thumb_url:
             return self.b2_video_thumb_url
-        # Cloudinary fallback with thumbnail transformation
+        # Cloudinary fallback with thumbnail transformation (preserve aspect ratio)
         if self.featured_image:
             try:
                 return self.featured_image.build_url(
                     width=300,
-                    height=300,
-                    crop='fill',
-                    gravity='auto',
+                    crop='limit',
                     quality='auto',
                     fetch_format='auto'
                 )
@@ -1248,14 +1246,12 @@ class Prompt(models.Model):
         # Video thumbnail fallback for video prompts
         if self.b2_video_thumb_url:
             return self.b2_video_thumb_url
-        # Cloudinary fallback with medium transformation
+        # Cloudinary fallback with medium transformation (preserve aspect ratio)
         if self.featured_image:
             try:
                 return self.featured_image.build_url(
                     width=600,
-                    height=600,
-                    crop='fill',
-                    gravity='auto',
+                    crop='limit',
                     quality='auto',
                     fetch_format='auto'
                 )

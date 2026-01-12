@@ -867,12 +867,20 @@ def b2_upload_complete(request):
                 except Exception as e:
                     logger.warning(f"Failed to extract video dimensions: {e}")
 
-                # Extract thumbnail
+                # Extract thumbnail (preserve aspect ratio, max 600px on longest side)
+                if video_width and video_height:
+                    if video_width >= video_height:
+                        thumb_size = f'600x{int(600 * video_height / video_width)}'
+                    else:
+                        thumb_size = f'{int(600 * video_width / video_height)}x600'
+                else:
+                    thumb_size = '600x600'  # Fallback to square if dimensions unknown
+                
                 extract_thumbnail(
                     temp_video_path,
                     temp_thumb_path,
                     timestamp='00:00:01',
-                    size='600x600'
+                    size=thumb_size
                 )
 
                 # Upload thumbnail

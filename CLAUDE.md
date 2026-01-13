@@ -7351,7 +7351,7 @@ User Upload → Validation (M5) → Frame Extraction (M1) → NSFW Check (M2)
 | M2 | Video NSFW Moderation | 📋 Planned | 3-4 days | M1 |
 | M3 | SEO Content Generation | 📋 Planned | 2-3 days | M1 |
 | M4 | Video Thumbnails | 📋 Planned | 1-2 days | M1 |
-| M5 | File Restrictions | 📋 Planned | 1 day | None |
+| M5 | File Restrictions + Video Dimensions | ✅ Complete | 1 day | None |
 | M6 | SEO File Naming/Slug | 📋 Planned | 1-2 days | M3 |
 
 ---
@@ -7397,10 +7397,11 @@ def extract_frames(video_path: str, num_frames: int = 5) -> list[str]:
     return frame_paths
 ```
 
-**Configuration:**
-- `VIDEO_FRAME_COUNT = 5` - Number of frames to extract
+**Configuration (Updated Session 48):**
+- `VIDEO_FRAME_COUNT = 3` - Number of frames to extract (reduced from 5)
 - `VIDEO_FRAME_QUALITY = 2` - JPEG quality (2 = high quality)
-- Frames extracted at 20%, 40%, 60%, 80% of video duration
+- Frames extracted at **25%, 50%, 75%** of video duration
+- **Rationale:** 3 frames provides good coverage while reducing API costs and processing time
 
 **Files to Create/Modify:**
 - `prompts/services/video_processor.py` - Frame extraction functions
@@ -7706,33 +7707,32 @@ def generate_prompt_slug(title: str, generator: str) -> str:
 
 #### Video Layout Shift on Prompt Detail Page
 
-**Status:** ⏸️ Deferred (not MVP-blocking)
+**Status:** ✅ RESOLVED (M5 - January 13, 2026)
 
-**Problem:** Videos on prompt detail page experience minor layout shift when loading. The browser doesn't know video dimensions until metadata loads, causing content below to shift.
+**Problem:** Videos on prompt detail page experienced layout shift when loading. The browser didn't know video dimensions until metadata loaded, causing content below to shift.
 
-**Attempted Fixes:**
+**Previous Attempted Fixes:**
 - M1-FIX3: Forced 16:9 aspect ratio container with `object-fit: contain`
 - **Result:** Rejected - caused ugly letterboxing for vertical (9:16) videos
 - **Rollback:** Reverted to commit `7fc11b9`
 
-**Proper Solution (Future Task):**
-1. Add fields to Prompt model:
+**Implemented Solution (M5-C):**
+1. Added fields to Prompt model:
    ```python
    video_width = models.PositiveIntegerField(null=True, blank=True)
    video_height = models.PositiveIntegerField(null=True, blank=True)
    ```
-2. Extract dimensions during upload via FFmpeg (already running for thumbnail generation)
-3. Save dimensions to database when video uploads
-4. Pass to template: `<video width="{{ prompt.video_width }}" height="{{ prompt.video_height }}">`
+2. FFmpeg extracts dimensions during upload via `get_video_dimensions()`
+3. Dimensions saved to session keys (`video_width`, `video_height`) during B2 complete
+4. Template uses `aspect-ratio: {{ prompt.video_width }} / {{ prompt.video_height }}`
 5. Browser reserves correct space upfront → zero layout shift
 
-**Decision:** Accept minor layout shift for MVP. Proper fix requires database migration and upload flow changes. Add to future video enhancement phase.
-
-**Files Involved:**
-- `prompts/models.py` - Add dimension fields
-- `prompts/services/video_processor.py` - Extract dimensions via FFmpeg
-- `prompts/views/upload_views.py` - Save dimensions during upload
-- `prompts/templates/prompts/prompt_detail.html` - Use dimensions in video tag
+**Files Modified:**
+- `prompts/models.py` - Added dimension fields (migration 0043)
+- `prompts/services/video_processor.py` - `get_video_dimensions()` function
+- `prompts/views/api_views.py` - Dimension extraction in `b2_upload_complete()`
+- `prompts/views/upload_views.py` - Dimension storage from session
+- `prompts/templates/prompts/prompt_detail.html` - Uses `aspect-ratio` CSS property
 
 ---
 
@@ -10258,6 +10258,55 @@ Session 42 completed critical fixes for video display in the B2 infrastructure a
 
 **Phase L Status:** ~98% complete (L11 documentation remaining)
 **Phase M Status:** Video uploads functional, layout shift documented as known issue
+
+---
+
+### January 2026 - Session 48 (Jan 13, 2026)
+
+**M5 Video Dimensions CLS Prevention: COMPLETE ✅**
+
+Session 48 resolved the video layout shift issue that was deferred in Session 42. The solution extracts video dimensions during upload and uses CSS `aspect-ratio` for zero-CLS video display.
+
+**M5-A: Model Fields + Migration**
+- Added `video_width` and `video_height` IntegerFields to Prompt model
+- Migration: `0043_prompt_video_height_prompt_video_width.py`
+- Fields nullable for backwards compatibility with existing prompts
+
+**M5-B: FFmpeg Dimension Extraction**
+- Added `get_video_dimensions()` function to `video_processor.py`
+- Uses FFprobe JSON output for reliable dimension extraction
+- Returns `(width, height)` tuple or `(None, None)` on failure
+- Integrated into `b2_upload_complete()` API endpoint
+
+**M5-C: Session Storage + Template Integration**
+- Session keys: `video_width`, `video_height` stored after dimension extraction
+- `upload_submit()` view reads session and saves to Prompt model
+- Template uses `aspect-ratio: {{ prompt.video_width }}/{{ prompt.video_height }}` for CLS prevention
+
+**Video Thumbnail Aspect Ratio Fix**
+- Fixed thumbnail generation to preserve aspect ratio
+- Thumbnail constraint: max 600px on longest side (was always 600x600 square crop)
+- Prevents distortion on portrait/landscape videos
+
+**New Management Command: `regenerate_video_thumbnails`**
+- Regenerates thumbnails for existing Cloudinary videos with correct aspect ratio
+- Supports `--dry-run` mode for safe testing
+- Filters: `--limit N`, prompts with `b2_video_url` IS NULL and `featured_video` IS NOT NULL
+
+**Video NSFW Moderation Planning Update (M1/M2)**
+- Reduced frame extraction from 5 frames to 3 frames
+- Extraction points: 25%, 50%, 75% of video duration (was 20%, 40%, 60%, 80%)
+- Rationale: 3 frames provides sufficient coverage while reducing API costs
+
+**Files Modified:**
+- `prompts/models.py` - Added `video_width`, `video_height` fields
+- `prompts/services/video_processor.py` - `get_video_dimensions()`, thumbnail aspect ratio fix
+- `prompts/views/api_views.py` - Dimension extraction in `b2_upload_complete()`
+- `prompts/views/upload_views.py` - Session retrieval, model save
+- `prompts/templates/prompts/prompt_detail.html` - CSS `aspect-ratio` property
+- `prompts/management/commands/regenerate_video_thumbnails.py` - NEW
+
+**Phase M Status:** M5 complete, video CLS issue resolved
 
 ---
 

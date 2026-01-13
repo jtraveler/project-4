@@ -127,7 +127,7 @@ live-working-project/
 
 ---
 
-## Management Commands (18 total)
+## Management Commands (19 total)
 
 | Command | Purpose | Schedule |
 |---------|---------|----------|
@@ -149,6 +149,7 @@ live-working-project/
 | `moderate_prompts` | Run moderation on prompts | Manual |
 | `test_moderation` | Test moderation service | Manual |
 | `test_api_latency` | Test B2 and OpenAI API response times | Manual |
+| `regenerate_video_thumbnails` | Regenerate Cloudinary video thumbnails with correct aspect ratio | Manual |
 
 ---
 

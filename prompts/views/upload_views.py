@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.core.cache import cache
 from django.db import IntegrityError
+from django.utils.html import escape
 from prompts.models import Prompt
 from taggit.models import Tag
 from django.views.decorators.http import require_POST
@@ -171,6 +172,13 @@ def upload_step1(request):
     # Clear any stale session data from previous uploads
     # This prevents data bleeding between upload sessions
     clear_upload_session(request)
+
+    # Check for error message from redirect (e.g., video moderation rejection)
+    error_message = request.GET.get('error', '')
+    if error_message:
+        # Sanitize and limit length for security (defense-in-depth against XSS)
+        sanitized_message = escape(error_message[:500])
+        messages.error(request, sanitized_message)
 
     # Calculate uploads this week
     week_start = timezone.now() - timedelta(days=7)

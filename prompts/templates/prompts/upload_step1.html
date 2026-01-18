@@ -980,7 +980,13 @@ async function uploadToB2(file) {
             throw fetchError;
         }
         if (!completeData.success) {
-            throw new Error(completeData.error || 'Processing failed');
+            // Redirect to upload page with error message instead of throwing
+            // This ensures the error displays in the banner, not the progress stepper
+            const errorMessage = completeData.error || 'Upload failed. Please try again.';
+            // Truncate very long messages to prevent URL length issues
+            const truncatedMessage = errorMessage.substring(0, 500);
+            window.location.href = `{% url 'prompts:upload_step1' %}?error=${encodeURIComponent(truncatedMessage)}`;
+            return; // Prevent further execution during redirect
         }
 
         // STEP 3.5: NSFW Moderation Check (CC_SPEC_NSFW_STEP1_BLOCKING)
@@ -1031,11 +1037,14 @@ async function uploadToB2(file) {
                             console.error('Failed to delete rejected content:', deleteErr);
                         }
 
-                        // Show error and stop - use timeout message if it was a timeout
-                        const errorMessage = moderationResult.timeout
-                            ? 'Moderation timeout - blocked'
-                            : 'Content blocked';
-                        throw new Error(errorMessage);
+                        // CC_SPEC_VIDEO_REJECTION_FIX: Redirect immediately with user-friendly message
+                        // This prevents the error from being caught by outer catch and displayed in progress stepper
+                        // Use the friendly messages directly (same as getUserFriendlyError mappings)
+                        const userFriendlyMessage = moderationResult.timeout
+                            ? "We couldn't verify this content meets our guidelines. For safety, please try again."
+                            : 'This content contains material that violates our community guidelines and cannot be uploaded.';
+                        window.location.href = `{% url 'prompts:upload_step1' %}?error=${encodeURIComponent(userFriendlyMessage)}`;
+                        return; // Stop all further execution during redirect
                     }
 
                     if (moderationResult.status === 'flagged') {
@@ -1053,11 +1062,7 @@ async function uploadToB2(file) {
                 // If moderation API fails (non-ok response), allow upload to continue
                 // The content will be moderated again at Step 2 submission
             } catch (moderationError) {
-                // If this is our thrown error (Content blocked), re-throw it
-                if (moderationError.message === 'Content blocked' ||
-                    moderationError.message === 'Moderation timeout - blocked') {
-                    throw moderationError;
-                }
+                // CC_SPEC_VIDEO_REJECTION_FIX: Blocking errors now redirect directly (no re-throw needed)
                 // For network errors, log but allow upload to continue
                 // Content will be moderated at Step 2 submission as fallback
                 console.warn('Moderation check failed, continuing:', moderationError);

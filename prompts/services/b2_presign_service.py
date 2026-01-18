@@ -40,6 +40,11 @@ def get_b2_client():
     """
     Create a boto3 S3 client configured for B2.
 
+    Timeout configuration:
+    - connect_timeout: 5 seconds to establish connection
+    - read_timeout: 10 seconds to receive response
+    - retries: 2 attempts max (1 retry on failure)
+
     Returns:
         boto3.client: Configured S3 client for B2
     """
@@ -51,7 +56,10 @@ def get_b2_client():
         region_name=settings.B2_REGION,
         config=Config(
             signature_version='s3v4',
-            s3={'addressing_style': 'path'}
+            s3={'addressing_style': 'path'},
+            connect_timeout=5,
+            read_timeout=10,
+            retries={'max_attempts': 2}
         )
     )
 

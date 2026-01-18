@@ -753,6 +753,10 @@ def b2_presign_upload(request):
 @login_required
 @require_POST
 def b2_upload_complete(request):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("=== B2_UPLOAD_COMPLETE STARTED ===")  # Add this FIRST
+
     """
     Handle completion of direct browser-to-B2 upload.
 
@@ -802,6 +806,7 @@ def b2_upload_complete(request):
     """
     # Get pending upload from session
     pending = request.session.get('pending_direct_upload')
+    logger.info(f"=== PENDING DATA EXISTS: {pending is not None} ===")
 
     if not pending:
         return JsonResponse({
@@ -816,7 +821,9 @@ def b2_upload_complete(request):
     is_video = pending['is_video']
 
     # Verify the upload exists in B2
+    logger.info(f"=== ABOUT TO VERIFY KEY: {key} ===")
     verification = verify_upload_exists(key)
+    logger.info(f"=== VERIFY RESULT: {verification} ===")
 
     if not verification['exists']:
         return JsonResponse({
@@ -824,21 +831,51 @@ def b2_upload_complete(request):
             'error': verification.get('error', 'Upload verification failed. File not found in storage.')
         }, status=400)
 
+    logger.info(f"=== VERIFICATION PASSED, is_video={is_video} ===")
     urls = {'original': cdn_url}
     variants_pending = False
+    video_moderation_result = None  # Will store moderation result for videos
+    logger.info("=== URLS DICT CREATED ===")
 
-    # For images: defer variant generation to Step 2
+    # For images: generate thumbnail synchronously, defer medium/large/webp to Step 2
     if not is_video:
-        # Store URL for deferred variant generation
+        # Generate thumbnail immediately (quick mode still defers medium/large/webp)
+        try:
+            from prompts.services.b2_upload_service import B2UploadService
+
+            # Fetch original image for thumbnail generation
+            image_response = requests.get(cdn_url, timeout=10)
+            image_response.raise_for_status()
+
+            # Generate only thumbnail (300x300)
+            b2_service = B2UploadService()
+            thumb_result = b2_service.process_upload(
+                image_response.content,
+                filename,
+                thumbnail_sizes=['thumb']  # Only generate thumb, not medium/large/webp
+            )
+
+            if thumb_result.get('success') and thumb_result.get('urls', {}).get('thumb'):
+                urls['thumb'] = thumb_result['urls']['thumb']
+                logger.info(f"=== IMAGE THUMB GENERATED: {urls['thumb']} ===")
+            else:
+                logger.warning("=== IMAGE THUMB GENERATION FAILED ===")
+
+        except Exception as e:
+            logger.error(f"=== IMAGE THUMB ERROR: {e} ===")
+            # Continue without thumb - not fatal
+
+        # Still defer medium/large/webp to Step 2
         request.session['pending_variant_url'] = cdn_url
         request.session['pending_variant_filename'] = filename
         request.session['variants_complete'] = False
         variants_pending = True
+        logger.info("=== IMAGE PATH: Session vars set, thumb generated ===")
 
     # For videos: generate thumbnail synchronously (required for display)
     if is_video:
         try:
-            from prompts.services.video_processor import extract_thumbnail, get_video_metadata
+            from prompts.services.video_processor import extract_thumbnail, get_video_metadata, extract_moderation_frames
             import tempfile
             import os
 
@@ -867,6 +904,59 @@ def b2_upload_complete(request):
                 except Exception as e:
                     logger.warning(f"Failed to extract video dimensions: {e}")
 
+                # Phase M1+M2: Video NSFW Moderation
+                # Extract frames at 25%, 50%, 75% of video duration for analysis
+                frame_paths = []
+                try:
+                    frame_paths = extract_moderation_frames(temp_video_path, num_frames=3)
+                    logger.info(f"Extracted {len(frame_paths)} frames for moderation")
+
+                    if frame_paths:
+                        from prompts.services.cloudinary_moderation import VisionModerationService
+                        video_moderation_result = VisionModerationService().moderate_video_frames(frame_paths)
+                        logger.info(f"Video moderation result: {video_moderation_result}")
+
+                        # Fail-closed: Block if content is NOT safe (rejected, flagged, or missing is_safe)
+                        if not video_moderation_result.get('is_safe', False):
+                            # Clean up temp files before returning
+                            for fp in frame_paths:
+                                try:
+                                    if os.path.exists(fp):
+                                        os.remove(fp)
+                                except Exception:
+                                    pass
+                            return JsonResponse({
+                                'success': False,
+                                'error': 'Video contains content that violates our guidelines.',
+                                'moderation_status': 'rejected',
+                                'severity': video_moderation_result.get('severity', 'critical')
+                            }, status=400)
+                    else:
+                        logger.warning("No frames extracted for moderation - blocking upload")
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'Unable to analyze video content. Please try again.',
+                            'moderation_status': 'error'
+                        }, status=400)
+
+                except Exception as e:
+                    # Fail-closed: Any moderation error blocks the upload
+                    logger.exception(f"Video moderation failed: {e}")
+                    # Note: Cleanup handled by finally block
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Unable to verify video content. Please try again.',
+                        'moderation_status': 'error'
+                    }, status=400)
+                finally:
+                    # Always clean up frame files (if not already cleaned in error handlers)
+                    for fp in frame_paths:
+                        try:
+                            if os.path.exists(fp):
+                                os.remove(fp)
+                        except Exception:
+                            pass
+
                 # Extract thumbnail (preserve aspect ratio, max 600px on longest side)
                 if video_width and video_height:
                     if video_width >= video_height:
@@ -876,10 +966,34 @@ def b2_upload_complete(request):
                 else:
                     thumb_size = '600x600'  # Fallback to square if dimensions unknown
                 
+                # Use AI-selected best frame if available, otherwise default to first frame
+                # best_thumbnail_frame is 1-indexed (1, 2, or 3), convert to 0-indexed
+                best_frame_index = 0  # Default to first analyzed frame (index 0)
+                if video_moderation_result and 'best_thumbnail_frame' in video_moderation_result:
+                    best_frame_index = video_moderation_result['best_thumbnail_frame'] - 1  # Convert 1-indexed to 0-indexed
+
+                # Calculate timestamp from frame index (frames at 25%, 50%, 75%)
+                if metadata and 'duration' in metadata:
+                    duration = metadata['duration']
+                    frame_positions = [0.25, 0.50, 0.75]
+                    if 0 <= best_frame_index < len(frame_positions):
+                        thumb_timestamp_seconds = duration * frame_positions[best_frame_index]
+                    else:
+                        thumb_timestamp_seconds = duration * 0.25  # Default to 25%
+                    # Format as HH:MM:SS
+                    hours = int(thumb_timestamp_seconds // 3600)
+                    minutes = int((thumb_timestamp_seconds % 3600) // 60)
+                    seconds = int(thumb_timestamp_seconds % 60)
+                    thumb_timestamp = f'{hours:02d}:{minutes:02d}:{seconds:02d}'
+                else:
+                    thumb_timestamp = '00:00:01'  # Fallback
+
+                logger.info(f"Using thumbnail timestamp: {thumb_timestamp} (frame_index: {best_frame_index}, AI-selected: {'best_thumbnail_frame' in video_moderation_result if video_moderation_result else False})")
+
                 extract_thumbnail(
                     temp_video_path,
                     temp_thumb_path,
-                    timestamp='00:00:01',
+                    timestamp=thumb_timestamp,
                     size=thumb_size
                 )
 
@@ -899,6 +1013,7 @@ def b2_upload_complete(request):
             # Continue without thumbnail - video is still valid
 
     # Clear pending upload from session
+    logger.info("=== ABOUT TO CLEAR PENDING UPLOAD ===")
     del request.session['pending_direct_upload']
     request.session.modified = True
 
@@ -915,15 +1030,24 @@ def b2_upload_complete(request):
         # Phase M5: Store video dimensions in session
         request.session['upload_video_width'] = video_width
         request.session['upload_video_height'] = video_height
+
+        # Phase M1+M2: Store video moderation result and AI-generated content
+        if video_moderation_result:
+            request.session['video_moderation_result'] = video_moderation_result
+            # Store AI-generated content for Step 2 form pre-population
+            if 'title' in video_moderation_result:
+                request.session['ai_generated_title'] = video_moderation_result['title']
+            if 'description' in video_moderation_result:
+                request.session['ai_generated_description'] = video_moderation_result['description']
+            if 'suggested_tags' in video_moderation_result:
+                request.session['ai_suggested_tags'] = video_moderation_result['suggested_tags']
+            logger.info(f"Video moderation result stored in session: status={video_moderation_result.get('status')}")
+
         logger.info(f"Video upload session keys set - video: {urls['original'][:50]}, thumb: {urls.get('thumb', '')[:50] if urls.get('thumb') else 'None'}, dimensions: {video_width}x{video_height}")
 
-        # DEBUG LOGGING
-        print(f"[DEBUG b2_upload_complete] is_video: {is_video}")
-        print(f"[DEBUG b2_upload_complete] Session keys set:")
-        print(f"  - upload_b2_video: {request.session.get('upload_b2_video', 'NOT SET')}")
-        print(f"  - upload_b2_video_thumb: {request.session.get('upload_b2_video_thumb', 'NOT SET')}")
-        print(f"  - upload_is_b2: {request.session.get('upload_is_b2', 'NOT SET')}")
-        print(f"  - direct_upload_is_video: {request.session.get('direct_upload_is_video', 'NOT SET')}")
+        # Debug logging for video session keys
+        logger.debug(f"[b2_upload_complete] is_video: {is_video}")
+        logger.debug(f"[b2_upload_complete] Session keys set: upload_b2_video={request.session.get('upload_b2_video', 'NOT SET')[:50] if request.session.get('upload_b2_video') else 'NOT SET'}, upload_b2_video_thumb={request.session.get('upload_b2_video_thumb', 'NOT SET')[:50] if request.session.get('upload_b2_video_thumb') else 'NOT SET'}, upload_is_b2={request.session.get('upload_is_b2', 'NOT SET')}")
     else:
         # For images, set the original URL (variants will be generated on Step 2)
         request.session['upload_b2_original'] = urls['original']
@@ -931,6 +1055,7 @@ def b2_upload_complete(request):
 
     request.session.modified = True
 
+    logger.info(f"=== RETURNING SUCCESS: is_video={is_video}, variants_pending={variants_pending} ===")
     return JsonResponse({
         'success': True,
         'filename': filename,

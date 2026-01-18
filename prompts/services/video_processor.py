@@ -273,6 +273,101 @@ def validate_video(uploaded_file):
         }
 
 
+def extract_moderation_frames(video_path, num_frames=3):
+    """
+    Extract frames from a video at evenly spaced intervals for moderation.
+
+    Extracts frames at 25%, 50%, and 75% of the video duration for NSFW
+    moderation analysis. Uses FFmpeg for frame extraction.
+
+    Args:
+        video_path: Path to the video file (string or Path object)
+        num_frames: Number of frames to extract (default: 3)
+
+    Returns:
+        list: List of paths to extracted frame images (JPEG format)
+              Returns empty list if extraction fails.
+
+    Note:
+        Caller is responsible for cleaning up the temporary frame files.
+        Use a try/finally block to ensure cleanup.
+    """
+    video_path = str(video_path)
+    frame_paths = []
+
+    if not os.path.exists(video_path):
+        logger.error(f"Video file not found for frame extraction: {video_path}")
+        return []
+
+    try:
+        # Get video duration
+        metadata = get_video_metadata(video_path)
+        duration = metadata.get('duration', 0)
+
+        if duration <= 0:
+            logger.error(f"Invalid video duration: {duration}")
+            return []
+
+        # Calculate timestamps at 25%, 50%, 75% of video duration
+        # This gives good coverage of the video content
+        percentages = [0.25, 0.50, 0.75]
+        timestamps = [duration * p for p in percentages[:num_frames]]
+
+        for i, ts in enumerate(timestamps):
+            # Create temp file for frame
+            output_path = tempfile.mktemp(suffix=f'_frame_{i}.jpg')
+
+            # Convert timestamp to FFmpeg format (seconds)
+            ts_str = f"{ts:.3f}"
+
+            cmd = [
+                'ffmpeg',
+                '-y',  # Overwrite output
+                '-ss', ts_str,  # Seek to timestamp
+                '-i', video_path,  # Input file
+                '-vframes', '1',  # Extract single frame
+                '-q:v', '2',  # High quality JPEG
+                output_path
+            ]
+
+            subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            # Check if frame was created successfully
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                frame_paths.append(output_path)
+                logger.debug(f"Extracted frame {i + 1} at {ts:.2f}s: {output_path}")
+            else:
+                logger.warning(f"Failed to extract frame {i + 1} at {ts:.2f}s")
+                # Clean up any partial file
+                if os.path.exists(output_path):
+                    os.remove(output_path)
+
+        logger.info(f"Extracted {len(frame_paths)}/{num_frames} frames from video")
+        return frame_paths
+
+    except subprocess.TimeoutExpired:
+        logger.error("FFmpeg frame extraction timed out")
+        # Clean up any extracted frames on timeout
+        for path in frame_paths:
+            if os.path.exists(path):
+                os.remove(path)
+        return []
+    except ValidationError:
+        raise
+    except Exception as e:
+        logger.error(f"Error extracting moderation frames: {e}")
+        # Clean up any extracted frames on error
+        for path in frame_paths:
+            if os.path.exists(path):
+                os.remove(path)
+        return []
+
+
 def extract_thumbnail(video_path, output_path, timestamp='00:00:01', size='600x600'):
     """
     Extract a thumbnail frame from a video at the specified timestamp.

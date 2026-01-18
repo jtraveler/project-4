@@ -18,10 +18,11 @@ Prompt checks for:
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 import os
 from openai import OpenAI, APITimeoutError, APIConnectionError
 import requests
+import base64
 
 # Import timeout constant from central constants file (L8-TIMEOUT)
 from prompts.constants import OPENAI_TIMEOUT
@@ -136,6 +137,61 @@ Respond with JSON in this exact format:
 }
 
 Be accurate with severity classification. Clothed suggestive content = "medium", not "high"."""
+
+    # Video moderation prompt for multi-frame analysis (M1/M2)
+    VIDEO_MODERATION_PROMPT = """Analyze these 3 video frames (from 25%, 50%, 75% of video duration) for content moderation.
+
+Check ALL frames for:
+- Sexual content or nudity
+- Violence or gore
+- Graphic disturbing content
+- Hate symbols
+- Self-harm content
+- Minors in inappropriate contexts
+
+SEVERITY DEFINITIONS (apply STRICTEST frame's severity):
+
+"critical" - ONLY for:
+  • Explicit nudity with genitals visible
+  • Sexual acts or pornography
+  • Extreme gore or graphic violence
+  • Any content involving minors inappropriately
+
+"high" - ONLY for:
+  • Actual nudity (breasts, buttocks fully visible) in non-sexual/artistic context
+  • Significant blood or violence
+  • Truly disturbing imagery
+
+"medium" - For suggestive but CLOTHED content:
+  • Lingerie, swimwear, bikinis
+  • Cleavage or form-fitting clothing
+  • Suggestive poses while clothed
+  • Mild violence
+
+"low" - For:
+  • Minor concerns or borderline content
+  • Normal content with no issues
+
+STRICTEST FRAME WINS: If ANY frame has "critical" severity, the entire video is "critical".
+
+Also generate content if safe:
+- title: 5-10 word SEO-friendly title
+- description: 50-100 word description of the video
+- tags: 5 relevant tags from common categories
+- best_thumbnail_frame: Which frame (1, 2, or 3) makes the best thumbnail
+
+Respond with JSON:
+{
+    "flagged": true/false,
+    "categories": ["category1", "category2"],
+    "severity": "low/medium/high/critical",
+    "explanation": "brief explanation",
+    "frame_severities": ["low", "low", "low"],
+    "title": "Generated Title Here",
+    "description": "Generated description...",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+    "best_thumbnail_frame": 2
+}"""
 
     def __init__(self):
         """Initialize OpenAI client."""
@@ -654,3 +710,195 @@ Be accurate with severity classification. Clothed suggestive content = "medium",
 
         logger.info(f"Extracted video frame URL from ID: {frame_url}")
         return frame_url
+
+    def moderate_video_frames(self, frame_paths: List[str], user_prompt: str = "") -> Dict:
+        """
+        Moderate video using multiple extracted frames.
+        
+        Implements "strictest frame wins" policy - if ANY frame has critical
+        severity, the entire video is rejected.
+        
+        Args:
+            frame_paths: List of paths to extracted frame images (from extract_moderation_frames)
+            user_prompt: Optional user-provided prompt text for context
+            
+        Returns:
+            Dict with:
+                - is_safe: bool
+                - status: 'approved' | 'flagged' | 'rejected'
+                - severity: 'low' | 'medium' | 'high' | 'critical'
+                - flagged_categories: list
+                - explanation: str
+                - title: str (if safe)
+                - description: str (if safe)
+                - tags: list (if safe)
+                - best_thumbnail_frame: int (1, 2, or 3)
+        """
+        if not frame_paths:
+            logger.warning("No frame paths provided for video moderation")
+            return {
+                'is_safe': False,
+                'status': 'rejected',
+                'severity': 'critical',
+                'flagged_categories': ['no_frames'],
+                'explanation': 'Could not extract frames from video for moderation.',
+                'best_thumbnail_frame': 1,
+            }
+        
+        try:
+            # Build content array with text prompt and all frame images
+            content = [
+                {
+                    "type": "text",
+                    "text": self.VIDEO_MODERATION_PROMPT + (f"\n\nUser's prompt context: {user_prompt}" if user_prompt else "")
+                }
+            ]
+            
+            # Add each frame as base64-encoded image
+            for i, frame_path in enumerate(frame_paths):
+                try:
+                    with open(frame_path, 'rb') as f:
+                        frame_data = base64.b64encode(f.read()).decode('utf-8')
+                    
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{frame_data}",
+                            "detail": "low"  # Cost optimization
+                        }
+                    })
+                    logger.debug(f"Added frame {i + 1} to moderation request")
+                except Exception as e:
+                    logger.error(f"Failed to read frame {i + 1}: {e}")
+                    # Continue with remaining frames
+            
+            if len(content) < 2:  # Only has text, no images
+                logger.error("No frames could be loaded for moderation")
+                return {
+                    'is_safe': False,
+                    'status': 'rejected',
+                    'severity': 'critical',
+                    'flagged_categories': ['frame_load_error'],
+                    'explanation': 'Could not load video frames for moderation.',
+                    'best_thumbnail_frame': 1,
+                }
+            
+            logger.info(f"Sending {len(content) - 1} frames to Vision API for moderation")
+            
+            # Call OpenAI Vision API with all frames
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": content}],
+                max_tokens=800,
+                temperature=0.0,
+            )
+            
+            # Parse response
+            response_content = response.choices[0].message.content
+            logger.info(f"Video moderation response: {response_content[:500]}...")
+            
+            # Check for AI refusal
+            if _is_ai_refusal(response_content):
+                logger.warning("AI refused to analyze video frames - treating as critical")
+                return {
+                    'is_safe': False,
+                    'status': 'rejected',
+                    'severity': 'critical',
+                    'flagged_categories': ['ai_refusal', 'explicit_content'],
+                    'explanation': 'Video content too explicit for AI analysis - automatically rejected.',
+                    'best_thumbnail_frame': 1,
+                }
+            
+            # Parse JSON response
+            import json
+            import re
+            
+            # Extract JSON from response (may have markdown code blocks)
+            json_match = re.search(r'\{[\s\S]*\}', response_content)
+            if not json_match:
+                logger.error("No JSON found in video moderation response")
+                return {
+                    'is_safe': False,
+                    'status': 'flagged',
+                    'severity': 'medium',
+                    'flagged_categories': ['parse_error'],
+                    'explanation': 'Could not parse moderation response.',
+                    'best_thumbnail_frame': 2,
+                }
+            
+            result = json.loads(json_match.group())
+            
+            # Extract fields with defaults
+            severity = result.get('severity', 'medium')
+            flagged = result.get('flagged', False)
+            categories = result.get('categories', [])
+            explanation = result.get('explanation', '')
+            best_frame = result.get('best_thumbnail_frame', 2)
+            
+            # Ensure best_frame is valid (1, 2, or 3)
+            if not isinstance(best_frame, int) or best_frame < 1 or best_frame > 3:
+                best_frame = 2
+            
+            # Determine status based on severity (strictest frame wins)
+            if severity == 'critical':
+                status = 'rejected'
+                is_safe = False
+            elif severity == 'high':
+                status = 'flagged'
+                is_safe = False
+            else:
+                status = 'approved'
+                is_safe = True
+            
+            # Build response
+            moderation_result = {
+                'is_safe': is_safe,
+                'status': status,
+                'severity': severity,
+                'flagged_categories': categories if flagged else [],
+                'explanation': explanation,
+                'best_thumbnail_frame': best_frame,
+                'frame_severities': result.get('frame_severities', []),
+            }
+            
+            # Include content generation if safe
+            if is_safe:
+                moderation_result['title'] = result.get('title')
+                moderation_result['description'] = result.get('description')
+                moderation_result['tags'] = result.get('tags', [])
+            
+            logger.info(f"Video moderation complete: status={status}, severity={severity}")
+            return moderation_result
+            
+        except (APITimeoutError, APIConnectionError) as e:
+            # Fail-closed on timeout
+            logger.warning(f"Video moderation timeout: {e}")
+            return {
+                'is_safe': False,
+                'status': 'rejected',
+                'severity': 'critical',
+                'flagged_categories': ['timeout'],
+                'explanation': 'Video moderation timed out - content blocked for safety.',
+                'best_thumbnail_frame': 1,
+            }
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error in video moderation: {e}")
+            return {
+                'is_safe': False,
+                'status': 'flagged',
+                'severity': 'medium',
+                'flagged_categories': ['parse_error'],
+                'explanation': 'Could not parse moderation response.',
+                'best_thumbnail_frame': 2,
+            }
+            
+        except Exception as e:
+            logger.error(f"Video moderation error: {e}", exc_info=True)
+            return {
+                'is_safe': False,
+                'status': 'flagged',
+                'severity': 'medium',
+                'flagged_categories': ['processing_error'],
+                'best_thumbnail_frame': 2,
+            }

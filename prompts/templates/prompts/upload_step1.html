@@ -326,6 +326,19 @@
 </div>
 
 <script>
+// Style Django error messages to match upload errors
+document.addEventListener('DOMContentLoaded', function() {
+    const djangoAlert = document.querySelector('.alert.alert-error, .alert.alert-danger');
+    if (djangoAlert && !djangoAlert.querySelector('.fa-exclamation-circle')) {
+        const message = djangoAlert.textContent.trim();
+        djangoAlert.innerHTML = `
+            <strong><i class="fas fa-exclamation-circle me-2"></i>Upload Error</strong>
+            <p class="mb-0 mt-1">${message}</p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+    }
+});
+
 // L8-TIMING-DIAGNOSTICS: Upload timing measurement object
 // Helps diagnose delays between API return and redirect
 const UploadTiming = {
@@ -962,6 +975,12 @@ async function uploadToB2(file) {
 
             if (!completeResponse.ok) {
                 const errorData = await completeResponse.json().catch(() => ({}));
+                // Video/content rejection - redirect with error instead of throwing
+                if (errorData.moderation_status === 'rejected' || errorData.error?.includes('violates')) {
+                    const errorMessage = errorData.error || 'Content violates our guidelines';
+                    window.location.href = `{% url 'prompts:upload_step1' %}?error=${encodeURIComponent(errorMessage.substring(0, 500))}`;
+                    return;
+                }
                 throw new Error(errorData.error || `Processing failed (${completeResponse.status})`);
             }
 

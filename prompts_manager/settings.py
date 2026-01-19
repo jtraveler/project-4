@@ -135,6 +135,7 @@ INSTALLED_APPS = [
     'cloudinary',
     'taggit',
     'csp',  # CSP for Content Security Policy
+    'django_q',  # Async task queue (Phase N)
     'prompts',
     'about',
 ]
@@ -558,3 +559,21 @@ B2_CUSTOM_DOMAIN = os.environ.get('B2_CUSTOM_DOMAIN', '')
 
 # Storage backend path - use this when instantiating B2 storage
 B2_STORAGE_BACKEND = 'prompts.storage_backends.B2MediaStorage'
+
+# ==============================================================================
+# DJANGO-Q ASYNC TASK QUEUE CONFIGURATION (Phase N)
+# ==============================================================================
+# Uses existing Postgres database as broker - zero extra infrastructure cost
+# Documentation: https://django-q2.readthedocs.io/
+Q_CLUSTER = {
+    'name': 'promptfinder',
+    'workers': 2,  # Number of worker processes
+    'timeout': 120,  # Task timeout in seconds
+    'retry': 180,  # Retry timeout for failed tasks
+    'queue_limit': 50,  # Maximum queue size
+    'bulk': 10,  # Bulk task processing count
+    'orm': 'default',  # Use default Django database as broker
+    'catch_up': False,  # Don't catch up on missed schedules after downtime
+    'save_limit': 250,  # Keep last 250 task results
+    'sync': False,  # Async mode (set True for debugging)
+}

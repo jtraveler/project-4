@@ -37,3 +37,6 @@ django-ratelimit==4.1.0
 
 # Error Monitoring
 sentry-sdk>=1.45.1
+
+# Async Task Queue
+django-q2==1.6.2

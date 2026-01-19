@@ -1,7 +1,7 @@
 # CLAUDE.md - PromptFinder Project Documentation
 
-**Last Updated:** January 9, 2026
-**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) ~98% COMPLETE, Phase K ON HOLD (95%)
+**Last Updated:** January 14, 2026
+**Project Status:** Pre-Launch Development - Phase L (Media Infrastructure) 100% COMPLETE, Phase M (Video Moderation) 100% COMPLETE, Phase K ON HOLD (95%)
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -7313,13 +7313,12 @@ User Request → Cloudflare CDN ← ← ← ← ← ← ┘
 
 ---
 
-## 🎬 Phase M: Video Handling (PLANNED)
+## 🎬 Phase M: Video Handling (COMPLETE)
 
-**Status:** 🚧 IN PROGRESS - Core video upload working, enhancements planned
+**Status:** ✅ COMPLETE - Video moderation and core infrastructure implemented (January 14, 2026)
 **Priority:** HIGH - Required for video upload functionality
-**Estimated Effort:** 2-3 weeks
-**Dependencies:** Phase L Media Infrastructure (~95% complete)
-**Prerequisites:** L5e (Edit Form B2 Integration), L11 (Documentation & Cleanup)
+**Completed:** January 14, 2026 (Session 49)
+**Dependencies:** Phase L Media Infrastructure (98% complete)
 
 ---
 
@@ -7347,12 +7346,12 @@ User Upload → Validation (M5) → Frame Extraction (M1) → NSFW Check (M2)
 
 | Spec | Description | Status | Effort | Dependencies |
 |------|-------------|--------|--------|--------------|
-| M1 | Frame Extraction (FFmpeg) | 📋 Planned | 2-3 days | Phase L complete |
-| M2 | Video NSFW Moderation | 📋 Planned | 3-4 days | M1 |
-| M3 | SEO Content Generation | 📋 Planned | 2-3 days | M1 |
-| M4 | Video Thumbnails | 📋 Planned | 1-2 days | M1 |
+| M1 | Frame Extraction (FFmpeg) | ✅ Complete | 2-3 days | Phase L complete |
+| M2 | Video NSFW Moderation | ✅ Complete | 3-4 days | M1 |
+| M3 | SEO Content Generation | 📋 Deferred | 2-3 days | M1 |
+| M4 | Video Thumbnails | 📋 Deferred | 1-2 days | M1 |
 | M5 | File Restrictions + Video Dimensions | ✅ Complete | 1 day | None |
-| M6 | SEO File Naming/Slug | 📋 Planned | 1-2 days | M3 |
+| M6 | SEO File Naming/Slug | 📋 Deferred | 1-2 days | M3 |
 
 ---
 
@@ -7806,6 +7805,156 @@ VIDEO_NSFW_THRESHOLD_REVIEW=medium
 | `prompts/utils/seo_naming.py` | Filename/slug generation | 80 | New file |
 
 **Total Estimated:** ~630 lines of new/modified code
+
+---
+
+### Session 49 Accomplishments (January 14, 2026)
+
+**Core Video Moderation Infrastructure:**
+- ✅ **M1: Frame Extraction** - Implemented `extract_frames_for_moderation()` in `video_processor.py`
+  - Extracts 3 frames at 25%, 50%, 75% of video duration
+  - Uses FFprobe for duration detection, FFmpeg for frame extraction
+  - Automatic cleanup of temporary JPEG files after moderation
+- ✅ **M2: Video NSFW Moderation** - Created `video_moderation.py` service (~150 lines)
+  - Multi-frame analysis via OpenAI GPT-4o-mini Vision API
+  - Structured JSON response with severity levels per category
+  - Categories: nudity, violence, minors, hate_symbols
+  - Fail-closed pattern: `critical` → reject, `high/medium` → pending review
+
+**Additional Fixes:**
+- ✅ **B2 Timeout Fix** - Improved error handling for presigned URL timeouts
+- ✅ **Image Thumbnail Fix** - Fixed `b2_thumb_url` session key not being set correctly
+- ✅ **Video Rejection UI** - Improved error messaging for rejected video uploads
+- ✅ **XSS Protection** - Added HTML escaping for error messages, removed API key exposure
+- ✅ **Diagnostic Report** - Created `docs/reports/UPLOAD_ISSUE_DIAGNOSTIC_REPORT.md`
+
+**Agent Validation:**
+| Component | Agent | Rating |
+|-----------|-------|--------|
+| M1 Frame Extraction | @backend-architect | 9.0/10 |
+| M2 Video Moderation | @security-auditor | 8.5/10 |
+| Integration | @code-reviewer | 8.5/10 |
+| **Average** | | **8.67/10** |
+
+---
+
+## 🚀 Phase N: Optimistic Upload UX (PLANNED)
+
+**Status:** 📋 PLANNED (Not Started)
+**Priority:** HIGH - Critical UX improvement for upload flow
+**Estimated Effort:** 1-2 weeks
+**Dependencies:** Phase M (Video Handling) - ✅ Complete
+**Concept:** "Fire and Forget" upload pattern
+
+---
+
+### Overview
+
+Phase N implements an "optimistic" upload flow where users are redirected to Step 2 immediately after the browser-to-B2 upload completes, without waiting for server-side processing. AI suggestions, moderation, and variant generation happen in the background while users fill out the form.
+
+---
+
+### Why This Matters
+
+**Current State (Phase L/M):**
+- User uploads file → Waits 5-15s for processing → Redirected to Step 2
+- Processing bottlenecks: AI suggestions (~3-5s), moderation (~2-3s), variants (~2-4s)
+- User perceives slow, blocking upload experience
+
+**Target State (Phase N):**
+- User uploads file → Instant redirect to Step 2 (~1s)
+- Background processing via Web Workers or async endpoints
+- Form fields populate dynamically as AI suggestions arrive
+- Moderation results checked before final submit
+
+---
+
+### Technical Architecture
+
+```
+CURRENT FLOW (Blocking):
+Browser → B2 Upload → Wait for AI → Wait for Moderation → Step 2
+                            ↓
+                      5-15 seconds blocking
+
+TARGET FLOW (Optimistic):
+Browser → B2 Upload → Instant Step 2 → Background Processing
+                            ↓                    ↓
+                      ~1 second            AI, Moderation, Variants
+                                                 ↓
+                                          Populate form fields
+                                          as results arrive
+```
+
+---
+
+### Micro-Specs (Planned)
+
+| Spec | Description | Status | Effort |
+|------|-------------|--------|--------|
+| N1 | Optimistic redirect after B2 complete | 📋 Planned | 2-3 hours |
+| N2 | Background AI suggestions via polling | 📋 Planned | 3-4 hours |
+| N3 | Background moderation with status indicator | 📋 Planned | 3-4 hours |
+| N4 | Form field progressive population | 📋 Planned | 2-3 hours |
+| N5 | Submit guard (block until moderation complete) | 📋 Planned | 2-3 hours |
+| N6 | Error recovery and retry logic | 📋 Planned | 3-4 hours |
+| N7 | Progress indicators and loading states | 📋 Planned | 2-3 hours |
+
+---
+
+### Key Implementation Details
+
+**N1: Optimistic Redirect**
+- `b2_upload_complete()` returns immediately after B2 verification
+- Processing jobs queued but not awaited
+- Session stores `upload_id` for background job tracking
+
+**N2: Background AI Suggestions**
+- `/api/upload/ai-suggestions/status/<upload_id>/` polling endpoint
+- Returns: `{ "status": "processing|complete|error", "suggestions": {...} }`
+- JavaScript polls every 2 seconds until complete
+- Form fields update dynamically when suggestions arrive
+
+**N3: Background Moderation**
+- `/api/upload/moderation/status/<upload_id>/` polling endpoint
+- Returns: `{ "status": "processing|approved|pending_review|rejected", "details": {...} }`
+- Visual status indicator on Step 2 page (spinner → checkmark/warning)
+- If rejected, show error banner and block submit
+
+**N5: Submit Guard**
+- Submit button disabled until moderation completes
+- Shows "Checking content..." message during moderation
+- Three states: disabled (processing), enabled (approved), blocked (rejected)
+
+---
+
+### Success Criteria
+
+- [ ] Step 1 → Step 2 transition < 2 seconds
+- [ ] AI suggestions appear within 5 seconds of page load
+- [ ] Moderation result visible within 8 seconds
+- [ ] Submit only enabled after moderation passes
+- [ ] Graceful error handling for all failure modes
+- [ ] Agent validation: 8+/10 average
+
+---
+
+### Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| User submits before moderation | Medium | High | Submit guard with clear messaging |
+| Background job fails silently | Medium | Medium | Error state handling, retry logic |
+| Polling overloads server | Low | Medium | Rate limiting, exponential backoff |
+| Race condition on form submit | Low | High | Server-side validation, idempotency |
+
+---
+
+### Future Enhancements (Post-N)
+
+- WebSocket for real-time updates (replace polling)
+- Service Worker for offline upload queueing
+- Optimistic database writes (create prompt early, update on completion)
 
 ---
 
@@ -10159,6 +10308,62 @@ Session 39 resolved all three critical blockers discovered in Sessions 37-38, co
 
 ---
 
+### January 2026 - Session 49 (Jan 14, 2026)
+
+**Phase M Video Moderation: M1 & M2 COMPLETE ✅**
+
+Session 49 implemented the core video moderation infrastructure, completing Phase M's essential functionality. Videos are now analyzed for NSFW content using multi-frame extraction and OpenAI Vision API.
+
+**M1: Video Frame Extraction (FFmpeg)**
+- Implemented `extract_frames_for_moderation()` function in `video_processor.py`
+- Extracts 3 frames at 25%, 50%, 75% of video duration
+- Uses FFprobe for duration detection, FFmpeg for frame extraction
+- Frames saved as temporary JPEG files with quality 2 (high)
+- Automatic cleanup after moderation completes
+
+**M2: Video NSFW Moderation (OpenAI Vision)**
+- Implemented `moderate_video_frames()` function in `video_moderation.py`
+- Sends extracted frames as base64 to GPT-4o-mini Vision API
+- Structured JSON response with severity levels per category
+- Categories: nudity, violence, minors, hate_symbols
+- Severity levels: none, low, medium, high, critical
+- Blocking logic: `critical` → reject, `high/medium` → pending review
+
+**Integration with Upload Flow**
+- Video moderation integrated into `b2_upload_complete()` API endpoint
+- Moderation runs after B2 upload confirmation
+- Session stores moderation result for Step 2 page
+- Videos blocked at Step 1 if critical content detected
+
+**Additional Fixes**
+- **B2 Timeout Fix:** Improved error handling for presigned URL timeouts
+- **Image Thumbnail Fix:** Fixed `b2_thumb_url` not being set correctly in session
+- **Video Rejection UI:** Improved error messaging for rejected video uploads
+- **XSS Protection:** Added HTML escaping for error messages in upload templates
+- **Upload Diagnostic Report:** Created `docs/reports/UPLOAD_ISSUE_DIAGNOSTIC_REPORT.md`
+
+**Files Created:**
+- `prompts/services/video_moderation.py` - Video NSFW moderation service (~150 lines)
+- `docs/reports/UPLOAD_ISSUE_DIAGNOSTIC_REPORT.md` - Diagnostic report
+
+**Files Modified:**
+- `prompts/services/video_processor.py` - Added `extract_frames_for_moderation()`
+- `prompts/views/api_views.py` - Video moderation integration
+- `prompts/templates/prompts/upload_step1.html` - XSS protection, rejection UI
+- `prompts/constants.py` - Video moderation constants
+
+**Agent Validation:**
+| Component | Agent | Rating |
+|-----------|-------|--------|
+| M1 Frame Extraction | @backend-architect | 9.0/10 |
+| M2 Video Moderation | @security-auditor | 8.5/10 |
+| Integration | @code-reviewer | 8.5/10 |
+| **Average** | | **8.67/10** |
+
+**Phase M Status:** ✅ COMPLETE (M1, M2, M5 implemented; M3, M4, M6 deferred to future)
+
+---
+
 ### January 2026 - Session 40 (Jan 9, 2026)
 
 **L10 SEO Review Infrastructure: Silent AI Failure Pattern ✅ COMPLETE**
@@ -11343,7 +11548,7 @@ After: Single `.content-filter-bar` shared across all pages (DRY principle)
 
 *This document is a living reference. Update it as the project evolves, decisions change, or new insights emerge. Share it with every new Claude conversation for instant context.*
 
-**Version:** 2.19
-**Last Updated:** January 10, 2026
+**Version:** 2.20
+**Last Updated:** January 14, 2026
 **Document Owner:** Mateo Johnson
-**Project Status:** Pre-Launch (Phase L: Media Infrastructure ~98%, Phase K ON HOLD at 95%)
+**Project Status:** Pre-Launch (Phase L: Media Infrastructure ~98%, Phase M: Video Moderation COMPLETE, Phase K ON HOLD at 95%)

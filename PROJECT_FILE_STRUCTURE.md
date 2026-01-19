@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 9, 2026
+**Last Updated:** January 14, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase L Media Infrastructure (~98% complete)
+**Current Phase:** Phase M Video Moderation (100% complete)
 **Total Tests:** 298 passing (48% coverage)
 
 ---
@@ -160,14 +160,14 @@ prompts/services/
 ├── __init__.py              # Service exports
 ├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT) ← NEW
 ├── b2_upload_service.py     # B2 upload orchestration (Phase L)
-├── cloudinary_moderation.py # Cloudinary AI moderation (AWS Rekognition)
+├── cloudinary_moderation.py # OpenAI Vision moderation for images and videos
 ├── content_generation.py    # GPT-4o content generation for uploads
 ├── image_processor.py       # Pillow image optimization (Phase L)
 ├── leaderboard.py           # Leaderboard calculations (Phase G)
 ├── openai_moderation.py     # OpenAI text moderation API
 ├── orchestrator.py          # Moderation orchestration (multi-layer)
 ├── profanity_filter.py      # Profanity detection and filtering
-└── video_processor.py       # FFmpeg video processing (Phase L6)
+└── video_processor.py       # FFmpeg video processing, frame extraction for moderation (Phase M)
 
 prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app root)
 ```
@@ -933,6 +933,12 @@ python manage.py test -v 2
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v2.7 (January 14, 2026):**
+- Phase M Video Moderation complete
+- Updated cloudinary_moderation.py description (OpenAI Vision)
+- Updated video_processor.py description (frame extraction)
+- Added UPLOAD_ISSUE_DIAGNOSTIC_REPORT.md to docs/reports/
 
 **v2.6 (January 9, 2026):**
 - Added SEO Review Admin Routes section (Phase L10c)

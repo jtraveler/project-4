@@ -8,12 +8,85 @@ Phase N: Optimistic Upload UX
 
 Usage:
     from django_q.tasks import async_task
-    async_task('prompts.tasks.placeholder_nsfw_moderation', image_url, prompt_id)
+    async_task('prompts.tasks.run_nsfw_moderation', upload_id, image_url)
 """
 
 import logging
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
+
+# Cache TTL for NSFW moderation results (1 hour)
+NSFW_CACHE_TTL = 3600
+
+
+def run_nsfw_moderation(upload_id: str, image_url: str) -> dict:
+    """
+    Background NSFW moderation task for Phase N optimistic upload UX.
+
+    Fetches image from CDN, sends to OpenAI Vision API for moderation,
+    and caches the result for frontend polling.
+
+    Args:
+        upload_id: Unique identifier for the upload (used as cache key)
+        image_url: URL of the image to moderate (B2/Cloudflare CDN URL)
+
+    Returns:
+        Dict with moderation result:
+        - status: 'approved', 'flagged', or 'rejected'
+        - severity: 'low', 'medium', 'high', or 'critical'
+        - explanation: Human-readable explanation
+        - flagged_categories: List of flagged content categories
+        - is_safe: Boolean indicating if content is safe
+
+    Cache Key Format:
+        nsfw_moderation:{upload_id}
+
+    Fail-Closed Pattern:
+        Any errors result in 'rejected' status to prevent unsafe content.
+    """
+    cache_key = f"nsfw_moderation:{upload_id}"
+
+    try:
+        logger.info(f"[NSFW Moderation] Starting moderation for upload {upload_id}")
+
+        # Import here to avoid circular imports
+        from prompts.services.cloudinary_moderation import VisionModerationService
+
+        # Run moderation via OpenAI Vision API
+        service = VisionModerationService()
+        result = service.moderate_image_url(image_url)
+
+        logger.info(
+            f"[NSFW Moderation] Completed for upload {upload_id}: "
+            f"status={result.get('status')}, severity={result.get('severity')}"
+        )
+
+        # Cache the result for frontend polling
+        cache.set(cache_key, result, NSFW_CACHE_TTL)
+
+        return result
+
+    except Exception as e:
+        # Fail-closed: any error results in rejection
+        logger.error(
+            f"[NSFW Moderation] Error for upload {upload_id}: {str(e)}",
+            exc_info=True
+        )
+
+        error_result = {
+            'status': 'rejected',
+            'severity': 'critical',
+            'explanation': 'Moderation service error. Please try again.',
+            'flagged_categories': ['error'],
+            'is_safe': False,
+            'error': True,
+        }
+
+        # Cache the error result so frontend knows moderation failed
+        cache.set(cache_key, error_result, NSFW_CACHE_TTL)
+
+        return error_result
 
 
 def test_task(message: str = "Hello from Django-Q!") -> str:

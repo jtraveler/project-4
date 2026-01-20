@@ -34,6 +34,8 @@ from io import BytesIO
 import requests
 import json
 import base64
+from django_q.tasks import async_task
+import uuid
 
 # =============================================================================
 # L8-ERRORS: RATE LIMIT DOCUMENTATION
@@ -653,6 +655,110 @@ def b2_upload_status(request):
         'ready': bool(b2_secure_url),
         'b2_secure_url': b2_secure_url,
         'b2_thumb_url': request.session.get('b2_thumb_url'),
+    })
+
+@login_required
+@require_POST
+@ratelimit(key='user', rate='30/m', method='POST', block=True)
+def nsfw_queue_task(request):
+    """
+    Phase N2: Queue background NSFW moderation task.
+    
+    Called immediately when Step 2 loads to start NSFW check.
+    
+    Request body (JSON):
+        image_url: URL of image to moderate
+        
+    Returns:
+        JSON with upload_id for status polling
+    """
+    try:
+        data = json.loads(request.body)
+        image_url = data.get('image_url')
+        
+        if not image_url:
+            return JsonResponse({
+                'success': False,
+                'error': 'image_url is required',
+            }, status=400)
+        
+        # Generate unique upload_id for this moderation request
+        upload_id = str(uuid.uuid4())
+        
+        # Queue Django-Q task
+        task_id = async_task(
+            'prompts.tasks.run_nsfw_moderation',
+            upload_id,
+            image_url,
+            task_name=f'nsfw_moderation_{upload_id[:8]}'
+        )
+        
+        logger.info(f"[N2] Queued NSFW task {task_id} for upload {upload_id}")
+        
+        # Store upload_id in session for later reference
+        request.session['nsfw_upload_id'] = upload_id
+        request.session.modified = True
+        
+        return JsonResponse({
+            'success': True,
+            'upload_id': upload_id,
+            'task_id': str(task_id) if task_id else None,
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON',
+        }, status=400)
+    except Exception as e:
+        logger.exception(f"[N2] Error queuing NSFW task: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to queue moderation task',
+        }, status=500)
+
+
+@login_required
+@ratelimit(key='user', rate='60/m', method='GET', block=True)
+def nsfw_check_status(request):
+    """
+    Phase N2: Check NSFW moderation status.
+    
+    Polled by frontend every 2 seconds until status != 'processing'.
+    
+    Query params:
+        upload_id: The upload_id returned from nsfw_queue_task
+        
+    Returns:
+        JSON with moderation status:
+        - status: 'processing' | 'approved' | 'flagged' | 'rejected'
+        - severity: 'low' | 'medium' | 'high' | 'critical' (if complete)
+        - categories: list of flagged categories (if flagged/rejected)
+        - explanation: reason for flagging (if flagged/rejected)
+    """
+    upload_id = request.GET.get('upload_id')
+    
+    if not upload_id:
+        return JsonResponse({
+            'success': False,
+            'error': 'upload_id is required',
+        }, status=400)
+    
+    # Check cache for result
+    cache_key = f"nsfw_moderation:{upload_id}"
+    result = cache.get(cache_key)
+    
+    if not result:
+        # Task hasn't started or cache expired
+        return JsonResponse({
+            'success': True,
+            'status': 'processing',
+            'upload_id': upload_id,
+        })
+    
+    return JsonResponse({
+        'success': True,
+        **result,
     })
 
 @login_required

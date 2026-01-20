@@ -105,6 +105,9 @@ urlpatterns = [
     # Admin ordering URLs
     path('prompt/<slug:slug>/move-up/', views.prompt_move_up, name='prompt_move_up'),
     path('api/upload/b2/status/', api_views.b2_upload_status, name='b2_upload_status'),
+    # NSFW Moderation API (Phase N2 - Background Validation)
+    path('api/upload/nsfw/queue/', api_views.nsfw_queue_task, name='nsfw_queue_task'),
+    path('api/upload/nsfw/status/', api_views.nsfw_check_status, name='nsfw_check_status'),
     path('prompt/<slug:slug>/move-down/', views.prompt_move_down, name='prompt_move_down'),
     path('prompt/<slug:slug>/set-order/', views.prompt_set_order, name='prompt_set_order'),
     path('prompts-admin/bulk-reorder/', views.bulk_reorder_prompts, name='bulk_reorder_prompts'),

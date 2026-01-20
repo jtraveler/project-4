@@ -160,6 +160,12 @@
     background-color: #048a6f;
 }
 
+.btn-submit:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 .btn-delete {
     background-color: transparent;
     color: #ef4444;
@@ -391,13 +397,36 @@
                 </div>
             </div>
 
+            <!-- PHASE N2: NSFW Moderation Status Indicator -->
+            <div id="nsfw-status-container" class="mb-3">
+                <div id="nsfw-checking" class="d-flex align-items-center gap-2 p-3 rounded" 
+                    style="background-color: #f3f4f6; border: 1px solid #e5e7eb;">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Checking...</span>
+                    </div>
+                    <span style="color: #6b7280; font-size: 14px;">Checking content safety...</span>
+                </div>
+                
+                <div id="nsfw-approved" class="align-items-center gap-2 p-3 rounded d-none" 
+                    style="background-color: #ecfdf5; border: 1px solid #a7f3d0;">
+                    <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                    <span style="color: #047857; font-size: 14px;">Content approved - ready to submit</span>
+                </div>
+                
+                <div id="nsfw-flagged" class="align-items-center gap-2 p-3 rounded d-none" 
+                    style="background-color: #fef3c7; border: 1px solid #fcd34d;">
+                    <i class="fas fa-exclamation-triangle" style="color: #d97706;"></i>
+                    <span style="color: #92400e; font-size: 14px;">Content flagged for admin review - you may still submit</span>
+                </div>
+            </div>
+
             <!-- Submit Section -->
             <div class="submit-section">
                 <button type="button" class="btn-delete" id="delete-upload">
                     <svg class="icon icon-sm me-2" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Delete this upload
                 </button>
                 <span style="color: var(--gray-400);">(1/1)</span>
-                <button type="submit" class="btn-submit" id="submit-btn">
+                <button type="submit" class="btn-submit" id="submit-btn" disabled>
                     <span id="submit-spinner" class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
                     <span id="submit-text">Submit your content</span>
                 </button>
@@ -482,6 +511,37 @@
                     <button type="button" class="btn btn-danger" onclick="leaveAndDelete()">
                         <i class="bi bi-trash"></i> Yes, leave and delete upload
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHASE N2: Content Rejected Modal -->
+    <div class="modal fade" id="contentRejectedModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-times-circle me-2"></i>Content Not Allowed
+                    </h5>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-ban text-danger" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4 class="mb-3">This content cannot be uploaded</h4>
+                    <p class="text-muted mb-3" id="rejection-reason">
+                        Your upload contains content that violates our community guidelines.
+                    </p>
+                    <p class="small text-muted">
+                        Please review our <a href="/about/" target="_blank">content guidelines</a> 
+                        and try uploading different content.
+                    </p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <a href="{% url 'prompts:upload_step1' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>Start New Upload
+                    </a>
                 </div>
             </div>
         </div>
@@ -1329,5 +1389,221 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionStorage.removeItem('localPreviewIsVideo');
     }
 });
+</script>
+
+<script>
+// ==========================================
+// PHASE N2: NSFW Background Validation
+// ==========================================
+
+(function() {
+    'use strict';
+    
+    const POLL_INTERVAL = 2000; // 2 seconds
+    const MAX_POLL_ATTEMPTS = 45; // 90 seconds max wait
+    
+    let pollCount = 0;
+    let pollTimer = null;
+    let uploadId = null;
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    
+    // Get image URL from page (passed from Django)
+    const imageUrl = '{{ secure_url|escapejs }}';
+    
+    // UI Elements
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+    const nsfwChecking = document.getElementById('nsfw-checking');
+    const nsfwApproved = document.getElementById('nsfw-approved');
+    const nsfwFlagged = document.getElementById('nsfw-flagged');
+    const uploadForm = document.getElementById('upload-form');
+    
+    /**
+     * Queue NSFW moderation task
+     */
+    async function queueNsfwTask() {
+        if (!imageUrl) {
+            console.error('[N2] No image URL available');
+            handleModerationError('Upload data not found');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/upload/nsfw/queue/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ image_url: imageUrl }),
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.upload_id) {
+                uploadId = data.upload_id;
+                console.log('[N2] NSFW task queued:', uploadId);
+                startPolling();
+            } else {
+                console.error('[N2] Failed to queue task:', data.error);
+                handleModerationError('Failed to start content check');
+            }
+        } catch (error) {
+            console.error('[N2] Queue error:', error);
+            handleModerationError('Network error during content check');
+        }
+    }
+    
+    /**
+     * Poll for moderation status
+     */
+    async function pollStatus() {
+        if (!uploadId) return;
+        
+        pollCount++;
+        
+        if (pollCount > MAX_POLL_ATTEMPTS) {
+            console.warn('[N2] Max poll attempts reached');
+            handleModerationError('Content check timed out');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/upload/nsfw/status/?upload_id=${uploadId}`);
+            const data = await response.json();
+            
+            console.log('[N2] Poll result:', data.status);
+            
+            if (data.status === 'processing') {
+                // Still processing, continue polling
+                return;
+            }
+            
+            // Moderation complete - stop polling
+            stopPolling();
+            
+            if (data.status === 'approved') {
+                handleApproved();
+            } else if (data.status === 'flagged') {
+                handleFlagged(data.categories || []);
+            } else if (data.status === 'rejected') {
+                handleRejected(data.explanation || 'Content violates community guidelines');
+            }
+            
+        } catch (error) {
+            console.error('[N2] Poll error:', error);
+            // Continue polling on network errors
+        }
+    }
+    
+    /**
+     * Start polling timer
+     */
+    function startPolling() {
+        pollTimer = setInterval(pollStatus, POLL_INTERVAL);
+        // Also do immediate first check
+        pollStatus();
+    }
+    
+    /**
+     * Stop polling timer
+     */
+    function stopPolling() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    }
+    
+    /**
+     * Handle approved status
+     */
+    function handleApproved() {
+        nsfwChecking.classList.add('d-none');
+        nsfwChecking.classList.remove('d-flex');
+        
+        nsfwApproved.classList.remove('d-none');
+        nsfwApproved.classList.add('d-flex');
+        
+        nsfwFlagged.classList.add('d-none');
+        nsfwFlagged.classList.remove('d-flex');
+        
+        submitBtn.disabled = false;
+        
+        console.log('[N2] Content approved');
+    }
+    
+    /**
+     * Handle flagged status (light NSFW - can still submit)
+     */
+    function handleFlagged(categories) {
+        nsfwChecking.classList.add('d-none');
+        nsfwChecking.classList.remove('d-flex');
+        
+        nsfwApproved.classList.add('d-none');
+        nsfwApproved.classList.remove('d-flex');
+        
+        nsfwFlagged.classList.remove('d-none');
+        nsfwFlagged.classList.add('d-flex');
+        
+        submitBtn.disabled = false;
+        submitText.textContent = 'Submit for review';
+        
+        console.log('[N2] Content flagged:', categories);
+    }
+    
+    /**
+     * Handle rejected status (hardcore NSFW - cannot submit)
+     */
+    function handleRejected(reason) {
+        nsfwChecking.classList.add('d-none');
+        nsfwChecking.classList.remove('d-flex');
+        
+        nsfwApproved.classList.add('d-none');
+        nsfwApproved.classList.remove('d-flex');
+        
+        nsfwFlagged.classList.add('d-none');
+        nsfwFlagged.classList.remove('d-flex');
+        
+        // Update rejection reason in modal
+        document.getElementById('rejection-reason').textContent = reason;
+        
+        // Show rejection modal (non-dismissible)
+        const modal = new bootstrap.Modal(document.getElementById('contentRejectedModal'));
+        modal.show();
+        
+        // Disable entire form
+        if (uploadForm) {
+            const inputs = uploadForm.querySelectorAll('input, textarea, select, button');
+            inputs.forEach(el => el.disabled = true);
+        }
+        
+        console.log('[N2] Content rejected:', reason);
+    }
+    
+    /**
+     * Handle moderation errors
+     */
+    function handleModerationError(message) {
+        stopPolling();
+        
+        // On error, fail-closed: show as rejected
+        handleRejected(message + '. Please try again with different content.');
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('[N2] Starting NSFW validation');
+        queueNsfwTask();
+    });
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        stopPolling();
+    });
+    
+})();
 </script>
 {% endblock %}

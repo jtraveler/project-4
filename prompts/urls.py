@@ -2,6 +2,7 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 from . import views
 from . import views_admin
+from .views import api_views
 
 app_name = 'prompts'
 
@@ -103,6 +104,7 @@ urlpatterns = [
          views.comment_delete, name='comment_delete'),
     # Admin ordering URLs
     path('prompt/<slug:slug>/move-up/', views.prompt_move_up, name='prompt_move_up'),
+    path('api/upload/b2/status/', api_views.b2_upload_status, name='b2_upload_status'),
     path('prompt/<slug:slug>/move-down/', views.prompt_move_down, name='prompt_move_down'),
     path('prompt/<slug:slug>/set-order/', views.prompt_set_order, name='prompt_set_order'),
     path('prompts-admin/bulk-reorder/', views.bulk_reorder_prompts, name='bulk_reorder_prompts'),

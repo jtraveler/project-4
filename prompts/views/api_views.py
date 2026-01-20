@@ -7,7 +7,8 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from prompts.models import Prompt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
+from django_ratelimit.decorators import ratelimit
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from prompts.forms import CollaborateForm
@@ -641,6 +642,18 @@ def b2_variants_status(request):
         'urls': variant_urls
     })
 
+
+@login_required
+@require_http_methods(["GET"])
+@ratelimit(key='user', rate='60/m', method='GET', block=True)
+def b2_upload_status(request):
+    """PHASE N1: Check if B2 upload processing is complete."""
+    b2_secure_url = request.session.get('b2_secure_url')
+    return JsonResponse({
+        'ready': bool(b2_secure_url),
+        'b2_secure_url': b2_secure_url,
+        'b2_thumb_url': request.session.get('b2_thumb_url'),
+    })
 
 @login_required
 def b2_presign_upload(request):

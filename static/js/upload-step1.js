@@ -794,6 +794,26 @@ async function uploadToB2(file) {
             params.set('b2_filename', completeData.filename);
         }
 
+        // PHASE N1: Store local preview before redirect
+        try {
+            const isVideoFile = file.type.startsWith('video/');
+            if (!isVideoFile && file.size < 5 * 1024 * 1024) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    sessionStorage.setItem('localPreviewData', e.target.result);
+                    sessionStorage.setItem('localPreviewType', 'base64');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                const objectUrl = URL.createObjectURL(file);
+                sessionStorage.setItem('localPreviewData', objectUrl);
+                sessionStorage.setItem('localPreviewType', 'objectUrl');
+            }
+            sessionStorage.setItem('localPreviewIsVideo', isVideoFile.toString());
+        } catch (previewError) {
+            console.warn('Could not store local preview:', previewError);
+        }
+
         // L8-PROGRESS-ANIMATE: Start animated finalizing state with rotating messages
         const redirectUrl = `/upload/details?${params.toString()}`;
         ProgressUI.startFinalizing();

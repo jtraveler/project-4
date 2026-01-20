@@ -1294,4 +1294,40 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<script>
+// PHASE N1: Display local preview from browser memory
+document.addEventListener('DOMContentLoaded', function() {
+    const localPreviewData = sessionStorage.getItem('localPreviewData');
+    const localPreviewType = sessionStorage.getItem('localPreviewType');
+    const isVideo = sessionStorage.getItem('localPreviewIsVideo') === 'true';
+    
+    if (localPreviewData) {
+        const previewContainer = document.querySelector('.preview-image, .upload-preview, #preview-container, .card-img-top');
+        
+        if (previewContainer) {
+            if (isVideo) {
+                const video = document.createElement('video');
+                video.src = localPreviewData;
+                video.controls = true;
+                video.muted = true;
+                video.style.maxWidth = '100%';
+                previewContainer.replaceWith(video);
+            } else {
+                previewContainer.src = localPreviewData;
+            }
+        }
+        
+        // Cleanup: Revoke object URL to free memory
+        if (localPreviewType === 'objectUrl') {
+            URL.revokeObjectURL(localPreviewData);
+        }
+        
+        // Cleanup: Clear sessionStorage
+        sessionStorage.removeItem('localPreviewData');
+        sessionStorage.removeItem('localPreviewType');
+        sessionStorage.removeItem('localPreviewIsVideo');
+    }
+});
+</script>
 {% endblock %}

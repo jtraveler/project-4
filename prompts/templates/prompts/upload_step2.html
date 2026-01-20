@@ -240,10 +240,75 @@
 .ai-error-container button:hover {
     color: #b91c1c;
 }
+
+/* N2: Approved indicator fade animation */
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    75% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.fade-notification {
+    animation: fadeInOut 4s ease-in-out forwards;
+}
+
+/* N2: Toast notification for flagged content */
+.toast-notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    max-width: 560px;
+    padding: 16px 20px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1050;
+    display: none;
+    animation: toastSlideIn 0.3s ease-out;
+}
+
+.toast-notification.show {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+@keyframes toastSlideIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Mobile: full width at bottom */
+@media (max-width: 576px) {
+    .toast-notification {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        max-width: none;
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- PHASE N2: Flagged Content Banner (Top of Page) -->
+<div class="container mt-3">
+    <div id="nsfw-flagged-banner" class="alert alert-warning d-none" role="alert"
+         style="background-color: #fff3cd; border: 1px solid #ffeaa7;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Content flagged for admin review</strong> - you may still submit
+    </div>
+</div>
+
+
 <div class="upload-container fade-in">
     <!-- Error Alert (profanity detection) -->
     {% if error_message %}
@@ -432,6 +497,17 @@
                 </button>
             </div>
         </form>
+        </div>
+    </div>
+
+    <!-- PHASE N2: Flagged Toast Notification (Fixed Position) -->
+    <div id="nsfw-flagged-toast" class="toast-notification" role="alert" aria-live="polite">
+        <i class="fas fa-exclamation-triangle" style="color: #d97706; flex-shrink: 0; margin-top: 2px;"></i>
+        <div>
+            <strong style="color: #92400e;">Content flagged for admin review</strong>
+            <p style="color: #92400e; margin: 4px 0 0 0; font-size: 14px;">
+                You may still submit - our team will review before publishing.
+            </p>
         </div>
     </div>
 
@@ -1418,6 +1494,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const nsfwChecking = document.getElementById('nsfw-checking');
     const nsfwApproved = document.getElementById('nsfw-approved');
     const nsfwFlagged = document.getElementById('nsfw-flagged');
+    const nsfwFlaggedBanner = document.getElementById('nsfw-flagged-banner'); // Top banner
     const uploadForm = document.getElementById('upload-form');
     
     /**
@@ -1524,13 +1601,20 @@ document.addEventListener('DOMContentLoaded', function() {
         nsfwChecking.classList.add('d-none');
         nsfwChecking.classList.remove('d-flex');
         
+        // Show approved with fade animation
         nsfwApproved.classList.remove('d-none');
-        nsfwApproved.classList.add('d-flex');
+        nsfwApproved.classList.add('d-flex', 'fade-notification');
         
         nsfwFlagged.classList.add('d-none');
         nsfwFlagged.classList.remove('d-flex');
         
+        // Hide top banner if visible
+        if (nsfwFlaggedBanner) {
+            nsfwFlaggedBanner.classList.add('d-none');
+        }
+        
         submitBtn.disabled = false;
+        submitText.textContent = 'Submit your content';
         
         console.log('[N2] Content approved');
     }
@@ -1545,8 +1629,20 @@ document.addEventListener('DOMContentLoaded', function() {
         nsfwApproved.classList.add('d-none');
         nsfwApproved.classList.remove('d-flex');
         
-        nsfwFlagged.classList.remove('d-none');
-        nsfwFlagged.classList.add('d-flex');
+        // Hide the inline indicator
+        nsfwFlagged.classList.add('d-none');
+        nsfwFlagged.classList.remove('d-flex');
+        
+        // Show TOP banner (consistent with site alerts)
+        if (nsfwFlaggedBanner) {
+            nsfwFlaggedBanner.classList.remove('d-none');
+        }
+        
+        // Show TOAST notification (visible regardless of scroll position)
+        const toast = document.getElementById('nsfw-flagged-toast');
+        if (toast) {
+            toast.classList.add('show');
+        }
         
         submitBtn.disabled = false;
         submitText.textContent = 'Submit for review';
@@ -1603,6 +1699,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('beforeunload', function() {
         stopPolling();
     });
+    
     
 })();
 </script>

@@ -81,7 +81,7 @@ const progressPercent = document.getElementById('progress-percent');
 const ProgressUI = {
     steps: [
         { step: 1, message: 'Analyzing your image...', detail: 'Please wait while we process your upload' },
-        { step: 2, message: 'Checking content safety...', detail: 'Ensuring your image meets our guidelines' },
+        { step: 2, message: 'Preparing upload...', detail: 'Getting ready to upload' },
         { step: 3, message: 'Generating tags...', detail: 'AI is suggesting relevant tags' },
         { step: 4, message: 'Uploading to cloud...', detail: 'Uploading: 0%' },
         { step: 5, message: 'Finalizing...', detail: 'Almost there!' }
@@ -679,86 +679,6 @@ async function uploadToB2(file) {
             const truncatedMessage = errorMessage.substring(0, 500);
             window.location.href = `${UploadConfig.uploadStep1Url}?error=${encodeURIComponent(truncatedMessage)}`;
             return; // Prevent further execution during redirect
-        }
-
-        // STEP 3.5: NSFW Moderation Check (CC_SPEC_NSFW_STEP1_BLOCKING)
-        // Call moderation API BEFORE redirect - block hardcore NSFW, warn on borderline
-        const imageUrl = completeData.urls.original;
-        console.log('[NSFW DEBUG] Starting moderation check...');
-        console.log('[NSFW DEBUG] imageUrl:', imageUrl);
-        console.log('[NSFW DEBUG] isVideo:', isVideo);
-        if (imageUrl && !isVideo) {  // Only moderate images at Step 1
-            ProgressUI.updateStep(4, 'active', 'Checking content...');
-            console.log('[NSFW DEBUG] Calling moderation endpoint...');
-
-            try {
-                const moderationResponse = await fetch('/api/upload/b2/moderate/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ image_url: imageUrl })
-                });
-
-                console.log('[NSFW DEBUG] Moderation response status:', moderationResponse.status);
-                if (moderationResponse.ok) {
-                    const moderationResult = await moderationResponse.json();
-                    console.log('[NSFW DEBUG] Full moderation result:', JSON.stringify(moderationResult, null, 2));
-                    console.log('[NSFW DEBUG] status:', moderationResult.status);
-                    console.log('[NSFW DEBUG] severity:', moderationResult.severity);
-                    console.log('[NSFW DEBUG] is_safe:', moderationResult.is_safe);
-                    console.log('[NSFW DEBUG] flagged_categories:', moderationResult.flagged_categories);
-
-                    if (moderationResult.status === 'rejected') {
-                        // BLOCKED: Delete from B2 and show error - DO NOT redirect
-                        console.log('[NSFW DEBUG] >>> BLOCKING CONTENT - status is rejected');
-                        console.warn('Content rejected by moderation:', moderationResult.explanation);
-
-                        // Delete the uploaded file from B2
-                        try {
-                            await fetch('/api/upload/b2/delete/', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrftoken
-                                },
-                                body: JSON.stringify({ file_url: imageUrl })
-                            });
-                        } catch (deleteErr) {
-                            console.error('Failed to delete rejected content:', deleteErr);
-                        }
-
-                        // CC_SPEC_VIDEO_REJECTION_FIX: Redirect immediately with user-friendly message
-                        // This prevents the error from being caught by outer catch and displayed in progress stepper
-                        // Use the friendly messages directly (same as getUserFriendlyError mappings)
-                        const userFriendlyMessage = moderationResult.timeout
-                            ? "We couldn't verify this content meets our guidelines. For safety, please try again."
-                            : 'This content contains material that violates our community guidelines and cannot be uploaded.';
-                        window.location.href = `${UploadConfig.uploadStep1Url}?error=${encodeURIComponent(userFriendlyMessage)}`;
-                        return; // Stop all further execution during redirect
-                    }
-
-                    if (moderationResult.status === 'flagged') {
-                        // WARNING: Store in sessionStorage for Step 2 display, continue redirect
-                        console.log('[NSFW DEBUG] >>> FLAGGED CONTENT - showing warning, allowing redirect');
-                        console.info('Content flagged for warning:', moderationResult.explanation);
-                        sessionStorage.setItem('upload_content_warning', JSON.stringify({
-                            severity: moderationResult.severity || 'medium',
-                            explanation: moderationResult.explanation || 'This content may not meet all guidelines.',
-                            categories: moderationResult.flagged_categories || []
-                        }));
-                    }
-                    // 'approved' status: continue normally without storing anything
-                }
-                // If moderation API fails (non-ok response), allow upload to continue
-                // The content will be moderated again at Step 2 submission
-            } catch (moderationError) {
-                // CC_SPEC_VIDEO_REJECTION_FIX: Blocking errors now redirect directly (no re-throw needed)
-                // For network errors, log but allow upload to continue
-                // Content will be moderated at Step 2 submission as fallback
-                console.warn('Moderation check failed, continuing:', moderationError);
-            }
         }
 
         // STEP 4: Redirect to step 2 with B2 URLs

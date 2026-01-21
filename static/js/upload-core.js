@@ -178,8 +178,8 @@
         }
 
         // Show preview area, hide drop zone
-        elements.dropZone.classList.add('d-none');
-        elements.previewArea.classList.remove('d-none');
+        elements.dropZone.style.display = 'none';
+        elements.previewArea.classList.add('active');
 
         // Enable form section
         enableForm();
@@ -311,10 +311,10 @@
         elements.originalFilename.value = '';
 
         // Reset UI
-        elements.previewArea.classList.add('d-none');
+        elements.previewArea.classList.remove('active');
         elements.previewImage.src = '';
         elements.previewVideo.src = '';
-        elements.dropZone.classList.remove('d-none');
+        elements.dropZone.style.display = '';
         disableForm();
 
         // Dispatch reset event

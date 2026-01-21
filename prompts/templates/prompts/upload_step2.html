@@ -1598,6 +1598,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * Handle approved status
      */
     function handleApproved() {
+        stopPolling();
         nsfwChecking.classList.add('d-none');
         nsfwChecking.classList.remove('d-flex');
         
@@ -1623,6 +1624,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * Handle flagged status (light NSFW - can still submit)
      */
     function handleFlagged(categories) {
+        stopPolling();
         nsfwChecking.classList.add('d-none');
         nsfwChecking.classList.remove('d-flex');
         
@@ -1654,6 +1656,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * Handle rejected status (hardcore NSFW - cannot submit)
      */
     function handleRejected(reason) {
+        stopPolling();
         nsfwChecking.classList.add('d-none');
         nsfwChecking.classList.remove('d-flex');
         

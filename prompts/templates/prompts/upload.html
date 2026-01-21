@@ -532,7 +532,7 @@ input:checked + .toggle-slider:before {
                     {% csrf_token %}
 
                     <!-- Hidden fields for B2 upload data -->
-                    <input type="hidden" name="b2_file_key" id="b2FileKey">
+                    <input type="hidden" name="cloudinary_id" id="b2FileKey">
                     <input type="hidden" name="b2_original_url" id="b2OriginalUrl">
                     <input type="hidden" name="b2_thumb_url" id="b2ThumbUrl">
                     <input type="hidden" name="resource_type" id="resourceType">
@@ -546,7 +546,7 @@ input:checked + .toggle-slider:before {
                         <textarea
                             class="form-control"
                             id="promptContent"
-                            name="prompt_content"
+                            name="content"
                             placeholder="Enter the prompt you used to generate this image/video..."
                             required
                             disabled
@@ -583,7 +583,7 @@ input:checked + .toggle-slider:before {
                         <label class="form-label">Visibility</label>
                         <div class="visibility-toggle">
                             <label class="toggle-switch">
-                                <input type="checkbox" id="isDraft" name="is_draft" disabled>
+                                <input type="checkbox" id="isDraft" name="save_as_draft" disabled>
                                 <span class="toggle-slider"></span>
                             </label>
                             <span class="toggle-label" id="visibilityLabel">Public - visible to everyone</span>
@@ -672,7 +672,7 @@ input:checked + .toggle-slider:before {
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extras %}
 <script>
 // Upload page configuration
 window.uploadConfig = {
@@ -696,4 +696,4 @@ window.uploadConfig = {
 <script src="{% static 'js/upload-core.js' %}"></script>
 <script src="{% static 'js/upload-form.js' %}"></script>
 <script src="{% static 'js/upload-guards.js' %}"></script>
-{% endblock %}
+{% endblock extras %}

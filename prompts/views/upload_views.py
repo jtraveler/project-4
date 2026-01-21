@@ -213,7 +213,7 @@ def upload_step1(request):
         'cloudinary_upload_preset': 'ml_default',
     }
 
-    return render(request, 'prompts/upload_step1.html', context)
+    return render(request, 'prompts/upload.html', context)
 
 
 @login_required

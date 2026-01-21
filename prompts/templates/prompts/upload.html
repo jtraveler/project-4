@@ -1,0 +1,699 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+/* ===== Upload Page Layout ===== */
+.upload-page {
+    min-height: calc(100vh - 80px);
+    padding: var(--space-6, 24px);
+}
+
+.upload-container {
+    display: grid;
+    grid-template-columns: 6fr 4fr;
+    gap: var(--space-6, 24px);
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+@media (max-width: 991.98px) {
+    .upload-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== Drop Zone ===== */
+.upload-drop-zone {
+    border: 2px dashed var(--gray-300, #d1d5db);
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-12, 48px);
+    text-align: center;
+    background: var(--gray-50, #f9fafb);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-drop-zone:hover,
+.upload-drop-zone.drag-over {
+    border-color: var(--primary, #2563eb);
+    background: var(--primary-50, #eff6ff);
+}
+
+.upload-drop-zone.has-file {
+    border-style: solid;
+    border-color: var(--success, #22c55e);
+    background: var(--white, #ffffff);
+    padding: var(--space-4, 16px);
+}
+
+.drop-zone-icon {
+    font-size: 48px;
+    color: var(--gray-400, #9ca3af);
+    margin-bottom: var(--space-4, 16px);
+}
+
+.drop-zone-text {
+    font-size: var(--text-lg, 18px);
+    color: var(--gray-600, #4b5563);
+    margin-bottom: var(--space-2, 8px);
+}
+
+.drop-zone-subtext {
+    font-size: var(--text-sm, 14px);
+    color: var(--gray-500, #6b7280);
+}
+
+/* ===== Preview Area ===== */
+.upload-preview {
+    display: none;
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    position: relative;
+}
+
+.upload-preview.active {
+    display: block;
+}
+
+.upload-preview img,
+.upload-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-md, 8px);
+    max-height: 500px;
+}
+
+.preview-change-btn {
+    position: absolute;
+    bottom: var(--space-4, 16px);
+    right: var(--space-4, 16px);
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--white, #ffffff);
+    border: none;
+    padding: var(--space-2, 8px) var(--space-4, 16px);
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    font-size: var(--text-sm, 14px);
+    transition: background 0.2s ease;
+}
+
+.preview-change-btn:hover {
+    background: rgba(0, 0, 0, 0.85);
+}
+
+/* ===== Form Section ===== */
+.upload-form-section {
+    background: var(--white, #ffffff);
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-6, 24px);
+    border: 1px solid var(--gray-200, #e5e7eb);
+}
+
+.upload-form-section.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.form-section-title {
+    font-size: var(--text-xl, 20px);
+    font-weight: 600;
+    color: var(--gray-900, #111827);
+    margin-bottom: var(--space-6, 24px);
+}
+
+/* ===== NSFW Status Indicator ===== */
+.nsfw-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    padding: var(--space-3, 12px);
+    border-radius: var(--radius-md, 8px);
+    margin-bottom: var(--space-4, 16px);
+    font-size: var(--text-sm, 14px);
+}
+
+.nsfw-status.checking {
+    background: var(--blue-50, #eff6ff);
+    color: var(--blue-700, #1d4ed8);
+    border: 1px solid var(--blue-200, #bfdbfe);
+}
+
+.nsfw-status.approved {
+    background: var(--green-50, #f0fdf4);
+    color: var(--green-700, #15803d);
+    border: 1px solid var(--green-200, #bbf7d0);
+}
+
+.nsfw-status.flagged {
+    background: var(--amber-50, #fffbeb);
+    color: var(--amber-700, #b45309);
+    border: 1px solid var(--amber-200, #fde68a);
+}
+
+.nsfw-status-icon {
+    font-size: 16px;
+}
+
+.nsfw-status.checking .nsfw-status-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ===== Form Elements ===== */
+.form-group {
+    margin-bottom: var(--space-5, 20px);
+}
+
+.form-label {
+    display: block;
+    font-weight: 500;
+    color: var(--gray-700, #374151);
+    margin-bottom: var(--space-2, 8px);
+    font-size: var(--text-sm, 14px);
+}
+
+.form-label .required {
+    color: var(--red-500, #ef4444);
+}
+
+.form-control {
+    width: 100%;
+    padding: var(--space-3, 12px);
+    border: 1px solid var(--gray-300, #d1d5db);
+    border-radius: var(--radius-md, 8px);
+    font-size: var(--text-base, 16px);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 3px var(--primary-100, #dbeafe);
+}
+
+.form-control:disabled {
+    background: var(--gray-100, #f3f4f6);
+    cursor: not-allowed;
+}
+
+textarea.form-control {
+    min-height: 150px;
+    resize: vertical;
+}
+
+.form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+}
+
+/* ===== Visibility Toggle ===== */
+.visibility-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3, 12px);
+    padding: var(--space-3, 12px);
+    background: var(--gray-50, #f9fafb);
+    border-radius: var(--radius-md, 8px);
+}
+
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--gray-300, #d1d5db);
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary, #2563eb);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.toggle-label {
+    font-size: var(--text-sm, 14px);
+    color: var(--gray-600, #4b5563);
+}
+
+/* ===== Submit Button ===== */
+.submit-section {
+    margin-top: var(--space-6, 24px);
+    padding-top: var(--space-6, 24px);
+    border-top: 1px solid var(--gray-200, #e5e7eb);
+}
+
+.btn-upload-submit {
+    width: 100%;
+    padding: var(--space-4, 16px);
+    background: var(--primary, #2563eb);
+    color: var(--white, #ffffff);
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    font-size: var(--text-base, 16px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2, 8px);
+}
+
+.btn-upload-submit:hover:not(:disabled) {
+    background: var(--primary-600, #1d4ed8);
+}
+
+.btn-upload-submit:disabled {
+    background: var(--gray-300, #d1d5db);
+    cursor: not-allowed;
+}
+
+.btn-upload-submit .spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.btn-upload-submit.loading .spinner {
+    display: inline-block;
+}
+
+.btn-upload-submit.loading .btn-text {
+    display: none;
+}
+
+/* ===== Modals ===== */
+.upload-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-modal.active {
+    display: flex;
+}
+
+.modal-dialog {
+    background: var(--white, #ffffff);
+    border-radius: var(--radius-lg, 12px);
+    max-width: 480px;
+    width: 90%;
+    padding: var(--space-6, 24px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-icon {
+    font-size: 48px;
+    margin-bottom: var(--space-4, 16px);
+    text-align: center;
+}
+
+.modal-icon.warning {
+    color: var(--amber-500, #f59e0b);
+}
+
+.modal-icon.error {
+    color: var(--red-500, #ef4444);
+}
+
+.modal-title {
+    font-size: var(--text-xl, 20px);
+    font-weight: 600;
+    color: var(--gray-900, #111827);
+    margin-bottom: var(--space-2, 8px);
+    text-align: center;
+}
+
+.modal-message {
+    font-size: var(--text-base, 16px);
+    color: var(--gray-600, #4b5563);
+    margin-bottom: var(--space-6, 24px);
+    text-align: center;
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--space-3, 12px);
+    justify-content: center;
+}
+
+.modal-btn {
+    padding: var(--space-3, 12px) var(--space-6, 24px);
+    border-radius: var(--radius-md, 8px);
+    font-size: var(--text-base, 16px);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.modal-btn-secondary {
+    background: var(--gray-100, #f3f4f6);
+    color: var(--gray-700, #374151);
+}
+
+.modal-btn-secondary:hover {
+    background: var(--gray-200, #e5e7eb);
+}
+
+.modal-btn-primary {
+    background: var(--primary, #2563eb);
+    color: var(--white, #ffffff);
+}
+
+.modal-btn-primary:hover {
+    background: var(--primary-600, #1d4ed8);
+}
+
+.modal-btn-danger {
+    background: var(--red-500, #ef4444);
+    color: var(--white, #ffffff);
+}
+
+.modal-btn-danger:hover {
+    background: var(--red-600, #dc2626);
+}
+
+/* ===== Toast Notification ===== */
+.upload-toast {
+    position: fixed;
+    bottom: var(--space-6, 24px);
+    right: var(--space-6, 24px);
+    background: var(--amber-50, #fffbeb);
+    border: 1px solid var(--amber-200, #fde68a);
+    color: var(--amber-800, #92400e);
+    padding: var(--space-4, 16px);
+    border-radius: var(--radius-md, 8px);
+    max-width: 400px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    display: none;
+    z-index: 1040;
+}
+
+.upload-toast.active {
+    display: block;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast-content {
+    display: flex;
+    gap: var(--space-3, 12px);
+}
+
+.toast-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.toast-message {
+    font-size: var(--text-sm, 14px);
+}
+
+.toast-close {
+    position: absolute;
+    top: var(--space-2, 8px);
+    right: var(--space-2, 8px);
+    background: none;
+    border: none;
+    color: var(--amber-600, #d97706);
+    cursor: pointer;
+    padding: var(--space-1, 4px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="upload-page">
+    <div class="container">
+        <h1 class="page-title mb-4">Upload Your Prompt</h1>
+
+        <div class="upload-container">
+            <!-- Left Column: Drop Zone / Preview -->
+            <div class="upload-left-column">
+                <!-- Drop Zone (visible when no file) -->
+                <div class="upload-drop-zone" id="dropZone">
+                    <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+                    <i class="fas fa-cloud-upload-alt drop-zone-icon"></i>
+                    <p class="drop-zone-text">Drag and drop your file here</p>
+                    <p class="drop-zone-subtext">or click to browse</p>
+                    <p class="drop-zone-subtext mt-2">Supports: JPG, PNG, GIF, MP4, MOV (max 100MB)</p>
+                </div>
+
+                <!-- Preview Area (visible when file selected) -->
+                <div class="upload-preview" id="previewArea">
+                    <img id="previewImage" src="" alt="Preview" style="display: none;">
+                    <video id="previewVideo" src="" controls style="display: none;"></video>
+                    <button type="button" class="preview-change-btn" id="changeFileBtn">
+                        <i class="fas fa-exchange-alt"></i> Change File
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: Form -->
+            <div class="upload-form-section disabled" id="formSection">
+                <h2 class="form-section-title">Prompt Details</h2>
+
+                <!-- NSFW Status Indicator -->
+                <div class="nsfw-status checking" id="nsfwStatus" style="display: none;">
+                    <i class="fas fa-spinner nsfw-status-icon"></i>
+                    <span class="nsfw-status-text">Checking content...</span>
+                </div>
+
+                <form id="uploadForm" method="post" action="{% url 'prompts:upload_submit' %}">
+                    {% csrf_token %}
+
+                    <!-- Hidden fields for B2 upload data -->
+                    <input type="hidden" name="b2_file_key" id="b2FileKey">
+                    <input type="hidden" name="b2_original_url" id="b2OriginalUrl">
+                    <input type="hidden" name="b2_thumb_url" id="b2ThumbUrl">
+                    <input type="hidden" name="resource_type" id="resourceType">
+                    <input type="hidden" name="original_filename" id="originalFilename">
+
+                    <!-- Prompt Content -->
+                    <div class="form-group">
+                        <label class="form-label" for="promptContent">
+                            Your Prompt <span class="required">*</span>
+                        </label>
+                        <textarea
+                            class="form-control"
+                            id="promptContent"
+                            name="prompt_content"
+                            placeholder="Enter the prompt you used to generate this image/video..."
+                            required
+                            disabled
+                        ></textarea>
+                    </div>
+
+                    <!-- AI Generator -->
+                    <div class="form-group">
+                        <label class="form-label" for="aiGenerator">
+                            AI Generator <span class="required">*</span>
+                        </label>
+                        <select class="form-control form-select" id="aiGenerator" name="ai_generator" required disabled>
+                            <option value="">Select AI Generator</option>
+                            <option value="Midjourney">Midjourney</option>
+                            <option value="DALL-E 3">DALL-E 3</option>
+                            <option value="DALL-E 2">DALL-E 2</option>
+                            <option value="Stable Diffusion">Stable Diffusion</option>
+                            <option value="Leonardo AI">Leonardo AI</option>
+                            <option value="Adobe Firefly">Adobe Firefly</option>
+                            <option value="Flux">Flux</option>
+                            <option value="Ideogram">Ideogram</option>
+                            <option value="Bing Image Creator">Bing Image Creator</option>
+                            <option value="Sora">Sora</option>
+                            <option value="Sora 2">Sora 2</option>
+                            <option value="Veo 3">Veo 3</option>
+                            <option value="Runway">Runway</option>
+                            <option value="Pika">Pika</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <!-- Visibility Toggle -->
+                    <div class="form-group">
+                        <label class="form-label">Visibility</label>
+                        <div class="visibility-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="isDraft" name="is_draft" disabled>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label" id="visibilityLabel">Public - visible to everyone</span>
+                        </div>
+                    </div>
+
+                    <!-- Submit Section -->
+                    <div class="submit-section">
+                        <button type="submit" class="btn-upload-submit" id="submitBtn" disabled>
+                            <span class="spinner"></span>
+                            <span class="btn-text">Publish Prompt</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Modal -->
+<div class="upload-modal" id="navigationModal">
+    <div class="modal-dialog">
+        <div class="modal-icon warning">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 class="modal-title">Leave Page?</h3>
+        <p class="modal-message">You have an upload in progress. If you leave, your progress will be lost.</p>
+        <div class="modal-actions">
+            <button type="button" class="modal-btn modal-btn-secondary" id="navStayBtn">Stay</button>
+            <button type="button" class="modal-btn modal-btn-danger" id="navLeaveBtn">Leave</button>
+        </div>
+    </div>
+</div>
+
+<!-- Idle Modal -->
+<div class="upload-modal" id="idleModal">
+    <div class="modal-dialog">
+        <div class="modal-icon warning">
+            <i class="fas fa-clock"></i>
+        </div>
+        <h3 class="modal-title">Still There?</h3>
+        <p class="modal-message">Your session will expire in <span id="idleCountdown">60</span> seconds due to inactivity.</p>
+        <div class="modal-actions">
+            <button type="button" class="modal-btn modal-btn-primary" id="idleContinueBtn">Continue</button>
+        </div>
+    </div>
+</div>
+
+<!-- Expired Modal -->
+<div class="upload-modal" id="expiredModal">
+    <div class="modal-dialog">
+        <div class="modal-icon error">
+            <i class="fas fa-times-circle"></i>
+        </div>
+        <h3 class="modal-title">Session Expired</h3>
+        <p class="modal-message">Your upload session has expired. Please start over.</p>
+        <div class="modal-actions">
+            <button type="button" class="modal-btn modal-btn-primary" id="expiredRestartBtn">Start Over</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rejected Modal -->
+<div class="upload-modal" id="rejectedModal">
+    <div class="modal-dialog">
+        <div class="modal-icon error">
+            <i class="fas fa-ban"></i>
+        </div>
+        <h3 class="modal-title">Content Not Allowed</h3>
+        <p class="modal-message" id="rejectedMessage">This content violates our community guidelines and cannot be uploaded.</p>
+        <div class="modal-actions">
+            <button type="button" class="modal-btn modal-btn-primary" id="rejectedOkBtn">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- Flagged Content Toast -->
+<div class="upload-toast" id="flaggedToast">
+    <button type="button" class="toast-close" id="toastCloseBtn">
+        <i class="fas fa-times"></i>
+    </button>
+    <div class="toast-content">
+        <i class="fas fa-exclamation-circle toast-icon"></i>
+        <span class="toast-message">This content has been flagged for review. You can still submit, but it may take longer to appear.</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Upload page configuration
+window.uploadConfig = {
+    urls: {
+        presign: "{% url 'prompts:b2_presign_upload' %}",
+        complete: "{% url 'prompts:b2_upload_complete' %}",
+        moderate: "{% url 'prompts:b2_moderate_upload' %}",
+        nsfwStatus: "{% url 'prompts:nsfw_status' %}",
+        submit: "{% url 'prompts:upload_submit' %}",
+        cancel: "{% url 'prompts:cancel_upload' %}"
+    },
+    csrf: "{{ csrf_token }}",
+    maxFileSize: 100 * 1024 * 1024,
+    allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    allowedVideoTypes: ['video/mp4', 'video/quicktime', 'video/webm'],
+    idleTimeout: 300000,
+    idleWarning: 60000,
+    nsfwPollInterval: 2000
+};
+</script>
+<script src="{% static 'js/upload-core.js' %}"></script>
+<script src="{% static 'js/upload-form.js' %}"></script>
+<script src="{% static 'js/upload-guards.js' %}"></script>
+{% endblock %}

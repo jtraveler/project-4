@@ -20,7 +20,7 @@
                     <i class="fas fa-cloud-upload-alt drop-zone-icon"></i>
                     <p class="drop-zone-text">Drag and drop your file here</p>
                     <p class="drop-zone-subtext">or click to browse</p>
-                    <p class="drop-zone-subtext mt-2">Supports: JPG, PNG, GIF, MP4, MOV (max 15MB)</p>
+                    <p class="drop-zone-subtext mt-2">Supports: JPG, PNG, GIF, WebP (max 3MB) • MP4, MOV, WebM (max 15MB)</p>
                 </div>
 
                 <!-- Preview Area (visible when file selected) -->
@@ -229,7 +229,7 @@ window.uploadConfig = {
         delete: "{% url 'prompts:b2_delete_upload' %}"
     },
     csrf: "{{ csrf_token }}",
-    maxFileSize: 15 * 1024 * 1024,
+    maxFileSize: 3 * 1024 * 1024,
     maxVideoSize: 15 * 1024 * 1024,
     allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     allowedVideoTypes: ['video/mp4', 'video/quicktime', 'video/webm'],

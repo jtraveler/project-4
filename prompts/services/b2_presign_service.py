@@ -156,10 +156,10 @@ def generate_presigned_upload_url(content_type, content_length, original_filenam
 
     # Validate file size
     is_video = content_type in ALLOWED_VIDEO_TYPES
-    max_size = 100 * 1024 * 1024 if is_video else 10 * 1024 * 1024
+    max_size = 15 * 1024 * 1024 if is_video else 3 * 1024 * 1024
 
     if content_length > max_size:
-        size_limit = '100MB' if is_video else '10MB'
+        size_limit = '15MB' if is_video else '3MB'
         return {
             'success': False,
             'error': f'File too large. Maximum size is {size_limit}.',

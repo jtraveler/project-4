@@ -270,18 +270,18 @@ def b2_upload_api(request):
 
     # Validate file size based on type
     if is_image:
-        max_size = 10 * 1024 * 1024  # 10MB for images
+        max_size = 3 * 1024 * 1024  # 3MB for images
         if uploaded_file.size > max_size:
             return JsonResponse({
                 'success': False,
-                'error': 'Image too large. Maximum size is 10MB.'
+                'error': 'Image too large. Maximum size is 3MB.'
             }, status=400)
     else:
-        max_size = 100 * 1024 * 1024  # 100MB for videos
+        max_size = 15 * 1024 * 1024  # 15MB for videos
         if uploaded_file.size > max_size:
             return JsonResponse({
                 'success': False,
-                'error': 'Video too large. Maximum size is 100MB.'
+                'error': 'Video too large. Maximum size is 15MB.'
             }, status=400)
 
     # Check for quick mode (images only)

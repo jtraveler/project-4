@@ -100,18 +100,6 @@
         if (elements.toastCloseBtn) {
             elements.toastCloseBtn.addEventListener('click', hideToast);
         }
-
-        // DEBUG: Verify modal elements were found
-        console.log('=== MODAL DEBUG ===');
-        console.log('rejectedModal:', elements.rejectedModal);
-        console.log('rejectedOkBtn:', elements.rejectedOkBtn);
-        
-        // DEBUG: Test click listener attachment
-        if (elements.rejectedOkBtn) {
-            console.log('rejectedOkBtn click listeners attached');
-        } else {
-            console.error('rejectedOkBtn NOT FOUND - check HTML');
-        }
     }
 
     // ========================================

@@ -35,6 +35,9 @@
             previewVideo: document.getElementById('previewVideo'),
             changeFileBtn: document.getElementById('changeFileBtn'),
             formSection: document.getElementById('formSection'),
+            // Rate limit modal
+            rateLimitModal: document.getElementById('rateLimitModal'),
+            rateLimitOkBtn: document.getElementById('rateLimitOkBtn'),
             // Hidden fields for form submission
             b2FileKey: document.getElementById('b2FileKey'),
             b2OriginalUrl: document.getElementById('b2OriginalUrl'),
@@ -66,6 +69,10 @@
 
         // Cleanup on page unload (best-effort)
         window.addEventListener('beforeunload', sendCleanupBeacon);
+
+        // Rate limit modal
+        elements.rateLimitOkBtn.addEventListener('click', handleRateLimitOk);
+        document.addEventListener('rateLimitExceeded', showRateLimitModal);
     }
 
     // ========================================
@@ -223,6 +230,12 @@
             );
 
             if (!presignResponse.ok) {
+                if (presignResponse.status === 429) {
+                    state.isUploading = false;
+                    state.uploadState = 'EMPTY';
+                    dispatch('rateLimitExceeded', {});
+                    return;
+                }
                 throw new Error('Failed to get upload URL');
             }
 
@@ -395,6 +408,22 @@
         navigator.sendBeacon(window.uploadConfig.urls.delete, formData);
 
         console.log('Cleanup beacon sent for:', fileKey);
+    }
+
+    // ========================================
+    // Rate Limit Modal
+    // ========================================
+    function showRateLimitModal(e) {
+        if (elements.rateLimitModal) {
+            elements.rateLimitModal.classList.add('active');
+        }
+    }
+
+    function handleRateLimitOk() {
+        if (elements.rateLimitModal) {
+            elements.rateLimitModal.classList.remove('active');
+        }
+        resetUpload();
     }
 
     // ========================================

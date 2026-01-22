@@ -175,6 +175,20 @@
     </div>
 </div>
 
+<!-- Rate Limit Modal -->
+<div class="upload-modal" id="rateLimitModal" role="dialog" aria-labelledby="rateLimitTitle" aria-modal="true">
+    <div class="modal-dialog">
+        <div class="modal-icon warning">
+            <i class="fas fa-clock" aria-hidden="true"></i>
+        </div>
+        <h3 class="modal-title" id="rateLimitTitle">Upload Limit Reached</h3>
+        <p class="modal-message">You've reached the hourly upload limit (20 uploads). <br>Please try again in about an hour.</p>
+        <div class="modal-actions">
+            <button type="button" class="modal-btn modal-btn-primary" id="rateLimitOkBtn">OK</button>
+        </div>
+    </div>
+</div>
+
 <!-- Flagged Content Toast -->
 <div class="upload-toast" id="flaggedToast">
     <button type="button" class="toast-close" id="toastCloseBtn">
@@ -202,6 +216,7 @@ window.uploadConfig = {
     },
     csrf: "{{ csrf_token }}",
     maxFileSize: 100 * 1024 * 1024,
+    maxVideoSize: 100 * 1024 * 1024,
     allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     allowedVideoTypes: ['video/mp4', 'video/quicktime', 'video/webm'],
     idleTimeout: 300000,

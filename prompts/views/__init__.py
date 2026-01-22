@@ -55,10 +55,6 @@ from .social_views import (
 from .api_views import (
     collaborate_request,
     prompt_like,
-    prompt_move_up,
-    prompt_move_down,
-    prompt_set_order,
-    bulk_reorder_prompts,
     b2_upload_api,
     b2_generate_variants,
     b2_variants_status,
@@ -66,7 +62,7 @@ from .api_views import (
     b2_upload_complete,
     b2_moderate_upload,
     b2_delete_upload,
-    ai_suggestions,  # L8-STEP2-PERF: Deferred AI suggestions
+    ai_suggestions,
 )
 
 # Import admin utility views
@@ -77,6 +73,10 @@ from .admin_views import (
     bulk_delete_no_media,
     bulk_set_draft_no_media,
     bulk_set_published_no_media,
+    prompt_move_up,
+    prompt_move_down,
+    prompt_set_order,
+    bulk_reorder_prompts,
 )
 
 # Import AI generator category views

@@ -38,6 +38,10 @@
             // Rate limit modal
             rateLimitModal: document.getElementById('rateLimitModal'),
             rateLimitOkBtn: document.getElementById('rateLimitOkBtn'),
+            // Validation error modal
+            validationErrorModal: document.getElementById('validationErrorModal'),
+            validationErrorMessage: document.getElementById('validationErrorMessage'),
+            validationErrorOkBtn: document.getElementById('validationErrorOkBtn'),
             // Hidden fields for form submission
             b2FileKey: document.getElementById('b2FileKey'),
             b2OriginalUrl: document.getElementById('b2OriginalUrl'),
@@ -73,6 +77,10 @@
         // Rate limit modal
         elements.rateLimitOkBtn.addEventListener('click', handleRateLimitOk);
         document.addEventListener('rateLimitExceeded', showRateLimitModal);
+
+        // Validation error modal
+        elements.validationErrorOkBtn.addEventListener('click', handleValidationErrorOk);
+        document.addEventListener('fileValidationError', showValidationErrorModal);
     }
 
     // ========================================
@@ -424,6 +432,24 @@
             elements.rateLimitModal.classList.remove('active');
         }
         resetUpload();
+    }
+
+    // ========================================
+    // Validation Error Modal
+    // ========================================
+    function showValidationErrorModal(e) {
+        if (elements.validationErrorModal) {
+            if (e.detail && e.detail.error && elements.validationErrorMessage) {
+                elements.validationErrorMessage.textContent = e.detail.error;
+            }
+            elements.validationErrorModal.classList.add('active');
+        }
+    }
+
+    function handleValidationErrorOk() {
+        if (elements.validationErrorModal) {
+            elements.validationErrorModal.classList.remove('active');
+        }
     }
 
     // ========================================

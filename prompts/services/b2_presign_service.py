@@ -35,10 +35,16 @@ ALLOWED_VIDEO_TYPES = [
     'video/quicktime',
 ]
 
+# Module-level cache for B2 client (boto3 clients are thread-safe)
+_b2_client_cache = None
+
 
 def get_b2_client():
     """
-    Create a boto3 S3 client configured for B2.
+    Get or create a cached boto3 S3 client configured for B2.
+
+    The client is cached at module level for reuse across requests.
+    boto3 clients are thread-safe and designed to be reused.
 
     Timeout configuration:
     - connect_timeout: 5 seconds to establish connection
@@ -46,22 +52,26 @@ def get_b2_client():
     - retries: 2 attempts max (1 retry on failure)
 
     Returns:
-        boto3.client: Configured S3 client for B2
+        boto3.client: Configured S3 client for B2 (cached)
     """
-    return boto3.client(
-        's3',
-        endpoint_url=settings.B2_ENDPOINT_URL,
-        aws_access_key_id=settings.B2_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
-        region_name=settings.B2_REGION,
-        config=Config(
-            signature_version='s3v4',
-            s3={'addressing_style': 'path'},
-            connect_timeout=5,
-            read_timeout=10,
-            retries={'max_attempts': 2}
+    global _b2_client_cache
+    if _b2_client_cache is None:
+        _b2_client_cache = boto3.client(
+            's3',
+            endpoint_url=settings.B2_ENDPOINT_URL,
+            aws_access_key_id=settings.B2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
+            region_name=settings.B2_REGION,
+            config=Config(
+                signature_version='s3v4',
+                s3={'addressing_style': 'path'},
+                connect_timeout=5,
+                read_timeout=10,
+                retries={'max_attempts': 2}
+            )
         )
-    )
+        logger.info("B2 client initialized (cached for reuse)")
+    return _b2_client_cache
 
 
 def generate_upload_key(content_type, original_filename=None):

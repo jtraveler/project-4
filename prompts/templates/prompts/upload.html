@@ -441,6 +441,18 @@ input:checked + .toggle-slider:before {
     background: var(--red-600, #dc2626);
 }
 
+/* Ensure modal buttons are always clickable */
+.modal-btn {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+.modal-dialog {
+    position: relative;
+    z-index: 1;
+}
+
 /* ===== Toast Notification ===== */
 .upload-toast {
     position: fixed;
@@ -521,7 +533,7 @@ input:checked + .toggle-slider:before {
                 <!-- Preview Area (visible when file selected) -->
                 <div class="upload-preview" id="previewArea">
                     <img id="previewImage" src="" alt="Preview" class="d-none">
-                    <video id="previewVideo" src="" controls class="d-none">
+                    <video id="previewVideo" src="" controls class="d-none"></video>
                     <button type="button" class="preview-change-btn" id="changeFileBtn">
                         <i class="fas fa-exchange-alt"></i> Change File
                     </button>
@@ -692,7 +704,8 @@ window.uploadConfig = {
         moderate: "{% url 'prompts:b2_moderate_upload' %}",
         nsfwStatus: "{% url 'prompts:nsfw_status' %}",
         submit: "{% url 'prompts:upload_submit' %}",
-        cancel: "{% url 'prompts:cancel_upload' %}"
+        cancel: "{% url 'prompts:cancel_upload' %}",
+        delete: "{% url 'prompts:b2_delete_upload' %}"
     },
     csrf: "{{ csrf_token }}",
     maxFileSize: 100 * 1024 * 1024,

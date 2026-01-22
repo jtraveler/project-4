@@ -1330,14 +1330,21 @@ def b2_delete_upload(request):
         - message: str
     """
     try:
-        # Parse request body
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({
-                'success': False,
-                'error': 'Invalid JSON in request body',
-            }, status=400)
+        # Parse request body (JSON or form data for sendBeacon compatibility)
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid JSON in request body',
+                }, status=400)
+        else:
+            # Form data (from sendBeacon)
+            data = {
+                'file_key': request.POST.get('file_key'),
+                'is_video': request.POST.get('is_video', 'false').lower() == 'true',
+            }
 
         file_key = data.get('file_key')
         if not file_key:

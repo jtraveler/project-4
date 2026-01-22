@@ -63,6 +63,9 @@
 
         // Change file button
         elements.changeFileBtn.addEventListener('click', handleChangeFile);
+
+        // Cleanup on page unload (best-effort)
+        window.addEventListener('beforeunload', sendCleanupBeacon);
     }
 
     // ========================================
@@ -186,11 +189,15 @@
     }
 
     function enableForm() {
-        elements.formSection.classList.remove('d-none');
+        if (elements.formSection) {
+            elements.formSection.classList.remove('disabled');
+        }
     }
 
     function disableForm() {
-        elements.formSection.classList.add('d-none');
+        if (elements.formSection) {
+            elements.formSection.classList.add('disabled');
+        }
     }
 
     // ========================================
@@ -290,9 +297,13 @@
     // ========================================
     // Change File / Reset
     // ========================================
-    function handleChangeFile(e) {
+    async function handleChangeFile(e) {
         e.preventDefault();
         e.stopPropagation();
+        
+        // Delete the previous upload from B2 before allowing new selection
+        await deleteCurrentUpload();
+        
         resetUpload();
         elements.fileInput.click();
     }
@@ -332,6 +343,61 @@
     }
 
     // ========================================
+    // B2 Cleanup (Delete orphaned files)
+    // ========================================
+    async function deleteCurrentUpload() {
+        // Only delete if we have uploaded data
+        if (!state.b2Data || !state.b2Data.file_key) {
+            return Promise.resolve();
+        }
+
+        const fileKey = state.b2Data.file_key;
+        const isVideo = state.currentFile?.type?.startsWith('video/') || false;
+
+        try {
+            const response = await fetch(window.uploadConfig.urls.delete, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.uploadConfig.csrf
+                },
+                body: JSON.stringify({
+                    file_key: fileKey,
+                    is_video: isVideo
+                })
+            });
+
+            if (response.ok) {
+                console.log('B2 file deleted:', fileKey);
+            } else {
+                console.warn('Failed to delete B2 file:', fileKey);
+            }
+        } catch (error) {
+            console.error('Error deleting B2 file:', error);
+        }
+    }
+
+    // Beacon cleanup for page unload (best-effort)
+    function sendCleanupBeacon() {
+        if (!state.b2Data || !state.b2Data.file_key) {
+            return;
+        }
+
+        const fileKey = state.b2Data.file_key;
+        const isVideo = state.currentFile?.type?.startsWith('video/') || false;
+
+        // Create form data for beacon (includes CSRF properly)
+        const formData = new FormData();
+        formData.append('file_key', fileKey);
+        formData.append('is_video', isVideo);
+        formData.append('csrfmiddlewaretoken', window.uploadConfig.csrf);
+
+        navigator.sendBeacon(window.uploadConfig.urls.delete, formData);
+
+        console.log('Cleanup beacon sent for:', fileKey);
+    }
+
+    // ========================================
     // Event Dispatch Helper
     // ========================================
     function dispatch(eventName, detail) {
@@ -345,7 +411,8 @@
         getState: () => ({ ...state }),
         isUploadComplete: () => state.uploadState === 'UPLOADED',
         isUploading: () => state.isUploading,
-        reset: resetUpload
+        reset: resetUpload,
+        deleteUpload: deleteCurrentUpload
     };
 
     // ========================================

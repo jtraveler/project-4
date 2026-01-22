@@ -100,6 +100,18 @@
         if (elements.toastCloseBtn) {
             elements.toastCloseBtn.addEventListener('click', hideToast);
         }
+
+        // DEBUG: Verify modal elements were found
+        console.log('=== MODAL DEBUG ===');
+        console.log('rejectedModal:', elements.rejectedModal);
+        console.log('rejectedOkBtn:', elements.rejectedOkBtn);
+        
+        // DEBUG: Test click listener attachment
+        if (elements.rejectedOkBtn) {
+            console.log('rejectedOkBtn click listeners attached');
+        } else {
+            console.error('rejectedOkBtn NOT FOUND - check HTML');
+        }
     }
 
     // ========================================
@@ -493,12 +505,18 @@
         elements.rejectedModal.classList.remove('active');
     }
 
-    function handleRejectedOk() {
+    async function handleRejectedOk() {
+        console.log('handleRejectedOk TRIGGERED');
         hideModal();
 
-        // Reset the upload flow
-        if (window.UploadCore && typeof window.UploadCore.reset === 'function') {
-            window.UploadCore.reset();
+        // Delete rejected file from B2, then reset
+        if (window.UploadCore) {
+            if (typeof window.UploadCore.deleteUpload === 'function') {
+                await window.UploadCore.deleteUpload();
+            }
+            if (typeof window.UploadCore.reset === 'function') {
+                window.UploadCore.reset();
+            }
         }
     }
 

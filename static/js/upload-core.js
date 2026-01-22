@@ -249,11 +249,21 @@
                 })
             });
 
-            if (!completeResponse.ok) {
-                throw new Error('Failed to complete upload');
-            }
-
             const completeData = await completeResponse.json();
+
+            // Check for moderation rejection (HTTP 400 with moderation_status)
+            if (!completeResponse.ok) {
+                if (completeData.moderation_status === 'rejected') {
+                    // Dispatch rejection event with full data
+                    dispatch('b2UploadError', { 
+                        error: completeData.error || 'Content rejected',
+                        data: completeData 
+                    });
+                    state.isUploading = false;
+                    return;
+                }
+                throw new Error(completeData.error || 'Failed to complete upload');
+            }
 
             // Update state
             state.uploadState = 'UPLOADED';

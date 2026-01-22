@@ -28,12 +28,13 @@
     // ========================================
     const MAX_POLL_ATTEMPTS = 30; // 30 * 2s = 60 seconds max
     const NSFW_STATUS_CLASSES = {
-        pending: 'status-pending',
-        checking: 'status-checking',
-        approved: 'status-approved',
-        flagged: 'status-flagged',
-        rejected: 'status-rejected',
-        error: 'status-error'
+    pending: '',
+    uploading: 'uploading',
+    checking: 'checking',
+    approved: 'approved',
+    flagged: 'flagged',
+    rejected: 'rejected',
+    error: 'error'
     };
 
     // ========================================
@@ -108,16 +109,26 @@
         // File selected, enable form section
         enableForm();
 
-        // Reset NSFW status to pending
-        updateNsfwStatus('pending');
+        // Show uploading status (B2 upload in progress)
+        updateNsfwStatus('uploading');
     }
 
     function handleB2UploadComplete(e) {
         const { data } = e.detail;
         state.b2Data = data;
 
-        // Queue NSFW moderation FIRST, then start polling
-        queueNsfwModeration(data);
+        // For videos, moderation already happened in complete endpoint
+        if (data.is_video && data.moderation_status) {
+            // Use the moderation result from complete endpoint
+            handleModerationResult({
+                status: data.moderation_status,
+                severity: data.severity || 'low',
+                message: data.moderation_message || ''
+            });
+        } else {
+            // For images, queue separate NSFW moderation
+            queueNsfwModeration(data);
+        }
     }
 
     // ========================================
@@ -135,8 +146,8 @@
                     'X-CSRFToken': config.csrf
                 },
                 body: JSON.stringify({
-                    image_url: data.originalUrl,
-                    file_key: data.fileKey
+                    image_url: data.urls?.original,
+                    file_key: data.file_key
                 })
             });
 
@@ -162,17 +173,26 @@
     }
 
     function handleModerationResult(result) {
-        switch (result.status) {
+        // Backend may return 'status' or 'moderation_status'
+        const status = result.status || result.moderation_status;
+        
+        // Map severity to status if needed (high=flagged, critical=rejected)
+        let finalStatus = status;
+        if (status === 'rejected' && result.severity === 'high') {
+            finalStatus = 'flagged';
+        }
+        
+        switch (finalStatus) {
             case 'approved':
                 updateNsfwStatus('approved');
                 break;
             case 'flagged':
                 updateNsfwStatus('flagged');
-                showFlaggedToast(result.message || 'Content flagged for review');
+                showFlaggedToast(result.error || result.message || 'Content flagged for review');
                 break;
             case 'rejected':
                 updateNsfwStatus('rejected');
-                showRejectedModal(result.message || 'Content rejected');
+                showRejectedModal(result.error || result.message || 'Content rejected');
                 break;
             default:
                 // If status is pending/checking, start polling
@@ -181,8 +201,15 @@
     }
 
     function handleB2UploadError(e) {
-        const { error } = e.detail;
+        const { error, data } = e.detail;
         console.error('B2 Upload Error:', error);
+
+        // Check if this is a moderation rejection (not a generic error)
+        if (data && data.moderation_status === 'rejected') {
+            updateNsfwStatus('rejected');
+            showRejectedModal(data.error || 'Video contains content that violates our guidelines.');
+            return;
+        }
 
         // Show error state but keep form enabled for retry
         updateNsfwStatus('error');
@@ -405,9 +432,19 @@
 
         if (!elements.nsfwStatus) return;
 
+        // Show the status element (it starts hidden)
+        if (status !== 'pending') {
+            elements.nsfwStatus.style.display = '';
+        }
+
+        // Make the status element visible (it starts with display: none)
+        elements.nsfwStatus.style.display = 'block';
+
         // Remove all status classes
         Object.values(NSFW_STATUS_CLASSES).forEach(cls => {
-            elements.nsfwStatus.classList.remove(cls);
+            if (cls) {  // Skip empty class names
+                elements.nsfwStatus.classList.remove(cls);
+            }
         });
 
         // Add current status class
@@ -416,10 +453,11 @@
         }
 
         // Update status text
-        const statusText = elements.nsfwStatus.querySelector('.status-text');
+        const statusText = elements.nsfwStatus.querySelector('.nsfw-status-text');
         if (statusText) {
             const messages = {
                 pending: 'Waiting for upload...',
+                uploading: 'Uploading file...',
                 checking: 'Checking content...',
                 approved: 'Content approved',
                 flagged: 'Flagged for review',
@@ -440,23 +478,19 @@
         if (!elements.rejectedModal) return;
 
         // Update modal message if element exists
-        const modalBody = elements.rejectedModal.querySelector('.modal-body p');
-        if (modalBody && message) {
-            modalBody.textContent = message;
+        const modalMessage = elements.rejectedModal.querySelector('.modal-message');
+        if (modalMessage && message) {
+            modalMessage.textContent = message;
         }
 
-        // Show modal (Bootstrap 5)
-        elements.rejectedModal.classList.add('show');
-        elements.rejectedModal.style.display = 'block';
-        document.body.classList.add('modal-open');
+        // Show modal
+        elements.rejectedModal.classList.add('active');
     }
 
     function hideModal() {
         if (!elements.rejectedModal) return;
 
-        elements.rejectedModal.classList.remove('show');
-        elements.rejectedModal.style.display = 'none';
-        document.body.classList.remove('modal-open');
+        elements.rejectedModal.classList.remove('active');
     }
 
     function handleRejectedOk() {
@@ -472,19 +506,19 @@
         if (!elements.flaggedToast) return;
 
         // Update toast message if element exists
-        const toastBody = elements.flaggedToast.querySelector('.toast-body');
-        if (toastBody && message) {
-            toastBody.textContent = message;
+        const toastMessage = elements.flaggedToast.querySelector('.toast-message');
+        if (toastMessage && message) {
+            toastMessage.textContent = message;
         }
 
         // Show toast
-        elements.flaggedToast.classList.add('show');
+        elements.flaggedToast.classList.add('active');
     }
 
     function hideToast() {
         if (!elements.flaggedToast) return;
 
-        elements.flaggedToast.classList.remove('show');
+        elements.flaggedToast.classList.remove('active');
     }
 
     // ========================================

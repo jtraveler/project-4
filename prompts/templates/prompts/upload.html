@@ -140,6 +140,16 @@
     font-size: var(--text-sm, 14px);
 }
 
+.nsfw-status.uploading {
+    background: var(--blue-50, #eff6ff);
+    color: var(--blue-700, #1d4ed8);
+    border: 1px solid var(--blue-200, #bfdbfe);
+}
+
+.nsfw-status.uploading .nsfw-status-icon {
+    animation: spin 1s linear infinite;
+}
+
 .nsfw-status.checking {
     background: var(--blue-50, #eff6ff);
     color: var(--blue-700, #1d4ed8);
@@ -510,8 +520,8 @@ input:checked + .toggle-slider:before {
 
                 <!-- Preview Area (visible when file selected) -->
                 <div class="upload-preview" id="previewArea">
-                    <img id="previewImage" src="" alt="Preview" style="display: none;">
-                    <video id="previewVideo" src="" controls style="display: none;"></video>
+                    <img id="previewImage" src="" alt="Preview" class="d-none">
+                    <video id="previewVideo" src="" controls class="d-none">
                     <button type="button" class="preview-change-btn" id="changeFileBtn">
                         <i class="fas fa-exchange-alt"></i> Change File
                     </button>
@@ -523,7 +533,7 @@ input:checked + .toggle-slider:before {
                 <h2 class="form-section-title">Prompt Details</h2>
 
                 <!-- NSFW Status Indicator -->
-                <div class="nsfw-status checking" id="nsfwStatus" style="display: none;">
+                <div class="nsfw-status" id="nsfwStatus" style="display: none;">
                     <i class="fas fa-spinner nsfw-status-icon"></i>
                     <span class="nsfw-status-text">Checking content...</span>
                 </div>

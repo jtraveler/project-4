@@ -960,19 +960,14 @@ def b2_upload_complete(request):
     if not is_video:
         # Generate thumbnail immediately (quick mode still defers medium/large/webp)
         try:
-            from prompts.services.b2_upload_service import B2UploadService
+            from prompts.services.b2_upload_service import generate_image_variants
 
             # Fetch original image for thumbnail generation
             image_response = requests.get(cdn_url, timeout=10)
             image_response.raise_for_status()
 
             # Generate only thumbnail (300x300)
-            b2_service = B2UploadService()
-            thumb_result = b2_service.process_upload(
-                image_response.content,
-                filename,
-                thumbnail_sizes=['thumb']  # Only generate thumb, not medium/large/webp
-            )
+            thumb_result = generate_image_variants(image_response.content, filename)
 
             if thumb_result.get('success') and thumb_result.get('urls', {}).get('thumb'):
                 urls['thumb'] = thumb_result['urls']['thumb']
@@ -1035,21 +1030,27 @@ def b2_upload_complete(request):
                         video_moderation_result = VisionModerationService().moderate_video_frames(frame_paths)
                         logger.info(f"Video moderation result: {video_moderation_result}")
 
-                        # Fail-closed: Block if content is NOT safe (rejected, flagged, or missing is_safe)
+                        # Handle unsafe content based on severity
                         if not video_moderation_result.get('is_safe', False):
-                            # Clean up temp files before returning
-                            for fp in frame_paths:
-                                try:
-                                    if os.path.exists(fp):
-                                        os.remove(fp)
-                                except Exception:
-                                    pass
-                            return JsonResponse({
-                                'success': False,
-                                'error': 'Video contains content that violates our guidelines.',
-                                'moderation_status': 'rejected',
-                                'severity': video_moderation_result.get('severity', 'critical')
-                            }, status=400)
+                            severity = video_moderation_result.get('severity', 'critical')
+                            
+                            # Only hard-block 'critical' severity (hardcore NSFW)
+                            if severity == 'critical':
+                                # Clean up temp files before returning
+                                for fp in frame_paths:
+                                    try:
+                                        if os.path.exists(fp):
+                                            os.remove(fp)
+                                    except Exception:
+                                        pass
+                                return JsonResponse({
+                                    'success': False,
+                                    'error': 'Video contains content that violates our guidelines.',
+                                    'moderation_status': 'rejected',
+                                    'severity': 'critical'
+                                }, status=400)
+                            # For 'high' severity, continue processing - video is flagged but allowed
+                            logger.info(f"Video flagged with severity={severity}, allowing upload with flag")
                     else:
                         logger.warning("No frames extracted for moderation - blocking upload")
                         return JsonResponse({
@@ -1175,7 +1176,7 @@ def b2_upload_complete(request):
     request.session.modified = True
 
     logger.info(f"=== RETURNING SUCCESS: is_video={is_video}, variants_pending={variants_pending} ===")
-    return JsonResponse({
+    response_data = {
         'success': True,
         'filename': filename,
         'urls': urls,
@@ -1183,7 +1184,18 @@ def b2_upload_complete(request):
         'variants_pending': variants_pending,
         'video_width': video_width if is_video else None,
         'video_height': video_height if is_video else None,
-    })
+    }
+    
+    # Include video moderation status in response if flagged
+    if is_video and video_moderation_result:
+        if not video_moderation_result.get('is_safe', True):
+            response_data['moderation_status'] = 'flagged'
+            response_data['severity'] = video_moderation_result.get('severity', 'high')
+            response_data['moderation_message'] = 'Video flagged for review'
+        else:
+            response_data['moderation_status'] = 'approved'
+    
+    return JsonResponse(response_data)
 
 
 # =============================================================================

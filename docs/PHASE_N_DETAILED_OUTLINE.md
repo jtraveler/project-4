@@ -2,8 +2,8 @@
 ## Detailed Implementation Outline
 
 **Created:** January 20, 2026
-**Last Updated:** January 21, 2026 (Session 52)
-**Status:** N0-N2 Logic Complete, N3 In Progress (Single-Page Rebuild)
+**Last Updated:** January 22, 2026 (Session 57)
+**Status:** N0-N3 ~95% Complete, N4-N5 Pending
 **Goal:** Transform upload flow to single-page optimistic UX
 
 ---
@@ -503,25 +503,29 @@ urlpatterns = [
 ---
 
 ### ════════════════════════════════════════════════════════════
-### N3: SINGLE-PAGE UPLOAD 🔄 IN PROGRESS
+### N3: SINGLE-PAGE UPLOAD ✅ ~95% COMPLETE
 ### ════════════════════════════════════════════════════════════
 
 **Objective:** Build new single-page upload from scratch
 
 **Implementation Steps:**
 
-| Step | CC Spec | Files Created | Test |
-|------|---------|--------------|------|
-| 3.1 | Spec 1 | upload.html | Visual check |
-| 3.2 | Spec 2 | upload-core.js | File select, preview |
-| 3.3 | Spec 3 | upload-form.js | NSFW polling, form |
-| 3.4 | Spec 4 | upload-guards.js | Navigation, idle |
-| 3.5 | Spec 5 | URLs + views | Full flow test |
-| 3.6 | Cleanup | Delete empty files | Verify no breaks |
+| Step | CC Spec | Files Created | Status |
+|------|---------|--------------|--------|
+| 3.1 | Spec 1 | upload.html | ✅ Complete |
+| 3.2 | Spec 2 | upload-core.js | ✅ Complete |
+| 3.3 | Spec 3 | upload-form.js | ✅ Complete |
+| 3.4 | Spec 4 | upload-guards.js | ✅ Complete |
+| 3.5 | Spec 5 | URLs + views | ✅ Complete |
+| 3.6 | Cleanup | Delete empty files | 🔲 Pending |
 
-**Estimated Effort:** 6-8 hours total
+**Session 57 Additions:**
+- Rate limit modal (HTTP 429 feedback) - 8.3/10
+- Validation error modal (file size/type) - 9.5/10
+- File size limits (3MB images, 15MB videos) - 8.75/10
+- B2 client caching optimization - 8.25/10
 
-**Current Status:** Creating CC specifications
+**Remaining:** Final testing, deploy to prod
 
 ---
 
@@ -567,11 +571,11 @@ urlpatterns = [
 | N0 | Django-Q setup | ✅ Complete | Done |
 | N1 | Local preview logic | ✅ Complete | Done |
 | N2 | Background NSFW logic | ✅ Complete | Done |
-| N3 | Single-page upload rebuild | 🔄 In Progress | 6-8h |
+| N3 | Single-page upload rebuild | ✅ ~95% Complete | Done (testing remaining) |
 | N4 | Background AI + processing page | 📋 Pending | 4-5h |
 | N5 | 301 redirect to slug | 📋 Pending | 2-3h |
 
-**Total Estimated Remaining:** 12-16 hours
+**Total Estimated Remaining:** 6-8 hours (N4 + N5)
 
 ---
 
@@ -579,23 +583,29 @@ urlpatterns = [
 
 If this session ends abruptly, here's how to continue:
 
-### Current State (as of Session 52)
+### Current State (as of Session 57)
 
 1. **PHASE_N_DETAILED_OUTLINE.md** - This document is the source of truth
-2. **Empty files to delete:**
-   - `static/js/upload-step2-form.js`
-   - `static/js/upload-step2-guards.js`
-   - `static/js/upload-step2-nsfw.js`
-3. **Approach:** Build single-page upload from scratch using CC specs
-4. **Next step:** Create CC Spec 1 for `upload.html` template
+2. **N3 ~95% Complete** - All core functionality implemented
+3. **Remaining N3 work:** Final testing, deploy to prod
+4. **Next phase:** N4 (Background AI + processing page)
+
+### Files Created in N3
+
+```
+prompts/templates/prompts/upload.html     ✅ Single-page template
+static/js/upload-core.js                  ✅ File handling, B2 upload
+static/js/upload-form.js                  ✅ Form + NSFW status
+static/js/upload-guards.js                ✅ Navigation + idle
+static/css/upload.css                     ✅ All upload styles
+```
 
 ### How to Continue
 
-1. Share this document with new session
-2. Delete the empty `upload-step2-*.js` files if not done
-3. Request: "Create CC Spec 1 for upload.html template"
-4. Follow spec sequence: Spec 1 → 2 → 3 → 4 → 5
-5. Test after each spec before proceeding
+1. Review CLAUDE.md, CLAUDE_PHASES.md, CLAUDE_CHANGELOG.md for context
+2. Test N3 functionality across browsers
+3. Deploy to production when verified
+4. Begin N4 implementation (Background AI + processing page)
 
 ### Key Decisions Made
 
@@ -605,6 +615,8 @@ If this session ends abruptly, here's how to continue:
 - ✅ NO AI suggestions on upload page
 - ✅ Build from scratch (not refactor)
 - ✅ Preserve navigation guards, idle detection, cleanup
+- ✅ File limits: 3MB images, 15MB videos
+- ✅ Rate limit: 20 uploads/hour
 
 ---
 

@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 14, 2026
+**Last Updated:** January 22, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase M Video Moderation (100% complete)
+**Current Phase:** Phase N Upload Flow Optimization (~95% complete)
 **Total Tests:** 298 passing (48% coverage)
 
 ---
@@ -14,7 +14,7 @@
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
-| **JavaScript Files** | 4 | static/js/ |
+| **JavaScript Files** | 8 | static/js/ |
 | **SVG Icons** | 30 | static/icons/sprite.svg |
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
@@ -326,6 +326,7 @@ prompts/views/
 static/css/
 ├── navbar.css           # 1,136 lines - Extracted navbar styles
 ├── style.css            # 1,789 lines - Main stylesheet
+├── upload.css           # ~500 lines - Upload page styles (Phase N3)
 ├── components/
 │   ├── icons.css        # ~250 lines - SVG icon system (Phase J.2)
 │   └── masonry-grid.css # 255 lines - Masonry grid component
@@ -334,7 +335,7 @@ static/css/
     └── prompt-list.css   # 304 lines - Prompt list page styles
 ```
 
-**Total CSS:** ~4,797 lines across 6 files
+**Total CSS:** ~5,297 lines across 7 files
 
 ---
 
@@ -374,7 +375,11 @@ static/js/
 ├── collections.js        # ~760 lines - Collections modal (Phase K)
 ├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
 ├── navbar.js             # ~650 lines - Extracted from base.html
-└── prompt-detail.js      # ~400 lines - Prompt detail interactions (Phase J.1)
+├── prompt-detail.js      # ~400 lines - Prompt detail interactions (Phase J.1)
+├── upload-core.js        # ~488 lines - File selection, B2 upload, preview (Phase N)
+├── upload-form.js        # ~624 lines - Form handling, NSFW status (Phase N)
+├── upload-guards.js      # ~410 lines - Navigation guards, idle detection (Phase N)
+└── upload-step1.js       # ~768 lines - Legacy Step 1 upload (deprecated)
 ```
 
 ### JavaScript Files
@@ -385,6 +390,10 @@ static/js/
 | **navbar.js** | ~650 | Dropdowns, search, mobile menu, scroll |
 | **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
 | **like-button.js** | ~155 | Centralized like handler with optimistic UI |
+| **upload-core.js** | ~488 | B2 presigned upload, drag-drop, local preview, orphan cleanup (Phase N) |
+| **upload-form.js** | ~624 | Form validation, NSFW status display, submit handling (Phase N) |
+| **upload-guards.js** | ~410 | Navigation guards, idle timeout, cleanup beacon (Phase N) |
+| **upload-step1.js** | ~768 | Legacy Step 1 upload page (deprecated, kept for reference) |
 
 ### navbar.js Features
 
@@ -409,7 +418,7 @@ static/js/
 | State Reset | ~60 | Reset modal state on close |
 | Error Handling | ~100 | Loading states, error messages |
 
-**Total JavaScript:** ~1,965 lines across 4 files
+**Total JavaScript:** ~4,255 lines across 8 files
 **Extraction Benefit:** base.html reduced from ~2000 lines to ~1400 lines
 
 ---
@@ -928,11 +937,17 @@ python manage.py test -v 2
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 2.6
-**Audit Date:** January 9, 2026
+**Version:** 2.8
+**Audit Date:** January 22, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v2.8 (January 22, 2026):**
+- Added Phase N upload JavaScript files to documentation
+- upload-core.js, upload-form.js, upload-guards.js, upload-step1.js
+- Updated JavaScript file count (4 → 8)
+- Updated total JavaScript lines (~1,965 → ~4,255)
 
 **v2.7 (January 14, 2026):**
 - Phase M Video Moderation complete

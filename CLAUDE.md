@@ -1,5 +1,16 @@
 # CLAUDE.md - PromptFinder Project Documentation (1 of 3)
 
+## ⚠️ IMPORTANT: This is Part 1 of 3
+
+**Before proceeding, also read:**
+- **CLAUDE_PHASES.md** - Phase specs, unfinished work details
+- **CLAUDE_CHANGELOG.md** - Session history, recent changes
+
+These three files together replace the original CLAUDE.md.
+Do NOT edit or reference this document without reading all three.
+
+---
+
 **Last Updated:** January 22, 2026
 **Project Status:** Pre-Launch Development
 
@@ -194,6 +205,22 @@ prompts/views/
 ---
 
 ## 🔄 How Upload Works
+
+### Philosophy: "The Restaurant Analogy"
+
+> At a restaurant, we don't ask customers to wash their own dishes. They're customers, not employees.
+
+**Applied to PromptFinder:**
+- Users upload content and provide the prompt they used
+- WE handle SEO (tags, titles, descriptions, slugs) in the background
+- Keep the form simple - minimum required fields only
+
+| User Provides | We Generate (Background) |
+|---------------|-------------------------|
+| Image/Video | NSFW moderation |
+| Prompt text (required) | AI-generated title |
+| AI Generator (required) | AI-generated description |
+| Visibility (draft/publish) | SEO-optimized tags & slug |
 
 ### The User Experience (Phase N - Current)
 

@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** January 22, 2026
+**Last Updated:** January 26, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -29,7 +29,8 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N** | 🔄 ~95% | Upload Flow Optimization | Final testing, deploy to prod |
+| **Phase N4** | 🔄 Planning Complete | Optimistic Upload Flow | Ready for implementation |
+| **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
 
@@ -44,6 +45,41 @@ Do NOT edit or reference this document without reading all three.
 | Phase L | Jan 2026 | Media Infrastructure (moved from Cloudinary to B2 + Cloudflare) |
 | Phase M | Jan 2026 | Video NSFW Moderation (FFmpeg frame extraction + OpenAI Vision) |
 | Phase J | Dec 2025 | Prompt Detail Page Redesign |
+
+---
+
+## 🚀 Current Phase: N4 - Optimistic Upload Flow
+
+**Status:** Planning Complete - Ready for Implementation
+**Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
+
+### Overview
+Rebuilding upload flow to feel "instant" by:
+- Processing images in background while user types
+- Using dedicated processing page with polling
+- Running AI analysis after submit
+- Deferring file renaming for faster perceived performance
+
+### Key Components
+1. **Variant generation after NSFW** - Start thumbnails while user types
+2. **Processing page** - `/prompt/processing/{uuid}/` with polling
+3. **Django-Q background tasks** - AI generation runs async
+4. **Deferred file renaming** - SEO filenames applied after "ready"
+5. **Fallback handling** - Graceful degradation on AI failure
+
+### Target Performance
+- Upload page → Submit: **0 seconds wait** (processing happens after)
+- Processing page → Ready: **5-10 seconds**
+- Total perceived improvement: **50-60% faster**
+
+### Key Technical Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Background tasks | Django-Q2 | Free, uses PostgreSQL, no Redis needed |
+| Status updates | Polling (3s) | Simple, reliable, Heroku compatible |
+| AI analysis ratio | 80% Vision / 20% Text | Users often write vague prompts |
+| File cleanup | 5-30 day retention | Use existing trash system |
 
 ---
 
@@ -377,5 +413,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 3.1 (Human-Readable Expanded)
-**Last Updated:** January 22, 2026
+**Version:** 3.2 (Phase N4 Planning)
+**Last Updated:** January 26, 2026

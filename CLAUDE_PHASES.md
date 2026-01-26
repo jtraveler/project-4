@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** January 22, 2026
+**Last Updated:** January 26, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -27,14 +27,15 @@
 | **K** | **Collections** | **⏸️ 95%** | **"Saves" feature - ON HOLD** |
 | L | Media Infrastructure | ✅ Done | Cloudinary → B2 + Cloudflare |
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
-| **N** | **Upload Optimization** | **🔄 ~95%** | **Single-page optimistic UX - CURRENT** |
+| N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
+| **N4** | **Optimistic Upload Flow** | **📋 Planning Complete** | **Background processing + polling - CURRENT** |
 
 ---
 
-## 🔄 Phase N: Upload Flow Optimization (CURRENT)
+## 🔄 Phase N3: Single-Page Upload (~95% Complete)
 
-**Status:** ~95% Complete  
-**Started:** January 2026  
+**Status:** ~95% Complete
+**Started:** January 2026
 **Goal:** Make uploads feel instant instead of making users wait 15+ seconds
 
 ### The Problem We Solved
@@ -70,6 +71,70 @@
 - 🔲 Final testing across browsers
 - 🔲 Deploy to production
 - 🔲 Monitor for edge cases
+
+---
+
+## 📋 Phase N4: Optimistic Upload Flow (CURRENT)
+
+**Status:** Planning Complete
+**Created:** January 26, 2026
+**Detailed Documentation:** `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
+
+### Objective
+Reduce perceived upload time from 15-20 seconds to 5-10 seconds by restructuring the upload flow with background processing and a dedicated processing page.
+
+### Sub-Phases
+
+| Phase | Description | Est. Effort |
+|-------|-------------|-------------|
+| N4a | Variant generation after NSFW passes | 2 hours |
+| N4b | Add processing_uuid field to Prompt model | 30 min |
+| N4c | Install & configure Django-Q2 | 1 hour |
+| N4d | Create processing page template | 2 hours |
+| N4e | Create AI generation background task | 2 hours |
+| N4f | Create polling endpoint | 1 hour |
+| N4g | Completion modal & redirect logic | 1 hour |
+| N4h | Modify upload_submit for new flow | 1 hour |
+| N4i | Deferred B2 file renaming task | 2 hours |
+| N4j | SEO additions (JSON-LD, sitemap) | 2 hours |
+| N4k | Testing & polish | 2 hours |
+
+**Total Estimated:** 16-18 hours
+
+### New Database Fields
+
+```python
+processing_uuid = models.UUIDField(default=uuid.uuid4, unique=True)
+processing_complete = models.BooleanField(default=False)
+```
+
+### New Files to Create
+
+- `prompts/tasks.py` - Django-Q background tasks
+- `prompts/templates/prompts/processing.html` - Processing page
+- `prompts/sitemaps.py` - XML sitemap
+- `static/js/processing.js` - Polling logic
+
+### New Dependencies
+
+- `django-q2` - Background task queue
+
+### Key Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Background tasks | Django-Q2 | Free, uses PostgreSQL, no Redis |
+| Status updates | Polling (3s) | Simple, Heroku compatible |
+| AI analysis | 80% Vision / 20% Text | Users write vague prompts |
+| File cleanup | 5-30 day retention | Use existing trash system |
+
+### Success Criteria
+
+- [ ] Processing page shows within 200ms of submit
+- [ ] AI generation completes in 5-10 seconds (typical)
+- [ ] Fallback mode works on AI timeout
+- [ ] User can cancel during processing
+- [ ] Files renamed for SEO after completion
 
 ---
 
@@ -310,5 +375,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 3.1 (Human-Readable Expanded)  
-**Last Updated:** January 22, 2026
+**Version:** 3.2 (Phase N4 Planning)
+**Last Updated:** January 26, 2026

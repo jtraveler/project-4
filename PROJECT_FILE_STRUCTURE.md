@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 22, 2026
+**Last Updated:** January 26, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N Upload Flow Optimization (~95% complete)
+**Current Phase:** Phase N4 Optimistic Upload Flow (Planning Complete)
 **Total Tests:** 298 passing (48% coverage)
 
 ---
@@ -921,6 +921,64 @@ python manage.py test -v 2
 
 ---
 
+## Phase N4 Files (Optimistic Upload Flow)
+
+### New Files to Create
+
+```
+docs/
+└── PHASE_N4_UPLOAD_FLOW_REPORT.md    # Comprehensive planning document (exists)
+
+prompts/
+├── tasks.py                           # Django-Q background tasks
+│   ├── generate_ai_content()          # AI title/description/tags
+│   └── rename_b2_files_for_seo()      # Deferred file renaming
+├── sitemaps.py                        # XML sitemap for SEO
+└── templates/prompts/
+    └── processing.html                # Processing page template
+
+static/js/
+└── processing.js                      # Polling logic for processing page
+```
+
+### Files to Modify
+
+```
+prompts/
+├── models.py                          # Add processing_uuid, processing_complete
+├── urls.py                            # Add processing page + status API routes
+└── views/
+    ├── upload_views.py                # Modify upload_submit flow
+    └── api_views.py                   # Add prompt_processing_status endpoint
+
+templates/prompts/
+└── prompt_detail.html                 # Add JSON-LD schema markup
+
+prompts_manager/
+├── settings.py                        # Add Django-Q configuration
+└── urls.py                            # Add sitemap route
+
+requirements.txt                       # Add django-q2
+Procfile                               # Add worker process for Django-Q
+```
+
+### New URL Routes
+
+| URL | View | Purpose |
+|-----|------|---------|
+| `/prompt/processing/<uuid>/` | `processing_page` | Processing page (HTML) |
+| `/api/prompt/status/<uuid>/` | `prompt_processing_status` | Polling endpoint (JSON) |
+| `/sitemap.xml` | Django sitemap | XML sitemap for SEO |
+
+### New Database Fields (Prompt model)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `processing_uuid` | UUIDField | Secure URL for processing page |
+| `processing_complete` | BooleanField | Flag for polling completion |
+
+---
+
 ## Related Documentation
 
 | Document | Location | Purpose |
@@ -930,6 +988,7 @@ python manage.py test -v 2
 | UI_STYLE_GUIDE.md | design-references/ | UI/UX standards |
 | PROJECT_FILE_STRUCTURE_AUDIT_REPORT.md | docs/reports/ | Latest audit findings |
 | L8_TIMEOUT_COMPLETION_REPORT.md | docs/reports/ | L8-TIMEOUT implementation details |
+| PHASE_N4_UPLOAD_FLOW_REPORT.md | docs/ | Phase N4 comprehensive planning |
 
 ---
 
@@ -937,11 +996,18 @@ python manage.py test -v 2
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 2.8
-**Audit Date:** January 22, 2026
+**Version:** 2.9
+**Audit Date:** January 26, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v2.9 (January 26, 2026):**
+- Added Phase N4 files section (Optimistic Upload Flow)
+- Documented new files to create: tasks.py, sitemaps.py, processing.html, processing.js
+- Documented files to modify: models.py, urls.py, views, settings.py
+- Added new URL routes and database fields
+- Added PHASE_N4_UPLOAD_FLOW_REPORT.md to Related Documentation
 
 **v2.8 (January 22, 2026):**
 - Added Phase N upload JavaScript files to documentation

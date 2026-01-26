@@ -22,6 +22,16 @@
     };
 
     // ========================================
+    // Variant Generation State (N4a)
+    // ========================================
+    const variantState = {
+        isGenerating: false,
+        isComplete: false,
+        variantUrls: null,
+        error: null
+    };
+
+    // ========================================
     // DOM Element Cache
     // ========================================
     let elements = {};
@@ -342,6 +352,9 @@
         state.b2Data = null;
         state.isUploading = false;
 
+        // Reset variant state (N4a)
+        resetVariantState();
+
         // Reset file input
         elements.fileInput.value = '';
 
@@ -453,6 +466,122 @@
     }
 
     // ========================================
+    // Variant Generation (N4a)
+    // ========================================
+
+    /**
+     * Start variant generation in background after NSFW passes.
+     * Called from upload-form.js when moderation status becomes 'approved'.
+     * Videos don't need variants (already processed server-side).
+     */
+    async function generateVariantsInBackground() {
+        // Skip if already generating or complete
+        if (variantState.isGenerating || variantState.isComplete) {
+            return;
+        }
+
+        // Skip for videos - they don't need client-triggered variants
+        if (state.currentFile?.type?.startsWith('video/')) {
+            variantState.isComplete = true;
+            return;
+        }
+
+        // Need upload to be complete first
+        if (state.uploadState !== 'UPLOADED') {
+            console.warn('Cannot generate variants: upload not complete');
+            return;
+        }
+
+        variantState.isGenerating = true;
+        variantState.error = null;
+
+        try {
+            const config = window.uploadConfig;
+            const response = await fetch(config.urls.variants, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': config.csrf
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                variantState.variantUrls = data.urls;
+                variantState.isComplete = true;
+                console.log('Variants generated:', Object.keys(data.urls).join(', '));
+            } else {
+                throw new Error(data.error || 'Failed to generate variants');
+            }
+
+        } catch (error) {
+            console.error('Variant generation error:', error);
+            variantState.error = error.message;
+            // Don't block submission on variant failure - they can be generated later
+            variantState.isComplete = true;
+        } finally {
+            variantState.isGenerating = false;
+        }
+    }
+
+    /**
+     * Wait for variants to complete before submission.
+     * Returns immediately if variants are done or if it's a video.
+     * Times out after 10 seconds to avoid blocking indefinitely.
+     */
+    async function waitForVariantsIfNeeded() {
+        // Videos don't need variants
+        if (state.currentFile?.type?.startsWith('video/')) {
+            return { success: true };
+        }
+
+        // Already complete
+        if (variantState.isComplete) {
+            return {
+                success: true,
+                urls: variantState.variantUrls
+            };
+        }
+
+        // Not started yet - start now
+        if (!variantState.isGenerating) {
+            generateVariantsInBackground();
+        }
+
+        // Wait with timeout (max 10 seconds)
+        const maxWait = 10000;
+        const checkInterval = 200;
+        let waited = 0;
+
+        while (variantState.isGenerating && waited < maxWait) {
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+            waited += checkInterval;
+        }
+
+        if (variantState.isComplete) {
+            return {
+                success: true,
+                urls: variantState.variantUrls
+            };
+        }
+
+        // Timed out but don't block - variants can be generated later
+        console.warn('Variant generation timed out, continuing with submission');
+        return { success: true, timedOut: true };
+    }
+
+    /**
+     * Reset variant state when user selects a new file.
+     */
+    function resetVariantState() {
+        variantState.isGenerating = false;
+        variantState.isComplete = false;
+        variantState.variantUrls = null;
+        variantState.error = null;
+    }
+
+    // ========================================
     // Event Dispatch Helper
     // ========================================
     function dispatch(eventName, detail) {
@@ -467,7 +596,11 @@
         isUploadComplete: () => state.uploadState === 'UPLOADED',
         isUploading: () => state.isUploading,
         reset: resetUpload,
-        deleteUpload: deleteCurrentUpload
+        deleteUpload: deleteCurrentUpload,
+        // Variant generation (N4a)
+        generateVariants: generateVariantsInBackground,
+        waitForVariants: waitForVariantsIfNeeded,
+        getVariantState: () => ({ ...variantState })
     };
 
     // ========================================

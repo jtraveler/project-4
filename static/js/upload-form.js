@@ -430,6 +430,11 @@
     function updateNsfwStatus(status) {
         state.nsfwStatus = status;
 
+        // N4a: Trigger variant generation when NSFW passes
+        if (status === 'approved' && window.UploadCore?.generateVariants) {
+            window.UploadCore.generateVariants();
+        }
+
         if (!elements.nsfwStatus) return;
 
         // Show the status element (it starts hidden)
@@ -546,6 +551,11 @@
         updateSubmitButton();
 
         try {
+            // N4a: Wait for variants if still generating
+            if (window.UploadCore?.waitForVariants) {
+                await window.UploadCore.waitForVariants();
+            }
+
             const config = window.uploadConfig;
             const formData = new FormData(elements.uploadForm);
 

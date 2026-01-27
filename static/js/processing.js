@@ -7,19 +7,23 @@
  * Expects window.PROCESSING_CONFIG to be set with:
  * - uuid: The processing UUID
  * - csrfToken: CSRF token for requests
+ * - pollInterval: (optional) Polling interval in ms (default: 3000)
+ * - maxPolls: (optional) Max poll attempts (default: 100)
  */
 
 (function() {
     'use strict';
 
-    // Configuration
-    const POLL_INTERVAL = 3000;  // 3 seconds
-    const MAX_POLLS = 100;       // Stop after ~5 minutes (100 * 3s)
+    // Configuration defaults (can be overridden via PROCESSING_CONFIG)
+    const DEFAULT_POLL_INTERVAL = 3000;  // 3 seconds
+    const DEFAULT_MAX_POLLS = 100;       // Stop after ~5 minutes (100 * 3s)
 
     // State
     let pollCount = 0;
     let pollTimer = null;
     let config = null;
+    let pollInterval = DEFAULT_POLL_INTERVAL;
+    let maxPolls = DEFAULT_MAX_POLLS;
 
     /**
      * Initialize and start polling
@@ -32,6 +36,14 @@
             return;
         }
 
+        // Use server-provided config if available
+        pollInterval = config.pollInterval || DEFAULT_POLL_INTERVAL;
+        maxPolls = config.maxPolls || DEFAULT_MAX_POLLS;
+
+        // Register cleanup handlers to prevent memory leaks
+        window.addEventListener('beforeunload', stopPolling);
+        window.addEventListener('pagehide', stopPolling);  // Safari support
+
         console.log('[N4d] Starting status polling for UUID:', config.uuid);
         startPolling();
     }
@@ -40,7 +52,7 @@
      * Start polling for completion status
      */
     function startPolling() {
-        pollTimer = setInterval(checkStatus, POLL_INTERVAL);
+        pollTimer = setInterval(checkStatus, pollInterval);
         // Also check immediately
         checkStatus();
     }
@@ -50,9 +62,9 @@
      */
     async function checkStatus() {
         pollCount++;
-        console.log('[N4d] Polling status (' + pollCount + '/' + MAX_POLLS + ')...');
+        console.log('[N4d] Polling status (' + pollCount + '/' + maxPolls + ')...');
 
-        if (pollCount >= MAX_POLLS) {
+        if (pollCount >= maxPolls) {
             console.log('[N4d] Max polls reached, stopping');
             stopPolling();
             showTimeoutMessage();

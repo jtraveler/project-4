@@ -687,7 +687,9 @@
 <script>
     window.PROCESSING_CONFIG = {
         uuid: "{{ prompt.processing_uuid }}",
-        csrfToken: "{{ csrf_token }}"
+        csrfToken: "{{ csrf_token }}",
+        pollInterval: 3000,  // Server-controlled: 3 seconds
+        maxPolls: 100        // Server-controlled: ~5 minute timeout
     };
 </script>
 <script src="{% static 'js/processing.js' %}"></script>

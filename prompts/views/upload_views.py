@@ -801,14 +801,14 @@ def prompt_processing(request, processing_uuid):
 
     # Get other prompts by this user for "More from author" section
     # Note: Fetch full objects (no .only()) to avoid FieldDoesNotExist errors
-    # Performance impact is negligible for 4 records
-    more_from_author = Prompt.objects.filter(
+    # Use list() to evaluate queryset once, then len() to avoid extra COUNT query
+    more_from_author = list(Prompt.objects.filter(
         author=request.user,
         deleted_at__isnull=True,
         status=1  # Published
-    ).exclude(id=prompt.id).order_by('-created_on')[:4]
+    ).exclude(id=prompt.id).order_by('-created_on')[:4])
 
-    more_from_author_count = more_from_author.count()
+    more_from_author_count = len(more_from_author)
 
     # Calculate remaining count for "+N more" overlay
     total_author_prompts = Prompt.objects.filter(

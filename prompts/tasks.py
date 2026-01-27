@@ -3,21 +3,44 @@ Django-Q async task functions for PromptFinder.
 
 Phase N: Optimistic Upload UX
 - Background NSFW moderation
-- Background AI content generation
+- Background AI content generation (N4e)
 - Background variant generation
 
 Usage:
     from django_q.tasks import async_task
     async_task('prompts.tasks.run_nsfw_moderation', upload_id, image_url)
+    async_task('prompts.tasks.generate_ai_content', prompt_id)
 """
 
+import json
 import logging
+import re
+import time
+from typing import Optional, Tuple
+from urllib.parse import urlparse
+import base64
+import requests
+
+from django.conf import settings
 from django.core.cache import cache
+from django.db import transaction
+from django.utils.text import slugify
 
 logger = logging.getLogger(__name__)
 
 # Cache TTL for NSFW moderation results (1 hour)
 NSFW_CACHE_TTL = 3600
+
+# Security: Allowlist of domains we can fetch images from
+ALLOWED_IMAGE_DOMAINS = [
+    'f003.backblazeb2.com',      # B2 direct
+    'cdn.promptfinder.net',      # Cloudflare CDN
+    'res.cloudinary.com',        # Legacy Cloudinary
+    'cloudinary.com',            # Legacy Cloudinary alt
+]
+
+# Maximum image size for base64 encoding (5MB)
+MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
 
 def run_nsfw_moderation(upload_id: str, image_url: str) -> dict:
@@ -139,36 +162,499 @@ def placeholder_nsfw_moderation(image_url: str, prompt_id: int) -> dict:
     }
 
 
-def placeholder_ai_generation(image_url: str, prompt_id: int) -> dict:
+def generate_ai_content(prompt_id: int) -> dict:
     """
-    Placeholder for background AI content generation task.
+    N4e: Generate AI content (title, description, tags) for a prompt.
 
-    Will be implemented in Phase N to:
-    - Analyze image using OpenAI Vision API
-    - Generate title, description, and tag suggestions
-    - Update prompt model with generated content
-    - Set needs_seo_review flag if generation fails
+    This task is queued after prompt creation and runs in the background
+    while the user views the processing page.
 
     Args:
-        image_url: URL of the image to analyze
-        prompt_id: ID of the Prompt model instance
+        prompt_id: Primary key of the Prompt to process
 
     Returns:
-        Dict with generated content
+        dict with status and generated content or error info
     """
-    logger.info(
-        f"[AI Generation Placeholder] "
-        f"Would generate content for prompt {prompt_id}: {image_url}"
+    from prompts.models import Prompt
+    from taggit.models import Tag
+
+    # Input validation with type coercion (Django-Q may serialize as string)
+    try:
+        prompt_id = int(prompt_id)
+    except (TypeError, ValueError):
+        logger.error(f"[AI Generation] Invalid prompt_id type: {type(prompt_id).__name__}")
+        return {'status': 'error', 'error': 'invalid_prompt_id'}
+
+    if prompt_id <= 0:
+        logger.error(f"[AI Generation] Invalid prompt_id value: {prompt_id}")
+        return {'status': 'error', 'error': 'invalid_prompt_id'}
+
+    try:
+        # Fetch prompt
+        prompt = Prompt.objects.get(pk=prompt_id)
+
+        # Skip if already processed
+        if prompt.processing_complete:
+            logger.info(f"[AI Generation] Prompt {prompt_id} already processed, skipping")
+            return {'status': 'skipped', 'reason': 'already_processed'}
+
+        logger.info(f"[AI Generation] Starting for prompt {prompt_id}")
+
+        # Get image URL for analysis
+        image_url = _get_analysis_url(prompt)
+        if not image_url:
+            return _handle_ai_failure(prompt, "No image URL available")
+
+        # Get available tags for AI (limit to 200 most common to avoid memory issues)
+        available_tags = list(Tag.objects.values_list('name', flat=True)[:200])
+
+        # Call OpenAI Vision API
+        ai_result = _call_openai_vision(
+            image_url=image_url,
+            prompt_text=prompt.content or "",
+            ai_generator=prompt.ai_generator.name if prompt.ai_generator else "AI",
+            available_tags=available_tags
+        )
+
+        if ai_result.get('error'):
+            return _handle_ai_failure(prompt, ai_result['error'])
+
+        # Update prompt with generated content
+        _update_prompt_with_ai_content(prompt, ai_result)
+
+        logger.info(f"[AI Generation] Successfully completed for prompt {prompt_id}")
+
+        return {
+            'status': 'success',
+            'prompt_id': prompt_id,
+            'title': ai_result.get('title'),
+            'tags_count': len(ai_result.get('tags', []))
+        }
+
+    except Prompt.DoesNotExist:
+        logger.error(f"[AI Generation] Prompt {prompt_id} not found")
+        return {'status': 'error', 'error': 'prompt_not_found'}
+
+    except Exception as e:
+        logger.exception(f"[AI Generation] Error for prompt {prompt_id}: {e}")
+        # Try to mark as complete with fallback
+        try:
+            prompt = Prompt.objects.get(pk=prompt_id)
+            return _handle_ai_failure(prompt, str(e))
+        except Exception:
+            return {'status': 'error', 'error': str(e)}
+
+
+def _get_analysis_url(prompt) -> Optional[str]:
+    """
+    Get the URL to use for AI analysis.
+
+    For images: Use the B2 image URL or fall back to Cloudinary
+    For videos: Use the video thumbnail URL
+    """
+    # B2 images (preferred)
+    if prompt.b2_image_url:
+        return prompt.b2_image_url
+
+    # B2 video thumbnail
+    if prompt.b2_video_thumb_url:
+        return prompt.b2_video_thumb_url
+
+    # Cloudinary image (legacy)
+    if prompt.featured_image:
+        return prompt.featured_image.url
+
+    # Cloudinary video thumbnail (legacy)
+    if prompt.featured_video:
+        # Generate thumbnail URL from video
+        video_url = prompt.featured_video.url
+        # Replace extension with jpg for thumbnail
+        thumb_url = re.sub(r'\.(mp4|mov|webm)$', '.jpg', video_url, flags=re.IGNORECASE)
+        return thumb_url
+
+    return None
+
+
+def _call_openai_vision(
+    image_url: str,
+    prompt_text: str,
+    ai_generator: str,
+    available_tags: list
+) -> dict:
+    """
+    Call OpenAI Vision API for content analysis.
+
+    Uses 80% image analysis, 20% prompt text weighting.
+    Returns title, description, and tags.
+    """
+    try:
+        from openai import OpenAI, APITimeoutError, APIConnectionError
+
+        # Import timeout constant from central constants file
+        from prompts.constants import OPENAI_TIMEOUT
+
+        api_key = getattr(settings, 'OPENAI_API_KEY', None)
+        if not api_key:
+            import os
+            api_key = os.getenv('OPENAI_API_KEY')
+
+        if not api_key:
+            return {'error': 'OPENAI_API_KEY not configured'}
+
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
+
+        # Build the analysis prompt
+        system_prompt = _build_analysis_prompt(prompt_text, ai_generator, available_tags)
+
+        # Download and encode image as base64 for reliability
+        image_result = _download_and_encode_image(image_url)
+        if not image_result:
+            # Fall back to URL-based analysis
+            image_content = {
+                "type": "image_url",
+                "image_url": {"url": image_url, "detail": "low"}
+            }
+        else:
+            image_data, media_type = image_result
+            image_content = {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{media_type};base64,{image_data}",
+                    "detail": "low"
+                }
+            }
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": system_prompt},
+                        image_content
+                    ]
+                }
+            ],
+            max_tokens=500,
+            temperature=0.7,
+            response_format={"type": "json_object"}  # Enforce JSON output
+        )
+
+        # Parse and validate the response
+        content = response.choices[0].message.content
+        result = _parse_ai_response(content)
+        return _validate_ai_result(result)
+
+    except (APITimeoutError, APIConnectionError) as e:
+        logger.warning(f"[AI Generation] OpenAI API timeout/connection error: {e}")
+        return {'error': f"OpenAI API timeout: {str(e)}"}
+    except Exception as e:
+        logger.exception(f"[AI Generation] OpenAI API error: {e}")
+        return {'error': f"OpenAI API error: {str(e)}"}
+
+
+def _is_safe_image_url(url: str) -> bool:
+    """
+    Validate that URL is from an allowed domain (SSRF protection).
+
+    Returns True if URL is safe to fetch, False otherwise.
+    """
+    try:
+        parsed = urlparse(url)
+
+        # Must be HTTPS (except for localhost in dev)
+        if parsed.scheme not in ('https', 'http'):
+            return False
+
+        # Must be from allowed domains
+        hostname = parsed.hostname or ''
+        if not any(hostname.endswith(domain) for domain in ALLOWED_IMAGE_DOMAINS):
+            logger.warning(f"[AI Generation] URL domain not in allowlist: {hostname}")
+            return False
+
+        return True
+    except Exception:
+        return False
+
+
+def _download_and_encode_image(url: str) -> Optional[Tuple[str, str]]:
+    """
+    Download image and encode as base64 with security validations.
+
+    Returns tuple of (base64_data, media_type) or None on failure.
+    Includes URL allowlist validation and size limits.
+    """
+    # Security: Validate URL is from allowed domain
+    if not _is_safe_image_url(url):
+        logger.warning(f"[AI Generation] Rejected unsafe URL: {url[:100]}")
+        return None
+
+    try:
+        # Stream response to check size before downloading fully
+        with requests.get(url, timeout=30, stream=True) as response:
+            response.raise_for_status()
+
+            # Check content length header if available
+            content_length = response.headers.get('content-length')
+            if content_length and int(content_length) > MAX_IMAGE_SIZE:
+                logger.warning(f"[AI Generation] Image too large: {content_length} bytes")
+                return None
+
+            # Check content type
+            content_type = response.headers.get('content-type', 'image/jpeg')
+            if not content_type.startswith('image/'):
+                logger.warning(f"[AI Generation] Invalid content type: {content_type}")
+                return None
+
+            # Determine media type for base64 encoding
+            if 'png' in content_type:
+                media_type = 'image/png'
+            elif 'webp' in content_type:
+                media_type = 'image/webp'
+            elif 'gif' in content_type:
+                media_type = 'image/gif'
+            else:
+                media_type = 'image/jpeg'
+
+            # Download with size limit
+            content = b''
+            for chunk in response.iter_content(chunk_size=8192):
+                content += chunk
+                if len(content) > MAX_IMAGE_SIZE:
+                    logger.warning("[AI Generation] Image exceeded max size during download")
+                    return None
+
+            return (base64.b64encode(content).decode('utf-8'), media_type)
+
+    except Exception as e:
+        logger.warning(f"[AI Generation] Failed to download image for base64 encoding: {e}")
+        return None
+
+
+def _build_analysis_prompt(prompt_text: str, ai_generator: str, available_tags: list) -> str:
+    """
+    Build the prompt for OpenAI Vision API.
+
+    Weight: 80% image analysis, 20% prompt text context
+    """
+    tags_list = ", ".join(available_tags[:100])  # Limit to avoid token overflow
+
+    return f'''Analyze this AI-generated image and provide SEO-optimized metadata.
+
+User's Original Prompt: "{prompt_text}"
+AI Generator Used: {ai_generator}
+
+IMPORTANT: Weight your analysis 80% on what you SEE in the image, 20% on the user's prompt text.
+The user's prompt provides context but the image content is primary.
+
+Respond with ONLY valid JSON in this exact format:
+{{
+    "title": "SEO-friendly title, 5-10 words, descriptive of the image",
+    "description": "SEO description, 50-100 words, describes image and prompt usage",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+}}
+
+Requirements:
+- Title: Capitalize main words, no quotes, engaging but accurate
+- Description: Third person, mentions the AI generator, describes visual elements and mood
+- Tags: Choose exactly 5 tags from this list: {tags_list}
+
+If the image is unclear or you cannot analyze it, use these fallbacks:
+- Title: "{ai_generator} AI Generated Artwork"
+- Description: "An AI-generated image created with {ai_generator}. Explore this prompt and create similar artwork."
+- Tags: ["AI Art", "Digital Art", "{ai_generator}", "Creative", "Artwork"]
+
+Respond ONLY with the JSON object, no other text.'''
+
+
+def _parse_ai_response(content: str) -> dict:
+    """
+    Parse the AI response JSON.
+
+    Handles cases where AI adds markdown code blocks or extra text.
+    """
+    try:
+        # Try direct JSON parse first
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    # Try to extract JSON from markdown code block
+    json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # Try to find JSON object anywhere in response
+    json_match = re.search(r'\{[^{}]*"title"[^{}]*\}', content, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    logger.error(f"[AI Generation] Failed to parse AI response: {content[:200]}")
+    return {'error': 'Failed to parse AI response'}
+
+
+def _validate_ai_result(result: dict) -> dict:
+    """
+    Validate that parsed AI result has required fields.
+
+    Returns the result if valid, or an error dict if invalid.
+    """
+    if 'error' in result:
+        return result
+
+    # Check for required fields
+    if 'title' not in result:
+        logger.warning("[AI Generation] AI response missing 'title' field")
+        result['title'] = None
+
+    if 'tags' not in result:
+        result['tags'] = []
+
+    # Ensure tags is a list
+    if not isinstance(result.get('tags'), list):
+        result['tags'] = []
+
+    return result
+
+
+def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
+    """
+    Update the prompt record with AI-generated content.
+
+    Also generates the SEO slug from the title.
+    Uses transaction.atomic() to ensure all-or-nothing updates.
+    """
+    from taggit.models import Tag
+
+    title = ai_result.get('title', f"{prompt.ai_generator} AI Artwork")
+    description = ai_result.get('description', '')
+    tags = ai_result.get('tags', [])
+
+    # Sanitize content (strip control characters, limit length)
+    title = _sanitize_content(title, max_length=200)
+    description = _sanitize_content(description, max_length=500)
+
+    # Use transaction to ensure atomicity of prompt save + tag adds
+    with transaction.atomic():
+        # Generate SEO slug with retry on collision
+        slug = _generate_unique_slug_with_retry(prompt, title)
+
+        # Update prompt fields
+        prompt.title = title
+        prompt.excerpt = description  # excerpt is the description field
+        prompt.slug = slug
+        prompt.processing_complete = True
+        prompt.save(update_fields=['title', 'excerpt', 'slug', 'processing_complete'])
+
+        # Add tags (using django-taggit)
+        if tags:
+            # Filter to only tags that exist in our database
+            existing_tags = Tag.objects.filter(name__in=tags).values_list('name', flat=True)
+            prompt.tags.add(*existing_tags)
+
+            # Log if any tags were skipped
+            skipped = set(tags) - set(existing_tags)
+            if skipped:
+                logger.info(f"[AI Generation] Skipped non-existent tags for prompt {prompt.pk}: {skipped}")
+
+
+def _sanitize_content(text: str, max_length: int = None) -> str:
+    """
+    Sanitize AI-generated content.
+
+    - Normalizes Unicode
+    - Removes control characters
+    - Truncates to max_length if specified
+    """
+    import unicodedata
+
+    if not text:
+        return ""
+
+    # Normalize Unicode
+    text = unicodedata.normalize('NFKC', text)
+
+    # Remove control characters (except newlines and tabs)
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+
+    # Truncate if needed
+    if max_length and len(text) > max_length:
+        text = text[:max_length]
+
+    return text.strip()
+
+
+def _generate_unique_slug_with_retry(prompt, title: str) -> str:
+    """
+    Generate a unique slug, appending numbers or timestamp if needed.
+
+    Handles slug collisions by incrementing counter up to 100,
+    then falling back to timestamp. Transaction.atomic() in the
+    caller will catch any IntegrityError from race conditions.
+    """
+    from prompts.models import Prompt
+
+    base_slug = slugify(title)[:50]  # Limit slug length
+    slug = base_slug
+    counter = 1
+
+    # First, try to find a unique slug
+    while Prompt.objects.filter(slug=slug).exclude(pk=prompt.pk).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+        if counter > 100:  # Safety limit - use timestamp
+            slug = f"{base_slug}-{int(time.time())}"
+            break
+
+    return slug
+
+
+def _handle_ai_failure(prompt, error_message: str) -> dict:
+    """
+    Handle task failure with graceful fallback.
+
+    Sets processing_complete=True so user isn't stuck,
+    but uses generic fallback content.
+    Uses transaction.atomic() to ensure all-or-nothing updates.
+    """
+    logger.warning(f"[AI Generation] Failed for prompt {prompt.pk}: {error_message}")
+
+    # Generate fallback content
+    ai_gen_name = prompt.ai_generator.name if prompt.ai_generator else "AI"
+
+    fallback_title = f"{ai_gen_name} Generated Artwork"
+    fallback_description = (
+        f"An AI-generated image created with {ai_gen_name}. "
+        f"Explore this prompt and create similar artwork with your favorite AI image generator."
     )
 
-    # Placeholder return - actual implementation will return real results
+    # Use transaction to ensure atomicity
+    with transaction.atomic():
+        # Generate slug from fallback title
+        slug = _generate_unique_slug_with_retry(prompt, fallback_title)
+
+        # Update prompt with fallback content
+        prompt.title = fallback_title
+        prompt.excerpt = fallback_description
+        prompt.slug = slug
+        prompt.processing_complete = True
+        prompt.needs_seo_review = True  # Flag for manual review
+        prompt.save(update_fields=['title', 'excerpt', 'slug', 'processing_complete', 'needs_seo_review'])
+
+        # Add generic tags
+        prompt.tags.add("AI Art", "Digital Art", "Artwork")
+
     return {
-        'prompt_id': prompt_id,
-        'status': 'placeholder',
-        'message': 'AI content generation not yet implemented',
-        'title': None,
-        'description': None,
-        'suggested_tags': [],
+        'status': 'fallback',
+        'prompt_id': prompt.pk,
+        'error': error_message,
+        'title': fallback_title
     }
 
 

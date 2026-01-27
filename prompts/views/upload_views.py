@@ -637,6 +637,17 @@ def upload_submit(request):
     # Uses _save_with_unique_title to handle duplicate title race conditions
     _save_with_unique_title(prompt)
 
+    # N4e: Queue AI content generation task for background processing
+    # This task will generate title, description, and tags asynchronously
+    # The task is idempotent - it checks processing_complete before running
+    from django_q.tasks import async_task
+    async_task(
+        'prompts.tasks.generate_ai_content',
+        prompt.pk,
+        task_name=f'ai_content_{prompt.processing_uuid}'
+    )
+    logger.info(f"Queued AI content generation task for prompt {prompt.pk}")
+
     # Add tags before moderation
     for tag_name in tags[:7]:
         tag, _ = Tag.objects.get_or_create(name=tag_name)

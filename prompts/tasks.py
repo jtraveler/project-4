@@ -3,13 +3,13 @@ Django-Q async task functions for PromptFinder.
 
 Phase N: Optimistic Upload UX
 - Background NSFW moderation
-- Background AI content generation (N4e)
+- Background AI content generation (N4-Refactor: cache-based)
 - Background variant generation
 
 Usage:
     from django_q.tasks import async_task
     async_task('prompts.tasks.run_nsfw_moderation', upload_id, image_url)
-    async_task('prompts.tasks.generate_ai_content', prompt_id)
+    async_task('prompts.tasks.generate_ai_content_cached', job_id, image_url)
 """
 
 import json
@@ -157,85 +157,16 @@ def placeholder_nsfw_moderation(image_url: str, prompt_id: int) -> dict:
 
 def generate_ai_content(prompt_id: int) -> dict:
     """
-    N4e: Generate AI content (title, description, tags) for a prompt.
+    DEPRECATED (N4-Cleanup): Use generate_ai_content_cached instead.
 
-    This task is queued after prompt creation and runs in the background
-    while the user views the processing page.
+    This function wrote AI content directly to the Prompt model.
+    The new cache-based version (generate_ai_content_cached) runs
+    during NSFW check and stores results in cache for faster UX.
 
-    Args:
-        prompt_id: Primary key of the Prompt to process
-
-    Returns:
-        dict with status and generated content or error info
+    Kept as stub for backwards compatibility with any queued tasks.
     """
-    from prompts.models import Prompt
-    from taggit.models import Tag
-
-    # Input validation with type coercion (Django-Q may serialize as string)
-    try:
-        prompt_id = int(prompt_id)
-    except (TypeError, ValueError):
-        logger.error(f"[AI Generation] Invalid prompt_id type: {type(prompt_id).__name__}")
-        return {'status': 'error', 'error': 'invalid_prompt_id'}
-
-    if prompt_id <= 0:
-        logger.error(f"[AI Generation] Invalid prompt_id value: {prompt_id}")
-        return {'status': 'error', 'error': 'invalid_prompt_id'}
-
-    try:
-        # Fetch prompt
-        prompt = Prompt.objects.get(pk=prompt_id)
-
-        # Skip if already processed
-        if prompt.processing_complete:
-            logger.info(f"[AI Generation] Prompt {prompt_id} already processed, skipping")
-            return {'status': 'skipped', 'reason': 'already_processed'}
-
-        logger.info(f"[AI Generation] Starting for prompt {prompt_id}")
-
-        # Get image URL for analysis
-        image_url = _get_analysis_url(prompt)
-        if not image_url:
-            return _handle_ai_failure(prompt, "No image URL available")
-
-        # Get available tags for AI (limit to 200 most common to avoid memory issues)
-        available_tags = list(Tag.objects.values_list('name', flat=True)[:200])
-
-        # Call OpenAI Vision API
-        ai_result = _call_openai_vision(
-            image_url=image_url,
-            prompt_text=prompt.content or "",
-            ai_generator=prompt.ai_generator if prompt.ai_generator else "AI",
-            available_tags=available_tags
-        )
-
-        if ai_result.get('error'):
-            return _handle_ai_failure(prompt, ai_result['error'])
-
-        # Update prompt with generated content
-        _update_prompt_with_ai_content(prompt, ai_result)
-
-        logger.info(f"[AI Generation] Successfully completed for prompt {prompt_id}")
-
-        return {
-            'status': 'success',
-            'prompt_id': prompt_id,
-            'title': ai_result.get('title'),
-            'tags_count': len(ai_result.get('tags', []))
-        }
-
-    except Prompt.DoesNotExist:
-        logger.error(f"[AI Generation] Prompt {prompt_id} not found")
-        return {'status': 'error', 'error': 'prompt_not_found'}
-
-    except Exception as e:
-        logger.exception(f"[AI Generation] Error for prompt {prompt_id}: {e}")
-        # Try to mark as complete with fallback
-        try:
-            prompt = Prompt.objects.get(pk=prompt_id)
-            return _handle_ai_failure(prompt, str(e))
-        except Exception:
-            return {'status': 'error', 'error': str(e)}
+    logger.warning(f"[AI Generation] Deprecated generate_ai_content called for prompt {prompt_id}")
+    return {'status': 'deprecated', 'error': 'Use generate_ai_content_cached instead'}
 
 
 def _get_analysis_url(prompt) -> Optional[str]:

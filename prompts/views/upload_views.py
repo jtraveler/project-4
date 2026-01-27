@@ -217,194 +217,16 @@ def upload_step1(request):
 
 
 @login_required
-@csp_exempt
-
-
 def upload_step2(request):
     """
-    Upload Step 2: Details form.
+    DEPRECATED (N4-Cleanup): Redirect to single-page upload.
 
-    AI generates title/description in background, user only fills:
-    - Prompt Content (their actual prompt text)
-    - Tags (optional, with AI suggestions)
-    - AI Generator (required)
-
-    Supports both B2 (new) and Cloudinary (legacy) uploads.
-    B2 uploads pass b2_original, b2_thumb, etc. parameters.
-    Cloudinary uploads pass cloudinary_id and secure_url.
+    The two-step upload flow (step1 → step2) has been replaced by a
+    single-page upload at /upload/. This view is kept for backwards
+    compatibility with bookmarks and any cached links.
     """
-    # Check for B2 parameters first (new upload path)
-    b2_original = request.GET.get('b2_original')
-    resource_type = request.GET.get('resource_type', 'image')
-
-    # Determine if this is a B2 upload or Cloudinary upload
-    is_b2_upload = bool(b2_original)
-
-    if is_b2_upload:
-        # B2 upload - get all B2 URLs
-        b2_thumb = request.GET.get('b2_thumb', '')
-        b2_medium = request.GET.get('b2_medium', '')
-        b2_large = request.GET.get('b2_large', '')
-        b2_webp = request.GET.get('b2_webp', '')
-        b2_filename = request.GET.get('b2_filename', '')
-
-        # Video-specific B2 parameters
-        b2_video = request.GET.get('b2_video', '')
-        b2_video_thumb = request.GET.get('b2_video_thumb', '')
-        video_duration = request.GET.get('video_duration', '')
-        video_width = request.GET.get('video_width', '')
-        video_height = request.GET.get('video_height', '')
-
-        # Use original URL for preview (or video URL for videos)
-        if resource_type == 'video':
-            preview_url = b2_video or b2_original
-        else:
-            preview_url = b2_original
-
-        # Store B2 URLs in session for upload_submit
-        # Always set original URL (required field)
-        request.session['upload_b2_original'] = b2_original
-
-        # Only update optional fields if provided (preserves existing session values)
-        if b2_thumb:
-            request.session['upload_b2_thumb'] = b2_thumb
-        if b2_medium:
-            request.session['upload_b2_medium'] = b2_medium
-        if b2_large:
-            request.session['upload_b2_large'] = b2_large
-        if b2_webp:
-            request.session['upload_b2_webp'] = b2_webp
-        if b2_filename:
-            request.session['upload_b2_filename'] = b2_filename
-
-        # Video-specific fields (only for video uploads)
-        if b2_video:
-            request.session['upload_b2_video'] = b2_video
-        if b2_video_thumb:
-            request.session['upload_b2_video_thumb'] = b2_video_thumb
-        if video_duration:
-            request.session['upload_video_duration'] = video_duration
-        if video_width:
-            request.session['upload_video_width'] = video_width
-        if video_height:
-            request.session['upload_video_height'] = video_height
-
-        request.session['upload_is_b2'] = True
-        request.session.modified = True
-
-        # For compatibility with existing code paths
-        cloudinary_id = None
-        secure_url = preview_url
-        file_format = b2_original.split('.')[-1] if '.' in b2_original else 'jpg'
-
-    else:
-        # Cloudinary upload (legacy path)
-        cloudinary_id = request.GET.get('cloudinary_id')
-        secure_url = request.GET.get('secure_url')
-        file_format = request.GET.get('format', 'jpg')
-        preview_url = secure_url
-
-        # Clear any B2 session data
-        request.session['upload_is_b2'] = False
-        request.session.modified = True
-
-    # Validate we have required data
-    # For B2: need b2_original (stored in preview_url)
-    # For Cloudinary: need cloudinary_id and secure_url
-    if is_b2_upload:
-        if not b2_original:
-            messages.error(request, 'Upload data missing. Please try again.')
-            return redirect('prompts:upload_step1')
-    else:
-        if not cloudinary_id or not secure_url:
-            messages.error(request, 'Upload data missing. Please try again.')
-            return redirect('prompts:upload_step1')
-
-    # Get all tags for autocomplete
-    all_tags = list(Tag.objects.values_list('name', flat=True))
-
-    # ==========================================================================
-    # L8-STEP2-PERF: AI calls deferred to AJAX endpoint for faster page load
-    # ==========================================================================
-    # Previously, this view made blocking AI calls (~8 seconds):
-    # 1. content_service.generate_content() - title, description, tags (~5s)
-    # 2. vision_service.moderate_image_url() - NSFW check (~3s)
-    #
-    # These calls are now deferred to /api/upload/ai-suggestions/ endpoint
-    # which is called via AJAX after the page loads.
-    #
-    # The template shows loading placeholders that are replaced when AJAX completes.
-    # Session storage (ai_title, ai_description, ai_tags) is set by the API endpoint.
-    # ==========================================================================
-
-    # Store media info in session for AI suggestions endpoint to use
-    request.session['pending_ai_suggestions'] = {
-        'secure_url': secure_url,
-        'cloudinary_id': cloudinary_id,
-        'resource_type': resource_type,
-    }
-    request.session.modified = True
-
-    # Initialize empty AI data - will be populated by AJAX
-    # (These may already exist from a previous attempt or page refresh)
-    image_warning = None
-
-    # Store upload session data for idle detection
-    from datetime import datetime
-    request.session['upload_timer'] = {
-        'cloudinary_id': cloudinary_id,  # Will be None for B2 uploads
-        'resource_type': resource_type,
-        'is_b2': is_b2_upload,
-        'b2_original': b2_original if is_b2_upload else None,
-        'started_at': datetime.now().isoformat(),
-        'expires_at': (datetime.now() + timedelta(minutes=45)).isoformat()
-    }
-    request.session.modified = True  # Ensure session saves
-
-    # L8-DIRECT-FIX: Check if variants need to be generated
-    # Can be triggered by:
-    # 1. Query param from Step 1 redirect (variants_pending=true)
-    # 2. Session key pending_variant_url (new L8-DIRECT approach)
-    # 3. Session key pending_variant_image (legacy quick mode)
-    variants_pending_param = request.GET.get('variants_pending', '').lower() == 'true'
-
-    # FIX: If variants_pending param is set but session doesn't have the URL,
-    # populate session from GET params (fixes race condition where session
-    # keys from b2_upload_complete haven't persisted before redirect).
-    # ROOT CAUSE: Django session middleware uses lazy writes - even with
-    # session.modified=True, the session may not persist to the backend before
-    # the redirect completes. This fallback ensures session keys are set.
-    # SECURITY: b2_original is validated upstream (is_b2_upload check at line 232
-    # ensures it comes from our redirect flow, not arbitrary user input).
-    if variants_pending_param and b2_original and not request.session.get('pending_variant_url'):
-        request.session['pending_variant_url'] = b2_original
-        request.session['pending_variant_filename'] = (
-            b2_filename or b2_original.split('/')[-1] or 'uploaded_file.jpg'
-        )
-        request.session['variants_complete'] = False
-        request.session.modified = True
-        logger.info(f"[Variants] Set pending_variant_url from GET param: {b2_original[:50]}...")
-
-    # Variants pending if: explicit URL param, or session has B2 URL, or session has base64 image
-    has_pending_url = bool(request.session.get('pending_variant_url'))
-    has_pending_image = bool(request.session.get('pending_variant_image'))
-    pending_variants = variants_pending_param or has_pending_url or has_pending_image
-
-    context = {
-        'cloudinary_id': cloudinary_id,
-        'resource_type': resource_type,
-        'secure_url': secure_url,
-        'preview_url': preview_url,  # B2 or Cloudinary URL for display
-        'file_format': file_format,
-        'ai_tags': [],  # Empty - will be populated by AJAX call to /api/upload/ai-suggestions/
-        'all_tags': json.dumps(all_tags),
-        'image_warning': image_warning,
-        'is_b2_upload': is_b2_upload,
-        'pending_variants': pending_variants,  # True if background variant generation needed
-        'ai_suggestions_pending': True,  # Flag for template to show loading state
-    }
-
-    return render(request, 'prompts/upload_step2.html', context)
+    messages.info(request, 'Please use the new upload page.')
+    return redirect('prompts:upload_step1')
 
 
 @login_required
@@ -616,34 +438,9 @@ def upload_submit(request):
                 'error_type': 'profanity'
             }, status=400)
 
-        # Re-render same page with error (NO REDIRECT)
-        import cloudinary
-        if resource_type == 'video':
-            image_url = cloudinary.CloudinaryVideo(cloudinary_id).build_url()
-        else:
-            image_url = cloudinary.CloudinaryImage(cloudinary_id).build_url()
-
-        all_tags = list(Tag.objects.values_list('name', flat=True))
-
-        # Preserve original AI tags or user-entered tags
-        original_ai_tags = request.POST.get('original_ai_tags', '')
-        tags_input = ','.join(tags) if tags else ''
-        preserved_tags = tags_input if tags_input.strip() else original_ai_tags
-
-        context = {
-            'cloudinary_id': cloudinary_id,
-            'resource_type': resource_type,
-            'image_url': image_url,
-            'secure_url': image_url,
-            'error_message': error_message,
-            'prompt_content': content,
-            'ai_generator': ai_generator,
-            'tags_input': preserved_tags,
-            'ai_tags': original_ai_tags.split(', ') if original_ai_tags else [],
-            'all_tags': json.dumps(all_tags),
-        }
-
-        return render(request, 'prompts/upload_step2.html', context)
+        # Redirect back to upload page with error message
+        messages.error(request, error_message)
+        return redirect('prompts:upload_step1')
 
     # Use AI-generated title (duplicate handling done at save time)
     title = ai_title or 'Untitled Prompt'

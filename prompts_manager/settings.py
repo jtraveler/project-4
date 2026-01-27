@@ -561,6 +561,19 @@ B2_CUSTOM_DOMAIN = os.environ.get('B2_CUSTOM_DOMAIN', '')
 B2_STORAGE_BACKEND = 'prompts.storage_backends.B2MediaStorage'
 
 # ==============================================================================
+# AI CONTENT GENERATION - IMAGE DOMAIN ALLOWLIST (N4e)
+# ==============================================================================
+# SSRF protection: Only fetch images from these trusted domains.
+# Used by background AI content generation task (prompts/tasks.py)
+ALLOWED_IMAGE_DOMAINS = [
+    'f003.backblazeb2.com',      # B2 direct
+    'cdn.promptfinder.net',      # Cloudflare CDN
+    'media.promptfinder.net',    # Media CDN
+    'res.cloudinary.com',        # Legacy Cloudinary
+    'cloudinary.com',            # Legacy Cloudinary alt
+]
+
+# ==============================================================================
 # DJANGO-Q ASYNC TASK QUEUE CONFIGURATION (Phase N)
 # ═══════════════════════════════════════════════════════════════════════════════
 # N4c: Django-Q2 Configuration

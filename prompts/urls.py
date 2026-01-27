@@ -119,7 +119,13 @@ urlpatterns = [
     path('api/upload/nsfw/status/', api_views.nsfw_check_status, name='nsfw_check_status'),
     # Alias for N3 upload template compatibility
     path('api/upload/nsfw/status/', api_views.nsfw_check_status, name='nsfw_status'),
-    
+
+    # N4f: Processing status polling endpoint
+    path('api/prompt/status/<uuid:processing_uuid>/', views.prompt_processing_status, name='prompt_processing_status'),
+
+    # N4-Refactor: AI job status polling endpoint (cache-based)
+    path('api/ai-job-status/<str:job_id>/', api_views.ai_job_status, name='ai_job_status'),
+
     # Admin moderation dashboard
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),
     # Note: admin maintenance tools (media-issues, debug/no-media, fix-media-issues, trash-dashboard)

@@ -213,6 +213,27 @@
         <span class="toast-message">This content has been flagged for review. You can still submit, but it may take longer to appear.</span>
     </div>
 </div>
+
+<!-- N4-Refactor: Processing Modal -->
+<div id="processing-modal" class="processing-modal" style="display: none;">
+    <div class="processing-modal-content">
+        <div class="processing-modal-body">
+            <h2 id="processing-status-text">Creating your prompt...</h2>
+
+            <div class="processing-progress-container">
+                <div class="processing-progress-bar">
+                    <div id="processing-progress-fill" class="processing-progress-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <p class="processing-note">
+                Feel free to navigate away - your prompt will be ready when you return!
+            </p>
+
+            <a href="/" class="btn btn-secondary" id="continue-browsing-btn">Continue Browsing</a>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extras %}

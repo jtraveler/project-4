@@ -159,8 +159,16 @@
             titleEl.textContent = data.title;
         }
 
-        if (viewBtn && data.final_url) {
-            viewBtn.href = data.final_url;
+        // N4h-fix: API returns 'redirect_url' not 'final_url'
+        const redirectUrl = data.redirect_url || data.final_url;
+        if (viewBtn && redirectUrl) {
+            viewBtn.href = redirectUrl;
+            // Add click handler as backup (href might not work if it's a button)
+            viewBtn.onclick = function(e) {
+                e.preventDefault();
+                console.log('[N4d] Redirecting to:', redirectUrl);
+                window.location.href = redirectUrl;
+            };
         }
 
         if (modal) {

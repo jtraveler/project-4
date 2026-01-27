@@ -412,9 +412,20 @@ def upload_step2(request):
 
 
 def upload_submit(request):
-    """Handle form submission - saves AI title/description automatically."""
+    """Handle form submission - saves AI title/description automatically.
+
+    N4h: Returns JSON for AJAX requests to support optimistic upload flow.
+    Frontend redirects to processing page based on redirect_url in response.
+    """
     if request.method != 'POST':
         return redirect('prompts:upload_step1')
+
+    # N4h: Detect AJAX requests - JavaScript form submission expects JSON
+    is_ajax = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+        'application/json' in request.headers.get('Content-Type', '') or
+        'application/json' in request.headers.get('Accept', '')
+    )
 
     # DEBUG LOGGING - Session State
     print(f"[DEBUG upload_submit] === SESSION STATE ===")
@@ -479,27 +490,72 @@ def upload_submit(request):
 
         logger.info(f"B2 upload detected - original: {b2_original[:50]}..." if b2_original else "B2 upload but no original URL")
 
-    # Get AI-generated title/description from session
-    ai_title = request.session.get('ai_title') or 'Untitled Prompt'
-    ai_description = request.session.get('ai_description') or ''
+    # N4-Refactor: Read AI results from cache (generated during NSFW check)
+    # Fall back to session data for backwards compatibility
+    ai_job_id = request.session.get('ai_job_id')
+    ai_data = {}
+    ai_complete = False
+
+    if ai_job_id:
+        from prompts.tasks import get_ai_job_status
+        ai_data = get_ai_job_status(ai_job_id)
+        ai_complete = ai_data.get('complete', False)
+        logger.info(f"AI job {ai_job_id}: complete={ai_complete}, progress={ai_data.get('progress', 0)}")
+
+    # Use cached AI results, fall back to session, then defaults
+    if ai_complete and ai_data.get('title'):
+        ai_title = ai_data.get('title', 'Untitled Prompt')
+        ai_description = ai_data.get('description', '')
+        ai_cached_tags = ai_data.get('tags', [])
+    else:
+        # Fallback to session (for backwards compatibility or if AI didn't complete)
+        ai_title = request.session.get('ai_title') or 'Untitled Prompt'
+        ai_description = request.session.get('ai_description') or ''
+        ai_cached_tags = []
 
     # Validate required fields
     if not content:
-        messages.error(request, 'Prompt content is required.')
+        error_msg = 'Prompt content is required.'
+        if is_ajax:
+            return JsonResponse({
+                'success': False,
+                'error': error_msg,
+                'field_errors': {'content': error_msg}
+            }, status=400)
+        messages.error(request, error_msg)
         return redirect(f'/upload/details?cloudinary_id={cloudinary_id}&resource_type={resource_type}')
 
     if not ai_generator:
-        messages.error(request, 'Please select an AI generator.')
+        error_msg = 'Please select an AI generator.'
+        if is_ajax:
+            return JsonResponse({
+                'success': False,
+                'error': error_msg,
+                'field_errors': {'ai_generator': error_msg}
+            }, status=400)
+        messages.error(request, error_msg)
         return redirect(f'/upload/details?cloudinary_id={cloudinary_id}&resource_type={resource_type}')
 
     # Validate upload data - B2 uploads need b2_original, Cloudinary needs cloudinary_id
     if is_b2_upload:
         if not b2_original:
-            messages.error(request, 'Upload data missing. Please try again.')
+            error_msg = 'Upload data missing. Please try again.'
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'error': error_msg
+                }, status=400)
+            messages.error(request, error_msg)
             return redirect('prompts:upload_step1')
     else:
         if not cloudinary_id:
-            messages.error(request, 'Upload data missing. Please try again.')
+            error_msg = 'Upload data missing. Please try again.'
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'error': error_msg
+                }, status=400)
+            messages.error(request, error_msg)
             return redirect('prompts:upload_step1')
 
     # Parse tags
@@ -508,12 +564,16 @@ def upload_submit(request):
     except json.JSONDecodeError:
         tags = []
 
-    # BUGFIX: If no tags provided in POST, fallback to AI-generated tags from session
+    # N4-Refactor: If no tags in POST, use cache first, then session fallback
     if not tags or len(tags) == 0:
-        ai_tags = request.session.get('ai_tags', [])
-        if ai_tags:
-            tags = ai_tags
-            logger.info(f"Using AI-generated tags from session: {tags}")
+        if ai_cached_tags:
+            tags = ai_cached_tags
+            logger.info(f"Using AI-generated tags from cache: {tags}")
+        else:
+            ai_tags = request.session.get('ai_tags', [])
+            if ai_tags:
+                tags = ai_tags
+                logger.info(f"Using AI-generated tags from session: {tags}")
 
     # For videos, generate title/tags from prompt text if not provided
     if resource_type == 'video':
@@ -544,9 +604,17 @@ def upload_submit(request):
         words_str = ', '.join([f'"{w}"' for w in flagged_words[:3]])
 
         error_message = (
-            f"🚫 Your content contains words that violate our community guidelines: {words_str}. "
-            "Please revise your content and try again. If you believe this was a mistake, contact us."
+            f"Your content contains words that violate our community guidelines: {words_str}. "
+            "Please revise your content and try again."
         )
+
+        # N4h: Return JSON error for AJAX requests
+        if is_ajax:
+            return JsonResponse({
+                'success': False,
+                'error': error_message,
+                'error_type': 'profanity'
+            }, status=400)
 
         # Re-render same page with error (NO REDIRECT)
         import cloudinary
@@ -637,16 +705,12 @@ def upload_submit(request):
     # Uses _save_with_unique_title to handle duplicate title race conditions
     _save_with_unique_title(prompt)
 
-    # N4e: Queue AI content generation task for background processing
-    # This task will generate title, description, and tags asynchronously
-    # The task is idempotent - it checks processing_complete before running
-    from django_q.tasks import async_task
-    async_task(
-        'prompts.tasks.generate_ai_content',
-        prompt.pk,
-        task_name=f'ai_content_{prompt.processing_uuid}'
-    )
-    logger.info(f"Queued AI content generation task for prompt {prompt.pk}")
+    # N4-Refactor: AI content generation now runs during NSFW check (cache-based)
+    # Mark as complete if AI already ran, otherwise it will need SEO review
+    if ai_complete:
+        prompt.processing_complete = True
+        prompt.save(update_fields=['processing_complete'])
+        logger.info(f"Prompt {prompt.pk}: AI complete from cache, processing_complete=True")
 
     # Add tags before moderation
     for tag_name in tags[:7]:
@@ -674,104 +738,53 @@ def upload_submit(request):
         prompt.save(update_fields=['needs_seo_review'])
         logger.info(f"Prompt {prompt.id}: needs_seo_review set to True")
 
-    # ALWAYS run moderation for content safety (even for drafts)
-    # This prevents users from bypassing moderation by saving as draft
-    # COPIED FROM prompt_create - WORKING LOGIC
-    try:
-        print("=" * 80)
-        print(f"DEBUG: Starting moderation for upload prompt {prompt.id}")
-        print(f"DEBUG: Prompt BEFORE moderation - status: {prompt.status}, title: {prompt.title}")
-        print("=" * 80)
+    # N4h-fix: Skip synchronous moderation - it already ran during upload
+    # The NSFW check at /api/upload/b2/moderate/ already approved this image
+    # before the submit button was enabled. No need to run it again.
+    #
+    # This removes a 10-15 second blocking delay from the submit flow.
+    # The image was already checked and approved during the upload step.
 
-        logger.info(f"Starting moderation for upload prompt {prompt.id}")
-        orchestrator = ModerationOrchestrator()
-        moderation_result = orchestrator.moderate_prompt(prompt)
-
-        print("=" * 80)
-        print("DEBUG: MODERATION RESULT:")
-        print(f"  overall_status: {moderation_result.get('overall_status')}")
-        print(f"  requires_review: {moderation_result.get('requires_review')}")
-        print(f"  checks_completed: {moderation_result.get('checks_completed')}")
-        print(f"  checks_failed: {moderation_result.get('checks_failed')}")
-        print(f"  summary: {moderation_result.get('summary')}")
-        print("=" * 80)
-
-        # Log moderation result
-        logger.info(
-            f"Moderation complete for upload prompt {prompt.id}: "
-            f"overall_status={moderation_result['overall_status']}, "
-            f"requires_review={moderation_result['requires_review']}"
-        )
-
-        # Refresh prompt to get status set by orchestrator
-        prompt.refresh_from_db()
-
-        print("=" * 80)
-        print(f"DEBUG: Prompt AFTER refresh - status: {prompt.status} (0=draft, 1=published)")
-        print(f"DEBUG: moderation_status: {prompt.moderation_status}")
-        print(f"DEBUG: requires_manual_review: {prompt.requires_manual_review}")
-        print("=" * 80)
-
-        logger.info(f"After refresh - Upload prompt {prompt.id} status: {prompt.status} (0=draft, 1=published)")
-
-        # Handle "Save as Draft" - override status to draft regardless of moderation
-        if save_as_draft:
-            # Keep as draft even if moderation approved
-            prompt.status = 0
-            prompt.save(update_fields=['status'])
-
-            # Show message based on moderation result
-            if prompt.requires_manual_review:
-                messages.warning(
-                    request,
-                    'Your prompt has been saved as a draft. However, it requires admin review '
-                    'before it can be published. An admin will review it shortly.'
-                )
-            else:
-                messages.info(
-                    request,
-                    'Your prompt has been saved as a draft. It is only visible to you. '
-                    'You can publish it anytime from the prompt page by clicking "Publish Now".'
-                )
-        # Normal publish flow (not a draft)
-        elif moderation_result['overall_status'] == 'approved':
-            logger.info(f"Showing SUCCESS message - upload prompt {prompt.id} is published")
-            messages.success(
-                request,
-                'Your prompt has been created and published successfully! It is now live.'
-            )
-        elif moderation_result['overall_status'] == 'pending':
-            logger.info(f"Showing PENDING message - upload prompt {prompt.id} awaiting moderation")
-            messages.info(
-                request,
-                'Your prompt has been created and is being reviewed. '
-                'It will be published automatically once the review is complete (usually within a few seconds).'
-            )
-        elif moderation_result['overall_status'] == 'rejected':
-            messages.error(
-                request,
-                'Your prompt was created but may contain content that violates our guidelines. '
-                'It has been saved as a draft and will not be published. '
-                'An admin will review it shortly.'
-            )
-        # REMOVED: Duplicate flash message for requires_review case
-        # The styled banner on prompt detail page will show this status
-        else:
-            messages.success(
-                request,
-                'Your prompt has been created successfully!'
-            )
-
-    except Exception as e:
-        print("=" * 80)
-        print(f"DEBUG: EXCEPTION in moderation: {str(e)}")
-        print("=" * 80)
-        logger.error(f"Moderation error for upload prompt {prompt.id}: {str(e)}", exc_info=True)
-        messages.warning(
+    # Handle "Save as Draft" - keep as draft
+    if save_as_draft:
+        prompt.status = 0  # Draft
+        prompt.moderation_status = 'approved'
+        prompt.moderation_completed_at = timezone.now()
+        prompt.requires_manual_review = False
+        prompt.save(update_fields=[
+            'status',
+            'moderation_status',
+            'moderation_completed_at',
+            'requires_manual_review'
+        ])
+        logger.info(f"Prompt {prompt.id}: Saved as draft (moderation passed during upload)")
+        messages.info(
             request,
-            'Your prompt has been created but requires manual review '
-            'due to a technical issue.'
+            'Your prompt has been saved as a draft. It is only visible to you. '
+            'You can publish it anytime from the prompt page by clicking "Publish Now".'
         )
+    else:
+        # Normal publish flow - trust the earlier NSFW check
+        prompt.status = 1  # Published
+        prompt.moderation_status = 'approved'
+        prompt.moderation_completed_at = timezone.now()
+        prompt.requires_manual_review = False
+        prompt.save(update_fields=[
+            'status',
+            'moderation_status',
+            'moderation_completed_at',
+            'requires_manual_review'
+        ])
+        logger.info(f"Prompt {prompt.id}: Published (moderation passed during upload)")
+        messages.success(
+            request,
+            'Your prompt has been created and published successfully!'
+        )
+
+    # N4-Refactor: Clean up AI job from cache
+    if ai_job_id:
+        cache.delete(f'ai_job_{ai_job_id}')
+        logger.info(f"Cleaned up AI job cache: {ai_job_id}")
 
     # Clear all upload-related session keys (upload completed successfully)
     clear_upload_session(request)
@@ -781,73 +794,49 @@ def upload_submit(request):
     for page in range(1, 5):
         cache.delete(f"prompt_list_None_None_{page}")
 
-    # ALWAYS redirect to detail page (same as prompt_create)
-    # The detail page handles showing drafts only to authors
+    # N4-Refactor: Return JSON for AJAX requests with prompt detail URL
+    # AI processing is complete (ran during upload), so go directly to final page
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'redirect_url': reverse(
+                'prompts:prompt_detail',
+                kwargs={'slug': prompt.slug}
+            ),
+            'prompt_id': prompt.pk,
+            'title': prompt.title,
+            'slug': prompt.slug,
+            'ai_complete': ai_complete,
+            'message': 'Your prompt has been created!'
+        })
+
+    # Non-AJAX fallback: redirect to detail page
     return redirect('prompts:prompt_detail', slug=prompt.slug)
 
 
 @login_required
 def prompt_processing(request, processing_uuid):
     """
-    N4d: Processing page - uses prompt_detail.html with is_processing=True.
+    DEPRECATED (N4-Refactor): Redirect to final page or home.
 
-    User sees their image and prompt immediately while title/description/tags
-    are being generated in the background by Django-Q.
+    The processing page is no longer used - AI processing now happens
+    during the upload flow via cache, and users are redirected directly
+    to the final prompt detail page.
 
-    Security: Only the author can view their own processing page.
+    This view is kept for backwards compatibility with bookmarks/links.
     """
-    # select_related for author to avoid N+1 query
-    prompt = get_object_or_404(
-        Prompt.objects.select_related('author'),
-        processing_uuid=processing_uuid
-    )
-
-    # Security: Only the author can view their processing page
-    if prompt.author != request.user:
-        raise Http404("Prompt not found")
-
-    # If already complete, redirect to final prompt page
-    if prompt.processing_complete and prompt.slug:
+    try:
+        prompt = Prompt.objects.get(
+            processing_uuid=processing_uuid,
+            author=request.user,
+            deleted_at__isnull=True
+        )
+        # Redirect to final page
         return redirect('prompts:prompt_detail', slug=prompt.slug)
-
-    # Get other prompts by this user for "More from author" section
-    # Note: Fetch full objects (no .only()) to avoid FieldDoesNotExist errors
-    # Use list() to evaluate queryset once, then len() to avoid extra COUNT query
-    more_from_author = list(Prompt.objects.filter(
-        author=request.user,
-        deleted_at__isnull=True,
-        status=1  # Published
-    ).exclude(id=prompt.id).order_by('-created_on')[:4])
-
-    more_from_author_count = len(more_from_author)
-
-    # Calculate remaining count for "+N more" overlay
-    total_author_prompts = Prompt.objects.filter(
-        author=request.user,
-        deleted_at__isnull=True,
-        status=1
-    ).exclude(id=prompt.id).count()
-    author_remaining_count = max(0, total_author_prompts - 4)
-
-    context = {
-        'prompt': prompt,
-        'is_processing': True,  # Triggers loading states in template
-        'more_from_author': more_from_author,
-        'more_from_author_count': more_from_author_count,
-        'author_remaining_count': author_remaining_count,
-        # Add safe defaults for variables the template expects
-        # (prevents layout differences due to missing/undefined variables)
-        'number_of_likes': 0,
-        'prompt_is_liked': False,
-        'view_count': 0,
-        'can_see_views': False,  # Hide views during processing
-        'is_following_author': False,
-        'comment_count': 0,
-        'comment_form': None,
-        'comments': [],
-    }
-
-    return render(request, 'prompts/prompt_detail.html', context)
+    except Prompt.DoesNotExist:
+        # Prompt doesn't exist or not owner
+        messages.info(request, 'That prompt is no longer available.')
+        return redirect('prompts:home')
 
 
 @login_required

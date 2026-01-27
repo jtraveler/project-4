@@ -64,6 +64,8 @@ from .api_views import (
     b2_moderate_upload,
     b2_delete_upload,
     ai_suggestions,
+    prompt_processing_status,  # N4f: Processing status polling
+    ai_job_status,  # N4-Refactor: AI job status polling
 )
 
 # Import admin utility views
@@ -169,6 +171,8 @@ __all__ = [
     'b2_moderate_upload',
     'b2_delete_upload',
     'ai_suggestions',
+    'prompt_processing_status',  # N4f: Processing status polling
+    'ai_job_status',  # N4-Refactor: AI job status polling
 
     # Admin views
     'media_issues_dashboard',

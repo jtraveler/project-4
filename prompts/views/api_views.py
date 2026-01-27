@@ -1119,6 +1119,25 @@ def b2_moderate_upload(request):
                     f"severity={result.get('severity')}, "
                     f"timeout={result.get('timeout', False)}")
 
+        # N4-Refactor: Start AI content generation if NSFW check passed
+        # This runs in parallel while user fills out the form
+        ai_job_id = None
+        if result.get('is_safe', False) or status in ('approved', 'flagged'):
+            import uuid
+            from django_q.tasks import async_task
+
+            ai_job_id = str(uuid.uuid4())
+            request.session['ai_job_id'] = ai_job_id
+
+            # Queue AI task (writes results to cache, not database)
+            async_task(
+                'prompts.tasks.generate_ai_content_cached',
+                ai_job_id,
+                image_url,
+                task_name=f'ai_cache_{ai_job_id}'
+            )
+            logger.info(f"Started AI job {ai_job_id} for image after NSFW check")
+
         return JsonResponse({
             'success': True,
             'status': result.get('status', 'flagged'),
@@ -1128,6 +1147,7 @@ def b2_moderate_upload(request):
             'flagged_categories': result.get('flagged_categories', []),
             'timeout': result.get('timeout', False),
             'confidence_score': result.get('confidence_score', 0.0),
+            'ai_job_id': ai_job_id,  # N4-Refactor: Return job ID for polling
         })
 
     except Exception as e:
@@ -1371,3 +1391,132 @@ def ai_suggestions(request):
             'error': 'Failed to generate AI suggestions. Please try again.',
             'ai_failed': True,
         }, status=500)
+
+
+# =============================================================================
+# N4-REFACTOR: AI JOB STATUS POLLING ENDPOINT
+# =============================================================================
+
+
+@login_required
+@require_http_methods(["GET"])
+def ai_job_status(request, job_id):
+    """
+    N4-Refactor: Check AI job progress from cache.
+
+    Called by upload page to show progress while AI analyzes the image.
+    Results are stored in cache (not database) and read by upload_submit.
+
+    Security:
+    - Requires authentication
+    - Validates job_id matches user's session
+
+    URL: GET /api/ai-job-status/<str:job_id>/
+
+    Response:
+    {
+        "progress": 0-100,
+        "complete": bool,
+        "error": str or null
+    }
+    """
+    # Security: Verify job belongs to this user's session
+    session_job_id = request.session.get('ai_job_id')
+
+    if session_job_id != job_id:
+        logger.warning(
+            f"[AI Job Status] User {request.user.id} attempted to access "
+            f"job {job_id} but session has {session_job_id}"
+        )
+        return JsonResponse({'error': 'Invalid job ID'}, status=403)
+
+    # Get status from cache
+    from prompts.tasks import get_ai_job_status
+    status = get_ai_job_status(job_id)
+
+    return JsonResponse({
+        'progress': status.get('progress', 0),
+        'complete': status.get('complete', False),
+        'error': status.get('error'),
+    })
+
+
+# =============================================================================
+# N4f: PROCESSING STATUS POLLING ENDPOINT
+# =============================================================================
+
+
+@login_required
+@require_http_methods(["GET"])
+def prompt_processing_status(request, processing_uuid):
+    """
+    N4f: API endpoint for polling prompt processing status.
+
+    Called by processing.js to check if AI content generation is complete.
+    Returns JSON with processing status, title, and redirect URL.
+
+    Security:
+    - Requires authentication
+    - Only the prompt author can check status
+    - Returns 404 for non-existent UUIDs (no info leakage)
+
+    URL: GET /api/prompt/status/<uuid:processing_uuid>/
+
+    Response (processing):
+    {
+        "processing_complete": false
+    }
+
+    Response (complete):
+    {
+        "processing_complete": true,
+        "title": "Generated Title",
+        "redirect_url": "/prompt/generated-slug/"
+    }
+    """
+    # Django URL converter <uuid:processing_uuid> handles UUID validation
+    # and converts to uuid.UUID automatically
+
+    try:
+        prompt = Prompt.objects.get(processing_uuid=processing_uuid)
+    except Prompt.DoesNotExist:
+        # Return 404 - don't reveal if UUID exists but belongs to someone else
+        return JsonResponse({'error': 'Not found'}, status=404)
+
+    # Security: Only author can check their own prompt's status
+    if prompt.author != request.user:
+        # Return 404 instead of 403 to avoid info leakage
+        logger.warning(
+            f"[N4f] User {request.user.id} attempted to access "
+            f"prompt {prompt.pk} owned by {prompt.author_id}"
+        )
+        return JsonResponse({'error': 'Not found'}, status=404)
+
+    # Build response
+    response_data = {
+        'processing_complete': prompt.processing_complete,
+    }
+
+    # Include additional data when processing is complete
+    if prompt.processing_complete:
+        response_data['title'] = prompt.title or 'Untitled'
+
+        # Build redirect URL
+        if prompt.slug:
+            response_data['redirect_url'] = reverse(
+                'prompts:prompt_detail',
+                kwargs={'slug': prompt.slug}
+            )
+        else:
+            # Fallback to processing page if no slug yet (edge case)
+            response_data['redirect_url'] = reverse(
+                'prompts:prompt_processing',
+                kwargs={'processing_uuid': str(prompt.processing_uuid)}
+            )
+
+    logger.debug(
+        f"[N4f] Status check for prompt {prompt.pk}: "
+        f"complete={prompt.processing_complete}"
+    )
+
+    return JsonResponse(response_data)

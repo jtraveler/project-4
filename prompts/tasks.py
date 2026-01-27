@@ -16,6 +16,7 @@ import json
 import logging
 import re
 import time
+import uuid
 from typing import Optional, Tuple
 from urllib.parse import urlparse
 import base64
@@ -30,14 +31,6 @@ logger = logging.getLogger(__name__)
 
 # Cache TTL for NSFW moderation results (1 hour)
 NSFW_CACHE_TTL = 3600
-
-# Security: Allowlist of domains we can fetch images from
-ALLOWED_IMAGE_DOMAINS = [
-    'f003.backblazeb2.com',      # B2 direct
-    'cdn.promptfinder.net',      # Cloudflare CDN
-    'res.cloudinary.com',        # Legacy Cloudinary
-    'cloudinary.com',            # Legacy Cloudinary alt
-]
 
 # Maximum image size for base64 encoding (5MB)
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
@@ -212,7 +205,7 @@ def generate_ai_content(prompt_id: int) -> dict:
         ai_result = _call_openai_vision(
             image_url=image_url,
             prompt_text=prompt.content or "",
-            ai_generator=prompt.ai_generator.name if prompt.ai_generator else "AI",
+            ai_generator=prompt.ai_generator if prompt.ai_generator else "AI",
             available_tags=available_tags
         )
 
@@ -358,6 +351,7 @@ def _is_safe_image_url(url: str) -> bool:
     Validate that URL is from an allowed domain (SSRF protection).
 
     Returns True if URL is safe to fetch, False otherwise.
+    Uses ALLOWED_IMAGE_DOMAINS from settings.py for centralized configuration.
     """
     try:
         parsed = urlparse(url)
@@ -366,9 +360,16 @@ def _is_safe_image_url(url: str) -> bool:
         if parsed.scheme not in ('https', 'http'):
             return False
 
+        # Get allowed domains from settings (with fallback for safety)
+        allowed_domains = getattr(settings, 'ALLOWED_IMAGE_DOMAINS', [
+            'f003.backblazeb2.com',
+            'cdn.promptfinder.net',
+            'res.cloudinary.com',
+        ])
+
         # Must be from allowed domains
         hostname = parsed.hostname or ''
-        if not any(hostname.endswith(domain) for domain in ALLOWED_IMAGE_DOMAINS):
+        if not any(hostname.endswith(domain) for domain in allowed_domains):
             logger.warning(f"[AI Generation] URL domain not in allowlist: {hostname}")
             return False
 
@@ -691,3 +692,232 @@ def placeholder_variant_generation(image_url: str, prompt_id: int) -> dict:
         'large_url': None,
         'webp_url': None,
     }
+
+
+# =============================================================================
+# N4-REFACTOR: CACHE-BASED AI CONTENT GENERATION
+# =============================================================================
+# This task writes results to cache instead of database.
+# The upload_submit handler reads from cache and creates the Prompt.
+# This allows AI processing to start immediately after NSFW check passes.
+
+AI_JOB_CACHE_TIMEOUT = 3600  # 1 hour - auto-cleanup for orphaned jobs
+
+
+def _is_valid_uuid(value: str) -> bool:
+    """
+    Validate that a string is a valid UUID format.
+
+    Prevents cache key injection attacks by ensuring job_id
+    follows expected UUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
+
+    Args:
+        value: String to validate
+
+    Returns:
+        True if valid UUID format, False otherwise
+    """
+    if not isinstance(value, str):
+        return False
+    try:
+        uuid.UUID(value, version=4)
+        return True
+    except (ValueError, AttributeError):
+        return False
+
+
+def update_ai_job_progress(job_id: str, progress: int, **kwargs) -> dict:
+    """
+    Update AI job progress in cache.
+
+    Args:
+        job_id: UUID string for cache key (validated)
+        progress: 0-100 progress percentage (clamped to valid range)
+        **kwargs: Additional fields (complete, title, description, tags, error)
+
+    Returns:
+        Updated cache data, or error dict if job_id invalid
+    """
+    # Validate UUID format to prevent cache key injection
+    if not _is_valid_uuid(job_id):
+        logger.warning(f"[AI Job] Invalid job_id format: {job_id[:50] if job_id else 'None'}")
+        return {'error': 'invalid_job_id', 'progress': 0, 'complete': False}
+
+    # Clamp progress to valid range 0-100
+    progress = max(0, min(100, int(progress)))
+
+    cache_key = f'ai_job_{job_id}'
+    current = cache.get(cache_key) or {}
+    current.update({
+        'progress': progress,
+        **kwargs
+    })
+    cache.set(cache_key, current, timeout=AI_JOB_CACHE_TIMEOUT)
+    return current
+
+
+def get_ai_job_status(job_id: str) -> dict:
+    """
+    Get current status of AI job from cache.
+
+    Args:
+        job_id: UUID string for cache key (validated)
+
+    Returns:
+        dict with progress, complete status, and results if available
+    """
+    # Validate UUID format to prevent cache key injection
+    if not _is_valid_uuid(job_id):
+        logger.warning(f"[AI Job] Invalid job_id in status check: {job_id[:50] if job_id else 'None'}")
+        return {'progress': 0, 'complete': False, 'error': 'invalid_job_id'}
+
+    cache_key = f'ai_job_{job_id}'
+    return cache.get(cache_key) or {
+        'progress': 0,
+        'complete': False,
+        'error': None
+    }
+
+
+def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
+    """
+    N4-Refactor: Generate AI content and store in cache (not database).
+
+    This task is queued immediately after NSFW check passes, allowing
+    AI processing to run in parallel while the user fills out the form.
+    Results are stored in cache and read by upload_submit when creating the Prompt.
+
+    Args:
+        job_id: UUID string for cache key
+        image_url: URL of image to analyze (B2 secure URL)
+
+    Returns:
+        dict with status and results
+
+    Cache Key Format:
+        ai_job_{job_id}
+
+    Cache Value:
+        {
+            'progress': 0-100,
+            'complete': bool,
+            'title': str or None,
+            'description': str or None,
+            'tags': list or None,
+            'error': str or None
+        }
+    """
+    from taggit.models import Tag
+
+    # Validate job_id format early (fail-fast)
+    if not _is_valid_uuid(job_id):
+        logger.error(f"[AI Cache] Invalid job_id format: {job_id[:50] if job_id else 'None'}")
+        return {'status': 'error', 'error': 'invalid_job_id'}
+
+    try:
+        # 10% - Starting
+        update_ai_job_progress(job_id, 10, complete=False, error=None)
+        logger.info(f"[AI Cache] Starting job {job_id}")
+
+        if not image_url:
+            logger.warning(f"[AI Cache] No image URL for job {job_id}")
+            update_ai_job_progress(
+                job_id, 100, complete=True,
+                error='no_image_url',
+                title='Untitled Prompt',
+                description='',
+                tags=[]
+            )
+            return {'status': 'error', 'error': 'no_image_url'}
+
+        # 20% - Validating URL
+        update_ai_job_progress(job_id, 20)
+
+        if not _is_safe_image_url(image_url):
+            logger.warning(f"[AI Cache] Domain not allowed for job {job_id}")
+            update_ai_job_progress(
+                job_id, 100, complete=True,
+                error='domain_not_allowed',
+                title='Untitled Prompt',
+                description='',
+                tags=[]
+            )
+            return {'status': 'error', 'error': 'domain_not_allowed'}
+
+        # 30% - Getting available tags
+        update_ai_job_progress(job_id, 30)
+
+        # Get available tags for AI (limit to 200 most common)
+        available_tags = list(Tag.objects.values_list('name', flat=True)[:200])
+
+        # 40% - Calling OpenAI
+        update_ai_job_progress(job_id, 40)
+
+        # Use existing OpenAI Vision helper
+        ai_result = _call_openai_vision(
+            image_url=image_url,
+            prompt_text="",  # No prompt text yet (user hasn't submitted)
+            ai_generator="AI",  # Generic (user hasn't selected yet)
+            available_tags=available_tags
+        )
+
+        # 70% - Processing response
+        update_ai_job_progress(job_id, 70)
+
+        if ai_result.get('error'):
+            logger.warning(f"[AI Cache] OpenAI error for job {job_id}: {ai_result['error']}")
+            update_ai_job_progress(
+                job_id, 100, complete=True,
+                error=ai_result['error'],
+                title='Untitled Prompt',
+                description='',
+                tags=[]
+            )
+            return {'status': 'error', 'error': ai_result['error']}
+
+        # Extract and sanitize results
+        title = _sanitize_content(ai_result.get('title', 'Untitled Prompt'), max_length=60)
+        description = _sanitize_content(ai_result.get('description', ''), max_length=1000)
+        tags = ai_result.get('tags', [])
+
+        # Clean tags - lowercase, trimmed, unique
+        clean_tags = []
+        seen = set()
+        for tag in tags[:10]:  # Max 10 tags
+            tag_clean = str(tag).strip().lower()[:50]
+            if tag_clean and tag_clean not in seen:
+                clean_tags.append(tag_clean)
+                seen.add(tag_clean)
+
+        # 90% - Storing results
+        update_ai_job_progress(job_id, 90)
+
+        # 100% - Complete
+        update_ai_job_progress(
+            job_id, 100, complete=True,
+            title=title,
+            description=description,
+            tags=clean_tags,
+            error=None
+        )
+
+        logger.info(f"[AI Cache] Job {job_id} complete: {title}")
+
+        return {
+            'status': 'success',
+            'job_id': job_id,
+            'title': title,
+            'description': description,
+            'tags': clean_tags
+        }
+
+    except Exception as e:
+        logger.exception(f"[AI Cache] Job {job_id} error: {e}")
+        update_ai_job_progress(
+            job_id, 100, complete=True,
+            error=str(e),
+            title='Untitled Prompt',
+            description='',
+            tags=[]
+        )
+        return {'status': 'error', 'error': str(e)}

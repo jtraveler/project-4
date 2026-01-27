@@ -824,6 +824,16 @@ def prompt_processing(request, processing_uuid):
         'more_from_author': more_from_author,
         'more_from_author_count': more_from_author_count,
         'author_remaining_count': author_remaining_count,
+        # Add safe defaults for variables the template expects
+        # (prevents layout differences due to missing/undefined variables)
+        'number_of_likes': 0,
+        'prompt_is_liked': False,
+        'view_count': 0,
+        'can_see_views': False,  # Hide views during processing
+        'is_following_author': False,
+        'comment_count': 0,
+        'comment_form': None,
+        'comments': [],
     }
 
     return render(request, 'prompts/prompt_detail.html', context)

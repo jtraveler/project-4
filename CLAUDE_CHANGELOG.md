@@ -62,13 +62,34 @@ This is a running log of development sessions. Each session entry includes:
 3. Removed `.only()` entirely - continued field mismatch issues
 4. Added 8 missing context variables (number_of_likes, prompt_is_liked, view_count, can_see_views, is_following_author, comment_count, comment_form, comments)
 
-**Agent Ratings:**
+**User Flow:**
+1. User submits upload → redirects to `/prompt/processing/<uuid>/`
+2. Processing page polls `/api/prompt/status/<uuid>/` every 3s
+3. On completion → modal appears → "View Prompt" button
+4. Click → redirects to `/prompt/<slug>/`
 
-| Agent | Rating | Focus |
-|-------|--------|-------|
-| @api-documenter | 7/10 | Documentation completeness |
-| @code-reviewer | 7.5/10 | Code quality, security, performance |
-| **Average** | **7.25/10** | |
+**Error Handling:**
+- Max polls (100 × 3s = 5min) → "Taking longer than expected" message with refresh link
+- Invalid UUID → 404 page (via `get_object_or_404`)
+- User not author → 404 page (security check)
+- User navigates away → polling stops (beforeunload/pagehide cleanup)
+
+**API Dependencies (N4f pending):**
+- `GET /api/prompt/status/<uuid>/` - Expected to return `{processing_complete: bool, title, description, tags, final_url}`
+- Currently returns 404 until N4f is implemented
+
+**Code Quality Improvements (post-initial review):**
+1. Memory leak fix - Added beforeunload/pagehide event listeners to stop polling
+2. Query optimization - Changed to `list()` + `len()` pattern to avoid duplicate COUNT query
+3. Server-controlled config - Added pollInterval/maxPolls to PROCESSING_CONFIG for future tuning
+
+**Agent Ratings (Final):**
+
+| Agent | Initial | After Improvements | Focus |
+|-------|---------|-------------------|-------|
+| @api-documenter | 7/10 | 7.5/10 | Documentation completeness |
+| @code-reviewer | 7.5/10 | 8.5/10 | Code quality, security, performance |
+| **Average** | **7.25/10** | **8/10** | Meets threshold |
 
 **Phase N4 Status:**
 - N4a ✅ Model fields
@@ -349,5 +370,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 3.3 (Phase N4d Complete)
+**Version:** 3.4 (Phase N4d Documentation Enhanced)
 **Last Updated:** January 27, 2026

@@ -12,6 +12,7 @@ import cloudinary.uploader
 import logging
 import hashlib
 import secrets
+import uuid
 
 from .constants import BOT_USER_AGENT_PATTERNS, DEFAULT_VIEW_RATE_LIMIT
 
@@ -862,6 +863,18 @@ class Prompt(models.Model):
         null=True,
         blank=True,
         help_text="Video height in pixels (extracted during upload)"
+    )
+
+    # Phase N4: Processing page support
+    processing_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        help_text="Unique identifier for processing page URL"
+    )
+    processing_complete = models.BooleanField(
+        default=False,
+        help_text="True when AI content generation is complete"
     )
 
     # Custom managers

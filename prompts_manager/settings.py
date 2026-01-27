@@ -562,18 +562,26 @@ B2_STORAGE_BACKEND = 'prompts.storage_backends.B2MediaStorage'
 
 # ==============================================================================
 # DJANGO-Q ASYNC TASK QUEUE CONFIGURATION (Phase N)
-# ==============================================================================
-# Uses existing Postgres database as broker - zero extra infrastructure cost
+# ═══════════════════════════════════════════════════════════════════════════════
+# N4c: Django-Q2 Configuration
+# Background task queue using PostgreSQL (ORM broker)
 # Documentation: https://django-q2.readthedocs.io/
+# ═══════════════════════════════════════════════════════════════════════════════
 Q_CLUSTER = {
     'name': 'promptfinder',
-    'workers': 2,  # Number of worker processes
-    'timeout': 120,  # Task timeout in seconds
-    'retry': 180,  # Retry timeout for failed tasks
-    'queue_limit': 50,  # Maximum queue size
-    'bulk': 10,  # Bulk task processing count
-    'orm': 'default',  # Use default Django database as broker
-    'catch_up': False,  # Don't catch up on missed schedules after downtime
-    'save_limit': 250,  # Keep last 250 task results
-    'sync': False,  # Async mode (set True for debugging)
+    'workers': 2,                # Number of worker processes
+    'recycle': 500,              # Restart worker after 500 tasks (memory management)
+    'timeout': 120,              # 2 minutes max per task
+    'retry': 180,                # Retry failed tasks after 3 minutes
+    'queue_limit': 50,           # Maximum queue size
+    'bulk': 10,                  # Bulk task processing count
+    'orm': 'default',            # Use PostgreSQL via Django ORM (no Redis needed!)
+    'catch_up': False,           # Don't run missed scheduled tasks
+    'max_attempts': 2,           # Retry failed tasks once
+    'ack_failures': True,        # Acknowledge failed tasks
+    'poll': 2,                   # Poll database every 2 seconds
+    'save_limit': 250,           # Keep last 250 successful tasks
+    'guard_cycle': 5,            # Guard cycle time in seconds
+    'cpu_affinity': 1,           # Number of CPUs per worker
+    'sync': False,               # Async mode (set True for debugging)
 }

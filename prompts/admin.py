@@ -14,7 +14,7 @@ class PromptAdmin(SummernoteModelAdmin):
     list_display = (
         'title', 'order', 'slug', 'status', 'moderation_badge', 'created_on',
         'author', 'tag_list', 'number_of_likes', 'ai_generator', 'media_type',
-        'deleted_at', 'image_validation', 'reorder_links'
+        'deleted_at', 'image_validation', 'reorder_links', 'processing_complete',  # N4c
     )
     list_display_links = ('title',)
     search_fields = ['title', 'content', 'tags__name', 'author__username']
@@ -65,7 +65,10 @@ class PromptAdmin(SummernoteModelAdmin):
         }),
     )
 
-    readonly_fields = ('created_on', 'updated_on', 'moderation_completed_at', 'image_preview')
+    readonly_fields = (
+        'created_on', 'updated_on', 'moderation_completed_at', 'image_preview',
+        'processing_uuid', 'processing_complete',  # N4c: Processing page support
+    )
 
     def get_queryset(self, request):
         """Optimize queries with select_related and prefetch_related"""

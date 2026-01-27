@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 26, 2026
+**Last Updated:** January 27, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (Planning Complete)
+**Current Phase:** Phase N4 Optimistic Upload Flow (N4a-N4d Complete)
 **Total Tests:** 298 passing (48% coverage)
 
 ---
@@ -14,7 +14,7 @@
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
-| **JavaScript Files** | 8 | static/js/ |
+| **JavaScript Files** | 9 | static/js/ |
 | **SVG Icons** | 30 | static/icons/sprite.svg |
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
@@ -375,6 +375,7 @@ static/js/
 ├── collections.js        # ~760 lines - Collections modal (Phase K)
 ├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
 ├── navbar.js             # ~650 lines - Extracted from base.html
+├── processing.js         # ~300 lines - Processing page polling (Phase N4d) ← NEW
 ├── prompt-detail.js      # ~400 lines - Prompt detail interactions (Phase J.1)
 ├── upload-core.js        # ~488 lines - File selection, B2 upload, preview (Phase N)
 ├── upload-form.js        # ~624 lines - Form handling, NSFW status (Phase N)
@@ -388,6 +389,7 @@ static/js/
 |------|-------|---------|
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
 | **navbar.js** | ~650 | Dropdowns, search, mobile menu, scroll |
+| **processing.js** | ~300 | Processing page polling, completion modal, XSS-safe updates (Phase N4d) |
 | **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
 | **like-button.js** | ~155 | Centralized like handler with optimistic UI |
 | **upload-core.js** | ~488 | B2 presigned upload, drag-drop, local preview, orphan cleanup (Phase N) |
@@ -418,7 +420,7 @@ static/js/
 | State Reset | ~60 | Reset modal state on close |
 | Error Handling | ~100 | Loading states, error messages |
 
-**Total JavaScript:** ~4,255 lines across 8 files
+**Total JavaScript:** ~4,555 lines across 9 files
 **Extraction Benefit:** base.html reduced from ~2000 lines to ~1400 lines
 
 ---
@@ -923,59 +925,77 @@ python manage.py test -v 2
 
 ## Phase N4 Files (Optimistic Upload Flow)
 
-### New Files to Create
+### Implementation Status (Session 59)
+
+| Sub-Phase | Status | What Was Done |
+|-----------|--------|---------------|
+| **N4a** | ✅ Complete | Model fields added |
+| **N4b** | ✅ Complete | Django-Q2 configured |
+| **N4c** | ✅ Complete | Admin fieldsets updated |
+| **N4d** | ✅ Complete | Processing page view + template conditionals |
+| **N4e** | ⏳ Pending | Error state handling |
+| **N4f** | ⏳ Pending | Status polling API endpoint |
+
+### Files Created
 
 ```
 docs/
-└── PHASE_N4_UPLOAD_FLOW_REPORT.md    # Comprehensive planning document (exists)
+└── PHASE_N4_UPLOAD_FLOW_REPORT.md    # Comprehensive planning document ✅
 
+static/js/
+└── processing.js                      # Polling logic for processing page ✅ (Session 59)
+```
+
+### Files Modified (Session 59)
+
+```
 prompts/
-├── tasks.py                           # Django-Q background tasks
+├── models.py                          # Added processing_uuid, processing_complete ✅
+├── urls.py                            # Added processing page route ✅
+└── views/
+    ├── upload_views.py                # Added prompt_processing view ✅
+    └── __init__.py                    # Exported prompt_processing ✅
+
+prompts/templates/prompts/
+└── prompt_detail.html                 # Added {% if is_processing %} conditionals ✅
+                                       # (DRY: Reused instead of separate processing.html)
+
+static/css/pages/
+└── prompt-detail.css                  # Added processing spinner + modal styles ✅
+
+prompts_manager/
+└── settings.py                        # Added Django-Q configuration ✅
+
+requirements.txt                       # Added django-q2 ✅
+Procfile                               # Added worker process for Django-Q ✅
+```
+
+### Files Still Pending
+
+```
+prompts/
+├── tasks.py                           # Django-Q background tasks (N4e/N4f)
 │   ├── generate_ai_content()          # AI title/description/tags
 │   └── rename_b2_files_for_seo()      # Deferred file renaming
 ├── sitemaps.py                        # XML sitemap for SEO
-└── templates/prompts/
-    └── processing.html                # Processing page template
-
-static/js/
-└── processing.js                      # Polling logic for processing page
-```
-
-### Files to Modify
-
-```
-prompts/
-├── models.py                          # Add processing_uuid, processing_complete
-├── urls.py                            # Add processing page + status API routes
 └── views/
-    ├── upload_views.py                # Modify upload_submit flow
-    └── api_views.py                   # Add prompt_processing_status endpoint
-
-templates/prompts/
-└── prompt_detail.html                 # Add JSON-LD schema markup
-
-prompts_manager/
-├── settings.py                        # Add Django-Q configuration
-└── urls.py                            # Add sitemap route
-
-requirements.txt                       # Add django-q2
-Procfile                               # Add worker process for Django-Q
+    └── api_views.py                   # Add prompt_processing_status endpoint (N4f)
 ```
 
-### New URL Routes
+### URL Routes
 
-| URL | View | Purpose |
-|-----|------|---------|
-| `/prompt/processing/<uuid>/` | `processing_page` | Processing page (HTML) |
-| `/api/prompt/status/<uuid>/` | `prompt_processing_status` | Polling endpoint (JSON) |
-| `/sitemap.xml` | Django sitemap | XML sitemap for SEO |
+| URL | View | Status |
+|-----|------|--------|
+| `/prompt/processing/<uuid>/` | `prompt_processing` | ✅ Implemented |
+| `/api/prompt/status/<uuid>/` | `prompt_processing_status` | ⏳ N4f pending |
+| `/sitemap.xml` | Django sitemap | ⏳ Future |
 
-### New Database Fields (Prompt model)
+### Database Fields (Prompt model)
 
-| Field | Type | Purpose |
-|-------|------|---------|
-| `processing_uuid` | UUIDField | Secure URL for processing page |
-| `processing_complete` | BooleanField | Flag for polling completion |
+| Field | Type | Status |
+|-------|------|--------|
+| `processing_uuid` | UUIDField | ✅ Added (N4a) |
+| `processing_complete` | BooleanField | ✅ Added (N4a) |
 
 ---
 
@@ -996,11 +1016,18 @@ Procfile                               # Add worker process for Django-Q
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 2.9
-**Audit Date:** January 26, 2026
+**Version:** 3.0
+**Audit Date:** January 27, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.0 (January 27, 2026):**
+- Updated Phase N4 section to reflect Session 59 implementation
+- N4a-N4d complete: processing page view, template conditionals, processing.js
+- Added processing.js to JavaScript Architecture section (9 files now)
+- Corrected: processing.html was NOT created (DRY - reused prompt_detail.html)
+- Updated file counts and line totals
 
 **v2.9 (January 26, 2026):**
 - Added Phase N4 files section (Optimistic Upload Flow)

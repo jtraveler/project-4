@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 Planning Complete | Optimistic Upload Flow | Ready for implementation |
+| **Phase N4** | 🔄 N4a-N4d Complete | Optimistic Upload Flow | N4e: Error handling, N4f: Status API |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** Planning Complete - Ready for Implementation
+**Status:** N4a-N4d Complete - Implementation In Progress
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -60,9 +60,20 @@ Rebuilding upload flow to feel "instant" by:
 - Running AI analysis after submit
 - Deferring file renaming for faster perceived performance
 
+### Implementation Progress
+
+| Sub-Phase | Status | What It Does |
+|-----------|--------|--------------|
+| **N4a** | ✅ Complete | Model fields: `processing_uuid`, `processing_complete` |
+| **N4b** | ✅ Complete | Django-Q2 setup with PostgreSQL ORM broker |
+| **N4c** | ✅ Complete | Admin fieldset updates for processing fields |
+| **N4d** | ✅ Complete | Processing page template and view |
+| **N4e** | ⏳ Pending | Error state handling |
+| **N4f** | ⏳ Pending | Status polling API endpoint |
+
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
-2. **Processing page** - `/prompt/processing/{uuid}/` with polling
+2. **Processing page** - `/prompt/processing/{uuid}/` with polling ✅ IMPLEMENTED
 3. **Django-Q background tasks** - AI generation runs async
 4. **Deferred file renaming** - SEO filenames applied after "ready"
 5. **Fallback handling** - Graceful degradation on AI failure
@@ -413,5 +424,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 3.2 (Phase N4 Planning)
-**Last Updated:** January 26, 2026
+**Version:** 3.3 (Phase N4d Complete)
+**Last Updated:** January 27, 2026

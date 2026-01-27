@@ -1307,3 +1307,97 @@ a.model-name:hover {
     font-weight: 600;
     margin-bottom: 1rem;
 }
+
+/* ==========================================================================
+   N4d: Processing Page Loading States
+   Shows spinner animations while AI generates title/description/tags
+   ========================================================================== */
+
+.processing-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--gray-800, #262626);
+    border-radius: 50%;
+    animation: processing-spin 1s linear infinite;
+    margin-right: 0.5em;
+    vertical-align: middle;
+}
+
+@keyframes processing-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.generating-text {
+    color: var(--text-muted, #6c757d);
+    font-style: italic;
+}
+
+/* Completion Modal */
+.completion-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1050;
+    justify-content: center;
+    align-items: center;
+}
+
+.completion-modal.show {
+    display: flex;
+}
+
+.completion-modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.completion-modal h3 {
+    margin-bottom: 0.5rem;
+    color: var(--success, #28a745);
+}
+
+.completion-modal p {
+    color: var(--gray-700, #374151);
+    margin-bottom: 1.5rem;
+}
+
+.completion-modal .btn-primary {
+    background: var(--gray-800, #262626);
+    border: none;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    color: white;
+    transition: background 0.2s ease;
+}
+
+.completion-modal .btn-primary:hover {
+    background: var(--gray-900, #171717);
+    color: white;
+}
+
+/* Tag badge styling for dynamically added tags */
+.tags-container .tag-badge {
+    display: inline-block;
+    background: var(--gray-100, #f3f4f6);
+    color: var(--gray-700, #374151);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+}

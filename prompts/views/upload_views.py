@@ -776,10 +776,9 @@ def upload_submit(request):
 
 
 @login_required
-@login_required
 def prompt_processing(request, processing_uuid):
     """
-    N4d: Processing page shown while AI generates content.
+    N4d: Processing page - uses prompt_detail.html with is_processing=True.
 
     User sees their image and prompt immediately while title/description/tags
     are being generated in the background by Django-Q.
@@ -800,22 +799,36 @@ def prompt_processing(request, processing_uuid):
     if prompt.processing_complete and prompt.slug:
         return redirect('prompts:prompt_detail', slug=prompt.slug)
 
-    # Get other prompts by this user for "More from @username" section
-    # Using only() to fetch minimal fields needed for display
-    other_prompts = Prompt.objects.filter(
+    # Get other prompts by this user for "More from author" section
+    # Match the context variables expected by prompt_detail.html
+    more_from_author = Prompt.objects.filter(
         author=request.user,
         deleted_at__isnull=True,
         status=1  # Published
     ).exclude(id=prompt.id).only(
-        'id', 'slug', 'title', 'b2_thumb_url', 'b2_image_url'
-    ).order_by('-created_on')[:6]
+        'id', 'slug', 'title', 'b2_thumb_url', 'b2_image_url',
+        'b2_video_thumb_url', 'cloudinary_video_url', 'is_video'
+    ).order_by('-created_on')[:4]
+
+    more_from_author_count = more_from_author.count()
+
+    # Calculate remaining count for "+N more" overlay
+    total_author_prompts = Prompt.objects.filter(
+        author=request.user,
+        deleted_at__isnull=True,
+        status=1
+    ).exclude(id=prompt.id).count()
+    author_remaining_count = max(0, total_author_prompts - 4)
 
     context = {
         'prompt': prompt,
-        'other_prompts': other_prompts,
+        'is_processing': True,  # Triggers loading states in template
+        'more_from_author': more_from_author,
+        'more_from_author_count': more_from_author_count,
+        'author_remaining_count': author_remaining_count,
     }
 
-    return render(request, 'prompts/processing.html', context)
+    return render(request, 'prompts/prompt_detail.html', context)
 
 
 @login_required

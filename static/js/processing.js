@@ -104,27 +104,28 @@
 
     /**
      * Handle successful completion
+     * Updates the prompt_detail.html elements with generated content
      */
     function handleCompletion(data) {
         console.log('[N4d] Processing complete!', data);
 
-        // Update title
-        const titleContainer = document.getElementById('title-container');
-        if (titleContainer && data.title) {
-            titleContainer.innerHTML = '<strong>' + escapeHtml(data.title) + '</strong>';
+        // Update title - find the h2.prompt-title element
+        const titleEl = document.querySelector('h2.prompt-title');
+        if (titleEl && data.title) {
+            titleEl.innerHTML = escapeHtml(data.title);
         }
 
-        // Update description
-        const descContainer = document.getElementById('description-container');
-        if (descContainer && data.description) {
-            descContainer.innerHTML = '<p>' + escapeHtml(data.description) + '</p>';
+        // Update description - find the div.prompt-description element
+        const descEl = document.querySelector('div.prompt-description');
+        if (descEl && data.description) {
+            descEl.innerHTML = '<p>' + escapeHtml(data.description) + '</p>';
         }
 
-        // Update tags
+        // Update tags - find the tags-container element
         const tagsContainer = document.getElementById('tags-container');
         if (tagsContainer && data.tags && data.tags.length > 0) {
             const tagsHtml = data.tags.map(function(tag) {
-                return '<span class="tag-badge">' + escapeHtml(tag) + '</span>';
+                return '<span class="tag-badge" data-tag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + '</span>';
             }).join('');
             tagsContainer.innerHTML = tagsHtml;
         }

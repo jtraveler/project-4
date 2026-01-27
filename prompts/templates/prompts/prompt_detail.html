@@ -119,6 +119,10 @@
 
             <!-- Title -->
             <h2 class="prompt-title">
+                {% if is_processing %}
+                <span class="processing-spinner" aria-hidden="true"></span>
+                <span class="generating-text">Generating title...</span>
+                {% else %}
                 {{ prompt.title }}
                 {% if prompt.is_video %}
                 <span class="media-type-indicator">
@@ -126,10 +130,16 @@
                     Video
                 </span>
                 {% endif %}
+                {% endif %}
             </h2>
 
             <!-- Description -->
-            {% if prompt.excerpt %}
+            {% if is_processing %}
+            <div class="prompt-description">
+                <span class="processing-spinner" aria-hidden="true"></span>
+                <span class="generating-text">Generating description...</span>
+            </div>
+            {% elif prompt.excerpt %}
             <div class="prompt-description">
                 <p>{{ prompt.excerpt }}</p>
             </div>
@@ -197,7 +207,8 @@
                 </div>
                 <!-- Action Icons Row -->
                 <div class="author-card-actions">
-                    <!-- Save to Collection Button -->
+                    {% if not is_processing %}
+                    <!-- Save to Collection Button (hidden during processing) -->
                     {% if user.is_authenticated %}
                     <button type="button"
                             class="btn-outline-standard action-icon-btn"
@@ -211,12 +222,12 @@
                     </button>
                     {% endif %}
 
-                    <!-- Comment Button -->
+                    <!-- Comment Button (hidden during processing) -->
                     <button class="btn-outline-standard action-icon-btn" onclick="scrollToComments()" aria-label="Scroll to comments" title="Comments">
                         <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-comment"/></svg>
                     </button>
 
-                    <!-- Like Button (Two-Icon Toggle) -->
+                    <!-- Like Button (hidden during processing) -->
                     {% if user.is_authenticated %}
                         <button class="btn-outline-standard action-icon-btn like-btn-detail {% if prompt_is_liked %}liked{% endif %}"
                                 data-prompt-slug="{{ prompt.slug }}"
@@ -235,21 +246,38 @@
                             <span class="action-count like-count">{{ number_of_likes }}</span>
                         </a>
                     {% endif %}
+                    {% endif %}
 
                     <!-- Edit Button (only for author) -->
                     {% if user.is_authenticated and prompt.author == user %}
+                    {% if is_processing %}
+                    <button class="btn-outline-standard action-icon-btn" disabled title="Available after processing completes" aria-label="Edit unavailable during processing">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-edit"/></svg>
+                    </button>
+                    {% else %}
                     <a href="{% url 'prompts:prompt_edit' prompt.slug %}" class="btn-outline-standard action-icon-btn" aria-label="Edit" title="Edit">
                         <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-edit"/></svg>
                     </a>
+                    {% endif %}
 
-                    <!-- Delete Button (only for author) -->
+                    <!-- Delete Button (only for author) - available during processing -->
+                    {% if is_processing %}
+                    <button class="btn-outline-standard action-icon-btn"
+                            onclick="deletePrompt()"
+                            id="delete-btn"
+                            aria-label="Delete" title="Delete">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
+                    </button>
+                    {% else %}
                     <button class="btn-outline-standard action-icon-btn"
                             onclick="confirmDelete('{% url 'prompts:prompt_delete' prompt.slug %}')"
                             aria-label="Delete" title="Delete">
                         <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
                     </button>
                     {% endif %}
+                    {% endif %}
 
+                    {% if not is_processing %}
                     <!-- Report Button (authenticated, not author) -->
                     {% if user.is_authenticated and prompt.author != user %}
                     <button class="btn-outline-standard action-icon-btn"
@@ -258,6 +286,7 @@
                             aria-label="Report" title="Report">
                         <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-flag"/></svg>
                     </button>
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -316,7 +345,15 @@
             </div>
 
             <!-- Tags Card -->
-            {% if prompt.tags.all %}
+            {% if is_processing %}
+            <div class="rail-card">
+                <h4 class="rail-card-title">Tags</h4>
+                <div class="tags-container" id="tags-container" role="status" aria-live="polite">
+                    <span class="processing-spinner" aria-hidden="true"></span>
+                    <span class="generating-text">Generating tags...</span>
+                </div>
+            </div>
+            {% elif prompt.tags.all %}
             <div class="rail-card">
                 <h4 class="rail-card-title">Tags</h4>
                 <div class="tags-container">
@@ -440,7 +477,9 @@
         <!-- ========================================
              COMMENTS SECTION (col-12)
              Full width, appears after right rail on mobile
+             Hidden during processing
              ======================================== -->
+        {% if not is_processing %}
         <div class="col-12 comments-column">
             <div class="comments-section" id="comments">
                 <h3 class="section-title">Comments ({{ comment_count }})</h3>
@@ -521,8 +560,22 @@
                 </div>
             </div>
         </div>
+        {% endif %}{# end is_processing check for comments #}
     </div>
 </div>
+
+<!-- Completion Modal (only shown during processing) -->
+{% if is_processing %}
+<div class="completion-modal" id="completion-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="generated-title">
+    <div class="completion-modal-content">
+        <h3 id="modal-title">Processing Complete!</h3>
+        <p id="generated-title">Your prompt is ready.</p>
+        <a href="#" id="view-prompt-btn" class="btn btn-primary" aria-label="View your completed prompt">
+            View Your Prompt
+        </a>
+    </div>
+</div>
+{% endif %}
 
 <!-- Enhanced Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
@@ -628,4 +681,15 @@
 {% block extras %}
 <!-- Prompt Detail Page JavaScript (extracted to external file) -->
 <script src="{% static 'js/prompt-detail.js' %}"></script>
+
+{% if is_processing %}
+<!-- Processing page config and script -->
+<script>
+    window.PROCESSING_CONFIG = {
+        uuid: "{{ prompt.processing_uuid }}",
+        csrfToken: "{{ csrf_token }}"
+    };
+</script>
+<script src="{% static 'js/processing.js' %}"></script>
+{% endif %}
 {% endblock %}

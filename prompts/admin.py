@@ -58,6 +58,11 @@ class PromptAdmin(SummernoteModelAdmin):
             'classes': ('collapse',),
             'description': 'AI moderation status and manual review'
         }),
+        ('Processing Status', {  # N4c: Background processing fields
+            'fields': ('processing_uuid', 'processing_complete'),
+            'classes': ('collapse',),
+            'description': 'Background processing status for optimistic upload flow'
+        }),
         ('Timestamps', {
             'fields': ('created_on', 'updated_on'),
             'classes': ('collapse',),

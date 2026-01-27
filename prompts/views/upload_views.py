@@ -801,13 +801,14 @@ def prompt_processing(request, processing_uuid):
 
     # Get other prompts by this user for "More from author" section
     # Match the context variables expected by prompt_detail.html
+    # Note: is_video is a method, so include the fields it depends on (b2_video_url, featured_video)
     more_from_author = Prompt.objects.filter(
         author=request.user,
         deleted_at__isnull=True,
         status=1  # Published
     ).exclude(id=prompt.id).only(
         'id', 'slug', 'title', 'b2_thumb_url', 'b2_image_url',
-        'b2_video_thumb_url', 'cloudinary_video_url', 'is_video'
+        'b2_video_thumb_url', 'cloudinary_video_url', 'b2_video_url', 'featured_video'
     ).order_by('-created_on')[:4]
 
     more_from_author_count = more_from_author.count()

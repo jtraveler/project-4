@@ -28,7 +28,7 @@
 | L | Media Infrastructure | ✅ Done | Cloudinary → B2 + Cloudflare |
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
-| **N4** | **Optimistic Upload Flow** | **📋 Planning Complete** | **Background processing + polling - CURRENT** |
+| **N4** | **Optimistic Upload Flow** | **🔄 ~90% Complete** | **Video submit fix needed - CURRENT** |
 
 ---
 
@@ -74,9 +74,9 @@
 
 ---
 
-## 📋 Phase N4: Optimistic Upload Flow (CURRENT)
+## 🔄 Phase N4: Optimistic Upload Flow (CURRENT)
 
-**Status:** Planning Complete
+**Status:** ~90% Complete - Video Submit Fix Needed
 **Created:** January 26, 2026
 **Detailed Documentation:** `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
@@ -85,21 +85,23 @@ Reduce perceived upload time from 15-20 seconds to 5-10 seconds by restructuring
 
 ### Sub-Phases
 
-| Phase | Description | Est. Effort |
-|-------|-------------|-------------|
-| N4a | Variant generation after NSFW passes | 2 hours |
-| N4b | Add processing_uuid field to Prompt model | 30 min |
-| N4c | Install & configure Django-Q2 | 1 hour |
-| N4d | Create processing page template | 2 hours |
-| N4e | Create AI generation background task | 2 hours |
-| N4f | Create polling endpoint | 1 hour |
-| N4g | Completion modal & redirect logic | 1 hour |
-| N4h | Modify upload_submit for new flow | 1 hour |
-| N4i | Deferred B2 file renaming task | 2 hours |
-| N4j | SEO additions (JSON-LD, sitemap) | 2 hours |
-| N4k | Testing & polish | 2 hours |
+| Phase | Description | Status |
+|-------|-------------|--------|
+| N4a | Variant generation after NSFW passes | ✅ Complete |
+| N4b | Add processing_uuid field to Prompt model | ✅ Complete |
+| N4c | Install & configure Django-Q2 | ✅ Complete |
+| N4d | Create processing page template | ✅ Complete |
+| N4e | AI job queuing for videos (uses thumbnail) | ✅ Complete |
+| N4f | ProcessingModal in upload-form.js | ✅ Complete |
+| N4 Cleanup | Remove old upload code | ✅ Complete |
+| N4g | **Video submit fix** | 🔴 **BLOCKER** |
+| N4h | Deferred B2 file renaming task | ⏳ Pending |
+| N4i | SEO additions (JSON-LD, sitemap) | ⏳ Pending |
+| N4j | Testing & polish | ⏳ Pending |
 
-**Total Estimated:** 16-18 hours
+**Current Blockers (Session 61):**
+- Video submit fails with "Upload data missing" (session key mismatch)
+- "Processing content..." status not showing for videos
 
 ### New Database Fields
 
@@ -108,12 +110,25 @@ processing_uuid = models.UUIDField(default=uuid.uuid4, unique=True)
 processing_complete = models.BooleanField(default=False)
 ```
 
-### New Files to Create
+### Files Status
 
-- `prompts/tasks.py` - Django-Q background tasks
-- `prompts/templates/prompts/processing.html` - Processing page
-- `prompts/sitemaps.py` - XML sitemap
-- `static/js/processing.js` - Polling logic
+**Created:**
+- `prompts/tasks.py` - Django-Q background tasks ✅ (uncommitted)
+- `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md` - Planning document ✅
+
+**Modified:**
+- `static/js/upload-form.js` - Added ProcessingModal (replaced processing.js)
+- `prompts/views/api_views.py` - AI job queuing for videos (uncommitted)
+
+**Deleted (Session 61 cleanup):**
+- ~~`prompts/templates/prompts/processing.html`~~ - Not needed (reused prompt_detail.html)
+- ~~`static/js/processing.js`~~ - Replaced by ProcessingModal in upload-form.js
+- ~~`static/js/upload-step1.js`~~ - Old step-based upload removed
+- ~~`prompts/templates/prompts/upload_step1.html`~~ - Replaced by upload.html
+- ~~`prompts/templates/prompts/upload_step2.html`~~ - Replaced by upload.html
+
+**Still Pending:**
+- `prompts/sitemaps.py` - XML sitemap (N4i)
 
 ### New Dependencies
 
@@ -375,5 +390,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 3.2 (Phase N4 Planning)
-**Last Updated:** January 26, 2026
+**Version:** 3.3 (Phase N4 Session 61 - Video Support)
+**Last Updated:** January 27, 2026

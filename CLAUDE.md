@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 N4a-N4d Complete | Optimistic Upload Flow | N4e: Error handling, N4f: Status API |
+| **Phase N4** | 🔄 ~90% Complete | Optimistic Upload Flow | Video submit session fix, status display |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** N4a-N4d Complete - Implementation In Progress
+**Status:** ~90% Complete - Video Submit Fix Needed
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -68,8 +68,10 @@ Rebuilding upload flow to feel "instant" by:
 | **N4b** | ✅ Complete | Django-Q2 setup with PostgreSQL ORM broker |
 | **N4c** | ✅ Complete | Admin fieldset updates for processing fields |
 | **N4d** | ✅ Complete | Processing page template and view |
-| **N4e** | ⏳ Pending | Error state handling |
-| **N4f** | ⏳ Pending | Status polling API endpoint |
+| **N4e** | ✅ Complete | AI job queuing for videos (uses thumbnail) |
+| **N4f** | ✅ Complete | ProcessingModal in upload-form.js |
+| **N4 Cleanup** | ✅ Complete | Removed old upload code (step templates, processing.js) |
+| **Video Fix** | 🔴 Blocker | Video submit fails: "Upload data missing" (session key mismatch) |
 
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
@@ -91,6 +93,24 @@ Rebuilding upload flow to feel "instant" by:
 | Status updates | Polling (3s) | Simple, reliable, Heroku compatible |
 | AI analysis ratio | 80% Vision / 20% Text | Users often write vague prompts |
 | File cleanup | 5-30 day retention | Use existing trash system |
+
+### Current Blockers (Session 61)
+
+| Issue | Description | Impact |
+|-------|-------------|--------|
+| **Video submit fails** | "Upload data missing" error on video submit | Videos cannot be uploaded |
+| **Status not showing** | "Processing content..." not displayed for videos | UX confusion |
+
+**Root Cause:** Session key mismatch - video flow sets different keys than submit expects.
+
+### Uncommitted Changes (Do Not Revert)
+
+| File | Change |
+|------|--------|
+| `prompts/tasks.py` | Domain allowlist fix for B2 URLs |
+| `prompts/views/api_views.py` | AI job queuing for videos |
+| `prompts_manager/settings.py` | Domain allowlist fix |
+| `static/js/upload-form.js` | Pass ai_job_id for videos |
 
 ---
 
@@ -211,10 +231,15 @@ CSS:
 static/css/upload.css    # All upload page styles (~500 lines)
 
 BACKEND:
-prompts/views/api_views.py           # API endpoints (1374 lines - BIG FILE)
+prompts/views/api_views.py           # API endpoints (1374+ lines)
 prompts/services/b2_presign_service.py    # Generates presigned URLs for B2
 prompts/services/b2_upload_service.py     # B2 upload utilities
 ```
+
+> ⚠️ **CRITICAL: api_views.py is 1374+ lines**
+> - Claude Code crashes (SIGABRT) when editing this file
+> - ALL edits to api_views.py must be done MANUALLY by developer
+> - Create specifications with exact line numbers for manual editing
 
 ### Working on Moderation?
 
@@ -271,6 +296,7 @@ prompts/views/
 
 ### The User Experience (Phase N - Current)
 
+**Image Flow:**
 ```
 1. User drags/drops an image
         ↓ INSTANT (no upload yet)
@@ -279,12 +305,39 @@ prompts/views/
 3. File uploads directly to B2 via presigned URL
         ↓ BACKGROUND
 4. Server generates thumbnail
-        ↓ BACKGROUND  
+        ↓ BACKGROUND
 5. OpenAI Vision checks for NSFW content
         ↓
 6. User fills out title, description, tags (while above happens)
         ↓
-7. User clicks Submit → Prompt created in database
+7. User clicks Submit → Modal shows "Processing content..."
+        ↓
+8. AI generates title/description/tags in background
+        ↓
+9. Prompt created → Redirect to detail page
+```
+
+**Video Flow (Session 61):**
+```
+1. User drags/drops a video
+        ↓
+2. Preview appears from browser memory
+        ↓ BACKGROUND
+3. Video uploads directly to B2 via presigned URL
+        ↓ BACKGROUND
+4. FFmpeg extracts frames for NSFW moderation
+        ↓ BACKGROUND
+5. OpenAI Vision checks frames for NSFW content
+        ↓ BACKGROUND
+6. AI job queued using video thumbnail
+        ↓ (ai_job_id returned to frontend)
+7. User fills out form (while above happens)
+        ↓
+8. User clicks Submit → Modal shows "Processing content..."
+        ↓
+9. Polls for AI completion using ai_job_id
+        ↓
+10. Prompt created → Redirect to detail page
 ```
 
 ### Key Principle: Optimistic UX
@@ -424,5 +477,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 3.3 (Phase N4d Complete)
+**Version:** 3.4 (Phase N4 Session 61 - Video Support)
 **Last Updated:** January 27, 2026

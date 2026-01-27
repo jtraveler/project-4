@@ -14,7 +14,7 @@
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
-| **JavaScript Files** | 9 | static/js/ |
+| **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
 | **SVG Icons** | 30 | static/icons/sprite.svg |
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
@@ -251,9 +251,12 @@ prompts/views/
 | `ai_generator_category.html` | AI generator landing pages |
 | `inspiration_index.html` | Prompts hub / browse page |
 | `user_profile.html` | User profile with tabs |
-| `upload_step1.html` | Step 1: Drag-and-drop upload |
-| `upload_step2.html` | Step 2: AI-generated details form |
+| `upload.html` | Single-page upload (Phase N - replaces step 1 & 2) |
 | `trash_bin.html` | User trash bin |
+
+**Deleted in Session 61:**
+| ~~upload_step1.html~~ | Old Step 1 - replaced by upload.html |
+| ~~upload_step2.html~~ | Old Step 2 - replaced by upload.html |
 | `settings_notifications.html` | Email preferences dashboard |
 | `unsubscribe.html` | Unsubscribe confirmation |
 | `leaderboard.html` | Community leaderboard (Phase G) |
@@ -375,12 +378,14 @@ static/js/
 ├── collections.js        # ~760 lines - Collections modal (Phase K)
 ├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
 ├── navbar.js             # ~650 lines - Extracted from base.html
-├── processing.js         # ~300 lines - Processing page polling (Phase N4d) ← NEW
 ├── prompt-detail.js      # ~400 lines - Prompt detail interactions (Phase J.1)
 ├── upload-core.js        # ~488 lines - File selection, B2 upload, preview (Phase N)
-├── upload-form.js        # ~624 lines - Form handling, NSFW status (Phase N)
-├── upload-guards.js      # ~410 lines - Navigation guards, idle detection (Phase N)
-└── upload-step1.js       # ~768 lines - Legacy Step 1 upload (deprecated)
+├── upload-form.js        # ~700+ lines - Form handling, ProcessingModal (Phase N4)
+└── upload-guards.js      # ~410 lines - Navigation guards, idle detection (Phase N)
+
+# DELETED in Session 61:
+# - processing.js (replaced by ProcessingModal in upload-form.js)
+# - upload-step1.js (old step-based upload, deprecated)
 ```
 
 ### JavaScript Files
@@ -389,13 +394,17 @@ static/js/
 |------|-------|---------|
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
 | **navbar.js** | ~650 | Dropdowns, search, mobile menu, scroll |
-| **processing.js** | ~300 | Processing page polling, completion modal, XSS-safe updates (Phase N4d) |
 | **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
 | **like-button.js** | ~155 | Centralized like handler with optimistic UI |
 | **upload-core.js** | ~488 | B2 presigned upload, drag-drop, local preview, orphan cleanup (Phase N) |
-| **upload-form.js** | ~624 | Form validation, NSFW status display, submit handling (Phase N) |
+| **upload-form.js** | ~700+ | Form validation, NSFW status, ProcessingModal, video ai_job_id (Phase N4) |
 | **upload-guards.js** | ~410 | Navigation guards, idle timeout, cleanup beacon (Phase N) |
-| **upload-step1.js** | ~768 | Legacy Step 1 upload page (deprecated, kept for reference) |
+
+**Deleted in Session 61:**
+| File | Lines | Reason |
+|------|-------|--------|
+| ~~processing.js~~ | ~300 | Replaced by ProcessingModal in upload-form.js |
+| ~~upload-step1.js~~ | ~768 | Old step-based upload flow removed |
 
 ### navbar.js Features
 
@@ -420,7 +429,7 @@ static/js/
 | State Reset | ~60 | Reset modal state on close |
 | Error Handling | ~100 | Loading states, error messages |
 
-**Total JavaScript:** ~4,555 lines across 9 files
+**Total JavaScript:** ~3,573 lines across 7 files (after Session 61 cleanup)
 **Extraction Benefit:** base.html reduced from ~2000 lines to ~1400 lines
 
 ---
@@ -742,7 +751,7 @@ The multi-step upload flow uses Django session storage to pass data between endp
    └─ Clears: All upload session keys via clear_upload_session()
 ```
 
-#### Video Upload Flow
+#### Video Upload Flow (Updated Session 61)
 ```
 1. GET /api/upload/b2/presign/
    └─ Sets: b2_pending_upload (file_key, filename, content_type='video/*')
@@ -752,19 +761,33 @@ The multi-step upload flow uses Django session storage to pass data between endp
 3. POST /api/upload/b2/complete/
    └─ Reads: b2_pending_upload
    └─ Sets: b2_video_url, b2_video_thumb_url, direct_upload_is_video=True
+   └─ Sets: ai_job_id (NEW: for video AI processing)
+   └─ Queues: AI content generation using video thumbnail
    └─ Note: No variant generation for videos (stored as-is)
 
-4. GET /upload/details/ (Step 2 page)
+4. User fills out form (single-page upload)
    └─ Reads: b2_video_url, b2_video_thumb_url, direct_upload_is_video
+   └─ Frontend receives: ai_job_id for polling
 
-5. GET /api/upload/ai-suggestions/
-   └─ Reads: b2_video_thumb_url (thumbnail used for AI analysis)
-   └─ Fallback: Uses first frame extraction if no thumbnail
-
-6. POST /upload/submit/
+5. POST /upload/submit/
    └─ Reads: b2_video_url, b2_video_thumb_url, direct_upload_is_video
+   └─ Shows: ProcessingModal while polling for AI completion
+   └─ Polls: ai_job_id status
    └─ Saves: prompt.b2_video_url, prompt.b2_video_thumb_url
    └─ Clears: All upload session keys via clear_upload_session()
+
+6. Redirect to prompt detail page
+```
+
+**Session Keys for Video (Session 61):**
+```python
+# Set in b2_upload_complete for videos:
+request.session['direct_upload_urls'] = urls  # {'original': ..., 'thumb': ...}
+request.session['direct_upload_filename'] = filename
+request.session['direct_upload_is_video'] = True
+request.session['upload_b2_video'] = urls['original']
+request.session['upload_b2_video_thumb'] = urls['thumb']
+request.session['ai_job_id'] = ai_job_id  # NEW: For video AI processing
 ```
 
 ### Session Clearing Helper
@@ -925,7 +948,7 @@ python manage.py test -v 2
 
 ## Phase N4 Files (Optimistic Upload Flow)
 
-### Implementation Status (Session 59)
+### Implementation Status (Session 61)
 
 | Sub-Phase | Status | What Was Done |
 |-----------|--------|---------------|
@@ -933,38 +956,56 @@ python manage.py test -v 2
 | **N4b** | ✅ Complete | Django-Q2 configured |
 | **N4c** | ✅ Complete | Admin fieldsets updated |
 | **N4d** | ✅ Complete | Processing page view + template conditionals |
-| **N4e** | ⏳ Pending | Error state handling |
-| **N4f** | ⏳ Pending | Status polling API endpoint |
+| **N4e** | ✅ Complete | AI job queuing for videos (uses thumbnail) |
+| **N4f** | ✅ Complete | ProcessingModal in upload-form.js |
+| **N4 Cleanup** | ✅ Complete | Removed old upload code |
+| **Video Fix** | 🔴 Blocker | Video submit: "Upload data missing" |
 
 ### Files Created
 
 ```
 docs/
 └── PHASE_N4_UPLOAD_FLOW_REPORT.md    # Comprehensive planning document ✅
-
-static/js/
-└── processing.js                      # Polling logic for processing page ✅ (Session 59)
 ```
 
-### Files Modified (Session 59)
+### Files Deleted (Session 61 Cleanup)
+
+```
+prompts/templates/prompts/
+├── upload_step1.html                  # DELETED - replaced by upload.html
+└── upload_step2.html                  # DELETED - replaced by upload.html
+
+static/js/
+├── processing.js                      # DELETED - replaced by ProcessingModal
+└── upload-step1.js                    # DELETED - old step-based upload (~768 lines)
+
+prompts/templates/prompts/
+└── prompt_detail.html                 # MODIFIED - removed is_processing conditionals
+```
+
+### Files Modified (Session 59-61)
 
 ```
 prompts/
 ├── models.py                          # Added processing_uuid, processing_complete ✅
 ├── urls.py                            # Added processing page route ✅
+├── tasks.py                           # Domain allowlist fix (uncommitted)
 └── views/
     ├── upload_views.py                # Added prompt_processing view ✅
+    ├── api_views.py                   # AI job queuing for videos (uncommitted)
     └── __init__.py                    # Exported prompt_processing ✅
 
 prompts/templates/prompts/
-└── prompt_detail.html                 # Added {% if is_processing %} conditionals ✅
-                                       # (DRY: Reused instead of separate processing.html)
+└── prompt_detail.html                 # Removed is_processing conditionals (Session 61)
+
+static/js/
+└── upload-form.js                     # Added ProcessingModal, video ai_job_id (uncommitted)
 
 static/css/pages/
 └── prompt-detail.css                  # Added processing spinner + modal styles ✅
 
 prompts_manager/
-└── settings.py                        # Added Django-Q configuration ✅
+└── settings.py                        # Django-Q config + domain allowlist fix (uncommitted)
 
 requirements.txt                       # Added django-q2 ✅
 Procfile                               # Added worker process for Django-Q ✅
@@ -1016,11 +1057,18 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.0
+**Version:** 3.1
 **Audit Date:** January 27, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.1 (January 27, 2026 - Session 61):**
+- Updated Phase N4 to ~90% complete (video submit blocker)
+- Documented Session 61 file deletions: processing.js, upload-step1.js, step templates
+- Updated video upload flow with ai_job_id session key
+- Updated JavaScript files section (7 files now, down from 9)
+- Added uncommitted changes note for video support files
 
 **v3.0 (January 27, 2026):**
 - Updated Phase N4 section to reflect Session 59 implementation

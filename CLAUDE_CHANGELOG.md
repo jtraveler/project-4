@@ -23,6 +23,58 @@ This is a running log of development sessions. Each session entry includes:
 
 ## January 2026 Sessions
 
+### Session 61 - January 27, 2026
+
+**Focus:** Phase N4 Video Support and Cleanup
+
+**Context:** Continuing N4 implementation. Added video support to optimistic upload flow and cleaned up deprecated code.
+
+**Completed:**
+
+| Task | Description | Status |
+|------|-------------|--------|
+| N4 Cleanup | Removed old upload code (processing.js, step templates) | ✅ |
+| Video AI Job | Added AI job queuing for videos using thumbnail | ✅ |
+| Domain Fix | Changed B2 allowlist to support all subdomains | ✅ |
+| Modal for Videos | Processing modal now works for video uploads | ✅ |
+| ProcessingModal | Moved processing logic from processing.js to upload-form.js | ✅ |
+
+**Files Deleted:**
+- `prompts/templates/prompts/upload_step1.html` - old step 1 template
+- `prompts/templates/prompts/upload_step2.html` - old step 2 template
+- `static/js/upload-step1.js` - ~768 lines, old step-based upload
+- `static/js/processing.js` - ~300 lines, replaced by ProcessingModal
+
+**Files Modified:**
+- `prompts/templates/prompts/prompt_detail.html` - removed is_processing conditionals
+- `static/js/upload-form.js` - added ProcessingModal, video ai_job_id handling
+
+**Uncommitted Changes:**
+| File | Change |
+|------|--------|
+| `prompts/tasks.py` | Domain allowlist fix |
+| `prompts/views/api_views.py` | AI job queuing for videos |
+| `prompts_manager/settings.py` | Domain allowlist fix |
+| `static/js/upload-form.js` | Pass ai_job_id for videos |
+
+**Blockers Discovered:**
+
+| Issue | Description | Impact |
+|-------|-------------|--------|
+| Video submit fails | "Upload data missing" error | Videos cannot be uploaded |
+| Status not showing | "Processing content..." not displayed for videos | UX confusion |
+
+**Root Cause:** Session key mismatch - video flow sets different keys than submit expects.
+
+**Phase N4 Status:** ~90% complete (video submit fix needed)
+
+**Next Session:**
+- Fix video submit session key mismatch
+- Ensure "Processing content..." shows for videos
+- Commit uncommitted changes after fix
+
+---
+
 ### Session 59 - January 27, 2026
 
 **Focus:** Phase N4d - Processing Page Template Implementation
@@ -355,6 +407,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Jan 27, 2026 | 61 | N4 video support + cleanup (~90% complete) |
 | Jan 27, 2026 | 59 | N4d processing page implemented |
 | Jan 26, 2026 | 58 | Phase N4 planning complete |
 | Jan 22, 2026 | 57 | CLAUDE.md refactored into 3 files |
@@ -370,5 +423,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 3.4 (Phase N4d Documentation Enhanced)
+**Version:** 3.5 (Session 61 - N4 Video Support)
 **Last Updated:** January 27, 2026

@@ -34,6 +34,7 @@ from .upload_views import (
     upload_submit,
     cancel_upload,
     extend_upload_time,
+    prompt_processing,  # N4d: Processing page
 )
 
 # Import user profile and settings views
@@ -140,6 +141,7 @@ __all__ = [
     'upload_submit',
     'cancel_upload',
     'extend_upload_time',
+    'prompt_processing',  # N4d: Processing page
 
     # User views
     'user_profile',

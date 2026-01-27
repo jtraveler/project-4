@@ -21,6 +21,8 @@ urlpatterns = [
     # Upload idle detection endpoints
     path('upload/cancel/', views.cancel_upload, name='cancel_upload'),
     path('upload/extend/', views.extend_upload_time, name='extend_upload_time'),
+    # N4d: Processing page (shown while AI generates content)
+    path('prompt/processing/<uuid:processing_uuid>/', views.prompt_processing, name='prompt_processing'),
     path('prompt/<slug:slug>/', views.prompt_detail, name='prompt_detail'),
     path('prompt/<slug:slug>/edit/', views.prompt_edit, name='prompt_edit'),
     path('prompt/<slug:slug>/delete/', views.prompt_delete, name='prompt_delete'),

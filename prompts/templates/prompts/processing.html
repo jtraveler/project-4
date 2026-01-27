@@ -1,0 +1,424 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Processing Your Upload | PromptFinder{% endblock %}
+
+{% block extra_head %}
+<!-- DNS prefetch for external resources -->
+<link rel="dns-prefetch" href="//res.cloudinary.com">
+
+<!-- Processing page styles -->
+<link rel="stylesheet" href="{% static 'css/pages/prompt-detail.css' %}">
+<style>
+    /* N4d: Processing page specific styles */
+    .processing-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 4px;
+        height: 1em;
+        margin: 0.5em 0;
+    }
+
+    @keyframes skeleton-loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .processing-label {
+        color: var(--gray-500, #6c757d);
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+    }
+
+    .processing-spinner {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid var(--gray-800, #262626);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 0.5em;
+        vertical-align: middle;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .generating-text {
+        color: var(--gray-500, #6c757d);
+        font-style: italic;
+    }
+
+    .edit-btn-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    /* Processing page layout */
+    .processing-page {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .processing-media-container {
+        background: var(--gray-100, #f5f5f5);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .processing-media-container img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .prompt-box {
+        background: var(--white, #fff);
+        border: 1px solid var(--gray-200, #e5e7eb);
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+
+    .prompt-box .card-header {
+        background: var(--gray-50, #fafafa);
+        border-bottom: 1px solid var(--gray-200, #e5e7eb);
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+    }
+
+    .prompt-box .card-body {
+        padding: 1rem;
+    }
+
+    .prompt-text {
+        font-family: 'Roboto Mono', monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--gray-800, #262626);
+    }
+
+    .metadata-card {
+        background: var(--white, #fff);
+        border: 1px solid var(--gray-200, #e5e7eb);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .author-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .author-info .text-muted {
+        color: var(--gray-500, #6c757d);
+        font-size: 0.9rem;
+    }
+
+    .metadata-section {
+        margin-bottom: 1rem;
+    }
+
+    .metadata-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .action-buttons .btn {
+        font-size: 0.875rem;
+    }
+
+    /* More from author section */
+    .more-from-author {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--gray-200, #e5e7eb);
+    }
+
+    .more-from-author h5 {
+        margin-bottom: 1rem;
+        color: var(--gray-800, #262626);
+    }
+
+    .more-from-author img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 8px;
+        transition: transform 0.2s ease;
+    }
+
+    .more-from-author a:hover img {
+        transform: scale(1.02);
+    }
+
+    /* Completion modal */
+    .completion-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1050;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .completion-modal.show {
+        display: flex;
+    }
+
+    .completion-modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .completion-modal h3 {
+        margin-bottom: 0.5rem;
+        color: var(--success, #28a745);
+    }
+
+    .completion-modal p {
+        color: var(--gray-700, #374151);
+        margin-bottom: 1.5rem;
+    }
+
+    .completion-modal .btn-primary {
+        background: var(--gray-800, #262626);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        color: white;
+        transition: background 0.2s ease;
+    }
+
+    .completion-modal .btn-primary:hover {
+        background: var(--gray-900, #171717);
+        color: white;
+    }
+
+    /* Tag badges */
+    .tag-badge {
+        display: inline-block;
+        background: var(--gray-100, #f3f4f6);
+        color: var(--gray-700, #374151);
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Generator display */
+    .generator-display {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--gray-700, #374151);
+    }
+
+    .generator-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 991px) {
+        .processing-page {
+            padding-top: 1rem;
+        }
+
+        .metadata-card {
+            margin-top: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="processing-page">
+    <div class="container">
+        <div class="row">
+            <!-- Left Column: Image and Prompt -->
+            <div class="col-lg-7">
+                <!-- Image Preview -->
+                <div class="processing-media-container">
+                    {% if prompt.b2_thumb_url %}
+                        <img src="{{ prompt.b2_thumb_url }}"
+                             alt="Processing upload"
+                             id="preview-image">
+                    {% elif prompt.b2_video_thumb_url %}
+                        <img src="{{ prompt.b2_video_thumb_url }}"
+                             alt="Video thumbnail"
+                             id="preview-image">
+                    {% elif prompt.b2_image_url %}
+                        <img src="{{ prompt.b2_image_url }}"
+                             alt="Processing upload"
+                             id="preview-image">
+                    {% else %}
+                        <div class="p-5 text-center text-muted">
+                            <p>Loading preview...</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Prompt Text Box -->
+                <div class="prompt-box card">
+                    <div class="card-header">
+                        <strong>Prompt</strong>
+                    </div>
+                    <div class="card-body">
+                        <p class="prompt-text mb-3">{{ prompt.content|default:"No prompt text provided" }}</p>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                onclick="copyPrompt()"
+                                id="copy-prompt-btn">
+                            <i class="far fa-copy me-1"></i> Copy Prompt
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Metadata -->
+            <div class="col-lg-5">
+                <div class="metadata-card">
+                    <!-- Author -->
+                    <div class="author-info mb-3">
+                        <strong>@{{ prompt.author.username }}</strong>
+                        <span class="text-muted">• Just now</span>
+                    </div>
+
+                    <hr>
+
+                    <!-- Title (generating) -->
+                    <div class="metadata-section">
+                        <div class="processing-label" id="title-label">Title</div>
+                        <div id="title-container" role="status" aria-live="polite" aria-labelledby="title-label">
+                            <span class="processing-spinner" aria-hidden="true"></span>
+                            <span class="generating-text">Generating...</span>
+                        </div>
+                    </div>
+
+                    <!-- Description (generating) -->
+                    <div class="metadata-section">
+                        <div class="processing-label" id="desc-label">Description</div>
+                        <div id="description-container" role="status" aria-live="polite" aria-labelledby="desc-label">
+                            <span class="processing-spinner" aria-hidden="true"></span>
+                            <span class="generating-text">Generating...</span>
+                        </div>
+                    </div>
+
+                    <!-- Tags (generating) -->
+                    <div class="metadata-section">
+                        <div class="processing-label" id="tags-label">Tags</div>
+                        <div id="tags-container" role="status" aria-live="polite" aria-labelledby="tags-label">
+                            <span class="processing-spinner" aria-hidden="true"></span>
+                            <span class="generating-text">Generating...</span>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Generator (already known) -->
+                    <div class="metadata-section">
+                        <div class="processing-label">Generator</div>
+                        <div class="generator-display">
+                            {{ prompt.get_ai_generator_display|default:"Not specified" }}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Actions -->
+                    <div class="action-buttons">
+                        <button class="btn btn-outline-danger btn-sm"
+                                onclick="deletePrompt()"
+                                id="delete-btn">
+                            <i class="far fa-trash-alt me-1"></i> Delete
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm"
+                                onclick="copyLink()">
+                            <i class="far fa-copy me-1"></i> Copy Link
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm edit-btn-disabled"
+                                disabled
+                                title="Available after processing completes">
+                            <i class="far fa-edit me-1"></i> Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- More from Author Section -->
+        {% if other_prompts %}
+        <div class="more-from-author">
+            <h5>More from @{{ prompt.author.username }}</h5>
+            <div class="row">
+                {% for other in other_prompts %}
+                <div class="col-4 col-md-2 mb-3">
+                    <a href="{% url 'prompts:prompt_detail' slug=other.slug %}">
+                        {% if other.b2_thumb_url %}
+                            <img src="{{ other.b2_thumb_url }}"
+                                 alt="{{ other.title }}">
+                        {% elif other.b2_image_url %}
+                            <img src="{{ other.b2_image_url }}"
+                                 alt="{{ other.title }}">
+                        {% endif %}
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Completion Modal (ARIA accessible) -->
+<div class="completion-modal" id="completion-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="generated-title">
+    <div class="completion-modal-content">
+        <h3 id="modal-title">Processing Complete!</h3>
+        <p id="generated-title">Your prompt is ready.</p>
+        <a href="#" id="view-prompt-btn" class="btn btn-primary" aria-label="View your completed prompt">
+            View Your Prompt
+        </a>
+    </div>
+</div>
+
+<!-- Hidden data for JavaScript -->
+<script>
+    window.PROCESSING_CONFIG = {
+        uuid: "{{ prompt.processing_uuid }}",
+        csrfToken: "{{ csrf_token }}",
+        promptContent: {{ prompt.content|escapejs|default:"''"|safe }}
+    };
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/processing.js' %}"></script>
+{% endblock %}

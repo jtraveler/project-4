@@ -776,9 +776,50 @@ def upload_submit(request):
 
 
 @login_required
+@login_required
+def prompt_processing(request, processing_uuid):
+    """
+    N4d: Processing page shown while AI generates content.
+
+    User sees their image and prompt immediately while title/description/tags
+    are being generated in the background by Django-Q.
+
+    Security: Only the author can view their own processing page.
+    """
+    # select_related for author to avoid N+1 query
+    prompt = get_object_or_404(
+        Prompt.objects.select_related('author'),
+        processing_uuid=processing_uuid
+    )
+
+    # Security: Only the author can view their processing page
+    if prompt.author != request.user:
+        raise Http404("Prompt not found")
+
+    # If already complete, redirect to final prompt page
+    if prompt.processing_complete and prompt.slug:
+        return redirect('prompts:prompt_detail', slug=prompt.slug)
+
+    # Get other prompts by this user for "More from @username" section
+    # Using only() to fetch minimal fields needed for display
+    other_prompts = Prompt.objects.filter(
+        author=request.user,
+        deleted_at__isnull=True,
+        status=1  # Published
+    ).exclude(id=prompt.id).only(
+        'id', 'slug', 'title', 'b2_thumb_url', 'b2_image_url'
+    ).order_by('-created_on')[:6]
+
+    context = {
+        'prompt': prompt,
+        'other_prompts': other_prompts,
+    }
+
+    return render(request, 'prompts/processing.html', context)
+
+
+@login_required
 @require_POST
-
-
 def cancel_upload(request):
     """
     Cancel an abandoned upload and delete file from Cloudinary.

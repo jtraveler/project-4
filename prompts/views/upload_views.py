@@ -358,9 +358,11 @@ def upload_submit(request):
         messages.error(request, error_msg)
         return redirect(f'/upload/details?cloudinary_id={cloudinary_id}&resource_type={resource_type}')
 
-    # Validate upload data - B2 uploads need b2_original, Cloudinary needs cloudinary_id
+    # Validate upload data - B2 uploads need b2_original (images) or b2_video (videos)
     if is_b2_upload:
-        if not b2_original:
+        # For videos, check b2_video; for images, check b2_original
+        has_upload_data = b2_original or b2_video
+        if not has_upload_data:
             error_msg = 'Upload data missing. Please try again.'
             if is_ajax:
                 return JsonResponse({

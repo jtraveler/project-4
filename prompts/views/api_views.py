@@ -999,6 +999,28 @@ def b2_upload_complete(request):
                 request.session['ai_suggested_tags'] = video_moderation_result['suggested_tags']
             logger.info(f"Video moderation result stored in session: status={video_moderation_result.get('status')}")
 
+        # N4-Video: Queue AI job for video (using thumbnail for analysis)
+        # This matches the image flow where AI job is queued after NSFW passes
+        video_thumb_url = urls.get('thumb', '')
+        if video_thumb_url:
+            import uuid
+            from django_q.tasks import async_task
+
+            ai_job_id = str(uuid.uuid4())
+            request.session['ai_job_id'] = ai_job_id
+
+            # Queue AI task using video thumbnail (writes results to cache)
+            async_task(
+                'prompts.tasks.generate_ai_content_cached',
+                ai_job_id,
+                video_thumb_url,
+                task_name=f'ai_cache_{ai_job_id}'
+            )
+            logger.info(f"Started AI job {ai_job_id} for video thumbnail after NSFW check")
+        else:
+            ai_job_id = None
+            logger.warning("No video thumbnail available for AI analysis")
+
         logger.info(f"Video upload session keys set - video: {urls['original'][:50]}, thumb: {urls.get('thumb', '')[:50] if urls.get('thumb') else 'None'}, dimensions: {video_width}x{video_height}")
 
         # Debug logging for video session keys
@@ -1022,7 +1044,7 @@ def b2_upload_complete(request):
         'video_height': video_height if is_video else None,
     }
     
-    # Include video moderation status in response if flagged
+    # Include video moderation status and AI job ID in response
     if is_video and video_moderation_result:
         if not video_moderation_result.get('is_safe', True):
             response_data['moderation_status'] = 'flagged'
@@ -1030,7 +1052,9 @@ def b2_upload_complete(request):
             response_data['moderation_message'] = 'Video flagged for review'
         else:
             response_data['moderation_status'] = 'approved'
-    
+        # N4-Video: Include AI job ID for videos (matches image flow)
+        response_data['ai_job_id'] = request.session.get('ai_job_id')
+
     return JsonResponse(response_data)
 
 

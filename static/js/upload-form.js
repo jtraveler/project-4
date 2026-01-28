@@ -355,6 +355,8 @@
         document.addEventListener('b2UploadComplete', handleB2UploadComplete);
         document.addEventListener('b2UploadError', handleB2UploadError);
         document.addEventListener('uploadReset', handleUploadReset);
+        // N4-Video: Listen for video processing start (server-side NSFW check)
+        document.addEventListener('videoProcessingStarted', handleVideoProcessingStarted);
 
         // Form submission
         if (elements.uploadForm) {
@@ -390,10 +392,12 @@
         // For videos, moderation already happened in complete endpoint
         if (data.is_video && data.moderation_status) {
             // Use the moderation result from complete endpoint
+            // N4-Video: Include ai_job_id so videos get same modal experience as images
             handleModerationResult({
                 status: data.moderation_status,
                 severity: data.severity || 'low',
-                message: data.moderation_message || ''
+                message: data.moderation_message || '',
+                ai_job_id: data.ai_job_id
             });
         } else {
             // For images, queue separate NSFW moderation
@@ -494,6 +498,12 @@
     function handleUploadReset() {
         // Reset form state
         resetForm();
+    }
+
+    // N4-Video: Handle video processing start event
+    function handleVideoProcessingStarted() {
+        // Update status to show NSFW check is happening server-side
+        updateNsfwStatus('checking');
     }
 
     // ========================================

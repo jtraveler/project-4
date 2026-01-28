@@ -272,6 +272,12 @@
                 throw new Error('Failed to upload file');
             }
 
+            // N4-Video: For videos, signal that server-side processing is starting
+            // This allows UI to show "Checking content..." during frame extraction + NSFW check
+            if (resourceType === 'video') {
+                dispatch('videoProcessingStarted', {});
+            }
+
             // Step 3: Notify backend of completion
             const completeResponse = await fetch(window.uploadConfig.urls.complete, {
                 method: 'POST',

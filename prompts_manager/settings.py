@@ -566,7 +566,7 @@ B2_STORAGE_BACKEND = 'prompts.storage_backends.B2MediaStorage'
 # SSRF protection: Only fetch images from these trusted domains.
 # Used by background AI content generation task (prompts/tasks.py)
 ALLOWED_IMAGE_DOMAINS = [
-    'f003.backblazeb2.com',      # B2 direct
+    'backblazeb2.com',           # B2 direct (all subdomains: s3.us-east-005, f003, etc.)
     'cdn.promptfinder.net',      # Cloudflare CDN
     'media.promptfinder.net',    # Media CDN
     'res.cloudinary.com',        # Legacy Cloudinary

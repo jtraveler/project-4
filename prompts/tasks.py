@@ -293,7 +293,7 @@ def _is_safe_image_url(url: str) -> bool:
 
         # Get allowed domains from settings (with fallback for safety)
         allowed_domains = getattr(settings, 'ALLOWED_IMAGE_DOMAINS', [
-            'f003.backblazeb2.com',
+            'backblazeb2.com',
             'cdn.promptfinder.net',
             'res.cloudinary.com',
         ])

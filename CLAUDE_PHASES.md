@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** January 26, 2026
+**Last Updated:** January 28, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -28,7 +28,7 @@
 | L | Media Infrastructure | ✅ Done | Cloudinary → B2 + Cloudflare |
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
-| **N4** | **Optimistic Upload Flow** | **🔄 ~90% Complete** | **Video submit fix needed - CURRENT** |
+| **N4** | **Optimistic Upload Flow** | **🔄 ~95% Complete** | **Video submit fix needed - CURRENT** |
 
 ---
 
@@ -76,7 +76,7 @@
 
 ## 🔄 Phase N4: Optimistic Upload Flow (CURRENT)
 
-**Status:** ~90% Complete - Video Submit Fix Needed
+**Status:** ~95% Complete - Video Submit Fix Needed (N4g Blocker)
 **Created:** January 26, 2026
 **Detailed Documentation:** `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
@@ -96,12 +96,12 @@ Reduce perceived upload time from 15-20 seconds to 5-10 seconds by restructuring
 | N4 Cleanup | Remove old upload code | ✅ Complete |
 | N4g | **Video submit fix** | 🔴 **BLOCKER** |
 | N4h | Deferred B2 file renaming task | ⏳ Pending |
-| N4i | SEO additions (JSON-LD, sitemap) | ⏳ Pending |
+| N4i | SEO additions (JSON-LD, sitemap) | 🔄 Partial (JSON-LD done, sitemap pending) |
 | N4j | Testing & polish | ⏳ Pending |
 
-**Current Blockers (Session 61):**
-- Video submit fails with "Upload data missing" (session key mismatch)
-- "Processing content..." status not showing for videos
+**Current Blockers (Session 63):**
+- N4g: Video submit fails with "Upload data missing" (session key mismatch)
+- Description length fix needs production verification (`max_tokens`/`max_length` changes)
 
 ### New Database Fields
 
@@ -390,5 +390,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 3.3 (Phase N4 Session 61 - Video Support)
-**Last Updated:** January 27, 2026
+**Version:** 3.4 (Phase N4 Session 63 - SEO + AI Content Quality)
+**Last Updated:** January 28, 2026

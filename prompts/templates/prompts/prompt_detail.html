@@ -3,6 +3,28 @@
 {% load cloudinary_tags %}
 {% load prompt_tags %}
 
+{% block title %}{{ prompt.title }} - {{ prompt.ai_generator }} AI Prompt | PromptFinder{% endblock %}
+
+{% block meta_description %}{{ prompt.description|default:prompt.excerpt|truncatechars:160 }}{% endblock %}
+
+{% block og_tags %}
+<meta property="og:site_name" content="PromptFinder">
+<meta property="og:title" content="{{ prompt.title }} - {{ prompt.ai_generator }} AI Prompt">
+<meta property="og:description" content="{{ prompt.description|default:prompt.excerpt|truncatechars:200 }}">
+<meta property="og:image" content="{{ prompt.display_large_url }}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="article:author" content="{{ prompt.author.username }}">
+<meta property="article:published_time" content="{{ prompt.created_on|date:'c' }}">
+{% endblock og_tags %}
+
+{% block twitter_tags %}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ prompt.title }} - {{ prompt.ai_generator }} AI Prompt">
+<meta name="twitter:description" content="{{ prompt.description|default:prompt.excerpt|truncatechars:200 }}">
+<meta name="twitter:image" content="{{ prompt.display_large_url }}">
+{% endblock twitter_tags %}
+
 {% block extra_head %}
 <!-- DNS prefetch for external resources -->
 <link rel="dns-prefetch" href="//res.cloudinary.com">
@@ -28,6 +50,33 @@
 
 <!-- Prompt Detail Page Styles (extracted to external file) -->
 <link rel="stylesheet" href="{% static 'css/pages/prompt-detail.css' %}">
+
+<!-- Canonical URL to prevent duplicate content issues -->
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+<!-- Schema.org Structured Data for SEO -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "ImageObject",
+    "name": "{{ prompt.title|escapejs }}",
+    "description": "{{ prompt.description|default:prompt.excerpt|truncatechars:300|escapejs }}",
+    "contentUrl": "{{ prompt.display_large_url }}",
+    "thumbnailUrl": "{{ prompt.display_medium_url }}",
+    "author": {
+        "@type": "Person",
+        "name": "{{ prompt.author.username|escapejs }}"
+    },
+    "datePublished": "{{ prompt.created_on|date:'c' }}",
+    "dateModified": "{{ prompt.updated_on|date:'c' }}",
+    {% if prompt.tags.all %}"keywords": "{% for tag in prompt.tags.all %}{{ tag.name|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}",{% endif %}
+    "creator": {
+        "@type": "Organization",
+        "name": "PromptFinder",
+        "url": "https://promptfinder.net"
+    }
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -128,10 +177,14 @@
                 {% endif %}
             </h2>
 
-            <!-- Description -->
-            {% if prompt.excerpt %}
+            <!-- Description (show full AI-generated description for SEO, fallback to excerpt) -->
+            {% if prompt.description %}
             <div class="prompt-description">
-                <p>{{ prompt.excerpt }}</p>
+                {{ prompt.description|linebreaks }}
+            </div>
+            {% elif prompt.excerpt %}
+            <div class="prompt-description">
+                {{ prompt.excerpt|linebreaks }}
             </div>
             {% endif %}
 

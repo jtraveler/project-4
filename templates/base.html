@@ -17,15 +17,20 @@
         <meta name="author" content="PromptFinder">
 
         <!-- Open Graph Meta Tags for Social Sharing -->
+        {% block og_tags %}
         <meta property="og:title" content="PromptFinder - Your Creative AI Community">
         <meta property="og:description" content="Discover, share, and create exceptional AI prompts with our vibrant community. From creative inspiration to technical precision, find the perfect prompts to unleash your AI potential.">
         <meta property="og:type" content="website">
         <meta property="og:url" content="{{ request.build_absolute_uri }}">
+        <meta property="og:site_name" content="PromptFinder">
+        {% endblock og_tags %}
 
         <!-- Twitter Card Meta Tags -->
+        {% block twitter_tags %}
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="PromptFinder - Your Creative AI Community">
         <meta name="twitter:description" content="Discover, share, and craft exceptional AI prompts with our vibrant community.">
+        {% endblock twitter_tags %}
         
         <!-- Security Headers-->
         <meta http-equiv="X-Content-Type-Options" content="nosniff">

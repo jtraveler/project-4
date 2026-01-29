@@ -452,7 +452,7 @@ def upload_submit(request):
         author=request.user,
         title=title,
         content=content,
-        excerpt=ai_description[:200] if ai_description else content[:200],
+        excerpt=ai_description[:2000] if ai_description else content[:500],
         ai_generator=ai_generator,
         status=0,
     )

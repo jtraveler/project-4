@@ -259,7 +259,7 @@ def _call_openai_vision(
                     ]
                 }
             ],
-            max_tokens=500,
+            max_tokens=1000,
             temperature=0.7,
             response_format={"type": "json_object"}  # Enforce JSON output
         )
@@ -367,7 +367,8 @@ def _build_analysis_prompt(prompt_text: str, ai_generator: str, available_tags: 
     """
     Build the prompt for OpenAI Vision API.
 
-    Weight: 80% image analysis, 20% prompt text context
+    Prioritizes artistic style identification for SEO-rich content.
+    Weight: 80% image analysis, 20% prompt text context.
     """
     tags_list = ", ".join(available_tags[:100])  # Limit to avoid token overflow
 
@@ -376,25 +377,108 @@ def _build_analysis_prompt(prompt_text: str, ai_generator: str, available_tags: 
 User's Original Prompt: "{prompt_text}"
 AI Generator Used: {ai_generator}
 
-IMPORTANT: Weight your analysis 80% on what you SEE in the image, 20% on the user's prompt text.
-The user's prompt provides context but the image content is primary.
+CRITICAL - IDENTIFY THE ARTISTIC STYLE FIRST:
+Before describing WHAT is in the image, identify HOW it was rendered:
+
+1. **Rendering Style** (MUST identify one):
+   - 3D render, clay/claymation style, Pixar-style, low-poly
+   - Photorealistic, hyperrealistic, photograph-style
+   - Anime, manga, cartoon, comic book style
+   - Digital painting, oil painting, watercolor, sketch
+   - Minimalist, flat design, vector art
+   - Vintage, retro, art deco, art nouveau
+   - Fantasy art, concept art, surrealist
+
+2. **Visual Characteristics**:
+   - Lighting (soft, dramatic, cinematic, neon, golden hour)
+   - Color palette (warm, cool, pastel, vibrant, muted, monochrome)
+   - Mood (whimsical, nostalgic, ethereal, dark, cheerful, mysterious)
 
 Respond with ONLY valid JSON in this exact format:
 {{
-    "title": "SEO-friendly title, 5-10 words, descriptive of the image",
-    "description": "SEO description, 50-100 words, describes image and prompt usage",
+    "title": "USE 50-60 CHARACTERS - include rendering technique + subject",
+    "description": "USE 150-200 WORDS - detailed, SEO-rich content",
     "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
 }}
 
-Requirements:
-- Title: Capitalize main words, no quotes, engaging but accurate
-- Description: Third person, mentions the AI generator, describes visual elements and mood
-- Tags: Choose exactly 5 tags from this list: {tags_list}
+TITLE REQUIREMENTS - MANDATORY:
+1. LENGTH: Use 50-60 characters (this is required, not optional)
+2. RENDERING TECHNIQUE: Must include one of these in the title:
+   - "3D" / "3D Render" / "Clay-Style" / "Pixar-Style" / "Low-Poly"
+   - "Photorealistic" / "Hyperrealistic" / "Photo-Style"
+   - "Anime" / "Manga" / "Cartoon" / "Comic Style"
+   - "Digital Painting" / "Digital Art" / "Illustration"
+   - "Oil Painting" / "Watercolor" / "Sketch"
+   - "Minimalist" / "Vector Art" / "Flat Design"
+   - "Cinematic" / "Concept Art" / "Fantasy Art"
+3. SUBJECT: Include what the image shows
+4. DESCRIPTORS: Add mood, colors, or setting to reach 50-60 chars
 
-If the image is unclear or you cannot analyze it, use these fallbacks:
-- Title: "{ai_generator} AI Generated Artwork"
-- Description: "An AI-generated image created with {ai_generator}. Explore this prompt and create similar artwork."
-- Tags: ["AI Art", "Digital Art", "{ai_generator}", "Creative", "Artwork"]
+GOOD TITLES BY CONTENT TYPE (all 50-60 characters):
+
+3D/Animated Style:
+- "Whimsical 3D Clay-Style Vintage Yellow Bus Illustration" (56 chars)
+- "Pixar-Style 3D Character Happy Child Playing in Garden" (55 chars)
+- "Cute Low-Poly Forest Animals Isometric Game Art Style" (54 chars)
+
+Photorealistic/Human:
+- "Photorealistic Portrait Young Woman Golden Hour Lighting" (57 chars)
+- "Hyperrealistic Business Man Professional Studio Portrait" (57 chars)
+- "Photo-Style Elderly Couple Walking Beach Sunset Scene" (54 chars)
+
+Anime/Cartoon:
+- "Anime Style Warrior Princess Epic Battle Fantasy Scene" (55 chars)
+- "Manga Character Schoolgirl Cherry Blossom Spring Setting" (57 chars)
+- "Cartoon Style Funny Dog Superhero Comic Book Art" (49 chars)
+
+Digital Art/Illustration:
+- "Digital Painting Mystical Forest Ethereal Moonlight" (52 chars)
+- "Concept Art Futuristic City Cyberpunk Neon Aesthetic" (53 chars)
+- "Fantasy Illustration Dragon Castle Epic Medieval Scene" (55 chars)
+
+Landscapes/Scenes:
+- "Cinematic Mountain Landscape Dramatic Storm Clouds Moody" (57 chars)
+- "Watercolor Style Peaceful Japanese Garden Autumn Colors" (56 chars)
+- "Surrealist Desert Dreamscape Melting Clocks Salvador Dali" (58 chars)
+
+BAD TITLES (too short, missing technique):
+- "Yellow Bus Scene" (16 chars) - Missing technique, too short
+- "Portrait of Woman" (17 chars) - Missing technique, too short
+- "Anime Character" (15 chars) - Too short, too generic
+- "Beautiful Landscape" (19 chars) - No technique, no specifics
+- "Whimsical Scene" (15 chars) - Mood only, no technique
+
+DESCRIPTION REQUIREMENTS - USE 150-200 WORDS (mandatory):
+
+Structure (fill ALL sections):
+
+PARAGRAPH 1 - Style & Technique (40-50 words):
+"This [rendering technique] artwork features [specific style characteristics].
+The [visual style] aesthetic showcases [lighting/texture/color details]..."
+
+PARAGRAPH 2 - Subject & Composition (50-60 words):
+"The image depicts [detailed subject description] with [composition notes].
+[Specific details about focal points, positioning, background elements]..."
+
+PARAGRAPH 3 - Usage & Context (50-60 words):
+"This prompt is ideal for [target users: artists, designers, content creators].
+Created with {ai_generator}, it demonstrates [technique/style benefits].
+Perfect for [specific use cases: social media, prints, game assets, etc.]..."
+
+IMPORTANT: You MUST write 150-200 words. Short descriptions waste SEO potential.
+
+TAGS REQUIREMENTS:
+- First 2 tags: Style/technique (e.g., "3D Art", "Digital Painting", "Anime")
+- Next 2 tags: Subject matter (e.g., "Vehicles", "Urban", "Characters")
+- Last tag: Mood/aesthetic (e.g., "Whimsical", "Nostalgic", "Cinematic")
+- Choose from this list: {tags_list}
+
+FALLBACK (only if image is completely unanalyzable):
+{{
+    "title": "{ai_generator} AI Generated Digital Artwork Creative Visual",
+    "description": "This captivating AI-generated artwork demonstrates the creative possibilities of modern artificial intelligence image generation. Created with {ai_generator}, this piece showcases unique artistic elements and imaginative composition that highlight the capabilities of AI art tools. The image features distinctive visual characteristics including interesting use of color, form, and texture that make it a compelling example of generative art. Digital artists and content creators will find this prompt valuable for exploring AI-assisted creative workflows. Whether you are seeking inspiration for your own projects or studying AI art techniques, this prompt offers insights into effective image generation strategies. The versatility of this style makes it suitable for various applications including digital content creation, artistic experimentation, and visual design projects.",
+    "tags": ["AI Art", "Digital Art", "Creative", "Artwork", "AI Generated"]
+}}
 
 Respond ONLY with the JSON object, no other text.'''
 
@@ -470,7 +554,7 @@ def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
 
     # Sanitize content (strip control characters, limit length)
     title = _sanitize_content(title, max_length=200)
-    description = _sanitize_content(description, max_length=500)
+    description = _sanitize_content(description, max_length=2000)
 
     # Use transaction to ensure atomicity of prompt save + tag adds
     with transaction.atomic():
@@ -807,8 +891,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             return {'status': 'error', 'error': ai_result['error']}
 
         # Extract and sanitize results
-        title = _sanitize_content(ai_result.get('title', 'Untitled Prompt'), max_length=60)
-        description = _sanitize_content(ai_result.get('description', ''), max_length=1000)
+        title = _sanitize_content(ai_result.get('title', 'Untitled Prompt'), max_length=200)
+        description = _sanitize_content(ai_result.get('description', ''), max_length=2000)
         tags = ai_result.get('tags', [])
 
         # Clean tags - lowercase, trimmed, unique

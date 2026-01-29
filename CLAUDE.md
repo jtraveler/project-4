@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** January 26, 2026
+**Last Updated:** January 28, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~90% Complete | Optimistic Upload Flow | Video submit session fix, status display |
+| **Phase N4** | 🔄 ~95% Complete | Optimistic Upload Flow | Video submit session fix (N4g blocker) |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** ~90% Complete - Video Submit Fix Needed
+**Status:** ~95% Complete - Video Submit Fix Needed (N4g Blocker)
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -71,7 +71,9 @@ Rebuilding upload flow to feel "instant" by:
 | **N4e** | ✅ Complete | AI job queuing for videos (uses thumbnail) |
 | **N4f** | ✅ Complete | ProcessingModal in upload-form.js |
 | **N4 Cleanup** | ✅ Complete | Removed old upload code (step templates, processing.js) |
-| **Video Fix** | 🔴 Blocker | Video submit fails: "Upload data missing" (session key mismatch) |
+| **SEO Meta** | ✅ Complete | OG/Twitter blocks, Schema.org JSON-LD, canonical URLs (Session 63) |
+| **AI Quality** | ✅ Complete | Style-first titles, description truncation fix (Session 63) |
+| **N4g Video Fix** | 🔴 Blocker | Video submit fails: "Upload data missing" (session key mismatch) |
 
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
@@ -94,23 +96,32 @@ Rebuilding upload flow to feel "instant" by:
 | AI analysis ratio | 80% Vision / 20% Text | Users often write vague prompts |
 | File cleanup | 5-30 day retention | Use existing trash system |
 
-### Current Blockers (Session 61)
+### Current Blockers (Session 63)
 
 | Issue | Description | Impact |
 |-------|-------------|--------|
-| **Video submit fails** | "Upload data missing" error on video submit | Videos cannot be uploaded |
-| **Status not showing** | "Processing content..." not displayed for videos | UX confusion |
+| **N4g: Video submit fails** | "Upload data missing" error on video submit | Videos cannot be uploaded |
 
 **Root Cause:** Session key mismatch - video flow sets different keys than submit expects.
+
+### Known Issues
+
+| Issue | Description | Status |
+|-------|-------------|--------|
+| Description length verification | `max_tokens`/`max_length` fix applied (S63) but untested in production | Needs verification |
+| Video redirect delay | ~10 seconds after AI completion before redirect | Low priority |
 
 ### Uncommitted Changes (Do Not Revert)
 
 | File | Change |
 |------|--------|
-| `prompts/tasks.py` | Domain allowlist fix for B2 URLs |
+| `prompts/tasks.py` | AI prompt rewrite, `max_tokens` 500→1000, description `max_length` 500→2000, domain allowlist |
 | `prompts/views/api_views.py` | AI job queuing for videos |
 | `prompts_manager/settings.py` | Domain allowlist fix |
 | `static/js/upload-form.js` | Pass ai_job_id for videos |
+| `templates/base.html` | OG/Twitter `{% block %}` wrappers |
+| `prompts/templates/prompts/prompt_detail.html` | OG/Twitter overrides, Schema.org JSON-LD, canonical, `|linebreaks` |
+| `prompts/services/content_generation.py` | `max_tokens` 500→1000, filename 3→5 keywords, alt tag format |
 
 ---
 
@@ -477,5 +488,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 3.4 (Phase N4 Session 61 - Video Support)
-**Last Updated:** January 27, 2026
+**Version:** 3.5 (Phase N4 Session 63 - SEO + AI Content Quality)
+**Last Updated:** January 28, 2026

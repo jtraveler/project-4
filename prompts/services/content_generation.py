@@ -181,7 +181,7 @@ class ContentGenerationService:
                         }
                     ]
                 }],
-                max_tokens=500,
+                max_tokens=1000,
                 temperature=0.7,
                 response_format={"type": "json_object"}
             )
@@ -318,7 +318,7 @@ Analyze this image and the user's prompt text: "{user_prompt_text}".
 {{
   "violations": [],
   "title": "Short, descriptive title (5-10 words)",
-  "description": "SEO-optimized description (50-100 words) that describes the image and how to use this prompt",
+  "description": "SEO-optimized description (150-200 words) - detailed, engaging content for search engines",
   "suggested_tags": ["5 most relevant tags from the provided list"],
   "relevance_score": 0.85,
   "relevance_explanation": "Brief explanation of how well the prompt matches the image"
@@ -353,11 +353,11 @@ Tag options (choose 5): {tags_list}
         cleaned = re.sub(r'[^\w\s-]', '', title.lower())
         words = [w for w in cleaned.split() if w not in stop_words]
 
-        # Take first 2-3 meaningful words (max 30 chars combined)
+        # Take first 4-5 meaningful words (max 50 chars combined) for better SEO
         keywords = []
         char_count = 0
         for word in words:
-            if char_count + len(word) <= 30 and len(keywords) < 3:
+            if char_count + len(word) <= 50 and len(keywords) < 5:
                 keywords.append(word)
                 char_count += len(word) + 1
 
@@ -370,8 +370,10 @@ Tag options (choose 5): {tags_list}
 
     def _generate_alt_tag(self, title: str, ai_generator: str) -> str:
         """
-        Generate alt tag for accessibility (max 125 chars).
-        Format: [Title] - [AI Generator] Prompt - AI-generated image
+        Generate SEO-optimized alt tag for accessibility (max 125 chars).
+        Format: [Title] - [AI Generator] AI Art Prompt for Image Generation
+
+        Maximizes keyword usage within the 125 character limit.
 
         Args:
             title: Generated title
@@ -380,12 +382,19 @@ Tag options (choose 5): {tags_list}
         Returns:
             Alt text string (max 125 chars)
         """
-        alt_tag = f"{title} - {ai_generator} Prompt - AI-generated image"
+        # Base template with more SEO keywords
+        base_suffix = f" - {ai_generator} AI Art Prompt for Image Generation"
 
-        if len(alt_tag) > 125:
-            max_title_len = 125 - len(f" - {ai_generator} Prompt - AI-generated image")
-            truncated = title[:max_title_len].rsplit(' ', 1)[0]  # Don't cut mid-word
-            alt_tag = f"{truncated}... - {ai_generator} Prompt - AI-generated image"
+        # Calculate available space for title
+        available_chars = 125 - len(base_suffix)
+
+        if len(title) <= available_chars:
+            # Title fits completely
+            alt_tag = f"{title}{base_suffix}"
+        else:
+            # Truncate title intelligently (don't cut mid-word)
+            truncated = title[:available_chars].rsplit(' ', 1)[0]
+            alt_tag = f"{truncated}...{base_suffix}"
 
         return alt_tag
 

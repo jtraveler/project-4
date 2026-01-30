@@ -463,7 +463,7 @@ Tag options (choose 5): {tags_list}
                         "role": "user",
                         "content": f"""Analyze this AI prompt and generate:
 1. A catchy, SEO-friendly title (max 60 characters)
-2. A brief description (max 150 characters)
+2. A detailed SEO description (150-200 words)
 3. 5 relevant tags from this list ONLY: {', '.join(self.AVAILABLE_TAGS[:100])}
 
 Prompt: "{prompt_text}"

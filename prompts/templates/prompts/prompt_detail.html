@@ -58,11 +58,12 @@
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",
-    "@type": "ImageObject",
+    "@type": "{% if prompt.is_video %}VideoObject{% else %}ImageObject{% endif %}",
     "name": "{{ prompt.title|escapejs }}",
     "description": "{{ prompt.description|default:prompt.excerpt|truncatechars:300|escapejs }}",
-    "contentUrl": "{{ prompt.display_large_url }}",
-    "thumbnailUrl": "{{ prompt.display_medium_url }}",
+    "contentUrl": "{% if prompt.is_video %}{{ prompt.display_video_url }}{% else %}{{ prompt.display_large_url }}{% endif %}",
+    "thumbnailUrl": "{% if prompt.is_video %}{{ prompt.display_video_thumb_url|default:prompt.display_medium_url }}{% else %}{{ prompt.display_medium_url }}{% endif %}",
+    {% if prompt.is_video and prompt.video_duration %}"duration": "PT{{ prompt.video_duration|floatformat:0 }}S",{% endif %}
     "author": {
         "@type": "Person",
         "name": "{{ prompt.author.username|escapejs }}"

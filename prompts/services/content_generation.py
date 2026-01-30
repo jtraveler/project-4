@@ -326,6 +326,10 @@ Analyze this image and the user's prompt text: "{user_prompt_text}".
 
 IMPORTANT:
 - Analyze BOTH the visual content AND the user's prompt text
+- For images with people, identify apparent ethnicity (Asian, Black, Caucasian, Hispanic, Middle Eastern, etc.)
+- Be specific: "young Asian woman" not just "woman"
+- For ambiguous cases, use skin tone: "brown-skinned woman" or "dark-skinned man"
+- In descriptions, mention multiple possibilities for ambiguous ethnicities
 - Suggested tags should capture: subject, style, mood, composition
 - Title should be keyword-rich for SEO
 - Description should be unique, valuable, and include usage tips

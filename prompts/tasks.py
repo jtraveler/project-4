@@ -394,6 +394,32 @@ Before describing WHAT is in the image, identify HOW it was rendered:
    - Color palette (warm, cool, pastel, vibrant, muted, monochrome)
    - Mood (whimsical, nostalgic, ethereal, dark, cheerful, mysterious)
 
+3. **Human Subjects - IMPORTANT FOR SEARCHABILITY**:
+   If the image contains people, identify their apparent:
+   - Ethnicity/Race: Asian, Black/African, Caucasian/White, Hispanic/Latino,
+     Middle Eastern, South Asian, Southeast Asian, Mixed/Multiracial
+   - Age range: child, teenager, young adult, middle-aged, elderly
+   - Gender: man, woman, non-binary (if apparent)
+
+   CLEAR CASES (use specific ethnicity):
+   - "young Asian woman" NOT just "woman"
+   - "elderly Black man" NOT just "elderly man"
+
+   AMBIGUOUS CASES (use skin tone + multiple possibilities):
+   - For light brown skin: "light brown-skinned woman (possibly Hispanic, Middle Eastern, or mixed)"
+   - For dark brown skin: "dark-skinned man (possibly Black, African, or South Asian)"
+   - For ambiguous features: describe skin tone rather than assuming ethnicity
+
+   TITLE STRATEGY (50-60 chars limit):
+   - Clear cases: Use specific ethnicity ("Asian Woman", "Black Man")
+   - Ambiguous cases: Use skin tone ("Brown-Skinned Woman", "Dark-Skinned Man")
+
+   DESCRIPTION STRATEGY (150-200 words - more space):
+   - Can mention multiple possibilities: "appears to be of Black, Hispanic, or Middle Eastern descent"
+   - This casts a wider SEO net for searches
+
+   Be respectful and descriptive, not stereotypical.
+
 Respond with ONLY valid JSON in this exact format:
 {{
     "title": "USE 50-60 CHARACTERS - include rendering technique + subject",
@@ -422,9 +448,11 @@ GOOD TITLES BY CONTENT TYPE (all 50-60 characters):
 - "Cute Low-Poly Forest Animals Isometric Game Art Style" (54 chars)
 
 Photorealistic/Human:
-- "Photorealistic Portrait Young Woman Golden Hour Lighting" (57 chars)
-- "Hyperrealistic Business Man Professional Studio Portrait" (57 chars)
-- "Photo-Style Elderly Couple Walking Beach Sunset Scene" (54 chars)
+- "Photorealistic Portrait Young Asian Woman Golden Hour Light" (60 chars)
+- "Hyperrealistic Black Business Man Professional Portrait" (56 chars)
+- "Photo-Style Elderly Hispanic Couple Beach Sunset Scene" (55 chars)
+- "Cinematic Middle Eastern Woman Dramatic Studio Lighting" (56 chars)
+- "Brown-Skinned Woman Portrait Soft Natural Window Light" (55 chars)
 
 Anime/Cartoon:
 - "Anime Style Warrior Princess Epic Battle Fantasy Scene" (55 chars)
@@ -457,7 +485,7 @@ PARAGRAPH 1 - Style & Technique (40-50 words):
 The [visual style] aesthetic showcases [lighting/texture/color details]..."
 
 PARAGRAPH 2 - Subject & Composition (50-60 words):
-"The image depicts [detailed subject description] with [composition notes].
+"The image depicts [detailed subject description including ethnicity/age if human] with [composition notes].
 [Specific details about focal points, positioning, background elements]..."
 
 PARAGRAPH 3 - Usage & Context (50-60 words):
@@ -465,7 +493,12 @@ PARAGRAPH 3 - Usage & Context (50-60 words):
 Created with {ai_generator}, it demonstrates [technique/style benefits].
 Perfect for [specific use cases: social media, prints, game assets, etc.]..."
 
-IMPORTANT: You MUST write 150-200 words. Short descriptions waste SEO potential.
+IMPORTANT:
+- You MUST write 150-200 words. Short descriptions waste SEO potential.
+- For human subjects, ALWAYS include apparent ethnicity/race for searchability.
+- Be specific: "young Asian woman" not "young woman", "Black elderly man" not "elderly man".
+- When ethnicity is ambiguous, use skin tone descriptors (brown-skinned, dark-skinned, light-skinned).
+- In descriptions, you can mention multiple possible ethnicities for ambiguous cases to cast a wider SEO net.
 
 TAGS REQUIREMENTS:
 - First 2 tags: Style/technique (e.g., "3D Art", "Digital Painting", "Anime")

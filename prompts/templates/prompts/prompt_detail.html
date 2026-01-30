@@ -104,6 +104,7 @@
                     {% if prompt.display_video_url %}
                         <!-- Video Display (B2 or Cloudinary) -->
                         <video controls class="hero-video"
+                            aria-label="{{ prompt.title }} - {{ prompt.ai_generator }} AI Video Prompt"
                             poster="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}"
                             preload="metadata"
                             autoplay
@@ -125,7 +126,7 @@
                              sizes="(max-width: 768px) 100vw,
                                     60vw"
                              class="hero-image"
-                             alt="{{ prompt.title }}"
+                             alt="{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation"
                              loading="eager"
                              fetchpriority="high"
                              decoding="async">
@@ -140,7 +141,7 @@
                         {% else %}
                             <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}"
                                  class="hero-image"
-                                 alt="{{ prompt.title }}"
+                                 alt="{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation"
                                  loading="eager"
                                  fetchpriority="high"
                                  decoding="async">

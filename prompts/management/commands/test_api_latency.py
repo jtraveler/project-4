@@ -102,7 +102,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f'  Iteration {i + 1}: ERROR - {str(e)}'))
                 latencies.append(None)
 
-        return [l for l in latencies if l is not None]
+        return [lat for lat in latencies if lat is not None]
 
     def _test_openai_latency(self, iterations):
         """Test OpenAI API latency with a minimal request."""
@@ -138,7 +138,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f'  Iteration {i + 1}: ERROR - {str(e)}'))
                 latencies.append(None)
 
-        return [l for l in latencies if l is not None]
+        return [lat for lat in latencies if lat is not None]
 
     def _print_summary(self, results):
         """Print a summary of all latency test results."""

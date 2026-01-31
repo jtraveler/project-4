@@ -308,14 +308,14 @@ if cloudinary_url:
         CLOUDINARY_STORAGE = {
             'CLOUDINARY_URL': cloudinary_url,
             'CLOUD_NAME': '',
-            'API_KEY': '',
-            'API_SECRET': '',
+            'API_KEY': '',  # nosec B105
+            'API_SECRET': '',  # nosec B105
         }
 else:
     CLOUDINARY_STORAGE = {
         'CLOUD_NAME': '',
-        'API_KEY': '',
-        'API_SECRET': '',
+        'API_KEY': '',  # nosec B105
+        'API_SECRET': '',  # nosec B105
     }
 
 # Force Cloudinary to use HTTPS
@@ -462,7 +462,7 @@ CSP_CONNECT_SRC = (
     "https://fonts.gstatic.com",
     "https://cdn.jsdelivr.net",
     "https://s3.us-east-005.backblazeb2.com",
-    
+
 )
 
 CSP_FONT_SRC = (

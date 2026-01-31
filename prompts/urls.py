@@ -105,13 +105,13 @@ urlpatterns = [
          views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',
          views.comment_delete, name='comment_delete'),
-    
+
     # Admin ordering URLs (moved to admin_views.py)
     path('prompt/<slug:slug>/move-up/', admin_views.prompt_move_up, name='prompt_move_up'),
     path('prompt/<slug:slug>/move-down/', admin_views.prompt_move_down, name='prompt_move_down'),
     path('prompt/<slug:slug>/set-order/', admin_views.prompt_set_order, name='prompt_set_order'),
     path('prompts-admin/bulk-reorder/', admin_views.bulk_reorder_prompts, name='bulk_reorder_prompts'),
-    
+
     # B2 Upload Status API
     path('api/upload/b2/status/', api_views.b2_upload_status, name='b2_upload_status'),
     # NSFW Moderation API (Phase N2 - Background Validation)

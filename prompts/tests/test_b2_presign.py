@@ -162,7 +162,7 @@ class TestGeneratePresignedUploadUrl(TestCase):
 
         result = generate_presigned_upload_url(
             content_type='video/mp4',
-            content_length=50 * 1024 * 1024,  # 50MB
+            content_length=10 * 1024 * 1024,  # 10MB
             original_filename='clip.mp4'
         )
 
@@ -180,27 +180,27 @@ class TestGeneratePresignedUploadUrl(TestCase):
         self.assertFalse(result['success'])
         self.assertIn('Invalid content type', result['error'])
 
-    def test_rejects_image_over_10mb(self):
-        """Should reject images over 10MB."""
+    def test_rejects_image_over_3mb(self):
+        """Should reject images over 3MB."""
         result = generate_presigned_upload_url(
             content_type='image/jpeg',
-            content_length=15 * 1024 * 1024,  # 15MB
+            content_length=5 * 1024 * 1024,  # 5MB
             original_filename='large.jpg'
         )
 
         self.assertFalse(result['success'])
-        self.assertIn('10MB', result['error'])
+        self.assertIn('3MB', result['error'])
 
-    def test_rejects_video_over_100mb(self):
-        """Should reject videos over 100MB."""
+    def test_rejects_video_over_15mb(self):
+        """Should reject videos over 15MB."""
         result = generate_presigned_upload_url(
             content_type='video/mp4',
-            content_length=150 * 1024 * 1024,  # 150MB
+            content_length=20 * 1024 * 1024,  # 20MB
             original_filename='large.mp4'
         )
 
         self.assertFalse(result['success'])
-        self.assertIn('100MB', result['error'])
+        self.assertIn('15MB', result['error'])
 
     @patch('prompts.services.b2_presign_service.get_b2_client')
     @patch('prompts.services.b2_presign_service.settings')

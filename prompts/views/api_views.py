@@ -493,6 +493,7 @@ def b2_upload_status(request):
         'b2_thumb_url': request.session.get('b2_thumb_url'),
     })
 
+
 @login_required
 @require_POST
 @ratelimit(key='user', rate='30/m', method='POST', block=True)
@@ -596,6 +597,8 @@ def nsfw_check_status(request):
         'success': True,
         **result,
     })
+
+
 
 @login_required
 def b2_presign_upload(request):
@@ -877,7 +880,7 @@ def b2_upload_complete(request):
                                     try:
                                         if os.path.exists(fp):
                                             os.remove(fp)
-                                    except Exception:
+                                    except Exception: # nosec B110 - Cleanup errors shouldn't block response
                                         pass
                                 return JsonResponse({
                                     'success': False,
@@ -910,7 +913,7 @@ def b2_upload_complete(request):
                         try:
                             if os.path.exists(fp):
                                 os.remove(fp)
-                        except Exception:
+                        except Exception: # nosec B110 - Cleanup errors shouldn't block response
                             pass
 
                 # Extract thumbnail (preserve aspect ratio, max 600px on longest side)

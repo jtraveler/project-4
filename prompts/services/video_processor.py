@@ -41,7 +41,7 @@ def check_ffmpeg_available():
     """
     try:
         # Check FFmpeg
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 B607
             ['ffmpeg', '-version'],
             capture_output=True,
             timeout=10
@@ -51,7 +51,7 @@ def check_ffmpeg_available():
             return False
 
         # Check FFprobe
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 B607
             ['ffprobe', '-version'],
             capture_output=True,
             timeout=10
@@ -108,7 +108,7 @@ def get_video_metadata(video_path):
             video_path
         ]
 
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 B607
             cmd,
             capture_output=True,
             text=True,
@@ -315,7 +315,8 @@ def extract_moderation_frames(video_path, num_frames=3):
 
         for i, ts in enumerate(timestamps):
             # Create temp file for frame
-            output_path = tempfile.mktemp(suffix=f'_frame_{i}.jpg')
+            fd, output_path = tempfile.mkstemp(suffix=f'_frame_{i}.jpg')
+            os.close(fd)
 
             # Convert timestamp to FFmpeg format (seconds)
             ts_str = f"{ts:.3f}"
@@ -330,7 +331,7 @@ def extract_moderation_frames(video_path, num_frames=3):
                 output_path
             ]
 
-            subprocess.run(
+            subprocess.run(  # nosec B603 B607
                 cmd,
                 capture_output=True,
                 text=True,
@@ -419,7 +420,7 @@ def extract_thumbnail(video_path, output_path, timestamp='00:00:01', size='600x6
             output_path
         ]
 
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 B607
             cmd,
             capture_output=True,
             text=True,

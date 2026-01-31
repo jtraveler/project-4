@@ -132,7 +132,6 @@ class Command(BaseCommand):
         if options['sync']:
             # Synchronous execution for testing
             try:
-                from prompts.tasks import test_task
                 result = test_task('Sync test from management command')
                 self.stdout.write(
                     self.style.SUCCESS(f'  ✓ Sync task completed: {result}')

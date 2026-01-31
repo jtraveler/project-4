@@ -76,8 +76,11 @@ per-file-ignores =
     # Models have whitespace from class definitions
     */models.py: F401, W291, W292, W293
 
+    # Tasks files have long AI prompt template strings
+    */tasks.py: E501, W291, W292, W293
+
     # Services have unused imports for future use and long lines
-    */services/*.py: F401, F541, E501, W291, W292, W293
+    */services/*.py: F401, F541, E501, C901, W291, W292, W293
 
     # Template tags are utility code
     */templatetags/*.py: E302, W292

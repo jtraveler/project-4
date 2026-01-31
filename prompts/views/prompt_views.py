@@ -816,7 +816,11 @@ def prompt_edit(request, slug):
                         else:
                             error_msg = result.get('error', 'Unknown error') if result else 'Upload service unavailable'
                             messages.error(request, f"Video upload failed: {error_msg}")
-                            return render(request, template_name, context)
+                            return render(request, 'prompts/prompt_edit.html', {
+                                'prompt_form': prompt_form,
+                                'prompt': prompt,
+                                'existing_tags': existing_tags,
+                            })
                     else:  # image
                         # Upload image to B2 with all variants
                         result = b2_upload_image(featured_media, featured_media.name)
@@ -835,14 +839,22 @@ def prompt_edit(request, slug):
                         else:
                             error_msg = result.get('error', 'Unknown error') if result else 'Upload service unavailable'
                             messages.error(request, f"Image upload failed: {error_msg}")
-                            return render(request, template_name, context)
+                            return render(request, 'prompts/prompt_edit.html', {
+                                'prompt_form': prompt_form,
+                                'prompt': prompt,
+                                'existing_tags': existing_tags,
+                            })
                 except Exception as e:
                     logger.error(f"B2 upload failed in prompt_edit: {e}")
                     messages.error(
                         request,
                         "Media upload failed. Please try again."
                     )
-                    return render(request, template_name, context)
+                    return render(request, 'prompts/prompt_edit.html', {
+                        'prompt_form': prompt_form,
+                        'prompt': prompt,
+                        'existing_tags': existing_tags,
+                    })
 
             prompt.save()
             prompt_form.save_m2m()

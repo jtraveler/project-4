@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 28, 2026
+**Last Updated:** January 31, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~95% - Video Fix Blocker)
+**Current Phase:** Phase N4 Optimistic Upload Flow (~95% - Worker Dyno Needed)
 **Total Tests:** 298 passing (48% coverage)
 
 ---
@@ -893,10 +893,20 @@ Admin routes for the SEO Review Queue feature, defined in `prompts/views/admin_v
 
 | Component | Configuration |
 |-----------|---------------|
-| **Dyno** | Eco dyno ($5/month) |
+| **Web Dyno** | Eco dyno ($5/month) |
+| **Worker Dyno** | Needed for Django-Q (`python manage.py qcluster`) - not yet configured |
 | **Database** | Heroku PostgreSQL Mini ($5/month) |
 | **Scheduler** | Heroku Scheduler (free) |
 | **Total Cost** | ~$10/month (covered by credits) |
+
+### Procfile
+
+```
+web: gunicorn prompts_manager.wsgi
+worker: python manage.py qcluster
+```
+
+The `worker` process runs Django-Q2 background task processing (AI content generation). Without a worker dyno scaled up, background tasks won't execute.
 
 ### Environment Variables
 
@@ -959,9 +969,10 @@ python manage.py test -v 2
 | **N4e** | ✅ Complete | AI job queuing for videos (uses thumbnail) |
 | **N4f** | ✅ Complete | ProcessingModal in upload-form.js |
 | **N4 Cleanup** | ✅ Complete | Removed old upload code |
-| **SEO Meta** | ✅ Complete | OG/Twitter blocks, Schema.org JSON-LD (Session 63) |
-| **AI Quality** | ✅ Complete | Style-first titles, description truncation fix (Session 63) |
-| **N4g Video Fix** | 🔴 Blocker | Video submit: "Upload data missing" |
+| **SEO Meta** | ✅ Complete | OG/Twitter blocks, Schema.org JSON-LD + VideoObject |
+| **AI Quality** | ✅ Complete | Style-first titles, description truncation fix, race/ethnicity |
+| **SEO Enhance** | ✅ Complete | Race/ethnicity, enhanced alt tags, Schema.org VideoObject (Session 64) |
+| **N4g Video Fix** | ✅ Resolved | Video submit session key mismatch fixed (Session 64) |
 
 ### Files Created
 
@@ -1065,11 +1076,17 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.2
-**Audit Date:** January 28, 2026
+**Version:** 3.3
+**Audit Date:** January 31, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.3 (January 31, 2026 - Session 64):**
+- Updated Phase N4 status: all 3 blockers resolved, worker dyno needed
+- Added Procfile documentation to Deployment Structure section
+- Added worker dyno to Heroku Configuration table
+- Updated N4 Implementation Status with Session 64 SEO enhancements
 
 **v3.2 (January 28, 2026 - Session 63):**
 - Updated Phase N4 status to ~95% complete

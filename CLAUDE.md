@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** January 28, 2026
+**Last Updated:** January 31, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~95% Complete | Optimistic Upload Flow | Video submit session fix (N4g blocker) |
+| **Phase N4** | 🔄 ~95% Complete | Optimistic Upload Flow | Worker dyno config for Django-Q |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** ~95% Complete - Video Submit Fix Needed (N4g Blocker)
+**Status:** ~95% Complete - Worker Dyno Configuration Needed
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -71,9 +71,10 @@ Rebuilding upload flow to feel "instant" by:
 | **N4e** | ✅ Complete | AI job queuing for videos (uses thumbnail) |
 | **N4f** | ✅ Complete | ProcessingModal in upload-form.js |
 | **N4 Cleanup** | ✅ Complete | Removed old upload code (step templates, processing.js) |
-| **SEO Meta** | ✅ Complete | OG/Twitter blocks, Schema.org JSON-LD, canonical URLs (Session 63) |
-| **AI Quality** | ✅ Complete | Style-first titles, description truncation fix (Session 63) |
-| **N4g Video Fix** | 🔴 Blocker | Video submit fails: "Upload data missing" (session key mismatch) |
+| **SEO Meta** | ✅ Complete | OG/Twitter blocks, Schema.org JSON-LD + VideoObject, canonical URLs |
+| **AI Quality** | ✅ Complete | Style-first titles, description truncation fix, race/ethnicity identification |
+| **SEO Enhance** | ✅ Complete | Race/ethnicity in AI prompts, enhanced alt tags, Schema.org VideoObject (Session 64) |
+| **N4g Video Fix** | ✅ Resolved | Video submit "Upload data missing" - session key mismatch fixed |
 
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
@@ -96,32 +97,48 @@ Rebuilding upload flow to feel "instant" by:
 | AI analysis ratio | 80% Vision / 20% Text | Users often write vague prompts |
 | File cleanup | 5-30 day retention | Use existing trash system |
 
-### Current Blockers (Session 63)
+### Current Blockers (Session 64)
 
 | Issue | Description | Impact |
 |-------|-------------|--------|
-| **N4g: Video submit fails** | "Upload data missing" error on video submit | Videos cannot be uploaded |
+| **Worker dyno** | Heroku worker dyno not yet configured for Django-Q | AI processing won't run in production |
 
-**Root Cause:** Session key mismatch - video flow sets different keys than submit expects.
+### Resolved Blockers (Session 64)
 
-### Known Issues
+| Issue | Resolution | Session |
+|-------|------------|---------|
+| N4g: Video submit fails | Session key mismatch fixed | 64 |
+| Description truncation | `max_tokens` 500→1000, `max_length` 500→2000 | 63-64 |
+| Video redirect delay | Self-resolved (was timing issue) | 64 |
 
-| Issue | Description | Status |
-|-------|-------------|--------|
-| Description length verification | `max_tokens`/`max_length` fix applied (S63) but untested in production | Needs verification |
-| Video redirect delay | ~10 seconds after AI completion before redirect | Low priority |
+### Production Infrastructure Notes
+
+- **Heroku Worker Dyno**: Required for Django-Q background processing
+  - AI content generation tasks run asynchronously
+  - Without worker, uploads timeout at "Creating your prompt..." modal
+  - Recommended: Basic dyno ($7/month) or Standard-1X ($25/month)
+  - Procfile already includes: `worker: python manage.py qcluster`
+
+- **B2 CORS Configuration**: Must include all domains
+  - `https://promptfinder.net`
+  - `https://www.promptfinder.net` (CRITICAL - missing this breaks production uploads)
+  - `https://mj-project-4-68750ca94690.herokuapp.com`
+  - `http://localhost:8000` (development)
+  - Operations: s3_put, s3_get, s3_head
+  - Use B2 CLI to update: `b2 bucket update --cors-rules ...`
 
 ### Uncommitted Changes (Do Not Revert)
 
 | File | Change |
 |------|--------|
-| `prompts/tasks.py` | AI prompt rewrite, `max_tokens` 500→1000, description `max_length` 500→2000, domain allowlist |
+| `prompts/tasks.py` | AI prompt rewrite, `max_tokens` 500→1000, description `max_length` 500→2000, domain allowlist, race/ethnicity instructions (S64) |
 | `prompts/views/api_views.py` | AI job queuing for videos |
+| `prompts/views/upload_views.py` | `.strip()` on excerpt assignment (S64) |
 | `prompts_manager/settings.py` | Domain allowlist fix |
 | `static/js/upload-form.js` | Pass ai_job_id for videos |
 | `templates/base.html` | OG/Twitter `{% block %}` wrappers |
-| `prompts/templates/prompts/prompt_detail.html` | OG/Twitter overrides, Schema.org JSON-LD, canonical, `|linebreaks` |
-| `prompts/services/content_generation.py` | `max_tokens` 500→1000, filename 3→5 keywords, alt tag format |
+| `prompts/templates/prompts/prompt_detail.html` | OG/Twitter overrides, Schema.org JSON-LD + VideoObject, canonical, `|linebreaks`, enhanced alt tags, video aria-label (S64) |
+| `prompts/services/content_generation.py` | `max_tokens` 500→1000, filename 3→5 keywords, alt tag format, race/ethnicity instructions, video description prompt fix (S64) |
 
 ---
 
@@ -488,5 +505,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 3.5 (Phase N4 Session 63 - SEO + AI Content Quality)
-**Last Updated:** January 28, 2026
+**Version:** 3.6 (Phase N4 Session 64 - SEO Enhancements + Blocker Resolution)
+**Last Updated:** January 31, 2026

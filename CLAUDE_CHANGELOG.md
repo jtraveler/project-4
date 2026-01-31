@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** January 28, 2026
+**Last Updated:** January 31, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,50 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## January 2026 Sessions
+
+### Session 64 - January 31, 2026
+
+**Focus:** Phase N4 SEO Enhancements + Blocker Resolution
+
+**Context:** Continuing from Session 63. All three N4 blockers resolved. Major SEO enhancements added including race/ethnicity identification in AI content, Schema.org VideoObject support, and enhanced alt tags. Production CORS issue discovered and fixed via B2 CLI. Discovered need for Heroku worker dyno for Django-Q processing.
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| Description truncation fix | `.strip()` added to excerpt, committed separately | N/A (bugfix) |
+| Race/ethnicity in AI prompts | AI now identifies ethnicity for human subjects (clear + ambiguous cases) | Part of SEO spec |
+| Schema.org VideoObject | Schema.org now uses VideoObject for videos, ImageObject for images, includes duration | Part of SEO spec |
+| Enhanced alt tags | Alt tags include generator + "AI Art Prompt for Image Generation" | Part of SEO spec |
+| Video aria-label | Added accessibility label to video elements | Part of SEO spec |
+| Video description prompt fix | Updated video prompt from "150 chars" to "150-200 words" for consistency | N/A (bugfix) |
+| B2 CORS fix | Added www.promptfinder.net to B2 CORS rules via B2 CLI | Production fix |
+
+**Files Modified:**
+- `prompts/tasks.py` - Race/ethnicity section (clear/ambiguous cases), diverse title examples, expanded IMPORTANT rules
+- `prompts/services/content_generation.py` - Race/ethnicity instructions, ambiguous case handling, video description prompt fix
+- `prompts/templates/prompts/prompt_detail.html` - Schema.org VideoObject conditional, enhanced alt tags (2 places), video aria-label
+- `prompts/views/upload_views.py` - `.strip()` on excerpt assignment
+
+**Key Technical Changes:**
+- Schema.org `@type` now conditionally uses `VideoObject` or `ImageObject` based on `prompt.is_video`
+- Schema.org includes `duration` field for videos (ISO 8601 format)
+- AI prompts now handle CLEAR cases (specific ethnicity) and AMBIGUOUS cases (skin tone descriptors)
+- Alt tags enhanced from `{{ prompt.title }}` to `{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation`
+
+**Infrastructure Discovery:**
+- Production CORS issue: `www.promptfinder.net` was missing from B2 CORS rules, breaking uploads from www subdomain
+- Django-Q requires a Heroku worker dyno (`python manage.py qcluster`) - not yet configured
+- Without worker dyno, AI content generation tasks timeout at "Creating your prompt..." modal
+
+**Phase N4 Status:** ~95% complete (all code blockers resolved, pending worker dyno configuration)
+
+**Next Session:**
+- Configure Heroku worker dyno for Django-Q processing
+- Commit all uncommitted changes
+- Deploy and test end-to-end upload flow in production
+
+---
 
 ### Session 63 - January 28, 2026
 
@@ -456,6 +500,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Jan 31, 2026 | 64 | SEO enhancements (race/ethnicity, VideoObject, alt tags) + all blockers resolved |
 | Jan 28, 2026 | 63 | SEO optimization + AI content quality + description fix |
 | Jan 27, 2026 | 61 | N4 video support + cleanup (~90% complete) |
 | Jan 27, 2026 | 59 | N4d processing page implemented |
@@ -473,5 +518,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 3.6 (Session 63 - SEO + AI Content Quality)
-**Last Updated:** January 28, 2026
+**Version:** 3.7 (Session 64 - SEO Enhancements + Blocker Resolution)
+**Last Updated:** January 31, 2026

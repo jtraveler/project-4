@@ -17,7 +17,7 @@ Created: December 30, 2025
 import json
 import logging
 import os
-import subprocess
+import subprocess  # nosec B404 - Required for FFmpeg video processing
 import tempfile
 from pathlib import Path
 

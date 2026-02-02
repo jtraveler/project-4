@@ -2,8 +2,8 @@
 
 **Last Updated:** January 31, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~95% - Worker Dyno Needed)
-**Total Tests:** 298 passing (48% coverage)
+**Current Phase:** Phase N4 Optimistic Upload Flow (~90% - Upload Page Bugs)
+**Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -252,6 +252,7 @@ prompts/views/
 | `inspiration_index.html` | Prompts hub / browse page |
 | `user_profile.html` | User profile with tabs |
 | `upload.html` | Single-page upload (Phase N - replaces step 1 & 2) |
+| `collection_edit.html` | Collection edit form (Phase K - Session 64) |
 | `trash_bin.html` | User trash bin |
 
 **Deleted in Session 61:**
@@ -329,7 +330,7 @@ prompts/views/
 static/css/
 ├── navbar.css           # 1,136 lines - Extracted navbar styles
 ├── style.css            # 1,789 lines - Main stylesheet
-├── upload.css           # ~500 lines - Upload page styles (Phase N3)
+├── upload.css           # ~780 lines - Upload page styles (complete rewrite Session 64)
 ├── components/
 │   ├── icons.css        # ~250 lines - SVG icon system (Phase J.2)
 │   └── masonry-grid.css # 255 lines - Masonry grid component
@@ -350,7 +351,7 @@ static/css/
 
 | Job | Purpose | Timeout |
 |-----|---------|---------|
-| **test** | Django tests with PostgreSQL, coverage ≥45% | 15 min |
+| **test** | Django tests with PostgreSQL, coverage ≥40% | 15 min |
 | **lint** | Flake8 code quality checks | 5 min |
 | **security** | Bandit SAST + pip-audit dependency scan | 10 min |
 
@@ -894,7 +895,7 @@ Admin routes for the SEO Review Queue feature, defined in `prompts/views/admin_v
 | Component | Configuration |
 |-----------|---------------|
 | **Web Dyno** | Eco dyno ($5/month) |
-| **Worker Dyno** | Needed for Django-Q (`python manage.py qcluster`) - not yet configured |
+| **Worker Dyno** | Standard-1X ($25/mo) for Django-Q (`python manage.py qcluster`) - configured Session 64 |
 | **Database** | Heroku PostgreSQL Mini ($5/month) |
 | **Scheduler** | Heroku Scheduler (free) |
 | **Total Cost** | ~$10/month (covered by credits) |
@@ -948,9 +949,9 @@ python manage.py test -v 2
 
 ### Test Statistics
 
-- **Total Tests:** 234 passing (12 skipped - Selenium)
+- **Total Tests:** 298 passing (12 skipped - Selenium)
 - **Pass Rate:** 100% in CI
-- **Coverage:** 46% (enforced minimum: 45%)
+- **Coverage:** 43% (enforced minimum: 40%)
 - **Priority Areas:** CRUD, authentication, rate limiting, URL migration
 - **CI Integration:** Tests run on every push/PR via GitHub Actions
 
@@ -958,7 +959,7 @@ python manage.py test -v 2
 
 ## Phase N4 Files (Optimistic Upload Flow)
 
-### Implementation Status (Session 63)
+### Implementation Status (Session 64)
 
 | Sub-Phase | Status | What Was Done |
 |-----------|--------|---------------|
@@ -1076,11 +1077,20 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.3
+**Version:** 3.4
 **Audit Date:** January 31, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.4 (January 31, 2026 - Session 64 End-of-Session):**
+- Added `collection_edit.html` to Prompts App Templates
+- Updated `upload.css` description (complete rewrite, ~500→~780 lines)
+- Updated CI/CD coverage threshold from 45% to 40%
+- Updated test statistics (298 tests, 43% coverage)
+- Updated worker dyno status: configured Standard-1X ($25/mo)
+- Updated Phase N4 status from ~95% to ~90% (upload page bugs remaining)
+- Updated N4 Implementation Status header to Session 64
 
 **v3.3 (January 31, 2026 - Session 64):**
 - Updated Phase N4 status: all 3 blockers resolved, worker dyno needed

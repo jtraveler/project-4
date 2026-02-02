@@ -28,7 +28,7 @@
 | L | Media Infrastructure | ✅ Done | Cloudinary → B2 + Cloudflare |
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
-| **N4** | **Optimistic Upload Flow** | **🔄 ~95% Complete** | **Worker dyno config needed - CURRENT** |
+| **N4** | **Optimistic Upload Flow** | **🔄 ~90% Complete** | **Upload page bugs, final testing - CURRENT** |
 
 ---
 
@@ -76,7 +76,7 @@
 
 ## 🔄 Phase N4: Optimistic Upload Flow (CURRENT)
 
-**Status:** ~95% Complete - Worker Dyno Configuration Needed
+**Status:** ~90% Complete - Upload Page Bugs Remaining
 **Created:** January 26, 2026
 **Detailed Documentation:** `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
@@ -101,8 +101,13 @@ Reduce perceived upload time from 15-20 seconds to 5-10 seconds by restructuring
 | N4j | Testing & polish | ⏳ Pending |
 
 **Current Blockers (Session 64):**
-- Worker dyno: Heroku worker dyno not yet configured for Django-Q background processing
-- Without worker, AI content generation tasks won't execute in production
+- Upload page: Change File button only visible on hover (needs always-visible state)
+- Upload page: Privacy toggle may not default to Public correctly
+
+**Resolved (Session 64):**
+- Worker dyno: Configured Standard-1X worker dyno on Heroku (`heroku ps:scale worker=1`)
+- CI/CD: Fixed 31 issues across 9 files, all 3 jobs passing
+- Collection edit: Created missing template, fixed 500 error
 
 ### New Database Fields
 
@@ -391,5 +396,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 3.5 (Phase N4 Session 64 - SEO Enhancements + Blocker Resolution)
+**Version:** 3.6 (Phase N4 Session 64 - CI/CD, Worker Dyno, Upload Redesign)
 **Last Updated:** January 31, 2026

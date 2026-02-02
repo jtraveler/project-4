@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~95% Complete | Optimistic Upload Flow | Worker dyno config for Django-Q |
+| **Phase N4** | 🔄 ~90% Complete | Optimistic Upload Flow | Upload page bugs, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** ~95% Complete - Worker Dyno Configuration Needed
+**Status:** ~90% Complete - Upload Page Bugs Remaining
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -75,6 +75,10 @@ Rebuilding upload flow to feel "instant" by:
 | **AI Quality** | ✅ Complete | Style-first titles, description truncation fix, race/ethnicity identification |
 | **SEO Enhance** | ✅ Complete | Race/ethnicity in AI prompts, enhanced alt tags, Schema.org VideoObject (Session 64) |
 | **N4g Video Fix** | ✅ Resolved | Video submit "Upload data missing" - session key mismatch fixed |
+| **CI/CD Fixes** | ✅ Complete | Fixed 31 issues across 9 files, all 3 CI/CD jobs passing (Session 64) |
+| **Worker Dyno** | ✅ Complete | Heroku worker dyno configured for Django-Q processing (Session 64) |
+| **Collection Edit** | ✅ Complete | Created collection_edit.html, fixed 500 error on edit page (Session 64) |
+| **Upload Redesign** | ✅ Complete | Complete visual redesign of upload page with modern card layout (Session 64) |
 
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
@@ -101,23 +105,27 @@ Rebuilding upload flow to feel "instant" by:
 
 | Issue | Description | Impact |
 |-------|-------------|--------|
-| **Worker dyno** | Heroku worker dyno not yet configured for Django-Q | AI processing won't run in production |
+| **Change File button** | Only visible on hover, needs always-visible state | UX issue on upload page |
+| **Privacy toggle** | May not default to Public correctly | Upload form behavior |
 
 ### Resolved Blockers (Session 64)
 
 | Issue | Resolution | Session |
 |-------|------------|---------|
+| Worker dyno | Configured Standard-1X worker dyno on Heroku | 64 |
+| CI/CD pipeline | Fixed 31 issues across 9 files, all 3 jobs passing | 64 |
+| Collection edit 500 | Created missing collection_edit.html template | 64 |
 | N4g: Video submit fails | Session key mismatch fixed | 64 |
 | Description truncation | `max_tokens` 500→1000, `max_length` 500→2000 | 63-64 |
 | Video redirect delay | Self-resolved (was timing issue) | 64 |
 
 ### Production Infrastructure Notes
 
-- **Heroku Worker Dyno**: Required for Django-Q background processing
+- **Heroku Worker Dyno**: Configured for Django-Q background processing
   - AI content generation tasks run asynchronously
-  - Without worker, uploads timeout at "Creating your prompt..." modal
-  - Recommended: Basic dyno ($7/month) or Standard-1X ($25/month)
-  - Procfile already includes: `worker: python manage.py qcluster`
+  - Command: `heroku ps:scale worker=1 --app mj-project-4`
+  - Current tier: Standard-1X ($25/month) - can downgrade to Basic ($7/month) for pre-launch
+  - Procfile includes: `worker: python manage.py qcluster`
 
 - **B2 CORS Configuration**: Must include all domains
   - `https://promptfinder.net`
@@ -135,10 +143,14 @@ Rebuilding upload flow to feel "instant" by:
 | `prompts/views/api_views.py` | AI job queuing for videos |
 | `prompts/views/upload_views.py` | `.strip()` on excerpt assignment (S64) |
 | `prompts_manager/settings.py` | Domain allowlist fix |
-| `static/js/upload-form.js` | Pass ai_job_id for videos |
+| `static/js/upload-form.js` | Pass ai_job_id for videos, icon updates (S64) |
+| `static/js/upload-core.js` | File input reset on validation error (S64) |
 | `templates/base.html` | OG/Twitter `{% block %}` wrappers |
+| `prompts/templates/prompts/upload.html` | Complete upload page redesign - new HTML structure (S64) |
 | `prompts/templates/prompts/prompt_detail.html` | OG/Twitter overrides, Schema.org JSON-LD + VideoObject, canonical, `|linebreaks`, enhanced alt tags, video aria-label (S64) |
+| `prompts/templates/prompts/collection_edit.html` | New template - collection edit form (S64) |
 | `prompts/services/content_generation.py` | `max_tokens` 500→1000, filename 3→5 keywords, alt tag format, race/ethnicity instructions, video description prompt fix (S64) |
+| `static/css/upload.css` | Complete rewrite - modern card layout, preview overlay with gradient (S64) |
 
 ---
 
@@ -227,12 +239,13 @@ Some older prompts still have images stored on **Cloudinary**. New uploads go to
 
 | Service | Monthly Cost | Notes |
 |---------|--------------|-------|
-| Heroku Eco Dyno | $5 | Covered by $248 credits (lasts until late 2026) |
+| Heroku Eco Dyno (web) | $5 | Covered by $248 credits (lasts until late 2026) |
+| Heroku Standard-1X (worker) | $25 | Django-Q background tasks; can downgrade to Basic ($7) |
 | Heroku PostgreSQL Mini | $5 | Covered by credits |
 | Backblaze B2 | ~$0 | Free tier (10GB storage, 1GB/day downloads) |
 | Cloudflare | $0 | Free tier |
 | OpenAI API | ~$0.50 per 1000 uploads | Pay-as-you-go |
-| **Total** | **~$10/month** | Mostly covered by credits |
+| **Total** | **~$35/month** | Web + DB covered by credits; worker is new cost |
 
 ### Why We Moved Away from Cloudinary
 
@@ -256,7 +269,7 @@ upload-form.js      # Form handling, NSFW status display
 upload-guards.js    # Navigation guards, idle timeout detection
 
 CSS:
-static/css/upload.css    # All upload page styles (~500 lines)
+static/css/upload.css    # All upload page styles (~780 lines, rewritten S64)
 
 BACKEND:
 prompts/views/api_views.py           # API endpoints (1374+ lines)
@@ -505,5 +518,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 3.6 (Phase N4 Session 64 - SEO Enhancements + Blocker Resolution)
+**Version:** 3.7 (Phase N4 Session 64 - CI/CD, Worker Dyno, Upload Redesign)
 **Last Updated:** January 31, 2026

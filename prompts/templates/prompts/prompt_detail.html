@@ -11,23 +11,38 @@
 <meta property="og:site_name" content="PromptFinder">
 <meta property="og:title" content="{{ prompt.title }} - {{ prompt.ai_generator }} AI Prompt">
 <meta property="og:description" content="{{ prompt.description|default:prompt.excerpt|truncatechars:200 }}">
+{% if prompt.display_large_url %}
 <meta property="og:image" content="{{ prompt.display_large_url }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:image:alt" content="{{ prompt.title }} - {{ prompt.ai_generator }} AI Prompt">
+{% endif %}
+{% if prompt.is_video and prompt.display_video_url %}
+<meta property="og:video" content="{{ prompt.display_video_url }}">
+<meta property="og:video:type" content="video/mp4">
+<meta property="og:video:secure_url" content="{{ prompt.display_video_url }}">
+{% endif %}
 <meta property="og:type" content="article">
-<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:url" content="https://www.promptfinder.net{{ request.path }}">
 <meta property="article:author" content="{{ prompt.author.username }}">
 <meta property="article:published_time" content="{{ prompt.created_on|date:'c' }}">
+<meta property="article:modified_time" content="{{ prompt.updated_on|date:'c' }}">
 {% endblock og_tags %}
 
 {% block twitter_tags %}
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@promptfinder">
 <meta name="twitter:title" content="{{ prompt.title }} - {{ prompt.ai_generator }} AI Prompt">
 <meta name="twitter:description" content="{{ prompt.description|default:prompt.excerpt|truncatechars:200 }}">
+{% if prompt.display_large_url %}
 <meta name="twitter:image" content="{{ prompt.display_large_url }}">
+<meta name="twitter:image:alt" content="{{ prompt.title }} - {{ prompt.ai_generator }} AI Prompt">
+{% endif %}
 {% endblock twitter_tags %}
 
 {% block extra_head %}
 <!-- DNS prefetch for external resources -->
-<link rel="dns-prefetch" href="//res.cloudinary.com">
+<link rel="dns-prefetch" href="//cdn.promptfinder.net">
 <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 
@@ -51,8 +66,13 @@
 <!-- Prompt Detail Page Styles (extracted to external file) -->
 <link rel="stylesheet" href="{% static 'css/pages/prompt-detail.css' %}">
 
+<!-- Prevent draft prompts from being indexed -->
+{% if prompt.status == 0 %}
+<meta name="robots" content="noindex, nofollow">
+{% endif %}
+
 <!-- Canonical URL to prevent duplicate content issues -->
-<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<link rel="canonical" href="https://www.promptfinder.net{{ request.path }}">
 
 <!-- Schema.org Structured Data for SEO -->
 <script type="application/ld+json">
@@ -61,12 +81,13 @@
     "@type": "{% if prompt.is_video %}VideoObject{% else %}ImageObject{% endif %}",
     "name": "{{ prompt.title|escapejs }}",
     "description": "{{ prompt.description|default:prompt.excerpt|truncatechars:300|escapejs }}",
-    "contentUrl": "{% if prompt.is_video %}{{ prompt.display_video_url }}{% else %}{{ prompt.display_large_url }}{% endif %}",
-    "thumbnailUrl": "{% if prompt.is_video %}{{ prompt.display_video_thumb_url|default:prompt.display_medium_url }}{% else %}{{ prompt.display_medium_url }}{% endif %}",
+    "contentUrl": "{% if prompt.is_video %}{{ prompt.display_video_url|default:'' }}{% else %}{{ prompt.display_large_url|default:'' }}{% endif %}",
+    "thumbnailUrl": "{% if prompt.is_video %}{{ prompt.display_video_thumb_url|default:prompt.display_medium_url|default:'' }}{% else %}{{ prompt.display_medium_url|default:prompt.display_large_url|default:'' }}{% endif %}",
     {% if prompt.is_video and prompt.video_duration %}"duration": "PT{{ prompt.video_duration|floatformat:0 }}S",{% endif %}
     "author": {
         "@type": "Person",
-        "name": "{{ prompt.author.username|escapejs }}"
+        "name": "{{ prompt.author.username|escapejs }}",
+        "url": "https://www.promptfinder.net{% url 'prompts:user_profile' prompt.author.username %}"
     },
     "datePublished": "{{ prompt.created_on|date:'c' }}",
     "dateModified": "{{ prompt.updated_on|date:'c' }}",
@@ -74,8 +95,36 @@
     "creator": {
         "@type": "Organization",
         "name": "PromptFinder",
-        "url": "https://promptfinder.net"
+        "url": "https://www.promptfinder.net"
     }
+}
+</script>
+
+<!-- BreadcrumbList Schema for SERP breadcrumbs -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://www.promptfinder.net/"
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "{{ prompt.ai_generator|escapejs }}",
+            "item": "https://www.promptfinder.net/?search={{ prompt.ai_generator|urlencode }}"
+        },
+        {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "{{ prompt.title|truncatechars:50|escapejs }}",
+            "item": "https://www.promptfinder.net{{ request.path }}"
+        }
+    ]
 }
 </script>
 {% endblock %}
@@ -128,9 +177,10 @@
                                     60vw"
                              class="hero-image"
                              alt="{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation"
+                             width="1200"
+                             height="1200"
                              loading="eager"
-                             fetchpriority="high"
-                             decoding="async">
+                             fetchpriority="high">
                     {% elif prompt.featured_image %}
                         <!-- Fallback: Direct Cloudinary URL -->
                         {% if "placeholder" in prompt.featured_image.url %}
@@ -143,9 +193,10 @@
                             <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}"
                                  class="hero-image"
                                  alt="{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation"
+                                 width="1200"
+                                 height="1200"
                                  loading="eager"
-                                 fetchpriority="high"
-                                 decoding="async">
+                                 fetchpriority="high">
                         {% endif %}
                     {% else %}
                         <!-- No media available -->
@@ -321,7 +372,7 @@
 
             <!-- MODEL USED Section (Separate Card) -->
             <div class="rail-card model-used-card">
-                <h4 class="rail-card-title">Model Used</h4>
+                <h3 class="rail-card-title">Model Used</h3>
                 <div class="model-used-row">
                     <div class="model-used-info">
                         <a href="{% url 'prompts:ai_generator_category' prompt.get_generator_url_slug %}" class="model-name">
@@ -354,7 +405,7 @@
             <!-- Prompt Text Card -->
             <div class="rail-card prompt-card">
                 <div class="prompt-card-header">
-                    <h4 class="rail-card-title">Prompt</h4>
+                    <h3 class="rail-card-title">Prompt</h3>
                     {% if user.is_authenticated %}
                     <button class="btn-outline-standard copy-btn action-icon-btn" onclick="copyPromptText()" id="copyButton">
                         <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-copy"/></svg>
@@ -375,10 +426,14 @@
             <!-- Tags Card -->
             {% if prompt.tags.all %}
             <div class="rail-card">
-                <h4 class="rail-card-title">Tags</h4>
+                <h3 class="rail-card-title">Tags</h3>
                 <div class="tags-container">
                     {% for tag in prompt.tags.all %}
-                        <span class="tag-badge" data-tag="{{ tag.name }}">{{ tag.name }}</span>
+                        <a href="{% url 'prompts:home' %}?search={{ tag.name|urlencode }}"
+                           class="tag-badge"
+                           title="Search prompts tagged with {{ tag.name }}">
+                            {{ tag.name }}
+                        </a>
                     {% endfor %}
                 </div>
             </div>
@@ -388,11 +443,11 @@
             <!-- Only show if author has at least 1 other published prompt -->
             {% if more_from_author_count >= 1 %}
             <div class="rail-card more-from-author-card">
-                <h4 class="rail-card-title">
+                <h3 class="rail-card-title">
                     More from
                     <a href="{% url 'prompts:user_profile' prompt.author.username %}"
                        class="author-link">@{{ prompt.author.username }}</a>
-                </h4>
+                </h3>
                 <div class="more-from-author-thumbnails">
                     {% for author_prompt in more_from_author %}
                     {# Phase J.2 Fix 4: 4th thumbnail gets "+N more" overlay if author has 5+ prompts #}

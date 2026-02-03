@@ -131,10 +131,24 @@
 
 {% block content %}
 <div class="prompt-detail-page container">
-<h1 class="visually-hidden">{{ prompt.title }} - AI Prompt Details</h1>
-
 {# Draft banner handled in base.html notification container #}
 
+
+
+            <!-- Visual Breadcrumb Navigation (matches BreadcrumbList JSON-LD) -->
+            <nav aria-label="Breadcrumb" class="prompt-breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="/">Home</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/?search={{ prompt.ai_generator|urlencode }}">{{ prompt.ai_generator }}</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {{ prompt.title|truncatechars:50 }}
+                    </li>
+                </ol>
+            </nav>
 <!-- ============================================================
      SIDE-BY-SIDE LAYOUT (PromptHero Style)
      Left Column: Image, Actions, Title, Description, Comments
@@ -220,7 +234,7 @@
             </div>
 
             <!-- Title -->
-            <h2 class="prompt-title">
+            <h1 class="prompt-title">
                 {{ prompt.title }}
                 {% if prompt.is_video %}
                 <span class="media-type-indicator">
@@ -228,7 +242,7 @@
                     Video
                 </span>
                 {% endif %}
-            </h2>
+            </h1>
 
             <!-- Description (show full AI-generated description for SEO, fallback to excerpt) -->
             {% if prompt.description %}

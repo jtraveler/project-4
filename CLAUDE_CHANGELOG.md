@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** January 31, 2026
+**Last Updated:** February 3, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -18,6 +18,80 @@ This is a running log of development sessions. Each session entry includes:
 - Any blockers or issues discovered
 
 **Update this document at the end of every session.**
+
+---
+
+## February 2026 Sessions
+
+### Session 66 - February 3, 2026
+
+**Focus:** SEO Overhaul + Upload Page Redesign + CSS Architecture
+
+**Context:** Continuing from Session 64. Upload page had known bugs (Change File visibility, privacy toggle). This session resolved those bugs, completely redesigned the upload page, unified CSS architecture, and performed a comprehensive SEO overhaul of the prompt detail page.
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| Upload page redesign | Two-column grid layout (7fr/5fr), card-based form, visibility toggle, native aspect ratio | N/A (design) |
+| File input reset fix | Reset file input after validation error so same file can be re-selected | N/A (bugfix) |
+| CSS border-radius unification | Replaced 22 hardcoded `12px` with `var(--radius-lg)` across 5 files | N/A (refactor) |
+| Media container component | Created shared `.media-container-shell` / `.media-container` in style.css, removed ~60 lines duplicate CSS | N/A (refactor) |
+| Upload preview unification | Aligned upload preview with prompt detail media container styling | N/A (style) |
+| SEO audit | Comprehensive 12-category audit of prompt detail page | 72/100 baseline |
+| SEO critical+high fixes | Canonical URL, og:image guard, image dimensions, heading hierarchy, tag links, og:video, twitter:site, BreadcrumbList, author URL, hero image CLS, copyright year | 9/10 |
+| SEO Tier 1 fixes | Filter order (truncatechars before escapejs), None guards on JSON-LD, consistent hardcoded domain | 9/10 |
+| SEO Tier 2 enhancements | og:image:alt, twitter:image:alt, article:modified_time, noindex for drafts, BreadcrumbList item URL, DNS prefetch update, creator org URL consistency | 8.85/10 |
+| SEO validation | Full verification of all implementations with sample rendered output | READY FOR PRODUCTION |
+
+**Files Modified:**
+- `prompts/templates/prompts/prompt_detail.html` - Complete SEO overhaul (JSON-LD, OG, Twitter, canonical, headings, tag links)
+- `prompts/templates/prompts/upload.html` - Two-column grid redesign, card form, visibility toggle
+- `templates/base.html` - Dynamic copyright year (`{% now "Y" %}`)
+- `static/css/style.css` - Media container component, 8 border-radius replacements, `--media-container-padding` variable
+- `static/css/upload.css` - Complete rewrite with modern card design, native aspect ratio preview
+- `static/css/pages/prompt-detail.css` - Media container variable usage, heading/SEO updates
+- `static/css/components/masonry-grid.css` - 3 border-radius replacements
+- `static/css/pages/prompt-list.css` - 1 border-radius replacement
+- `static/js/upload-core.js` - File input reset fix
+- `static/js/upload-form.js` - Visibility toggle (`initVisibilityToggle`), SVG checkmark for NSFW approved
+
+**Key Technical Changes:**
+- SEO score: 72/100 → 95/100 (+23 points improvement)
+- 22 hardcoded `border-radius: 12px` replaced with `var(--radius-lg)` across 5 CSS files
+- Shared `.media-container-shell` and `.media-container` CSS component created (removes ~60 lines duplication)
+- Upload page restructured from single-column to 7fr/5fr grid layout
+- BreadcrumbList JSON-LD schema added (Home → Generator → Prompt) with all item URLs
+- Draft prompts now have `<meta name="robots" content="noindex, nofollow">`
+- All canonical signals hardcoded to `https://www.promptfinder.net` (consistent domain authority)
+- DNS prefetch updated from Cloudinary to `cdn.promptfinder.net`
+- Filter order fixed: `truncatechars` before `escapejs` to prevent invalid JSON-LD
+
+**Reports Created:**
+- `docs/reports/SEO_AUDIT_PROMPT_DETAIL_PAGE.md` - Initial audit (72/100)
+- `docs/reports/SEO_REAUDIT_PROMPT_DETAIL_PAGE.md` - Re-audit after critical+high fixes (88/100)
+- `docs/reports/SEO_TIER1_FIXES_REPORT.md` - Tier 1 fixes report (~92/100)
+- `docs/reports/SEO_TIER2_FIXES_REPORT.md` - Tier 2 fixes report (~95/100)
+- `docs/reports/SEO_VALIDATION_REPORT.md` - Final validation (READY FOR PRODUCTION)
+
+**Agent Ratings:**
+
+| Review Area | Agents | Average |
+|-------------|--------|---------|
+| SEO Tier 2 (final) | @seo-structure-architect 9.2/10, @code-reviewer 8.5/10 | 8.85/10 |
+| SEO Tier 1 | @seo-structure-architect 9/10, @code-reviewer 9/10 | 9/10 |
+| SEO Re-audit | @seo-structure-architect 8.1/10, @code-reviewer 7.5/10 | 7.8/10 (triggered Tier 1 fixes) |
+
+**Abandoned:**
+- Progress overlay feature - B2 uploads complete in ~200ms, no meaningful progress to show. Attempted 3 approaches, all unsatisfactory.
+
+**Phase N4 Status:** ~95% complete (SEO done, upload redesign done, worker dyno configured)
+
+**Next Session:**
+- Commit all uncommitted changes and deploy
+- Complete N4h (B2 file renaming), N4i (XML sitemap), N4j (final testing)
+- Consider api_views.py refactoring
+- Resume Phase K (Collections) at 95%
 
 ---
 
@@ -522,6 +596,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 3, 2026 | 66 | SEO overhaul (72→95/100), upload page redesign, CSS architecture (media container component, var(--radius-lg)) |
 | Jan 31, 2026 | 64 | CI/CD fixed (31 issues), worker dyno configured, upload page redesign, collection edit template, SEO enhancements |
 | Jan 28, 2026 | 63 | SEO optimization + AI content quality + description fix |
 | Jan 27, 2026 | 61 | N4 video support + cleanup (~90% complete) |
@@ -540,5 +615,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 3.8 (Session 64 - CI/CD, Worker Dyno, Upload Redesign)
-**Last Updated:** January 31, 2026
+**Version:** 3.9 (Session 66 - SEO Overhaul, Upload Redesign, CSS Architecture)
+**Last Updated:** February 3, 2026

@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** January 31, 2026
+**Last Updated:** February 3, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~90% - Upload Page Bugs)
+**Current Phase:** Phase N4 Optimistic Upload Flow (~95% - SEO Done, Upload Redesigned)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
@@ -61,7 +61,7 @@ live-working-project/
 ├── docs/                         # Active documentation (33+ files)
 │   ├── bug_reports/
 │   ├── implementation_reports/
-│   ├── reports/                  # Phase/feature reports (16 files)
+│   ├── reports/                  # Phase/feature reports (21 files)
 │   ├── specifications/
 │   └── CC_COMMUNICATION_PROTOCOL.md
 ├── prompts/                      # Main Django app (100+ files)
@@ -329,8 +329,8 @@ prompts/views/
 ```
 static/css/
 ├── navbar.css           # 1,136 lines - Extracted navbar styles
-├── style.css            # 1,789 lines - Main stylesheet
-├── upload.css           # ~780 lines - Upload page styles (complete rewrite Session 64)
+├── style.css            # ~1,800 lines - Main stylesheet + shared media container component (Session 66)
+├── upload.css           # ~750 lines - Upload page styles (complete rewrite Session 66)
 ├── components/
 │   ├── icons.css        # ~250 lines - SVG icon system (Phase J.2)
 │   └── masonry-grid.css # 255 lines - Masonry grid component
@@ -339,7 +339,12 @@ static/css/
     └── prompt-list.css   # 304 lines - Prompt list page styles
 ```
 
-**Total CSS:** ~5,297 lines across 7 files
+**Total CSS:** ~5,638 lines across 7 files
+
+**Shared CSS Components (Session 66):**
+- `.media-container-shell` / `.media-container` - Shared image/video container used by upload preview and prompt detail
+- `--media-container-padding` CSS variable in `:root`
+- `var(--radius-lg)` replaces all hardcoded `border-radius: 12px` values
 
 ---
 
@@ -959,7 +964,7 @@ python manage.py test -v 2
 
 ## Phase N4 Files (Optimistic Upload Flow)
 
-### Implementation Status (Session 64)
+### Implementation Status (Session 66)
 
 | Sub-Phase | Status | What Was Done |
 |-----------|--------|---------------|
@@ -974,6 +979,9 @@ python manage.py test -v 2
 | **AI Quality** | ✅ Complete | Style-first titles, description truncation fix, race/ethnicity |
 | **SEO Enhance** | ✅ Complete | Race/ethnicity, enhanced alt tags, Schema.org VideoObject (Session 64) |
 | **N4g Video Fix** | ✅ Resolved | Video submit session key mismatch fixed (Session 64) |
+| **Upload Polish** | ✅ Complete | File input reset, visibility toggle, native aspect ratio (Session 66) |
+| **CSS Architecture** | ✅ Complete | Shared media container, 22 border-radius unified (Session 66) |
+| **SEO Overhaul** | ✅ Complete | 72→95/100: JSON-LD, OG, Twitter, canonical, headings, noindex (Session 66) |
 
 ### Files Created
 
@@ -995,6 +1003,40 @@ static/js/
 
 prompts/templates/prompts/
 └── prompt_detail.html                 # MODIFIED - removed is_processing conditionals
+```
+
+### Files Modified (Session 66 - SEO + Upload + CSS)
+
+```
+prompts/templates/prompts/
+└── prompt_detail.html                 # Complete SEO overhaul: JSON-LD, OG, Twitter, canonical,
+                                       # heading hierarchy, tag links, noindex drafts (72→95/100)
+
+prompts/templates/prompts/
+└── upload.html                        # Two-column grid redesign, card form, visibility toggle
+
+templates/
+└── base.html                          # Dynamic copyright year ({% now "Y" %})
+
+static/css/
+├── style.css                          # Shared .media-container-shell/.media-container, --media-container-padding,
+│                                      # 8 border-radius replacements with var(--radius-lg)
+├── upload.css                         # Complete rewrite: modern card design, native aspect ratio
+├── components/masonry-grid.css        # 3 border-radius replacements
+└── pages/
+    ├── prompt-detail.css              # Media container variable usage
+    └── prompt-list.css                # 1 border-radius replacement
+
+static/js/
+├── upload-core.js                     # File input reset on validation error
+└── upload-form.js                     # initVisibilityToggle(), SVG checkmark NSFW approved
+
+docs/reports/
+├── SEO_AUDIT_PROMPT_DETAIL_PAGE.md    # NEW - Initial audit (72/100)
+├── SEO_REAUDIT_PROMPT_DETAIL_PAGE.md  # NEW - Re-audit (88/100)
+├── SEO_TIER1_FIXES_REPORT.md         # NEW - Tier 1 fixes (~92/100)
+├── SEO_TIER2_FIXES_REPORT.md         # NEW - Tier 2 enhancements (~95/100)
+└── SEO_VALIDATION_REPORT.md          # NEW - Final validation (READY FOR PRODUCTION)
 ```
 
 ### Files Modified (Session 59-63)
@@ -1077,11 +1119,20 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.4
-**Audit Date:** January 31, 2026
+**Version:** 3.5
+**Audit Date:** February 3, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.5 (February 3, 2026 - Session 66 End-of-Session):**
+- Updated Phase N4 status from ~90% to ~95% (SEO done, upload redesigned)
+- Added Session 66 files modified section (SEO overhaul, upload redesign, CSS architecture)
+- Added 5 SEO report files to docs/reports/ (audit → validation pipeline)
+- Updated CSS architecture section with shared media container component
+- Updated upload.css line count (~780 → ~750)
+- Updated N4 Implementation Status with 3 new Session 66 items
+- Updated docs/reports count (16 → 21 files)
 
 **v3.4 (January 31, 2026 - Session 64 End-of-Session):**
 - Added `collection_edit.html` to Prompts App Templates

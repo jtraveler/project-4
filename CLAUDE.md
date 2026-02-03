@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** January 31, 2026
+**Last Updated:** February 3, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~90% Complete | Optimistic Upload Flow | Upload page bugs, final testing |
+| **Phase N4** | 🔄 ~95% Complete | Optimistic Upload Flow | B2 file renaming, XML sitemap, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** ~90% Complete - Upload Page Bugs Remaining
+**Status:** ~95% Complete - SEO Done, Upload Redesign Done
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -79,6 +79,9 @@ Rebuilding upload flow to feel "instant" by:
 | **Worker Dyno** | ✅ Complete | Heroku worker dyno configured for Django-Q processing (Session 64) |
 | **Collection Edit** | ✅ Complete | Created collection_edit.html, fixed 500 error on edit page (Session 64) |
 | **Upload Redesign** | ✅ Complete | Complete visual redesign of upload page with modern card layout (Session 64) |
+| **Upload Polish** | ✅ Complete | File input reset fix, visibility toggle, native aspect ratio preview (Session 66) |
+| **CSS Architecture** | ✅ Complete | Shared media container component, 22 border-radius unified to var(--radius-lg) (Session 66) |
+| **SEO Overhaul** | ✅ Complete | Comprehensive SEO: JSON-LD, OG/Twitter, canonical, headings, noindex drafts (72→95/100) (Session 66) |
 
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
@@ -101,17 +104,17 @@ Rebuilding upload flow to feel "instant" by:
 | AI analysis ratio | 80% Vision / 20% Text | Users often write vague prompts |
 | File cleanup | 5-30 day retention | Use existing trash system |
 
-### Current Blockers (Session 64)
+### Current Blockers
 
-| Issue | Description | Impact |
-|-------|-------------|--------|
-| **Change File button** | Only visible on hover, needs always-visible state | UX issue on upload page |
-| **Privacy toggle** | May not default to Public correctly | Upload form behavior |
+None. All known blockers resolved as of Session 66.
 
-### Resolved Blockers (Session 64)
+### Resolved Blockers (Session 64-66)
 
 | Issue | Resolution | Session |
 |-------|------------|---------|
+| Change File button | Moved outside preview overlay, always visible | 66 |
+| Privacy toggle | Redesigned as visibility toggle, defaults to Public | 66 |
+| SEO score 72/100 | Comprehensive overhaul: JSON-LD, OG, Twitter, canonical, headings | 66 |
 | Worker dyno | Configured Standard-1X worker dyno on Heroku | 64 |
 | CI/CD pipeline | Fixed 31 issues across 9 files, all 3 jobs passing | 64 |
 | Collection edit 500 | Created missing collection_edit.html template | 64 |
@@ -143,14 +146,18 @@ Rebuilding upload flow to feel "instant" by:
 | `prompts/views/api_views.py` | AI job queuing for videos |
 | `prompts/views/upload_views.py` | `.strip()` on excerpt assignment (S64) |
 | `prompts_manager/settings.py` | Domain allowlist fix |
-| `static/js/upload-form.js` | Pass ai_job_id for videos, icon updates (S64) |
-| `static/js/upload-core.js` | File input reset on validation error (S64) |
-| `templates/base.html` | OG/Twitter `{% block %}` wrappers |
-| `prompts/templates/prompts/upload.html` | Complete upload page redesign - new HTML structure (S64) |
-| `prompts/templates/prompts/prompt_detail.html` | OG/Twitter overrides, Schema.org JSON-LD + VideoObject, canonical, `|linebreaks`, enhanced alt tags, video aria-label (S64) |
-| `prompts/templates/prompts/collection_edit.html` | New template - collection edit form (S64) |
 | `prompts/services/content_generation.py` | `max_tokens` 500→1000, filename 3→5 keywords, alt tag format, race/ethnicity instructions, video description prompt fix (S64) |
-| `static/css/upload.css` | Complete rewrite - modern card layout, preview overlay with gradient (S64) |
+| `prompts/templates/prompts/collection_edit.html` | New template - collection edit form (S64) |
+
+**Committed in Session 66** (commit `806dd5b`):
+- `prompts/templates/prompts/prompt_detail.html` - Complete SEO overhaul (JSON-LD, OG, Twitter, canonical, headings, tag links, noindex)
+- `prompts/templates/prompts/upload.html` - Two-column grid redesign
+- `templates/base.html` - OG/Twitter blocks + dynamic copyright year
+- `static/css/upload.css` - Complete rewrite with modern card design
+- `static/css/style.css` - Media container component, border-radius variables
+- `static/css/pages/prompt-detail.css` - Media container + SEO updates
+- `static/js/upload-core.js` - File input reset fix
+- `static/js/upload-form.js` - Visibility toggle, modal handlers
 
 ---
 
@@ -269,7 +276,7 @@ upload-form.js      # Form handling, NSFW status display
 upload-guards.js    # Navigation guards, idle timeout detection
 
 CSS:
-static/css/upload.css    # All upload page styles (~780 lines, rewritten S64)
+static/css/upload.css    # All upload page styles (~750 lines, rewritten S66)
 
 BACKEND:
 prompts/views/api_views.py           # API endpoints (1374+ lines)
@@ -518,5 +525,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 3.7 (Phase N4 Session 64 - CI/CD, Worker Dyno, Upload Redesign)
-**Last Updated:** January 31, 2026
+**Version:** 3.9 (Phase N4 Session 66 - SEO Overhaul, Upload Redesign, CSS Architecture)
+**Last Updated:** February 3, 2026

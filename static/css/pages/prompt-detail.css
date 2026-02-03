@@ -60,7 +60,7 @@
    ========================================================================== */
 
 .prompt-content-wrapper {
-    padding-top: calc(var(--space-12) + var(--space-4));  /* Match leaderboard-page */
+    padding-top: calc(var(--space-4) + var(--space-4));  /* Match leaderboard-page */
     padding-bottom: var(--spacing-xl);
 }
 
@@ -1335,4 +1335,76 @@ a.model-name:hover {
     font-size: 0.8rem;
     margin-right: 0.25rem;
     margin-bottom: 0.25rem;
+}
+
+/* ==========================================================================
+   Breadcrumb Navigation (SEO + UX)
+   Visual breadcrumbs matching BreadcrumbList JSON-LD schema
+   Added: February 2026
+   ========================================================================== */
+
+.prompt-breadcrumb {
+    padding-top: calc(var(--space-6) + var(--space-1));
+}
+
+.prompt-breadcrumb .breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+}
+
+.prompt-breadcrumb .breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+}
+
+.prompt-breadcrumb .breadcrumb-item a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.prompt-breadcrumb .breadcrumb-item a:hover {
+    color: var(--main-blue, #2563eb);
+    text-decoration: underline;
+}
+
+.prompt-breadcrumb .breadcrumb-item.active {
+    color: var(--text-dark);
+    font-weight: 500;
+}
+
+/* Bootstrap breadcrumb separator override */
+.prompt-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: var(--text-muted);
+    padding-right: 0.5rem;
+    font-weight: 400;
+}
+
+/* Mobile: allow natural wrapping between items */
+@media (max-width: 576px) {
+    .prompt-breadcrumb .breadcrumb {
+        font-size: 0.8125rem;
+    }
+
+    /* Keep "Home" and generator links on one line each (no mid-link breaks) */
+    .prompt-breadcrumb .breadcrumb-item {
+        white-space: nowrap;
+    }
+
+    /* Allow the active title to wrap naturally if too long */
+    .prompt-breadcrumb .breadcrumb-item.active {
+        white-space: normal;
+        overflow-wrap: break-word;
+    }
+}
+
+/* Keyboard focus indicator for accessibility (WCAG 2.1 AA) */
+.prompt-breadcrumb .breadcrumb-item a:focus-visible {
+    outline: 2px solid var(--main-blue, #2563eb);
+    outline-offset: 2px;
+    border-radius: 2px;
 }

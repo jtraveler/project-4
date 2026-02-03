@@ -34,52 +34,13 @@
    Provides background and padding for the media container
    ========================================================================== */
 
+/* Shell & container inherit from .media-container-shell / .media-container in style.css */
 .prompt-media-container-shell {
-    background: var(--gray-100);
-    padding: var(--media-container-padding);
-    border-radius: var(--radius-lg);
     margin-bottom: var(--spacing-lg);
-    overflow: hidden; /* Clip inner content to border-radius */
 }
 
-/* ==========================================================================
-   Media Container (inner wrapper)
-   Handles the actual media display
-   ========================================================================== */
-
-.prompt-media-container {
-    position: relative;
-    width: 100%;
-    overflow: hidden;
-}
-
-/* Video container: shrink to fit video's natural size, centered */
-.prompt-media-container:has(.hero-video) {
-    width: fit-content;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Hero Image & Video Styling (shared properties) */
-.hero-image,
-.hero-video {
-    width: 100%;
-    max-width: 100%;
-    max-height: 800px;
-    border-radius: var(--radius-lg);
-    display: block;
-    margin: 0 auto;
-    object-fit: contain;
-}
-
-/* Image-specific styling */
-.hero-image {
-    /* Padding and background handled by .prompt-media-container-shell */
-}
-
-/* Video-specific styling */
-.hero-video {
-    /* Padding and background handled by .prompt-media-container-shell */
+/* Video: no max-height restriction */
+.prompt-media-container video {
     max-height: none;
 }
 
@@ -884,16 +845,6 @@ a.model-name:hover {
 
 /* Tablet and below */
 @media (max-width: 991.98px) {
-    .prompt-media-container {
-        border-radius: 8px;
-    }
-
-    .hero-image,
-    .hero-video {
-        border-radius: 8px;
-        max-height: 500px;
-    }
-
     .prompt-title {
         font-size: 1.5rem;
     }
@@ -962,17 +913,11 @@ a.model-name:hover {
 
 /* Mobile */
 @media (max-width: 575.98px) {
-    .prompt-media-container {
+    .prompt-media-container-shell {
         border-radius: 0;
         margin-left: -12px;
         margin-right: -12px;
         width: calc(100% + 24px);
-    }
-
-    .hero-image,
-    .hero-video {
-        border-radius: 0;
-        max-height: 400px;
     }
 
     .prompt-title {
@@ -1288,16 +1233,6 @@ a.model-name:hover {
    Legacy Classes (Deprecated - kept for backwards compatibility)
    Will be removed in future version
    ========================================================================== */
-
-.hero-image-shell {
-    position: relative;
-    width: 100%;
-    max-width: 1200px;
-    background: var(--gray-100);
-    border-radius: var(--radius-lg);
-    padding: 1rem;
-    margin: 0 auto;
-}
 
 .action-buttons {
     margin-bottom: 1.5rem;

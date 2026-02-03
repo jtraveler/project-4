@@ -150,8 +150,6 @@
     opacity: 0 !important;
 }
 
-/* .hero-video styles moved to static/css/pages/prompt-detail.css for better organization */
-
 /* Video loading state */
 .video-loading {
     position: absolute;

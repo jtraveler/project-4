@@ -110,13 +110,10 @@
 }
 
 /* ===== Preview Area ===== */
+/* Shell & container inherit from .media-container-shell / .media-container in style.css */
 .upload-preview {
     display: none;
     position: relative;
-    padding: var(--media-container-padding, 30px);
-    border-radius: var(--radius-lg, 12px);
-    overflow: hidden;
-    background: var(--gray-100, #f5f5f5);
 }
 
 .upload-preview.active {
@@ -126,22 +123,10 @@
     min-height: 200px;
 }
 
-.preview-media-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-}
-
+/* Upload-specific: lower max-height than detail page */
 .upload-preview img,
 .upload-preview video {
-    display: block;
-    max-width: 100%;
     max-height: 700px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    border-radius: var(--radius-lg);
 }
 
 /* Change File Button (below preview, always visible when preview active) */

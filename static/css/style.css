@@ -173,6 +173,53 @@
   --tab-hover-bg: rgba(0, 0, 0, 0.05);
 }
 
+/* ==========================================================================
+   Shared Media Container Component
+   Used by: upload page (.upload-preview), prompt detail page
+   ========================================================================== */
+
+.media-container-shell {
+  background: var(--gray-100);
+  padding: var(--media-container-padding, 30px);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.media-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.media-container img,
+.media-container video {
+  display: block;
+  max-width: 100%;
+  max-height: 800px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+}
+
+/* Tablet and below */
+@media (max-width: 991.98px) {
+  .media-container img,
+  .media-container video {
+    max-height: 500px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 575.98px) {
+  .media-container img,
+  .media-container video {
+    border-radius: 0;
+    max-height: 400px;
+  }
+}
+
 /* ===== FONT FAMILY DECLARATIONS ===== */
 /* Prevent horizontal scrollbar globally (CRITICAL FIX) */
 *, *::before, *::after {

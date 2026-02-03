@@ -72,6 +72,9 @@
   --radius-lg: 12px;
   --radius-full: 9999px;
 
+  /* === MEDIA CONTAINER === */
+  --media-container-padding: 30px;
+
   /* === TRANSITIONS & TIMING === */
   --transition-fast: 0.15s ease;
   --transition-base: 0.2s ease;

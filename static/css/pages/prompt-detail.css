@@ -36,8 +36,8 @@
 
 .prompt-media-container-shell {
     background: var(--gray-100);
-    padding: 30px;
-    border-radius: 12px;
+    padding: var(--media-container-padding);
+    border-radius: var(--radius-lg);
     margin-bottom: var(--spacing-lg);
     overflow: hidden; /* Clip inner content to border-radius */
 }

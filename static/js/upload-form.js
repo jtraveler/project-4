@@ -321,7 +321,8 @@
             // Form fields
             promptContent: document.getElementById('promptContent'),
             aiGenerator: document.getElementById('aiGenerator'),
-            isDraft: document.getElementById('isDraft'),
+            isPublicToggle: document.getElementById('isPublicToggle'),
+            isDraftHidden: document.getElementById('isDraftHidden'),
 
             // Hidden fields (populated by upload-core.js)
             b2FileKey: document.getElementById('b2FileKey'),
@@ -523,8 +524,8 @@
         if (elements.aiGenerator) {
             elements.aiGenerator.disabled = false;
         }
-        if (elements.isDraft) {
-            elements.isDraft.disabled = false;
+        if (elements.isPublicToggle) {
+            elements.isPublicToggle.disabled = false;
         }
 
         // Submit button stays disabled until NSFW check passes
@@ -545,8 +546,8 @@
         if (elements.aiGenerator) {
             elements.aiGenerator.disabled = true;
         }
-        if (elements.isDraft) {
-            elements.isDraft.disabled = true;
+        if (elements.isPublicToggle) {
+            elements.isPublicToggle.disabled = true;
         }
 
         updateSubmitButton();
@@ -579,8 +580,12 @@
         if (elements.aiGenerator) {
             elements.aiGenerator.selectedIndex = 0;
         }
-        if (elements.isDraft) {
-            elements.isDraft.checked = false;
+        if (elements.isPublicToggle) {
+            elements.isPublicToggle.checked = true; // Default to Public (ON)
+            elements.isPublicToggle.dispatchEvent(new Event('change')); // Sync label
+        }
+        if (elements.isDraftHidden) {
+            elements.isDraftHidden.value = ''; // Not a draft by default
         }
 
         // Hide modals/toasts
@@ -743,6 +748,27 @@
         // Add current status class
         if (NSFW_STATUS_CLASSES[status]) {
             elements.nsfwStatus.classList.add(NSFW_STATUS_CLASSES[status]);
+        }
+
+        // Update status icon using innerHTML to preserve the container element
+        const statusIcon = elements.nsfwStatus.querySelector('.nsfw-status-icon');
+        if (statusIcon) {
+            if (status === 'approved') {
+                // Use Lucide-style SVG checkmark for approved state
+                statusIcon.className = 'nsfw-status-icon';
+                statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+            } else {
+                const icons = {
+                    pending: 'fa-spinner',
+                    uploading: 'fa-spinner',
+                    checking: 'fa-spinner',
+                    flagged: 'fa-exclamation-triangle',
+                    rejected: 'fa-times-circle',
+                    error: 'fa-exclamation-circle'
+                };
+                statusIcon.innerHTML = '';
+                statusIcon.className = 'fas ' + (icons[status] || 'fa-spinner') + ' nsfw-status-icon';
+            }
         }
 
         // Update status text
@@ -926,6 +952,34 @@
     }
 
     // ========================================
+    // Visibility Toggle
+    // ========================================
+    function initVisibilityToggle() {
+        const toggle = elements.isPublicToggle;
+        const hidden = elements.isDraftHidden;
+        const label = document.getElementById('visibilityLabel');
+
+        if (!toggle) return;
+
+        function updateVisibility() {
+            if (toggle.checked) {
+                // Toggle ON = Public
+                if (label) label.textContent = 'Public - visible to everyone';
+                if (hidden) hidden.value = '';
+            } else {
+                // Toggle OFF = Draft
+                if (label) label.textContent = 'Draft - only you can see this';
+                if (hidden) hidden.value = '1';  // Backend expects '1' for draft
+            }
+        }
+
+        toggle.addEventListener('change', updateVisibility);
+
+        // Set initial state
+        updateVisibility();
+    }
+
+    // ========================================
     // Public API
     // ========================================
     window.UploadForm = {
@@ -953,6 +1007,7 @@
     function init() {
         cacheElements();
         bindEvents();
+        initVisibilityToggle();
     }
 
     // Initialize when DOM is ready

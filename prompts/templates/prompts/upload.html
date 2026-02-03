@@ -6,113 +6,143 @@
 {% endblock %}
 
 {% block content %}
-<!-- Page Header -->
 <div class="upload-page">
-    <div class="container">
-        <h1 class="page-title mb-4">Upload Your Prompt</h1>
+    <div class="upload-wrapper">
+        <!-- Page Header -->
+        <div class="upload-header">
+            <h1 class="upload-title">Upload Your Prompt</h1>
+            <p class="upload-subtitle">Share your creative AI masterpieces with the world.</p>
+        </div>
 
-        <div class="upload-container">
-            <!-- Left Column: Drop Zone / Preview -->
-            <div class="upload-left-column">
+        <!-- Main Content Grid -->
+        <div class="upload-grid">
+            <!-- Left Column: Preview Area -->
+            <div class="upload-preview-column">
                 <!-- Drop Zone (visible when no file) -->
                 <div class="upload-drop-zone" id="dropZone">
                     <input type="file" id="fileInput" accept="image/*,video/*" hidden>
-                    <i class="fas fa-cloud-upload-alt drop-zone-icon"></i>
-                    <p class="drop-zone-text">Drag and drop your file here</p>
-                    <p class="drop-zone-subtext">or click to browse</p>
-                    <p class="drop-zone-subtext mt-2">Supports: JPG, PNG, GIF, WebP (max 3MB) • MP4, MOV, WebM (max 15MB)</p>
+                    <div class="drop-zone-content">
+                        <i class="fas fa-cloud-upload-alt drop-zone-icon"></i>
+                        <p class="drop-zone-text">Drag and drop your file here</p>
+                        <p class="drop-zone-subtext">or click to browse</p>
+                        <p class="drop-zone-formats">
+                            JPG, PNG, GIF, WebP (max 3MB) • MP4, MOV, WebM (max 15MB)
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Preview Area (visible when file selected) -->
                 <div class="upload-preview" id="previewArea">
-                    <img id="previewImage" src="" alt="Preview" class="d-none">
-                    <video id="previewVideo" src="" controls class="d-none"></video>
-                    <button type="button" class="preview-change-btn" id="changeFileBtn">
-                        <i class="fas fa-exchange-alt"></i> Change File
-                    </button>
+                    <div class="preview-media-wrapper">
+                        <img id="previewImage" src="" alt="Preview" class="d-none">
+                        <video id="previewVideo" src="" controls class="d-none"></video>
+                    </div>
                 </div>
+                <!-- Button now OUTSIDE and BELOW the preview -->
+                <button type="button" class="change-file-btn" id="changeFileBtn">
+                    <i class="fas fa-sync-alt"></i> Change File
+                </button>
             </div>
 
-            <!-- Right Column: Form -->
-            <div class="upload-form-section disabled" id="formSection">
-                <h2 class="form-section-title">Prompt Details</h2>
-
-                <!-- NSFW Status Indicator -->
-                <div class="nsfw-status" id="nsfwStatus" style="display: none;">
-                    <i class="fas fa-spinner nsfw-status-icon"></i>
-                    <span class="nsfw-status-text">Checking content...</span>
-                </div>
-
-                <form id="uploadForm" method="post" action="{% url 'prompts:upload_submit' %}">
-                    {% csrf_token %}
-
-                    <!-- Hidden fields for B2 upload data -->
-                    <input type="hidden" name="cloudinary_id" id="b2FileKey">
-                    <input type="hidden" name="b2_original_url" id="b2OriginalUrl">
-                    <input type="hidden" name="b2_thumb_url" id="b2ThumbUrl">
-                    <input type="hidden" name="resource_type" id="resourceType">
-                    <input type="hidden" name="original_filename" id="originalFilename">
-
-                    <!-- Prompt Content -->
-                    <div class="form-group">
-                        <label class="form-label" for="promptContent">
-                            Your Prompt <span class="required">*</span>
-                        </label>
-                        <textarea
-                            class="form-control"
-                            id="promptContent"
-                            name="content"
-                            placeholder="Enter the prompt you used to generate this image/video..."
-                            required
-                            disabled
-                        ></textarea>
+            <!-- Right Column: Form Card -->
+            <div class="upload-form-column">
+                <div class="upload-form-card disabled" id="formSection">
+                    <!-- Card Header -->
+                    <div class="form-card-header">
+                        <h2 class="form-card-title">Prompt Details</h2>
+                        <span class="form-step-indicator">Step 1 of 2</span>
                     </div>
 
-                    <!-- AI Generator -->
-                    <div class="form-group">
-                        <label class="form-label" for="aiGenerator">
-                            AI Generator <span class="required">*</span>
-                        </label>
-                        <select class="form-control form-select" id="aiGenerator" name="ai_generator" required disabled>
-                            <option value="">Select AI Generator</option>
-                            <option value="Midjourney">Midjourney</option>
-                            <option value="DALL-E 3">DALL-E 3</option>
-                            <option value="DALL-E 2">DALL-E 2</option>
-                            <option value="Stable Diffusion">Stable Diffusion</option>
-                            <option value="Leonardo AI">Leonardo AI</option>
-                            <option value="Adobe Firefly">Adobe Firefly</option>
-                            <option value="Flux">Flux</option>
-                            <option value="Ideogram">Ideogram</option>
-                            <option value="Bing Image Creator">Bing Image Creator</option>
-                            <option value="Sora">Sora</option>
-                            <option value="Sora 2">Sora 2</option>
-                            <option value="Veo 3">Veo 3</option>
-                            <option value="Runway">Runway</option>
-                            <option value="Pika">Pika</option>
-                            <option value="Other">Other</option>
-                        </select>
+                    <!-- NSFW Status Badge -->
+                    <div class="nsfw-status" id="nsfwStatus" style="display: none;">
+                        <i class="fas fa-spinner nsfw-status-icon"></i>
+                        <span class="nsfw-status-text">Checking content...</span>
                     </div>
 
-                    <!-- Visibility Toggle -->
-                    <div class="form-group">
-                        <label class="form-label">Visibility</label>
-                        <div class="visibility-toggle">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="isDraft" name="save_as_draft" disabled>
-                                <span class="toggle-slider"></span>
+                    <!-- Form -->
+                    <form id="uploadForm" method="post" action="{% url 'prompts:upload_submit' %}">
+                        {% csrf_token %}
+
+                        <!-- Hidden fields for B2 upload data -->
+                        <input type="hidden" name="cloudinary_id" id="b2FileKey">
+                        <input type="hidden" name="b2_original_url" id="b2OriginalUrl">
+                        <input type="hidden" name="b2_thumb_url" id="b2ThumbUrl">
+                        <input type="hidden" name="resource_type" id="resourceType">
+                        <input type="hidden" name="original_filename" id="originalFilename">
+
+                        <!-- Prompt Content -->
+                        <div class="form-group">
+                            <label class="form-label" for="promptContent">
+                                Your Prompt <span class="required">*</span>
                             </label>
-                            <span class="toggle-label" id="visibilityLabel">Public - visible to everyone</span>
+                            <textarea
+                                class="form-control form-textarea"
+                                id="promptContent"
+                                name="content"
+                                placeholder="Enter the prompt you used to generate this image/video..."
+                                rows="5"
+                                required
+                                disabled
+                            ></textarea>
                         </div>
-                    </div>
 
-                    <!-- Submit Section -->
-                    <div class="submit-section">
-                        <button type="submit" class="btn-upload-submit" id="submitBtn" disabled>
-                            <span class="spinner"></span>
-                            <span class="btn-text">Publish Prompt</span>
-                        </button>
-                    </div>
-                </form>
+                        <!-- AI Generator -->
+                        <div class="form-group">
+                            <label class="form-label" for="aiGenerator">
+                                AI Generator <span class="required">*</span>
+                            </label>
+                            <div class="select-wrapper">
+                                <select class="form-control form-select" id="aiGenerator" name="ai_generator" required disabled>
+                                    <option value="">Select AI Generator</option>
+                                    <option value="Midjourney">Midjourney</option>
+                                    <option value="DALL-E 3">DALL-E 3</option>
+                                    <option value="DALL-E 2">DALL-E 2</option>
+                                    <option value="Stable Diffusion">Stable Diffusion</option>
+                                    <option value="Leonardo AI">Leonardo AI</option>
+                                    <option value="Adobe Firefly">Adobe Firefly</option>
+                                    <option value="Flux">Flux</option>
+                                    <option value="Ideogram">Ideogram</option>
+                                    <option value="Bing Image Creator">Bing Image Creator</option>
+                                    <option value="Sora">Sora</option>
+                                    <option value="Sora 2">Sora 2</option>
+                                    <option value="Veo 3">Veo 3</option>
+                                    <option value="Runway">Runway</option>
+                                    <option value="Pika">Pika</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Visibility Toggle -->
+                        <div class="form-group">
+                            <div class="visibility-card">
+                                <div class="visibility-info">
+                                    <span class="visibility-title">Visibility</span>
+                                    <span class="visibility-desc" id="visibilityLabel">Public - visible to everyone</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="isPublicToggle" checked disabled>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <!-- Hidden field for backend: only sent when toggle is OFF (Draft) -->
+                                <input type="hidden" id="isDraftHidden" name="save_as_draft" value="">
+                            </div>
+                        </div>
+
+                        <!-- Submit Section -->
+                        <div class="submit-section">
+                            <button type="submit" class="btn-upload-submit" id="submitBtn" disabled>
+                                <span class="spinner"></span>
+                                <span class="btn-text">Submit Prompt</span>
+                            </button>
+                            <p class="submit-notice">
+                                By submitting, you agree to our
+                                <a href="/about/">Community Guidelines</a> and
+                                <a href="/about/">Terms of Service</a>.
+                            </p>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

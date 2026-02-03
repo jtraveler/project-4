@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~95% Complete | Optimistic Upload Flow | B2 file renaming, XML sitemap, final testing |
+| **Phase N4** | 🔄 ~97% Complete | Optimistic Upload Flow | N4h rename triggering, XML sitemap, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** ~95% Complete - SEO Done, Upload Redesign Done
+**Status:** ~97% Complete - B2 File Renaming Built, Triggering Issue Remaining
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -82,6 +82,8 @@ Rebuilding upload flow to feel "instant" by:
 | **Upload Polish** | ✅ Complete | File input reset fix, visibility toggle, native aspect ratio preview (Session 66) |
 | **CSS Architecture** | ✅ Complete | Shared media container component, 22 border-radius unified to var(--radius-lg) (Session 66) |
 | **SEO Overhaul** | ✅ Complete | Comprehensive SEO: JSON-LD, OG/Twitter, canonical, headings, noindex drafts (72→95/100) (Session 66) |
+| **SEO Headings** | ✅ Complete | Fixed heading hierarchy (H1→H2→H3), visual breadcrumbs with focus-visible (Session 67) |
+| **N4h File Rename** | ✅ Complete | B2 SEO file renaming: seo.py utility, B2RenameService, background task in tasks.py (Session 67) |
 
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
@@ -106,7 +108,11 @@ Rebuilding upload flow to feel "instant" by:
 
 ### Current Blockers
 
-None. All known blockers resolved as of Session 66.
+| Issue | Description | Impact |
+|-------|-------------|--------|
+| **N4h rename not triggering** | `rename_prompt_files_for_seo` task is coded but not generating SEO filenames in production | Files keep UUID names instead of SEO slugs |
+
+**Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation in next session.
 
 ### Resolved Blockers (Session 64-66)
 
@@ -148,6 +154,14 @@ None. All known blockers resolved as of Session 66.
 | `prompts_manager/settings.py` | Domain allowlist fix |
 | `prompts/services/content_generation.py` | `max_tokens` 500→1000, filename 3→5 keywords, alt tag format, race/ethnicity instructions, video description prompt fix (S64) |
 | `prompts/templates/prompts/collection_edit.html` | New template - collection edit form (S64) |
+| `prompts/utils/__init__.py` | NEW - Utils package init (S67) |
+| `prompts/utils/seo.py` | NEW - SEO filename generation utility (S67) |
+| `prompts/services/b2_rename.py` | NEW - B2 file rename service (copy-verify-delete) (S67) |
+| `prompts/tasks.py` | Added `rename_prompt_files_for_seo` task + queuing in `_update_prompt_with_ai_content` (S67) |
+| `prompts/templates/prompts/upload.html` | Heading hierarchy fixes, visual breadcrumbs, accessibility (S67) |
+| `static/css/upload.css` | Breadcrumb styles, focus-visible, heading updates (S67) |
+| `static/js/upload-core.js` | Minor upload flow updates (S67) |
+| `static/js/upload-form.js` | Minor form handling updates (S67) |
 
 **Committed in Session 66** (commit `806dd5b`):
 - `prompts/templates/prompts/prompt_detail.html` - Complete SEO overhaul (JSON-LD, OG, Twitter, canonical, headings, tag links, noindex)
@@ -282,6 +296,9 @@ BACKEND:
 prompts/views/api_views.py           # API endpoints (1374+ lines)
 prompts/services/b2_presign_service.py    # Generates presigned URLs for B2
 prompts/services/b2_upload_service.py     # B2 upload utilities
+prompts/services/b2_rename.py        # B2 file renaming (copy-verify-delete)
+prompts/utils/seo.py                 # SEO filename generation
+prompts/tasks.py                     # Background tasks (AI generation, SEO rename)
 ```
 
 > ⚠️ **CRITICAL: api_views.py is 1374+ lines**
@@ -525,5 +542,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 3.9 (Phase N4 Session 66 - SEO Overhaul, Upload Redesign, CSS Architecture)
+**Version:** 4.0 (Phase N4 Session 67 - B2 File Renaming, SEO Headings, Visual Breadcrumbs)
 **Last Updated:** February 3, 2026

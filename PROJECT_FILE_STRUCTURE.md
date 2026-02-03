@@ -2,7 +2,7 @@
 
 **Last Updated:** February 3, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~95% - SEO Done, Upload Redesigned)
+**Current Phase:** Phase N4 Optimistic Upload Flow (~97% - B2 File Renaming Built, Trigger Issue Remaining)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
@@ -19,7 +19,7 @@
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
 | **Management Commands** | 18 | prompts/management/commands/ |
-| **Services** | 10 | prompts/services/ |
+| **Services** | 11 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
 | **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
@@ -68,7 +68,8 @@ live-working-project/
 │   ├── management/
 │   │   └── commands/             # 17 management commands + __init__.py
 │   ├── migrations/               # 40 migrations + __init__.py
-│   ├── services/                 # 9 service modules
+│   ├── services/                 # 11 service modules
+│   ├── utils/                    # Utility modules (SEO filename generation)
 │   ├── storage_backends.py       # B2 storage backend + CDN (Phase L)
 │   ├── templates/prompts/        # 23 templates
 │   │   └── partials/             # Partial templates
@@ -153,12 +154,13 @@ live-working-project/
 
 ---
 
-## Service Layer Architecture (10 modules)
+## Service Layer Architecture (11 modules)
 
 ```
 prompts/services/
 ├── __init__.py              # Service exports
-├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT) ← NEW
+├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT)
+├── b2_rename.py             # B2 file renaming via copy-verify-delete (Phase N4h) ← NEW
 ├── b2_upload_service.py     # B2 upload orchestration (Phase L)
 ├── cloudinary_moderation.py # OpenAI Vision moderation for images and videos
 ├── content_generation.py    # GPT-4o content generation for uploads
@@ -170,6 +172,10 @@ prompts/services/
 └── video_processor.py       # FFmpeg video processing, frame extraction for moderation (Phase M)
 
 prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app root)
+
+prompts/utils/
+├── __init__.py              # Package init
+└── seo.py                   # SEO filename generation (stop word removal, slug truncation, -ai-prompt suffix)
 ```
 
 ### Service Descriptions
@@ -177,6 +183,7 @@ prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app ro
 | Service | Description | Cost |
 |---------|-------------|------|
 | **b2_presign_service** | Generates presigned URLs for direct browser-to-B2 uploads (L8-DIRECT) | N/A |
+| **b2_rename** | Renames B2 files from UUID to SEO slugs via copy-verify-delete (Phase N4h) | N/A |
 | **b2_upload_service** | Orchestrates B2 uploads with optimization | ~$0.005/GB |
 | **cloudinary_moderation** | Cloudinary AI Vision for image/video moderation | ~$5-10/1000 images |
 | **content_generation** | GPT-4o-mini for AI-generated titles, descriptions, tags | ~$0.00255/upload |
@@ -964,7 +971,7 @@ python manage.py test -v 2
 
 ## Phase N4 Files (Optimistic Upload Flow)
 
-### Implementation Status (Session 66)
+### Implementation Status (Session 67)
 
 | Sub-Phase | Status | What Was Done |
 |-----------|--------|---------------|
@@ -982,6 +989,8 @@ python manage.py test -v 2
 | **Upload Polish** | ✅ Complete | File input reset, visibility toggle, native aspect ratio (Session 66) |
 | **CSS Architecture** | ✅ Complete | Shared media container, 22 border-radius unified (Session 66) |
 | **SEO Overhaul** | ✅ Complete | 72→95/100: JSON-LD, OG, Twitter, canonical, headings, noindex (Session 66) |
+| **SEO Headings** | ✅ Complete | Fixed heading hierarchy (H1→H2→H3), visual breadcrumbs with focus-visible (Session 67) |
+| **N4h File Rename** | ✅ Complete | B2 SEO file renaming: seo.py, B2RenameService, background task (Session 67) |
 
 ### Files Created
 
@@ -1039,6 +1048,35 @@ docs/reports/
 └── SEO_VALIDATION_REPORT.md          # NEW - Final validation (READY FOR PRODUCTION)
 ```
 
+### Files Created (Session 67 - N4h B2 File Renaming)
+
+```
+prompts/utils/
+├── __init__.py                        # NEW - Utils package init
+└── seo.py                             # NEW - SEO filename generation (stop words, slug truncation, -ai-prompt suffix)
+
+prompts/services/
+└── b2_rename.py                       # NEW - B2RenameService (copy → head_object verify → delete pattern)
+```
+
+### Files Modified (Session 67 - SEO Headings + N4h)
+
+```
+prompts/
+└── tasks.py                           # Added rename_prompt_files_for_seo() task + async_task queuing
+                                       # in _update_prompt_with_ai_content (per-field immediate DB save)
+
+prompts/templates/prompts/
+└── upload.html                        # Heading hierarchy fixes, visual breadcrumbs, accessibility
+
+static/css/
+└── upload.css                         # Breadcrumb styles, focus-visible, heading updates
+
+static/js/
+├── upload-core.js                     # Minor upload flow updates
+└── upload-form.js                     # Minor form handling updates
+```
+
 ### Files Modified (Session 59-63)
 
 ```
@@ -1077,13 +1115,12 @@ Procfile                               # Added worker process for Django-Q ✅
 
 ```
 prompts/
-├── tasks.py                           # Django-Q background tasks (N4e/N4f)
-│   ├── generate_ai_content()          # AI title/description/tags
-│   └── rename_b2_files_for_seo()      # Deferred file renaming
 ├── sitemaps.py                        # XML sitemap for SEO
 └── views/
     └── api_views.py                   # Add prompt_processing_status endpoint (N4f)
 ```
+
+**Note:** `rename_b2_files_for_seo()` in `tasks.py` was implemented in Session 67 (moved from pending to complete).
 
 ### URL Routes
 
@@ -1119,11 +1156,20 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.5
+**Version:** 3.6
 **Audit Date:** February 3, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.6 (February 3, 2026 - Session 67 End-of-Session):**
+- Updated Phase N4 status from ~95% to ~97% (B2 file renaming built)
+- Added `prompts/utils/` package (seo.py for SEO filename generation)
+- Added `prompts/services/b2_rename.py` (B2RenameService - copy-verify-delete)
+- Updated service count from 10 to 11
+- Added Session 67 files created/modified sections
+- Updated N4 Implementation Status with 2 new Session 67 items (SEO Headings, N4h File Rename)
+- Updated Files Still Pending: removed rename_b2_files_for_seo (now implemented)
 
 **v3.5 (February 3, 2026 - Session 66 End-of-Session):**
 - Updated Phase N4 status from ~90% to ~95% (SEO done, upload redesigned)

@@ -23,6 +23,78 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February 2026 Sessions
 
+### Session 67 - February 3, 2026
+
+**Focus:** N4h B2 File Renaming + SEO Heading Fixes + Visual Breadcrumbs
+
+**Context:** Continuing from Session 66. Upload page and SEO overhaul complete. This session implemented the deferred B2 file renaming system (N4h), fixed heading hierarchy on the upload page, and added visual breadcrumbs with accessibility.
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| SEO heading hierarchy | Fixed upload page H1→H2→H3 structure for proper document outline | N/A (SEO) |
+| Visual breadcrumbs | Added breadcrumb navigation to upload page with Home → Upload path | N/A (UX) |
+| Breadcrumb accessibility | Added focus-visible outlines, aria-current, aria-label to breadcrumbs | N/A (a11y) |
+| SEO filename utility | Created `prompts/utils/seo.py` with stop word removal, slug truncation, `-ai-prompt` suffix | 9/10 |
+| B2 rename service | Created `prompts/services/b2_rename.py` with copy → head_object verify → delete pattern | 9/10 |
+| Background rename task | Added `rename_prompt_files_for_seo()` to tasks.py with per-field immediate DB save | 9/10 |
+| Task queuing | Added `async_task()` call in `_update_prompt_with_ai_content` after AI generation | 9/10 |
+| Agent review round 1 | Django expert 8.5, Cloud architect 7, Code reviewer 7 → Average 7.5 (below threshold) | 7.5/10 |
+| Critical fixes | Query string stripping, CDN domain matching, head_object verify, per-field save, dedup | N/A (fixes) |
+| Agent review round 2 | Code reviewer 9, Cloud architect 9 → Average 9.0 (above threshold) | 9/10 |
+
+**Files Created:**
+- `prompts/utils/__init__.py` - Utils package init
+- `prompts/utils/seo.py` - SEO filename generation (`generate_seo_filename`, `generate_video_thumbnail_filename`, shared `_build_seo_slug`)
+- `prompts/services/b2_rename.py` - B2RenameService (copy-verify-delete, CDN domain matching, idempotent)
+
+**Files Modified:**
+- `prompts/tasks.py` - Added `rename_prompt_files_for_seo()` task + `async_task()` queuing in `_update_prompt_with_ai_content`
+- `prompts/templates/prompts/upload.html` - Heading hierarchy fixes, visual breadcrumbs, WCAG 2.1 AA accessibility
+- `static/css/upload.css` - Breadcrumb styles, focus-visible outlines, heading updates
+- `static/js/upload-core.js` - Minor upload flow updates
+- `static/js/upload-form.js` - Minor form handling updates
+
+**Key Technical Changes:**
+- B2 has no native rename: implemented copy → `head_object` verify → delete pattern
+- Per-field immediate `prompt.save(update_fields=[field])` prevents broken image references on partial failure
+- SEO filenames: stop word removal, slug truncation at word boundary (60 chars max), `-ai-prompt` suffix
+- CDN domain matching uses `parsed.netloc ==` (not substring) to prevent false matches
+- Query string stripping before file extension extraction (URLs like `file.jpg?token=abc`)
+- Idempotent: returns success if old_key == new_key (safe for retries)
+- Each image variant lives in different B2 directories so identical filenames are safe
+
+**Architecture Decisions:**
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Rename pattern | Copy-verify-delete | B2 has no native rename; head_object ensures copy landed before deleting |
+| DB save strategy | Per-field immediate | Prevents broken references if task fails mid-way through 7 fields |
+| Filename format | `{slug}-ai-prompt.{ext}` | SEO-optimized with stop words removed, truncated at word boundary |
+| Task queuing | `async_task()` in `_update_prompt_with_ai_content` | Rename runs after AI generates title (needs title for slug) |
+| Shared helper | `_build_seo_slug()` in seo.py | Deduplicated logic between image and video thumbnail generators |
+
+**Agent Ratings:**
+
+| Review Round | Agents | Average |
+|-------------|--------|---------|
+| Round 1 | @django-pro 8.5/10, @cloud-architect 7/10, @code-reviewer 7/10 | 7.5/10 (below threshold) |
+| Round 2 (after fixes) | @code-reviewer 9/10, @cloud-architect 9/10 | 9.0/10 |
+
+**Current Blocker:**
+- N4h rename task code is complete but not generating SEO filenames in production. Task queues correctly but filenames remain UUID-based. Needs investigation.
+
+**Phase N4 Status:** ~97% complete (B2 file renaming built, trigger issue remaining)
+
+**Next Session:**
+- Debug N4h rename not triggering (check Django-Q worker logs, task execution)
+- Implement N4i (XML sitemap)
+- Commit all uncommitted changes and deploy
+- Consider api_views.py refactoring
+
+---
+
 ### Session 66 - February 3, 2026
 
 **Focus:** SEO Overhaul + Upload Page Redesign + CSS Architecture
@@ -596,6 +668,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 3, 2026 | 67 | N4h B2 file renaming (copy-verify-delete), SEO heading hierarchy, visual breadcrumbs, seo.py utility |
 | Feb 3, 2026 | 66 | SEO overhaul (72→95/100), upload page redesign, CSS architecture (media container component, var(--radius-lg)) |
 | Jan 31, 2026 | 64 | CI/CD fixed (31 issues), worker dyno configured, upload page redesign, collection edit template, SEO enhancements |
 | Jan 28, 2026 | 63 | SEO optimization + AI content quality + description fix |
@@ -615,5 +688,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 3.9 (Session 66 - SEO Overhaul, Upload Redesign, CSS Architecture)
+**Version:** 4.0 (Session 67 - N4h B2 File Renaming, SEO Headings, Visual Breadcrumbs)
 **Last Updated:** February 3, 2026

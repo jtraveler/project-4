@@ -600,7 +600,7 @@ main {
 
 .prompt-card {
   position: relative;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -621,7 +621,7 @@ main {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 /* Clickable link overlay */
@@ -681,7 +681,7 @@ main {
   background: rgba(255, 255, 255, 0.9);
   color: #333;
   padding: 4px 8px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -943,7 +943,7 @@ main {
   width: 100%;
   padding: 16px 20px;
   border: 2px solid var(--main-border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-size: 16px;
   font-family: inherit;
   background: var(--gray-100);
@@ -965,7 +965,7 @@ main {
   width: 100%;
   padding: 16px 20px;
   border: 2px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   font-size: 16px;
   transition: all 0.2s ease;
 }
@@ -1232,7 +1232,7 @@ main {
   justify-content: center;
   padding: 24px 20px;
   border: 2px dashed #d1d5db;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: #f9fafb;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1988,7 +1988,7 @@ footer {
 
 .trash-modal {
     background-color: var(--white, #FFFFFF);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
     padding: 32px;
     max-width: 480px;
@@ -2857,7 +2857,7 @@ footer {
     min-width: 180px;
     background: var(--white);
     border: 2px solid var(--white);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-dropdown);
     z-index: var(--z-dropdown);
     opacity: 0;

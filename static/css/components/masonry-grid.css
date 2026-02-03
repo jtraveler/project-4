@@ -46,7 +46,7 @@
 /* Prompt cards */
 .prompt-card {
     position: relative;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -97,7 +97,7 @@
     display: none;
     visibility: hidden;
     object-fit: contain;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     position: relative;
     z-index: 2;
 }
@@ -115,7 +115,7 @@
     display: block;
     transition: opacity 0.3s ease;
     object-fit: contain;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     position: absolute;
     top: 0;
     left: 0;

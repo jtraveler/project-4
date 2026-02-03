@@ -66,7 +66,7 @@
     width: 100%;
     max-width: 100%;
     max-height: 800px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     display: block;
     margin: 0 auto;
     object-fit: contain;
@@ -855,7 +855,7 @@ a.model-name:hover {
    ========================================================================== */
 
 .modal-content {
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
 }
 
 .modal-header {
@@ -1294,7 +1294,7 @@ a.model-name:hover {
     width: 100%;
     max-width: 1200px;
     background: var(--gray-100);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 1rem;
     margin: 0 auto;
 }
@@ -1356,7 +1356,7 @@ a.model-name:hover {
 .completion-modal-content {
     background: white;
     padding: 2rem;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     max-width: 400px;
     width: 90%;
     text-align: center;

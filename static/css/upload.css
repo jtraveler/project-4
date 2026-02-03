@@ -141,6 +141,7 @@
     width: auto;
     height: auto;
     object-fit: contain;
+    border-radius: var(--radius-lg);
 }
 
 /* Change File Button (below preview, always visible when preview active) */
@@ -152,7 +153,7 @@
     background: var(--white, #ffffff);
     color: var(--gray-700, #374151);
     border: 1px solid var(--gray-200, #e5e7eb);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.9375rem;
     font-weight: 600;
     cursor: pointer;
@@ -213,7 +214,7 @@
     align-items: center;
     gap: 12px;
     padding: 16px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     margin-bottom: 24px;
     font-size: 0.875rem;
     font-weight: 500;
@@ -274,7 +275,7 @@
     padding: 14px 16px;
     background: var(--gray-50, #f9fafb);
     border: 1px solid var(--gray-200, #e5e7eb);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 1rem;
     color: var(--gray-900, #111827);
     transition: all 0.2s ease;
@@ -335,7 +336,7 @@
     padding: 16px;
     background: var(--gray-50, #f9fafb);
     border: 1px solid var(--gray-100, #f3f4f6);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
 }
 
 .visibility-info {
@@ -351,7 +352,7 @@
 }
 
 .visibility-desc {
-    font-size: 0.75rem;
+    font-size: 1rem;
     color: var(--gray-500, #6b7280);
 }
 
@@ -420,7 +421,7 @@ input:disabled + .toggle-slider {
     background: var(--primary, #2563eb);
     color: var(--white, #ffffff);
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
@@ -602,7 +603,7 @@ input:disabled + .toggle-slider {
     border: 1px solid var(--amber-200, #fde68a);
     color: var(--amber-800, #92400e);
     padding: 16px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     max-width: 400px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
     display: none;

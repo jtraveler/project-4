@@ -134,6 +134,8 @@
         const validation = validateFile(file);
         if (!validation.valid) {
             dispatch('fileValidationError', { error: validation.error });
+            // Reset file input so the same file can be selected again
+            elements.fileInput.value = '';
             return;
         }
 
@@ -458,16 +460,27 @@
     // ========================================
     function showValidationErrorModal(e) {
         if (elements.validationErrorModal) {
+            // Reset modal state first to handle repeated triggers
+            elements.validationErrorModal.classList.remove('active');
+
             if (e.detail && e.detail.error && elements.validationErrorMessage) {
                 elements.validationErrorMessage.textContent = e.detail.error;
             }
-            elements.validationErrorModal.classList.add('active');
+
+            // Use setTimeout to ensure DOM updates before re-showing
+            setTimeout(() => {
+                elements.validationErrorModal.classList.add('active');
+            }, 10);
         }
     }
 
     function handleValidationErrorOk() {
         if (elements.validationErrorModal) {
             elements.validationErrorModal.classList.remove('active');
+        }
+        // Reset file input so user can try again with the same or different file
+        if (elements.fileInput) {
+            elements.fileInput.value = '';
         }
     }
 

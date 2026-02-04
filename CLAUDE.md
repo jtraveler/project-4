@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 3, 2026
+**Last Updated:** February 4, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~97% Complete | Optimistic Upload Flow | N4h rename triggering, XML sitemap, final testing |
+| **Phase N4** | 🔄 ~90% Complete | Optimistic Upload Flow | N4h rename triggering, XML sitemap, indexes migration, SEO score regression, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** ~97% Complete - B2 File Renaming Built, Triggering Issue Remaining
+**Status:** ~90% Complete - Performance Optimized, Admin Improved, SEO Score Regression Pending
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -84,6 +84,12 @@ Rebuilding upload flow to feel "instant" by:
 | **SEO Overhaul** | ✅ Complete | Comprehensive SEO: JSON-LD, OG/Twitter, canonical, headings, noindex drafts (72→95/100) (Session 66) |
 | **SEO Headings** | ✅ Complete | Fixed heading hierarchy (H1→H2→H3), visual breadcrumbs with focus-visible (Session 67) |
 | **N4h File Rename** | ✅ Complete | B2 SEO file renaming: seo.py utility, B2RenameService, background task in tasks.py (Session 67) |
+| **Admin Improvements** | ✅ Complete | Prompt ID display, B2 Media URLs fieldset, all fieldsets expanded (Session 68) |
+| **Upload UX** | ✅ Complete | 30-second soft warning toast, improved error message with friendly copy (Session 68) |
+| **Perf: Backend** | ✅ Complete | select_related/prefetch_related optimization, materialized likes/comments, query reduction ~60-70% (Session 68) |
+| **Perf: Caching** | ✅ Complete | Template fragment caching for tags and more_from_author (5-min TTL) (Session 68) |
+| **Perf: Indexes** | ✅ Complete | Composite indexes: (status,created_on), (author,status,deleted_at) - migration pending (Session 68) |
+| **Perf: Frontend** | ✅ Complete | Critical CSS inlining, async CSS loading, LCP preload with imagesrcset, preconnect hints, JS defer (Session 68) |
 
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
@@ -111,8 +117,10 @@ Rebuilding upload flow to feel "instant" by:
 | Issue | Description | Impact |
 |-------|-------------|--------|
 | **N4h rename not triggering** | `rename_prompt_files_for_seo` task is coded but not generating SEO filenames in production | Files keep UUID names instead of SEO slugs |
+| **SEO score regression** | SEO score dropped from 100 to 92 after performance optimization (Session 68) | Needs investigation |
+| **Indexes migration pending** | Composite indexes added to models.py but `makemigrations` not yet run | Indexes not active in database |
 
-**Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation in next session.
+**N4h Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation.
 
 ### Resolved Blockers (Session 64-66)
 
@@ -148,20 +156,23 @@ Rebuilding upload flow to feel "instant" by:
 
 | File | Change |
 |------|--------|
-| `prompts/tasks.py` | AI prompt rewrite, `max_tokens` 500→1000, description `max_length` 500→2000, domain allowlist, race/ethnicity instructions (S64) |
+| `prompts/tasks.py` | AI prompt rewrite, `max_tokens` 500→1000, `rename_prompt_files_for_seo` task, domain allowlist, race/ethnicity (S64-S67) |
 | `prompts/views/api_views.py` | AI job queuing for videos |
 | `prompts/views/upload_views.py` | `.strip()` on excerpt assignment (S64) |
 | `prompts_manager/settings.py` | Domain allowlist fix |
-| `prompts/services/content_generation.py` | `max_tokens` 500→1000, filename 3→5 keywords, alt tag format, race/ethnicity instructions, video description prompt fix (S64) |
+| `prompts/services/content_generation.py` | `max_tokens` 500→1000, filename 3→5 keywords, alt tag format, race/ethnicity, video description fix (S64) |
 | `prompts/templates/prompts/collection_edit.html` | New template - collection edit form (S64) |
 | `prompts/utils/__init__.py` | NEW - Utils package init (S67) |
 | `prompts/utils/seo.py` | NEW - SEO filename generation utility (S67) |
 | `prompts/services/b2_rename.py` | NEW - B2 file rename service (copy-verify-delete) (S67) |
-| `prompts/tasks.py` | Added `rename_prompt_files_for_seo` task + queuing in `_update_prompt_with_ai_content` (S67) |
 | `prompts/templates/prompts/upload.html` | Heading hierarchy fixes, visual breadcrumbs, accessibility (S67) |
-| `static/css/upload.css` | Breadcrumb styles, focus-visible, heading updates (S67) |
-| `static/js/upload-core.js` | Minor upload flow updates (S67) |
-| `static/js/upload-form.js` | Minor form handling updates (S67) |
+| `prompts/admin.py` | ID display, B2 Media URLs fieldset, expanded fieldsets (S68) |
+| `prompts/views/prompt_views.py` | Query optimization: select_related, prefetch_related, materialized likes/comments (S68) |
+| `prompts/models.py` | Composite indexes: (status,created_on), (author,status,deleted_at) (S68) |
+| `prompts/templates/prompts/prompt_detail.html` | Template fragment caching, critical CSS, async loading, preconnect hints (S68) |
+| `static/js/upload-core.js` | 30-second upload warning timer (S67-S68) |
+| `static/js/upload-form.js` | Improved error message display, warning toast dismiss (S67-S68) |
+| `static/css/upload.css` | Warning toast styles, error card styles, breadcrumb styles (S67-S68) |
 
 **Committed in Session 66** (commit `806dd5b`):
 - `prompts/templates/prompts/prompt_detail.html` - Complete SEO overhaul (JSON-LD, OG, Twitter, canonical, headings, tag links, noindex)
@@ -290,7 +301,7 @@ upload-form.js      # Form handling, NSFW status display
 upload-guards.js    # Navigation guards, idle timeout detection
 
 CSS:
-static/css/upload.css    # All upload page styles (~750 lines, rewritten S66)
+static/css/upload.css    # All upload page styles (~920 lines, rewritten S66, expanded S68)
 
 BACKEND:
 prompts/views/api_views.py           # API endpoints (1374+ lines)
@@ -542,5 +553,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.0 (Phase N4 Session 67 - B2 File Renaming, SEO Headings, Visual Breadcrumbs)
-**Last Updated:** February 3, 2026
+**Version:** 4.1 (Phase N4 Session 68 - Performance Optimization, Admin Improvements, Upload UX)
+**Last Updated:** February 4, 2026

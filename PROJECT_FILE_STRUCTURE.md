@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 3, 2026
+**Last Updated:** February 4, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~97% - B2 File Renaming Built, Trigger Issue Remaining)
+**Current Phase:** Phase N4 Optimistic Upload Flow (~90% - Performance Optimized, SEO Score Regression Pending)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
@@ -337,7 +337,7 @@ prompts/views/
 static/css/
 ├── navbar.css           # 1,136 lines - Extracted navbar styles
 ├── style.css            # ~1,800 lines - Main stylesheet + shared media container component (Session 66)
-├── upload.css           # ~750 lines - Upload page styles (complete rewrite Session 66)
+├── upload.css           # ~880 lines - Upload page styles, warning toast, error card (rewritten S66, expanded S68)
 ├── components/
 │   ├── icons.css        # ~250 lines - SVG icon system (Phase J.2)
 │   └── masonry-grid.css # 255 lines - Masonry grid component
@@ -409,8 +409,8 @@ static/js/
 | **navbar.js** | ~650 | Dropdowns, search, mobile menu, scroll |
 | **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
 | **like-button.js** | ~155 | Centralized like handler with optimistic UI |
-| **upload-core.js** | ~488 | B2 presigned upload, drag-drop, local preview, orphan cleanup (Phase N) |
-| **upload-form.js** | ~700+ | Form validation, NSFW status, ProcessingModal, video ai_job_id (Phase N4) |
+| **upload-core.js** | ~640 | B2 presigned upload, drag-drop, local preview, orphan cleanup, 30s warning toast (Phase N) |
+| **upload-form.js** | ~1020 | Form validation, NSFW status, ProcessingModal, video ai_job_id, error message card (Phase N4) |
 | **upload-guards.js** | ~410 | Navigation guards, idle timeout, cleanup beacon (Phase N) |
 
 **Deleted in Session 61:**
@@ -971,7 +971,7 @@ python manage.py test -v 2
 
 ## Phase N4 Files (Optimistic Upload Flow)
 
-### Implementation Status (Session 67)
+### Implementation Status (Session 68)
 
 | Sub-Phase | Status | What Was Done |
 |-----------|--------|---------------|
@@ -991,6 +991,12 @@ python manage.py test -v 2
 | **SEO Overhaul** | ✅ Complete | 72→95/100: JSON-LD, OG, Twitter, canonical, headings, noindex (Session 66) |
 | **SEO Headings** | ✅ Complete | Fixed heading hierarchy (H1→H2→H3), visual breadcrumbs with focus-visible (Session 67) |
 | **N4h File Rename** | ✅ Complete | B2 SEO file renaming: seo.py, B2RenameService, background task (Session 67) |
+| **Admin Improvements** | ✅ Complete | Prompt ID, B2 URLs fieldset, expanded fieldsets (Session 68) |
+| **Upload UX** | ✅ Complete | 30-second warning toast, friendly error message card (Session 68) |
+| **Perf: Backend** | ✅ Complete | select_related/prefetch_related, materialized likes/comments, ~60-70% query reduction (Session 68) |
+| **Perf: Caching** | ✅ Complete | Template fragment caching for tags + more_from_author, 5-min TTL (Session 68) |
+| **Perf: Indexes** | ✅ Complete | Composite indexes (status,created_on) + (author,status,deleted_at) - migration pending (Session 68) |
+| **Perf: Frontend** | ✅ Complete | Critical CSS inlining, async CSS, LCP preload, preconnect, JS defer (Session 68) |
 
 ### Files Created
 
@@ -1077,6 +1083,27 @@ static/js/
 └── upload-form.js                     # Minor form handling updates
 ```
 
+### Files Modified (Session 68 - Admin + Upload UX + Performance)
+
+```
+prompts/
+├── admin.py                          # Prompt ID display, B2 Media URLs fieldset, all fieldsets expanded
+├── models.py                         # Composite indexes: (status,created_on), (author,status,deleted_at)
+└── views/
+    └── prompt_views.py               # select_related/prefetch_related optimization, materialized likes/comments
+
+prompts/templates/prompts/
+└── prompt_detail.html                # Template fragment caching (tags, more_from_author), critical CSS,
+                                       # async CSS loading, LCP preload with imagesrcset, preconnect hints
+
+static/css/
+└── upload.css                         # Warning toast styles, error message card styles
+
+static/js/
+├── upload-core.js                     # 30-second upload warning timer, toast show/hide/dismiss
+└── upload-form.js                     # Improved error message display, warning toast dismiss in modal
+```
+
 ### Files Modified (Session 59-63)
 
 ```
@@ -1156,11 +1183,19 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.6
-**Audit Date:** February 3, 2026
+**Version:** 3.7
+**Audit Date:** February 4, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.7 (February 4, 2026 - Session 68 End-of-Session):**
+- Updated Phase N4 status from ~97% to ~90% (SEO score regression, indexes migration pending)
+- Added Session 68 files modified section (admin, upload UX, performance optimization)
+- Updated N4 Implementation Status with 7 new Session 68 items
+- Updated upload-core.js description (30s warning toast, ~488→~640 lines)
+- Updated upload-form.js description (error message card, ~700→~1020 lines)
+- Updated upload.css line count (~750→~880 lines, warning toast + error card styles)
 
 **v3.6 (February 3, 2026 - Session 67 End-of-Session):**
 - Updated Phase N4 status from ~95% to ~97% (B2 file renaming built)

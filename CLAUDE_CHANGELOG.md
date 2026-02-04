@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 3, 2026
+**Last Updated:** February 4, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,72 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Session 68 - February 4, 2026
+
+**Focus:** Admin Improvements + Upload UX + Performance Optimization
+
+**Context:** Continuing from Session 67. B2 file renaming and SEO headings complete. This session improved the Django admin for Prompt debugging, added upload UX improvements (timeout handling), and performed comprehensive backend performance optimization for the prompt detail page.
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| Admin improvements | Prompt ID display, B2 Media URLs fieldset, all fieldsets expanded | 9.25/10 |
+| Upload warning toast | 30-second soft warning with warm/neutral design, "Try Again" + dismiss | 8.8/10 |
+| Upload error message | Friendly "Upload couldn't be completed" card replacing harsh "Check failed" text | 8.8/10 |
+| Query optimization | select_related/prefetch_related for author/userprofile/comments, materialized likes/comments | 8.75/10 |
+| Template caching | 5-min fragment cache for tags and more_from_author sidebar sections | 8.75/10 |
+| Database indexes | Composite indexes: (status,created_on), (author,status,deleted_at) | 8.75/10 |
+| Frontend performance | Critical CSS inlining, async CSS loading, LCP preload with imagesrcset, preconnect hints, JS defer | 8.5/10 |
+
+**Files Modified:**
+- `prompts/admin.py` - ID in readonly_fields, B2 Media URLs fieldset, removed collapse classes
+- `prompts/views/prompt_views.py` - select_related('author__userprofile'), materialized likes/comments, optimized more_from_author
+- `prompts/models.py` - Added composite indexes (status+created_on, author+status+deleted_at)
+- `prompts/templates/prompts/prompt_detail.html` - {% load cache %}, template fragment caching, critical CSS, async loading, preconnect
+- `static/js/upload-core.js` - 30-second warning timer, toast show/hide/dismiss functions
+- `static/js/upload-form.js` - Improved error message display, warning toast dismiss in ProcessingModal
+- `static/css/upload.css` - Warning toast styles (BEM), error message card styles, focus-visible states
+
+**Key Technical Changes:**
+- Database queries reduced from ~25-30 to ~8-12 per page load (~60-70% reduction)
+- `list()` on prefetched likes/comments to use in-memory operations instead of DB queries
+- Comments materialized once, filtered once for approved (was iterating 3 times)
+- Slug index intentionally NOT added (unique=True already creates one)
+- Author card NOT cached (user-specific follow button state)
+- Upload warning toast uses CSS transform animation (translateY slide-up)
+- Error message card uses friendly, no-blame language with emoji icon
+
+**Agent Ratings:**
+
+| Review Area | Agents | Average |
+|-------------|--------|---------|
+| Admin improvements | @django-pro 9.5/10, @code-reviewer 9/10 | 9.25/10 |
+| Upload UX | @ui-ux-designer 9.1/10, @frontend-developer 8.5/10 | 8.8/10 |
+| Performance (round 1) | @django-pro 9/10, @performance-engineer 6/10, @code-reviewer 6.5/10 | 7.17/10 (below threshold) |
+| Performance (round 2, after fixes) | @django-pro 9.5/10, @code-reviewer 8/10 | 8.75/10 |
+
+**Fixes After Round 1 Review:**
+- Removed duplicate slug index (unique=True already creates one)
+- Removed unnecessary `select_related('author')` from more_from_author query
+- Optimized comments to materialize prefetched set once instead of three iterations
+
+**Known Issues:**
+- SEO score dropped from 100 to 92 after performance optimization (needs investigation)
+- Indexes migration not yet created (`makemigrations` needed)
+- N4h rename still not triggering in production
+
+**Phase N4 Status:** ~90% complete (performance optimized, admin improved, SEO regression pending)
+
+**Next Session:**
+- Investigate SEO score regression (100 -> 92)
+- Create and run indexes migration
+- Debug N4h rename not triggering
+- Implement N4i (XML sitemap)
+- Commit all uncommitted changes and deploy
+
+---
 
 ### Session 67 - February 3, 2026
 
@@ -668,6 +734,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 4, 2026 | 68 | Performance optimization (60-70% query reduction), admin improvements, upload UX (warning toast, error card) |
 | Feb 3, 2026 | 67 | N4h B2 file renaming (copy-verify-delete), SEO heading hierarchy, visual breadcrumbs, seo.py utility |
 | Feb 3, 2026 | 66 | SEO overhaul (72→95/100), upload page redesign, CSS architecture (media container component, var(--radius-lg)) |
 | Jan 31, 2026 | 64 | CI/CD fixed (31 issues), worker dyno configured, upload page redesign, collection edit template, SEO enhancements |
@@ -688,5 +755,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.0 (Session 67 - N4h B2 File Renaming, SEO Headings, Visual Breadcrumbs)
-**Last Updated:** February 3, 2026
+**Version:** 4.1 (Session 68 - Performance Optimization, Admin Improvements, Upload UX)
+**Last Updated:** February 4, 2026

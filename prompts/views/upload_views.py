@@ -511,6 +511,21 @@ def upload_submit(request):
         prompt.save(update_fields=['processing_complete'])
         logger.info(f"Prompt {prompt.pk}: AI complete from cache, processing_complete=True")
 
+    # N4h: Queue SEO file renaming for B2 uploads
+    # Renames UUID filenames to SEO-friendly slugs (e.g., "title-slug-ai-prompt.jpg")
+    if is_b2_upload and prompt.pk:
+        try:
+            from django_q.tasks import async_task
+            async_task(
+                'prompts.tasks.rename_prompt_files_for_seo',
+                prompt.pk,
+                task_name=f'seo-rename-{prompt.pk}',
+            )
+            logger.info(f"Prompt {prompt.pk}: Queued SEO rename task")
+        except Exception as e:
+            # Non-blocking: rename failure shouldn't break the upload flow
+            logger.warning(f"Prompt {prompt.pk}: Failed to queue SEO rename: {e}")
+
     # Add tags before moderation
     for tag_name in tags[:7]:
         tag, _ = Tag.objects.get_or_create(name=tag_name)

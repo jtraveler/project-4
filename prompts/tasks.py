@@ -613,6 +613,19 @@ def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
             if skipped:
                 logger.info(f"[AI Generation] Skipped non-existent tags for prompt {prompt.pk}: {skipped}")
 
+    # Queue SEO file renaming as background task (N4h)
+    try:
+        from django_q.tasks import async_task
+        async_task(
+            'prompts.tasks.rename_prompt_files_for_seo',
+            prompt.pk,
+            task_name=f'seo-rename-{prompt.pk}',
+        )
+        logger.info(f"[AI Generation] Queued SEO rename task for prompt {prompt.pk}")
+    except Exception as e:
+        # Non-blocking: rename failure shouldn't break the upload flow
+        logger.warning(f"[AI Generation] Failed to queue SEO rename for prompt {prompt.pk}: {e}")
+
 
 def _sanitize_content(text: str, max_length: int = None) -> str:
     """
@@ -970,3 +983,120 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             tags=[]
         )
         return {'status': 'error', 'error': str(e)}
+
+
+# =============================================================================
+# N4h: SEO FILE RENAMING
+# =============================================================================
+# After AI generates the title, rename B2 files from UUID filenames
+# to SEO-friendly slugs (e.g., "whimsical-3d-clay-style-ai-prompt.jpg").
+# Queued as a background task after _update_prompt_with_ai_content completes.
+
+
+def rename_prompt_files_for_seo(prompt_id: int) -> dict:
+    """
+    Rename B2 files for a prompt to SEO-friendly filenames.
+
+    Called as a background task after AI content generation sets the title.
+    Uses copy + delete pattern since B2 has no native rename.
+
+    Each successful rename is saved to the database immediately to prevent
+    broken image references if the task fails partway through.
+
+    Args:
+        prompt_id: ID of the Prompt to rename files for
+
+    Returns:
+        dict with status and details of renamed files
+    """
+    from prompts.models import Prompt
+    from prompts.utils.seo import generate_seo_filename, generate_video_thumbnail_filename
+    from prompts.services.b2_rename import B2RenameService
+
+    try:
+        prompt = Prompt.objects.get(pk=prompt_id)
+    except Prompt.DoesNotExist:
+        logger.error("[SEO Rename] Prompt %s not found", prompt_id)
+        return {'status': 'error', 'error': 'Prompt not found'}
+
+    if not prompt.title:
+        logger.warning("[SEO Rename] Prompt %s has no title, skipping rename", prompt_id)
+        return {'status': 'skipped', 'reason': 'no_title'}
+
+    service = B2RenameService()
+    results = {}
+    updated_fields = []
+
+    def _get_extension(url):
+        """Extract file extension from URL, stripping query strings."""
+        if not url:
+            return 'jpg'
+        path = url.rsplit('/', 1)[-1] if '/' in url else url
+        # Strip query string before extracting extension
+        path = path.split('?')[0]
+        if '.' in path:
+            return path.rsplit('.', 1)[1].lower()
+        return 'jpg'
+
+    def _rename_field(field_name, new_filename):
+        """Rename a single B2 file and save the new URL immediately."""
+        old_url = getattr(prompt, field_name, None)
+        if not old_url or not new_filename:
+            return
+
+        try:
+            result = service.rename_file(old_url, new_filename)
+            results[field_name] = result
+
+            if result['success'] and result['new_url'] != old_url:
+                setattr(prompt, field_name, result['new_url'])
+                # Save immediately so the DB URL is always valid
+                prompt.save(update_fields=[field_name])
+                updated_fields.append(field_name)
+        except Exception as e:
+            logger.error(
+                "[SEO Rename] Error renaming %s for prompt %s: %s",
+                field_name, prompt_id, e, exc_info=True
+            )
+            results[field_name] = {'success': False, 'error': str(e)}
+
+    # Rename image variants (original, thumb, medium, large, webp)
+    # Each variant lives in a different directory so identical filenames are safe
+    image_fields = ['b2_image_url', 'b2_thumb_url', 'b2_medium_url', 'b2_large_url']
+    for field_name in image_fields:
+        old_url = getattr(prompt, field_name, None)
+        if old_url:
+            ext = _get_extension(old_url)
+            _rename_field(field_name, generate_seo_filename(prompt.title, ext))
+
+    # WebP variant always uses .webp extension
+    if prompt.b2_webp_url:
+        _rename_field('b2_webp_url', generate_seo_filename(prompt.title, 'webp'))
+
+    # Rename video file
+    if prompt.b2_video_url:
+        ext = _get_extension(prompt.b2_video_url)
+        _rename_field('b2_video_url', generate_seo_filename(prompt.title, ext))
+
+    # Rename video thumbnail
+    if prompt.b2_video_thumb_url:
+        _rename_field(
+            'b2_video_thumb_url',
+            generate_video_thumbnail_filename(prompt.title)
+        )
+
+    if updated_fields:
+        logger.info(
+            "[SEO Rename] Prompt %s: renamed %d files (%s)",
+            prompt_id, len(updated_fields), ', '.join(updated_fields)
+        )
+    else:
+        logger.info("[SEO Rename] Prompt %s: no files needed renaming", prompt_id)
+
+    return {
+        'status': 'success',
+        'prompt_id': prompt_id,
+        'renamed_count': len(updated_fields),
+        'fields': updated_fields,
+        'details': results,
+    }

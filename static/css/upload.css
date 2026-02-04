@@ -722,6 +722,163 @@ input:disabled + .toggle-slider {
     background-color: var(--gray-200, #e5e7eb);
 }
 
+/* ===== Upload Warning Toast ===== */
+/* Soft warning shown after 30 seconds of uploading */
+
+.upload-warning-toast {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    z-index: 1050;
+    max-width: 420px;
+    width: calc(100% - 2rem);
+    padding: 1rem;
+    transition: transform 0.3s ease-out;
+}
+
+.upload-warning-toast--visible {
+    transform: translateX(-50%) translateY(-1rem);
+}
+
+.upload-warning-toast__content {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 2rem 1rem 1.25rem;
+    background: var(--color-surface, #fffbf5);
+    border: 1px solid var(--color-border-warm, #e8dfd5);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.upload-warning-toast__icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.upload-warning-toast__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.upload-warning-toast__text strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--gray-900, #2d2a26);
+    margin-bottom: 0.25rem;
+}
+
+.upload-warning-toast__text p {
+    font-size: 0.85rem;
+    color: var(--gray-500, #6b6560);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.upload-warning-toast__btn {
+    flex-shrink: 0;
+    align-self: center;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--primary, #8b5c3e);
+    background: transparent;
+    border: 1px solid var(--primary, #8b5c3e);
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.upload-warning-toast__btn:hover {
+    background: var(--primary, #8b5c3e);
+    color: white;
+}
+
+.upload-warning-toast__close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--gray-400, #9b958f);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.upload-warning-toast__close:hover {
+    opacity: 1;
+}
+
+.upload-warning-toast__close:focus-visible,
+.upload-warning-toast__btn:focus-visible,
+.upload-error-message__btn:focus-visible {
+    outline: 2px solid var(--primary, #2563eb);
+    outline-offset: 2px;
+}
+
+/* ===== Upload Error Message ===== */
+/* Friendly error when check/upload fails */
+
+.upload-error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--gray-50, #fafafa);
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+    margin: 1rem 0;
+}
+
+.upload-error-message__icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.upload-error-message__content {
+    margin-bottom: 1rem;
+}
+
+.upload-error-message__content strong {
+    display: block;
+    font-size: 1.1rem;
+    color: var(--gray-900, #2d2a26);
+    margin-bottom: 0.5rem;
+}
+
+.upload-error-message__content p {
+    font-size: 0.9rem;
+    color: var(--gray-500, #6b6560);
+    margin: 0;
+    max-width: 300px;
+}
+
+.upload-error-message__btn {
+    padding: 0.5rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: white;
+    background: var(--primary, #2563eb);
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.upload-error-message__btn:hover {
+    background: var(--primary-600, #1d4ed8);
+}
+
 /* ===== Responsive Adjustments ===== */
 @media (max-width: 768px) {
     .upload-page {
@@ -749,5 +906,16 @@ input:disabled + .toggle-slider {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .upload-warning-toast__content {
+        flex-wrap: wrap;
+    }
+
+    .upload-warning-toast__btn {
+        width: 100%;
+        margin-top: 0.5rem;
     }
 }

@@ -60,6 +60,11 @@
                 this.pollAttempts = 0;
                 this.updateProgressBar(0);
 
+                // Dismiss upload warning toast if visible (don't show behind modal)
+                if (window.UploadCore && window.UploadCore.hideWarningToast) {
+                    window.UploadCore.hideWarningToast();
+                }
+
                 this.modal.style.display = 'flex';
 
                 // Only start polling if we have an aiJobId
@@ -781,9 +786,15 @@
                 approved: 'Content approved',
                 flagged: 'Flagged for review',
                 rejected: 'Content rejected',
-                error: 'Check failed'
+                error: 'Upload couldn\'t be completed'
             };
             statusText.textContent = messages[status] || status;
+        }
+
+        // Show/hide friendly error message block
+        removeUploadErrorMessage();
+        if (status === 'error') {
+            showUploadErrorMessage();
         }
 
         // Update submit button state
@@ -844,6 +855,34 @@
         if (!elements.flaggedToast) return;
 
         elements.flaggedToast.classList.remove('active');
+    }
+
+    // ========================================
+    // Upload Error Message (friendly replacement for "Check failed")
+    // ========================================
+    function showUploadErrorMessage() {
+        if (document.getElementById('upload-error-message')) return;
+
+        var container = elements.nsfwStatus;
+        if (!container || !container.parentNode) return;
+
+        var errorDiv = document.createElement('div');
+        errorDiv.id = 'upload-error-message';
+        errorDiv.className = 'upload-error-message';
+        errorDiv.innerHTML =
+            '<span class="upload-error-message__icon">\uD83D\uDE15</span>' +
+            '<div class="upload-error-message__content">' +
+                '<strong>Upload couldn\'t be completed</strong>' +
+                '<p>This can happen with slow connections or temporary server issues. Please try again in a moment.</p>' +
+            '</div>' +
+            '<button class="upload-error-message__btn" onclick="location.reload()">Try Again</button>';
+
+        container.parentNode.insertBefore(errorDiv, container.nextSibling);
+    }
+
+    function removeUploadErrorMessage() {
+        var el = document.getElementById('upload-error-message');
+        if (el) el.remove();
     }
 
     // ========================================

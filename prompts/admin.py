@@ -31,46 +31,61 @@ class PromptAdmin(SummernoteModelAdmin):
     list_per_page = 50  # Pagination for performance
     date_hierarchy = 'created_on'
 
-    # Updated fieldsets to include order and moderation fields
+    # Updated fieldsets with B2 URLs section and all expanded by default
     fieldsets = (
         ('Basic Information', {
-            'fields': ('title', 'slug', 'author', 'status', 'order')
+            'fields': ('id', 'title', 'slug', 'author', 'status', 'order'),
         }),
         ('Content', {
-            'fields': ('excerpt', 'content')
+            'fields': ('excerpt', 'content'),
         }),
         ('Media', {
             'fields': ('featured_image', 'featured_video'),
-            'description': 'Upload either an image OR a video, not both.'
+            'description': 'Upload either an image OR a video, not both.',
         }),
         ('Media Preview', {
             'fields': ('image_preview',),
-            'description': 'Preview of uploaded image or video'
+            'description': 'Preview of uploaded image or video',
+        }),
+        ('B2 Media URLs', {
+            'fields': (
+                'b2_image_url',
+                'b2_thumb_url',
+                'b2_medium_url',
+                'b2_large_url',
+                'b2_webp_url',
+                'b2_video_url',
+                'b2_video_thumb_url',
+                'video_width',
+                'video_height',
+            ),
+            'description': 'B2/Cloudflare CDN URLs - Read only. Shows current filenames for debugging.',
         }),
         ('Metadata', {
-            'fields': ('tags', 'ai_generator')
+            'fields': ('tags', 'ai_generator'),
         }),
         ('Moderation', {
             'fields': (
                 'moderation_status', 'requires_manual_review',
-                'moderation_completed_at', 'reviewed_by', 'review_notes'
+                'moderation_completed_at', 'reviewed_by', 'review_notes',
             ),
-            'classes': ('collapse',),
-            'description': 'AI moderation status and manual review'
+            'description': 'AI moderation status and manual review',
         }),
-        ('Processing Status', {  # N4c: Background processing fields
+        ('Processing Status', {
             'fields': ('processing_uuid', 'processing_complete'),
-            'classes': ('collapse',),
-            'description': 'Background processing status for optimistic upload flow'
+            'description': 'Background processing status for optimistic upload flow',
         }),
         ('Timestamps', {
             'fields': ('created_on', 'updated_on'),
-            'classes': ('collapse',),
-            'description': 'Automatically managed timestamps'
+            'description': 'Automatically managed timestamps',
         }),
     )
 
     readonly_fields = (
+        'id',
+        'b2_image_url', 'b2_thumb_url', 'b2_medium_url', 'b2_large_url',
+        'b2_webp_url', 'b2_video_url', 'b2_video_thumb_url',
+        'video_width', 'video_height',
         'created_on', 'updated_on', 'moderation_completed_at', 'image_preview',
         'processing_uuid', 'processing_complete',  # N4c: Processing page support
     )

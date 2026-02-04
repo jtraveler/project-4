@@ -18,7 +18,8 @@
         previewUrl: null,
         uploadState: 'EMPTY', // EMPTY | SELECTED | UPLOADED
         b2Data: null,
-        isUploading: false
+        isUploading: false,
+        uploadWarningTimer: null
     };
 
     // ========================================
@@ -233,6 +234,10 @@
     async function startB2Upload(file, resourceType) {
         state.isUploading = true;
 
+        // Start soft warning timer (30 seconds)
+        clearUploadWarningTimer();
+        state.uploadWarningTimer = setTimeout(showUploadWarningToast, 30000);
+
         try {
             // Step 1: Get presigned URL
             const presignResponse = await fetch(
@@ -311,6 +316,10 @@
                 throw new Error(completeData.error || 'Failed to complete upload');
             }
 
+            // Clear warning timer on success
+            clearUploadWarningTimer();
+            hideUploadWarningToast();
+
             // Update state
             state.uploadState = 'UPLOADED';
             state.b2Data = completeData;
@@ -327,6 +336,8 @@
             dispatch('b2UploadComplete', { data: completeData });
 
         } catch (error) {
+            clearUploadWarningTimer();
+            hideUploadWarningToast();
             state.isUploading = false;
             console.error('B2 Upload Error:', error);
             dispatch('b2UploadError', { error: error.message });
@@ -348,6 +359,10 @@
     }
 
     function resetUpload() {
+        // Clear warning timer
+        clearUploadWarningTimer();
+        hideUploadWarningToast();
+
         // Revoke preview URL
         if (state.previewUrl) {
             URL.revokeObjectURL(state.previewUrl);
@@ -601,6 +616,48 @@
     }
 
     // ========================================
+    // Upload Warning Toast (30-second soft warning)
+    // ========================================
+    function clearUploadWarningTimer() {
+        if (state.uploadWarningTimer) {
+            clearTimeout(state.uploadWarningTimer);
+            state.uploadWarningTimer = null;
+        }
+    }
+
+    function showUploadWarningToast() {
+        if (document.getElementById('upload-warning-toast')) return;
+
+        const toast = document.createElement('div');
+        toast.id = 'upload-warning-toast';
+        toast.className = 'upload-warning-toast';
+        toast.innerHTML =
+            '<div class="upload-warning-toast__content">' +
+                '<span class="upload-warning-toast__icon">\u23F3</span>' +
+                '<div class="upload-warning-toast__text">' +
+                    '<strong>Still uploading...</strong>' +
+                    '<p>Large files can take a while on slower connections. If this seems stuck, try again.</p>' +
+                '</div>' +
+                '<button class="upload-warning-toast__btn" onclick="location.reload()">Try Again</button>' +
+                '<button class="upload-warning-toast__close" onclick="window.UploadCore.hideWarningToast()" aria-label="Dismiss">&times;</button>' +
+            '</div>';
+
+        document.body.appendChild(toast);
+
+        requestAnimationFrame(function() {
+            toast.classList.add('upload-warning-toast--visible');
+        });
+    }
+
+    function hideUploadWarningToast() {
+        var toast = document.getElementById('upload-warning-toast');
+        if (toast) {
+            toast.classList.remove('upload-warning-toast--visible');
+            setTimeout(function() { toast.remove(); }, 300);
+        }
+    }
+
+    // ========================================
     // Event Dispatch Helper
     // ========================================
     function dispatch(eventName, detail) {
@@ -619,7 +676,9 @@
         // Variant generation (N4a)
         generateVariants: generateVariantsInBackground,
         waitForVariants: waitForVariantsIfNeeded,
-        getVariantState: () => ({ ...variantState })
+        getVariantState: () => ({ ...variantState }),
+        // Warning toast (for dismiss button onclick)
+        hideWarningToast: hideUploadWarningToast
     };
 
     // ========================================

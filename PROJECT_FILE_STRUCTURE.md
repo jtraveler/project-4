@@ -2,7 +2,7 @@
 
 **Last Updated:** February 4, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~90% - Performance Optimized, SEO Score Regression Pending)
+**Current Phase:** Phase N4 Optimistic Upload Flow (~99% - Lighthouse 96/100/100/100)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
@@ -18,7 +18,7 @@
 | **SVG Icons** | 30 | static/icons/sprite.svg |
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
-| **Management Commands** | 18 | prompts/management/commands/ |
+| **Management Commands** | 19 | prompts/management/commands/ |
 | **Services** | 11 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
@@ -99,6 +99,8 @@ live-working-project/
 │   └── wsgi.py
 ├── reports/                      # Generated CSV reports
 ├── scripts/                      # Utility scripts (7 files)
+├── static_root/                  # Root-level files served by WhiteNoise (no hashing)
+│   └── robots.txt                # Search engine crawl directives (Session 69)
 ├── static/                       # Source static files
 │   ├── css/                      # 6 CSS files (~105KB total)
 │   │   ├── components/
@@ -128,7 +130,7 @@ live-working-project/
 
 ---
 
-## Management Commands (19 total)
+## Management Commands (20 total)
 
 | Command | Purpose | Schedule |
 |---------|---------|----------|
@@ -151,6 +153,7 @@ live-working-project/
 | `test_moderation` | Test moderation service | Manual |
 | `test_api_latency` | Test B2 and OpenAI API response times | Manual |
 | `regenerate_video_thumbnails` | Regenerate Cloudinary video thumbnails with correct aspect ratio | Manual |
+| `minify_assets` | Minify CSS/JS files in STATIC_ROOT (run after collectstatic) | Manual / CI |
 
 ---
 
@@ -971,7 +974,7 @@ python manage.py test -v 2
 
 ## Phase N4 Files (Optimistic Upload Flow)
 
-### Implementation Status (Session 68)
+### Implementation Status (Session 69)
 
 | Sub-Phase | Status | What Was Done |
 |-----------|--------|---------------|
@@ -997,6 +1000,9 @@ python manage.py test -v 2
 | **Perf: Caching** | ✅ Complete | Template fragment caching for tags + more_from_author, 5-min TTL (Session 68) |
 | **Perf: Indexes** | ✅ Complete | Composite indexes (status,created_on) + (author,status,deleted_at) - migration pending (Session 68) |
 | **Perf: Frontend** | ✅ Complete | Critical CSS inlining, async CSS, LCP preload, preconnect, JS defer (Session 68) |
+| **SEO: robots.txt** | ✅ Complete | robots.txt via WHITENOISE_ROOT, preconnect cleanup, font optimization (Session 69) |
+| **A11y Fixes** | ✅ Complete | h3→h2 headings, aria-label pluralize fixes (Session 69) |
+| **Asset Minification** | ✅ Complete | minify_assets command targeting STATIC_ROOT, csscompressor + rjsmin (Session 69) |
 
 ### Files Created
 
@@ -1104,6 +1110,35 @@ static/js/
 └── upload-form.js                     # Improved error message display, warning toast dismiss in modal
 ```
 
+### Files Created (Session 69 - SEO + A11y + Minification)
+
+```
+static_root/
+└── robots.txt                        # NEW - Search engine crawl directives via WHITENOISE_ROOT
+
+prompts/management/commands/
+└── minify_assets.py                  # NEW - CSS/JS minification command (targets STATIC_ROOT, --dry-run)
+```
+
+### Files Modified (Session 69 - SEO + A11y + Minification)
+
+```
+prompts_manager/
+└── settings.py                       # Added WHITENOISE_ROOT = BASE_DIR / 'static_root'
+
+prompts_manager/
+└── urls.py                           # Removed robots.txt RedirectView, added WHITENOISE_ROOT comment
+
+templates/
+└── base.html                         # Removed stale preconnects (Cloudinary, cdnjs), reduced font weights
+                                       # (300,400,500,700 → 400,500,700), deferred icons.css + noscript fallback
+
+prompts/templates/prompts/
+└── prompt_detail.html                # h3→h2 headings (5 instances), aria-label pluralize fixes (like buttons, see all)
+
+requirements.txt                       # Added csscompressor>=0.9.5, rjsmin>=1.2.0
+```
+
 ### Files Modified (Session 59-63)
 
 ```
@@ -1183,11 +1218,18 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.7
+**Version:** 3.8
 **Audit Date:** February 4, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.8 (February 4, 2026 - Session 69 End-of-Session):**
+- Updated Phase N4 status from ~90% to ~99% (Lighthouse 96/100/100/100)
+- Added `static_root/` directory with `robots.txt` to directory structure
+- Added `minify_assets.py` management command (count 19→20)
+- Added Session 69 files created/modified sections
+- Added 3 new N4 Implementation Status items (SEO, A11y, Minification)
 
 **v3.7 (February 4, 2026 - Session 68 End-of-Session):**
 - Updated Phase N4 status from ~97% to ~90% (SEO score regression, indexes migration pending)

@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~90% Complete | Optimistic Upload Flow | N4h rename triggering, XML sitemap, indexes migration, SEO score regression, final testing |
+| **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | N4h rename triggering, XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -50,7 +50,7 @@ Do NOT edit or reference this document without reading all three.
 
 ## 🚀 Current Phase: N4 - Optimistic Upload Flow
 
-**Status:** ~90% Complete - Performance Optimized, Admin Improved, SEO Score Regression Pending
+**Status:** ~99% Complete - Lighthouse 96/100/100/100, All Core Features Done
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
 ### Overview
@@ -90,6 +90,10 @@ Rebuilding upload flow to feel "instant" by:
 | **Perf: Caching** | ✅ Complete | Template fragment caching for tags and more_from_author (5-min TTL) (Session 68) |
 | **Perf: Indexes** | ✅ Complete | Composite indexes: (status,created_on), (author,status,deleted_at) - migration pending (Session 68) |
 | **Perf: Frontend** | ✅ Complete | Critical CSS inlining, async CSS loading, LCP preload with imagesrcset, preconnect hints, JS defer (Session 68) |
+| **SEO: robots.txt** | ✅ Complete | Created robots.txt served via WHITENOISE_ROOT (HTTP 200, no redirect) (Session 69) |
+| **Perf: CSS Optim** | ✅ Complete | Removed stale preconnects, reduced font weights (4→3), deferred icons.css with noscript fallback (Session 69) |
+| **A11y Fixes** | ✅ Complete | Fixed heading hierarchy (h3→h2), aria-label mismatches with pluralize filter (Session 69) |
+| **Asset Minification** | ✅ Complete | Management command for CSS/JS minification targeting STATIC_ROOT (Session 69) |
 
 ### Key Components
 1. **Variant generation after NSFW** - Start thumbnails while user types
@@ -117,10 +121,11 @@ Rebuilding upload flow to feel "instant" by:
 | Issue | Description | Impact |
 |-------|-------------|--------|
 | **N4h rename not triggering** | `rename_prompt_files_for_seo` task is coded but not generating SEO filenames in production | Files keep UUID names instead of SEO slugs |
-| **SEO score regression** | SEO score dropped from 100 to 92 after performance optimization (Session 68) | Needs investigation |
 | **Indexes migration pending** | Composite indexes added to models.py but `makemigrations` not yet run | Indexes not active in database |
 
 **N4h Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation.
+
+**Resolved in Session 69:** SEO score regression (92→100) fixed via robots.txt + preconnect cleanup + font optimization.
 
 ### Resolved Blockers (Session 64-66)
 
@@ -173,6 +178,12 @@ Rebuilding upload flow to feel "instant" by:
 | `static/js/upload-core.js` | 30-second upload warning timer (S67-S68) |
 | `static/js/upload-form.js` | Improved error message display, warning toast dismiss (S67-S68) |
 | `static/css/upload.css` | Warning toast styles, error card styles, breadcrumb styles (S67-S68) |
+| `static_root/robots.txt` | NEW - Search engine crawl directives served via WHITENOISE_ROOT (S69) |
+| `prompts_manager/settings.py` | Added WHITENOISE_ROOT = BASE_DIR / 'static_root' (S69) |
+| `templates/base.html` | Removed stale preconnects, reduced font weights (4→3), deferred icons.css with noscript (S69) |
+| `prompts/templates/prompts/prompt_detail.html` | Fixed h3→h2 headings, aria-label mismatches with pluralize filter (S69) |
+| `prompts/management/commands/minify_assets.py` | NEW - CSS/JS minification command targeting STATIC_ROOT (S69) |
+| `requirements.txt` | Added csscompressor>=0.9.5, rjsmin>=1.2.0 (S69) |
 
 **Committed in Session 66** (commit `806dd5b`):
 - `prompts/templates/prompts/prompt_detail.html` - Complete SEO overhaul (JSON-LD, OG, Twitter, canonical, headings, tag links, noindex)
@@ -553,5 +564,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.1 (Phase N4 Session 68 - Performance Optimization, Admin Improvements, Upload UX)
+**Version:** 4.2 (Phase N4 Session 69 - SEO 100, A11y 100, Performance 96, Asset Minification)
 **Last Updated:** February 4, 2026

@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** January 31, 2026
+**Last Updated:** February 4, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -28,7 +28,7 @@
 | L | Media Infrastructure | ✅ Done | Cloudinary → B2 + Cloudflare |
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
-| **N4** | **Optimistic Upload Flow** | **🔄 ~90% Complete** | **Upload page bugs, final testing - CURRENT** |
+| **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration - CURRENT** |
 
 ---
 
@@ -76,7 +76,7 @@
 
 ## 🔄 Phase N4: Optimistic Upload Flow (CURRENT)
 
-**Status:** ~90% Complete - Upload Page Bugs Remaining
+**Status:** ~99% Complete - Lighthouse 96/100/100/100
 **Created:** January 26, 2026
 **Detailed Documentation:** `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
 
@@ -96,18 +96,21 @@ Reduce perceived upload time from 15-20 seconds to 5-10 seconds by restructuring
 | N4 Cleanup | Remove old upload code | ✅ Complete |
 | N4g | Video submit fix (session key mismatch) | ✅ Resolved (S64) |
 | N4-SEO | Race/ethnicity, Schema.org VideoObject, alt tags | ✅ Complete (S64) |
-| N4h | Deferred B2 file renaming task | ⏳ Pending |
-| N4i | SEO additions (JSON-LD, sitemap) | 🔄 Partial (JSON-LD + VideoObject done, sitemap pending) |
+| N4h | Deferred B2 file renaming task | ✅ Code complete (trigger issue remaining) |
+| N4i | SEO additions (JSON-LD, sitemap) | 🔄 Deferred to pre-launch (JSON-LD done, sitemap pending) |
 | N4j | Testing & polish | ⏳ Pending |
+| N4-SEO | robots.txt, preconnect cleanup, font optimization | ✅ Complete (Session 69) |
+| N4-A11y | Heading hierarchy (h3→h2), aria-label fixes | ✅ Complete (Session 69) |
+| N4-Minify | CSS/JS minification management command | ✅ Complete (Session 69) |
 
-**Current Blockers (Session 64):**
-- Upload page: Change File button only visible on hover (needs always-visible state)
-- Upload page: Privacy toggle may not default to Public correctly
+**Lighthouse Scores (Session 69):**
+- Performance: 96 | Accessibility: 100 | Best Practices: 100 | SEO: 100
 
-**Resolved (Session 64):**
-- Worker dyno: Configured Standard-1X worker dyno on Heroku (`heroku ps:scale worker=1`)
-- CI/CD: Fixed 31 issues across 9 files, all 3 jobs passing
-- Collection edit: Created missing template, fixed 500 error
+**Remaining Items:**
+- N4h rename not triggering in production (code complete, needs debugging)
+- XML sitemap (deferred to pre-launch)
+- Indexes migration pending (`makemigrations` needed)
+- Final testing and deploy
 
 ### New Database Fields
 
@@ -349,6 +352,17 @@ static/css/style.css                 # Lines ~700-793 have modal styles
 
 ## 📋 Future Features (After Phase N)
 
+### Pre-Launch Checklist
+
+| Task | Priority | Notes |
+|------|----------|-------|
+| XML Sitemap | High | `prompts/sitemaps.py` - deferred from N4i |
+| Run indexes migration | High | `makemigrations` + `migrate` for composite indexes |
+| Debug N4h rename trigger | Medium | Code complete, needs production debugging |
+| Font Awesome full removal | Low | 30+ new SVG sprite icons needed, already non-render-blocking |
+| Commit all uncommitted changes | Critical | Many sessions of uncommitted work |
+| Deploy and test end-to-end | Critical | Full production validation |
+
 ### Tier 1: Critical (Q1 2026)
 
 | Feature | Effort | Notes |
@@ -396,5 +410,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 3.6 (Phase N4 Session 64 - CI/CD, Worker Dyno, Upload Redesign)
-**Last Updated:** January 31, 2026
+**Version:** 3.7 (Phase N4 Session 69 - SEO 100, A11y 100, Performance 96, Asset Minification)
+**Last Updated:** February 4, 2026

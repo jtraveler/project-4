@@ -287,6 +287,9 @@ STATICFILES_STORAGE = (
 WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = True
 
+# Serve root-level files (robots.txt, etc.) without hashing
+WHITENOISE_ROOT = BASE_DIR / 'static_root'
+
 # Crispy Forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"

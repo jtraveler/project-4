@@ -1,0 +1,12 @@
+# robots.txt for PromptFinder (promptfinder.net)
+# Last updated: February 2026
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /accounts/
+Disallow: /api/
+Disallow: /summernote/
+
+# Sitemap (to be added when XML sitemap is implemented)
+# Sitemap: https://promptfinder.net/sitemap.xml

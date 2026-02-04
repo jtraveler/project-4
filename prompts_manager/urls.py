@@ -39,6 +39,8 @@ urlpatterns = [
         permanent=True
     ), name='favicon'),
 
+    # robots.txt served by WhiteNoise via WHITENOISE_ROOT setting
+
     # Other apps
     path("summernote/", include('django_summernote.urls')),
     path("about/", include("about.urls")),

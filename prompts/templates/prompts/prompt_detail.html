@@ -374,7 +374,7 @@
                         <button class="btn-outline-standard action-icon-btn like-btn-detail {% if prompt_is_liked %}liked{% endif %}"
                                 data-prompt-slug="{{ prompt.slug }}"
                                 onclick="toggleLike(this)"
-                                aria-label="{% if prompt_is_liked %}Unlike{% else %}Like{% endif %}"
+                                aria-label="{{ number_of_likes }} like{{ number_of_likes|pluralize }}, {% if prompt_is_liked %}unlike{% else %}like{% endif %}"
                                 title="Like">
                             <!-- Outline heart (shown when NOT liked) -->
                             <svg class="icon icon-sm heart-outline" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
@@ -383,7 +383,7 @@
                             <span class="action-count like-count">{{ number_of_likes }}</span>
                         </button>
                     {% else %}
-                        <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn-outline-standard action-icon-btn like-btn-detail" aria-label="Log in to like" title="Like">
+                        <a href="{% url 'account_login' %}?next={{ request.path }}" class="btn-outline-standard action-icon-btn like-btn-detail" aria-label="{{ number_of_likes }} like{{ number_of_likes|pluralize }}, log in to like" title="Like">
                             <svg class="icon icon-sm heart-outline" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
                             <span class="action-count like-count">{{ number_of_likes }}</span>
                         </a>
@@ -418,7 +418,7 @@
 
             <!-- MODEL USED Section (Separate Card) -->
             <div class="rail-card model-used-card">
-                <h3 class="rail-card-title">Model Used</h3>
+                <h2 class="rail-card-title">Model Used</h2>
                 <div class="model-used-row">
                     <div class="model-used-info">
                         <a href="{% url 'prompts:ai_generator_category' prompt.get_generator_url_slug %}" class="model-name">
@@ -451,7 +451,7 @@
             <!-- Prompt Text Card -->
             <div class="rail-card prompt-card">
                 <div class="prompt-card-header">
-                    <h3 class="rail-card-title">Prompt</h3>
+                    <h2 class="rail-card-title">Prompt</h2>
                     {% if user.is_authenticated %}
                     <button class="btn-outline-standard copy-btn action-icon-btn" onclick="copyPromptText()" id="copyButton">
                         <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-copy"/></svg>
@@ -473,7 +473,7 @@
             {% if prompt.tags.all %}
             {% cache 300 prompt_tags prompt.id %}
             <div class="rail-card">
-                <h3 class="rail-card-title">Tags</h3>
+                <h2 class="rail-card-title">Tags</h2>
                 <div class="tags-container">
                     {% for tag in prompt.tags.all %}
                         <a href="{% url 'prompts:home' %}?search={{ tag.name|urlencode }}"
@@ -492,18 +492,18 @@
             {% if more_from_author_count >= 1 %}
             {% cache 300 more_from_author prompt.author.id prompt.id %}
             <div class="rail-card more-from-author-card">
-                <h3 class="rail-card-title">
+                <h2 class="rail-card-title">
                     More from
                     <a href="{% url 'prompts:user_profile' prompt.author.username %}"
                        class="author-link">@{{ prompt.author.username }}</a>
-                </h3>
+                </h2>
                 <div class="more-from-author-thumbnails">
                     {% for author_prompt in more_from_author %}
                     {# Phase J.2 Fix 4: 4th thumbnail gets "+N more" overlay if author has 5+ prompts #}
                     {% if forloop.counter == 4 and author_remaining_count > 0 %}
                     <a href="{% url 'prompts:user_profile' prompt.author.username %}"
                        class="author-thumbnail-link author-thumbnail-more"
-                       aria-label="See all prompts from {{ prompt.author.username }}">
+                       aria-label="+{{ author_remaining_count }} more, see all prompts from {{ prompt.author.username }}">
                         <div class="author-thumbnail-wrapper">
                             {% with thumb_url=author_prompt.display_thumb_url medium_url=author_prompt.display_medium_url %}
                             {% if thumb_url %}
@@ -605,7 +605,7 @@
              ======================================== -->
         <div class="col-12 comments-column">
             <div class="comments-section" id="comments">
-                <h3 class="section-title">Comments ({{ comment_count }})</h3>
+                <h2 class="section-title">Comments ({{ comment_count }})</h2>
 
                 <!-- Comment Form (Authenticated Users) -->
                 {% if user.is_authenticated %}

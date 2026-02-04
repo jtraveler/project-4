@@ -40,3 +40,7 @@ sentry-sdk>=1.45.1
 
 # Async Task Queue
 django-q2==1.6.2
+
+# Asset Minification
+csscompressor>=0.9.5
+rjsmin>=1.2.0

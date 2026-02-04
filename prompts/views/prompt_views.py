@@ -375,14 +375,18 @@ def prompt_detail(request, slug):
     )
 
     # Use all_objects to include deleted prompts (needed for back button detection)
-    prompt_queryset = Prompt.all_objects.select_related('author').prefetch_related(
+    prompt_queryset = Prompt.all_objects.select_related(
+        'author',
+        'author__userprofile',
+    ).prefetch_related(
         'tags',
         'likes',
         Prefetch(
             'comments',
-            queryset=Comment.objects.select_related('author').order_by(
-                'created_on'
-            )
+            queryset=Comment.objects.select_related(
+                'author',
+                'author__userprofile',
+            ).order_by('created_on')
         )
     )
 
@@ -468,18 +472,14 @@ def prompt_detail(request, slug):
         if prompt.status != 1:
             raise Http404("Prompt not found")
 
+    # Materialize prefetched comments once to avoid repeated iteration
+    all_comments = list(prompt.comments.all())
+    approved_comments = [c for c in all_comments if c.approved]
     if request.user.is_authenticated:
-        comments = [
-            comment for comment in prompt.comments.all()
-            if comment.approved or comment.author == request.user
-        ]
+        comments = [c for c in all_comments if c.approved or c.author == request.user]
     else:
-        comments = [
-            comment for comment in prompt.comments.all()
-            if comment.approved
-        ]
-
-    comment_count = len([c for c in prompt.comments.all() if c.approved])
+        comments = approved_comments
+    comment_count = len(approved_comments)
 
     if request.method == "POST":
         comment_form = CommentForm(data=request.POST)
@@ -516,9 +516,12 @@ def prompt_detail(request, slug):
     else:
         comment_form = CommentForm()
 
+    # Use prefetched likes cache to avoid extra queries
+    all_likes = list(prompt.likes.all())
     liked = False
     if request.user.is_authenticated:
-        liked = request.user in prompt.likes.all()
+        liked = request.user in all_likes
+    number_of_likes = len(all_likes)
 
     # Record view (Phase G Part B) - only for published, non-deleted prompts
     view_created = False
@@ -546,25 +549,24 @@ def prompt_detail(request, slug):
     # Phase J.2: Get more prompts from this author (up to 4 most popular)
     # Ordered by likes count, excludes current prompt, only published prompts
     # Note: Count is already imported at top of file
-    more_from_author = list(Prompt.objects.filter(
+    author_other_prompts_qs = Prompt.objects.filter(
         author=prompt.author,
         status=1,
-        deleted_at__isnull=True
-    ).exclude(
-        id=prompt.id
-    ).annotate(
-        likes_count=Count('likes')
-    ).order_by('-likes_count', '-created_on')[:4])
+        deleted_at__isnull=True,
+    ).exclude(id=prompt.id)
+
+    # Get total count first (single COUNT query), then fetch top 4
+    author_total_prompts = author_other_prompts_qs.count()
+
+    more_from_author = list(
+        author_other_prompts_qs
+        .annotate(likes_count=Count('likes'))
+        .order_by('-likes_count', '-created_on')[:4]
+    )
 
     # Phase J.2 Fix 3: Track count for placeholder logic in template
     more_from_author_count = len(more_from_author)
 
-    # Phase J.2 Fix 4: Total count of author's other prompts for "+N more" overlay
-    author_total_prompts = Prompt.objects.filter(
-        author=prompt.author,
-        status=1,
-        deleted_at__isnull=True
-    ).exclude(id=prompt.id).count()
     # Calculate remaining count beyond the 4 shown
     author_remaining_count = max(0, author_total_prompts - 4)
 
@@ -584,7 +586,7 @@ def prompt_detail(request, slug):
             "comments": comments,
             "comment_count": comment_count,
             "comment_form": comment_form,
-            "number_of_likes": prompt.likes.count(),
+            "number_of_likes": number_of_likes,
             "prompt_is_liked": liked,
             "view_count": view_count,
             "can_see_views": can_see_views,

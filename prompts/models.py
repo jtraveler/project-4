@@ -899,6 +899,16 @@ class Prompt(models.Model):
                 fields=['ai_generator', 'created_on'],
                 name='prompt_ai_gen_date_idx'
             ),
+            # Performance: listing queries (status + created_on ordering)
+            models.Index(
+                fields=['status', 'created_on'],
+                name='prompt_status_created_idx'
+            ),
+            # Performance: author profile page queries
+            models.Index(
+                fields=['author', 'status', 'deleted_at'],
+                name='prompt_author_status_idx'
+            ),
         ]
 
     def __str__(self):

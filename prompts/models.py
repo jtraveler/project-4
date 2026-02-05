@@ -2529,6 +2529,14 @@ class Collection(models.Model):
         """Return up to 3 prompts for thumbnail preview."""
         return self.items.select_related('prompt')[:3]
 
+    def soft_delete(self, user):
+        """Move collection to trash (soft delete)."""
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'])
+
 
 class CollectionItem(models.Model):
     """

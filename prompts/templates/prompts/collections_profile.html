@@ -635,8 +635,8 @@
 {% if collections %}
 <div class="collection-grid" id="collectionsGrid">
     {% for collection in collections %}
-    <a href="{% url 'prompts:collection_detail' slug=collection.slug %}" class="collection-card-link">
-        <div class="collection-card">
+    <div class="collection-card" data-collection-slug="{{ collection.slug }}">
+        <a href="{% url 'prompts:collection_detail' slug=collection.slug %}" class="collection-card-link">
             {# Thumbnail area - reuses modal structure #}
             <div class="collection-card-thumbnail" style="cursor: pointer;">
                 {% if collection.thumbnails %}
@@ -670,23 +670,38 @@
             </div>
             {# Title #}
             <span class="collection-card-title">{{ collection.title|truncatechars:35 }}</span>
-            {# Meta: count + visibility #}
-            <div class="collection-card-meta">
-                <span class="collection-card-count">{{ collection.items_count }} item{{ collection.items_count|pluralize }}</span>
-                <span class="collection-card-visibility-icon">
+        </a>
+        {# Meta: count + actions #}
+        <div class="collection-card-meta">
+            <span class="collection-card-count">{{ collection.items_count }} item{{ collection.items_count|pluralize }}</span>
+            <div class="collection-card-actions">
+                <span class="collection-card-visibility-icon"
+                      data-bs-toggle="tooltip"
+                      data-bs-placement="top"
+                      title="{% if collection.is_private %}Private collection{% else %}Public collection{% endif %}">
                     {% if collection.is_private %}
                     <svg class="icon" aria-hidden="true">
                         <use href="{% static 'icons/sprite.svg' %}#icon-eye-off"></use>
                     </svg>
+                    <span class="collection-icon-label">Private</span>
                     {% else %}
                     <svg class="icon" aria-hidden="true">
                         <use href="{% static 'icons/sprite.svg' %}#icon-eye"></use>
                     </svg>
+                    <span class="collection-icon-label">Public</span>
                     {% endif %}
                 </span>
+                {% if is_own_profile %}
+                <button type="button" class="collection-delete-btn" data-slug="{{ collection.slug }}" data-title="{{ collection.title }}" aria-label="Delete {{ collection.title }}" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete collection">
+                    <svg class="icon" aria-hidden="true">
+                        <use href="{% static 'icons/sprite.svg' %}#icon-trash"></use>
+                    </svg>
+                    <span class="collection-icon-label">Delete</span>
+                </button>
+                {% endif %}
             </div>
         </div>
-    </a>
+    </div>
     {% endfor %}
 </div>
 
@@ -813,7 +828,7 @@
                 const doc = parser.parseFromString(html, 'text/html');
 
                 // Get new collection cards from the response
-                const newCards = doc.querySelectorAll('.collection-grid .collection-card-link');
+                const newCards = doc.querySelectorAll('.collection-grid .collection-card');
                 const grid = document.getElementById('collectionsGrid');
 
                 // Safety check for grid element
@@ -867,25 +882,30 @@
 
         // Create the card HTML (with animation class for Bug #2 fix)
         const visibilityIcon = collection.is_private ? 'icon-eye-off' : 'icon-eye';
+        const slug = collection.slug || '';
+        const deleteBtn = `{% if is_own_profile %}<button type="button" class="collection-delete-btn" data-slug="${slug}" data-title="${collection.title}" aria-label="Delete collection"><svg class="icon" aria-hidden="true"><use href="${spriteBase}#icon-trash"></use></svg></button>{% endif %}`;
         const cardHTML = `
-            <a href="${collection.url}" class="collection-card-link">
-                <div class="collection-card collection-card-new">
+            <div class="collection-card collection-card-new" data-collection-slug="${slug}">
+                <a href="${collection.url}" class="collection-card-link">
                     <div class="collection-card-thumbnail" style="cursor: pointer;">
                         <svg class="icon" aria-hidden="true">
                             <use href="${spriteBase}#icon-image"></use>
                         </svg>
                     </div>
                     <span class="collection-card-title">${collection.title.length > 35 ? collection.title.substring(0, 32) + '...' : collection.title}</span>
-                    <div class="collection-card-meta">
-                        <span class="collection-card-count">0 items</span>
+                </a>
+                <div class="collection-card-meta">
+                    <span class="collection-card-count">0 items</span>
+                    <div class="collection-card-actions">
                         <span class="collection-card-visibility-icon">
                             <svg class="icon" aria-hidden="true">
                                 <use href="${spriteBase}#${visibilityIcon}"></use>
                             </svg>
                         </span>
+                        ${deleteBtn}
                     </div>
                 </div>
-            </a>
+            </div>
         `;
 
         // Find or create the grid
@@ -911,6 +931,135 @@
         }
     });
 })();
+</script>
+
+{% if is_own_profile %}
+<!-- Delete Collection Confirmation Modal -->
+<div class="delete-modal-overlay" id="collectionDeleteOverlay" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" aria-describedby="deleteModalDesc" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
+    <div style="background:#fff;border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <svg style="width:32px;height:32px;color:var(--danger,#dc3545);margin-bottom:12px;" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+        <h3 id="deleteModalTitle" style="margin:0 0 12px;font-size:18px;color:var(--gray-900);">Delete Collection</h3>
+        <p id="deleteModalDesc" style="margin:0 0 24px;color:var(--gray-600);font-size:14px;line-height:1.5;">Are you sure you want to delete "<strong id="deleteCollectionTitle"></strong>"? This action can be undone from trash within 30 days.</p>
+        <div style="display:flex;gap:12px;justify-content:center;">
+            <button type="button" id="deleteCollectionCancel" style="padding:10px 24px;border-radius:40px;font-size:14px;font-weight:600;border:1px solid var(--gray-300);background:transparent;color:var(--gray-700);cursor:pointer;">Cancel</button>
+            <button type="button" id="deleteCollectionConfirm" style="padding:10px 24px;border-radius:40px;font-size:14px;font-weight:600;border:none;background:var(--danger,#dc3545);color:#fff;cursor:pointer;">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    const overlay = document.getElementById('collectionDeleteOverlay');
+    const titleEl = document.getElementById('deleteCollectionTitle');
+    const cancelBtn = document.getElementById('deleteCollectionCancel');
+    const confirmBtn = document.getElementById('deleteCollectionConfirm');
+    let pendingSlug = null;
+    let focusTrigger = null;
+
+    function showDeleteModal(slug, title) {
+        focusTrigger = document.activeElement;
+        pendingSlug = slug;
+        titleEl.textContent = title;
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        cancelBtn.focus();
+    }
+
+    function hideDeleteModal() {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+        pendingSlug = null;
+        if (focusTrigger) {
+            focusTrigger.focus();
+            focusTrigger = null;
+        }
+    }
+
+    // Event delegation for delete buttons
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.collection-delete-btn');
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            showDeleteModal(btn.dataset.slug, btn.dataset.title);
+        }
+    });
+
+    cancelBtn.addEventListener('click', hideDeleteModal);
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) hideDeleteModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay.style.display === 'flex') hideDeleteModal();
+    });
+
+    confirmBtn.addEventListener('click', function() {
+        if (!pendingSlug) return;
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+            || document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1];
+
+        // Capture slug and card reference BEFORE closing modal (pendingSlug gets cleared)
+        const slugToDelete = pendingSlug;
+        const card = document.querySelector(`.collection-card[data-collection-slug="${slugToDelete}"]`);
+
+        // OPTIMISTIC: Hide card immediately for instant feedback
+        if (card) {
+            card.classList.add('removing');
+            card.style.pointerEvents = 'none';
+        }
+        hideDeleteModal();
+
+        // Then make API call
+        fetch(`/collections/${slugToDelete}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Delete failed');
+            return response.json();
+        })
+        .then(data => {
+            // Success - remove card from DOM after animation completes
+            if (card) {
+                setTimeout(function() {
+                    card.remove();
+                    // If grid is empty, reload to show empty state
+                    const grid = document.getElementById('collectionsGrid');
+                    if (grid && grid.children.length === 0) {
+                        location.reload();
+                    }
+                }, 300);
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting collection:', error);
+            // ROLLBACK: Restore card if API failed
+            if (card) {
+                card.classList.remove('removing');
+                card.style.pointerEvents = '';
+            }
+        });
+    });
+})();
+</script>
+{% endif %}
+
+<!-- Initialize Bootstrap tooltips for collection icons -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
 </script>
 
 {% endblock %}

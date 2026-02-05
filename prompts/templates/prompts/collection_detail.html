@@ -111,6 +111,116 @@
     color: var(--gray-900);
 }
 
+.btn-delete-collection {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--danger, #dc3545);
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--danger, #dc3545);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-collection:hover {
+    background: var(--danger, #dc3545);
+    color: #ffffff;
+}
+
+.delete-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.delete-modal-overlay.active {
+    display: flex;
+}
+
+.delete-modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.delete-modal h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: var(--gray-900);
+}
+
+.delete-modal p {
+    margin: 0 0 24px;
+    color: var(--gray-600);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.delete-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.delete-modal-cancel {
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid var(--gray-300);
+    background: transparent;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.delete-modal-cancel:hover {
+    background: var(--gray-100);
+}
+
+.delete-modal-confirm {
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    background: var(--danger, #dc3545);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.delete-modal-confirm:hover {
+    background: #c82333;
+}
+
+.delete-modal-cancel:focus-visible,
+.delete-modal-confirm:focus-visible {
+    outline: 2px solid var(--gray-900);
+    outline-offset: 2px;
+}
+
+.btn-delete-collection:focus-visible {
+    outline: 2px solid var(--danger, #dc3545);
+    outline-offset: 2px;
+}
+
 /* Empty collection state */
 .collection-empty-state {
     max-width: 400px;
@@ -228,6 +338,10 @@
         <button type="button" class="btn-share-collection" onclick="copyCollectionLink()">
             <svg class="icon" style="width: 16px; height: 16px;"><use href="{% static 'icons/sprite.svg' %}#icon-share"></use></svg>
             Share
+        </button>
+        <button type="button" class="btn-delete-collection" onclick="showDeleteModal()">
+            <svg class="icon" style="width: 16px; height: 16px;"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+            Delete
         </button>
     </div>
     {% endif %}
@@ -428,5 +542,59 @@ function copyCollectionLink() {
     }
 })();
 </script>
+
+{% if can_edit %}
+<div class="delete-modal-overlay" id="deleteModalOverlay" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" aria-describedby="deleteModalDesc">
+    <div class="delete-modal">
+        <svg style="width: 32px; height: 32px; color: var(--danger, #dc3545); margin-bottom: 12px;" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+        <h3 id="deleteModalTitle">Delete Collection</h3>
+        <p id="deleteModalDesc">Are you sure you want to delete "<strong>{{ collection.title }}</strong>"? This action can be undone from trash within 30 days.</p>
+        <div class="delete-modal-actions">
+            <button type="button" class="delete-modal-cancel" id="deleteModalCancel">Cancel</button>
+            <form method="post" action="{% url 'prompts:collection_delete' collection.slug %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="delete-modal-confirm" id="deleteModalConfirm">Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+    var overlay = document.getElementById('deleteModalOverlay');
+    var cancelBtn = document.getElementById('deleteModalCancel');
+    var confirmBtn = document.getElementById('deleteModalConfirm');
+    var triggerBtn = document.querySelector('.btn-delete-collection');
+    var focusTrigger = null;
+
+    window.showDeleteModal = function() {
+        focusTrigger = document.activeElement;
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        cancelBtn.focus();
+    };
+
+    window.hideDeleteModal = function() {
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+        if (focusTrigger) {
+            focusTrigger.focus();
+            focusTrigger = null;
+        }
+    };
+
+    cancelBtn.addEventListener('click', hideDeleteModal);
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) hideDeleteModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) hideDeleteModal();
+    });
+})();
+</script>
+{% endif %}
 
 {% endblock %}

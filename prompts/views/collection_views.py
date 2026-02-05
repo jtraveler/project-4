@@ -49,13 +49,13 @@ def api_collections_list(request):
         prompt_id = request.GET.get('prompt_id')
         user = request.user
 
-        # Get user's non-deleted collections with item count
-        collections = Collection.objects.filter(
+        # Get user's non-deleted collections with item count (limit to 50 for performance)
+        collections = list(Collection.objects.filter(
             user=user,
             is_deleted=False
         ).annotate(
             items_count=Count('items')
-        ).order_by('-created_at')  # Micro-Spec #9.1: Show most recently CREATED first
+        ).order_by('-created_at')[:50])  # Micro-Spec #9.1: Show most recently CREATED first
 
         # If prompt_id provided, get set of collection IDs that contain it
         collections_with_prompt = set()
@@ -72,16 +72,25 @@ def api_collections_list(request):
             except (ValueError, TypeError):
                 pass  # Invalid prompt_id, just skip
 
+        # PERFORMANCE FIX: Batch fetch all thumbnails in ONE query instead of N+1
+        collection_ids = [c.id for c in collections]
+        all_items = CollectionItem.objects.filter(
+            collection_id__in=collection_ids
+        ).select_related('prompt').order_by('collection_id', '-added_at')
+
+        # Group items by collection (max 3 per collection)
+        from collections import defaultdict
+        items_by_collection = defaultdict(list)
+        for item in all_items:
+            if len(items_by_collection[item.collection_id]) < 3:
+                items_by_collection[item.collection_id].append(item)
+
         # Build response data
         collections_data = []
         for collection in collections:
-            # Get up to 3 most recent thumbnails for grid layout
+            # Get thumbnails from pre-fetched items
             thumbnails = []
-            recent_items = CollectionItem.objects.filter(
-                collection=collection
-            ).select_related('prompt').order_by('-added_at')[:3]
-
-            for idx, item in enumerate(recent_items):
+            for idx, item in enumerate(items_by_collection.get(collection.id, [])):
                 if item.prompt:
                     # Micro-Spec #11.7: Use 600px for first thumb (full-width), 300px for grid items
                     thumb_width = 600 if idx == 0 else 300
@@ -476,18 +485,18 @@ def collection_delete(request, slug):
 
     if request.method == 'POST':
         collection_title = collection.title
+        username = request.user.username
         collection.soft_delete(request.user)
 
         messages.success(request, f'Collection "{collection_title}" has been deleted.')
-        logger.info(f"User {request.user.username} deleted collection '{collection_title}' (ID: {collection.id})")
+        logger.info("User %s deleted collection '%s' (ID: %s)", username, collection_title, collection.id)
 
-        return redirect('prompts:collections_list')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'ok', 'message': f'Collection "{collection_title}" deleted.'})
+        return redirect('prompts:user_collections', username=username)
 
-    context = {
-        'collection': collection,
-    }
-
-    return render(request, 'prompts/collection_delete.html', context)
+    # GET requests redirect to detail page (delete is handled via modal)
+    return redirect('prompts:collection_detail', slug=slug)
 
 
 def user_collections(request, username):
@@ -620,27 +629,39 @@ def user_collections(request, username):
             deleted_at__isnull=False
         ).count()
 
-    # Attach thumbnails to each collection
-    for collection in collections:
-        thumbnails = []
-        recent_items = CollectionItem.objects.filter(
-            collection=collection
-        ).select_related('prompt').order_by('-added_at')[:3]
+    # Pagination (12 collections per page) - paginate BEFORE thumbnail fetch
+    paginator = Paginator(collections, 12)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
-        for idx, item in enumerate(recent_items):
+    # PERFORMANCE FIX: Batch fetch thumbnails for ONLY the current page
+    # This reduces N+1 queries (was 1 query per collection)
+    from collections import defaultdict
+
+    page_collections = list(page_obj.object_list)
+    collection_ids = [c.id for c in page_collections]
+
+    all_items = CollectionItem.objects.filter(
+        collection_id__in=collection_ids
+    ).select_related('prompt').order_by('collection_id', '-added_at')
+
+    # Group items by collection (max 3 per collection)
+    items_by_collection = defaultdict(list)
+    for item in all_items:
+        if len(items_by_collection[item.collection_id]) < 3:
+            items_by_collection[item.collection_id].append(item)
+
+    # Attach thumbnails to each collection
+    for collection in page_collections:
+        thumbnails = []
+        for idx, item in enumerate(items_by_collection.get(collection.id, [])):
             if item.prompt:
                 # Micro-Spec #11.7: Use 600px for first thumb (full-width), 300px for grid items
                 thumb_width = 600 if idx == 0 else 300
                 thumb_url = item.prompt.get_thumbnail_url(width=thumb_width)
                 if thumb_url:
                     thumbnails.append(thumb_url)
-
         collection.thumbnails = thumbnails
-
-    # Pagination (12 collections per page)
-    paginator = Paginator(collections, 12)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
 
     context = {
         'profile_user': profile_user,

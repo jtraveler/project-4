@@ -2555,20 +2555,37 @@ footer {
 /* Trash video styling */
 .trash-prompt-wrapper video.trash-video {
     border-radius: var(--radius-lg);
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
 }
 
 /* Desktop: hide play icon when video is autoplaying */
 .trash-video-play {
     display: none;
-    z-index: 6;  /* Above .card-link (z-index: 5) so taps reach JS handler */
-    pointer-events: auto;
-    cursor: pointer;
 }
 
 /* Mobile: show play icon, video is paused */
 @media (max-width: 768px) {
     .trash-video-play {
         display: flex;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        pointer-events: auto;
+        cursor: pointer;
+        font-size: 3rem;
+        color: white;
+        opacity: 0.85;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    /* On mobile, disable card-link on ALL trash cards so play icon receives taps */
+    .trash-prompt-wrapper .card-link {
+        pointer-events: none;
     }
 }
 

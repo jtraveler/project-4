@@ -225,6 +225,8 @@ def user_profile(request, username, active_tab=None):
     deleted_collections = []
     deleted_collections_count = 0
     trash_sub_tab = 'prompts'  # Default sub-tab
+    trash_sort_order = 'recency'  # Default sort order
+    trash_media_filter = 'all'  # Default media filter
 
     if is_owner:
         # Deleted prompts
@@ -259,9 +261,31 @@ def user_profile(request, username, active_tab=None):
             if trash_sub_tab not in ('prompts', 'collections'):
                 trash_sub_tab = 'prompts'
 
+            # Get sort/filter params for trash
+            trash_sort_order = request.GET.get('sort', 'recency')
+            trash_media_filter = request.GET.get('media', 'all')
+
             if trash_sub_tab == 'prompts':
+                # Apply media filtering to prompts trash (same pattern as Gallery tab)
+                if trash_media_filter == 'photos':
+                    trash_items_qs = trash_items_qs.filter(featured_image__isnull=False)
+                elif trash_media_filter == 'videos':
+                    trash_items_qs = trash_items_qs.filter(featured_video__isnull=False)
+
+                # Apply sorting to prompts trash
+                if trash_sort_order == 'oldest':
+                    trash_items_qs = trash_items_qs.order_by('deleted_at')
+                else:  # recency (default)
+                    trash_items_qs = trash_items_qs.order_by('-deleted_at')
+
                 trash_items = list(trash_items_qs)
             else:
+                # Apply sorting to collections trash
+                if trash_sort_order == 'oldest':
+                    deleted_collections_qs = deleted_collections_qs.order_by('deleted_at')
+                else:  # recency (default)
+                    deleted_collections_qs = deleted_collections_qs.order_by('-deleted_at')
+
                 deleted_collections = list(deleted_collections_qs)
                 # Attach thumbnails to each collection (same logic as collection_views.py)
                 for collection in deleted_collections:
@@ -289,6 +313,9 @@ def user_profile(request, username, active_tab=None):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
+    # Compute total trash count for profile nav badge
+    total_trash_count = trash_count + deleted_collections_count
+
     context = {
         'profile_user': profile_user,
         'profile': profile,
@@ -308,6 +335,9 @@ def user_profile(request, username, active_tab=None):
         'deleted_collections': deleted_collections,
         'deleted_collections_count': deleted_collections_count,
         'trash_sub_tab': trash_sub_tab,  # 'prompts' or 'collections'
+        'trash_sort_order': trash_sort_order,  # Sort order for trash items
+        'trash_media_filter': trash_media_filter,  # Media filter for trash prompts
+        'total_trash_count': total_trash_count,  # Combined prompts + collections count
         'total_collections': total_collections,  # Phase K: Collections count for profile tabs
         'show_statistics_tab': False,  # Phase G: Hidden for future implementation
     }

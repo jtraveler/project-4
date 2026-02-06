@@ -993,7 +993,7 @@
                    style="text-decoration: none;">
                     <svg class="icon icon-sm" aria-hidden="true" style="margin-right: 6px;"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
                     Trash
-                    <span class="profile-tab-count stat-badge">{{ trash_count|default:0 }}</span>
+                    <span class="profile-tab-count stat-badge">{{ total_trash_count|default:0 }}</span>
                 </a>
                 {% endif %}
             </div>
@@ -1116,20 +1116,137 @@
         <strong>Free:</strong> Items are kept for 5 days before permanent deletion. Last 10 items shown.
     </div>
 
-    <!-- Sub-tabs for Prompts / Collections -->
-    <div class="trash-sub-tabs mb-4">
-        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=prompts"
-           class="trash-sub-tab {% if trash_sub_tab == 'prompts' %}active{% endif %}">
-            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
-            Prompts
-            <span class="trash-sub-tab-count">{{ trash_count }}</span>
-        </a>
-        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=collections"
-           class="trash-sub-tab {% if trash_sub_tab == 'collections' %}active{% endif %}">
-            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-folder"/></svg>
-            Collections
-            <span class="trash-sub-tab-count">{{ deleted_collections_count }}</span>
-        </a>
+    <!-- Trash Action Bar: sub-tabs left, controls right -->
+    <div class="trash-action-bar">
+        <!-- LEFT: Sub-tabs -->
+        <div class="trash-sub-tabs">
+            <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=prompts"
+               class="trash-sub-tab {% if trash_sub_tab == 'prompts' %}active{% endif %}">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
+                Prompts
+                <span class="trash-sub-tab-count">{{ trash_count }}</span>
+            </a>
+            <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=collections"
+               class="trash-sub-tab {% if trash_sub_tab == 'collections' %}active{% endif %}">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-folder"/></svg>
+                Collections
+                <span class="trash-sub-tab-count">{{ deleted_collections_count }}</span>
+            </a>
+        </div>
+
+        <!-- RIGHT: Sort controls + Empty button -->
+        <div class="trash-controls">
+            {% if trash_sub_tab == 'prompts' and trash_items %}
+                <!-- Media Type Filter (Prompts only) -->
+                <div class="profile-sort-dropdown" id="trashMediaDropdown">
+                    <button class="profile-sort-dropdown-btn" id="trashMediaDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                        {% if trash_media_filter == 'photos' %}
+                            Photos only
+                        {% elif trash_media_filter == 'videos' %}
+                            Videos only
+                        {% else %}
+                            Photos and videos
+                        {% endif %}
+                        <svg class="profile-sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <div class="profile-sort-dropdown-menu" id="trashMediaDropdownMenu" role="menu">
+                        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=prompts&media=all{% if trash_sort_order %}&sort={{ trash_sort_order }}{% endif %}"
+                           class="profile-sort-dropdown-item {% if trash_media_filter == 'all' or not trash_media_filter %}active{% endif %}"
+                           role="menuitem">
+                            {% if trash_media_filter == 'all' or not trash_media_filter %}
+                            <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            {% else %}
+                            <span style="width: 16px;"></span>
+                            {% endif %}
+                            Photos and videos
+                        </a>
+                        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=prompts&media=photos{% if trash_sort_order %}&sort={{ trash_sort_order }}{% endif %}"
+                           class="profile-sort-dropdown-item {% if trash_media_filter == 'photos' %}active{% endif %}"
+                           role="menuitem">
+                            {% if trash_media_filter == 'photos' %}
+                            <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            {% else %}
+                            <span style="width: 16px;"></span>
+                            {% endif %}
+                            Photos only
+                        </a>
+                        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=prompts&media=videos{% if trash_sort_order %}&sort={{ trash_sort_order }}{% endif %}"
+                           class="profile-sort-dropdown-item {% if trash_media_filter == 'videos' %}active{% endif %}"
+                           role="menuitem">
+                            {% if trash_media_filter == 'videos' %}
+                            <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            {% else %}
+                            <span style="width: 16px;"></span>
+                            {% endif %}
+                            Videos only
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Recency Dropdown (both tabs, only when items exist) -->
+            {% if trash_sub_tab == 'prompts' and trash_items or trash_sub_tab == 'collections' and deleted_collections %}
+                <div class="profile-sort-dropdown" id="trashSortDropdown">
+                    <button class="profile-sort-dropdown-btn" id="trashSortDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                        {% if trash_sort_order == 'oldest' %}
+                            Oldest first
+                        {% else %}
+                            Recency
+                        {% endif %}
+                        <svg class="profile-sort-dropdown-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <div class="profile-sort-dropdown-menu" id="trashSortDropdownMenu" role="menu">
+                        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab={{ trash_sub_tab }}&sort=recency{% if trash_media_filter %}&media={{ trash_media_filter }}{% endif %}"
+                           class="profile-sort-dropdown-item {% if trash_sort_order == 'recency' or not trash_sort_order %}active{% endif %}"
+                           role="menuitem">
+                            {% if trash_sort_order == 'recency' or not trash_sort_order %}
+                            <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            {% else %}
+                            <span style="width: 16px;"></span>
+                            {% endif %}
+                            Recency
+                        </a>
+                        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab={{ trash_sub_tab }}&sort=oldest{% if trash_media_filter %}&media={{ trash_media_filter }}{% endif %}"
+                           class="profile-sort-dropdown-item {% if trash_sort_order == 'oldest' %}active{% endif %}"
+                           role="menuitem">
+                            {% if trash_sort_order == 'oldest' %}
+                            <svg class="profile-sort-check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            {% else %}
+                            <span style="width: 16px;"></span>
+                            {% endif %}
+                            Oldest first
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Empty Trash Button -->
+            {% if trash_sub_tab == 'prompts' and trash_items %}
+                <button type="button" class="trash-btn-empty-inline" onclick="openEmptyTrashModal()">
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
+                    Empty Trash for Prompts ({{ trash_count }})
+                </button>
+            {% elif trash_sub_tab == 'collections' and deleted_collections %}
+                <button type="button" class="trash-btn-empty-inline" onclick="openEmptyCollectionsTrashModal()">
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
+                    Empty Trash for Collections ({{ deleted_collections_count }})
+                </button>
+            {% endif %}
+        </div>
     </div>
 
     {% if trash_sub_tab == 'prompts' %}
@@ -1137,13 +1254,6 @@
          PROMPTS SUB-TAB
          ============================================ -->
     {% if trash_items %}
-        <!-- Empty Trash Button -->
-        <div class="mb-4">
-            <button type="button" class="trash-btn-empty" onclick="openEmptyTrashModal()">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Empty Trash ({{ trash_count }})
-            </button>
-        </div>
-
         <!-- Simplified Trash Grid -->
         <div class="trash-grid">
             {% for prompt in trash_items %}
@@ -1295,13 +1405,6 @@
          COLLECTIONS SUB-TAB
          ============================================ -->
     {% if deleted_collections %}
-        <!-- Empty Trash Button (Collections) -->
-        <div class="mb-4">
-            <button type="button" class="trash-btn-empty" onclick="openEmptyCollectionsTrashModal()">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Empty Collections Trash ({{ deleted_collections_count }})
-            </button>
-        </div>
-
         <!-- Collections Trash Grid (EXACT match to Collections page) -->
         <div class="collection-grid" id="trashCollectionsGrid">
             {% for collection in deleted_collections %}
@@ -1913,7 +2016,7 @@ function closeEmptyTrashModal() {
     document.body.style.overflow = '';
     document.removeEventListener('keydown', handleEmptyTrashEscapeKey);
 
-    const emptyBtn = document.querySelector('.trash-btn-empty');
+    const emptyBtn = document.querySelector('.trash-btn-empty, .trash-btn-empty-inline');
     if (emptyBtn) emptyBtn.focus();
 }
 

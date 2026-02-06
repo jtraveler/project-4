@@ -2438,55 +2438,16 @@ footer {
 }
 
 /* ============================================
-   TRASH PROMPTS - Masonry Grid (uses _prompt_card.html)
+   TRASH PROMPTS - Footer styles (uses standard masonry classes)
    ============================================ */
 
-/* Container for trash prompts masonry layout */
-.trash-masonry-container {
-    padding: 24px 0;
-    max-width: 1600px;
-    margin: 0 auto;
-}
-
-/* CSS columns masonry grid */
-.trash-masonry-grid {
-    column-count: 4;
-    column-gap: 24px;
-}
-
-@media (max-width: 1100px) {
-    .trash-masonry-grid {
-        column-count: 3;
-    }
-}
-
-@media (max-width: 800px) {
-    .trash-masonry-grid {
-        column-count: 2;
-    }
-}
-
-@media (max-width: 500px) {
-    .trash-masonry-grid {
-        column-count: 1;
-    }
-    .trash-masonry-container {
-        padding: 16px 0;
-    }
-}
-
-/* Wrapper holds card + footer together, prevents column break */
+/* Wrapper holds card + footer together (combined with .masonry-item) */
 .trash-prompt-wrapper {
     break-inside: avoid;
     margin-bottom: 24px;
 }
 
 /* Remove animation opacity from masonry-item inside trash grid */
-.trash-prompt-wrapper .masonry-item {
-    opacity: 1;
-    animation: none;
-}
-
 /* Override prompt-card border-radius when above footer */
 .trash-prompt-wrapper .prompt-card {
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -2502,10 +2463,7 @@ footer {
 /* Footer below each prompt card */
 .trash-prompt-footer {
     background-color: var(--white);
-    border: 1px solid var(--gray-200);
-    border-top: none;
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-    padding: 12px 16px;
+    padding-top: 12px;
 }
 
 /* Meta info row */

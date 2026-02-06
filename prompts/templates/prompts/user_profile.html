@@ -1256,11 +1256,11 @@
          PROMPTS SUB-TAB
          ============================================ -->
     {% if trash_items %}
-        <!-- Trash Prompts Masonry Grid (CSS columns + _prompt_card.html) -->
-        <div class="trash-masonry-container">
-            <div class="trash-masonry-grid">
+        <!-- Trash Prompts Masonry Grid (uses standard masonry classes) -->
+        <div class="masonry-container" style="padding: 0;">
+            <div class="masonry-grid">
                 {% for prompt in trash_items %}
-                <div class="trash-prompt-wrapper" data-slug="{{ prompt.slug }}">
+                <div class="masonry-item trash-prompt-wrapper" data-slug="{{ prompt.slug }}">
                     {# Prompt card WITHOUT its own masonry-item wrapper, WITHOUT draft badge #}
                     {% include 'prompts/partials/_prompt_card.html' with prompt=prompt in_trash=True %}
 

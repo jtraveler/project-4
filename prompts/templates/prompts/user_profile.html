@@ -1273,10 +1273,11 @@
                                    {% if prompt.video_width and prompt.video_height %}
                                    width="{{ prompt.video_width }}"
                                    height="{{ prompt.video_height }}"
+                                   style="width: 100%; height: auto; display: block; aspect-ratio: {{ prompt.video_width }}/{{ prompt.video_height }};"
                                    {% else %}
                                    width="440"
-                                   {% endif %}
-                                   style="width: 100%; height: auto; display: block;">
+                                   style="width: 100%; height: auto; display: block;"
+                                   {% endif %}>
                                 <source src="{{ prompt.display_video_url|default:prompt.get_video_url }}" type="video/mp4">
                             </video>
                             <div class="video-play-icon trash-video-play">

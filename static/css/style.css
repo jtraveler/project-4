@@ -2560,6 +2560,9 @@ footer {
 /* Desktop: hide play icon when video is autoplaying */
 .trash-video-play {
     display: none;
+    z-index: 6;  /* Above .card-link (z-index: 5) so taps reach JS handler */
+    pointer-events: auto;
+    cursor: pointer;
 }
 
 /* Mobile: show play icon, video is paused */

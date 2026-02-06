@@ -2568,7 +2568,8 @@ footer {
 
 /* Mobile: show play icon, video is paused */
 @media (max-width: 768px) {
-    .trash-video-play {
+    /* Specificity 0,2,0 beats masonry-grid.css's .video-play-icon (0,1,0) which sets pointer-events: none */
+    .trash-prompt-wrapper .trash-video-play {
         display: flex;
         position: absolute;
         top: 50%;

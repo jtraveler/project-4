@@ -2472,15 +2472,6 @@ footer {
     -webkit-column-break-inside: avoid;
     overflow: hidden;
     margin-bottom: var(--grid-gap, 15px);
-    border-radius: var(--radius-lg);
-    background: var(--white);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Prompt-card inside wrapper: no rounding/shadow (wrapper handles it) */
-.trash-prompt-wrapper .prompt-card {
-    border-radius: 0;
-    box-shadow: none;
 }
 
 /* No-media placeholder for trash cards */
@@ -2508,16 +2499,18 @@ footer {
 
 /* Footer below each prompt card */
 .trash-prompt-footer {
-    background-color: var(--white);
-    padding-top: 12px;
+    padding: 10px 0 0 0;
+    background: none;
 }
 
 /* Meta info row */
 .trash-prompt-meta {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 10px;
     font-size: 13px;
     color: var(--gray-500);
 }
@@ -2556,6 +2549,23 @@ footer {
 @media (max-width: 360px) {
     .trash-prompt-actions {
         flex-direction: column;
+    }
+}
+
+/* Trash video styling */
+.trash-prompt-wrapper video.trash-video {
+    border-radius: var(--radius-lg);
+}
+
+/* Desktop: hide play icon when video is autoplaying */
+.trash-video-play {
+    display: none;
+}
+
+/* Mobile: show play icon, video is paused */
+@media (max-width: 768px) {
+    .trash-video-play {
+        display: flex;
     }
 }
 

@@ -1265,20 +1265,21 @@
                 <div class="prompt-card">
                     <div class="image-wrapper">
                         {% if prompt.is_video %}
-                            {# Autoplay video with thumbnail poster fallback #}
-                            <video autoplay muted loop playsinline
+                            {# Video with poster fallback #}
+                            <video class="trash-video"
+                                   autoplay muted loop playsinline
+                                   preload="metadata"
                                    poster="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}"
                                    {% if prompt.video_width and prompt.video_height %}
-                                   style="width: 100%; height: auto; display: block; aspect-ratio: {{ prompt.video_width }} / {{ prompt.video_height }};"
                                    width="{{ prompt.video_width }}"
                                    height="{{ prompt.video_height }}"
                                    {% else %}
-                                   style="width: 100%; height: auto; display: block;"
                                    width="440"
-                                   {% endif %}>
+                                   {% endif %}
+                                   style="width: 100%; height: auto; display: block;">
                                 <source src="{{ prompt.display_video_url|default:prompt.get_video_url }}" type="video/mp4">
                             </video>
-                            <div class="video-play-icon">
+                            <div class="video-play-icon trash-video-play">
                                 <i class="fas fa-play-circle"></i>
                             </div>
                         {% elif prompt.display_medium_url %}
@@ -1306,12 +1307,23 @@
                         <div class="card-overlay">
                             <div class="overlay-bottom">
                                 <span class="platform-info">
-                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-user"/></svg>
+                                    <i class="fas fa-user"></i>
                                     {{ prompt.author }}
                                 </span>
-                                <span class="heart-counter">
-                                    <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
-                                    {{ prompt.number_of_likes }} like{% if prompt.number_of_likes != 1 %}s{% endif %}
+                                <span class="card-actions-group" style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                                    <!-- Bookmark icon (visual only in trash) -->
+                                    <span style="color: white;">
+                                        <svg class="icon icon-sm" aria-hidden="true" style="stroke: currentColor; fill: none;">
+                                            <use href="{% static 'icons/sprite.svg' %}#icon-bookmark"/>
+                                        </svg>
+                                    </span>
+                                    <span class="heart-counter">
+                                        <small style="color: white;">
+                                            <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
+                                            <span>{{ prompt.number_of_likes }}</span>
+                                            like{% if prompt.number_of_likes != 1 %}s{% endif %}
+                                        </small>
+                                    </span>
                                 </span>
                             </div>
                         </div>
@@ -1424,6 +1436,48 @@
                 </form>
             </div>
         </div>
+
+        {# Mobile Video Behavior + Reduced Motion: pause on mobile or motion preference, click-to-play #}
+        <script>
+        (function() {
+            var isMobile = window.matchMedia('(max-width: 768px)');
+            var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+            function handleVideoBehavior() {
+                var shouldPause = isMobile.matches || prefersReducedMotion.matches;
+                document.querySelectorAll('.trash-prompt-wrapper video.trash-video').forEach(function(video) {
+                    if (shouldPause) {
+                        video.pause();
+                        video.removeAttribute('autoplay');
+                    } else {
+                        video.setAttribute('autoplay', '');
+                        video.play().catch(function() {});
+                    }
+                });
+            }
+            // Initial check
+            handleVideoBehavior();
+            // Listen for resize and motion preference changes
+            isMobile.addEventListener('change', handleVideoBehavior);
+            prefersReducedMotion.addEventListener('change', handleVideoBehavior);
+            // Click-to-play on mobile
+            document.querySelectorAll('.trash-video-play').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var video = this.parentElement.querySelector('video.trash-video');
+                    if (video) {
+                        if (video.paused) {
+                            video.play().catch(function() {});
+                            this.style.display = 'none';
+                        } else {
+                            video.pause();
+                            this.style.display = 'flex';
+                        }
+                    }
+                });
+            });
+        })();
+        </script>
 
     {% else %}
         <!-- Empty Prompts Trash State -->

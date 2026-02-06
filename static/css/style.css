@@ -2558,7 +2558,7 @@ footer {
     width: 100%;
     height: auto;
     display: block;
-    object-fit: cover;
+    object-fit: contain;  /* contain prevents poster cropping to wrong aspect ratio */
 }
 
 /* Desktop: hide play icon when video is autoplaying */

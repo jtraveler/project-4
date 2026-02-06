@@ -4,7 +4,7 @@ from django.http import JsonResponse, HttpResponseRedirect, Http404
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 import logging
@@ -266,11 +266,19 @@ def user_profile(request, username, active_tab=None):
             trash_media_filter = request.GET.get('media', 'all')
 
             if trash_sub_tab == 'prompts':
-                # Apply media filtering to prompts trash (same pattern as Gallery tab)
+                # Apply media filtering to prompts trash
+                # Videos: have b2_video_url OR featured_video (matching is_video() method)
+                # Photos: have NO video in either field
                 if trash_media_filter == 'photos':
-                    trash_items_qs = trash_items_qs.filter(featured_image__isnull=False)
+                    trash_items_qs = trash_items_qs.filter(
+                        Q(b2_video_url__isnull=True) | Q(b2_video_url=''),
+                        Q(featured_video__isnull=True) | Q(featured_video='')
+                    )
                 elif trash_media_filter == 'videos':
-                    trash_items_qs = trash_items_qs.filter(featured_video__isnull=False)
+                    trash_items_qs = trash_items_qs.filter(
+                        Q(b2_video_url__isnull=False, b2_video_url__gt='') |
+                        Q(featured_video__isnull=False)
+                    )
 
                 # Apply sorting to prompts trash
                 if trash_sort_order == 'oldest':

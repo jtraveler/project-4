@@ -2474,10 +2474,25 @@ footer {
     margin-bottom: var(--grid-gap, 15px);
 }
 
-/* Remove animation opacity from masonry-item inside trash grid */
 /* Override prompt-card border-radius when above footer */
 .trash-prompt-wrapper .prompt-card {
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* No-media placeholder for trash cards */
+.trash-media-placeholder {
+    min-height: 200px;
+    background: var(--gray-200, #e9ecef);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+}
+
+.trash-media-placeholder .icon {
+    width: 3rem;
+    height: 3rem;
+    color: var(--gray-500, #adb5bd);
 }
 
 /* Animation for removing items */

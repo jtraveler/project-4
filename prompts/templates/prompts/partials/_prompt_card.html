@@ -99,13 +99,12 @@
     </div>
 
 {% else %}
-    {# === MASONRY CARD (Homepage, Gallery, Trash) === #}
-    {# When in_trash=True, parent provides .masonry-item wrapper (for card + footer) #}
-    {% if not in_trash %}<div class="masonry-item"
+    {# === MASONRY CARD (Homepage, Gallery) === #}
+    <div class="masonry-item"
          data-item
          {% if prompt.is_video %}data-video="true"{% endif %}
          data-order="{{ prompt.order }}"
-         data-slug="{{ prompt.slug }}">{% endif %}
+         data-slug="{{ prompt.slug }}">
         <div class="prompt-card {% if prompt.is_video %}video-card{% endif %}">
 
             {# Admin Controls (only for staff AND when show_admin_controls=True) #}
@@ -213,8 +212,8 @@
                     {% endif %}
                 {% endif %}
 
-                {# Draft Status Indicator - Hidden in trash context #}
-                {% if prompt.status == 0 and not in_trash %}
+                {# Draft Status Indicator #}
+                {% if prompt.status == 0 %}
                 <div class="draft-indicator position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
                      style="background: rgba(0,0,0,0.7); z-index: 1; pointer-events: none;">
                     <span class="badge bg-warning text-dark fs-6" style="pointer-events: auto; z-index: 2;">DRAFT</span>
@@ -305,5 +304,5 @@
                 {% endfor %}
             </div>
         </div>
-    {% if not in_trash %}</div>{% endif %}
+    </div>
 {% endif %}

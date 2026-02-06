@@ -1256,52 +1256,109 @@
          PROMPTS SUB-TAB
          ============================================ -->
     {% if trash_items %}
-        <!-- Trash Prompts Grid (CSS columns, no JS required) -->
+        {# Trash cards are intentionally inline (not using _prompt_card.html) because:
+           1. No video playback needed (just thumbnails) - masonry uses <video> with JS
+           2. No interactivity (likes, save-to-collection buttons)
+           3. No masonry JS dependencies on this page #}
+        <!-- Trash Prompts Grid (self-contained, CSS columns, no JS) -->
         <div class="trash-prompts-grid">
             {% for prompt in trash_items %}
             <div class="trash-prompt-wrapper" data-slug="{{ prompt.slug }}">
-                    {# Prompt card WITHOUT its own masonry-item wrapper, WITHOUT draft badge #}
-                    {% include 'prompts/partials/_prompt_card.html' with prompt=prompt in_trash=True %}
-
-                    {# Trash footer: meta info + action buttons #}
-                    <div class="trash-prompt-footer">
-                        {% if prompt.is_expiring_soon %}
-                            <div class="trash-prompt-meta trash-prompt-warning">
-                                <span>
-                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-alert-triangle"></use></svg>
-                                    Expires in {{ prompt.days_until_permanent_deletion }} day(s)!
-                                </span>
+                {# === Simple Card: thumbnail + overlay === #}
+                <div class="prompt-card">
+                    <div class="image-wrapper">
+                        {% if prompt.is_video %}
+                            {# Video prompt: show thumbnail image, NOT <video> element #}
+                            <img src="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}"
+                                 alt="{{ prompt.title }}"
+                                 width="440"
+                                 height="auto"
+                                 loading="lazy"
+                                 decoding="async">
+                            <div class="video-play-icon">
+                                <i class="fas fa-play-circle"></i>
                             </div>
+                        {% elif prompt.display_medium_url %}
+                            {# B2 image #}
+                            <img src="{{ prompt.display_thumb_url|default:prompt.display_medium_url }}"
+                                 alt="{{ prompt.title }}"
+                                 width="440"
+                                 height="auto"
+                                 loading="lazy"
+                                 decoding="async">
+                        {% elif prompt.featured_image %}
+                            {# Cloudinary fallback #}
+                            <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
+                                 alt="{{ prompt.title }}"
+                                 width="440"
+                                 height="auto"
+                                 loading="lazy"
+                                 decoding="async">
                         {% else %}
-                            <div class="trash-prompt-meta">
-                                <span>
-                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-clock"></use></svg>
-                                    Deleted {{ prompt.deleted_at|timesince }} ago
-                                </span>
-                                <span>
-                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"></use></svg>
-                                    {{ prompt.days_until_permanent_deletion }} days left
-                                </span>
+                            {# No media placeholder #}
+                            <div class="trash-media-placeholder">
+                                <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
                             </div>
                         {% endif %}
-                        <div class="trash-prompt-actions">
-                            <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}" style="flex: 1;">
-                                {% csrf_token %}
-                                <input type="hidden" name="restore_as" value="draft">
-                                <button type="submit" class="btn-trash-action w-100">
-                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-restore"></use></svg>
-                                    Restore
-                                </button>
-                            </form>
-                            <button type="button" class="btn-trash-action btn-trash-action-delete" style="flex: 1;"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#deleteModal{{ prompt.id }}">
-                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
-                                Delete
-                            </button>
+
+                        {# Bottom gradient overlay with user info #}
+                        <div class="card-overlay">
+                            <div class="overlay-bottom">
+                                <span class="platform-info">
+                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-user"/></svg>
+                                    {{ prompt.author }}
+                                </span>
+                                <span class="heart-counter">
+                                    <svg class="icon icon-sm heart-icon me-1" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-heart"/></svg>
+                                    {{ prompt.number_of_likes }} like{% if prompt.number_of_likes != 1 %}s{% endif %}
+                                </span>
+                            </div>
                         </div>
                     </div>
+
+                    {# Clickable link to prompt detail #}
+                    <a href="{% url 'prompts:prompt_detail' prompt.slug %}" class="card-link" aria-label="View {{ prompt.title }}"></a>
                 </div>
+
+                {# === Trash Footer: meta + actions === #}
+                <div class="trash-prompt-footer">
+                    {% if prompt.is_expiring_soon %}
+                        <div class="trash-prompt-meta trash-prompt-warning">
+                            <span>
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-alert-triangle"></use></svg>
+                                Expires in {{ prompt.days_until_permanent_deletion }} day(s)!
+                            </span>
+                        </div>
+                    {% else %}
+                        <div class="trash-prompt-meta">
+                            <span>
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-clock"></use></svg>
+                                Deleted {{ prompt.deleted_at|timesince }} ago
+                            </span>
+                            <span>
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"></use></svg>
+                                {{ prompt.days_until_permanent_deletion }} days left
+                            </span>
+                        </div>
+                    {% endif %}
+                    <div class="trash-prompt-actions">
+                        <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}" style="flex: 1;">
+                            {% csrf_token %}
+                            <input type="hidden" name="restore_as" value="draft">
+                            <button type="submit" class="btn-trash-action w-100">
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-restore"></use></svg>
+                                Restore
+                            </button>
+                        </form>
+                        <button type="button" class="btn-trash-action btn-trash-action-delete" style="flex: 1;"
+                                data-bs-toggle="modal"
+                                data-bs-target="#deleteModal{{ prompt.id }}">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
             {% endfor %}
         </div>
 

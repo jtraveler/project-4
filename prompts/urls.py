@@ -103,6 +103,10 @@ urlpatterns = [
     path('collections/<slug:slug>/', views.collection_detail, name='collection_detail'),
     path('collections/<slug:slug>/edit/', views.collection_edit, name='collection_edit'),
     path('collections/<slug:slug>/delete/', views.collection_delete, name='collection_delete'),
+    # Collections trash endpoints (Phase K - Trash Integration)
+    path('collections/<slug:slug>/restore/', views.collection_restore, name='collection_restore'),
+    path('collections/<slug:slug>/delete-forever/', views.collection_permanent_delete, name='collection_permanent_delete'),
+    path('collections/trash/empty/', views.empty_collections_trash, name='empty_collections_trash'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',
          views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',

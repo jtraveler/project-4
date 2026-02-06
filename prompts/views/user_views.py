@@ -9,7 +9,7 @@ from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 import logging
 
-from prompts.models import Prompt, Comment, UserProfile, Collection
+from prompts.models import Prompt, Comment, UserProfile, Collection, CollectionItem
 from prompts.forms import CommentForm
 
 logger = logging.getLogger(__name__)
@@ -222,16 +222,57 @@ def user_profile(request, username, active_tab=None):
     # Trash tab data (only for owner)
     trash_items = []
     trash_count = 0
+    deleted_collections = []
+    deleted_collections_count = 0
+    trash_sub_tab = 'prompts'  # Default sub-tab
+
     if is_owner:
+        # Deleted prompts
         trash_items_qs = Prompt.all_objects.filter(
             author=profile_user,
             deleted_at__isnull=False
         ).order_by('-deleted_at')
         trash_count = trash_items_qs.count()
 
+        # Deleted collections - get count first (separate query, no prefetch)
+        deleted_collections_count = Collection.objects.filter(
+            user=profile_user,
+            is_deleted=True
+        ).count()
+
+        # Deleted collections with prefetch (slice in template, not here)
+        deleted_collections_qs = Collection.objects.filter(
+            user=profile_user,
+            is_deleted=True
+        ).prefetch_related(
+            Prefetch(
+                'items',
+                queryset=CollectionItem.objects.select_related('prompt').order_by('-added_at'),
+                to_attr='prefetched_items'
+            )
+        ).order_by('-deleted_at')
+
         # Only load full data if trash tab is active
         if active_tab == 'trash':
-            trash_items = list(trash_items_qs)
+            # Get sub-tab from query parameter (defaults to 'prompts')
+            trash_sub_tab = request.GET.get('sub_tab', 'prompts')
+            if trash_sub_tab not in ('prompts', 'collections'):
+                trash_sub_tab = 'prompts'
+
+            if trash_sub_tab == 'prompts':
+                trash_items = list(trash_items_qs)
+            else:
+                deleted_collections = list(deleted_collections_qs)
+                # Attach thumbnails to each collection (same logic as collection_views.py)
+                for collection in deleted_collections:
+                    thumbnails = []
+                    for idx, item in enumerate(getattr(collection, 'prefetched_items', [])[:3]):
+                        if item.prompt:
+                            thumb_width = 600 if idx == 0 else 300
+                            thumb_url = item.prompt.get_thumbnail_url(width=thumb_width)
+                            if thumb_url:
+                                thumbnails.append(thumb_url)
+                    collection.thumbnails = thumbnails
 
     # Redirect non-owners away from trash tab
     if active_tab == 'trash' and not is_owner:
@@ -264,6 +305,9 @@ def user_profile(request, username, active_tab=None):
         'active_tab': active_tab or 'gallery',
         'trash_items': trash_items,
         'trash_count': trash_count,
+        'deleted_collections': deleted_collections,
+        'deleted_collections_count': deleted_collections_count,
+        'trash_sub_tab': trash_sub_tab,  # 'prompts' or 'collections'
         'total_collections': total_collections,  # Phase K: Collections count for profile tabs
         'show_statistics_tab': False,  # Phase G: Hidden for future implementation
     }

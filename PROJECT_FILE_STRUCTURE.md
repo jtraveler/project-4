@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 4, 2026
+**Last Updated:** February 6, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~99% - Lighthouse 96/100/100/100)
+**Current Phase:** Phase N4 Optimistic Upload Flow (~99% - Lighthouse 96/100/100/100), Phase K Collections (~98%)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
@@ -15,7 +15,7 @@
 | **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
-| **SVG Icons** | 30 | static/icons/sprite.svg |
+| **SVG Icons** | 31 | static/icons/sprite.svg |
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
 | **Management Commands** | 19 | prompts/management/commands/ |
@@ -458,10 +458,10 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `sprite.svg` | static/icons/ | SVG sprite with 30 icon definitions |
+| `sprite.svg` | static/icons/ | SVG sprite with 31 icon definitions |
 | `icons.css` | static/css/components/ | Icon utility classes |
 
-### Available Icons (30 total)
+### Available Icons (31 total)
 
 **Phase 1 Icons (Navigation) - 5 icons:**
 - `icon-image` - Photos filter indicator
@@ -488,7 +488,7 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 - `icon-user-pen` - Edit profile
 - `icon-mail` - Email/contact
 
-**Phase K Icons (Collections) - 11 icons:**
+**Phase K Icons (Collections) - 12 icons:**
 - `icon-bookmark` - Save button (outline)
 - `icon-bookmark-filled` - Saved state (pink fill)
 - `icon-circle-check` - Already in collection
@@ -500,6 +500,7 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 - `icon-arrow-right` - Forward navigation
 - `icon-download` - Download button
 - `icon-share` - Share/copy link
+- `icon-rotate-ccw` - Restore button (Session 70)
 
 ### Usage Pattern
 
@@ -637,6 +638,9 @@ API endpoints for the Collections feature, defined in `prompts/views/collection_
 | `/collections/<slug>/` | `collection_detail` | View collection contents |
 | `/collections/<slug>/edit/` | `collection_edit` | Edit collection settings |
 | `/collections/<slug>/delete/` | `collection_delete` | Delete collection (soft delete) |
+| `/collections/<slug>/restore/` | `collection_restore` | Restore deleted collection (Session 70) |
+| `/collections/<slug>/delete-forever/` | `collection_permanent_delete` | Permanently delete collection (Session 70) |
+| `/collections/trash/empty/` | `empty_collections_trash` | Empty all trashed collections (Session 70) |
 
 ### API Response Format
 
@@ -1218,11 +1222,18 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.8
-**Audit Date:** February 4, 2026
+**Version:** 3.9
+**Audit Date:** February 6, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.9 (February 6, 2026 - Session 70 End-of-Session):**
+- Updated Phase K status from ~95% to ~98% (trash integration complete)
+- Added `icon-rotate-ccw` to SVG icons (31 total, Phase K icons 11→12)
+- Added 3 collections trash endpoints to Collections API section
+- Updated user_views.py and user_profile.html in files documentation
+- Added style.css trash collection footer styles documentation
 
 **v3.8 (February 4, 2026 - Session 69 End-of-Session):**
 - Updated Phase N4 status from ~90% to ~99% (Lighthouse 96/100/100/100)

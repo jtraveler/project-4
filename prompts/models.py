@@ -2537,6 +2537,28 @@ class Collection(models.Model):
         self.deleted_by = user
         self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'])
 
+    @property
+    def days_until_permanent_deletion(self):
+        """Calculate days remaining before permanent deletion."""
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.conf import settings
+
+        if not self.deleted_at:
+            return None
+
+        # Get retention days from settings (default 5 for free tier)
+        retention_days = getattr(settings, 'TRASH_RETENTION_DAYS_FREE', 5)
+        deletion_date = self.deleted_at + timedelta(days=retention_days)
+        days_remaining = (deletion_date - timezone.now()).days
+        return max(0, days_remaining)
+
+    @property
+    def is_expiring_soon(self):
+        """Check if collection is within 24 hours of permanent deletion."""
+        days_left = self.days_until_permanent_deletion
+        return days_left is not None and days_left <= 1
+
 
 class CollectionItem(models.Model):
     """

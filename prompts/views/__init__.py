@@ -103,6 +103,9 @@ from .collection_views import (
     collection_detail,
     collection_edit,
     collection_delete,
+    collection_restore,
+    collection_permanent_delete,
+    empty_collections_trash,
     user_collections,
 )
 
@@ -198,6 +201,9 @@ __all__ = [
     'collection_detail',
     'collection_edit',
     'collection_delete',
+    'collection_restore',
+    'collection_permanent_delete',
+    'empty_collections_trash',
     'user_collections',
 
     # Utility views

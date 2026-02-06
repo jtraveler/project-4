@@ -1116,6 +1116,26 @@
         <strong>Free:</strong> Items are kept for 5 days before permanent deletion. Last 10 items shown.
     </div>
 
+    <!-- Sub-tabs for Prompts / Collections -->
+    <div class="trash-sub-tabs mb-4">
+        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=prompts"
+           class="trash-sub-tab {% if trash_sub_tab == 'prompts' %}active{% endif %}">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
+            Prompts
+            <span class="trash-sub-tab-count">{{ trash_count }}</span>
+        </a>
+        <a href="{% url 'prompts:user_profile_trash' username=profile_user.username %}?sub_tab=collections"
+           class="trash-sub-tab {% if trash_sub_tab == 'collections' %}active{% endif %}">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-folder"/></svg>
+            Collections
+            <span class="trash-sub-tab-count">{{ deleted_collections_count }}</span>
+        </a>
+    </div>
+
+    {% if trash_sub_tab == 'prompts' %}
+    <!-- ============================================
+         PROMPTS SUB-TAB
+         ============================================ -->
     {% if trash_items %}
         <!-- Empty Trash Button -->
         <div class="mb-4">
@@ -1124,119 +1144,80 @@
             </button>
         </div>
 
-        <!-- Trash Items Grid (Masonry) -->
-        <div class="masonry-container" style="max-width: 1600px; margin: 0 auto; padding: 40px 0; width: 100%;">
-            <div class="masonry-wrapper">
-                <div class="masonry-grid" id="trash-masonry-grid">
-                    <!-- Columns will be created by JavaScript -->
-                </div>
-            </div>
-
-            <!-- Store items in hidden container for JavaScript -->
-            <div id="trash-items-container" style="display: none;">
-                {% for prompt in trash_items %}
-                <div class="masonry-item" data-item data-order="{{ forloop.counter }}" data-slug="{{ prompt.slug }}">
-                    <div class="card prompt-card {% if prompt.is_expiring_soon %}border-danger{% endif %}">
-                        {# Thumbnail (B2 first, Cloudinary fallback) #}
-                        <div class="position-relative">
-                            {% if prompt.is_video %}
-                                <video class="w-100"
-                                       style="display: block; border-radius: 12px 12px 0 0;"
-                                       autoplay loop muted playsinline preload="metadata"
-                                       poster="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}">
-                                    <source src="{{ prompt.display_video_url|default:prompt.get_video_url }}" type="video/mp4">
-                                </video>
-                            {% elif prompt.display_medium_url %}
-                                {# B2 preferred, Cloudinary fallback #}
-                                <img src="{{ prompt.display_thumb_url|default:prompt.display_medium_url }}"
-                                     srcset="{{ prompt.display_thumb_url }} 300w,
-                                             {{ prompt.display_medium_url }} 600w"
-                                     sizes="(max-width: 500px) 100vw,
-                                            (max-width: 800px) 50vw,
-                                            (max-width: 1100px) 33vw,
-                                            25vw"
-                                     class="w-100"
-                                     style="display: block; border-radius: 12px 12px 0 0;"
-                                     alt="{{ prompt.title }}"
-                                     loading="lazy"
-                                     decoding="async"
-                                     onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                {# Fallback for broken/missing images #}
-                                <div class="w-100 bg-secondary align-items-center justify-content-center" style="display: none; height: 300px; border-radius: 12px 12px 0 0;">
-                                    <i class="fas fa-image fa-3x text-white" aria-hidden="true"></i>
-                                </div>
-                            {% elif prompt.featured_image %}
-                                {# Direct Cloudinary fallback if no B2 URL #}
-                                <img src="{{ prompt.featured_image|cloudinary_transform:'w_440,f_webp,q_90' }}"
-                                     class="w-100"
-                                     style="display: block; border-radius: 12px 12px 0 0;"
-                                     alt="{{ prompt.title }}"
-                                     loading="lazy"
-                                     decoding="async"
-                                     onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                {# Fallback for broken/missing Cloudinary images #}
-                                <div class="w-100 bg-secondary align-items-center justify-content-center" style="display: none; height: 300px; border-radius: 12px 12px 0 0;">
-                                    <i class="fas fa-image fa-3x text-white" aria-hidden="true"></i>
-                                </div>
-                            {% else %}
-                                <div class="w-100 bg-secondary d-flex align-items-center justify-content-center" style="height: 300px; border-radius: 12px 12px 0 0;">
-                                    <i class="fas fa-image fa-3x text-white" aria-hidden="true"></i>
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        {# Card Meta #}
-                        <div class="trash-card-meta">
-                            <h5 class="trash-card-title">{{ prompt.title|truncatewords:10 }}</h5>
-                            <p class="trash-card-info">
-                                <i class="far fa-clock" aria-hidden="true"></i> Deleted {{ prompt.deleted_at|timesince }} ago
-                            </p>
-
-                            {% if prompt.is_expiring_soon %}
-                                <div class="alert alert-danger py-1 px-2 small mb-2">
-                                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
-                                    Expires in {{ prompt.days_until_permanent_deletion }} day(s)!
-                                </div>
-                            {% else %}
-                                <p class="trash-card-info">
-                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"/></svg> {{ prompt.days_until_permanent_deletion }} days remaining
-                                </p>
-                            {% endif %}
-                        </div>
-
-                        {# Action Buttons #}
-                        <div class="trash-card-actions">
-                            {# Primary: Restore & Publish (Dark Gray) - Hidden for NSFW/flagged content #}
-                            {% if not prompt.requires_manual_review %}
-                            <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="restore_as" value="published">
-                                <button type="submit" class="trash-btn-action" title="Restore and make public immediately">
-                                    <i class="fas fa-globe" aria-hidden="true"></i> Restore & Publish
-                                </button>
-                            </form>
-                            {% endif %}
-
-                            {# Secondary: Restore as Draft (Dark Gray) #}
-                            <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="restore_as" value="draft">
-                                <button type="submit" class="trash-btn-action" title="Restore as draft for editing">
-                                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-edit"/></svg> Restore as Draft
-                                </button>
-                            </form>
-
-                            {# Delete Forever Button (Red - Destructive) #}
-                            <button type="button" class="trash-btn-delete"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#deleteModal{{ prompt.id }}">
-                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Delete Forever
-                            </button>
-                        </div>
+        <!-- Simplified Trash Grid -->
+        <div class="trash-grid">
+            {% for prompt in trash_items %}
+            <div class="trash-item-wrapper" data-slug="{{ prompt.slug }}">
+                {# Card with media thumbnail #}
+                <div class="prompt-card">
+                    <div class="image-wrapper">
+                        {% if prompt.is_video %}
+                            <img src="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}"
+                                 alt="{{ prompt.title }}"
+                                 loading="lazy"
+                                 decoding="async">
+                            <div class="video-play-icon">
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                        {% elif prompt.display_medium_url %}
+                            <img src="{{ prompt.display_thumb_url|default:prompt.display_medium_url }}"
+                                 alt="{{ prompt.title }}"
+                                 loading="lazy"
+                                 decoding="async">
+                        {% elif prompt.featured_image %}
+                            <img src="{{ prompt.featured_image|cloudinary_transform:'w_440,f_webp,q_90' }}"
+                                 alt="{{ prompt.title }}"
+                                 loading="lazy"
+                                 decoding="async">
+                        {% else %}
+                            <div class="w-100 bg-secondary d-flex align-items-center justify-content-center" style="min-height: 200px;">
+                                <svg class="icon" aria-hidden="true" style="width: 3rem; height: 3rem; color: white;"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
-                {% endfor %}
+
+                {# Trash footer with meta + actions #}
+                <div class="trash-item-footer">
+                    <h5 class="fw-semibold mb-2" style="font-size: 15px;">{{ prompt.title|truncatewords:8 }}</h5>
+
+                    {% if prompt.is_expiring_soon %}
+                        <div class="trash-item-warning">
+                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-alert-triangle"/></svg>
+                            Expires in {{ prompt.days_until_permanent_deletion }} day(s)!
+                        </div>
+                    {% else %}
+                        <div class="trash-item-meta">
+                            <span>
+                                <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-clock"/></svg>
+                                Deleted {{ prompt.deleted_at|timesince }} ago
+                            </span>
+                            <span>
+                                <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"/></svg>
+                                {{ prompt.days_until_permanent_deletion }} days left
+                            </span>
+                        </div>
+                    {% endif %}
+
+                    <div class="trash-item-actions">
+                        <form method="post" action="{% url 'prompts:prompt_restore' prompt.slug %}" style="flex: 1;">
+                            {% csrf_token %}
+                            <input type="hidden" name="restore_as" value="draft">
+                            <button type="submit" class="trash-btn-action w-100" title="Restore as draft">
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-rotate-ccw"/></svg>
+                                Restore
+                            </button>
+                        </form>
+                        <button type="button" class="trash-btn-delete"
+                                data-bs-toggle="modal"
+                                data-bs-target="#deleteModal{{ prompt.id }}"
+                                title="Delete forever">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
+            {% endfor %}
         </div>
 
         {# Delete Modals - Outside hidden container so Bootstrap can find them #}
@@ -1302,12 +1283,163 @@
         </div>
 
     {% else %}
-        <!-- Empty Trash State -->
+        <!-- Empty Prompts Trash State -->
         <div class="empty-profile">
             <svg class="icon" aria-hidden="true" style="width: 4rem; height: 4rem;"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
-            <h3>Trash is Empty</h3>
-            <p>Items you delete will appear here for 5 days before being permanently removed.</p>
+            <h3>No Deleted Prompts</h3>
+            <p>Prompts you delete will appear here for 5 days before being permanently removed.</p>
         </div>
+    {% endif %}
+    {% else %}
+    <!-- ============================================
+         COLLECTIONS SUB-TAB
+         ============================================ -->
+    {% if deleted_collections %}
+        <!-- Empty Trash Button (Collections) -->
+        <div class="mb-4">
+            <button type="button" class="trash-btn-empty" onclick="openEmptyCollectionsTrashModal()">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg> Empty Collections Trash ({{ deleted_collections_count }})
+            </button>
+        </div>
+
+        <!-- Collections Trash Grid (EXACT match to Collections page) -->
+        <div class="collection-grid" id="trashCollectionsGrid">
+            {% for collection in deleted_collections %}
+            <div class="collection-card trash-collection-card" data-collection-slug="{{ collection.slug }}">
+                {# Thumbnail area - EXACT same structure as Collections page #}
+                <div class="collection-card-thumbnail">
+                    {% if collection.thumbnails %}
+                        {% if collection.thumbnails|length == 1 %}
+                            {# 1 item: full width #}
+                            <div class="thumb-full">
+                                <img src="{{ collection.thumbnails.0 }}" alt="" loading="lazy">
+                            </div>
+                        {% elif collection.thumbnails|length == 2 %}
+                            {# 2 items: 50/50 split #}
+                            <div class="thumb-grid thumb-grid-2">
+                                <img src="{{ collection.thumbnails.0 }}" alt="" loading="lazy">
+                                <img src="{{ collection.thumbnails.1 }}" alt="" loading="lazy">
+                            </div>
+                        {% else %}
+                            {# 3+ items: Tall left + stacked right #}
+                            <div class="thumb-grid thumb-grid-3">
+                                <img src="{{ collection.thumbnails.0 }}" alt="" class="thumb-tall" loading="lazy">
+                                <div class="thumb-stack">
+                                    <img src="{{ collection.thumbnails.1 }}" alt="" loading="lazy">
+                                    <img src="{{ collection.thumbnails.2 }}" alt="" loading="lazy">
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        {# No items: placeholder icon (same as Collections page) #}
+                        <svg class="icon" aria-hidden="true">
+                            <use href="{% static 'icons/sprite.svg' %}#icon-image"></use>
+                        </svg>
+                    {% endif %}
+                </div>
+
+                {# Title - same as Collections page #}
+                <span class="collection-card-title">{{ collection.title|truncatechars:35 }}</span>
+
+                {# Meta: item count only (no visibility/delete icons) #}
+                <div class="collection-card-meta">
+                    <span class="collection-card-count">{{ collection.items.count }} item{{ collection.items.count|pluralize }}</span>
+                </div>
+
+                {# Trash-specific footer #}
+                <div class="trash-collection-footer">
+                    <div class="trash-collection-meta">
+                        <span class="meta-delete">Deleted {{ collection.deleted_at|timesince }} ago</span>
+                        <span class="meta-time-left">
+                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"></use></svg>
+                            {{ collection.days_until_permanent_deletion }} days left
+                        </span>
+                    </div>
+                    <div class="trash-collection-actions">
+                        <button type="button"
+                                class="btn-trash-action btn-restore collection-restore-btn"
+                                data-slug="{{ collection.slug }}"
+                                data-title="{{ collection.title }}">
+                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-rotate-ccw"></use></svg>
+                            Restore
+                        </button>
+                        <button type="button"
+                                class="btn-trash-action btn-delete collection-permanent-delete-btn"
+                                data-slug="{{ collection.slug }}"
+                                data-title="{{ collection.title }}">
+                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Empty Collections Trash Modal -->
+        <div class="trash-modal-backdrop" id="emptyCollectionsTrashModal" role="dialog" aria-modal="true" aria-labelledby="emptyCollectionsTrashTitle">
+            <div class="trash-modal">
+                <h2 class="trash-modal-title" id="emptyCollectionsTrashTitle">
+                    <svg class="icon" aria-hidden="true" style="width: 1.5rem; height: 1.5rem;"><use href="{% static 'icons/sprite.svg' %}#icon-alert-triangle"/></svg>
+                    Empty Collections Trash?
+                </h2>
+
+                <p class="trash-modal-body">
+                    Are you sure you want to permanently delete <strong>{{ deleted_collections_count }} collection(s)</strong>?
+                </p>
+
+                <div class="trash-modal-warning">
+                    <strong>Warning:</strong> This action cannot be undone. All collections will be permanently removed.
+                </div>
+
+                <div class="trash-modal-actions">
+                    <button type="button" class="trash-modal-btn-confirm" onclick="emptyCollectionsTrash()">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
+                        Yes, Empty Trash
+                    </button>
+                    <button type="button" class="trash-modal-btn-cancel" onclick="closeEmptyCollectionsTrashModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single Collection Delete Modal -->
+        <div class="trash-modal-backdrop" id="collectionDeleteModal" role="dialog" aria-modal="true" aria-labelledby="collectionDeleteTitle">
+            <div class="trash-modal">
+                <h2 class="trash-modal-title" id="collectionDeleteTitle">
+                    <svg class="icon" aria-hidden="true" style="width: 1.5rem; height: 1.5rem;"><use href="{% static 'icons/sprite.svg' %}#icon-alert-triangle"/></svg>
+                    Delete Forever?
+                </h2>
+
+                <p class="trash-modal-body">
+                    Permanently delete <strong id="collectionDeleteName"></strong>?
+                </p>
+
+                <div class="trash-modal-warning">
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+
+                <div class="trash-modal-actions">
+                    <button type="button" class="trash-modal-btn-confirm" id="confirmCollectionDelete">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
+                        Delete Forever
+                    </button>
+                    <button type="button" class="trash-modal-btn-cancel" onclick="closeCollectionDeleteModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Empty Collections Trash State -->
+        <div class="empty-profile">
+            <svg class="icon" aria-hidden="true" style="width: 4rem; height: 4rem;"><use href="{% static 'icons/sprite.svg' %}#icon-folder"/></svg>
+            <h3>No Deleted Collections</h3>
+            <p>Collections you delete will appear here for 5 days before being permanently removed.</p>
+        </div>
+    {% endif %}
     {% endif %}
 </div>
 {% endif %}
@@ -1756,80 +1888,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================================================
-// TRASH TAB FUNCTIONALITY (Masonry Grid + Modal)
+// TRASH TAB FUNCTIONALITY (Modal Functions)
 // ============================================================================
-
-// Trash Masonry Grid Logic
-document.addEventListener('DOMContentLoaded', function() {
-    const trashGrid = document.getElementById('trash-masonry-grid');
-    const trashContainer = document.getElementById('trash-items-container');
-
-    if (!trashGrid || !trashContainer) {
-        return; // Not on trash tab
-    }
-
-    let columns = [];
-    let columnCount = 4;
-
-    function getColumnCount() {
-        const width = window.innerWidth;
-        if (width < 500) return 1;
-        if (width < 800) return 2;
-        if (width < 1100) return 3;
-        return 4;
-    }
-
-    function createColumns() {
-        trashGrid.innerHTML = '';
-        columns = [];
-        columnCount = getColumnCount();
-
-        for (let i = 0; i < columnCount; i++) {
-            const column = document.createElement('div');
-            column.className = 'masonry-column';
-            trashGrid.appendChild(column);
-            columns.push(column);
-        }
-
-        trashGrid.setAttribute('data-columns', columnCount);
-    }
-
-    function distributeItems() {
-        const items = Array.from(trashContainer.querySelectorAll('[data-item]'));
-
-        items.forEach((item, index) => {
-            const targetColumn = index % columnCount;
-            if (columns[targetColumn]) {
-                columns[targetColumn].appendChild(item);
-                item.style.animationDelay = `${index * 0.05}s`;
-            }
-        });
-    }
-
-    // Initialize
-    createColumns();
-    distributeItems();
-
-    // Handle resize
-    let resizeTimer;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(function() {
-            const newColumnCount = getColumnCount();
-            if (newColumnCount !== columnCount) {
-                const allItems = [];
-                columns.forEach(col => {
-                    allItems.push(...Array.from(col.querySelectorAll('.masonry-item')));
-                });
-
-                allItems.forEach(item => trashContainer.appendChild(item));
-
-                createColumns();
-                distributeItems();
-            }
-        }, 250);
-    });
-});
 
 // Empty Trash Modal Functions
 function openEmptyTrashModal() {
@@ -1870,6 +1930,282 @@ document.addEventListener('DOMContentLoaded', function() {
         emptyTrashModal.addEventListener('click', function(event) {
             if (event.target === this) {
                 closeEmptyTrashModal();
+            }
+        });
+    }
+});
+
+// ============================================================================
+// COLLECTIONS TRASH FUNCTIONALITY (Phase K)
+// ============================================================================
+
+// Empty Collections Trash Modal Functions
+function openEmptyCollectionsTrashModal() {
+    const modal = document.getElementById('emptyCollectionsTrashModal');
+    if (!modal) return;
+
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    const cancelBtn = modal.querySelector('.trash-modal-btn-cancel');
+    if (cancelBtn) cancelBtn.focus();
+
+    document.addEventListener('keydown', handleEmptyCollectionsTrashEscapeKey);
+}
+
+function closeEmptyCollectionsTrashModal() {
+    const modal = document.getElementById('emptyCollectionsTrashModal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', handleEmptyCollectionsTrashEscapeKey);
+}
+
+function handleEmptyCollectionsTrashEscapeKey(event) {
+    if (event.key === 'Escape') {
+        closeEmptyCollectionsTrashModal();
+    }
+}
+
+function emptyCollectionsTrash() {
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+
+    fetch('{% url "prompts:empty_collections_trash" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            // Reload page to show empty state
+            window.location.reload();
+        } else {
+            alert(data.message || 'An error occurred.');
+        }
+    })
+    .catch(error => {
+        console.error('Error emptying collections trash:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+
+// Single Collection Delete Modal Functions
+let pendingCollectionSlug = null;
+
+function openCollectionDeleteModal(slug, title) {
+    pendingCollectionSlug = slug;
+    const modal = document.getElementById('collectionDeleteModal');
+    const nameEl = document.getElementById('collectionDeleteName');
+
+    if (!modal || !nameEl) return;
+
+    nameEl.textContent = '"' + title + '"';
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    document.addEventListener('keydown', handleCollectionDeleteEscapeKey);
+}
+
+function closeCollectionDeleteModal() {
+    const modal = document.getElementById('collectionDeleteModal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    pendingCollectionSlug = null;
+    document.removeEventListener('keydown', handleCollectionDeleteEscapeKey);
+}
+
+function handleCollectionDeleteEscapeKey(event) {
+    if (event.key === 'Escape') {
+        closeCollectionDeleteModal();
+    }
+}
+
+// Collection Restore Handler
+function restoreCollection(slug, cardElement) {
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+
+    // Optimistic UI - hide card immediately
+    if (cardElement) {
+        cardElement.classList.add('removing');
+    }
+
+    fetch(`/collections/${slug}/restore/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            // Remove card from DOM after animation
+            setTimeout(() => {
+                if (cardElement) cardElement.remove();
+                // Check if grid is empty
+                const grid = document.querySelector('#trashCollectionsGrid');
+                if (grid && grid.children.length === 0) {
+                    window.location.reload();
+                }
+            }, 300);
+        } else {
+            // Restore card on error
+            if (cardElement) {
+                cardElement.classList.remove('removing');
+            }
+            alert(data.message || 'An error occurred.');
+        }
+    })
+    .catch(error => {
+        console.error('Error restoring collection:', error);
+        if (cardElement) {
+            cardElement.classList.remove('removing');
+        }
+        alert('An error occurred. Please try again.');
+    });
+}
+
+// Collection Permanent Delete Handler
+function permanentDeleteCollection(slug, cardElement) {
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+
+    closeCollectionDeleteModal();
+
+    // Optimistic UI - hide card immediately
+    if (cardElement) {
+        cardElement.classList.add('removing');
+    }
+
+    fetch(`/collections/${slug}/delete-forever/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            // Remove card from DOM after animation
+            setTimeout(() => {
+                if (cardElement) cardElement.remove();
+                // Check if grid is empty
+                const grid = document.querySelector('#trashCollectionsGrid');
+                if (grid && grid.children.length === 0) {
+                    window.location.reload();
+                }
+            }, 300);
+        } else {
+            // Restore card on error
+            if (cardElement) {
+                cardElement.classList.remove('removing');
+            }
+            alert(data.message || 'An error occurred.');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting collection:', error);
+        if (cardElement) {
+            cardElement.classList.remove('removing');
+        }
+        alert('An error occurred. Please try again.');
+    });
+}
+
+// CSRF Token Helper
+function getCSRFToken() {
+    // Try from cookie first
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === 'csrftoken=') {
+                cookieValue = decodeURIComponent(cookie.substring(10));
+                break;
+            }
+        }
+    }
+    // Fallback to DOM input
+    if (!cookieValue) {
+        const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (tokenInput) {
+            cookieValue = tokenInput.value;
+        }
+    }
+    return cookieValue;
+}
+
+// Event Delegation for Collection Buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Restore button clicks
+    document.querySelectorAll('.collection-restore-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const slug = this.dataset.slug;
+            const card = this.closest('.collection-card[data-collection-slug]');
+            restoreCollection(slug, card);
+        });
+    });
+
+    // Delete button clicks - open modal
+    document.querySelectorAll('.collection-permanent-delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const slug = this.dataset.slug;
+            const title = this.dataset.title;
+            openCollectionDeleteModal(slug, title);
+        });
+    });
+
+    // Confirm delete button
+    const confirmDeleteBtn = document.getElementById('confirmCollectionDelete');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (pendingCollectionSlug) {
+                const card = document.querySelector(`.collection-card[data-collection-slug="${pendingCollectionSlug}"]`);
+                permanentDeleteCollection(pendingCollectionSlug, card);
+            }
+        });
+    }
+
+    // Close modals on backdrop click
+    const collectionsTrashModal = document.getElementById('emptyCollectionsTrashModal');
+    if (collectionsTrashModal) {
+        collectionsTrashModal.addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeEmptyCollectionsTrashModal();
+            }
+        });
+    }
+
+    const deleteModal = document.getElementById('collectionDeleteModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeCollectionDeleteModal();
             }
         });
     }

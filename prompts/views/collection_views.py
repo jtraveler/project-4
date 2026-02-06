@@ -499,6 +499,110 @@ def collection_delete(request, slug):
     return redirect('prompts:collection_detail', slug=slug)
 
 
+@login_required
+@require_POST
+def collection_restore(request, slug):
+    """
+    Restore a deleted collection from trash.
+
+    - Only owner can restore
+    - Clears is_deleted, deleted_at, deleted_by fields
+    """
+    # Use filter to find deleted collections (not get_object_or_404 which excludes deleted)
+    collection = Collection.objects.filter(
+        slug=slug, user=request.user, is_deleted=True
+    ).first()
+
+    if not collection:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': 'Collection not found.'}, status=404)
+        messages.error(request, 'Collection not found.')
+        return redirect('prompts:user_profile_trash', username=request.user.username)
+
+    collection_title = collection.title
+    collection.is_deleted = False
+    collection.deleted_at = None
+    collection.deleted_by = None
+    collection.save()
+
+    logger.info("User %s restored collection '%s' (ID: %s)", request.user.username, collection_title, collection.id)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'ok', 'message': f'Collection "{collection_title}" restored.'})
+
+    messages.success(request, f'Collection "{collection_title}" has been restored.')
+    return redirect('prompts:user_profile_trash', username=request.user.username)
+
+
+@login_required
+@require_POST
+def collection_permanent_delete(request, slug):
+    """
+    Permanently delete a collection from trash.
+
+    - Only owner can permanently delete
+    - Collection must already be in trash (is_deleted=True)
+    - Permanently removes the collection and all collection items
+    """
+    # Use filter to find deleted collections
+    collection = Collection.objects.filter(
+        slug=slug, user=request.user, is_deleted=True
+    ).first()
+
+    if not collection:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': 'Collection not found.'}, status=404)
+        messages.error(request, 'Collection not found.')
+        return redirect('prompts:user_profile_trash', username=request.user.username)
+
+    collection_title = collection.title
+    collection_id = collection.id
+
+    # Delete permanently (cascade will delete CollectionItems)
+    collection.delete()
+
+    logger.info("User %s permanently deleted collection '%s' (ID: %s)", request.user.username, collection_title, collection_id)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'ok', 'message': f'Collection "{collection_title}" permanently deleted.'})
+
+    messages.success(request, f'Collection "{collection_title}" has been permanently deleted.')
+    return redirect('prompts:user_profile_trash', username=request.user.username)
+
+
+@login_required
+@require_POST
+def empty_collections_trash(request):
+    """
+    Permanently delete all collections in trash.
+
+    - Only deletes collections owned by the requesting user
+    - Permanently removes all deleted collections and their items
+    """
+    deleted_collections = Collection.objects.filter(
+        user=request.user, is_deleted=True
+    )
+
+    count = deleted_collections.count()
+
+    if count == 0:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'ok', 'message': 'No collections to delete.'})
+        messages.info(request, 'No collections in trash.')
+        return redirect('prompts:user_profile_trash', username=request.user.username)
+
+    # Permanently delete all
+    deleted_collections.delete()
+
+    logger.info("User %s emptied collections trash (%d collections)", request.user.username, count)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'ok', 'message': f'{count} collection(s) permanently deleted.'})
+
+    messages.success(request, f'{count} collection(s) permanently deleted.')
+    return redirect('prompts:user_profile_trash', username=request.user.username)
+
+
 def user_collections(request, username):
     """
     Display a user's collections on their profile page (Collections tab).

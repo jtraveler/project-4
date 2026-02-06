@@ -1256,10 +1256,7 @@
          PROMPTS SUB-TAB
          ============================================ -->
     {% if trash_items %}
-        {# Trash cards are intentionally inline (not using _prompt_card.html) because:
-           1. No video playback needed (just thumbnails) - masonry uses <video> with JS
-           2. No interactivity (likes, save-to-collection buttons)
-           3. No masonry JS dependencies on this page #}
+        <!-- Trash cards: self-contained, no _prompt_card.html partial, no JS dependencies -->
         <!-- Trash Prompts Grid (self-contained, CSS columns, no JS) -->
         <div class="trash-prompts-grid">
             {% for prompt in trash_items %}
@@ -1268,13 +1265,19 @@
                 <div class="prompt-card">
                     <div class="image-wrapper">
                         {% if prompt.is_video %}
-                            {# Video prompt: show thumbnail image, NOT <video> element #}
-                            <img src="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}"
-                                 alt="{{ prompt.title }}"
-                                 width="440"
-                                 height="auto"
-                                 loading="lazy"
-                                 decoding="async">
+                            {# Autoplay video with thumbnail poster fallback #}
+                            <video autoplay muted loop playsinline
+                                   poster="{{ prompt.display_video_thumb_url|default:prompt.get_thumbnail_url }}"
+                                   {% if prompt.video_width and prompt.video_height %}
+                                   style="width: 100%; height: auto; display: block; aspect-ratio: {{ prompt.video_width }} / {{ prompt.video_height }};"
+                                   width="{{ prompt.video_width }}"
+                                   height="{{ prompt.video_height }}"
+                                   {% else %}
+                                   style="width: 100%; height: auto; display: block;"
+                                   width="440"
+                                   {% endif %}>
+                                <source src="{{ prompt.display_video_url|default:prompt.get_video_url }}" type="video/mp4">
+                            </video>
                             <div class="video-play-icon">
                                 <i class="fas fa-play-circle"></i>
                             </div>
@@ -1283,7 +1286,6 @@
                             <img src="{{ prompt.display_thumb_url|default:prompt.display_medium_url }}"
                                  alt="{{ prompt.title }}"
                                  width="440"
-                                 height="auto"
                                  loading="lazy"
                                  decoding="async">
                         {% elif prompt.featured_image %}
@@ -1291,7 +1293,6 @@
                             <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_440,f_webp,q_90' }}"
                                  alt="{{ prompt.title }}"
                                  width="440"
-                                 height="auto"
                                  loading="lazy"
                                  decoding="async">
                         {% else %}
@@ -2066,6 +2067,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (event.target === this) {
                 closeEmptyTrashModal();
             }
+        });
+    }
+});
+
+// Accessibility: Respect prefers-reduced-motion for autoplay videos (WCAG 2.2.2)
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.querySelectorAll('.trash-prompt-wrapper video[autoplay]').forEach(function(video) {
+            video.pause();
+            video.removeAttribute('autoplay');
         });
     }
 });

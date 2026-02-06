@@ -2468,15 +2468,19 @@ footer {
     display: inline-block;
     width: 100%;
     break-inside: avoid;
-    page-break-inside: avoid; /* Legacy */
-    -webkit-column-break-inside: avoid; /* Safari */
-    overflow: hidden; /* Firefox fix */
+    page-break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    overflow: hidden;
     margin-bottom: var(--grid-gap, 15px);
+    border-radius: var(--radius-lg);
+    background: var(--white);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Override prompt-card border-radius when above footer */
+/* Prompt-card inside wrapper: no rounding/shadow (wrapper handles it) */
 .trash-prompt-wrapper .prompt-card {
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 /* No-media placeholder for trash cards */

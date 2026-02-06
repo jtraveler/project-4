@@ -2411,7 +2411,7 @@ footer {
 }
 
 .trash-collection-meta .meta-delete {
-    flex: 152px 0;
+    flex: 200px 0;
 
 }
 
@@ -2441,8 +2441,8 @@ footer {
 }
 
 .btn-trash-action .icon {
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
 }
 
 .btn-trash-action:hover {
@@ -2474,6 +2474,11 @@ footer {
     opacity: 0;
     transform: scale(0.95);
     transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Trash collection thumbnails are not clickable */
+.trash-collection-card .collection-card-thumbnail {
+    cursor: default;
 }
 
 /* Responsive: Stack buttons on mobile */

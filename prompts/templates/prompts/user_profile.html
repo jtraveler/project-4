@@ -1204,7 +1204,7 @@
                             {% csrf_token %}
                             <input type="hidden" name="restore_as" value="draft">
                             <button type="submit" class="trash-btn-action w-100" title="Restore as draft">
-                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-rotate-ccw"/></svg>
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-restore"/></svg>
                                 Restore
                             </button>
                         </form>
@@ -1360,14 +1360,14 @@
                                 class="btn-trash-action btn-restore collection-restore-btn"
                                 data-slug="{{ collection.slug }}"
                                 data-title="{{ collection.title }}">
-                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-rotate-ccw"></use></svg>
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-restore"></use></svg>
                             Restore
                         </button>
                         <button type="button"
                                 class="btn-trash-action btn-delete collection-permanent-delete-btn"
                                 data-slug="{{ collection.slug }}"
                                 data-title="{{ collection.title }}">
-                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
                             Delete
                         </button>
                     </div>

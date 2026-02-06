@@ -2438,13 +2438,40 @@ footer {
 }
 
 /* ============================================
-   TRASH PROMPTS - Footer styles (uses standard masonry classes)
+   TRASH PROMPTS - CSS columns grid (no JS required)
    ============================================ */
 
-/* Wrapper holds card + footer together (combined with .masonry-item) */
+/* Grid container using CSS columns for masonry effect */
+.trash-prompts-grid {
+    column-count: 4;
+    column-gap: var(--grid-gap, 15px);
+    column-fill: balance;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* Responsive breakpoints aligned with Bootstrap 5 */
+@media (max-width: 1199.98px) {
+    .trash-prompts-grid { column-count: 3; }
+}
+
+@media (max-width: 991.98px) {
+    .trash-prompts-grid { column-count: 2; }
+}
+
+@media (max-width: 575.98px) {
+    .trash-prompts-grid { column-count: 1; }
+}
+
+/* Wrapper holds card + footer together as single column item */
 .trash-prompt-wrapper {
+    display: inline-block;
+    width: 100%;
     break-inside: avoid;
-    margin-bottom: 24px;
+    page-break-inside: avoid; /* Legacy */
+    -webkit-column-break-inside: avoid; /* Safari */
+    overflow: hidden; /* Firefox fix */
+    margin-bottom: var(--grid-gap, 15px);
 }
 
 /* Remove animation opacity from masonry-item inside trash grid */

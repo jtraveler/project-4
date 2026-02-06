@@ -1256,11 +1256,10 @@
          PROMPTS SUB-TAB
          ============================================ -->
     {% if trash_items %}
-        <!-- Trash Prompts Masonry Grid (uses standard masonry classes) -->
-        <div class="masonry-container" style="padding: 0;">
-            <div class="masonry-grid">
-                {% for prompt in trash_items %}
-                <div class="masonry-item trash-prompt-wrapper" data-slug="{{ prompt.slug }}">
+        <!-- Trash Prompts Grid (CSS columns, no JS required) -->
+        <div class="trash-prompts-grid">
+            {% for prompt in trash_items %}
+            <div class="trash-prompt-wrapper" data-slug="{{ prompt.slug }}">
                     {# Prompt card WITHOUT its own masonry-item wrapper, WITHOUT draft badge #}
                     {% include 'prompts/partials/_prompt_card.html' with prompt=prompt in_trash=True %}
 
@@ -1303,8 +1302,7 @@
                         </div>
                     </div>
                 </div>
-                {% endfor %}
-            </div>
+            {% endfor %}
         </div>
 
         {# Delete Modals - Outside hidden container so Bootstrap can find them #}

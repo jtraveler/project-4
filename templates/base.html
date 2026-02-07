@@ -46,6 +46,29 @@
         <!-- Google Fonts - Roboto Family + Pattaya for Logo -->
         <link href="https://fonts.googleapis.com/css2?family=Pattaya&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
+        <!-- Critical Icon CSS: Prevents FOUC (flash of unstyled SVG icons) -->
+        <!-- These sizing rules are inlined to ensure icons render at correct size on first frame -->
+        <!-- Full icons.css still loads below for additional styling (colors, button states, etc.) -->
+        <style>
+            .icon {
+                display: inline-block;
+                width: 1em;
+                height: 1em;
+                vertical-align: -0.125em;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                flex-shrink: 0;
+            }
+            .icon-xs { width: 0.75rem; height: 0.75rem; }
+            .icon-sm { width: 1.4rem; height: 1.4rem; }
+            .icon-md { width: 1.5rem; height: 1.5rem; }
+            .icon-lg { width: 1.5rem; height: 1.5rem; }
+            .icon-xl { width: 1.5rem; height: 1.5rem; }
+        </style>
+
         <!-- Font Awesome CSS - Deferred to prevent render blocking -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" crossorigin="anonymous" media="print" onload="this.media='all'">
         <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" crossorigin="anonymous"></noscript>

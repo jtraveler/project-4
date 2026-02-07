@@ -70,6 +70,7 @@
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
+  --radius-pill: 15px;  /* Tabs, badges, pill-shaped elements */
   --radius-full: 9999px;
 
   /* === MEDIA CONTAINER === */
@@ -488,7 +489,7 @@ main {
 .author-badge {
   background: rgba(255, 255, 255, 0.2);
   padding: 0.25rem 0.75rem 0.25rem 0;
-  border-radius: 15px;
+  border-radius: var(--radius-pill);
   font-weight: 500;
 }
 
@@ -530,7 +531,7 @@ main {
   background: var(--gray-200);
   color: var(--gray-800);
   padding: 0.375rem 0.75rem;
-  border-radius: 15px;
+  border-radius: var(--radius-pill);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;

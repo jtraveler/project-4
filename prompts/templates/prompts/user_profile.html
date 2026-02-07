@@ -196,7 +196,7 @@
     flex: 1;  /* Take remaining space in wrapper */
     flex-wrap: nowrap;  /* Prevent tabs from wrapping */
     padding-bottom: 10px;
-    justify-content: center;
+    border-radius: var(--radius-pill);
 }
 
 /* FIX 2: Hide scrollbar for Chrome/Safari */
@@ -281,6 +281,7 @@
         rgba(247, 247, 247, 0.7) 50%,
         rgba(247, 247, 247, 0) 100%
     );
+    border-radius: var(--radius-pill);
 
     /* Position on right edge, full height */
     position: absolute;
@@ -319,6 +320,8 @@
         rgba(247, 247, 247, 0.7) 50%,
         rgba(247, 247, 247, 0) 100%
     );
+
+    border-radius: var(--radius-pill);
 
     /* Position on left edge, full height */
     position: absolute;
@@ -549,7 +552,6 @@
 
     .profile-filters-container {
         width: 100%;
-        flex-direction: column;  /* Stack vertically */
         gap: 12px;  /* Space between dropdowns */
     }
 
@@ -594,7 +596,7 @@
     }
 
     .profile-navigation-row {
-        padding: 0 20px 20px;
+        padding: 20px 0;
     }
 
     .profile-filters-container {
@@ -637,7 +639,6 @@
     .profile-filters-container,
     .toolbar,
     .d-flex.justify-content-between {
-        flex-direction: column;
         gap: 10px;
         width: 100%;
     }

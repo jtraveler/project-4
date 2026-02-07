@@ -209,6 +209,12 @@
         opacity: 1 !important;
     }
 
+    /* Override opacity:0 set by JS on desktop - attribute selector specificity 0,2,0
+       matches the non-media-query rule, but later position in file wins */
+    .video-thumbnail[style*="opacity"] {
+        opacity: 1 !important;
+    }
+
     .gallery-video {
         position: absolute;
         top: 0;

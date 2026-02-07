@@ -15,7 +15,7 @@
 | **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
-| **SVG Icons** | 31 | static/icons/sprite.svg |
+| **SVG Icons** | 32 | static/icons/sprite.svg |
 | **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
 | **Management Commands** | 19 | prompts/management/commands/ |
@@ -75,6 +75,7 @@ live-working-project/
 │   │   └── partials/             # Partial templates
 │   │       ├── _masonry_grid.html
 │   │       ├── _prompt_card.html
+│   │       ├── _prompt_card_list.html   # Related prompts AJAX partial (Session 74)
 │   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
 │   ├── tests/                    # 13 test files
@@ -178,6 +179,7 @@ prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app ro
 
 prompts/utils/
 ├── __init__.py              # Package init
+├── related.py               # Related prompts scoring algorithm (4-factor: tags, generator, engagement, recency)
 └── seo.py                   # SEO filename generation (stop word removal, slug truncation, -ai-prompt suffix)
 ```
 
@@ -464,10 +466,10 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `sprite.svg` | static/icons/ | SVG sprite with 31 icon definitions |
+| `sprite.svg` | static/icons/ | SVG sprite with 32 icon definitions |
 | `icons.css` | static/css/components/ | Icon utility classes |
 
-### Available Icons (31 total)
+### Available Icons (32 total)
 
 **Phase 1 Icons (Navigation) - 5 icons:**
 - `icon-image` - Photos filter indicator
@@ -494,7 +496,7 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 - `icon-user-pen` - Edit profile
 - `icon-mail` - Email/contact
 
-**Phase K Icons (Collections) - 12 icons:**
+**Phase K Icons (Collections) - 13 icons:**
 - `icon-bookmark` - Save button (outline)
 - `icon-bookmark-filled` - Saved state (pink fill)
 - `icon-circle-check` - Already in collection
@@ -507,6 +509,7 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 - `icon-download` - Download button
 - `icon-share` - Share/copy link
 - `icon-rotate-ccw` - Restore button (Session 70)
+- `icon-clock` - Trash "deleted X days ago" indicator (Session 74)
 
 ### Usage Pattern
 
@@ -1228,11 +1231,18 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.10
+**Version:** 3.11
 **Audit Date:** February 7, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.11 (February 7, 2026 - Session 74 End-of-Session):**
+- Added `prompts/utils/related.py` - Related prompts scoring algorithm (4-factor)
+- Added `prompts/templates/prompts/partials/_prompt_card_list.html` - AJAX partial for related prompts
+- Updated SVG icon count: 31→32 (added `icon-clock` for trash "deleted X days ago")
+- Updated Phase K icons count: 12→13 (added `icon-clock`)
+- Updated audit date and version
 
 **v3.10 (February 7, 2026 - Session 73 End-of-Session):**
 - Updated Phase K status from ~98% to ~96% (video bugs documented)

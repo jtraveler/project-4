@@ -29,7 +29,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | N4h rename triggering, XML sitemap, indexes migration, final testing |
+| **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 
 ### What's Paused (Don't Forget!)
@@ -42,6 +42,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Related Prompts P1 | Feb 7, 2026 | "You Might Also Like" section on prompt detail (scoring algorithm, AJAX Load More) |
 | Phase L | Jan 2026 | Media Infrastructure (moved from Cloudinary to B2 + Cloudflare) |
 | Phase M | Jan 2026 | Video NSFW Moderation (FFmpeg frame extraction + OpenAI Vision) |
 | Phase J | Dec 2025 | Prompt Detail Page Redesign |
@@ -201,6 +202,16 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 | `prompts/templates/prompts/prompt_detail.html` | Fixed h3→h2 headings, aria-label mismatches with pluralize filter (S69) |
 | `prompts/management/commands/minify_assets.py` | NEW - CSS/JS minification command targeting STATIC_ROOT (S69) |
 | `requirements.txt` | Added csscompressor>=0.9.5, rjsmin>=1.2.0 (S69) |
+| `prompts/utils/related.py` | NEW - Related prompts scoring algorithm (4-factor: tags, generator, engagement, recency) (S74) |
+| `prompts/templates/prompts/partials/_prompt_card_list.html` | NEW - AJAX partial for related prompts Load More (S74) |
+| `prompts/views/prompt_views.py` | Added related_prompts_ajax view, get_related_prompts import, context updates (S74) |
+| `prompts/urls.py` | Added /prompt/<slug>/related/ AJAX endpoint (S74) |
+| `prompts/templates/prompts/prompt_detail.html` | Added "You Might Also Like" section with masonry grid + Load More JS (S74) |
+| `static/css/pages/prompt-detail.css` | Related prompts section styles (S74) |
+| `prompts/templates/prompts/user_profile.html` | Trash page polish: tap-to-toggle, card-link, clock icon, bookmark removal, FOUC fix (S74) |
+| `static/css/style.css` | --radius-pill variable, trash badge styles, FOUC fix (S74) |
+| `static/icons/sprite.svg` | Added icon-clock for trash "deleted X days ago" (S74) |
+| `docs/DESIGN_RELATED_PROMPTS.md` | NEW - Related Prompts Phase 1 & 2 design document (S74) |
 
 **Committed in Session 66** (commit `806dd5b`):
 - `prompts/templates/prompts/prompt_detail.html` - Complete SEO overhaul (JSON-LD, OG, Twitter, canonical, headings, tag links, noindex)
@@ -581,5 +592,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.4 (Session 73 - Phase K Trash Video UI Polish)
+**Version:** 4.5 (Session 74 - Related Prompts Phase 1, Trash Page Polish)
 **Last Updated:** February 7, 2026

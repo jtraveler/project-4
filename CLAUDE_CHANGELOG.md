@@ -68,6 +68,75 @@ This is a running log of development sessions. Each session entry includes:
 
 ---
 
+### Session 74 - February 7, 2026
+
+**Focus:** Related Prompts Phase 1 + Trash Page Polish
+
+**Context:** Continuing from Session 73's trash video UI work. This session implemented the "You Might Also Like" related prompts feature (Phase 1) and completed trash page polish with improved interactions and styling.
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| Related prompts scoring | Created `prompts/utils/related.py` with 4-factor algorithm (60% tags, 15% generator, 15% engagement, 10% recency) | 8.5/10 |
+| Related prompts view | Added related prompts context to `prompt_detail` view + AJAX endpoint for Load More | 8.5/10 |
+| Related prompts template | Added "You Might Also Like" section to prompt_detail.html with masonry grid | 8.5/10 |
+| Grid alignment fix | Changed dynamic column count to always create 4 columns (matching homepage pattern) | 8.5/10 |
+| MIN_SCORE removal | Removed 0.30 threshold - all related prompts now shown, best matches first | 8.5/10 |
+| Trash tap-to-toggle | Mobile trash cards use tap-to-toggle overlay instead of click | N/A (UX) |
+| Trash card-link | Desktop trash cards have clickable card area (like homepage) | N/A (UX) |
+| Clock icon | Added icon-clock to sprite.svg for "deleted X days ago" | N/A (icon) |
+| Bookmark removal | Removed bookmark/save icon from trash cards (irrelevant in trash context) | N/A (cleanup) |
+| FOUC fix | Added CSS to prevent flash of unstyled content on trash page | N/A (bugfix) |
+| --radius-pill variable | Added CSS variable for pill-shaped border radius (used by trash badges) | N/A (style) |
+
+**Files Created:**
+- `prompts/utils/related.py` - Related prompts scoring algorithm (Jaccard similarity for tags, linear decay for recency)
+- `prompts/templates/prompts/partials/_prompt_card_list.html` - Partial for AJAX Load More rendering
+
+**Files Modified:**
+- `prompts/views/prompt_views.py` - Added `get_related_prompts()` import, related prompts context, `related_prompts_ajax` view
+- `prompts/urls.py` - Added `/prompt/<slug>/related/` AJAX endpoint (line 29)
+- `prompts/templates/prompts/prompt_detail.html` - Added "You Might Also Like" section with masonry grid + Load More JS
+- `static/css/pages/prompt-detail.css` - Related prompts section styles (.related-prompts-section, .related-prompts-title)
+- `prompts/templates/prompts/user_profile.html` - Trash card improvements (tap-to-toggle, card-link, clock icon)
+- `static/css/style.css` - `--radius-pill` variable, trash badge styles, FOUC fix
+- `static/icons/sprite.svg` - Added icon-clock (32 icons total)
+
+**Key Technical Changes:**
+- Related prompts use same masonry grid pattern as homepage (always 4 columns, CSS hides extras via `[data-columns]`)
+- Scoring algorithm pre-filters candidates (must share tag OR generator) to avoid scoring entire database
+- Safety cap: if >500 candidates, limit to 500 most recent before scoring
+- `prefetch_related('tags', 'likes')` + `annotate(likes_count=Count('likes'))` for efficient scoring
+- No MIN_SCORE threshold - "You Might Also Like" wording justifies showing loosely related content
+
+**Agent Ratings:**
+
+| Review Area | Agents | Average |
+|-------------|--------|---------|
+| Related prompts (round 1) | @ui 7.5/10, @code-review 8.5/10 | 8.0/10 (below threshold) |
+| Related prompts (round 2, after grid fix) | @code-review 8.5/10 | 8.5/10 |
+
+**Fixes After Round 1 Review:**
+- Changed dynamic column count (`for i < newColumnCount`) to fixed 4 columns (`for i < 4`)
+- Updated comment to accurately describe vertical distribution pattern
+- Cards now start from left column consistently (matching homepage behavior)
+
+**Known Bugs (Documented in DESIGN_RELATED_PROMPTS.md):**
+- Grid layout may need CSS column-count approach instead of JS columns (planned for Session 75)
+
+**Design Document:**
+- `docs/DESIGN_RELATED_PROMPTS.md` - Complete Phase 1 & 2 design, updated with Session 74 implementation status
+
+**Phase K Status:** ~96% complete (trash polish done)
+
+**Next Session:**
+- Test related prompts on production with real data
+- Consider Phase 2 (subject categories with AI classification)
+- Final Phase K cleanup (K.2: download tracking, virtual collections; K.3: premium limits)
+
+---
+
 ### Session 70 - February 6, 2026
 
 **Focus:** Phase K - Trash Integration & Collection Delete Features
@@ -911,6 +980,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 7, 2026 | 74 | Related Prompts Phase 1: scoring algorithm (4 factors), AJAX Load More, masonry grid, trash page polish |
 | Feb 7, 2026 | 73 | Phase K trash video UI polish: mobile click-to-play, CSS specificity fixes, self-contained trash cards |
 | Feb 6, 2026 | 70 | Phase K trash integration: simplified layouts, collection delete with optimistic UI, trash collections matching Collections page |
 | Feb 4, 2026 | 69 | Lighthouse 96/100/100/100: robots.txt, CSS perf, a11y fixes, asset minification (102.5 KiB saved) |
@@ -935,5 +1005,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.4 (Session 73 - Phase K Trash Video UI Polish, CSS Specificity Fixes)
+**Version:** 4.5 (Session 74 - Related Prompts Phase 1, Trash Page Polish)
 **Last Updated:** February 7, 2026

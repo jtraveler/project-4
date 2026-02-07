@@ -1458,6 +1458,7 @@ a.model-name:hover {
     width: 100% !important;
     opacity: 1 !important;
     animation: none !important;
+    vertical-align: top !important;
 }
 
 /* Responsive column counts */

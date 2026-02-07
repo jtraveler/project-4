@@ -1447,15 +1447,17 @@ a.model-name:hover {
 .related-prompts-grid {
     display: block !important;  /* Override flex from masonry-grid.css */
     column-count: 4;
-    column-gap: 15px;
+    column-gap: 15px !important;
+    gap: 15px !important;  /* Ensure gap property also set for broader support */
 }
 
 .related-prompts-grid .masonry-item {
     break-inside: avoid;
-    margin-bottom: 15px;
-    display: inline-block;
-    width: 100%;
-    opacity: 1;  /* Override fadeIn animation from masonry-grid.css */
+    margin-bottom: 15px !important;
+    display: inline-block !important;
+    width: 100% !important;
+    opacity: 1 !important;
+    animation: none !important;
 }
 
 /* Responsive column counts */

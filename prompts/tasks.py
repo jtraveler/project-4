@@ -991,10 +991,19 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 clean_categories.append(cat_clean)
                 cat_seen.add(cat_clean)
 
-        # 90% - Storing results
-        update_ai_job_progress(job_id, 90)
+        # 90% - Storing partial results (categories available even if user submits early)
+        # Write data to cache at 90% so categories are available before complete=True
+        update_ai_job_progress(
+            job_id, 90,
+            complete=False,
+            title=title,
+            description=description,
+            tags=clean_tags,
+            categories=clean_categories,
+            error=None
+        )
 
-        # 100% - Complete
+        # 100% - Complete (marks job as done)
         update_ai_job_progress(
             job_id, 100, complete=True,
             title=title,

@@ -327,20 +327,22 @@ def upload_submit(request):
         logger.warning(f"[CAT DEBUG] ai_complete={ai_complete}, has_title={bool(ai_data.get('title'))}, categories={ai_data.get('categories', 'NOT IN CACHE')}")
         logger.warning(f"[CAT DEBUG] Full cache contents: {ai_data}")
 
-    # Use cached AI results, fall back to session, then defaults
-    if ai_complete and ai_data.get('title'):
+    # Use cached AI results (cache-first approach), fall back to session
+    # Check if cache has data (title), not ai_complete - data available at 90% progress
+    if ai_data.get('title'):
+        # Cache has data - use everything from cache
         ai_title = ai_data.get('title', 'Untitled Prompt')
         ai_description = ai_data.get('description', '')
         ai_cached_tags = ai_data.get('tags', [])
         ai_cached_categories = ai_data.get('categories', [])
-        logger.warning(f"[CAT DEBUG] CACHE PATH: categories={ai_cached_categories}")
+        logger.warning(f"[CAT DEBUG] CACHE PATH: all data from cache, categories={ai_cached_categories}")
     else:
-        # Fallback to session (for backwards compatibility or if AI didn't complete)
+        # Cache empty - pure session fallback (backwards compatibility only)
         ai_title = request.session.get('ai_title') or 'Untitled Prompt'
         ai_description = request.session.get('ai_description') or ''
         ai_cached_tags = []
         ai_cached_categories = []
-        logger.warning(f"[CAT DEBUG] SESSION FALLBACK: categories are EMPTY (session doesn't store categories)")
+        logger.warning(f"[CAT DEBUG] SESSION FALLBACK: cache empty, using session data")
 
     # Validate required fields
     if not content:

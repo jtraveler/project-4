@@ -15,6 +15,7 @@ from .redirect_views import (
 from .prompt_views import (
     PromptList,
     prompt_detail,
+    related_prompts_ajax,  # Related prompts AJAX endpoint
     comment_edit,
     comment_delete,
     prompt_edit,
@@ -129,6 +130,7 @@ __all__ = [
     # Prompt views
     'PromptList',
     'prompt_detail',
+    'related_prompts_ajax',  # Related prompts AJAX endpoint
     'comment_edit',
     'comment_delete',
     'prompt_edit',

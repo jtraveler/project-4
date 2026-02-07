@@ -1408,3 +1408,79 @@ a.model-name:hover {
     outline-offset: 2px;
     border-radius: 2px;
 }
+
+/* ==========================================================================
+   Related Prompts Section
+   ========================================================================== */
+
+.related-prompts-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--gray-200, #e5e7eb);
+}
+
+.related-prompts-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--gray-800, #1f2937);
+}
+
+/* Constrain the related prompts container - matches homepage .masonry-container */
+.related-prompts-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 40px;  /* Horizontal padding for edge spacing */
+    box-sizing: border-box;
+}
+
+/* Load More button styling */
+.related-prompts-section .load-more-container {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* CSS Column-Count Layout for Related Prompts Grid */
+.related-prompts-grid {
+    column-count: 4;
+    column-gap: 15px;
+}
+
+.related-prompts-grid .masonry-item {
+    break-inside: avoid;
+    margin-bottom: 15px;
+    display: inline-block;
+    width: 100%;
+}
+
+/* Responsive column counts */
+@media (max-width: 1100px) {
+    .related-prompts-grid {
+        column-count: 3;
+    }
+}
+
+@media (max-width: 800px) {
+    .related-prompts-grid {
+        column-count: 2;
+    }
+}
+
+@media (max-width: 500px) {
+    .related-prompts-grid {
+        column-count: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .related-prompts-section {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+    }
+
+    .related-prompts-title {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+}

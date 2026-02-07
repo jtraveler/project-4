@@ -1,6 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseRedirect, Http404
+from django.template.loader import render_to_string
+from prompts.utils.related import get_related_prompts
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -570,6 +572,12 @@ def prompt_detail(request, slug):
     # Calculate remaining count beyond the 4 shown
     author_remaining_count = max(0, author_total_prompts - 4)
 
+    # Related prompts (Phase: Related Prompts Feature)
+    related_page_size = 18  # Match homepage paginate_by
+    all_related = get_related_prompts(prompt, limit=60)
+    related_prompts = all_related[:related_page_size]
+    has_more_related = len(all_related) > related_page_size
+
     end_time = time.time()
     logger.warning(
         f"DEBUG: prompt_detail view took {end_time - start_time:.3f} seconds"
@@ -594,6 +602,10 @@ def prompt_detail(request, slug):
             "more_from_author": more_from_author,
             "more_from_author_count": more_from_author_count,
             "author_remaining_count": author_remaining_count,
+            # Related prompts (Phase: Related Prompts Feature)
+            "related_prompts": related_prompts,
+            "has_more_related": has_more_related,
+            "related_prompt_slug": prompt.slug,
         },
     )
 
@@ -603,6 +615,51 @@ def prompt_detail(request, slug):
     response['Expires'] = '0'
 
     return response
+
+
+def related_prompts_ajax(request, slug):
+    """
+    AJAX endpoint for loading more related prompts.
+
+    Returns paginated HTML fragments of related prompt cards for
+    infinite scroll / load more functionality.
+
+    Args:
+        request: HTTP request object
+        slug: URL slug of the source prompt
+
+    Returns:
+        JsonResponse with 'html' (rendered cards) and 'has_more' (boolean)
+
+    URL: /prompt/<slug>/related/?page=N
+    """
+    prompt = get_object_or_404(Prompt, slug=slug, status=1, deleted_at__isnull=True)
+
+    # Parse and validate page parameter
+    try:
+        page = int(request.GET.get('page', 1))
+    except (ValueError, TypeError):
+        page = 1
+    page = max(1, page)  # Ensure page >= 1
+
+    page_size = 18  # Match homepage paginate_by
+
+    all_related = get_related_prompts(prompt, limit=60)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_prompts = all_related[start:end]
+    has_more = end < len(all_related)
+
+    html = render_to_string(
+        'prompts/partials/_prompt_card_list.html',
+        {'prompts': page_prompts},
+        request=request
+    )
+
+    return JsonResponse({
+        'html': html,
+        'has_more': has_more,
+    })
 
 
 def comment_edit(request, slug, comment_id):

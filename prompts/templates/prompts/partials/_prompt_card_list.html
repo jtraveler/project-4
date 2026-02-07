@@ -1,0 +1,15 @@
+{% comment %}
+Partial for rendering a list of prompt cards.
+Used by the related prompts AJAX endpoint for Load More functionality.
+
+Usage: {% include 'prompts/partials/_prompt_card_list.html' with prompts=prompt_list %}
+
+Note: This partial expects 'prompts' (not 'prompt') as the context variable.
+Each prompt is passed to _prompt_card.html which expects 'prompt' (singular).
+{% endcomment %}
+
+{% load static %}
+
+{% for prompt in prompts %}
+    {% include 'prompts/partials/_prompt_card.html' with prompt=prompt %}
+{% endfor %}

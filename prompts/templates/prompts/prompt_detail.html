@@ -686,6 +686,37 @@
     </div>
 </div>
 
+{# === Related Prompts Section (CSS column-count layout) === #}
+{% if related_prompts %}
+<section class="related-prompts-section">
+    <div class="masonry-container related-prompts-container">
+        <h2 class="related-prompts-title">You Might Also Like</h2>
+        <div class="masonry-wrapper">
+            <div class="masonry-grid related-prompts-grid" id="related-prompts-grid">
+                {% for related_prompt in related_prompts %}
+                    {% include 'prompts/partials/_prompt_card.html' with prompt=related_prompt %}
+                {% endfor %}
+            </div>
+        </div>
+        {% if has_more_related %}
+        <div class="load-more-container text-center mt-4">
+            <button id="load-more-related"
+                    class="btn btn-primary btn-lg"
+                    data-slug="{{ related_prompt_slug }}"
+                    data-next-page="2"
+                    aria-label="Load more related prompts">
+                <i class="fas fa-plus-circle me-2"></i>
+                Load More
+            </button>
+            <div id="related-loading-spinner" class="mt-3" style="display: none;">
+                <i class="fas fa-spinner fa-spin"></i> Loading more prompts...
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
 <!-- Enhanced Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -790,4 +821,52 @@
 {% block extras %}
 <!-- Prompt Detail Page JavaScript (deferred for performance) -->
 <script src="{% static 'js/prompt-detail.js' %}" defer></script>
+
+{% if has_more_related %}
+<!-- Related Prompts Load More (CSS column-count handles layout) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var loadMoreBtn = document.getElementById('load-more-related');
+    if (!loadMoreBtn) return;
+
+    var grid = document.getElementById('related-prompts-grid');
+    var spinner = document.getElementById('related-loading-spinner');
+    var isLoading = false;
+
+    loadMoreBtn.addEventListener('click', function() {
+        if (isLoading) return;
+        isLoading = true;
+
+        var slug = this.dataset.slug;
+        var page = this.dataset.nextPage;
+
+        this.style.display = 'none';
+        spinner.style.display = 'block';
+
+        fetch('/prompt/' + slug + '/related/?page=' + page, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            // Append new items directly to grid (CSS column-count handles layout)
+            grid.insertAdjacentHTML('beforeend', data.html);
+
+            spinner.style.display = 'none';
+            isLoading = false;
+
+            if (data.has_more) {
+                loadMoreBtn.dataset.nextPage = parseInt(page) + 1;
+                loadMoreBtn.style.display = 'inline-block';
+            }
+        })
+        .catch(function(err) {
+            console.error('Failed to load related prompts:', err);
+            spinner.style.display = 'none';
+            loadMoreBtn.style.display = 'inline-block';
+            isLoading = false;
+        });
+    });
+});
+</script>
+{% endif %}
 {% endblock %}

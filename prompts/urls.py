@@ -25,6 +25,8 @@ urlpatterns = [
     path('prompt/processing/<uuid:processing_uuid>/', views.prompt_processing, name='prompt_processing'),
     # 301 redirect: /prompt/ (without slug) -> /prompts/
     path('prompt/', RedirectView.as_view(url='/prompts/', permanent=True)),
+    # Related prompts AJAX endpoint (must be before catch-all slug pattern)
+    path('prompt/<slug:slug>/related/', views.related_prompts_ajax, name='related_prompts_ajax'),
     path('prompt/<slug:slug>/', views.prompt_detail, name='prompt_detail'),
     path('prompt/<slug:slug>/edit/', views.prompt_edit, name='prompt_edit'),
     path('prompt/<slug:slug>/delete/', views.prompt_delete, name='prompt_delete'),

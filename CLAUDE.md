@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 6, 2026
+**Last Updated:** February 7, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -36,7 +36,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase K** | ⏸️ 98% | Collections ("Saves") | K.2: Download tracking, virtual collections; K.3: Premium limits |
+| **Phase K** | ⏸️ ~96% | Collections ("Saves") | Trash video bugs (3), K.2: Download tracking, virtual collections; K.3: Premium limits |
 
 ### Recently Completed
 
@@ -126,6 +126,23 @@ Rebuilding upload flow to feel "instant" by:
 **N4h Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation.
 
 **Resolved in Session 69:** SEO score regression (92→100) fixed via robots.txt + preconnect cleanup + font optimization.
+
+### Phase K Known Bugs (Session 73)
+
+| Bug | Description | Impact |
+|-----|-------------|--------|
+| Video poster aspect ratio | Poster images may crop to wrong aspect ratio with `object-fit: cover` | Visual glitch |
+| Mobile play icon resize | Play icon doesn't reappear after desktop→mobile resize | Minor UX |
+| Videos at ≤768px | Videos disappear on homepage/gallery at mobile breakpoint | Needs investigation |
+
+### Trash Prompts Architecture (Session 73)
+
+The trash prompts grid uses a **self-contained card approach** with CSS columns instead of JavaScript masonry:
+
+- **Why:** Homepage masonry JS isn't initialized on trash page, and `_prompt_card.html` video elements break in trash context
+- **Solution:** Self-contained cards in `user_profile.html` (lines ~1267-1480) with `column-count` CSS layout
+- **CSS:** Styles in `static/css/style.css` under "Trash video styling" section (~line 2555-2590)
+- **Specificity Note:** `.trash-prompt-wrapper .trash-video-play` uses specificity 0,2,0 to beat `masonry-grid.css` `.video-play-icon` (0,1,0) which loads later
 
 ### Resolved Blockers (Session 64-66)
 
@@ -564,5 +581,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.3 (Session 70 - Phase K Trash Integration, Collection Delete)
-**Last Updated:** February 6, 2026
+**Version:** 4.4 (Session 73 - Phase K Trash Video UI Polish)
+**Last Updated:** February 7, 2026

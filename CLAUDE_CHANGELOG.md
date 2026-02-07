@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 6, 2026
+**Last Updated:** February 7, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,51 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Session 73 - February 7, 2026
+
+**Focus:** Phase K - Trash Prompts Video UI Polish
+
+**Context:** Completing Phase K trash integration with video behavior and styling fixes. Session involved multiple iterative CSS fixes using investigation-first debugging approach after 4+ blind iterations failed.
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| Mobile video click-to-play | Added click handlers for video play on mobile with `prefers-reduced-motion` support (WCAG 2.2.2) | N/A (UX) |
+| CSS specificity fix | Fixed `.trash-video-play` pointer-events being overridden by masonry-grid.css | N/A (bugfix) |
+| Card-link mobile fix | Disabled `.card-link` pointer-events on mobile so play icon receives taps | N/A (bugfix) |
+| Video aspect ratio | Changed `object-fit: cover` to `contain` to prevent poster cropping | N/A (style) |
+| Bookmark icon | Added bookmark icon to trash card overlay (save to collection) | N/A (UI) |
+
+**Files Modified:**
+- `prompts/templates/prompts/user_profile.html` - Self-contained trash cards with video + overlay, mobile click-to-play JS with `prefers-reduced-motion`
+- `static/css/style.css` - Trash video styling (~line 2555-2590), specificity 0,2,0 for `.trash-prompt-wrapper .trash-video-play`
+
+**Key Technical Changes:**
+- Trash prompts use CSS `column-count` layout (not JS masonry) - homepage masonry JS isn't initialized on trash page
+- Self-contained cards instead of `_prompt_card.html` partial - video elements break in trash context
+- CSS specificity battle: `masonry-grid.css` loads after `style.css` in `base.html`, so `.video-play-icon { pointer-events: none; }` wins ties
+- Fixed by using `.trash-prompt-wrapper .trash-video-play` (specificity 0,2,0) instead of `.trash-video-play` (0,1,0)
+- Mobile: disabled `.card-link` via `pointer-events: none` so play icon tap handler fires
+
+**Debugging Methodology:**
+- After 4+ failed blind CSS fix iterations, user required investigation-first approach
+- Diagnostic scripts to log computed styles, z-index values, stacking contexts
+- Root cause: CSS cascade order + specificity, not z-index stacking contexts
+
+**Known Bugs (Documented):**
+1. Video poster aspect ratio mismatch (some cases)
+2. Play icon doesn't reappear on mobile after desktop→mobile resize
+3. Videos disappear at ≤768px on homepage/gallery (needs investigation)
+
+**Phase K Status:** ~96% complete (trash video UI polish done, 3 video bugs remaining)
+
+**Next Session:**
+- Investigate remaining video bugs OR return to Phase N4 blockers
+- Final Phase K cleanup (K.2: download tracking, virtual collections; K.3: premium limits)
+
+---
 
 ### Session 70 - February 6, 2026
 
@@ -866,6 +911,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 7, 2026 | 73 | Phase K trash video UI polish: mobile click-to-play, CSS specificity fixes, self-contained trash cards |
 | Feb 6, 2026 | 70 | Phase K trash integration: simplified layouts, collection delete with optimistic UI, trash collections matching Collections page |
 | Feb 4, 2026 | 69 | Lighthouse 96/100/100/100: robots.txt, CSS perf, a11y fixes, asset minification (102.5 KiB saved) |
 | Feb 4, 2026 | 68 | Performance optimization (60-70% query reduction), admin improvements, upload UX (warning toast, error card) |
@@ -889,5 +935,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.3 (Session 70 - Phase K Trash Integration, Collection Delete, Simplified Layouts)
-**Last Updated:** February 6, 2026
+**Version:** 4.4 (Session 73 - Phase K Trash Video UI Polish, CSS Specificity Fixes)
+**Last Updated:** February 7, 2026

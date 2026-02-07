@@ -9,7 +9,7 @@
   Icon Index:
   Phase 1: icon-image, icon-video, icon-search, icon-trophy, icon-lightbulb
   Phase 2: icon-comment, icon-heart, icon-heart-filled, icon-flag, icon-edit, icon-trash,
-           icon-external-link, icon-calendar, icon-copy, icon-login, icon-bell
+           icon-external-link, icon-calendar, icon-clock, icon-copy, icon-login, icon-bell
   Phase 3: icon-user, icon-user-pen, icon-mail
   Phase K: icon-bookmark, icon-bookmark-filled, icon-circle-check, icon-circle-minus,
            icon-eye, icon-eye-off, icon-x, icon-arrow-left, icon-arrow-right,
@@ -129,6 +129,12 @@
     <rect width="18" height="18" x="3" y="4" rx="2"/>
     <path d="M3 10h18"/>
     <path d="m9 16 2 2 4-4"/>
+  </symbol>
+
+  <!-- Icon: clock (time/duration) -->
+  <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M12 6v6l4 2"/>
   </symbol>
 
   <!-- Icon: copy -->

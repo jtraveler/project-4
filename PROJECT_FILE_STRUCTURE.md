@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 6, 2026
+**Last Updated:** February 7, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~99% - Lighthouse 96/100/100/100), Phase K Collections (~98%)
+**Current Phase:** Phase N4 Optimistic Upload Flow (~99% - Lighthouse 96/100/100/100), Phase K Collections (~96%)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
@@ -355,6 +355,12 @@ static/css/
 - `.media-container-shell` / `.media-container` - Shared image/video container used by upload preview and prompt detail
 - `--media-container-padding` CSS variable in `:root`
 - `var(--radius-lg)` replaces all hardcoded `border-radius: 12px` values
+
+**CSS Specificity Notes (Session 73):**
+- `masonry-grid.css` loads AFTER `style.css` in `base.html` (line 62 vs 58)
+- `.video-play-icon { pointer-events: none; }` in masonry-grid.css (line 139) wins specificity ties against style.css
+- Trash video styles use `.trash-prompt-wrapper .trash-video-play` (specificity 0,2,0) to override masonry-grid.css (0,1,0)
+- Mobile trash cards disable `.card-link` via `pointer-events: none` to allow play icon taps
 
 ---
 
@@ -1222,11 +1228,17 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.9
-**Audit Date:** February 6, 2026
+**Version:** 3.10
+**Audit Date:** February 7, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.10 (February 7, 2026 - Session 73 End-of-Session):**
+- Updated Phase K status from ~98% to ~96% (video bugs documented)
+- Added CSS Specificity Notes section documenting masonry-grid.css load order issue
+- Documented `.trash-prompt-wrapper .trash-video-play` specificity override pattern (0,2,0 vs 0,1,0)
+- Updated audit date and version
 
 **v3.9 (February 6, 2026 - Session 70 End-of-Session):**
 - Updated Phase K status from ~95% to ~98% (trash integration complete)

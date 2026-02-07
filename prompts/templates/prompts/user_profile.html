@@ -196,6 +196,7 @@
     flex: 1;  /* Take remaining space in wrapper */
     flex-wrap: nowrap;  /* Prevent tabs from wrapping */
     padding-bottom: 10px;
+    justify-content: center;
 }
 
 /* FIX 2: Hide scrollbar for Chrome/Safari */
@@ -740,6 +741,7 @@
     position: relative;
     display: inline-block;
     min-width: fit-content;
+    flex: 1 180px;
 }
 
 .profile-sort-dropdown-btn {
@@ -755,6 +757,7 @@
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
+    width: 100%;
 }
 
 .profile-sort-dropdown-btn:hover {
@@ -1263,7 +1266,7 @@
             <div class="trash-prompt-wrapper" data-slug="{{ prompt.slug }}">
                 {# === Simple Card: thumbnail + overlay === #}
                 <div class="prompt-card">
-                    <div class="image-wrapper">
+                    <div class="image-wrapper"{% if prompt.is_video and prompt.video_width and prompt.video_height %} style="aspect-ratio: {{ prompt.video_width }}/{{ prompt.video_height }}; overflow: hidden;"{% endif %}>
                         {% if prompt.is_video %}
                             {# Video with poster fallback #}
                             <video class="trash-video"
@@ -1273,10 +1276,8 @@
                                    {% if prompt.video_width and prompt.video_height %}
                                    width="{{ prompt.video_width }}"
                                    height="{{ prompt.video_height }}"
-                                   style="width: 100%; height: auto; display: block; aspect-ratio: {{ prompt.video_width }}/{{ prompt.video_height }};"
                                    {% else %}
                                    width="440"
-                                   style="width: 100%; height: auto; display: block;"
                                    {% endif %}>
                                 <source src="{{ prompt.display_video_url|default:prompt.get_video_url }}" type="video/mp4">
                             </video>
@@ -1446,12 +1447,15 @@
             function handleVideoBehavior() {
                 var shouldPause = isMobile.matches || prefersReducedMotion.matches;
                 document.querySelectorAll('.trash-prompt-wrapper video.trash-video').forEach(function(video) {
+                    var playIcon = video.parentElement.querySelector('.trash-video-play');
                     if (shouldPause) {
                         video.pause();
                         video.removeAttribute('autoplay');
+                        if (playIcon) playIcon.style.display = 'flex';
                     } else {
                         video.setAttribute('autoplay', '');
                         video.play().catch(function() {});
+                        if (playIcon) playIcon.style.display = 'none';
                     }
                 });
             }
@@ -1474,6 +1478,23 @@
                             video.pause();
                             this.style.display = 'flex';
                         }
+                    }
+                });
+            });
+            // Mobile: tap video to toggle play/pause with play icon visibility
+            document.querySelectorAll('.trash-prompt-wrapper video.trash-video').forEach(function(video) {
+                video.addEventListener('click', function(e) {
+                    // Only handle on mobile/reduced-motion (when videos don't autoplay)
+                    if (!isMobile.matches && !prefersReducedMotion.matches) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var playIcon = this.parentElement.querySelector('.trash-video-play');
+                    if (this.paused) {
+                        this.play().catch(function() {});
+                        if (playIcon) playIcon.style.display = 'none';
+                    } else {
+                        this.pause();
+                        if (playIcon) playIcon.style.display = 'flex';
                     }
                 });
             });
@@ -1540,9 +1561,12 @@
                 {# Trash-specific footer #}
                 <div class="trash-collection-footer">
                     <div class="trash-collection-meta">
-                        <span class="meta-delete">Deleted {{ collection.deleted_at|timesince }} ago</span>
+                        <span class="meta-delete">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-clock"></use></svg>
+                            Deleted {{ collection.deleted_at|timesince }} ago
+                        </span>
                         <span class="meta-time-left">
-                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"></use></svg>
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-calendar"></use></svg>
                             {{ collection.days_until_permanent_deletion }} days left
                         </span>
                     </div>

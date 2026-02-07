@@ -2374,6 +2374,7 @@ footer {
     align-items: center;
     margin-bottom: 1.5rem;
     gap: 16px;
+    flex-wrap: wrap;
 }
 
 /* Right-side controls group */
@@ -2398,6 +2399,7 @@ footer {
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+    flex: 1;
 }
 
 .trash-btn-empty-inline:hover {
@@ -2429,6 +2431,13 @@ footer {
     .trash-controls {
         flex-wrap: wrap;
         gap: 8px;
+        width: 100%;
+    }
+
+    .trash-sub-tabs {
+        width: 100%;
+        overflow-x: auto;
+        padding: 10px;;
     }
 
     .trash-btn-empty-inline {
@@ -2497,6 +2506,12 @@ footer {
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+/* Disable card link on trash cards — deleted items are not browseable */
+.trash-prompt-wrapper .card-link {
+    pointer-events: none;
+    cursor: default;
+}
+
 /* Footer below each prompt card */
 .trash-prompt-footer {
     padding: 10px 0 0 0;
@@ -2552,13 +2567,18 @@ footer {
     }
 }
 
-/* Trash video styling */
+/* Trash video styling - default for videos without dimensions */
 .trash-prompt-wrapper video.trash-video {
     border-radius: var(--radius-lg);
     width: 100%;
     height: auto;
     display: block;
-    object-fit: contain;  /* contain prevents poster cropping to wrong aspect ratio */
+    object-fit: contain;
+}
+
+/* Videos WITH dimensions: wrapper has inline aspect-ratio, video fills it */
+.trash-prompt-wrapper .image-wrapper[style*="aspect-ratio"] video.trash-video {
+    height: 100%;
 }
 
 /* Desktop: hide play icon when video is autoplaying */
@@ -2584,8 +2604,9 @@ footer {
         text-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
 
-    /* On mobile, disable card-link on ALL trash cards so play icon receives taps */
-    .trash-prompt-wrapper .card-link {
+    /* On mobile, disable overlay interaction on trash cards - contains only visual elements
+       (bookmark icon, like count), allows taps to pass through to video element for play/pause */
+    .trash-prompt-wrapper .card-overlay {
         pointer-events: none;
     }
 }

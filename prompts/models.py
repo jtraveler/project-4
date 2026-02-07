@@ -593,6 +593,30 @@ class TagCategory(models.Model):
         return f"{self.tag.name} ({self.get_category_display()})"
 
 
+class SubjectCategory(models.Model):
+    """
+    Predefined subject categories for prompt classification.
+
+    Unlike TagCategory (which categorizes individual tags), SubjectCategory
+    classifies prompts by their visual subject matter. Each prompt can have
+    1-3 categories assigned by AI during upload.
+
+    The 25 categories are fixed and seeded via data migration.
+    """
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
+    description = models.TextField(blank=True, help_text="Brief description for AI context")
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Subject Category'
+        verbose_name_plural = 'Subject Categories'
+        ordering = ['display_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
 # Add status choices
 STATUS = ((0, "Draft"), (1, "Published"))
 
@@ -732,6 +756,12 @@ class Prompt(models.Model):
         help_text='Manual ordering position. Lower numbers appear first.'
     )
     tags = TaggableManager()
+    categories = models.ManyToManyField(
+        'SubjectCategory',
+        related_name='prompts',
+        blank=True,
+        help_text='Subject categories (1-3) assigned by AI'
+    )
     likes = models.ManyToManyField(
         User, related_name='prompt_likes', blank=True
     )

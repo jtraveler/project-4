@@ -6,7 +6,7 @@ from django.urls import reverse, path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem
 
 
 @admin.register(Prompt)
@@ -838,6 +838,29 @@ class TagCategoryAdmin(admin.ModelAdmin):
         """Allow deletion for cleanup"""
         return True
 
+
+@admin.register(SubjectCategory)
+class SubjectCategoryAdmin(admin.ModelAdmin):
+    """Admin interface for managing prompt subject categories (25 predefined)."""
+    list_display = ['name', 'slug', 'display_order', 'prompt_count']
+    list_display_links = ['name']
+    search_fields = ['name', 'slug', 'description']
+    ordering = ['display_order', 'name']
+    readonly_fields = ['slug']  # Prevent slug changes after creation
+    prepopulated_fields = {}  # Disabled since categories are pre-seeded
+
+    def prompt_count(self, obj):
+        """Display how many prompts have this category."""
+        return obj.prompts.count()
+    prompt_count.short_description = 'Prompts'
+
+    def has_add_permission(self, request):
+        """Categories are pre-seeded via migrations; prevent manual addition."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of predefined categories."""
+        return False
 
 
 @admin.register(UserProfile)

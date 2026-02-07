@@ -424,7 +424,8 @@ Respond with ONLY valid JSON in this exact format:
 {{
     "title": "USE 50-60 CHARACTERS - include rendering technique + subject",
     "description": "USE 150-200 WORDS - detailed, SEO-rich content",
-    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+    "categories": ["Category Name 1", "Category Name 2"]
 }}
 
 TITLE REQUIREMENTS - MANDATORY:
@@ -506,12 +507,25 @@ TAGS REQUIREMENTS:
 - Last tag: Mood/aesthetic (e.g., "Whimsical", "Nostalgic", "Cinematic")
 - Choose from this list: {tags_list}
 
+CATEGORIES REQUIREMENTS:
+- Assign 1-3 subject categories from this EXACT list (use exact names):
+  Portrait, Fashion & Style, Landscape & Nature, Urban & City, Sci-Fi & Futuristic,
+  Fantasy & Mythical, Animals & Wildlife, Interior & Architecture, Abstract & Artistic,
+  Food & Drink, Vehicles & Transport, Horror & Dark, Anime & Manga, Photorealistic,
+  Digital Art, Illustration, Product & Commercial, Sports & Action, Music & Entertainment,
+  Retro & Vintage, Minimalist, Macro & Close-up, Seasonal & Holiday, Text & Typography,
+  Meme & Humor
+- Choose based on the PRIMARY visual subject matter
+- Select categories that would help users discover this image
+- Maximum 3 categories (most images need only 1-2)
+
 FALLBACK (only if image is completely unanalyzable):
 {{
     "title": "{ai_generator} AI Generated Digital Artwork Creative Visual",
     "description": "This captivating AI-generated artwork demonstrates the creative possibilities of modern artificial intelligence image generation. Created with {ai_generator}, this piece showcases unique artistic elements and imaginative composition that highlight the capabilities of AI art tools. The image features distinctive visual characteristics including interesting use of color, form, and texture that make it a compelling example of generative art. Digital artists and content creators will find this prompt valuable for exploring AI-assisted creative workflows. Whether you are seeking inspiration for your own projects or studying AI art techniques, this prompt offers insights into effective image generation strategies. The versatility of this style makes it suitable for various applications including digital content creation, artistic experimentation, and visual design projects.",
 
-    "tags": ["AI Art", "Digital Art", "Creative", "Artwork", "AI Generated"]
+    "tags": ["AI Art", "Digital Art", "Creative", "Artwork", "AI Generated"],
+    "categories": ["Digital Art"]
 }}
 
 Respond ONLY with the JSON object, no other text.'''
@@ -585,6 +599,7 @@ def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
     title = ai_result.get('title', f"{prompt.ai_generator} AI Artwork")
     description = ai_result.get('description', '')
     tags = ai_result.get('tags', [])
+    categories = ai_result.get('categories', [])
 
     # Sanitize content (strip control characters, limit length)
     title = _sanitize_content(title, max_length=200)
@@ -612,6 +627,17 @@ def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
             skipped = set(tags) - set(existing_tags)
             if skipped:
                 logger.info(f"[AI Generation] Skipped non-existent tags for prompt {prompt.pk}: {skipped}")
+
+        # Add categories (Phase 2 - Subject Categories)
+        if categories:
+            from prompts.models import SubjectCategory
+            existing_cats = SubjectCategory.objects.filter(name__in=categories)
+            prompt.categories.set(existing_cats)
+
+            # Log if any categories were skipped
+            skipped_cats = set(categories) - set(existing_cats.values_list('name', flat=True))
+            if skipped_cats:
+                logger.info(f"[AI Generation] Skipped non-existent categories for prompt {prompt.pk}: {skipped_cats}")
 
     # Queue SEO file renaming as background task (N4h)
     try:
@@ -795,7 +821,7 @@ def update_ai_job_progress(job_id: str, progress: int, **kwargs) -> dict:
     Args:
         job_id: UUID string for cache key (validated)
         progress: 0-100 progress percentage (clamped to valid range)
-        **kwargs: Additional fields (complete, title, description, tags, error)
+        **kwargs: Additional fields (complete, title, description, tags, categories, error)
 
     Returns:
         Updated cache data, or error dict if job_id invalid
@@ -866,6 +892,7 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             'title': str or None,
             'description': str or None,
             'tags': list or None,
+            'categories': list or None,
             'error': str or None
         }
     """
@@ -888,7 +915,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 error='no_image_url',
                 title='Untitled Prompt',
                 description='',
-                tags=[]
+                tags=[],
+                categories=[]
             )
             return {'status': 'error', 'error': 'no_image_url'}
 
@@ -902,7 +930,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 error='domain_not_allowed',
                 title='Untitled Prompt',
                 description='',
-                tags=[]
+                tags=[],
+                categories=[]
             )
             return {'status': 'error', 'error': 'domain_not_allowed'}
 
@@ -933,7 +962,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 error=ai_result['error'],
                 title='Untitled Prompt',
                 description='',
-                tags=[]
+                tags=[],
+                categories=[]
             )
             return {'status': 'error', 'error': ai_result['error']}
 
@@ -941,6 +971,7 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
         title = _sanitize_content(ai_result.get('title', 'Untitled Prompt'), max_length=200)
         description = _sanitize_content(ai_result.get('description', ''), max_length=2000)
         tags = ai_result.get('tags', [])
+        categories = ai_result.get('categories', [])
 
         # Clean tags - lowercase, trimmed, unique
         clean_tags = []
@@ -951,6 +982,15 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 clean_tags.append(tag_clean)
                 seen.add(tag_clean)
 
+        # Clean categories - trimmed, unique, max 3
+        clean_categories = []
+        cat_seen = set()
+        for cat in categories[:3]:  # Max 3 categories
+            cat_clean = str(cat).strip()[:50]
+            if cat_clean and cat_clean not in cat_seen:
+                clean_categories.append(cat_clean)
+                cat_seen.add(cat_clean)
+
         # 90% - Storing results
         update_ai_job_progress(job_id, 90)
 
@@ -960,6 +1000,7 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             title=title,
             description=description,
             tags=clean_tags,
+            categories=clean_categories,
             error=None
         )
 
@@ -970,7 +1011,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             'job_id': job_id,
             'title': title,
             'description': description,
-            'tags': clean_tags
+            'tags': clean_tags,
+            'categories': clean_categories
         }
 
     except Exception as e:
@@ -980,7 +1022,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             error=str(e),
             title='Untitled Prompt',
             description='',
-            tags=[]
+            tags=[],
+            categories=[]
         )
         return {'status': 'error', 'error': str(e)}
 

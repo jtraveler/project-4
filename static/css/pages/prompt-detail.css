@@ -60,7 +60,7 @@
    ========================================================================== */
 
 .prompt-content-wrapper {
-    padding-top: calc(var(--space-4) + var(--space-4));  /* Match leaderboard-page */
+    padding-top: 0;
     padding-bottom: var(--spacing-xl);
 }
 
@@ -241,6 +241,7 @@
     flex-direction: row;
     flex-wrap: wrap;
     gap: var(--spacing-sm);
+    padding-top: calc(var(--space-8) + var(--space-5));
 }
 
 /* Author details container - simple block layout */
@@ -1344,7 +1345,8 @@ a.model-name:hover {
    ========================================================================== */
 
 .prompt-breadcrumb {
-    padding-top: calc(var(--space-6) + var(--space-1));
+    padding-top: calc(var(--space-1) + var(--space-1));
+    padding-bottom: calc(var(--space-1) + var(--space-2));
 }
 
 .prompt-breadcrumb .breadcrumb {
@@ -1459,6 +1461,26 @@ a.model-name:hover {
     opacity: 1 !important;
     animation: none !important;
     vertical-align: top !important;
+}
+
+/* Video cards in related prompts: show thumbnail as static image.
+   Homepage uses JS IntersectionObserver to show/hide video elements,
+   but related section doesn't have that JS. Make thumbnail position:relative
+   so it takes up space and the card has height. */
+.related-prompts-grid .video-thumbnail {
+    position: relative !important;
+    opacity: 1 !important;
+    z-index: 1;
+}
+
+/* Hide play icon in related prompts — no video playback here */
+.related-prompts-grid .video-play-icon {
+    display: none !important;
+}
+
+/* Keep gallery-video hidden — we only show the thumbnail */
+.related-prompts-grid .gallery-video {
+    display: none !important;
 }
 
 /* Responsive column counts */

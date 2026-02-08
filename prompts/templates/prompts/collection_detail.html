@@ -301,6 +301,26 @@
     background: var(--gray-400);
     cursor: not-allowed;
 }
+
+/* Video cards in collections: show thumbnail as static image.
+   Homepage uses JS IntersectionObserver to show/hide video elements,
+   but collection page doesn't have that JS. Make thumbnail position:relative
+   so it takes up space and the card has height. */
+#masonry-grid .video-thumbnail {
+    position: relative !important;
+    opacity: 1 !important;
+    z-index: 1;
+}
+
+/* Hide play icon in collections — no video playback here */
+#masonry-grid .video-play-icon {
+    display: none !important;
+}
+
+/* Keep gallery-video hidden — we only show the thumbnail */
+#masonry-grid .gallery-video {
+    display: none !important;
+}
 </style>
 
 <!-- Collection Header -->

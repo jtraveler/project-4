@@ -315,7 +315,6 @@ def upload_submit(request):
     # N4-Refactor: Read AI results from cache (generated during NSFW check)
     # Fall back to session data for backwards compatibility
     ai_job_id = request.session.get('ai_job_id')
-    logger.warning(f"[CAT DEBUG] ai_job_id from session = {ai_job_id}")
     ai_data = {}
     ai_complete = False
 
@@ -324,8 +323,6 @@ def upload_submit(request):
         ai_data = get_ai_job_status(ai_job_id)
         ai_complete = ai_data.get('complete', False)
         logger.info(f"AI job {ai_job_id}: complete={ai_complete}, progress={ai_data.get('progress', 0)}")
-        logger.warning(f"[CAT DEBUG] ai_complete={ai_complete}, has_title={bool(ai_data.get('title'))}, categories={ai_data.get('categories', 'NOT IN CACHE')}")
-        logger.warning(f"[CAT DEBUG] Full cache contents: {ai_data}")
 
     # Use cached AI results (cache-first approach), fall back to session
     # Check if cache has data (title), not ai_complete - data available at 90% progress
@@ -335,14 +332,12 @@ def upload_submit(request):
         ai_description = ai_data.get('description', '')
         ai_cached_tags = ai_data.get('tags', [])
         ai_cached_categories = ai_data.get('categories', [])
-        logger.warning(f"[CAT DEBUG] CACHE PATH: all data from cache, categories={ai_cached_categories}")
     else:
         # Cache empty - pure session fallback (backwards compatibility only)
         ai_title = request.session.get('ai_title') or 'Untitled Prompt'
         ai_description = request.session.get('ai_description') or ''
         ai_cached_tags = []
         ai_cached_categories = []
-        logger.warning(f"[CAT DEBUG] SESSION FALLBACK: cache empty, using session data")
 
     # Validate required fields
     if not content:
@@ -546,17 +541,11 @@ def upload_submit(request):
         existing_cats = SubjectCategory.objects.filter(name__in=ai_cached_categories)
         found_names = list(existing_cats.values_list('name', flat=True))
         missing_cats = set(ai_cached_categories) - set(found_names)
-        logger.warning(f"[CAT DEBUG] DB lookup: requested={ai_cached_categories}, found={found_names}, missing={missing_cats}")
         if existing_cats.exists():
             prompt.categories.set(existing_cats)
             logger.info(f"Prompt {prompt.pk}: Assigned categories {found_names}")
-            # Post-assignment verification
-            verified_cats = list(prompt.categories.values_list('name', flat=True))
-            logger.warning(f"[CAT DEBUG] POST-ASSIGNMENT verified: prompt {prompt.pk} has {verified_cats}")
         else:
-            logger.warning(f"[CAT DEBUG] NO matching categories found in DB for: {ai_cached_categories}")
-    else:
-        logger.warning(f"[CAT DEBUG] NO categories to assign: ai_cached_categories={ai_cached_categories}")
+            logger.warning(f"No matching categories found in DB for: {ai_cached_categories}")
 
     # L10b: Set SEO review flag if AI failed or fields are empty
     ai_failed = request.POST.get('ai_failed', 'false') == 'true'

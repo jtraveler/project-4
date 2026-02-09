@@ -579,6 +579,18 @@ def upload_submit(request):
                     f"Prompt {prompt.pk}: Skipped non-existent descriptors: {skipped_descs}"
                 )
 
+    # Auto-flag for SEO review if AI detected gender but skipped ethnicity
+    if ai_cached_descriptors and isinstance(ai_cached_descriptors, dict):
+        cached_genders = ai_cached_descriptors.get('gender', [])
+        cached_ethnicities = ai_cached_descriptors.get('ethnicity', [])
+        if cached_genders and not cached_ethnicities:
+            prompt.needs_seo_review = True
+            prompt.save(update_fields=['needs_seo_review'])
+            logger.info(
+                f"Prompt {prompt.pk}: Flagged for SEO review — "
+                f"gender detected but no ethnicity in AI cache"
+            )
+
     # L10b: Set SEO review flag if AI failed or fields are empty
     ai_failed = request.POST.get('ai_failed', 'false') == 'true'
     needs_review = False

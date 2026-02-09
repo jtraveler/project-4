@@ -373,23 +373,41 @@ def _build_analysis_prompt(prompt_text: str, ai_generator: str, available_tags: 
     Args kept for backwards compatibility but ai_generator and available_tags
     are no longer interpolated into the prompt to reduce hallucination risk.
     """
-    return '''Analyze this image and return a JSON object with the following fields.
+    return '''IMPORTANT CONTEXT: This is a diversity-focused AI art discovery platform where users
+search for representation. Ethnicity and gender descriptors are ESSENTIAL for discoverability.
+When people are clearly visible in an image, you MUST identify and include their apparent
+ethnicity and gender in the title, description, AND tags. Omitting ethnicity when a person
+is visible is a critical SEO failure — users searching for "African-American portrait" or
+"Asian woman fashion" will never find these images. This is not about stereotyping — it is
+about ensuring equal discoverability for all subjects.
+
+Analyze this image and return a JSON object with the following fields.
 
 VALIDATION RULE: You MUST only return values that appear EXACTLY as written in the
 lists below. Do NOT invent, modify, combine, or abbreviate any value. If you are unsure
-about any assignment, OMIT it entirely. An omission is always better than an incorrect
-assignment.
+about a category or descriptor value, OMIT it — an omission is better than an incorrect
+assignment. EXCEPTION: For ethnicity and gender, you MUST assign a value whenever a person
+is clearly visible. Use the broadest applicable term if specific heritage is uncertain
+(e.g., "African-American / Black" covers African-American, African, and Caribbean subjects).
 
 ═══════════════════════════════════════════════════
 FIELD 1: "title" (string)
 ═══════════════════════════════════════════════════
-A concise, SEO-optimized title for this image. Max 60 characters.
+A concise, SEO-optimized title for this image. 50-70 characters.
 Include the most important subject and style keywords.
+
+MANDATORY for titles with people visible:
+- ALWAYS include apparent ethnicity (e.g., "African-American", "Asian", "Hispanic")
+- ALWAYS include gender (e.g., "Woman", "Man")
+- Ethnicity + gender should appear EARLY in the title (first 3-4 words) for URL/slug SEO.
+- Example: "African-American Woman Cinematic Portrait Golden Hour" NOT "Cinematic Portrait Golden Hour"
+- Example: "Asian Man Cyberpunk Neon City Street Scene" NOT "Man in Cyberpunk Neon City"
+- If no people visible, focus on subject and style keywords instead.
 
 ═══════════════════════════════════════════════════
 FIELD 2: "description" (string)
 ═══════════════════════════════════════════════════
-A detailed, SEO-optimized description. 2-4 sentences. Follow these CRITICAL SEO RULES:
+A detailed, SEO-optimized description. 4-6 sentences. Follow these CRITICAL SEO RULES:
 
 ETHNICITY SYNONYMS — when describing ethnicity, ALWAYS include multiple search terms:
   * "Black" → also include "African-American" (or "African" if clearly African context)
@@ -398,6 +416,7 @@ ETHNICITY SYNONYMS — when describing ethnicity, ALWAYS include multiple search
   * "Asian" → specify "East Asian," "Southeast Asian," etc. when identifiable
   * "Arab" → also include "Middle Eastern"
   * "White" → also include "Caucasian" or "European" if contextually appropriate
+  * If a person is visible, you MUST mention their ethnicity in the description. Skipping ethnicity is a critical SEO failure.
 
 GENDER SYNONYMS — include both specific and general:
   * Include "woman" AND "female," "man" AND "male"
@@ -427,7 +446,11 @@ SEO-optimized keyword tags. Use hyphens for multi-word tags (e.g., "african-amer
 
 Include:
 - Primary subject (e.g., "portrait", "landscape")
-- Demographic synonyms (e.g., both "african-american" AND "black-woman")
+- MANDATORY when people are visible:
+  * Gender tags: ALWAYS include BOTH forms (e.g., "man" AND "male", or "woman" AND "female")
+  * Do NOT include standalone ethnicity or race tags (e.g., no "african-american",
+    "white-woman", "asian-man", "black-man" as tags). Ethnicity is already captured
+    in the title, description, and descriptors.
 - Mood/atmosphere keywords
 - Art style (e.g., "photorealistic", "oil-painting")
 - Specific elements (e.g., "coffee", "red-car", "neon-lights")
@@ -494,7 +517,7 @@ Leave an array empty [] if nothing applies or if you are not confident.
 "gender" (0-1 values, ONLY if person clearly visible):
   Male, Female, Androgynous
 
-"ethnicity" (0-1 values, ONLY if >90% confident — OMIT if ANY doubt):
+"ethnicity" (0-1 values, REQUIRED when a person is clearly visible — use the broadest applicable term if specific heritage is uncertain):
   African-American / Black, African, Hispanic / Latino, East Asian,
   South Asian / Indian / Desi, Southeast Asian, Middle Eastern / Arab,
   Caucasian / White, Indigenous / Native, Pacific Islander, Mixed / Multiracial
@@ -721,6 +744,17 @@ def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
                     logger.info(
                         f"[AI Generation] Skipped non-existent descriptors "
                         f"for prompt {prompt.pk}: {skipped_descs}"
+                    )
+
+                # Auto-flag for SEO review if AI detected gender but skipped ethnicity
+                has_gender = existing_descs.filter(descriptor_type='gender').exists()
+                has_ethnicity = existing_descs.filter(descriptor_type='ethnicity').exists()
+                if has_gender and not has_ethnicity:
+                    prompt.needs_seo_review = True
+                    prompt.save(update_fields=['needs_seo_review'])
+                    logger.info(
+                        f"Prompt {prompt.pk}: Flagged for SEO review — "
+                        f"gender detected but no ethnicity assigned"
                     )
 
     # Queue SEO file renaming as background task (N4h)

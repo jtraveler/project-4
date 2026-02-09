@@ -250,6 +250,21 @@ class Command(BaseCommand):
                                     )
                                 )
 
+                    # Auto-flag for SEO review if AI detected gender but skipped ethnicity
+                    has_gender = any(
+                        name in all_descriptors and all_descriptors[name].descriptor_type == 'gender'
+                        for name in all_descriptor_names
+                        if name in all_descriptors
+                    ) if all_descriptor_names else False
+                    has_ethnicity = any(
+                        name in all_descriptors and all_descriptors[name].descriptor_type == 'ethnicity'
+                        for name in all_descriptor_names
+                        if name in all_descriptors
+                    ) if all_descriptor_names else False
+                    if has_gender and not has_ethnicity:
+                        prompt.needs_seo_review = True
+                        prompt.save(update_fields=['needs_seo_review'])
+
                 # Queue SEO file rename (outside transaction)
                 try:
                     from django_q.tasks import async_task

@@ -1463,24 +1463,22 @@ a.model-name:hover {
     vertical-align: top !important;
 }
 
-/* Video cards in related prompts: show thumbnail as static image.
-   Homepage uses JS IntersectionObserver to show/hide video elements,
-   but related section doesn't have that JS. Make thumbnail position:relative
-   so it takes up space and the card has height. */
+/* Video cards in related prompts:
+   Thumbnail starts as position:relative for initial card height.
+   Once JS initializes the video, thumbnail switches back to absolute
+   to overlay the playing video. */
 .related-prompts-grid .video-thumbnail {
     position: relative !important;
-    opacity: 1 !important;
-    z-index: 1;
+    opacity: 1;
+    z-index: 3;
 }
 
-/* Hide play icon in related prompts — no video playback here */
-.related-prompts-grid .video-play-icon {
-    display: none !important;
-}
-
-/* Keep gallery-video hidden — we only show the thumbnail */
-.related-prompts-grid .gallery-video {
-    display: none !important;
+/* When video is initialized by JS, switch thumbnail to absolute overlay */
+.related-prompts-grid .gallery-video[data-initialized="true"] + .video-thumbnail {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
 }
 
 /* Responsive column counts */

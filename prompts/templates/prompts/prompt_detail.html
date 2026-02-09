@@ -167,6 +167,20 @@
 
 
 
+            
+<!-- ============================================================
+     SIDE-BY-SIDE LAYOUT (PromptHero Style)
+     Left Column: Image, Actions, Title, Description, Comments
+     Right Rail: Author Card, Stats, Details, Prompt, Tags
+     ============================================================ -->
+<div class="container prompt-content-wrapper">
+    <div class="row">
+        <!-- ========================================
+             LEFT COLUMN (col-lg-7)
+             Image at TOP, then content below
+             ======================================== -->
+        <div class="col-lg-7 prompt-left-column">
+
             <!-- Visual Breadcrumb Navigation (matches BreadcrumbList JSON-LD) -->
             <nav aria-label="Breadcrumb" class="prompt-breadcrumb">
                 <ol class="breadcrumb mb-0">
@@ -181,18 +195,6 @@
                     </li>
                 </ol>
             </nav>
-<!-- ============================================================
-     SIDE-BY-SIDE LAYOUT (PromptHero Style)
-     Left Column: Image, Actions, Title, Description, Comments
-     Right Rail: Author Card, Stats, Details, Prompt, Tags
-     ============================================================ -->
-<div class="container prompt-content-wrapper">
-    <div class="row">
-        <!-- ========================================
-             LEFT COLUMN (col-lg-7)
-             Image at TOP, then content below
-             ======================================== -->
-        <div class="col-lg-7 prompt-left-column">
 
             <!-- Featured Media (Image/Video) - NOW IN LEFT COLUMN -->
             <div class="media-container-shell prompt-media-container-shell">
@@ -822,6 +824,113 @@
 <!-- Prompt Detail Page JavaScript (deferred for performance) -->
 <script src="{% static 'js/prompt-detail.js' %}" defer></script>
 
+<!-- Video autoplay for Related Prompts section -->
+<script>
+(function() {
+    'use strict';
+
+    function loadVideoSource(video) {
+        if (video.dataset.loaded === 'true') return;
+        var source = video.querySelector('source');
+        if (source && source.dataset.src) {
+            source.src = source.dataset.src;
+            video.load();
+            video.dataset.loaded = 'true';
+        }
+    }
+
+    function initRelatedVideoObserver() {
+        // Disconnect previous observer to prevent memory leak
+        if (window._relatedVideoObserver) {
+            window._relatedVideoObserver.disconnect();
+            window._relatedVideoObserver = null;
+        }
+
+        var grid = document.getElementById('related-prompts-grid');
+        if (!grid) return;
+
+        var videoCards = grid.querySelectorAll('[data-video="true"]');
+        if (videoCards.length === 0) return;
+
+        // Skip autoplay on mobile or reduced motion
+        var isMobile = window.innerWidth <= 768;
+        var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (isMobile || prefersReducedMotion) {
+            // On mobile: just ensure thumbnails are visible (CSS handles this)
+            // Play icon is already visible via masonry-grid.css mobile rules
+            return;
+        }
+
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                var video = entry.target.querySelector('video');
+                var thumbnail = entry.target.querySelector('.video-thumbnail');
+                var playIcon = entry.target.querySelector('.video-play-icon');
+
+                if (!video) return;
+
+                if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                    // Load video source (lazy)
+                    loadVideoSource(video);
+
+                    // Initialize video display
+                    if (video.dataset.initialized !== 'true') {
+                        video.style.display = 'block';
+                        video.style.visibility = 'visible';
+                        video.dataset.initialized = 'true';
+                    }
+
+                    // Play if paused
+                    if (video.paused) {
+                        if (thumbnail) thumbnail.style.opacity = '0';
+                        if (playIcon) playIcon.style.opacity = '0';
+
+                        var playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(function(error) {
+                                if (error.name !== 'AbortError') {
+                                    console.log('Related video auto-play prevented:', error);
+                                    if (thumbnail) thumbnail.style.opacity = '1';
+                                    if (playIcon) playIcon.style.opacity = '1';
+                                    // Reset video state since autoplay failed
+                                    video.style.display = 'none';
+                                    video.style.visibility = 'hidden';
+                                    video.dataset.initialized = 'false';
+                                }
+                            });
+                        }
+                    }
+                } else if (video.dataset.initialized === 'true' && !video.paused) {
+                    // Pause when scrolled out of view
+                    video.pause();
+                }
+            });
+        }, {
+            threshold: [0, 0.3, 0.5],
+            rootMargin: '0px'
+        });
+
+        videoCards.forEach(function(card) {
+            observer.observe(card);
+        });
+
+        // Store observer reference for Load More reinitialization
+        window._relatedVideoObserver = observer;
+    }
+
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRelatedVideoObserver);
+    } else {
+        initRelatedVideoObserver();
+    }
+
+    // Expose for Load More to call after appending new cards
+    window.initRelatedVideoObserver = initRelatedVideoObserver;
+})();
+</script>
+
 {% if has_more_related %}
 <!-- Related Prompts Load More (CSS column-count handles layout) -->
 <script>
@@ -850,6 +959,11 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(function(data) {
             // Append new items directly to grid (CSS column-count handles layout)
             grid.insertAdjacentHTML('beforeend', data.html);
+
+            // Reinitialize video observer for new cards
+            if (window.initRelatedVideoObserver) {
+                window.initRelatedVideoObserver();
+            }
 
             spinner.style.display = 'none';
             isLoading = false;

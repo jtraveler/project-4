@@ -302,24 +302,21 @@
     cursor: not-allowed;
 }
 
-/* Video cards in collections: show thumbnail as static image.
-   Homepage uses JS IntersectionObserver to show/hide video elements,
-   but collection page doesn't have that JS. Make thumbnail position:relative
-   so it takes up space and the card has height. */
+/* Video cards in collections: thumbnail starts position:relative for card height.
+   JS IntersectionObserver will initialize videos on desktop.
+   On mobile, masonry-grid.css handles thumbnail/play-icon visibility. */
 #masonry-grid .video-thumbnail {
     position: relative !important;
-    opacity: 1 !important;
-    z-index: 1;
+    opacity: 1;
+    z-index: 3;
 }
 
-/* Hide play icon in collections — no video playback here */
-#masonry-grid .video-play-icon {
-    display: none !important;
-}
-
-/* Keep gallery-video hidden — we only show the thumbnail */
-#masonry-grid .gallery-video {
-    display: none !important;
+/* When video is initialized by JS, switch thumbnail to absolute overlay */
+#masonry-grid .gallery-video[data-initialized="true"] + .video-thumbnail {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
 }
 </style>
 
@@ -444,7 +441,7 @@ function copyCollectionLink() {
         const newColumnCount = getColumnCount();
         grid.setAttribute('data-columns', newColumnCount);
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < newColumnCount; i++) {
             const column = document.createElement('div');
             column.className = 'masonry-column';
             column.id = `column-${i}`;
@@ -454,9 +451,10 @@ function copyCollectionLink() {
     }
 
     function getShortestColumn() {
+        if (columns.length === 0) return 0;
         let shortest = 0;
         let minHeight = columns[0].height;
-        const colCount = getColumnCount();
+        const colCount = Math.min(getColumnCount(), columns.length);
 
         for (let i = 1; i < colCount; i++) {
             if (columns[i].height < minHeight) {
@@ -488,9 +486,85 @@ function copyCollectionLink() {
         distributeItems();
     }
 
+    function loadVideoSource(video) {
+        if (video.dataset.loaded === 'true') return;
+        var source = video.querySelector('source');
+        if (source && source.dataset.src) {
+            source.src = source.dataset.src;
+            video.load();
+            video.dataset.loaded = 'true';
+        }
+    }
+
+    var videoObserver = null;
+
+    function initVideoObserver() {
+        if (videoObserver) {
+            videoObserver.disconnect();
+            videoObserver = null;
+        }
+
+        var grid = document.getElementById('masonry-grid');
+        if (!grid) return;
+
+        var videoCards = grid.querySelectorAll('[data-video="true"]');
+        if (videoCards.length === 0) return;
+
+        var isMobile = window.innerWidth <= 768;
+        var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (isMobile || prefersReducedMotion) return;
+
+        videoObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                var video = entry.target.querySelector('video');
+                var thumbnail = entry.target.querySelector('.video-thumbnail');
+                var playIcon = entry.target.querySelector('.video-play-icon');
+
+                if (!video) return;
+
+                if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                    loadVideoSource(video);
+
+                    if (video.dataset.initialized !== 'true') {
+                        video.style.display = 'block';
+                        video.style.visibility = 'visible';
+                        video.dataset.initialized = 'true';
+                    }
+
+                    if (video.paused) {
+                        if (thumbnail) thumbnail.style.opacity = '0';
+                        if (playIcon) playIcon.style.opacity = '0';
+
+                        var playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(function(error) {
+                                if (error.name !== 'AbortError') {
+                                    console.log('Collection video auto-play prevented:', error);
+                                    if (thumbnail) thumbnail.style.opacity = '1';
+                                    if (playIcon) playIcon.style.opacity = '1';
+                                }
+                            });
+                        }
+                    }
+                } else if (video.dataset.initialized === 'true' && !video.paused) {
+                    video.pause();
+                }
+            });
+        }, {
+            threshold: [0, 0.3, 0.5],
+            rootMargin: '0px'
+        });
+
+        videoCards.forEach(function(card) {
+            videoObserver.observe(card);
+        });
+    }
+
     // Initialize on DOM ready
     document.addEventListener('DOMContentLoaded', function() {
         initMasonry();
+        initVideoObserver();
 
         // Handle window resize
         let resizeTimer;
@@ -498,6 +572,7 @@ function copyCollectionLink() {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function() {
                 initMasonry();
+                initVideoObserver();
             }, 250);
         });
 
@@ -544,6 +619,8 @@ function copyCollectionLink() {
                 columns[shortestIndex].element.appendChild(clone);
                 columns[shortestIndex].height += 300;
             });
+
+            initVideoObserver();
 
             // Update or remove Load More button
             if (newLoadMore) {

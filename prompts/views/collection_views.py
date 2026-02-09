@@ -92,9 +92,11 @@ def api_collections_list(request):
             thumbnails = []
             for idx, item in enumerate(items_by_collection.get(collection.id, [])):
                 if item.prompt:
-                    # Micro-Spec #11.7: Use 600px for first thumb (full-width), 300px for grid items
-                    thumb_width = 600 if idx == 0 else 300
-                    thumb_url = item.prompt.get_thumbnail_url(width=thumb_width)
+                    # Use B2-aware properties (B2 → video thumb → Cloudinary fallback)
+                    if idx == 0:
+                        thumb_url = item.prompt.display_medium_url  # 600px for main thumb
+                    else:
+                        thumb_url = item.prompt.display_thumb_url  # 300px for grid items
                     if thumb_url:
                         thumbnails.append(thumb_url)
 
@@ -760,9 +762,11 @@ def user_collections(request, username):
         thumbnails = []
         for idx, item in enumerate(items_by_collection.get(collection.id, [])):
             if item.prompt:
-                # Micro-Spec #11.7: Use 600px for first thumb (full-width), 300px for grid items
-                thumb_width = 600 if idx == 0 else 300
-                thumb_url = item.prompt.get_thumbnail_url(width=thumb_width)
+                # Use B2-aware properties (B2 → video thumb → Cloudinary fallback)
+                if idx == 0:
+                    thumb_url = item.prompt.display_medium_url  # 600px for main thumb
+                else:
+                    thumb_url = item.prompt.display_thumb_url  # 300px for grid items
                 if thumb_url:
                     thumbnails.append(thumb_url)
         collection.thumbnails = thumbnails

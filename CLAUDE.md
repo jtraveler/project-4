@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 7, 2026
+**Last Updated:** February 9, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -42,6 +42,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Subject Categories P2 | Feb 9, 2026 | AI-assigned prompt classification (25 categories, cache-first logic) |
 | Related Prompts P1 | Feb 7, 2026 | "You Might Also Like" section on prompt detail (scoring algorithm, AJAX Load More) |
 | Phase L | Jan 2026 | Media Infrastructure (moved from Cloudinary to B2 + Cloudflare) |
 | Phase M | Jan 2026 | Video NSFW Moderation (FFmpeg frame extraction + OpenAI Vision) |
@@ -136,6 +137,68 @@ Rebuilding upload flow to feel "instant" by:
 | Mobile play icon resize | Play icon doesn't reappear after desktop→mobile resize | Minor UX |
 | Videos at ≤768px | Videos disappear on homepage/gallery at mobile breakpoint | Needs investigation |
 
+### Related Prompts Feature (Session 74)
+
+"You Might Also Like" section on prompt detail pages.
+
+| Component | Details |
+|-----------|---------|
+| **Scoring algorithm** | `prompts/utils/related.py` — 5-factor weighted scoring |
+| **Weights** | 35% tags, 35% categories, 10% generator, 10% engagement, 10% recency |
+| **Pre-filter** | Must share at least 1 tag OR same AI generator (max 500 candidates) |
+| **AJAX endpoint** | `/prompt/<slug>/related/` — 18 per page, 60 max |
+| **Layout** | CSS `column-count` responsive grid (4→3→2→1 columns) |
+| **Video autoplay** | IntersectionObserver on desktop (skip mobile/reduced-motion) |
+| **Load More** | Reinitializes video observer after appending new cards |
+
+### Subject Categories Feature (Session 74)
+
+AI-assigned subject categories for prompt classification.
+
+| Component | Details |
+|-----------|---------|
+| **Model** | `SubjectCategory` — name, slug, description, display_order |
+| **Relationship** | `Prompt.categories` M2M field (1-3 categories per prompt) |
+| **AI assignment** | During upload via OpenAI Vision prompt, written to cache at 90% progress |
+| **Categories** | 25 predefined (Portrait, Sci-Fi, Fantasy, Anime, Abstract, etc.) |
+| **Migrations** | `0046_add_subject_categories.py`, `0047_populate_subject_categories.py` |
+| **Backfill** | `python manage.py backfill_categories` — exists but DO NOT RUN until Phase 2B completes |
+| **Admin** | `SubjectCategoryAdmin` with read-only enforcement (no add/delete) |
+
+### Phase 2B: Category Taxonomy Revamp (Planned)
+
+Full design in `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`, execution roadmap in `docs/PHASE_2B_AGENDA.md`.
+
+- Expand to 43 subject categories (from 25)
+- Add `SubjectDescriptor` model (~108 descriptors across 10 types: gender, ethnicity, age, features, profession, mood, color, holiday, season, setting)
+- Tag limit increase: 5 → 10
+- Category limit increase: 3 → 5
+- Anti-hallucination 4-layer AI prompt strategy
+- SEO synonym rules for descriptions and tags
+- Backfill all existing prompts + Cloudinary → B2 media migration
+
+### Technical Patterns (Session 74)
+
+**CSS `!important` cascade:**
+- `masonry-grid.css` uses `!important` on many properties
+- Overrides in page-specific CSS must also use `!important`
+- NEVER use `!important` on properties JS controls inline (like `opacity`) — it blocks JS from toggling
+
+**B2-aware thumbnails:**
+- Always use `display_thumb_url` / `display_medium_url` properties (B2 → video thumb → Cloudinary fallback)
+- NEVER use `get_thumbnail_url()` — it's Cloudinary-only and returns None for B2 prompts
+
+**Video autoplay pattern:**
+- IntersectionObserver with threshold `[0, 0.3, 0.5]`
+- Skip on mobile (`window.innerWidth <= 768`) and `prefers-reduced-motion`
+- CSS uses `data-initialized="true"` attribute + adjacent sibling selector to switch thumbnail from `position: relative` to `position: absolute`
+- Disconnect observer before recreating (memory leak prevention)
+
+**Cache-first categories:**
+- AI writes all data (including categories) to cache at 90% progress
+- `upload_views.py` checks cache before session — if cache has title, use ALL cache data
+- Session fallback only when cache is truly empty
+
 ### Trash Prompts Architecture (Session 73)
 
 The trash prompts grid uses a **self-contained card approach** with CSS columns instead of JavaScript masonry:
@@ -212,6 +275,17 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 | `static/css/style.css` | --radius-pill variable, trash badge styles, FOUC fix (S74) |
 | `static/icons/sprite.svg` | Added icon-clock for trash "deleted X days ago" (S74) |
 | `docs/DESIGN_RELATED_PROMPTS.md` | NEW - Related Prompts Phase 1 & 2 design document (S74) |
+| `prompts/models.py` | Added SubjectCategory model, Prompt.categories M2M (S74) |
+| `prompts/admin.py` | Added SubjectCategoryAdmin with read-only enforcement (S74) |
+| `prompts/tasks.py` | Added category assignment in AI prompt, writes to cache at 90% (S74) |
+| `prompts/management/commands/backfill_categories.py` | NEW - Backfill categories for existing prompts (S74) |
+| `prompts/migrations/0046_add_subject_categories.py` | NEW - SubjectCategory model + M2M (S74) |
+| `prompts/migrations/0047_populate_subject_categories.py` | NEW - Seed 25 categories (S74) |
+| `prompts/views/collection_views.py` | B2-aware thumbnail URLs replacing Cloudinary-only get_thumbnail_url() (S74) |
+| `prompts/views/user_views.py` | B2-aware thumbnail URLs for trash collections (S74) |
+| `prompts/templates/prompts/collection_detail.html` | Grid column fix, video autoplay observer, CSS overrides (S74) |
+| `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
+| `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
 
 **Committed in Session 66** (commit `806dd5b`):
 - `prompts/templates/prompts/prompt_detail.html` - Complete SEO overhaul (JSON-LD, OG, Twitter, canonical, headings, tag links, noindex)
@@ -577,6 +651,9 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 | `docs/CC_COMMUNICATION_PROTOCOL.md` | Agent requirements for Claude Code |
 | `docs/CC_SPEC_TEMPLATE.md` | Template for writing specs |
 | `PROJECT_FILE_STRUCTURE.md` | Complete file tree |
+| `docs/DESIGN_RELATED_PROMPTS.md` | Related Prompts Phase 1 & 2 design |
+| `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | Phase 2B category taxonomy revamp design |
+| `docs/PHASE_2B_AGENDA.md` | Phase 2B execution roadmap (7 phases) |
 
 ---
 
@@ -592,5 +669,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.5 (Session 74 - Related Prompts Phase 1, Trash Page Polish)
-**Last Updated:** February 7, 2026
+**Version:** 4.6 (Session 74 - Related Prompts P1, Subject Categories P2, Collection Fixes, Video Autoplay)
+**Last Updated:** February 9, 2026

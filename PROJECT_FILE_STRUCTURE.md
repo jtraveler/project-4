@@ -1,6 +1,6 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 7, 2026
+**Last Updated:** February 9, 2026
 **Project:** PromptFinder (Django 5.2.9)
 **Current Phase:** Phase N4 Optimistic Upload Flow (~99% - Lighthouse 96/100/100/100), Phase K Collections (~96%)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
@@ -16,9 +16,9 @@
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
 | **SVG Icons** | 32 | static/icons/sprite.svg |
-| **Migrations** | 41 | prompts/migrations/ (40), about/migrations/ (1) |
+| **Migrations** | 43 | prompts/migrations/ (42), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
-| **Management Commands** | 19 | prompts/management/commands/ |
+| **Management Commands** | 20 | prompts/management/commands/ |
 | **Services** | 11 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
@@ -58,18 +58,21 @@ live-working-project/
 ├── backups/                      # Email preferences backups
 ├── design-references/            # UI design assets
 │   └── UI_STYLE_GUIDE.md
-├── docs/                         # Active documentation (33+ files)
+├── docs/                         # Active documentation (36+ files)
 │   ├── bug_reports/
 │   ├── implementation_reports/
 │   ├── reports/                  # Phase/feature reports (21 files)
 │   ├── specifications/
-│   └── CC_COMMUNICATION_PROTOCOL.md
+│   ├── CC_COMMUNICATION_PROTOCOL.md
+│   ├── DESIGN_RELATED_PROMPTS.md           # Related prompts Phase 1 & 2 design (Session 74)
+│   ├── DESIGN_CATEGORY_TAXONOMY_REVAMP.md  # Phase 2B taxonomy revamp (Session 74)
+│   └── PHASE_2B_AGENDA.md                  # Phase 2B execution roadmap (Session 74)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
-│   │   └── commands/             # 17 management commands + __init__.py
-│   ├── migrations/               # 40 migrations + __init__.py
+│   │   └── commands/             # 18 management commands + __init__.py
+│   ├── migrations/               # 42 migrations + __init__.py
 │   ├── services/                 # 11 service modules
-│   ├── utils/                    # Utility modules (SEO filename generation)
+│   ├── utils/                    # Utility modules (SEO filenames, related prompts scoring)
 │   ├── storage_backends.py       # B2 storage backend + CDN (Phase L)
 │   ├── templates/prompts/        # 23 templates
 │   │   └── partials/             # Partial templates
@@ -108,7 +111,7 @@ live-working-project/
 │   │   │   ├── icons.css         # SVG icon system styles
 │   │   │   └── masonry-grid.css
 │   │   ├── pages/
-│   │   │   ├── prompt-detail.css # Prompt detail page styles (1,063 lines)
+│   │   │   ├── prompt-detail.css # Prompt detail page styles (1,515 lines, includes related prompts section)
 │   │   │   └── prompt-list.css
 │   │   ├── navbar.css
 │   │   └── style.css
@@ -131,7 +134,7 @@ live-working-project/
 
 ---
 
-## Management Commands (20 total)
+## Management Commands (21 total)
 
 | Command | Purpose | Schedule |
 |---------|---------|----------|
@@ -155,6 +158,7 @@ live-working-project/
 | `test_api_latency` | Test B2 and OpenAI API response times | Manual |
 | `regenerate_video_thumbnails` | Regenerate Cloudinary video thumbnails with correct aspect ratio | Manual |
 | `minify_assets` | Minify CSS/JS files in STATIC_ROOT (run after collectstatic) | Manual / CI |
+| `backfill_categories` | Backfill subject categories for existing prompts (DO NOT RUN until Phase 2B) | Manual |
 
 ---
 
@@ -179,7 +183,7 @@ prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app ro
 
 prompts/utils/
 ├── __init__.py              # Package init
-├── related.py               # Related prompts scoring algorithm (4-factor: tags, generator, engagement, recency)
+├── related.py               # Related prompts scoring algorithm (5-factor: tags 35%, categories 35%, generator 10%, engagement 10%, recency 10%)
 └── seo.py                   # SEO filename generation (stop word removal, slug truncation, -ai-prompt suffix)
 ```
 
@@ -325,7 +329,7 @@ prompts/views/
 | File | Lines | Purpose |
 |------|-------|---------|
 | `views/` | ~3,929 | View package (11 modules) ✅ REFACTORED |
-| `models.py` | ~2,026 | Database models (Prompt, UserProfile, etc.) |
+| `models.py` | ~2,026 | Database models (Prompt, UserProfile, SubjectCategory, etc.) |
 | `admin.py` | ~500 | Django admin configuration |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
@@ -347,11 +351,11 @@ static/css/
 │   ├── icons.css        # ~250 lines - SVG icon system (Phase J.2)
 │   └── masonry-grid.css # 255 lines - Masonry grid component
 └── pages/
-    ├── prompt-detail.css # 1,063 lines - Prompt detail page (Phase J.1)
+    ├── prompt-detail.css # 1,515 lines - Prompt detail page + related prompts section (Phase J.1, Session 74)
     └── prompt-list.css   # 304 lines - Prompt list page styles
 ```
 
-**Total CSS:** ~5,638 lines across 7 files
+**Total CSS:** ~6,090 lines across 7 files
 
 **Shared CSS Components (Session 66):**
 - `.media-container-shell` / `.media-container` - Shared image/video container used by upload preview and prompt detail
@@ -1224,6 +1228,9 @@ prompts/
 | PROJECT_FILE_STRUCTURE_AUDIT_REPORT.md | docs/reports/ | Latest audit findings |
 | L8_TIMEOUT_COMPLETION_REPORT.md | docs/reports/ | L8-TIMEOUT implementation details |
 | PHASE_N4_UPLOAD_FLOW_REPORT.md | docs/ | Phase N4 comprehensive planning |
+| DESIGN_RELATED_PROMPTS.md | docs/ | Related Prompts Phase 1 & 2 design (Session 74) |
+| DESIGN_CATEGORY_TAXONOMY_REVAMP.md | docs/ | Phase 2B category taxonomy revamp (Session 74) |
+| PHASE_2B_AGENDA.md | docs/ | Phase 2B execution roadmap (Session 74) |
 
 ---
 
@@ -1231,11 +1238,22 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.11
-**Audit Date:** February 7, 2026
+**Version:** 3.12
+**Audit Date:** February 9, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.12 (February 9, 2026 - Session 74 End-of-Session Docs Update):**
+- Added `backfill_categories.py` management command (count 20→21)
+- Added migrations 0046, 0047 (count 40→42)
+- Added 3 design docs to docs/ directory structure (count 33→36)
+- Updated `related.py` description to reflect 5-factor scoring (categories added)
+- Updated `prompt-detail.css` line count (1,063→1,515)
+- Updated total CSS lines (~5,638→~6,090)
+- Updated `models.py` description to mention SubjectCategory model
+- Added design docs to Related Documentation table
+- Updated audit date and version
 
 **v3.11 (February 7, 2026 - Session 74 End-of-Session):**
 - Added `prompts/utils/related.py` - Related prompts scoring algorithm (4-factor)

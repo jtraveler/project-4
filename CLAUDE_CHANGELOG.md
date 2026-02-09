@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 7, 2026
+**Last Updated:** February 9, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -68,71 +68,93 @@ This is a running log of development sessions. Each session entry includes:
 
 ---
 
-### Session 74 - February 7, 2026
+### Session 74 - February 7-9, 2026
 
-**Focus:** Related Prompts Phase 1 + Trash Page Polish
+**Focus:** Related Prompts Phase 1, Subject Categories Phase 2, Collection Fixes, Video Autoplay
 
-**Context:** Continuing from Session 73's trash video UI work. This session implemented the "You Might Also Like" related prompts feature (Phase 1) and completed trash page polish with improved interactions and styling.
+**Context:** Continuing from Session 73's trash video UI work. This session implemented the "You Might Also Like" related prompts feature (Phase 1), added AI-assigned subject categories (Phase 2), fixed collection detail page bugs, fixed B2-aware thumbnails, and added video autoplay via IntersectionObserver.
 
 **Completed:**
 
 | Task | What It Does | Rating |
 |------|--------------|--------|
-| Related prompts scoring | Created `prompts/utils/related.py` with 4-factor algorithm (60% tags, 15% generator, 15% engagement, 10% recency) | 8.5/10 |
+| Related prompts scoring | Created `prompts/utils/related.py` with multi-factor algorithm (now 35% tags, 35% categories, 10% generator, 10% engagement, 10% recency) | 8.5/10 |
 | Related prompts view | Added related prompts context to `prompt_detail` view + AJAX endpoint for Load More | 8.5/10 |
-| Related prompts template | Added "You Might Also Like" section to prompt_detail.html with masonry grid | 8.5/10 |
-| Grid alignment fix | Changed dynamic column count to always create 4 columns (matching homepage pattern) | 8.5/10 |
-| MIN_SCORE removal | Removed 0.30 threshold - all related prompts now shown, best matches first | 8.5/10 |
+| Related prompts template | Added "You Might Also Like" section to prompt_detail.html with CSS column-count grid | 8.5/10 |
+| Subject Categories | SubjectCategory model with 25 categories, AI-assigned during upload (1-3 per prompt) | 8.5/10 |
+| Category cache-first | Categories written to cache at 90% AI progress; upload_views uses cache-first logic | N/A (bugfix) |
+| Collection grid fix | Fixed hardcoded 4 columns → dynamic `getColumnCount()` in collection_detail.html | N/A (bugfix) |
+| Collection video autoplay | Added IntersectionObserver for desktop video autoplay in collection detail | N/A (feature) |
+| Collection mobile play icon | Removed aggressive `display: none !important` CSS override | N/A (bugfix) |
+| Collection modal B2 thumbnails | Replaced Cloudinary-only `get_thumbnail_url()` with B2-aware properties (3 locations) | N/A (bugfix) |
+| Related prompts video autoplay | Added IntersectionObserver with memory leak prevention and play failure handling | N/A (feature) |
+| Related prompts CSS fixes | Fixed card visibility, vertical gap, opacity cascade, padding | N/A (bugfix) |
+| [CAT DEBUG] removal | Removed 8 diagnostic logger.warning lines from upload_views.py | N/A (cleanup) |
 | Trash tap-to-toggle | Mobile trash cards use tap-to-toggle overlay instead of click | N/A (UX) |
 | Trash card-link | Desktop trash cards have clickable card area (like homepage) | N/A (UX) |
 | Clock icon | Added icon-clock to sprite.svg for "deleted X days ago" | N/A (icon) |
-| Bookmark removal | Removed bookmark/save icon from trash cards (irrelevant in trash context) | N/A (cleanup) |
 | FOUC fix | Added CSS to prevent flash of unstyled content on trash page | N/A (bugfix) |
-| --radius-pill variable | Added CSS variable for pill-shaped border radius (used by trash badges) | N/A (style) |
 
 **Files Created:**
-- `prompts/utils/related.py` - Related prompts scoring algorithm (Jaccard similarity for tags, linear decay for recency)
+- `prompts/utils/related.py` - Related prompts scoring algorithm (Jaccard similarity for tags, category overlap, linear decay for recency)
 - `prompts/templates/prompts/partials/_prompt_card_list.html` - Partial for AJAX Load More rendering
+- `prompts/management/commands/backfill_categories.py` - Backfill categories for existing prompts (DO NOT RUN until Phase 2B)
+- `prompts/migrations/0046_add_subject_categories.py` - SubjectCategory model + M2M
+- `prompts/migrations/0047_populate_subject_categories.py` - Seed 25 categories
+- `docs/DESIGN_RELATED_PROMPTS.md` - Complete Phase 1 & 2 design document
+- `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` - Phase 2B taxonomy revamp (43 categories, ~108 descriptors)
+- `docs/PHASE_2B_AGENDA.md` - Phase 2B execution roadmap (7 phases)
 
 **Files Modified:**
-- `prompts/views/prompt_views.py` - Added `get_related_prompts()` import, related prompts context, `related_prompts_ajax` view
-- `prompts/urls.py` - Added `/prompt/<slug>/related/` AJAX endpoint (line 29)
-- `prompts/templates/prompts/prompt_detail.html` - Added "You Might Also Like" section with masonry grid + Load More JS
-- `static/css/pages/prompt-detail.css` - Related prompts section styles (.related-prompts-section, .related-prompts-title)
-- `prompts/templates/prompts/user_profile.html` - Trash card improvements (tap-to-toggle, card-link, clock icon)
+- `prompts/models.py` - Added SubjectCategory model, Prompt.categories M2M
+- `prompts/admin.py` - Added SubjectCategoryAdmin with read-only enforcement
+- `prompts/tasks.py` - Category assignment in AI prompt, writes to cache at 90% progress
+- `prompts/views/prompt_views.py` - Related prompts context, `related_prompts_ajax` view
+- `prompts/views/collection_views.py` - B2-aware thumbnail URLs (2 locations)
+- `prompts/views/user_views.py` - B2-aware thumbnail URLs for trash collections
+- `prompts/views/upload_views.py` - Cache-first category logic, removed [CAT DEBUG] logging
+- `prompts/urls.py` - Added `/prompt/<slug>/related/` AJAX endpoint
+- `prompts/templates/prompts/prompt_detail.html` - "You Might Also Like" section + IntersectionObserver video autoplay
+- `prompts/templates/prompts/collection_detail.html` - Grid column fix, video autoplay, CSS overrides
+- `static/css/pages/prompt-detail.css` - Related prompts section styles, video CSS, padding fix
+- `prompts/templates/prompts/user_profile.html` - Trash card improvements
 - `static/css/style.css` - `--radius-pill` variable, trash badge styles, FOUC fix
 - `static/icons/sprite.svg` - Added icon-clock (32 icons total)
 
 **Key Technical Changes:**
-- Related prompts use same masonry grid pattern as homepage (always 4 columns, CSS hides extras via `[data-columns]`)
-- Scoring algorithm pre-filters candidates (must share tag OR generator) to avoid scoring entire database
-- Safety cap: if >500 candidates, limit to 500 most recent before scoring
-- `prefetch_related('tags', 'likes')` + `annotate(likes_count=Count('likes'))` for efficient scoring
-- No MIN_SCORE threshold - "You Might Also Like" wording justifies showing loosely related content
+- Related prompts use CSS `column-count` responsive grid (not JS masonry) — 4→3→2→1 columns
+- IntersectionObserver with threshold `[0, 0.3, 0.5]` for desktop video autoplay, skip mobile/reduced-motion
+- CSS uses `data-initialized="true"` attribute + adjacent sibling selector to toggle thumbnail positioning
+- Observer disconnected before recreation to prevent memory leaks on Load More
+- Autoplay failure handler resets video state when browser blocks playback
+- `getShortestColumn()` bounds check prevents race condition after resize
+- B2-aware `display_medium_url`/`display_thumb_url` replaces Cloudinary-only `get_thumbnail_url()` (3 locations)
+- Subject categories written to cache at 90% AI progress for cache-first upload logic
 
 **Agent Ratings:**
 
 | Review Area | Agents | Average |
 |-------------|--------|---------|
 | Related prompts (round 1) | @ui 7.5/10, @code-review 8.5/10 | 8.0/10 (below threshold) |
-| Related prompts (round 2, after grid fix) | @code-review 8.5/10 | 8.5/10 |
+| Related prompts (round 2) | @code-review 8.5/10 | 8.5/10 |
+| Subject categories | @debugger 8/10, @django-pro 9/10 | 8.5/10 |
+| Video autoplay + collection fixes | @ui-visual-validator, @debugger | Multiple rounds, bugs caught and fixed |
 
-**Fixes After Round 1 Review:**
-- Changed dynamic column count (`for i < newColumnCount`) to fixed 4 columns (`for i < 4`)
-- Updated comment to accurately describe vertical distribution pattern
-- Cards now start from left column consistently (matching homepage behavior)
+**Bugs Found and Fixed by Agents:**
+- Memory leak: IntersectionObserver not disconnected before recreation on Load More
+- Play failure: video stays visible behind thumbnail when autoplay blocked; reset state in catch handler
+- Race condition: `getShortestColumn()` — `getColumnCount()` can exceed `columns.length` after resize
+- Third B2 location: `user_views.py:304` also used Cloudinary-only `get_thumbnail_url()`
 
-**Known Bugs (Documented in DESIGN_RELATED_PROMPTS.md):**
-- Grid layout may need CSS column-count approach instead of JS columns (planned for Session 75)
-
-**Design Document:**
-- `docs/DESIGN_RELATED_PROMPTS.md` - Complete Phase 1 & 2 design, updated with Session 74 implementation status
+**Design Documents:**
+- `docs/DESIGN_RELATED_PROMPTS.md` - Phase 1 & 2 design
+- `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` - Phase 2B full design (43 categories, ~108 descriptors, anti-hallucination 4-layer strategy)
+- `docs/PHASE_2B_AGENDA.md` - Phase 2B execution roadmap (7 phases)
 
 **Phase K Status:** ~96% complete (trash polish done)
 
 **Next Session:**
-- Test related prompts on production with real data
-- Consider Phase 2 (subject categories with AI classification)
+- Phase 2B: Category Taxonomy Revamp (expand categories, add descriptors)
 - Final Phase K cleanup (K.2: download tracking, virtual collections; K.3: premium limits)
 
 ---
@@ -980,7 +1002,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
-| Feb 7, 2026 | 74 | Related Prompts Phase 1: scoring algorithm (4 factors), AJAX Load More, masonry grid, trash page polish |
+| Feb 7-9, 2026 | 74 | Related Prompts P1, Subject Categories P2, collection fixes, video autoplay, B2 thumbnails, Phase 2B design |
 | Feb 7, 2026 | 73 | Phase K trash video UI polish: mobile click-to-play, CSS specificity fixes, self-contained trash cards |
 | Feb 6, 2026 | 70 | Phase K trash integration: simplified layouts, collection delete with optimistic UI, trash collections matching Collections page |
 | Feb 4, 2026 | 69 | Lighthouse 96/100/100/100: robots.txt, CSS perf, a11y fixes, asset minification (102.5 KiB saved) |
@@ -1005,5 +1027,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.5 (Session 74 - Related Prompts Phase 1, Trash Page Polish)
-**Last Updated:** February 7, 2026
+**Version:** 4.6 (Session 74 - Related Prompts P1, Subject Categories P2, Collection Fixes, Video Autoplay)
+**Last Updated:** February 9, 2026

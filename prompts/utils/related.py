@@ -2,14 +2,15 @@
 Related Prompts Scoring Utility.
 
 Provides the get_related_prompts() function for scoring and ranking
-related prompts based on 5 weighted factors:
-- Tag overlap (35%): Jaccard similarity on shared tags
-- Category overlap (35%): Jaccard similarity on shared subject categories
+related prompts based on 6 weighted factors:
+- Tag overlap (20%): Jaccard similarity on shared tags
+- Category overlap (25%): Jaccard similarity on shared subject categories
+- Descriptor overlap (25%): Jaccard similarity on shared subject descriptors
 - Same AI generator (10%): Binary match
 - Similar engagement (10%): Inverse normalized like count difference
 - Recency (10%): Linear decay over 90 days
 
-Phase 2 implementation - includes subject categories.
+Phase 2B implementation - includes subject descriptors.
 """
 
 from django.db.models import Count, Q
@@ -18,10 +19,10 @@ from django.utils import timezone
 
 def get_related_prompts(prompt, limit=60):
     """
-    Score and rank related prompts using 5 weighted factors.
+    Score and rank related prompts using 6 weighted factors.
 
     Pre-filters candidates to avoid scoring entire database:
-    Only scores prompts sharing at least 1 tag, 1 category, OR same AI generator.
+    Only scores prompts sharing at least 1 tag, 1 category, 1 descriptor, OR same AI generator.
 
     Args:
         prompt: The source Prompt instance
@@ -33,9 +34,10 @@ def get_related_prompts(prompt, limit=60):
     # Import here to avoid circular imports
     from prompts.models import Prompt
 
-    # Get source prompt's tag IDs and category IDs
+    # Get source prompt's tag IDs, category IDs, and descriptor IDs
     prompt_tags = set(prompt.tags.values_list('id', flat=True))
     prompt_categories = set(prompt.categories.values_list('id', flat=True))
+    prompt_descriptors = set(prompt.descriptors.values_list('id', flat=True))
 
     # Pre-filter: only score prompts that have SOME relationship
     candidates = Prompt.objects.filter(
@@ -46,27 +48,29 @@ def get_related_prompts(prompt, limit=60):
         deleted_at__isnull=False  # Exclude soft-deleted
     )
 
-    # Filter to prompts sharing tags, categories, OR same AI generator
-    if prompt_tags or prompt_categories:
+    # Filter to prompts sharing tags, categories, descriptors, OR same AI generator
+    if prompt_tags or prompt_categories or prompt_descriptors:
         filter_q = Q()
         if prompt_tags:
             filter_q |= Q(tags__in=prompt_tags)
         if prompt_categories:
             filter_q |= Q(categories__in=prompt_categories)
+        if prompt_descriptors:
+            filter_q |= Q(descriptors__in=prompt_descriptors)
         if prompt.ai_generator:
             filter_q |= Q(ai_generator=prompt.ai_generator)
         candidates = candidates.filter(filter_q)
     else:
-        # No tags and no categories — fall back to same AI generator only
+        # No tags, no categories, and no descriptors — fall back to same AI generator only
         if prompt.ai_generator:
             candidates = candidates.filter(ai_generator=prompt.ai_generator)
         else:
-            # No tags, no categories, and no generator — return empty list
+            # No tags, no categories, no descriptors, and no generator — return empty list
             return []
 
     candidates = candidates.distinct().select_related(
         'author'
-    ).prefetch_related('tags', 'categories', 'likes').annotate(
+    ).prefetch_related('tags', 'categories', 'descriptors', 'likes').annotate(
         likes_count=Count('likes')  # Annotate for scoring; prefetch for template user check
     )
 
@@ -79,9 +83,11 @@ def get_related_prompts(prompt, limit=60):
     # Build lookup dicts to avoid N+1 (use prefetched .all(), not .values_list())
     candidate_tags_map = {}
     candidate_categories_map = {}
+    candidate_descriptors_map = {}
     for candidate in candidate_list:
         candidate_tags_map[candidate.id] = set(tag.id for tag in candidate.tags.all())
         candidate_categories_map[candidate.id] = set(cat.id for cat in candidate.categories.all())
+        candidate_descriptors_map[candidate.id] = set(desc.id for desc in candidate.descriptors.all())
 
     # Score each candidate
     scored = []
@@ -91,34 +97,42 @@ def get_related_prompts(prompt, limit=60):
     for candidate in candidate_list:
         candidate_tags = candidate_tags_map.get(candidate.id, set())
         candidate_categories = candidate_categories_map.get(candidate.id, set())
+        candidate_descriptors = candidate_descriptors_map.get(candidate.id, set())
 
-        # 1. Tag overlap (35%) — Jaccard similarity
+        # 1. Tag overlap (20%) — Jaccard similarity
         if prompt_tags and candidate_tags:
             tag_score = len(prompt_tags & candidate_tags) / len(prompt_tags | candidate_tags)
         else:
             tag_score = 0.0
 
-        # 2. Category overlap (35%) — Jaccard similarity
+        # 2. Category overlap (25%) — Jaccard similarity
         if prompt_categories and candidate_categories:
             category_score = len(prompt_categories & candidate_categories) / len(prompt_categories | candidate_categories)
         else:
             category_score = 0.0
 
-        # 3. Same AI generator (10%) — Binary
+        # 3. Descriptor overlap (25%) — Jaccard similarity
+        if prompt_descriptors and candidate_descriptors:
+            descriptor_score = len(prompt_descriptors & candidate_descriptors) / len(prompt_descriptors | candidate_descriptors)
+        else:
+            descriptor_score = 0.0
+
+        # 4. Same AI generator (10%) — Binary
         generator_score = 1.0 if candidate.ai_generator == prompt.ai_generator else 0.0
 
-        # 4. Similar engagement (10%) — Inverse normalized difference
+        # 5. Similar engagement (10%) — Inverse normalized difference
         candidate_likes = candidate.likes_count  # Use annotated count
         max_likes = max(prompt_likes, candidate_likes, 1)  # Avoid div by zero
         engagement_score = 1.0 - (abs(prompt_likes - candidate_likes) / max_likes)
 
-        # 5. Recency (10%) — Linear decay over 90 days
+        # 6. Recency (10%) — Linear decay over 90 days
         days_old = (now - candidate.created_on).days
         recency_score = max(0.0, 1.0 - (days_old / 90))
 
         total = (
-            tag_score * 0.35 +
-            category_score * 0.35 +
+            tag_score * 0.20 +
+            category_score * 0.25 +
+            descriptor_score * 0.25 +
             generator_score * 0.10 +
             engagement_score * 0.10 +
             recency_score * 0.10

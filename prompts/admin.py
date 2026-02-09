@@ -6,7 +6,7 @@ from django.urls import reverse, path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem
 
 
 @admin.register(Prompt)
@@ -861,6 +861,27 @@ class SubjectCategoryAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Prevent deletion of predefined categories."""
         return False
+
+
+@admin.register(SubjectDescriptor)
+class SubjectDescriptorAdmin(admin.ModelAdmin):
+    """Admin interface for managing subject descriptors (Tier 2 taxonomy)."""
+    list_display = ['name', 'descriptor_type', 'slug', 'prompt_count']
+    list_filter = ['descriptor_type']
+    search_fields = ['name', 'slug']
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ['prompt_count']
+
+    def get_queryset(self, request):
+        from django.db.models import Count
+        return super().get_queryset(request).annotate(
+            _prompt_count=Count('prompts')
+        )
+
+    def prompt_count(self, obj):
+        return getattr(obj, '_prompt_count', obj.prompts.count())
+    prompt_count.short_description = 'Prompts'
+    prompt_count.admin_order_field = '_prompt_count'
 
 
 @admin.register(UserProfile)

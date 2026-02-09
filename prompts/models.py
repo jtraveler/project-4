@@ -617,6 +617,48 @@ class SubjectCategory(models.Model):
         return self.name
 
 
+class SubjectDescriptor(models.Model):
+    """
+    Tier-2 taxonomy descriptors for prompt classification.
+
+    Unlike SubjectCategory (Tier 1, broad subject), SubjectDescriptor captures
+    finer-grained attributes like gender presentation, ethnicity, age range,
+    mood, color palette, and setting. Each prompt can have multiple descriptors
+    assigned by AI during upload.
+
+    10 descriptor types with 109 total entries, seeded via data migration.
+    """
+    DESCRIPTOR_TYPES = [
+        ('gender', 'Gender Presentation'),
+        ('ethnicity', 'Ethnicity / Heritage'),
+        ('age', 'Age Range'),
+        ('features', 'Physical Features'),
+        ('profession', 'Profession / Role'),
+        ('mood', 'Mood / Atmosphere'),
+        ('color', 'Color Palette'),
+        ('holiday', 'Holiday / Occasion'),
+        ('season', 'Season'),
+        ('setting', 'Setting / Environment'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    descriptor_type = models.CharField(
+        max_length=20, choices=DESCRIPTOR_TYPES
+    )
+
+    class Meta:
+        ordering = ['descriptor_type', 'name']
+        verbose_name = "Subject Descriptor"
+        verbose_name_plural = "Subject Descriptors"
+        indexes = [
+            models.Index(fields=['descriptor_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_descriptor_type_display()})"
+
+
 # Add status choices
 STATUS = ((0, "Draft"), (1, "Published"))
 
@@ -761,6 +803,12 @@ class Prompt(models.Model):
         related_name='prompts',
         blank=True,
         help_text='Subject categories (1-3) assigned by AI'
+    )
+    descriptors = models.ManyToManyField(
+        'SubjectDescriptor',
+        related_name='prompts',
+        blank=True,
+        help_text='Subject descriptors (Tier 2) assigned by AI'
     )
     likes = models.ManyToManyField(
         User, related_name='prompt_likes', blank=True

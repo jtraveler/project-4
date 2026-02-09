@@ -259,7 +259,7 @@ def _call_openai_vision(
                     ]
                 }
             ],
-            max_tokens=1000,
+            max_tokens=1500,
             temperature=0.7,
             response_format={"type": "json_object"}  # Enforce JSON output
         )
@@ -367,168 +367,199 @@ def _build_analysis_prompt(prompt_text: str, ai_generator: str, available_tags: 
     """
     Build the prompt for OpenAI Vision API.
 
-    Prioritizes artistic style identification for SEO-rich content.
-    Weight: 80% image analysis, 20% prompt text context.
+    Phase 2B: Three-tier taxonomy prompt with anti-hallucination design.
+    Reference: docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md Section 7.3
+
+    Args kept for backwards compatibility but ai_generator and available_tags
+    are no longer interpolated into the prompt to reduce hallucination risk.
     """
-    tags_list = ", ".join(available_tags[:100])  # Limit to avoid token overflow
+    return '''Analyze this image and return a JSON object with the following fields.
 
-    return f'''Analyze this AI-generated image and provide SEO-optimized metadata.
+VALIDATION RULE: You MUST only return values that appear EXACTLY as written in the
+lists below. Do NOT invent, modify, combine, or abbreviate any value. If you are unsure
+about any assignment, OMIT it entirely. An omission is always better than an incorrect
+assignment.
 
-User's Original Prompt: "{prompt_text}"
-AI Generator Used: {ai_generator}
+═══════════════════════════════════════════════════
+FIELD 1: "title" (string)
+═══════════════════════════════════════════════════
+A concise, SEO-optimized title for this image. Max 60 characters.
+Include the most important subject and style keywords.
 
-CRITICAL - IDENTIFY THE ARTISTIC STYLE FIRST:
-Before describing WHAT is in the image, identify HOW it was rendered:
+═══════════════════════════════════════════════════
+FIELD 2: "description" (string)
+═══════════════════════════════════════════════════
+A detailed, SEO-optimized description. 2-4 sentences. Follow these CRITICAL SEO RULES:
 
-1. **Rendering Style** (MUST identify one):
-   - 3D render, clay/claymation style, Pixar-style, low-poly
-   - Photorealistic, hyperrealistic, photograph-style
-   - Anime, manga, cartoon, comic book style
-   - Digital painting, oil painting, watercolor, sketch
-   - Minimalist, flat design, vector art
-   - Vintage, retro, art deco, art nouveau
-   - Fantasy art, concept art, surrealist
+ETHNICITY SYNONYMS — when describing ethnicity, ALWAYS include multiple search terms:
+  * "Black" → also include "African-American" (or "African" if clearly African context)
+  * "Hispanic" → also include "Latino" or "Latina"
+  * "Indian" → also include "South Asian" and "Desi"
+  * "Asian" → specify "East Asian," "Southeast Asian," etc. when identifiable
+  * "Arab" → also include "Middle Eastern"
+  * "White" → also include "Caucasian" or "European" if contextually appropriate
 
-2. **Visual Characteristics**:
-   - Lighting (soft, dramatic, cinematic, neon, golden hour)
-   - Color palette (warm, cool, pastel, vibrant, muted, monochrome)
-   - Mood (whimsical, nostalgic, ethereal, dark, cheerful, mysterious)
+GENDER SYNONYMS — include both specific and general:
+  * Include "woman" AND "female," "man" AND "male"
 
-3. **Human Subjects - IMPORTANT FOR SEARCHABILITY**:
-   If the image contains people, identify their apparent:
-   - Ethnicity/Race: Asian, Black/African, Caucasian/White, Hispanic/Latino,
-     Middle Eastern, South Asian, Southeast Asian, Mixed/Multiracial
-   - Age range: child, teenager, young adult, middle-aged, elderly
-   - Gender: man, woman, non-binary (if apparent)
+NICHE TERMS — include when applicable:
+  * AI Influencer images: "AI influencer," "AI avatar," "virtual influencer," "digital influencer"
+  * Person + business/smart-casual attire + professional mood: "LinkedIn headshot," "LinkedIn profile photo,"
+    "professional headshot," "corporate portrait" (any framing — not limited to headshots)
+  * Boudoir: "boudoir photography," "intimate portrait," "sensual portrait"
+  * Styled portraits: naturally mention "virtual photoshoot" when applicable
+  * Holiday images: include holiday name AND season AND mood keywords
 
-   CLEAR CASES (use specific ethnicity):
-   - "young Asian woman" NOT just "woman"
-   - "elderly Black man" NOT just "elderly man"
+SPELLING VARIANTS — always include both US and UK spellings in descriptions and tags:
+  * "coloring book" AND "colouring book"
+  * "watercolor" AND "watercolour"
+  * "color" AND "colour" (when color is a key term)
+  * "gray" AND "grey"
+  * "center" AND "centre" (when relevant)
+  * "favor" AND "favour" (when relevant)
 
-   AMBIGUOUS CASES (use skin tone + multiple possibilities):
-   - For light brown skin: "light brown-skinned woman (possibly Hispanic, Middle Eastern, or mixed)"
-   - For dark brown skin: "dark-skinned man (possibly Black, African, or South Asian)"
-   - For ambiguous features: describe skin tone rather than assuming ethnicity
+Naturally weave in 2-3 synonym variants of key terms without keyword stuffing.
 
-   TITLE STRATEGY (50-60 chars limit):
-   - Clear cases: Use specific ethnicity ("Asian Woman", "Black Man")
-   - Ambiguous cases: Use skin tone ("Brown-Skinned Woman", "Dark-Skinned Man")
+═══════════════════════════════════════════════════
+FIELD 3: "tags" (array of strings, up to 10)
+═══════════════════════════════════════════════════
+SEO-optimized keyword tags. Use hyphens for multi-word tags (e.g., "african-american").
 
-   DESCRIPTION STRATEGY (150-200 words - more space):
-   - Can mention multiple possibilities: "appears to be of Black, Hispanic, or Middle Eastern descent"
-   - This casts a wider SEO net for searches
+Include:
+- Primary subject (e.g., "portrait", "landscape")
+- Demographic synonyms (e.g., both "african-american" AND "black-woman")
+- Mood/atmosphere keywords
+- Art style (e.g., "photorealistic", "oil-painting")
+- Specific elements (e.g., "coffee", "red-car", "neon-lights")
+- LinkedIn photos: include "linkedin-headshot", "linkedin-profile-photo", "professional-headshot",
+  "corporate-portrait", "business-portrait" (triggered by professional attire + corporate mood,
+  ANY framing — not limited to shoulders-up headshots)
+- Other niche terms when applicable: "ai-influencer", "ai-avatar", "virtual-photoshoot",
+  "boudoir", "burlesque", "pin-up", "glamour-photography"
+- YouTube thumbnails: include "youtube-thumbnail", "thumbnail-design", "cover-art",
+  "video-thumbnail", "podcast-cover", "social-media-graphic"
+- Maternity shoots: include "maternity-shoot", "maternity-photography", "pregnancy-photoshoot",
+  "baby-bump", "expecting-mother", "maternity-portrait"
+- 3D/forced perspective: include "3d-photo", "forced-perspective", "facebook-3d", "3d-effect",
+  "fisheye-portrait", "pop-out-effect", "parallax-photo"
+- Photo restoration: include "photo-restoration", "ai-restoration", "restore-old-photo",
+  "colorized-photo", "ai-colorize", "vintage-restoration"
+- US/UK spelling variants: include BOTH spellings when applicable, e.g. "coloring-book" AND
+  "colouring-book", "watercolor" AND "watercolour"
 
-   Be respectful and descriptive, not stereotypical.
+═══════════════════════════════════════════════════
+FIELD 4: "categories" (array of strings, up to 5)
+═══════════════════════════════════════════════════
+Choose from this EXACT list only:
 
-Respond with ONLY valid JSON in this exact format:
-{{
-    "title": "USE 50-60 CHARACTERS - include rendering technique + subject",
-    "description": "USE 150-200 WORDS - detailed, SEO-rich content",
-    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
-    "categories": ["Category Name 1", "Category Name 2"]
-}}
+Portrait, Fashion & Style, Landscape & Nature, Urban & City, Sci-Fi & Futuristic,
+Fantasy & Mythical, Wildlife & Nature Animals, Interior & Architecture, Abstract & Artistic,
+Food & Drink, Vehicles & Transport, Horror & Dark, Anime & Manga, Photorealistic,
+Digital Art, Illustration, Product & Commercial, Sports & Action, Music & Entertainment,
+Retro & Vintage, Minimalist, Macro & Close-up, Text & Typography, Comedy & Humor,
+Wedding & Engagement, Couple & Romance, Group & Crowd, Cosplay, Tattoo & Body Art,
+Underwater, Aerial & Drone View, Concept Art, Wallpaper & Background, Character Design,
+Pixel Art, 3D Render, Watercolor & Traditional, Surreal & Dreamlike,
+AI Influencer / AI Avatar, Headshot, Boudoir, YouTube Thumbnail / Cover Art,
+Pets & Domestic Animals, Maternity Shoot, 3D Photo / Forced Perspective,
+Photo Restoration
 
-TITLE REQUIREMENTS - MANDATORY:
-1. LENGTH: Use 50-60 characters (this is required, not optional)
-2. RENDERING TECHNIQUE: Must include one of these in the title:
-   - "3D" / "3D Render" / "Clay-Style" / "Pixar-Style" / "Low-Poly"
-   - "Photorealistic" / "Hyperrealistic" / "Photo-Style"
-   - "Anime" / "Manga" / "Cartoon" / "Comic Style"
-   - "Digital Painting" / "Digital Art" / "Illustration"
-   - "Oil Painting" / "Watercolor" / "Sketch"
-   - "Minimalist" / "Vector Art" / "Flat Design"
-   - "Cinematic" / "Concept Art" / "Fantasy Art"
-3. SUBJECT: Include what the image shows
-4. DESCRIPTORS: Add mood, colors, or setting to reach 50-60 chars
+SPECIAL RULES:
+- "AI Influencer / AI Avatar": ONLY if single person + polished/glamorous + fashion-styled
+  + luxury/aspirational setting or social-media-ready framing.
+- "Headshot": Shoulders-up + single person + clean background.
+- "Boudoir": Lingerie/revealing clothing + intimate setting + sensual posing/lighting.
+  Based on styling, NOT body type.
+- "YouTube Thumbnail / Cover Art": Designed composition with at least 2 of: bold text overlay,
+  exaggerated expression, bright saturated colors, landscape orientation, split composition,
+  arrow/circle graphics. Must be intentionally designed as a clickable cover/preview.
+- "Maternity Shoot": Pregnant subject + styled photoshoot elements (flowing gowns, belly poses,
+  dreamy lighting, partner involvement, baby props). Genre intent, not just pregnancy visible.
+- "3D Photo / Forced Perspective": At least 2 of: fisheye/wide-angle distortion, object projected
+  toward viewer in extreme foreground, three-layer depth separation, breaking frame boundaries,
+  worm's-eye perspective, dramatic scale distortion.
+- "Photo Restoration": At least 2 of: before/after layout, colorized B&W, enhanced old photo
+  with period-specific context, old format borders with modern clarity, visible damage repair.
+  NOT new images in vintage style (that's "Retro & Vintage").
+- "Comedy & Humor": Intentionally comedic — memes, parody, satire, caricature, absurd humor,
+  funny juxtapositions. NOT merely playful or whimsical.
 
-GOOD TITLES BY CONTENT TYPE (all 50-60 characters):
+═══════════════════════════════════════════════════
+FIELD 5: "descriptors" (object with typed arrays)
+═══════════════════════════════════════════════════
+Return an object with these EXACT keys. Each value is an array of strings.
+Choose ONLY from the options listed under each key.
+Leave an array empty [] if nothing applies or if you are not confident.
 
-3D/Animated Style:
-- "Whimsical 3D Clay-Style Vintage Yellow Bus Illustration" (56 chars)
-- "Pixar-Style 3D Character Happy Child Playing in Garden" (55 chars)
-- "Cute Low-Poly Forest Animals Isometric Game Art Style" (54 chars)
+"gender" (0-1 values, ONLY if person clearly visible):
+  Male, Female, Androgynous
 
-Photorealistic/Human:
-- "Photorealistic Portrait Young Asian Woman Golden Hour Light" (60 chars)
-- "Hyperrealistic Black Business Man Professional Portrait" (56 chars)
-- "Photo-Style Elderly Hispanic Couple Beach Sunset Scene" (55 chars)
-- "Cinematic Middle Eastern Woman Dramatic Studio Lighting" (56 chars)
-- "Brown-Skinned Woman Portrait Soft Natural Window Light" (55 chars)
+"ethnicity" (0-1 values, ONLY if >90% confident — OMIT if ANY doubt):
+  African-American / Black, African, Hispanic / Latino, East Asian,
+  South Asian / Indian / Desi, Southeast Asian, Middle Eastern / Arab,
+  Caucasian / White, Indigenous / Native, Pacific Islander, Mixed / Multiracial
 
-Anime/Cartoon:
-- "Anime Style Warrior Princess Epic Battle Fantasy Scene" (55 chars)
-- "Manga Character Schoolgirl Cherry Blossom Spring Setting" (57 chars)
-- "Cartoon Style Funny Dog Superhero Comic Book Art" (49 chars)
+"age" (0-1 values, ONLY if person clearly visible):
+  Baby / Infant, Child, Teen, Young Adult, Middle-Aged, Senior / Elderly
 
-Digital Art/Illustration:
-- "Digital Painting Mystical Forest Ethereal Moonlight" (52 chars)
-- "Concept Art Futuristic City Cyberpunk Neon Aesthetic" (53 chars)
-- "Fantasy Illustration Dragon Castle Epic Medieval Scene" (55 chars)
+"features" (0-3 values, ONLY visually prominent intentional features):
+  Vitiligo, Albinism, Heterochromia, Freckles, Natural Hair / Afro,
+  Braids / Locs, Hijab / Headscarf, Bald / Shaved Head, Glasses / Eyewear,
+  Beard / Facial Hair, Colorful / Dyed Hair, Wheelchair User, Prosthetic,
+  Scarring, Plus Size / Curvy, Athletic / Muscular, Pregnancy / Maternity
 
-Landscapes/Scenes:
-- "Cinematic Mountain Landscape Dramatic Storm Clouds Moody" (57 chars)
-- "Watercolor Style Peaceful Japanese Garden Autumn Colors" (56 chars)
-- "Surrealist Desert Dreamscape Melting Clocks Salvador Dali" (58 chars)
+"profession" (0-2 values, ONLY if identifiable through uniform/equipment/context):
+  Military / Armed Forces, Healthcare / Medical, First Responder,
+  Chef / Culinary, Business / Executive, Scientist / Lab, Artist / Creative,
+  Teacher / Education, Athlete / Sports, Construction / Blue Collar,
+  Pilot / Aviation, Musician / Performer, Royal / Regal, Warrior / Knight,
+  Astronaut, Cowboy / Western, Ninja / Samurai
 
-BAD TITLES (too short, missing technique):
-- "Yellow Bus Scene" (16 chars) - Missing technique, too short
-- "Portrait of Woman" (17 chars) - Missing technique, too short
-- "Anime Character" (15 chars) - Too short, too generic
-- "Beautiful Landscape" (19 chars) - No technique, no specifics
-- "Whimsical Scene" (15 chars) - Mood only, no technique
+"mood" (1-2 values, almost every image has a mood):
+  Dark & Moody, Bright & Cheerful, Dreamy / Ethereal, Cinematic, Dramatic,
+  Peaceful / Serene, Romantic, Mysterious, Energetic, Melancholic, Whimsical,
+  Eerie / Unsettling, Sensual / Alluring, Professional / Corporate,
+  Vintage / Aged Film
 
-DESCRIPTION REQUIREMENTS - USE 150-200 WORDS (mandatory):
+"color" (1-2 values, almost every image has a color palette):
+  Warm Tones, Cool Tones, Monochrome, Neon / Vibrant, Pastel, Earth Tones,
+  High Contrast, Muted / Desaturated, Dark / Low-Key, Gold & Luxury
 
-Structure (fill ALL sections):
+"holiday" (0-1 values, ONLY if clearly related to a specific holiday):
+  Valentine's Day, Christmas, Halloween, Easter, Thanksgiving, New Year,
+  Independence Day, St. Patrick's Day, Lunar New Year, Día de los Muertos,
+  Mother's Day, Father's Day, Pride, Holi, Diwali, Eid, Hanukkah
 
-PARAGRAPH 1 - Style & Technique (40-50 words):
-"This [rendering technique] artwork features [specific style characteristics].
-The [visual style] aesthetic showcases [lighting/texture/color details]..."
+"season" (0-1 values, ONLY if clear seasonal visual cues):
+  Spring, Summer, Autumn / Fall, Winter
 
-PARAGRAPH 2 - Subject & Composition (50-60 words):
-"The image depicts [detailed subject description including ethnicity/age if human] with [composition notes].
-[Specific details about focal points, positioning, background elements]..."
+"setting" (0-1 values, if primary setting is determinable):
+  Studio / Indoor, Outdoor / Nature, Urban / Street, Beach / Coastal,
+  Mountain, Desert, Forest / Woodland, Space / Cosmic, Underwater
 
-PARAGRAPH 3 - Usage & Context (50-60 words):
-"This prompt is ideal for [target users: artists, designers, content creators].
-Created with {ai_generator}, it demonstrates [technique/style benefits].
-Perfect for [specific use cases: social media, prints, game assets, etc.]..."
+═══════════════════════════════════════════════════
+EXAMPLE RESPONSE
+═══════════════════════════════════════════════════
+{
+  "title": "Cinematic African-American Woman Golden Hour Portrait",
+  "description": "A stunning cinematic portrait of a young African-American woman bathed in golden hour light. This photorealistic image captures the Black female subject with natural afro hair, wearing elegant gold jewelry against a warm urban backdrop. The dramatic lighting and rich warm tones create a powerful, aspirational mood perfect for AI avatar and virtual photoshoot inspiration. Ideal for creators seeking diverse, high-quality portrait prompts featuring African-American beauty and cinematic photography techniques.",
+  "tags": ["african-american", "black-woman", "portrait", "cinematic", "golden-hour", "photorealistic", "natural-hair", "afro", "urban-portrait", "ai-avatar"],
+  "categories": ["Portrait", "AI Influencer / AI Avatar", "Photorealistic"],
+  "descriptors": {
+    "gender": ["Female"],
+    "ethnicity": ["African-American / Black"],
+    "age": ["Young Adult"],
+    "features": ["Natural Hair / Afro"],
+    "profession": [],
+    "mood": ["Cinematic", "Dramatic"],
+    "color": ["Warm Tones", "Gold & Luxury"],
+    "holiday": [],
+    "season": [],
+    "setting": ["Urban / Street"]
+  }
+}
 
-IMPORTANT:
-- You MUST write 150-200 words. Short descriptions waste SEO potential.
-- For human subjects, ALWAYS include apparent ethnicity/race for searchability.
-- Be specific: "young Asian woman" not "young woman", "Black elderly man" not "elderly man".
-- When ethnicity is ambiguous, use skin tone descriptors (brown-skinned, dark-skinned, light-skinned).
-- In descriptions, you can mention multiple possible ethnicities for ambiguous cases to cast a wider SEO net.
-
-TAGS REQUIREMENTS:
-- First 2 tags: Style/technique (e.g., "3D Art", "Digital Painting", "Anime")
-- Next 2 tags: Subject matter (e.g., "Vehicles", "Urban", "Characters")
-- Last tag: Mood/aesthetic (e.g., "Whimsical", "Nostalgic", "Cinematic")
-- Choose from this list: {tags_list}
-
-CATEGORIES REQUIREMENTS:
-- Assign 1-3 subject categories from this EXACT list (use exact names):
-  Portrait, Fashion & Style, Landscape & Nature, Urban & City, Sci-Fi & Futuristic,
-  Fantasy & Mythical, Animals & Wildlife, Interior & Architecture, Abstract & Artistic,
-  Food & Drink, Vehicles & Transport, Horror & Dark, Anime & Manga, Photorealistic,
-  Digital Art, Illustration, Product & Commercial, Sports & Action, Music & Entertainment,
-  Retro & Vintage, Minimalist, Macro & Close-up, Seasonal & Holiday, Text & Typography,
-  Meme & Humor
-- Choose based on the PRIMARY visual subject matter
-- Select categories that would help users discover this image
-- Maximum 3 categories (most images need only 1-2)
-
-FALLBACK (only if image is completely unanalyzable):
-{{
-    "title": "{ai_generator} AI Generated Digital Artwork Creative Visual",
-    "description": "This captivating AI-generated artwork demonstrates the creative possibilities of modern artificial intelligence image generation. Created with {ai_generator}, this piece showcases unique artistic elements and imaginative composition that highlight the capabilities of AI art tools. The image features distinctive visual characteristics including interesting use of color, form, and texture that make it a compelling example of generative art. Digital artists and content creators will find this prompt valuable for exploring AI-assisted creative workflows. Whether you are seeking inspiration for your own projects or studying AI art techniques, this prompt offers insights into effective image generation strategies. The versatility of this style makes it suitable for various applications including digital content creation, artistic experimentation, and visual design projects.",
-
-    "tags": ["AI Art", "Digital Art", "Creative", "Artwork", "AI Generated"],
-    "categories": ["Digital Art"]
-}}
-
-Respond ONLY with the JSON object, no other text.'''
+RESPOND WITH ONLY THE JSON OBJECT. No markdown, no backticks, no preamble.'''
 
 
 def _parse_ai_response(content: str) -> dict:
@@ -536,9 +567,10 @@ def _parse_ai_response(content: str) -> dict:
     Parse the AI response JSON.
 
     Handles cases where AI adds markdown code blocks or extra text.
+    Updated in Phase 2B to handle nested objects (descriptors).
     """
     try:
-        # Try direct JSON parse first
+        # Try direct JSON parse first (works with response_format=json_object)
         return json.loads(content)
     except json.JSONDecodeError:
         pass
@@ -551,11 +583,13 @@ def _parse_ai_response(content: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    # Try to find JSON object anywhere in response
-    json_match = re.search(r'\{[^{}]*"title"[^{}]*\}', content, re.DOTALL)
-    if json_match:
+    # Try to find outermost JSON object (handles nested braces in descriptors)
+    # Find first { and last } to get the complete JSON object
+    first_brace = content.find('{')
+    last_brace = content.rfind('}')
+    if first_brace != -1 and last_brace > first_brace:
         try:
-            return json.loads(json_match.group(0))
+            return json.loads(content[first_brace:last_brace + 1])
         except json.JSONDecodeError:
             pass
 
@@ -568,6 +602,7 @@ def _validate_ai_result(result: dict) -> dict:
     Validate that parsed AI result has required fields.
 
     Returns the result if valid, or an error dict if invalid.
+    Phase 2B: Also validates descriptors and categories fields.
     """
     if 'error' in result:
         return result
@@ -583,6 +618,27 @@ def _validate_ai_result(result: dict) -> dict:
     # Ensure tags is a list
     if not isinstance(result.get('tags'), list):
         result['tags'] = []
+
+    # Ensure categories is a list
+    if not isinstance(result.get('categories'), list):
+        result['categories'] = []
+
+    # Ensure descriptors is a dict with expected structure
+    if not isinstance(result.get('descriptors'), dict):
+        result['descriptors'] = {}
+
+    # Validate each descriptor type is a list (not a string or other type)
+    valid_types = {'gender', 'ethnicity', 'age', 'features', 'profession',
+                   'mood', 'color', 'holiday', 'season', 'setting'}
+    cleaned_descriptors = {}
+    for dtype in valid_types:
+        value = result['descriptors'].get(dtype, [])
+        if isinstance(value, list):
+            # Ensure all items are strings
+            cleaned_descriptors[dtype] = [str(v) for v in value if v]
+        else:
+            cleaned_descriptors[dtype] = []
+    result['descriptors'] = cleaned_descriptors
 
     return result
 
@@ -638,6 +694,34 @@ def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
             skipped_cats = set(categories) - set(existing_cats.values_list('name', flat=True))
             if skipped_cats:
                 logger.info(f"[AI Generation] Skipped non-existent categories for prompt {prompt.pk}: {skipped_cats}")
+
+        # Add descriptors (Phase 2B - Subject Descriptors — Layer 4 validation)
+        descriptors_dict = ai_result.get('descriptors', {})
+        if descriptors_dict and isinstance(descriptors_dict, dict):
+            from prompts.models import SubjectDescriptor
+            # Flatten all descriptor names from all types
+            all_descriptor_names = []
+            for dtype_values in descriptors_dict.values():
+                if isinstance(dtype_values, list):
+                    all_descriptor_names.extend(
+                        str(v).strip() for v in dtype_values if v
+                    )
+            if all_descriptor_names:
+                # Layer 4: Only valid descriptors from DB are stored
+                existing_descs = SubjectDescriptor.objects.filter(
+                    name__in=all_descriptor_names
+                )
+                prompt.descriptors.set(existing_descs)
+
+                # Log if any descriptors were skipped (hallucinated)
+                skipped_descs = set(all_descriptor_names) - set(
+                    existing_descs.values_list('name', flat=True)
+                )
+                if skipped_descs:
+                    logger.info(
+                        f"[AI Generation] Skipped non-existent descriptors "
+                        f"for prompt {prompt.pk}: {skipped_descs}"
+                    )
 
     # Queue SEO file renaming as background task (N4h)
     try:
@@ -916,7 +1000,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 title='Untitled Prompt',
                 description='',
                 tags=[],
-                categories=[]
+                categories=[],
+                descriptors={}
             )
             return {'status': 'error', 'error': 'no_image_url'}
 
@@ -931,7 +1016,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 title='Untitled Prompt',
                 description='',
                 tags=[],
-                categories=[]
+                categories=[],
+                descriptors={}
             )
             return {'status': 'error', 'error': 'domain_not_allowed'}
 
@@ -963,7 +1049,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 title='Untitled Prompt',
                 description='',
                 tags=[],
-                categories=[]
+                categories=[],
+                descriptors={}
             )
             return {'status': 'error', 'error': ai_result['error']}
 
@@ -972,6 +1059,7 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
         description = _sanitize_content(ai_result.get('description', ''), max_length=2000)
         tags = ai_result.get('tags', [])
         categories = ai_result.get('categories', [])
+        descriptors = ai_result.get('descriptors', {})
 
         # Clean tags - lowercase, trimmed, unique
         clean_tags = []
@@ -982,17 +1070,28 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
                 clean_tags.append(tag_clean)
                 seen.add(tag_clean)
 
-        # Clean categories - trimmed, unique, max 3
+        # Clean categories - trimmed, unique, max 5
         clean_categories = []
         cat_seen = set()
-        for cat in categories[:3]:  # Max 3 categories
+        for cat in categories[:5]:  # Max 5 categories (Phase 2B)
             cat_clean = str(cat).strip()[:50]
             if cat_clean and cat_clean not in cat_seen:
                 clean_categories.append(cat_clean)
                 cat_seen.add(cat_clean)
 
-        # 90% - Storing partial results (categories available even if user submits early)
-        # Write data to cache at 90% so categories are available before complete=True
+        # Clean descriptors - ensure dict of lists with string values
+        clean_descriptors = {}
+        valid_descriptor_types = {'gender', 'ethnicity', 'age', 'features', 'profession',
+                                  'mood', 'color', 'holiday', 'season', 'setting'}
+        for dtype in valid_descriptor_types:
+            values = descriptors.get(dtype, [])
+            if isinstance(values, list):
+                clean_descriptors[dtype] = [str(v).strip()[:100] for v in values[:5] if v]
+            else:
+                clean_descriptors[dtype] = []
+
+        # 90% - Storing partial results (categories + descriptors available even if user submits early)
+        # Write data to cache at 90% so categories/descriptors are available before complete=True
         update_ai_job_progress(
             job_id, 90,
             complete=False,
@@ -1000,6 +1099,7 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             description=description,
             tags=clean_tags,
             categories=clean_categories,
+            descriptors=clean_descriptors,
             error=None
         )
 
@@ -1010,6 +1110,7 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             description=description,
             tags=clean_tags,
             categories=clean_categories,
+            descriptors=clean_descriptors,
             error=None
         )
 
@@ -1021,7 +1122,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             'title': title,
             'description': description,
             'tags': clean_tags,
-            'categories': clean_categories
+            'categories': clean_categories,
+            'descriptors': clean_descriptors
         }
 
     except Exception as e:
@@ -1032,7 +1134,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
             title='Untitled Prompt',
             description='',
             tags=[],
-            categories=[]
+            categories=[],
+            descriptors={}
         )
         return {'status': 'error', 'error': str(e)}
 

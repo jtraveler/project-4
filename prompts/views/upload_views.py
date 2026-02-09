@@ -332,12 +332,14 @@ def upload_submit(request):
         ai_description = ai_data.get('description', '')
         ai_cached_tags = ai_data.get('tags', [])
         ai_cached_categories = ai_data.get('categories', [])
+        ai_cached_descriptors = ai_data.get('descriptors', {})
     else:
         # Cache empty - pure session fallback (backwards compatibility only)
         ai_title = request.session.get('ai_title') or 'Untitled Prompt'
         ai_description = request.session.get('ai_description') or ''
         ai_cached_tags = []
         ai_cached_categories = []
+        ai_cached_descriptors = {}
 
     # Validate required fields
     if not content:
@@ -546,6 +548,36 @@ def upload_submit(request):
             logger.info(f"Prompt {prompt.pk}: Assigned categories {found_names}")
         else:
             logger.warning(f"No matching categories found in DB for: {ai_cached_categories}")
+
+    # Add descriptors (Phase 2B - Subject Descriptors — Layer 4 validation)
+    if ai_cached_descriptors and isinstance(ai_cached_descriptors, dict):
+        from prompts.models import SubjectDescriptor
+        # Flatten all descriptor names from all types
+        all_descriptor_names = []
+        for dtype_values in ai_cached_descriptors.values():
+            if isinstance(dtype_values, list):
+                all_descriptor_names.extend(
+                    str(v).strip() for v in dtype_values if v
+                )
+        if all_descriptor_names:
+            existing_descs = SubjectDescriptor.objects.filter(
+                name__in=all_descriptor_names
+            )
+            found_desc_names = list(existing_descs.values_list('name', flat=True))
+            if existing_descs.exists():
+                prompt.descriptors.set(existing_descs)
+                logger.info(f"Prompt {prompt.pk}: Assigned descriptors {found_desc_names}")
+            else:
+                logger.warning(
+                    f"Prompt {prompt.pk}: No matching descriptors found in DB "
+                    f"for: {all_descriptor_names}"
+                )
+            # Log any skipped (hallucinated) descriptors
+            skipped_descs = set(all_descriptor_names) - set(found_desc_names)
+            if skipped_descs:
+                logger.info(
+                    f"Prompt {prompt.pk}: Skipped non-existent descriptors: {skipped_descs}"
+                )
 
     # L10b: Set SEO review flag if AI failed or fields are empty
     ai_failed = request.POST.get('ai_failed', 'false') == 'true'

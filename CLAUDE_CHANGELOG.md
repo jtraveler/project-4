@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 9, 2026
+**Last Updated:** February 10, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,83 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Phase 2B Session - February 9-10, 2026
+
+**Focus:** Phase 2B — Category Taxonomy Revamp (2B-1 through 2B-8)
+
+**Context:** Implementing the full three-tier taxonomy system designed in Session 74. Expanded from 25 categories to 46, added 109 descriptors across 10 types, updated AI prompts for demographic SEO, backfilled all existing prompts, and refined tag/search filtering.
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| Phase 2B-1: Model + Data Setup | SubjectDescriptor model (10 types, 109 entries), Prompt.descriptors M2M, 19 new categories, 3 renamed/removed | N/A (foundation) |
+| Phase 2B-2: AI Prompt Updates | Three-tier taxonomy prompt in tasks.py, descriptor parsing, anti-hallucination reinforcement | N/A (AI) |
+| Phase 2B-3: Upload Flow | upload_views.py reads descriptors from cache/session, assigns to prompt on save | N/A (integration) |
+| Phase 2B-4: Scoring Update | related.py updated to 6-factor scoring (20% tags, 25% categories, 25% descriptors, 10% generator, 10% engagement, 10% recency) | N/A (algorithm) |
+| Phase 2B-5: Full AI Backfill | backfill_ai_content management command, 51 prompts processed with 0 errors | N/A (data) |
+| Phase 2B-6: SEO Demographics | Ethnicity/gender required in title+description when person visible, 80% confidence threshold | N/A (SEO) |
+| Phase 2B-7: Tag Refinements | 17 ethnicity terms banned from tags, gender tags retained, mandatory AI-related tags | N/A (SEO) |
+| Phase 2B-8: Tag Filter Fix | Exact tag matching via `?tag=` parameter, `.distinct()` for M2M, video display fix | N/A (bugfix) |
+| Slug expansion | Prompt.slug max_length 50→200, _generate_unique_slug_with_retry updated | N/A (fix) |
+| Title optimization | 40-60 chars, keyword-only, no filler words | N/A (SEO) |
+
+**Files Created:**
+- `prompts/management/commands/backfill_ai_content.py` - Bulk AI content regeneration (--dry-run, --limit, --prompt-id, --batch-size, --delay, --skip-recent)
+- `prompts/migrations/0048_create_subject_descriptor.py` - SubjectDescriptor model + Prompt.descriptors M2M
+- `prompts/migrations/0049_populate_descriptors.py` - Seed 109 descriptors across 10 types
+- `prompts/migrations/0050_update_subject_categories.py` - Expand to 46 categories (add 19, rename 2, remove 1)
+- `prompts/migrations/0051_fix_descriptor_type_duplicate_index.py` - Index fix for descriptor_type
+- `prompts/migrations/0052_alter_subjectcategory_slug.py` - SubjectCategory.slug max_length 200
+- `docs/PHASE_2B1_COMPLETION_REPORT.md` through `docs/PHASE_2B6_COMPLETION_REPORT.md` - Phase completion reports
+- `PHASE_2B_2_SPEC.md` - Phase 2B-2 specification document
+
+**Files Modified:**
+- `prompts/models.py` - SubjectDescriptor model, Prompt.descriptors M2M, slug max_length 200
+- `prompts/admin.py` - SubjectDescriptorAdmin with read-only enforcement
+- `prompts/tasks.py` - Three-tier taxonomy AI prompt, demographic SEO rules, ethnicity banned from tags, mandatory AI-related tags, title generation rules
+- `prompts/views/upload_views.py` - Descriptor assignment from cache/session
+- `prompts/views/prompt_views.py` - Tag filter (`?tag=` exact matching with `.distinct()`), video B2-first visibility
+- `prompts/utils/related.py` - 6-factor scoring (added 25% descriptor similarity, reweighted)
+- `prompts/templates/prompts/prompt_list.html` - Tag links: `?search=` → `?tag=`
+- `prompts/templates/prompts/prompt_detail.html` - Tag links: `?search=` → `?tag=`
+- `docs/DESIGN_RELATED_PROMPTS.md` - Updated scoring weights
+
+**Key Technical Changes:**
+- Three-tier taxonomy: SubjectCategory (Tier 1, 46 entries) → SubjectDescriptor (Tier 2, 109 entries across 10 types) → Tags (Tier 3, unlimited)
+- Anti-hallucination Layer 4: `SubjectDescriptor.objects.filter(name__in=...)` silently drops AI-hallucinated values
+- Demographic SEO: ethnicity REQUIRED in title/description/descriptors, BANNED from tags; gender REQUIRED everywhere including tags
+- Tag filter system: `?tag=` uses exact Django-taggit `tags__name` matching (not icontains search)
+- `.distinct()` on tag-filtered querysets prevents M2M join duplicates
+- `needs_seo_review` auto-flag when gender detected but ethnicity missing
+- Backfill reuses `_call_openai_vision` and `_sanitize_content` from tasks.py for identical logic to new uploads
+
+**Key Decisions:**
+- Ethnicity in title/description/descriptors only — banned from user-facing tags (17 terms)
+- Gender tags retained (man/woman/male/female) — zero SEO controversy
+- "person" fallback when gender unclear (80% confidence threshold)
+- Age-appropriate terms: boy/girl, teen-boy/teen-girl, baby/infant for children
+- Tags created via get_or_create (new tags auto-created for long-tail SEO)
+
+**Known Issues:**
+- OpenAI Vision API inconsistency: same image can return different demographics across runs
+- Auto-flag gap: `needs_seo_review` doesn't trigger when neither gender nor ethnicity assigned
+
+**Pending:**
+- Phase 2B-9: "You Might Also Like" Related Prompts update (spec ready, not implemented)
+- Phase 2B-6 (original agenda): Cloudinary → B2 media migration (not yet started)
+- Phase 2B-7 (original agenda): Browse/Filter UI (not yet started)
+
+**Phase 2B Status:** 2B-1 through 2B-8 complete. 2B-9 spec ready. Original agenda items 2B-6 (media migration) and 2B-7 (browse/filter UI) not started.
+
+**Next Session:**
+- Phase 2B-9: Related Prompts "You Might Also Like" update
+- Cloudinary → B2 media migration
+- Final Phase K cleanup (K.2: download tracking, virtual collections; K.3: premium limits)
+- Phase N4 remaining blockers (N4h rename trigger, indexes migration, XML sitemap)
+
+---
 
 ### Session 73 - February 7, 2026
 
@@ -1002,6 +1079,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 9-10, 2026 | 2B | Phase 2B Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill (51 prompts), demographic SEO, tag filter fix |
 | Feb 7-9, 2026 | 74 | Related Prompts P1, Subject Categories P2, collection fixes, video autoplay, B2 thumbnails, Phase 2B design |
 | Feb 7, 2026 | 73 | Phase K trash video UI polish: mobile click-to-play, CSS specificity fixes, self-contained trash cards |
 | Feb 6, 2026 | 70 | Phase K trash integration: simplified layouts, collection delete with optimistic UI, trash collections matching Collections page |
@@ -1027,5 +1105,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.6 (Session 74 - Related Prompts P1, Subject Categories P2, Collection Fixes, Video Autoplay)
-**Last Updated:** February 9, 2026
+**Version:** 4.7 (Phase 2B Session - Category Taxonomy Revamp: 2B-1 through 2B-8 complete)
+**Last Updated:** February 10, 2026

@@ -1,7 +1,7 @@
 # PHASE 2B COMPLETE AGENDA
 
-**Date:** February 9, 2026
-**Status:** Ready to begin next session
+**Date:** February 9-10, 2026
+**Status:** 2B-1 through 2B-8 COMPLETE | 2B-9 (Browse/Filter UI) SPEC READY
 **Reference Doc:** `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`
 
 ---
@@ -12,7 +12,7 @@
 
 ---
 
-## Phase 2B-1: Model + Data Setup (1 CC session)
+## Phase 2B-1: Model + Data Setup (1 CC session) ✅ COMPLETE
 
 **Foundation — everything else depends on this.**
 
@@ -29,7 +29,7 @@
 
 ---
 
-## Phase 2B-2: AI Prompt Updates (1 CC session)
+## Phase 2B-2: AI Prompt Updates (1 CC session) ✅ COMPLETE
 
 **Depends on:** 2B-1
 
@@ -44,7 +44,7 @@
 
 ---
 
-## Phase 2B-3: Upload Flow (1 CC session)
+## Phase 2B-3: Upload Flow (1 CC session) ✅ COMPLETE
 
 **Depends on:** 2B-2
 
@@ -58,7 +58,7 @@
 
 ---
 
-## Phase 2B-4: Scoring Update (1 CC session)
+## Phase 2B-4: Scoring Update (1 CC session) ✅ COMPLETE
 
 **Depends on:** 2B-1
 
@@ -71,7 +71,7 @@
 
 ---
 
-## Phase 2B-5: Backfill — AI Content (1 CC session + ~30-60 min runtime)
+## Phase 2B-5: Backfill — AI Content (1 CC session + ~30-60 min runtime) ✅ COMPLETE
 
 **Depends on:** 2B-1 through 2B-4 all complete
 
@@ -100,9 +100,64 @@ Updates ALL existing prompts (~800) with one OpenAI Vision call each:
 
 ---
 
-## Phase 2B-6: Media Migration — Cloudinary → B2 (1 CC session + ~1-2 hours runtime)
+## Phase 2B-6: Demographic SEO Rules ✅ COMPLETE
 
-**Independent — can run before or after 2B-5, no AI dependency**
+**Added during implementation (not in original agenda)**
+
+- Ethnicity REQUIRED in title and description, BANNED from tags (17 banned words)
+- Gender required in title, description, AND tags
+- Mandatory AI-related tags (e.g., "ai art", "midjourney") on every prompt
+- `get_or_create` tag strategy for long-tail SEO growth
+
+**Deliverables:** Updated `tasks.py` AI prompt with demographic SEO rules
+
+---
+
+## Phase 2B-7: Slug & Title SEO Config ✅ COMPLETE
+
+**Added during implementation (not in original agenda)**
+
+- Expanded `Prompt.slug` max_length from 50 → 200
+- Style-first title format: `"{style} {subject} {medium}"` pattern
+- `_generate_unique_slug_with_retry` with collision handling (appends `-2`, `-3`, etc.)
+- Title truncated to 200 chars at word boundary
+
+**Deliverables:** Updated `models.py`, `tasks.py`, migration `0053`
+
+---
+
+## Phase 2B-8: Exact Tag Filtering & Video Display Fix ✅ COMPLETE
+
+**Added during implementation (not in original agenda)**
+
+- Tag filter via `?tag=` query parameter with exact `tags__name` matching
+- `.distinct()` for M2M join deduplication
+- Tag links on prompt detail and card templates
+- Video display fix for search/filter results
+
+**Deliverables:** Updated `prompt_views.py`, `prompt_detail.html`, `_prompt_card.html`
+
+---
+
+## Phase 2B-9: Browse/Filter UI — SPEC READY (not started)
+
+**Depends on:** 2B-1 through 2B-8 (renumbered from original 2B-7)
+
+- Multi-axis filter sidebar with checkbox groups by descriptor type
+- URL-based filtering: `/browse/?gender=female&ethnicity=african-american&mood=cinematic`
+- Category landing pages: `/categories/portrait/`
+- Descriptor landing pages: `/browse/african-american/`
+- Responsive filter UI (drawer on mobile, sidebar on desktop)
+- SEO-optimized landing page titles and meta tags
+
+**Deliverables:** New views, templates, URLs, CSS
+
+---
+
+## Separate Task: Media Migration — Cloudinary → B2 (not started)
+
+**Independent — can run before or after Phase 2B, no AI dependency**
+**(Originally numbered 2B-6, moved to separate task)**
 
 Migrates old prompt image/video files from Cloudinary to B2/Cloudflare CDN:
 
@@ -116,21 +171,6 @@ Migrates old prompt image/video files from Cloudinary to B2/Cloudflare CDN:
 **Runtime:** ~1-2 hours for ~800 prompts
 
 **Deliverables:** New `manage.py migrate_media_to_b2` command, all old prompts served from B2/Cloudflare
-
----
-
-## Phase 2B-7: Browse/Filter UI (2-3 CC sessions)
-
-**Depends on:** 2B-1 through 2B-5
-
-- Multi-axis filter sidebar with checkbox groups by descriptor type
-- URL-based filtering: `/browse/?gender=female&ethnicity=african-american&mood=cinematic`
-- Category landing pages: `/categories/portrait/`
-- Descriptor landing pages: `/browse/african-american/`
-- Responsive filter UI (drawer on mobile, sidebar on desktop)
-- SEO-optimized landing page titles and meta tags
-
-**Deliverables:** New views, templates, URLs, CSS
 
 ---
 
@@ -154,29 +194,24 @@ Additional requirement: Store tombstone metadata (generator, tags, categories, d
 
 ---
 
-## End-of-Phase Docs Update
+## End-of-Phase Docs Update ✅ COMPLETE
 
-After all phases complete:
-- Update `CLAUDE.md` with new models, commands, and features
-- Update `PROJECT_FILE_STRUCTURE.md` with new files
-- Update `DESIGN_RELATED_PROMPTS.md` with final scoring weights
+After 2B-1 through 2B-8:
+- [x] Update `CLAUDE.md` with new models, commands, and features
+- [x] Update `PROJECT_FILE_STRUCTURE.md` with new files
+- [x] Update `CLAUDE_PHASES.md` with Phase 2B section
+- [x] Update `CLAUDE_CHANGELOG.md` with session history
+- [x] Update `DESIGN_RELATED_PROMPTS.md` with final scoring weights
 
 ---
 
-## Suggested Execution Order (Next Sessions)
+## Remaining Work (Next Sessions)
 
 | Session | Task | Why This Order |
 |---------|------|---------------|
-| Next | Deleted prompt pages redesign | Visual impact, independent, quick win |
-| Next | Phase 2B-1: Models + migrations | Foundation for everything |
-| +1 | Phase 2B-2: AI prompt updates | Needs models |
-| +1 | Phase 2B-3: Upload flow | Needs AI prompts |
-| +2 | Phase 2B-4: Scoring update | Needs models |
-| +2 | Phase 2B-5: Backfill AI content | Needs all of 2B-1 through 2B-4 |
-| +3 | Phase 2B-6: Media migration to B2 | Independent, can run anytime |
-| +4-6 | Phase 2B-7: Browse/filter UI | Needs all data in place |
-
-**Total estimate: ~8-10 CC sessions across 4-6 chat sessions**
+| Next | Phase 2B-9: Browse/Filter UI | Spec ready, all data in place |
+| Anytime | Media Migration: Cloudinary → B2 | Independent, no AI dependency |
+| Anytime | Deleted prompt pages redesign | Visual impact, independent |
 
 ---
 

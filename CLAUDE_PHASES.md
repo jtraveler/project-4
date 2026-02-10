@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** February 4, 2026
+**Last Updated:** February 10, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -28,7 +28,8 @@
 | L | Media Infrastructure | ✅ Done | Cloudinary → B2 + Cloudflare |
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
-| **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration - CURRENT** |
+| **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
+| **2B** | **Category Taxonomy Revamp** | **✅ 2B-1 through 2B-8 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO** |
 
 ---
 
@@ -350,6 +351,42 @@ static/css/style.css                 # Lines ~700-793 have modal styles
 
 ---
 
+## ✅ Phase 2B: Category Taxonomy Revamp (2B-1 through 2B-8 COMPLETE)
+
+**Completed:** February 9-10, 2026
+**Design Doc:** `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`
+**Execution Roadmap:** `docs/PHASE_2B_AGENDA.md`
+
+### What Was Built
+
+Three-tier taxonomy system for prompt classification:
+- **Tier 1:** 46 subject categories (expanded from 25)
+- **Tier 2:** 109 descriptors across 10 types (gender, ethnicity, age, features, profession, mood, color, holiday, season, setting)
+- **Tier 3:** Up to 10 tags per prompt (increased from 5)
+
+### Sub-Phases
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 2B-1 | ✅ Complete | SubjectDescriptor model, taxonomy expansion, 5 migrations |
+| 2B-2 | ✅ Complete | Three-tier AI prompt in tasks.py, descriptor parsing |
+| 2B-3 | ✅ Complete | Upload flow descriptor assignment from cache/session |
+| 2B-4 | ✅ Complete | 6-factor related prompts scoring (added 25% descriptors) |
+| 2B-5 | ✅ Complete | Full AI content backfill (51 prompts, 0 errors) |
+| 2B-6 | ✅ Complete | SEO demographic strengthening (ethnicity/gender rules) |
+| 2B-7 | ✅ Complete | Tag demographic refinements (banned ethnicity, gender confidence) |
+| 2B-8 | ✅ Complete | Exact tag filtering (`?tag=` parameter), video display fix |
+| 2B-9 | 📋 Spec Ready | Related Prompts "You Might Also Like" update |
+
+### Remaining From Original Agenda
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Cloudinary → B2 media migration | 🔲 Not started | Original 2B-6 in agenda, independent of taxonomy |
+| Browse/Filter UI | 🔲 Not started | Original 2B-7 in agenda, needs all data in place |
+
+---
+
 ## 📋 Future Features (After Phase N)
 
 ### Pre-Launch Checklist
@@ -376,7 +413,7 @@ static/css/style.css                 # Lines ~700-793 have modal styles
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Related Prompts | 1 week | "More like this" section |
+| Related Prompts | 1 week | ✅ Phase 1 done (Session 74), scoring updated in 2B-4 |
 | Image Lightbox | 3-4 days | Click to zoom |
 | Notification System | 2 weeks | In-app notifications |
 | Search Improvements | 2 weeks | Autocomplete, filters |
@@ -410,5 +447,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 3.7 (Phase N4 Session 69 - SEO 100, A11y 100, Performance 96, Asset Minification)
-**Last Updated:** February 4, 2026
+**Version:** 3.8 (Phase 2B Session - Category Taxonomy Revamp: 2B-1 through 2B-8 complete)
+**Last Updated:** February 10, 2026

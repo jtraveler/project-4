@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 9, 2026
+**Last Updated:** February 10, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase N4 Optimistic Upload Flow (~99% - Lighthouse 96/100/100/100), Phase K Collections (~96%)
+**Current Phase:** Phase 2B Category Taxonomy Revamp (2B-1 through 2B-8 complete), Phase N4 (~99%), Phase K (~96%)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
@@ -16,9 +16,9 @@
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
 | **SVG Icons** | 32 | static/icons/sprite.svg |
-| **Migrations** | 43 | prompts/migrations/ (42), about/migrations/ (1) |
+| **Migrations** | 53 | prompts/migrations/ (52), about/migrations/ (1) |
 | **Test Files** | 13 | prompts/tests/ |
-| **Management Commands** | 20 | prompts/management/commands/ |
+| **Management Commands** | 23 | prompts/management/commands/ |
 | **Services** | 11 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
@@ -58,7 +58,7 @@ live-working-project/
 ├── backups/                      # Email preferences backups
 ├── design-references/            # UI design assets
 │   └── UI_STYLE_GUIDE.md
-├── docs/                         # Active documentation (36+ files)
+├── docs/                         # Active documentation (33+ files)
 │   ├── bug_reports/
 │   ├── implementation_reports/
 │   ├── reports/                  # Phase/feature reports (21 files)
@@ -66,11 +66,12 @@ live-working-project/
 │   ├── CC_COMMUNICATION_PROTOCOL.md
 │   ├── DESIGN_RELATED_PROMPTS.md           # Related prompts Phase 1 & 2 design (Session 74)
 │   ├── DESIGN_CATEGORY_TAXONOMY_REVAMP.md  # Phase 2B taxonomy revamp (Session 74)
-│   └── PHASE_2B_AGENDA.md                  # Phase 2B execution roadmap (Session 74)
+│   ├── PHASE_2B_AGENDA.md                  # Phase 2B execution roadmap (Session 74)
+│   └── PHASE_2B1-6_COMPLETION_REPORT.md    # 6 Phase 2B sub-phase completion reports (Phase 2B Session)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
-│   │   └── commands/             # 18 management commands + __init__.py
-│   ├── migrations/               # 42 migrations + __init__.py
+│   │   └── commands/             # 23 management commands + __init__.py
+│   ├── migrations/               # 52 migrations + __init__.py
 │   ├── services/                 # 11 service modules
 │   ├── utils/                    # Utility modules (SEO filenames, related prompts scoring)
 │   ├── storage_backends.py       # B2 storage backend + CDN (Phase L)
@@ -134,7 +135,7 @@ live-working-project/
 
 ---
 
-## Management Commands (21 total)
+## Management Commands (23 total)
 
 | Command | Purpose | Schedule |
 |---------|---------|----------|
@@ -156,9 +157,11 @@ live-working-project/
 | `moderate_prompts` | Run moderation on prompts | Manual |
 | `test_moderation` | Test moderation service | Manual |
 | `test_api_latency` | Test B2 and OpenAI API response times | Manual |
+| `test_django_q` | Test Django-Q2 background task processing | Manual |
 | `regenerate_video_thumbnails` | Regenerate Cloudinary video thumbnails with correct aspect ratio | Manual |
 | `minify_assets` | Minify CSS/JS files in STATIC_ROOT (run after collectstatic) | Manual / CI |
-| `backfill_categories` | Backfill subject categories for existing prompts (DO NOT RUN until Phase 2B) | Manual |
+| `backfill_categories` | Backfill subject categories for existing prompts (superseded by backfill_ai_content) | Manual |
+| `backfill_ai_content` | Regenerate ALL AI content (title, description, tags, categories, descriptors, slug) for existing prompts | Manual |
 
 ---
 
@@ -183,7 +186,7 @@ prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app ro
 
 prompts/utils/
 ├── __init__.py              # Package init
-├── related.py               # Related prompts scoring algorithm (5-factor: tags 35%, categories 35%, generator 10%, engagement 10%, recency 10%)
+├── related.py               # Related prompts scoring algorithm (6-factor: tags 20%, categories 25%, descriptors 25%, generator 10%, engagement 10%, recency 10%)
 └── seo.py                   # SEO filename generation (stop word removal, slug truncation, -ai-prompt suffix)
 ```
 
@@ -329,7 +332,7 @@ prompts/views/
 | File | Lines | Purpose |
 |------|-------|---------|
 | `views/` | ~3,929 | View package (11 modules) ✅ REFACTORED |
-| `models.py` | ~2,026 | Database models (Prompt, UserProfile, SubjectCategory, etc.) |
+| `models.py` | ~2,076 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, etc.) |
 | `admin.py` | ~500 | Django admin configuration |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
@@ -1218,6 +1221,65 @@ prompts/
 
 ---
 
+## Phase 2B Files (Category Taxonomy Revamp)
+
+### Files Created (Phase 2B Session — Feb 9-10, 2026)
+
+```
+prompts/management/commands/
+└── backfill_ai_content.py            # NEW - Full AI content regeneration (--dry-run, --limit, --prompt-id, --batch-size, --delay, --skip-recent)
+
+prompts/migrations/
+├── 0048_create_subject_descriptor.py  # NEW - SubjectDescriptor model + Prompt.descriptors M2M
+├── 0049_populate_descriptors.py       # NEW - Seed 109 descriptors across 10 types
+├── 0050_update_subject_categories.py  # NEW - Expand to 46 categories (add 19, rename 2, remove 1)
+├── 0051_fix_descriptor_type_duplicate_index.py  # NEW - Index fix for descriptor_type
+└── 0052_alter_subjectcategory_slug.py # NEW - SubjectCategory.slug max_length 200
+
+docs/
+├── PHASE_2B1_COMPLETION_REPORT.md     # NEW - Model + data setup completion
+├── PHASE_2B2_COMPLETION_REPORT.md     # NEW - AI prompt updates completion
+├── PHASE_2B3_COMPLETION_REPORT.md     # NEW - Upload flow completion
+├── PHASE_2B4_COMPLETION_REPORT.md     # NEW - Scoring update completion
+├── PHASE_2B5_COMPLETION_REPORT.md     # NEW - Full AI backfill completion
+└── PHASE_2B6_COMPLETION_REPORT.md     # NEW - SEO demographic strengthening completion
+```
+
+### Files Modified (Phase 2B Session)
+
+```
+prompts/
+├── models.py                          # SubjectDescriptor model, Prompt.descriptors M2M, slug max_length 200
+├── admin.py                           # SubjectDescriptorAdmin with read-only enforcement
+├── tasks.py                           # Three-tier taxonomy AI prompt, demographic SEO rules, banned ethnicity tags, mandatory AI tags
+└── views/
+    ├── upload_views.py                # Descriptor assignment from cache/session
+    └── prompt_views.py                # Tag filter (?tag= exact matching with .distinct()), video B2-first visibility
+
+prompts/utils/
+└── related.py                         # 6-factor scoring (added 25% descriptor similarity, reweighted from 5-factor)
+
+prompts/templates/prompts/
+├── prompt_list.html                   # Tag links: ?search= → ?tag=
+└── prompt_detail.html                 # Tag links: ?search= → ?tag=
+
+docs/
+└── DESIGN_RELATED_PROMPTS.md          # Updated scoring weights for 6-factor system
+```
+
+### Database Fields (Phase 2B)
+
+| Field | Type | Status |
+|-------|------|--------|
+| `Prompt.descriptors` | ManyToManyField → SubjectDescriptor | ✅ Added (2B-1) |
+| `Prompt.slug` | SlugField(max_length=200) | ✅ Updated from 50 (2B-6) |
+| `SubjectDescriptor.name` | CharField(max_length=100) | ✅ Added (2B-1) |
+| `SubjectDescriptor.slug` | SlugField(max_length=100) | ✅ Added (2B-1) |
+| `SubjectDescriptor.descriptor_type` | CharField(max_length=20, choices=10 types) | ✅ Added (2B-1) |
+| `SubjectCategory.slug` | SlugField(max_length=200) | ✅ Updated (0052) |
+
+---
+
 ## Related Documentation
 
 | Document | Location | Purpose |
@@ -1231,6 +1293,7 @@ prompts/
 | DESIGN_RELATED_PROMPTS.md | docs/ | Related Prompts Phase 1 & 2 design (Session 74) |
 | DESIGN_CATEGORY_TAXONOMY_REVAMP.md | docs/ | Phase 2B category taxonomy revamp (Session 74) |
 | PHASE_2B_AGENDA.md | docs/ | Phase 2B execution roadmap (Session 74) |
+| PHASE_2B1-6_COMPLETION_REPORT.md | docs/ | Phase 2B sub-phase completion reports (Phase 2B Session) |
 
 ---
 
@@ -1238,11 +1301,22 @@ prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.12
-**Audit Date:** February 9, 2026
+**Version:** 3.13
+**Audit Date:** February 10, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.13 (February 10, 2026 - Phase 2B End-of-Session Docs Update):**
+- Added `backfill_ai_content.py` management command (count 21→23, also added test_django_q)
+- Added migrations 0048-0052 (count 42→52)
+- Added Phase 2B Files section with created/modified files and database fields
+- Updated `related.py` description to reflect 6-factor scoring (descriptors added)
+- Updated `models.py` description to mention SubjectDescriptor model
+- Updated Prompt.slug max_length documentation (50→200)
+- Added 6 Phase 2B completion reports to docs/ structure
+- Added PHASE_2B1-6_COMPLETION_REPORT.md to Related Documentation table
+- Updated current phase in header
 
 **v3.12 (February 9, 2026 - Session 74 End-of-Session Docs Update):**
 - Added `backfill_categories.py` management command (count 20→21)

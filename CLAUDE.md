@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 9, 2026
+**Last Updated:** February 10, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -42,6 +42,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Phase 2B (1-8) | Feb 9-10, 2026 | Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill, demographic SEO rules |
 | Subject Categories P2 | Feb 9, 2026 | AI-assigned prompt classification (25 categories, cache-first logic) |
 | Related Prompts P1 | Feb 7, 2026 | "You Might Also Like" section on prompt detail (scoring algorithm, AJAX Load More) |
 | Phase L | Jan 2026 | Media Infrastructure (moved from Cloudinary to B2 + Cloudflare) |
@@ -143,39 +144,100 @@ Rebuilding upload flow to feel "instant" by:
 
 | Component | Details |
 |-----------|---------|
-| **Scoring algorithm** | `prompts/utils/related.py` — 5-factor weighted scoring |
-| **Weights** | 35% tags, 35% categories, 10% generator, 10% engagement, 10% recency |
+| **Scoring algorithm** | `prompts/utils/related.py` — 6-factor weighted scoring |
+| **Weights** | 20% tags, 25% categories, 25% descriptors, 10% generator, 10% engagement, 10% recency |
 | **Pre-filter** | Must share at least 1 tag OR same AI generator (max 500 candidates) |
 | **AJAX endpoint** | `/prompt/<slug>/related/` — 18 per page, 60 max |
 | **Layout** | CSS `column-count` responsive grid (4→3→2→1 columns) |
 | **Video autoplay** | IntersectionObserver on desktop (skip mobile/reduced-motion) |
 | **Load More** | Reinitializes video observer after appending new cards |
 
-### Subject Categories Feature (Session 74)
+### Subject Categories & Descriptors (Phase 2B)
 
-AI-assigned subject categories for prompt classification.
+Three-tier AI taxonomy for prompt classification, expanded from initial 25-category system.
 
 | Component | Details |
 |-----------|---------|
-| **Model** | `SubjectCategory` — name, slug, description, display_order |
-| **Relationship** | `Prompt.categories` M2M field (1-3 categories per prompt) |
+| **SubjectCategory model** | name, slug, description, display_order — 46 categories |
+| **SubjectDescriptor model** | name, slug, descriptor_type — 109 descriptors across 10 types |
+| **Prompt.categories** | M2M field (1-5 categories per prompt) |
+| **Prompt.descriptors** | M2M field (up to 10 descriptors per prompt) |
 | **AI assignment** | During upload via OpenAI Vision prompt, written to cache at 90% progress |
-| **Categories** | 25 predefined (Portrait, Sci-Fi, Fantasy, Anime, Abstract, etc.) |
-| **Migrations** | `0046_add_subject_categories.py`, `0047_populate_subject_categories.py` |
-| **Backfill** | `python manage.py backfill_categories` — exists but DO NOT RUN until Phase 2B completes |
-| **Admin** | `SubjectCategoryAdmin` with read-only enforcement (no add/delete) |
+| **Descriptor types** | gender, ethnicity, age, features, profession, mood, color, holiday, season, setting |
+| **Migrations** | `0046`-`0047` (initial categories), `0048`-`0049` (descriptors), `0050` (category updates), `0051`-`0052` (fixes) |
+| **Backfill** | `python manage.py backfill_ai_content` — regenerates all AI content for existing prompts |
+| **Admin** | `SubjectCategoryAdmin` + `SubjectDescriptorAdmin` with read-only enforcement |
 
-### Phase 2B: Category Taxonomy Revamp (Planned)
+### Phase 2B: Category Taxonomy Revamp (2B-1 through 2B-8 COMPLETE)
 
 Full design in `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`, execution roadmap in `docs/PHASE_2B_AGENDA.md`.
 
-- Expand to 43 subject categories (from 25)
-- Add `SubjectDescriptor` model (~108 descriptors across 10 types: gender, ethnicity, age, features, profession, mood, color, holiday, season, setting)
-- Tag limit increase: 5 → 10
-- Category limit increase: 3 → 5
-- Anti-hallucination 4-layer AI prompt strategy
-- SEO synonym rules for descriptions and tags
-- Backfill all existing prompts + Cloudinary → B2 media migration
+| Sub-Phase | Status | What It Does |
+|-----------|--------|--------------|
+| **2B-1** | ✅ Complete | SubjectDescriptor model, taxonomy expansion (46 cats, 109 descs) |
+| **2B-2** | ✅ Complete | AI prompt update for three-tier taxonomy |
+| **2B-3** | ✅ Complete | Upload view descriptor assignment |
+| **2B-4** | ✅ Complete | Descriptor-aware related prompts scoring (6-factor) |
+| **2B-5** | ✅ Complete | Full AI content backfill (51 prompts, 0 errors) |
+| **2B-6** | ✅ Complete | SEO demographic strengthening (ethnicity/gender in titles/descriptions) |
+| **2B-7** | ✅ Complete | Tag demographic refinements (ethnicity banned from tags, gender confidence rules) |
+| **2B-8** | ✅ Complete | Tag filter fix (exact tag matching via `?tag=`), video display fix |
+| **2B-9** | 📋 Spec Ready | Related Prompts "You Might Also Like" update — pending implementation |
+
+### Demographic SEO Rules (Phase 2B-6/2B-7)
+
+| Rule | Where Applied | Details |
+|------|---------------|---------|
+| **Ethnicity** | Title, description, descriptors | REQUIRED when person visible; BANNED from tags (17 banned words) |
+| **Gender** | Title, description, descriptors, tags | REQUIRED when person visible; both forms in tags (man+male, woman+female) |
+| **80% confidence** | All | Use "person" when gender unclear |
+| **Age terms** | All | boy/girl, teen-boy/teen-girl, baby/infant for children |
+| **Auto-flag** | `needs_seo_review` | Flagged when gender detected but ethnicity missing |
+| **AI-related tags** | Tags | At least one mandatory: ai-prompt, ai-art, or ai-generated |
+
+### Tag System Rules (Phase 2B)
+
+- 10 tags per prompt (increased from 5)
+- At least one AI-related tag mandatory: `ai-prompt`, `ai-art`, or `ai-generated`
+- 17 ethnicity terms banned from tags (african-american, asian, caucasian, etc.)
+- Gender tags retained (man/woman/male/female) — zero SEO controversy
+- Tags created via `get_or_create` (new tags auto-created for long-tail SEO)
+
+### Title Generation Rules (Phase 2B-6)
+
+- 40-60 characters
+- No filler words (in, at, with, the, and, overlooking, featuring, standing)
+- Ethnicity + gender in first 3-4 words when person visible
+- Every word should be a searchable keyword
+
+### Slug Configuration (Phase 2B)
+
+- `Prompt.slug` max_length: 200 (was 50)
+- Code limit in `_generate_unique_slug_with_retry`: 200 (was 50)
+- `SubjectCategory.slug` max_length: 200
+
+### Tag Filter System (Phase 2B-8)
+
+- Tag clicks use `?tag=` parameter with exact Django-taggit matching (`tags__name=tag_name`)
+- Text search uses `?search=` parameter with `icontains`
+- `.distinct()` applied to prevent M2M join duplicates
+
+### Backfill Management Command
+
+```
+python manage.py backfill_ai_content --dry-run                 # Preview only
+python manage.py backfill_ai_content --limit 10                # Process 10
+python manage.py backfill_ai_content --prompt-id 42            # Single prompt
+python manage.py backfill_ai_content --batch-size 10 --delay 3 # Rate control
+python manage.py backfill_ai_content --skip-recent 7           # Skip last 7 days
+```
+
+Regenerates title, slug, description, tags, categories, and descriptors for existing prompts using Phase 2B three-tier taxonomy prompt.
+
+### Known Issues/Limitations (Phase 2B)
+
+- **OpenAI Vision inconsistency:** Same image can return different demographics across runs
+- **Auto-flag gap:** `needs_seo_review` doesn't trigger when neither gender nor ethnicity assigned (only when gender present but ethnicity missing)
 
 ### Technical Patterns (Session 74)
 
@@ -265,7 +327,7 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 | `prompts/templates/prompts/prompt_detail.html` | Fixed h3→h2 headings, aria-label mismatches with pluralize filter (S69) |
 | `prompts/management/commands/minify_assets.py` | NEW - CSS/JS minification command targeting STATIC_ROOT (S69) |
 | `requirements.txt` | Added csscompressor>=0.9.5, rjsmin>=1.2.0 (S69) |
-| `prompts/utils/related.py` | NEW - Related prompts scoring algorithm (4-factor: tags, generator, engagement, recency) (S74) |
+| `prompts/utils/related.py` | Related prompts scoring algorithm (6-factor: tags, categories, descriptors, generator, engagement, recency) (S74, updated Phase 2B) |
 | `prompts/templates/prompts/partials/_prompt_card_list.html` | NEW - AJAX partial for related prompts Load More (S74) |
 | `prompts/views/prompt_views.py` | Added related_prompts_ajax view, get_related_prompts import, context updates (S74) |
 | `prompts/urls.py` | Added /prompt/<slug>/related/ AJAX endpoint (S74) |
@@ -286,6 +348,24 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 | `prompts/templates/prompts/collection_detail.html` | Grid column fix, video autoplay observer, CSS overrides (S74) |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
 | `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
+
+**Committed in Phase 2B Session (Feb 9-10, 2026):**
+- `prompts/models.py` - SubjectDescriptor model, Prompt.descriptors M2M, slug max_length 200
+- `prompts/admin.py` - SubjectDescriptorAdmin with read-only enforcement
+- `prompts/tasks.py` - Three-tier taxonomy AI prompt, demographic SEO rules, banned ethnicity tags
+- `prompts/views/upload_views.py` - Descriptor assignment from cache/session
+- `prompts/views/prompt_views.py` - Tag filter (`?tag=` parameter), video visibility fix (B2-first)
+- `prompts/utils/related.py` - 6-factor scoring (added descriptor similarity 20%)
+- `prompts/templates/prompts/prompt_list.html` - Tag links changed from `?search=` to `?tag=`
+- `prompts/templates/prompts/prompt_detail.html` - Tag links changed from `?search=` to `?tag=`
+- `prompts/management/commands/backfill_ai_content.py` - NEW: Bulk AI content regeneration
+- `prompts/migrations/0048_create_subject_descriptor.py` - NEW: SubjectDescriptor model
+- `prompts/migrations/0049_populate_descriptors.py` - NEW: Seed 109 descriptors
+- `prompts/migrations/0050_update_subject_categories.py` - NEW: Expand to 46 categories
+- `prompts/migrations/0051_fix_descriptor_type_duplicate_index.py` - NEW: Index fix
+- `prompts/migrations/0052_alter_subjectcategory_slug.py` - NEW: Slug max_length 200
+- `docs/DESIGN_RELATED_PROMPTS.md` - Updated scoring weights for 6-factor system
+- `docs/PHASE_2B1_COMPLETION_REPORT.md` through `docs/PHASE_2B6_COMPLETION_REPORT.md` - NEW: Phase completion reports
 
 **Committed in Session 66** (commit `806dd5b`):
 - `prompts/templates/prompts/prompt_detail.html` - Complete SEO overhaul (JSON-LD, OG, Twitter, canonical, headings, tag links, noindex)
@@ -344,7 +424,7 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 
 | Layer | Technology | Version | Notes |
 |-------|------------|---------|-------|
-| **Framework** | Django | 5.2.3 | Python web framework |
+| **Framework** | Django | 5.2.9 | Python web framework |
 | **Language** | Python | 3.12 | Backend logic |
 | **Database** | PostgreSQL | - | Hosted on Heroku |
 | **Media Storage** | Backblaze B2 | - | Images, videos, thumbnails |
@@ -455,12 +535,17 @@ Views were split into a modular package for maintainability:
 ```
 prompts/views/
 ├── __init__.py           # Exports all views
-├── api_views.py          # API endpoints (1374 lines - TOO BIG FOR CC)
-├── upload_views.py       # Upload page views  
 ├── admin_views.py        # Admin functions (ordering, bulk actions)
-├── prompt_views.py       # Prompt CRUD operations
-├── profile_views.py      # User profile pages
-└── collection_views.py   # Collections API
+├── api_views.py          # API endpoints (1374 lines - TOO BIG FOR CC)
+├── collection_views.py   # Collections API
+├── generator_views.py    # AI generator filter pages
+├── leaderboard_views.py  # Leaderboard/ranking pages
+├── prompt_views.py       # Prompt CRUD, detail, tag filtering
+├── redirect_views.py     # URL redirects and legacy routes
+├── social_views.py       # Social sharing endpoints
+├── upload_views.py       # Upload page views
+├── user_views.py         # User profile pages
+└── utility_views.py      # Utility/helper views
 ```
 
 ---
@@ -654,6 +739,7 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 | `docs/DESIGN_RELATED_PROMPTS.md` | Related Prompts Phase 1 & 2 design |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | Phase 2B category taxonomy revamp design |
 | `docs/PHASE_2B_AGENDA.md` | Phase 2B execution roadmap (7 phases) |
+| `docs/PHASE_2B1_COMPLETION_REPORT.md` - `PHASE_2B6_COMPLETION_REPORT.md` | Phase 2B sub-phase completion reports |
 
 ---
 
@@ -669,5 +755,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.6 (Session 74 - Related Prompts P1, Subject Categories P2, Collection Fixes, Video Autoplay)
-**Last Updated:** February 9, 2026
+**Version:** 4.7 (Phase 2B Session - Category Taxonomy Revamp: 2B-1 through 2B-8 complete)
+**Last Updated:** February 10, 2026

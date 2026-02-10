@@ -376,7 +376,7 @@ def _build_analysis_prompt(prompt_text: str, ai_generator: str, available_tags: 
     return '''IMPORTANT CONTEXT: This is a diversity-focused AI art discovery platform where users
 search for representation. Ethnicity and gender descriptors are ESSENTIAL for discoverability.
 When people are clearly visible in an image, you MUST identify and include their apparent
-ethnicity and gender in the title, description, AND tags. Omitting ethnicity when a person
+ethnicity and gender in the title, description, and descriptors. Omitting ethnicity when a person
 is visible is a critical SEO failure — users searching for "African-American portrait" or
 "Asian woman fashion" will never find these images. This is not about stereotyping — it is
 about ensuring equal discoverability for all subjects.
@@ -393,12 +393,19 @@ is clearly visible. Use the broadest applicable term if specific heritage is unc
 ═══════════════════════════════════════════════════
 FIELD 1: "title" (string)
 ═══════════════════════════════════════════════════
-A concise, SEO-optimized title for this image. 50-70 characters.
-Include the most important subject and style keywords.
+A concise, SEO-optimized title for this image. 40-60 characters.
+Include ONLY high-value SEO keywords. Drop filler words like "in", "at",
+"with", "the", "and", "overlooking", "featuring", "standing". Every word
+in the title should be a searchable keyword.
+Good: "African-American Woman Elegant Green Dress Lion Portrait"
+Bad: "African-American Woman in Elegant Green Dress with Lion"
 
 MANDATORY for titles with people visible:
 - ALWAYS include apparent ethnicity (e.g., "African-American", "Asian", "Hispanic")
-- ALWAYS include gender (e.g., "Woman", "Man")
+- ALWAYS include gender using age-appropriate terms:
+  Adults: "Woman"/"Man". Teens: "Teen Girl"/"Teen Boy" or "Teenager".
+  Children: "Girl"/"Boy" or "Child". Babies: "Baby"/"Infant".
+  If gender is unclear, use "Person", "Teenager", "Child", or "Baby".
 - Ethnicity + gender should appear EARLY in the title (first 3-4 words) for URL/slug SEO.
 - Example: "African-American Woman Cinematic Portrait Golden Hour" NOT "Cinematic Portrait Golden Hour"
 - Example: "Asian Man Cyberpunk Neon City Street Scene" NOT "Man in Cyberpunk Neon City"
@@ -447,10 +454,21 @@ SEO-optimized keyword tags. Use hyphens for multi-word tags (e.g., "african-amer
 Include:
 - Primary subject (e.g., "portrait", "landscape")
 - MANDATORY when people are visible:
-  * Gender tags: ALWAYS include BOTH forms (e.g., "man" AND "male", or "woman" AND "female")
-  * Do NOT include standalone ethnicity or race tags (e.g., no "african-american",
-    "white-woman", "asian-man", "black-man" as tags). Ethnicity is already captured
-    in the title, description, and descriptors.
+  * Gender tags using age-appropriate terms:
+    - Adults: "man" AND "male", or "woman" AND "female"
+    - Teens: "teen-boy" or "teen-girl", plus "teenager" AND "teen"
+    - Children: "boy" or "girl", plus "child" AND "kid"
+    - Babies: "baby" AND "infant"
+    - If gender is not clearly identifiable (~80%+ confidence), use neutral terms
+      instead: "person", "teenager", "child", or "baby"
+    - ALWAYS include both the specific term AND the general term
+      (e.g., "woman" AND "female", or "boy" AND "child")
+  * Do NOT include ANY ethnicity or race terms as tags — not standalone and not
+    as part of compound tags. Banned tag words include: "african-american", "black",
+    "caucasian", "white", "asian", "hispanic", "latino", "latina", "arab",
+    "middle-eastern", "indian", "desi", and any compounds like "black-woman",
+    "white-man", "asian-girl", etc. Ethnicity belongs ONLY in the title,
+    description, and descriptors — NEVER in tags.
 - Mood/atmosphere keywords
 - Art style (e.g., "photorealistic", "oil-painting")
 - Specific elements (e.g., "coffee", "red-car", "neon-lights")
@@ -566,7 +584,7 @@ EXAMPLE RESPONSE
 {
   "title": "Cinematic African-American Woman Golden Hour Portrait",
   "description": "A stunning cinematic portrait of a young African-American woman bathed in golden hour light. This photorealistic image captures the Black female subject with natural afro hair, wearing elegant gold jewelry against a warm urban backdrop. The dramatic lighting and rich warm tones create a powerful, aspirational mood perfect for AI avatar and virtual photoshoot inspiration. Ideal for creators seeking diverse, high-quality portrait prompts featuring African-American beauty and cinematic photography techniques.",
-  "tags": ["african-american", "black-woman", "portrait", "cinematic", "golden-hour", "photorealistic", "natural-hair", "afro", "urban-portrait", "ai-avatar"],
+  "tags": ["portrait", "woman", "female", "cinematic", "golden-hour", "photorealistic", "natural-hair", "afro", "urban-portrait", "ai-avatar"],
   "categories": ["Portrait", "AI Influencer / AI Avatar", "Photorealistic"],
   "descriptors": {
     "gender": ["Female"],

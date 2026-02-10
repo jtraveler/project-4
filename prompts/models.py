@@ -604,7 +604,7 @@ class SubjectCategory(models.Model):
     The 25 categories are fixed and seeded via data migration.
     """
     name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=200, unique=True)
     description = models.TextField(blank=True, help_text="Brief description for AI context")
     display_order = models.PositiveIntegerField(default=0)
 

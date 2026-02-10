@@ -463,6 +463,9 @@ Include:
       instead: "person", "teenager", "child", or "baby"
     - ALWAYS include both the specific term AND the general term
       (e.g., "woman" AND "female", or "boy" AND "child")
+  * ALWAYS include at least ONE of these AI-related tags: "ai-prompt", "ai-art",
+    or "ai-generated". These are high-volume search terms that reinforce the
+    page's purpose.
   * Do NOT include ANY ethnicity or race terms as tags — not standalone and not
     as part of compound tags. Banned tag words include: "african-american", "african",
     "black", "caucasian", "white", "asian", "hispanic", "latino", "latina", "arab",

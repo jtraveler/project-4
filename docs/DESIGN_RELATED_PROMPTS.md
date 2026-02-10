@@ -3,7 +3,7 @@
 **Date:** February 7, 2026
 **Feature:** "You Might Also Like" section on prompt detail pages
 **Status:** Phase 1 complete, Phase 2 complete, Phase 2B complete (taxonomy revamp)
-**Last Updated:** February 10, 2026 (Phase 2B-9 — Rebalanced scoring to 35/30/25/5/3/2, 90% content / 10% tiebreakers)
+**Last Updated:** February 10, 2026 (Phase 2B-9b — IDF-weighted tag/category similarity; rare tags worth ~5x more than common ones)
 
 ---
 
@@ -325,7 +325,7 @@ python manage.py backfill_categories --batch-size=50 --delay=2
 
 Phase 2B-9 rationale: Content similarity (tags + categories + descriptors) = 90% of score. Non-relevance factors (generator + engagement + recency) = 10% tiebreakers only. Generator also removed from pre-filter to avoid pulling in irrelevant candidates that only match on platform.
 
-Category scoring: Jaccard similarity (same as tags) — shared categories / total unique categories.
+Phase 2B-9b: Tag and category scoring now use IDF-weighted similarity (rare items worth more). Descriptor scoring remains Jaccard.
 
 ### Additional Phase 2 Benefits
 

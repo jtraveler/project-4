@@ -3,8 +3,8 @@ Related Prompts Scoring Utility.
 
 Provides the get_related_prompts() function for scoring and ranking
 related prompts based on 6 weighted factors:
-- Tag overlap (35%): Jaccard similarity on shared tags
-- Category overlap (30%): Jaccard similarity on shared subject categories
+- Tag overlap (35%): IDF-weighted similarity (rare tags worth more)
+- Category overlap (30%): IDF-weighted similarity (rare categories worth more)
 - Descriptor overlap (25%): Jaccard similarity on shared subject descriptors
 - Same AI generator (5%): Binary match (tiebreaker)
 - Similar engagement (3%): Inverse normalized like count difference (tiebreaker)
@@ -14,10 +14,52 @@ Content similarity (tags + categories + descriptors) = 90% of score.
 Non-relevance factors (generator + engagement + recency) = 10% tiebreakers.
 
 Phase 2B-9: Rebalanced from 70/30 to 90/10 split for topical relevance.
+Phase 2B-9b: Added inverse frequency weighting for tags and categories.
+  Rare tags/categories contribute more to similarity than common ones.
+  e.g., shared "giraffe" tag (1 prompt) worth ~5x more than "portrait" (31 prompts).
 """
+
+from math import log
 
 from django.db.models import Count, Q
 from django.utils import timezone
+
+
+def _get_tag_idf_weights():
+    """
+    Return inverse-frequency weights for all tags, keyed by tag ID.
+
+    Formula: weight = 1 / log(prompt_count + 1)
+
+    Examples (approximate):
+      "giraffe" (1 prompt)    -> 1/log(2)  = 1.44 (high value)
+      "portrait" (31 prompts) -> 1/log(32) = 0.29 (low value)
+      "ai-art" (27 prompts)   -> 1/log(28) = 0.30 (low value)
+    """
+    from taggit.models import Tag
+    tag_counts = Tag.objects.annotate(
+        prompt_count=Count('taggit_taggeditem_items')
+    ).values_list('id', 'prompt_count')
+    return {
+        tag_id: 1.0 / log(count + 1) if count > 0 else 0.0
+        for tag_id, count in tag_counts
+    }
+
+
+def _get_category_idf_weights():
+    """
+    Return inverse-frequency weights for all categories, keyed by category ID.
+
+    Same principle: rare categories worth more than common ones.
+    """
+    from prompts.models import SubjectCategory
+    cat_counts = SubjectCategory.objects.annotate(
+        prompt_count=Count('prompts')
+    ).values_list('id', 'prompt_count')
+    return {
+        cat_id: 1.0 / log(count + 1) if count > 0 else 0.0
+        for cat_id, count in cat_counts
+    }
 
 
 def get_related_prompts(prompt, limit=60):
@@ -83,6 +125,10 @@ def get_related_prompts(prompt, limit=60):
     if not candidate_list:
         return []
 
+    # Cache IDF weights ONCE — 2 queries total, reused for all candidates
+    tag_idf = _get_tag_idf_weights()
+    cat_idf = _get_category_idf_weights()
+
     # Build lookup dicts to avoid N+1 (use prefetched .all(), not .values_list())
     candidate_tags_map = {}
     candidate_categories_map = {}
@@ -102,15 +148,21 @@ def get_related_prompts(prompt, limit=60):
         candidate_categories = candidate_categories_map.get(candidate.id, set())
         candidate_descriptors = candidate_descriptors_map.get(candidate.id, set())
 
-        # 1. Tag overlap (35%) — Jaccard similarity
+        # 1. Tag overlap (35%) — IDF-weighted similarity (rare tags worth more)
         if prompt_tags and candidate_tags:
-            tag_score = len(prompt_tags & candidate_tags) / len(prompt_tags | candidate_tags)
+            shared_tags = prompt_tags & candidate_tags
+            weighted_shared = sum(tag_idf.get(t, 0) for t in shared_tags)
+            max_possible = sum(tag_idf.get(t, 0) for t in prompt_tags)
+            tag_score = weighted_shared / max_possible if max_possible > 0 else 0.0
         else:
             tag_score = 0.0
 
-        # 2. Category overlap (30%) — Jaccard similarity
+        # 2. Category overlap (30%) — IDF-weighted similarity (rare categories worth more)
         if prompt_categories and candidate_categories:
-            category_score = len(prompt_categories & candidate_categories) / len(prompt_categories | candidate_categories)
+            shared_cats = prompt_categories & candidate_categories
+            weighted_shared = sum(cat_idf.get(c, 0) for c in shared_cats)
+            max_possible = sum(cat_idf.get(c, 0) for c in prompt_categories)
+            category_score = weighted_shared / max_possible if max_possible > 0 else 0.0
         else:
             category_score = 0.0
 

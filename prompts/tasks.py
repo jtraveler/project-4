@@ -464,9 +464,10 @@ Include:
     - ALWAYS include both the specific term AND the general term
       (e.g., "woman" AND "female", or "boy" AND "child")
   * Do NOT include ANY ethnicity or race terms as tags — not standalone and not
-    as part of compound tags. Banned tag words include: "african-american", "black",
-    "caucasian", "white", "asian", "hispanic", "latino", "latina", "arab",
-    "middle-eastern", "indian", "desi", and any compounds like "black-woman",
+    as part of compound tags. Banned tag words include: "african-american", "african",
+    "black", "caucasian", "white", "asian", "hispanic", "latino", "latina", "arab",
+    "middle-eastern", "indian", "desi", "european", "pacific-islander", "indigenous",
+    "native", and any compounds like "black-woman",
     "white-man", "asian-girl", etc. Ethnicity belongs ONLY in the title,
     description, and descriptors — NEVER in tags.
 - Mood/atmosphere keywords
@@ -825,7 +826,7 @@ def _generate_unique_slug_with_retry(prompt, title: str) -> str:
     """
     from prompts.models import Prompt
 
-    base_slug = slugify(title)[:50]  # Limit slug length
+    base_slug = slugify(title)[:200]  # Match model max_length
     slug = base_slug
     counter = 1
 

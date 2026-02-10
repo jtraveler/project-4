@@ -371,7 +371,7 @@ Three-tier taxonomy system for prompt classification:
 | 2B-1 | ✅ Complete | SubjectDescriptor model, taxonomy expansion, 5 migrations |
 | 2B-2 | ✅ Complete | Three-tier AI prompt in tasks.py, descriptor parsing |
 | 2B-3 | ✅ Complete | Upload flow descriptor assignment from cache/session |
-| 2B-4 | ✅ Complete | 6-factor related prompts scoring (added 25% descriptors) |
+| 2B-4 | ✅ Complete | 6-factor related prompts scoring (35/30/25/5/3/2 — rebalanced in 2B-9) |
 | 2B-5 | ✅ Complete | Full AI content backfill (51 prompts, 0 errors) |
 | 2B-6 | ✅ Complete | SEO demographic strengthening (ethnicity/gender rules) |
 | 2B-7 | ✅ Complete | Tag demographic refinements (banned ethnicity, gender confidence) |

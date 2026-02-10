@@ -3,7 +3,7 @@
 **Date:** February 7, 2026
 **Feature:** "You Might Also Like" section on prompt detail pages
 **Status:** Phase 1 complete, Phase 2 complete, Phase 2B complete (taxonomy revamp)
-**Last Updated:** February 9, 2026 (Session 75 — Phase 2B descriptors added, scoring updated to 6-factor 20/25/25/10/10/10)
+**Last Updated:** February 10, 2026 (Phase 2B-9 — Rebalanced scoring to 35/30/25/5/3/2, 90% content / 10% tiebreakers)
 
 ---
 
@@ -312,16 +312,18 @@ python manage.py backfill_categories --batch-size=50 --delay=2
 - Logs progress and failures
 - Can be resumed (skips prompts that already have categories)
 
-### Updated Scoring Formula (Phase 2 → Phase 2B)
+### Updated Scoring Formula (Phase 2 → Phase 2B → Phase 2B-9)
 
-| Factor | Phase 1 Weight | Phase 2 Weight | Phase 2B Weight |
-|--------|---------------|----------------|-----------------|
-| Tag overlap | 60% | 35% | 20% |
-| Subject categories | — | 35% | 25% |
-| Subject descriptors | — | — | 25% |
-| Same AI generator | 15% | 10% | 10% |
-| Similar engagement | 15% | 10% | 10% |
-| Recency | 10% | 10% | 10% |
+| Factor | Phase 1 Weight | Phase 2 Weight | Phase 2B Weight | Phase 2B-9 Weight |
+|--------|---------------|----------------|-----------------|-------------------|
+| Tag overlap | 60% | 35% | 20% | **35%** |
+| Subject categories | — | 35% | 25% | **30%** |
+| Subject descriptors | — | — | 25% | **25%** |
+| Same AI generator | 15% | 10% | 10% | **5%** |
+| Similar engagement | 15% | 10% | 10% | **3%** |
+| Recency | 10% | 10% | 10% | **2%** |
+
+Phase 2B-9 rationale: Content similarity (tags + categories + descriptors) = 90% of score. Non-relevance factors (generator + engagement + recency) = 10% tiebreakers only. Generator also removed from pre-filter to avoid pulling in irrelevant candidates that only match on platform.
 
 Category scoring: Jaccard similarity (same as tags) — shared categories / total unique categories.
 

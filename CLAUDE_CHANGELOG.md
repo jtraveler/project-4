@@ -36,7 +36,7 @@ This is a running log of development sessions. Each session entry includes:
 | Phase 2B-1: Model + Data Setup | SubjectDescriptor model (10 types, 109 entries), Prompt.descriptors M2M, 19 new categories, 3 renamed/removed | N/A (foundation) |
 | Phase 2B-2: AI Prompt Updates | Three-tier taxonomy prompt in tasks.py, descriptor parsing, anti-hallucination reinforcement | N/A (AI) |
 | Phase 2B-3: Upload Flow | upload_views.py reads descriptors from cache/session, assigns to prompt on save | N/A (integration) |
-| Phase 2B-4: Scoring Update | related.py updated to 6-factor scoring (20% tags, 25% categories, 25% descriptors, 10% generator, 10% engagement, 10% recency) | N/A (algorithm) |
+| Phase 2B-4: Scoring Update | related.py updated to 6-factor scoring (35% tags, 30% categories, 25% descriptors, 5% generator, 3% engagement, 2% recency — rebalanced in 2B-9) | N/A (algorithm) |
 | Phase 2B-5: Full AI Backfill | backfill_ai_content management command, 51 prompts processed with 0 errors | N/A (data) |
 | Phase 2B-6: SEO Demographics | Ethnicity/gender required in title+description when person visible, 80% confidence threshold | N/A (SEO) |
 | Phase 2B-7: Tag Refinements | 17 ethnicity terms banned from tags, gender tags retained, mandatory AI-related tags | N/A (SEO) |
@@ -60,7 +60,7 @@ This is a running log of development sessions. Each session entry includes:
 - `prompts/tasks.py` - Three-tier taxonomy AI prompt, demographic SEO rules, ethnicity banned from tags, mandatory AI-related tags, title generation rules
 - `prompts/views/upload_views.py` - Descriptor assignment from cache/session
 - `prompts/views/prompt_views.py` - Tag filter (`?tag=` exact matching with `.distinct()`), video B2-first visibility
-- `prompts/utils/related.py` - 6-factor scoring (added 25% descriptor similarity, reweighted)
+- `prompts/utils/related.py` - 6-factor scoring (35/30/25/5/3/2 — rebalanced in 2B-9 for 90% content relevance)
 - `prompts/templates/prompts/prompt_list.html` - Tag links: `?search=` → `?tag=`
 - `prompts/templates/prompts/prompt_detail.html` - Tag links: `?search=` → `?tag=`
 - `docs/DESIGN_RELATED_PROMPTS.md` - Updated scoring weights

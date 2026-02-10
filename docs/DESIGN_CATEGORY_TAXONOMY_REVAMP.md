@@ -912,7 +912,7 @@ RESPOND WITH ONLY THE JSON OBJECT. No markdown, no backticks, no preamble.
 4. Add backend validation: `SubjectDescriptor.objects.filter(name__in=...)` (Layer 4 safety net)
 
 ### Phase 2B-4: Scoring Update (1 CC session)
-1. Update `prompts/utils/related.py` with new weights (20/25/25/10/10/10)
+1. Update `prompts/utils/related.py` with new weights (35/30/25/5/3/2 — rebalanced in 2B-9)
 2. Add descriptor Jaccard similarity calculation
 3. Update pre-filter to include descriptor overlap as candidate criteria
 4. Update `DESIGN_RELATED_PROMPTS.md` to reflect new weights

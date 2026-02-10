@@ -529,12 +529,37 @@ SPECIAL RULES:
 - "Comedy & Humor": Intentionally comedic — memes, parody, satire, caricature, absurd humor,
   funny juxtapositions. NOT merely playful or whimsical.
 
+CATEGORY ASSIGNMENT RULES (MANDATORY):
+1. SUBJECT ACCURACY FIRST: Categories must reflect WHAT IS IN THE IMAGE, not just the visual
+   style. A giraffe image MUST include "Wildlife & Nature Animals" regardless of art style.
+   A spaceship MUST include "Sci-Fi & Futuristic". A person in a wedding dress MUST include
+   "Wedding & Engagement". The subject of the image is the primary driver of categories.
+2. SUBJECT + STYLE REQUIRED: Every prompt MUST have at least one SUBJECT category (what is
+   depicted) AND one STYLE/MEDIUM category (how it looks). Example: a watercolor painting of
+   a cat = "Pets & Domestic Animals" + "Watercolor & Traditional". A 3D render of a city =
+   "Urban & City" + "3D Render". NEVER assign only style categories.
+3. DUAL SUBJECTS: If a person appears WITH a non-person subject (e.g., woman with a horse,
+   child with a dog), include categories for BOTH (e.g., "Portrait" + "Pets & Domestic Animals").
+4. ASSIGN 3-5 CATEGORIES per prompt. Fewer than 3 means you are under-classifying.
+
 ═══════════════════════════════════════════════════
 FIELD 5: "descriptors" (object with typed arrays)
 ═══════════════════════════════════════════════════
 Return an object with these EXACT keys. Each value is an array of strings.
 Choose ONLY from the options listed under each key.
-Leave an array empty [] if nothing applies or if you are not confident.
+Leave an array empty [] ONLY for person-specific fields (gender, ethnicity, age, features,
+profession) when no person is visible, or for holiday/season when genuinely not applicable.
+
+DESCRIPTOR ASSIGNMENT RULES (MANDATORY):
+1. MINIMUM 4-8 DESCRIPTORS per prompt across all types combined. Every image has a mood,
+   a color palette, and usually a setting — these three alone give you 3-4 descriptors.
+2. MULTI-DIMENSIONAL: Descriptors must cover the image from multiple angles:
+   - Subject attributes (gender, ethnicity, age, features, profession — when people visible)
+   - Visual style (mood, color — ALWAYS applicable)
+   - Environment (setting — almost always determinable)
+   Do NOT stop after assigning 1-2 obvious descriptors.
+3. "mood" and "color" are REQUIRED for every image — every image has a mood and color palette.
+4. "setting" should be assigned whenever the environment is visible or inferrable.
 
 "gender" (0-1 values, ONLY if person clearly visible):
   Male, Female, Androgynous
@@ -589,7 +614,7 @@ EXAMPLE RESPONSE
   "title": "Cinematic African-American Woman Golden Hour Portrait",
   "description": "A stunning cinematic portrait of a young African-American woman bathed in golden hour light. This photorealistic image captures the Black female subject with natural afro hair, wearing elegant gold jewelry against a warm urban backdrop. The dramatic lighting and rich warm tones create a powerful, aspirational mood perfect for AI avatar and virtual photoshoot inspiration. Ideal for creators seeking diverse, high-quality portrait prompts featuring African-American beauty and cinematic photography techniques.",
   "tags": ["portrait", "woman", "female", "cinematic", "golden-hour", "photorealistic", "natural-hair", "afro", "urban-portrait", "ai-avatar"],
-  "categories": ["Portrait", "AI Influencer / AI Avatar", "Photorealistic"],
+  "categories": ["Portrait", "AI Influencer / AI Avatar", "Photorealistic", "Fashion & Style"],
   "descriptors": {
     "gender": ["Female"],
     "ethnicity": ["African-American / Black"],

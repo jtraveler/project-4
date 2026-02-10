@@ -312,20 +312,22 @@ python manage.py backfill_categories --batch-size=50 --delay=2
 - Logs progress and failures
 - Can be resumed (skips prompts that already have categories)
 
-### Updated Scoring Formula (Phase 2 → Phase 2B → Phase 2B-9)
+### Updated Scoring Formula (Phase 2 → Phase 2B → Phase 2B-9 → Phase 2B-9c)
 
-| Factor | Phase 1 Weight | Phase 2 Weight | Phase 2B Weight | Phase 2B-9 Weight |
-|--------|---------------|----------------|-----------------|-------------------|
-| Tag overlap | 60% | 35% | 20% | **35%** |
-| Subject categories | — | 35% | 25% | **30%** |
-| Subject descriptors | — | — | 25% | **25%** |
-| Same AI generator | 15% | 10% | 10% | **5%** |
-| Similar engagement | 15% | 10% | 10% | **3%** |
-| Recency | 10% | 10% | 10% | **2%** |
+| Factor | Phase 1 | Phase 2 | Phase 2B | Phase 2B-9 | Phase 2B-9c |
+|--------|---------|---------|----------|------------|-------------|
+| Tag overlap | 60% | 35% | 20% | 35% | **30%** |
+| Subject categories | — | 35% | 25% | 30% | **25%** |
+| Subject descriptors | — | — | 25% | 25% | **35%** |
+| Same AI generator | 15% | 10% | 10% | 5% | **5%** |
+| Similar engagement | 15% | 10% | 10% | 3% | **3%** |
+| Recency | 10% | 10% | 10% | 2% | **2%** |
 
 Phase 2B-9 rationale: Content similarity (tags + categories + descriptors) = 90% of score. Non-relevance factors (generator + engagement + recency) = 10% tiebreakers only. Generator also removed from pre-filter to avoid pulling in irrelevant candidates that only match on platform.
 
-Phase 2B-9b: Tag and category scoring now use IDF-weighted similarity (rare items worth more). Descriptor scoring remains Jaccard.
+Phase 2B-9b: Tag and category scoring now use IDF-weighted similarity (`1 / log(count + 1)`) — rare items worth more.
+
+Phase 2B-9c: Extended IDF weighting to descriptors. Rebalanced weights to prioritize descriptors (35%) over tags (30%) and categories (25%) because key content signals (ethnicity, mood, setting) live in descriptors. All three content factors now use IDF-weighted similarity.
 
 ### Additional Phase 2 Benefits
 

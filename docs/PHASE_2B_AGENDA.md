@@ -62,7 +62,7 @@
 
 **Depends on:** 2B-1
 
-- Update `prompts/utils/related.py` weights to 35/30/25/5/3/2 (rebalanced in 2B-9: 90% content / 10% tiebreakers)
+- Update `prompts/utils/related.py` weights to 30/25/35/5/3/2 (rebalanced in 2B-9c: IDF-weighted, 90% content / 10% tiebreakers)
 - Add descriptor Jaccard similarity calculation
 - Update pre-filter to include descriptor overlap as candidate criteria
 - Update `DESIGN_RELATED_PROMPTS.md` to reflect new weights and descriptor scoring
@@ -183,7 +183,7 @@ Three issues identified from current pages:
 | Issue | Current State | Fix |
 |-------|--------------|-----|
 | Grid layout | Flat 3-column, not masonry | Apply masonry CSS used everywhere else |
-| Recommendation logic | Simple tag/generator match | Use new weighted scoring system (35/30/25/5/3/2) |
+| Recommendation logic | Simple tag/generator match | Use new weighted scoring system (30/25/35/5/3/2) |
 | UI design | Looks like an error page | Redesign to feel like a gentle redirect with polished UI |
 
 Pages to redesign:

@@ -145,7 +145,7 @@ Rebuilding upload flow to feel "instant" by:
 | Component | Details |
 |-----------|---------|
 | **Scoring algorithm** | `prompts/utils/related.py` — 6-factor weighted scoring |
-| **Weights** | 35% tags, 30% categories, 25% descriptors, 5% generator, 3% engagement, 2% recency (Phase 2B-9: 90% content / 10% tiebreakers) |
+| **Weights** | 30% tags, 25% categories, 35% descriptors, 5% generator, 3% engagement, 2% recency (Phase 2B-9c: IDF-weighted, 90% content / 10% tiebreakers) |
 | **Pre-filter** | Must share at least 1 tag, category, OR descriptor (max 500 candidates) |
 | **AJAX endpoint** | `/prompt/<slug>/related/` — 18 per page, 60 max |
 | **Layout** | CSS `column-count` responsive grid (4→3→2→1 columns) |

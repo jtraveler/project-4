@@ -186,7 +186,7 @@ prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app ro
 
 prompts/utils/
 ├── __init__.py              # Package init
-├── related.py               # Related prompts scoring algorithm (6-factor: tags 35%, categories 30%, descriptors 25%, generator 5%, engagement 3%, recency 2%)
+├── related.py               # Related prompts scoring algorithm (6-factor: tags 30%, categories 25%, descriptors 35%, generator 5%, engagement 3%, recency 2%)
 └── seo.py                   # SEO filename generation (stop word removal, slug truncation, -ai-prompt suffix)
 ```
 
@@ -1257,7 +1257,7 @@ prompts/
     └── prompt_views.py                # Tag filter (?tag= exact matching with .distinct()), video B2-first visibility
 
 prompts/utils/
-└── related.py                         # 6-factor scoring (35/30/25/5/3/2 — 90% content relevance, 10% tiebreakers)
+└── related.py                         # 6-factor scoring (30/25/35/5/3/2 — IDF-weighted, 90% content relevance, 10% tiebreakers)
 
 prompts/templates/prompts/
 ├── prompt_list.html                   # Tag links: ?search= → ?tag=

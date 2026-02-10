@@ -3,9 +3,9 @@ Related Prompts Scoring Utility.
 
 Provides the get_related_prompts() function for scoring and ranking
 related prompts based on 6 weighted factors:
-- Tag overlap (35%): IDF-weighted similarity (rare tags worth more)
-- Category overlap (30%): IDF-weighted similarity (rare categories worth more)
-- Descriptor overlap (25%): Jaccard similarity on shared subject descriptors
+- Tag overlap (30%): IDF-weighted similarity (rare tags worth more)
+- Category overlap (25%): IDF-weighted similarity (rare categories worth more)
+- Descriptor overlap (35%): IDF-weighted similarity (rare descriptors worth more)
 - Same AI generator (5%): Binary match (tiebreaker)
 - Similar engagement (3%): Inverse normalized like count difference (tiebreaker)
 - Recency (2%): Linear decay over 90 days (tiebreaker)
@@ -15,8 +15,9 @@ Non-relevance factors (generator + engagement + recency) = 10% tiebreakers.
 
 Phase 2B-9: Rebalanced from 70/30 to 90/10 split for topical relevance.
 Phase 2B-9b: Added inverse frequency weighting for tags and categories.
-  Rare tags/categories contribute more to similarity than common ones.
-  e.g., shared "giraffe" tag (1 prompt) worth ~5x more than "portrait" (31 prompts).
+Phase 2B-9c: Extended IDF weighting to descriptors. Rebalanced weights to
+  prioritize descriptors (35%) over tags (30%) and categories (25%) because
+  key content signals (ethnicity, mood, setting) live in descriptors.
 """
 
 from math import log
@@ -59,6 +60,24 @@ def _get_category_idf_weights():
     return {
         cat_id: 1.0 / log(count + 1) if count > 0 else 0.0
         for cat_id, count in cat_counts
+    }
+
+
+def _get_descriptor_idf_weights():
+    """
+    Return inverse-frequency weights for all descriptors, keyed by descriptor ID.
+
+    Same principle as tags/categories: rare descriptors worth more.
+    General-purpose — works for any descriptor type (ethnicity, mood, setting, etc.)
+    without hardcoding specific types.
+    """
+    from prompts.models import SubjectDescriptor
+    desc_counts = SubjectDescriptor.objects.annotate(
+        prompt_count=Count('prompts')
+    ).values_list('id', 'prompt_count')
+    return {
+        desc_id: 1.0 / log(count + 1) if count > 0 else 0.0
+        for desc_id, count in desc_counts
     }
 
 
@@ -125,9 +144,10 @@ def get_related_prompts(prompt, limit=60):
     if not candidate_list:
         return []
 
-    # Cache IDF weights ONCE — 2 queries total, reused for all candidates
+    # Cache IDF weights ONCE — 3 queries total, reused for all candidates
     tag_idf = _get_tag_idf_weights()
     cat_idf = _get_category_idf_weights()
+    desc_idf = _get_descriptor_idf_weights()
 
     # Build lookup dicts to avoid N+1 (use prefetched .all(), not .values_list())
     candidate_tags_map = {}
@@ -148,7 +168,7 @@ def get_related_prompts(prompt, limit=60):
         candidate_categories = candidate_categories_map.get(candidate.id, set())
         candidate_descriptors = candidate_descriptors_map.get(candidate.id, set())
 
-        # 1. Tag overlap (35%) — IDF-weighted similarity (rare tags worth more)
+        # 1. Tag overlap (30%) — IDF-weighted similarity (rare tags worth more)
         if prompt_tags and candidate_tags:
             shared_tags = prompt_tags & candidate_tags
             weighted_shared = sum(tag_idf.get(t, 0) for t in shared_tags)
@@ -157,7 +177,7 @@ def get_related_prompts(prompt, limit=60):
         else:
             tag_score = 0.0
 
-        # 2. Category overlap (30%) — IDF-weighted similarity (rare categories worth more)
+        # 2. Category overlap (25%) — IDF-weighted similarity (rare categories worth more)
         if prompt_categories and candidate_categories:
             shared_cats = prompt_categories & candidate_categories
             weighted_shared = sum(cat_idf.get(c, 0) for c in shared_cats)
@@ -166,9 +186,12 @@ def get_related_prompts(prompt, limit=60):
         else:
             category_score = 0.0
 
-        # 3. Descriptor overlap (25%) — Jaccard similarity
+        # 3. Descriptor overlap (35%) — IDF-weighted similarity (rare descriptors worth more)
         if prompt_descriptors and candidate_descriptors:
-            descriptor_score = len(prompt_descriptors & candidate_descriptors) / len(prompt_descriptors | candidate_descriptors)
+            shared_descs = prompt_descriptors & candidate_descriptors
+            weighted_shared = sum(desc_idf.get(d, 0) for d in shared_descs)
+            max_possible = sum(desc_idf.get(d, 0) for d in prompt_descriptors)
+            descriptor_score = weighted_shared / max_possible if max_possible > 0 else 0.0
         else:
             descriptor_score = 0.0
 
@@ -185,9 +208,9 @@ def get_related_prompts(prompt, limit=60):
         recency_score = max(0.0, 1.0 - (days_old / 90))
 
         total = (
-            tag_score * 0.35 +
-            category_score * 0.30 +
-            descriptor_score * 0.25 +
+            tag_score * 0.30 +
+            category_score * 0.25 +
+            descriptor_score * 0.35 +
             generator_score * 0.05 +
             engagement_score * 0.03 +
             recency_score * 0.02

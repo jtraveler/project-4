@@ -116,12 +116,16 @@ class PromptList(generic.ListView):
         if tab == 'photos':
             queryset = queryset.filter(featured_image__isnull=False)
         elif tab == 'videos':
-            queryset = queryset.filter(featured_video__isnull=False)
+            # B2-first: check both b2_video_url and legacy featured_video
+            queryset = queryset.filter(
+                (Q(b2_video_url__isnull=False) & ~Q(b2_video_url='')) |
+                Q(featured_video__isnull=False)
+            )
         # 'home' and 'all' show everything (no media filter)
 
-        # Apply tag filter if present
+        # Apply tag filter if present (distinct avoids M2M join duplicates)
         if tag_name:
-            queryset = queryset.filter(tags__name=tag_name)
+            queryset = queryset.filter(tags__name=tag_name).distinct()
 
         # Apply search filter if present
         # Search ONLY prompt (content) and description (excerpt) fields
@@ -135,7 +139,10 @@ class PromptList(generic.ListView):
             if search_type == 'images':
                 queryset = queryset.filter(featured_image__isnull=False)
             elif search_type == 'videos':
-                queryset = queryset.filter(featured_video__isnull=False)
+                queryset = queryset.filter(
+                    (Q(b2_video_url__isnull=False) & ~Q(b2_video_url='')) |
+                    Q(featured_video__isnull=False)
+                )
 
         # Apply sort filter (Phase G)
         if sort_by == 'following':

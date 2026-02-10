@@ -478,9 +478,9 @@
                 <h2 class="rail-card-title">Tags</h2>
                 <div class="tags-container">
                     {% for tag in prompt.tags.all %}
-                        <a href="{% url 'prompts:home' %}?search={{ tag.name|urlencode }}"
+                        <a href="{% url 'prompts:home' %}?tag={{ tag.name|urlencode }}"
                            class="tag-badge"
-                           title="Search prompts tagged with {{ tag.name }}">
+                           title="Browse prompts tagged with {{ tag.name }}">
                             {{ tag.name }}
                         </a>
                     {% endfor %}

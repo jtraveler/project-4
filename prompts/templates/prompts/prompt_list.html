@@ -310,25 +310,25 @@ html {
 <div class="content-filter-bar">
     <!-- LEFT: Tab Navigation (Pexels-style pills) -->
     <nav class="filter-tabs" role="tablist" aria-label="Content filter">
-        <a href="{% url 'prompts:home' %}?tab=home{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
+        <a href="{% url 'prompts:home' %}?tab=home{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag|urlencode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
            class="filter-tab {% if current_tab == 'home' %}active{% endif %}"
            role="tab"
            aria-selected="{% if current_tab == 'home' %}true{% else %}false{% endif %}">
             Home
         </a>
-        <a href="{% url 'prompts:home' %}?tab=all{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
+        <a href="{% url 'prompts:home' %}?tab=all{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag|urlencode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
            class="filter-tab {% if current_tab == 'all' %}active{% endif %}"
            role="tab"
            aria-selected="{% if current_tab == 'all' %}true{% else %}false{% endif %}">
             All
         </a>
-        <a href="{% url 'prompts:home' %}?tab=photos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
+        <a href="{% url 'prompts:home' %}?tab=photos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag|urlencode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
            class="filter-tab {% if current_tab == 'photos' %}active{% endif %}"
            role="tab"
            aria-selected="{% if current_tab == 'photos' %}true{% else %}false{% endif %}">
             Photos
         </a>
-        <a href="{% url 'prompts:home' %}?tab=videos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
+        <a href="{% url 'prompts:home' %}?tab=videos{% if sort_by and sort_by != 'trending' %}&sort={{ sort_by }}{% endif %}{% if current_tag %}&tag={{ current_tag|urlencode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}#browse-prompts"
            class="filter-tab {% if current_tab == 'videos' %}active{% endif %}"
            role="tab"
            aria-selected="{% if current_tab == 'videos' %}true{% else %}false{% endif %}">
@@ -356,7 +356,7 @@ html {
                 </svg>
             </button>
         <div class="sort-dropdown-menu" id="sortDropdownMenu" role="menu">
-            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=trending{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=trending{% if current_tag %}&tag={{ current_tag|urlencode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
                class="sort-dropdown-item {% if sort_by == 'trending' %}active{% endif %}"
                role="menuitem">
                 {% if sort_by == 'trending' %}
@@ -368,7 +368,7 @@ html {
                 {% endif %}
                 Trending
             </a>
-            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=new{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=new{% if current_tag %}&tag={{ current_tag|urlencode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
                class="sort-dropdown-item {% if sort_by == 'new' %}active{% endif %}"
                role="menuitem">
                 {% if sort_by == 'new' %}
@@ -381,7 +381,7 @@ html {
                 New
             </a>
             {% if user.is_authenticated %}
-            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=following{% if current_tag %}&tag={{ current_tag }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+            <a href="{% url 'prompts:home' %}?tab={{ current_tab }}&sort=following{% if current_tag %}&tag={{ current_tag|urlencode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
                class="sort-dropdown-item {% if sort_by == 'following' %}active{% endif %}"
                role="menuitem">
                 {% if sort_by == 'following' %}

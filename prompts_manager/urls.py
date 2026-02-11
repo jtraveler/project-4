@@ -30,6 +30,9 @@ urlpatterns = [
     path('admin/seo-review/', admin_views.seo_review_queue, name='admin_seo_review_queue'),
     path('admin/seo-review/<int:prompt_id>/complete/', admin_views.mark_seo_complete, name='admin_mark_seo_complete'),
 
+    # Tag autocomplete (django-autocomplete-light)
+    path('admin/tag-autocomplete/', admin_views.TagAutocomplete.as_view(), name='tag-autocomplete'),
+
     # Django admin
     path('admin/', admin.site.urls),
 

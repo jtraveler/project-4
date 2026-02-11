@@ -27,6 +27,35 @@ class PromptAdminForm(forms.ModelForm):
         model = Prompt
         fields = '__all__'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Enforce character limits (must be set here, after form init)
+        if 'slug' in self.fields:
+            self.fields['slug'].widget.attrs['maxlength'] = 200
+        if 'title' in self.fields:
+            self.fields['title'].widget.attrs['maxlength'] = 80
+        if 'excerpt' in self.fields:
+            self.fields['excerpt'].widget.attrs['maxlength'] = 2000
+
+        # Restore tag autocomplete widget (Select2 via django-autocomplete-light)
+        if 'tags' in self.fields:
+            from dal_select2_taggit.widgets import TaggitSelect2
+            self.fields['tags'].widget = TaggitSelect2(
+                url='tag-autocomplete',
+                attrs={
+                    'data-placeholder': 'Start typing to search tags...',
+                    'data-minimum-input-length': 1,
+                }
+            )
+            self.fields['tags'].help_text = (
+                '🏷️ <strong>Up to 10 tags.</strong><br>'
+                '📊 Tags = 30% of related prompts score.<br>'
+                '⚠️ Use autocomplete to avoid case duplicates '
+                '("Portrait" vs "portrait" creates separate tags).<br>'
+                '💡 New tags auto-created if typed manually.'
+            )
+
     def clean_slug(self):
         slug = self.cleaned_data.get('slug', '')
         if not slug:
@@ -180,7 +209,6 @@ class PromptAdmin(SummernoteModelAdmin):
                 'OG/Twitter cards, and browser tabs.<br>'
                 '⚠️ Changing the title does NOT update the stored B2 filename or alt tag.'
             )
-            form.base_fields['title'].widget.attrs['maxlength'] = 80
         if 'slug' in form.base_fields:
             form.base_fields['slug'].help_text = (
                 '🔗 <strong>URL-safe identifier.</strong><br>'
@@ -188,14 +216,12 @@ class PromptAdmin(SummernoteModelAdmin):
                 '✅ Changing the slug auto-creates a 301 redirect from the old URL.<br>'
                 '🚫 Reserved: upload, admin, about, collections, browse, search, trash.'
             )
-            form.base_fields['slug'].widget.attrs['maxlength'] = 200
         if 'excerpt' in form.base_fields:
             form.base_fields['excerpt'].help_text = (
                 '📄 <strong>AI-generated description for SEO.</strong><br>'
                 '150-300 words recommended. Max 2000 characters.<br>'
                 '🔍 Used in: meta description, OG cards, search result snippets.'
             )
-            form.base_fields['excerpt'].widget.attrs['maxlength'] = 2000
         if 'categories' in form.base_fields:
             form.base_fields['categories'].help_text = (
                 '📂 <strong>1-5 categories recommended.</strong><br>'
@@ -220,7 +246,6 @@ class PromptAdmin(SummernoteModelAdmin):
         if db_field.name == 'tags':
             kwargs['help_text'] = (
                 '🏷️ <strong>Up to 10 tags.</strong><br>'
-                '🚨 ai-art or ai-generated mandatory.<br>'
                 '📊 Tags = 30% of related prompts score.<br>'
                 '💡 New tags auto-created if typed manually.'
             )
@@ -791,15 +816,6 @@ class PromptAdmin(SummernoteModelAdmin):
                 level='warning'
             )
 
-        # Check mandatory tags
-        tag_names = set(obj.tags.names())
-        mandatory_tags = {'ai-art', 'ai-generated'}
-        if tag_names and not (tag_names & mandatory_tags):
-            self.message_user(
-                request,
-                '🚨 Missing mandatory tags: ai-art or ai-generated.',
-                level='warning'
-            )
 
 
 @admin.register(Comment)

@@ -7,6 +7,8 @@ from prompts.models import Prompt
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.core.cache import cache
+from dal import autocomplete
+from taggit.models import Tag
 import cloudinary.api
 import json
 import logging
@@ -452,6 +454,23 @@ def bulk_reorder_prompts(request):
             {'error': 'An unexpected error occurred. Please try again.'},
             status=500
         )
+
+
+# =============================================================================
+# TAG AUTOCOMPLETE (Admin)
+# =============================================================================
+
+
+class TagAutocomplete(autocomplete.Select2QuerySetView):
+    """Autocomplete endpoint for django-taggit tags in admin."""
+
+    def get_queryset(self):
+        if not self.request.user.is_staff:
+            return Tag.objects.none()
+        qs = Tag.objects.all().order_by('name')
+        if self.q:
+            qs = qs.filter(name__istartswith=self.q)
+        return qs
 
 
 # =============================================================================

@@ -138,14 +138,17 @@ Rebuilding upload flow to feel "instant" by:
 | Mobile play icon resize | Play icon doesn't reappear after desktop→mobile resize | Minor UX |
 | Videos at ≤768px | Videos disappear on homepage/gallery at mobile breakpoint | Needs investigation |
 
-### Related Prompts Feature (Session 74)
+### Related Prompts Feature (Phase 2B-9 Complete)
 
-"You Might Also Like" section on prompt detail pages.
+"You Might Also Like" section on prompt detail pages. Full design: `docs/DESIGN_RELATED_PROMPTS.md`.
 
 | Component | Details |
 |-----------|---------|
-| **Scoring algorithm** | `prompts/utils/related.py` — 6-factor weighted scoring |
-| **Weights** | 30% tags, 25% categories, 35% descriptors, 5% generator, 3% engagement, 2% recency (Phase 2B-9c: IDF-weighted, 90% content / 10% tiebreakers) |
+| **Scoring algorithm** | `prompts/utils/related.py` — 6-factor IDF-weighted scoring (275 lines) |
+| **Weights** | 30% tags, 25% categories, 35% descriptors, 5% generator, 3% engagement, 2% recency |
+| **Content split** | 90% content similarity (tags+categories+descriptors) / 10% tiebreakers |
+| **IDF weighting** | `1 / log(count + 1)` — rare items worth more; published-only counting |
+| **Stop-word threshold** | Infrastructure ready, disabled at 1.0 (re-enable at 0.25 when 200+ prompts) |
 | **Pre-filter** | Must share at least 1 tag, category, OR descriptor (max 500 candidates) |
 | **AJAX endpoint** | `/prompt/<slug>/related/` — 18 per page, 60 max |
 | **Layout** | CSS `column-count` responsive grid (4→3→2→1 columns) |
@@ -182,7 +185,10 @@ Full design in `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`, execution roadmap in `
 | **2B-6** | ✅ Complete | SEO demographic strengthening (ethnicity/gender in titles/descriptions) |
 | **2B-7** | ✅ Complete | Tag demographic refinements (ethnicity banned from tags, gender confidence rules) |
 | **2B-8** | ✅ Complete | Tag filter fix (exact tag matching via `?tag=`), video display fix |
-| **2B-9** | 📋 Spec Ready | Related Prompts "You Might Also Like" update — pending implementation |
+| **2B-9a** | ✅ Complete | Weight rebalance: 90/10 content/tiebreaker split |
+| **2B-9b** | ✅ Complete | IDF weighting for tags and categories |
+| **2B-9c** | ✅ Complete | IDF weighting for descriptors, rebalanced to 30/25/35/5/3/2 |
+| **2B-9d** | ✅ Complete | Stop-word filtering (infrastructure ready, disabled at 51 prompts), published-only IDF counting |
 
 ### Demographic SEO Rules (Phase 2B-6/2B-7)
 
@@ -327,7 +333,7 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 | `prompts/templates/prompts/prompt_detail.html` | Fixed h3→h2 headings, aria-label mismatches with pluralize filter (S69) |
 | `prompts/management/commands/minify_assets.py` | NEW - CSS/JS minification command targeting STATIC_ROOT (S69) |
 | `requirements.txt` | Added csscompressor>=0.9.5, rjsmin>=1.2.0 (S69) |
-| `prompts/utils/related.py` | Related prompts scoring algorithm (6-factor: tags, categories, descriptors, generator, engagement, recency) (S74, updated Phase 2B) |
+| `prompts/utils/related.py` | Related prompts IDF-weighted scoring (6-factor: tags 30%, categories 25%, descriptors 35%, generator 5%, engagement 3%, recency 2%) (Phase 2B-9 complete) |
 | `prompts/templates/prompts/partials/_prompt_card_list.html` | NEW - AJAX partial for related prompts Load More (S74) |
 | `prompts/views/prompt_views.py` | Added related_prompts_ajax view, get_related_prompts import, context updates (S74) |
 | `prompts/urls.py` | Added /prompt/<slug>/related/ AJAX endpoint (S74) |
@@ -336,7 +342,7 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 | `prompts/templates/prompts/user_profile.html` | Trash page polish: tap-to-toggle, card-link, clock icon, bookmark removal, FOUC fix (S74) |
 | `static/css/style.css` | --radius-pill variable, trash badge styles, FOUC fix (S74) |
 | `static/icons/sprite.svg` | Added icon-clock for trash "deleted X days ago" (S74) |
-| `docs/DESIGN_RELATED_PROMPTS.md` | NEW - Related Prompts Phase 1 & 2 design document (S74) |
+| `docs/DESIGN_RELATED_PROMPTS.md` | Related Prompts system reference — full rewrite (Phase 2B-9) |
 | `prompts/models.py` | Added SubjectCategory model, Prompt.categories M2M (S74) |
 | `prompts/admin.py` | Added SubjectCategoryAdmin with read-only enforcement (S74) |
 | `prompts/tasks.py` | Added category assignment in AI prompt, writes to cache at 90% (S74) |
@@ -355,7 +361,7 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 - `prompts/tasks.py` - Three-tier taxonomy AI prompt, demographic SEO rules, banned ethnicity tags
 - `prompts/views/upload_views.py` - Descriptor assignment from cache/session
 - `prompts/views/prompt_views.py` - Tag filter (`?tag=` parameter), video visibility fix (B2-first)
-- `prompts/utils/related.py` - 6-factor scoring (added descriptor similarity 20%)
+- `prompts/utils/related.py` - IDF-weighted 6-factor scoring (30/25/35/5/3/2), published-only counting, stop-word infrastructure
 - `prompts/templates/prompts/prompt_list.html` - Tag links changed from `?search=` to `?tag=`
 - `prompts/templates/prompts/prompt_detail.html` - Tag links changed from `?search=` to `?tag=`
 - `prompts/management/commands/backfill_ai_content.py` - NEW: Bulk AI content regeneration
@@ -736,7 +742,7 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 | `docs/CC_COMMUNICATION_PROTOCOL.md` | Agent requirements for Claude Code |
 | `docs/CC_SPEC_TEMPLATE.md` | Template for writing specs |
 | `PROJECT_FILE_STRUCTURE.md` | Complete file tree |
-| `docs/DESIGN_RELATED_PROMPTS.md` | Related Prompts Phase 1 & 2 design |
+| `docs/DESIGN_RELATED_PROMPTS.md` | Related Prompts system reference (Phase 2B-9 complete) |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | Phase 2B category taxonomy revamp design |
 | `docs/PHASE_2B_AGENDA.md` | Phase 2B execution roadmap (7 phases) |
 | `docs/PHASE_2B1_COMPLETION_REPORT.md` - `PHASE_2B6_COMPLETION_REPORT.md` | Phase 2B sub-phase completion reports |
@@ -755,5 +761,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.7 (Phase 2B Session - Category Taxonomy Revamp: 2B-1 through 2B-8 complete)
+**Version:** 4.8 (Phase 2B-9 — IDF-weighted scoring, stop-word infrastructure, published-only counting)
 **Last Updated:** February 10, 2026

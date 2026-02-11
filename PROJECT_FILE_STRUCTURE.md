@@ -2,7 +2,7 @@
 
 **Last Updated:** February 10, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase 2B Category Taxonomy Revamp (2B-1 through 2B-8 complete), Phase N4 (~99%), Phase K (~96%)
+**Current Phase:** Phase 2B Category Taxonomy Revamp (2B-1 through 2B-9 complete), Phase N4 (~99%), Phase K (~96%)
 **Total Tests:** 298 passing (43% coverage, threshold 40%)
 
 ---
@@ -64,7 +64,7 @@ live-working-project/
 │   ├── reports/                  # Phase/feature reports (21 files)
 │   ├── specifications/
 │   ├── CC_COMMUNICATION_PROTOCOL.md
-│   ├── DESIGN_RELATED_PROMPTS.md           # Related prompts Phase 1 & 2 design (Session 74)
+│   ├── DESIGN_RELATED_PROMPTS.md           # Related prompts system reference (Phase 2B-9 complete)
 │   ├── DESIGN_CATEGORY_TAXONOMY_REVAMP.md  # Phase 2B taxonomy revamp (Session 74)
 │   ├── PHASE_2B_AGENDA.md                  # Phase 2B execution roadmap (Session 74)
 │   └── PHASE_2B1-6_COMPLETION_REPORT.md    # 6 Phase 2B sub-phase completion reports (Phase 2B Session)
@@ -186,7 +186,7 @@ prompts/storage_backends.py  # B2 storage backend + CDN URLs (Phase L, at app ro
 
 prompts/utils/
 ├── __init__.py              # Package init
-├── related.py               # Related prompts scoring algorithm (6-factor: tags 30%, categories 25%, descriptors 35%, generator 5%, engagement 3%, recency 2%)
+├── related.py               # Related prompts IDF-weighted scoring (6-factor: tags 30%, categories 25%, descriptors 35%, generator 5%, engagement 3%, recency 2%; 275 lines)
 └── seo.py                   # SEO filename generation (stop word removal, slug truncation, -ai-prompt suffix)
 ```
 
@@ -1290,7 +1290,7 @@ docs/
 | PROJECT_FILE_STRUCTURE_AUDIT_REPORT.md | docs/reports/ | Latest audit findings |
 | L8_TIMEOUT_COMPLETION_REPORT.md | docs/reports/ | L8-TIMEOUT implementation details |
 | PHASE_N4_UPLOAD_FLOW_REPORT.md | docs/ | Phase N4 comprehensive planning |
-| DESIGN_RELATED_PROMPTS.md | docs/ | Related Prompts Phase 1 & 2 design (Session 74) |
+| DESIGN_RELATED_PROMPTS.md | docs/ | Related Prompts system reference (Phase 2B-9 complete) |
 | DESIGN_CATEGORY_TAXONOMY_REVAMP.md | docs/ | Phase 2B category taxonomy revamp (Session 74) |
 | PHASE_2B_AGENDA.md | docs/ | Phase 2B execution roadmap (Session 74) |
 | PHASE_2B1-6_COMPLETION_REPORT.md | docs/ | Phase 2B sub-phase completion reports (Phase 2B Session) |
@@ -1301,11 +1301,16 @@ docs/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.13
+**Version:** 3.14
 **Audit Date:** February 10, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.14 (February 10, 2026 - Phase 2B-9 Documentation Update):**
+- Updated `related.py` description to reflect IDF-weighted scoring and 276-line count
+- Updated `DESIGN_RELATED_PROMPTS.md` description (full rewrite as system reference)
+- Updated current phase in header to include Phase 2B-9
 
 **v3.13 (February 10, 2026 - Phase 2B End-of-Session Docs Update):**
 - Added `backfill_ai_content.py` management command (count 21→23, also added test_django_q)

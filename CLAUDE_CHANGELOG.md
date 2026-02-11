@@ -23,6 +23,52 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February 2026 Sessions
 
+### Phase 2B-9 Session - February 10, 2026
+
+**Focus:** Phase 2B-9 — Related Prompts Scoring Refinement (2B-9a through 2B-9d)
+
+**Context:** Refining the "You Might Also Like" scoring algorithm after Phase 2B backfill populated all prompts with categories and descriptors. Four sub-phases improved content relevance from simple Jaccard similarity to IDF-weighted scoring with published-only counting.
+
+**Completed:**
+
+| Task | What It Does | Commit |
+|------|--------------|--------|
+| 2B-9a: Weight rebalance | Rebalanced from 70/30 to 90/10 content/tiebreaker split | `5bba5a6` |
+| 2B-9b: Tag/category IDF | Added `1/log(count+1)` weighting to tags and categories | `1104f08` |
+| 2B-9c: Descriptor IDF + rebalance | Extended IDF to descriptors, rebalanced to 30/25/35/5/3/2 | `450110b` |
+| 2B-9c (revised): AI prompt accuracy | Subject-accuracy rules for better category/descriptor assignment | `38e0eef` |
+| 2B-9d: Stop-word filtering | Implemented then disabled (too aggressive at 51 prompts) | `4d56fdb`, `5a07245` |
+| 2B-9d (fix): Published-only IDF | IDF functions now exclude drafts/trash from frequency counts | `87476e7` |
+| Documentation update | Full rewrite of DESIGN_RELATED_PROMPTS.md + all project docs | This commit |
+
+**Files Modified:**
+- `prompts/utils/related.py` — IDF weighting, stop-word infrastructure (disabled), published-only counting, edge case fallbacks
+- `prompts/tasks.py` — Subject-accuracy rules for AI category/descriptor assignment
+- `docs/DESIGN_RELATED_PROMPTS.md` — Full rewrite as system reference
+- `CLAUDE.md` — Updated Related Prompts section with IDF details
+- `CLAUDE_CHANGELOG.md` — Added this session entry
+- `CLAUDE_PHASES.md` — Updated 2B-9 sub-phases to complete
+- `PROJECT_FILE_STRUCTURE.md` — Updated related.py description
+
+**Key Technical Changes:**
+- IDF weighting: `weight = 1 / log(count + 1)` — rare items contribute ~2.5x more than common items
+- Published-only counting: Tags use `published_ids` subquery (taggit generic relations), categories/descriptors use filtered `Count()`
+- Stop-word infrastructure: `STOP_WORD_THRESHOLD = 1.0` (disabled). Set to `0.25` when library reaches 200+ prompts
+- Edge case fallback: When all source items are stop-words (`max_possible == 0`), falls back to `len(shared) / len(source)`
+- Content similarity = 90% (tags 30% + categories 25% + descriptors 35%), tiebreakers = 10% (generator 5% + engagement 3% + recency 2%)
+
+**Key Decisions:**
+- Stop-word threshold disabled at 51 prompts because zeroing items on 13+ prompts was too aggressive — living rooms ranked #1 for giraffe prompt
+- IDF weighting alone (without zeroing) already significantly downweights common items — sufficient for small library
+- Published-only counting kept regardless of stop-word status — drafts/trash should never inflate frequency
+- Descriptors weighted highest (35%) because key content signals (ethnicity, mood, setting) live there
+
+**Agent Ratings:** @code-reviewer 8/10, @django-pro 9.5/10, @docs-architect 7.5/10 — Average **8.33/10** (threshold: 8.0)
+
+**Phase 2B-9 Status:** Complete. All sub-phases implemented. Stop-word threshold disabled pending larger library.
+
+---
+
 ### Phase 2B Session - February 9-10, 2026
 
 **Focus:** Phase 2B — Category Taxonomy Revamp (2B-1 through 2B-8)
@@ -1079,6 +1125,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 10, 2026 | 2B-9 | Related Prompts scoring refinement: IDF weighting, published-only counting, stop-word infrastructure |
 | Feb 9-10, 2026 | 2B | Phase 2B Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill (51 prompts), demographic SEO, tag filter fix |
 | Feb 7-9, 2026 | 74 | Related Prompts P1, Subject Categories P2, collection fixes, video autoplay, B2 thumbnails, Phase 2B design |
 | Feb 7, 2026 | 73 | Phase K trash video UI polish: mobile click-to-play, CSS specificity fixes, self-contained trash cards |
@@ -1105,5 +1152,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.7 (Phase 2B Session - Category Taxonomy Revamp: 2B-1 through 2B-8 complete)
+**Version:** 4.8 (Phase 2B-9 — IDF-weighted scoring, stop-word infrastructure, published-only counting)
 **Last Updated:** February 10, 2026

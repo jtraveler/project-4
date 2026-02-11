@@ -29,7 +29,7 @@
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
 | **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
-| **2B** | **Category Taxonomy Revamp** | **✅ 2B-1 through 2B-8 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO** |
+| **2B** | **Category Taxonomy Revamp** | **✅ 2B-1 through 2B-9 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring** |
 
 ---
 
@@ -351,7 +351,7 @@ static/css/style.css                 # Lines ~700-793 have modal styles
 
 ---
 
-## ✅ Phase 2B: Category Taxonomy Revamp (2B-1 through 2B-8 COMPLETE)
+## ✅ Phase 2B: Category Taxonomy Revamp (2B-1 through 2B-9 COMPLETE)
 
 **Completed:** February 9-10, 2026
 **Design Doc:** `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`
@@ -376,7 +376,10 @@ Three-tier taxonomy system for prompt classification:
 | 2B-6 | ✅ Complete | SEO demographic strengthening (ethnicity/gender rules) |
 | 2B-7 | ✅ Complete | Tag demographic refinements (banned ethnicity, gender confidence) |
 | 2B-8 | ✅ Complete | Exact tag filtering (`?tag=` parameter), video display fix |
-| 2B-9 | 📋 Spec Ready | Related Prompts "You Might Also Like" update |
+| 2B-9a | ✅ Complete | Weight rebalance: 90/10 content/tiebreaker split |
+| 2B-9b | ✅ Complete | IDF weighting for tags and categories |
+| 2B-9c | ✅ Complete | IDF weighting for descriptors, rebalanced to 30/25/35/5/3/2 |
+| 2B-9d | ✅ Complete | Stop-word filtering (infrastructure ready, disabled at 51 prompts), published-only IDF counting |
 
 ### Remaining From Original Agenda
 
@@ -413,7 +416,7 @@ Three-tier taxonomy system for prompt classification:
 
 | Feature | Effort | Notes |
 |---------|--------|-------|
-| Related Prompts | 1 week | ✅ Phase 1 done (Session 74), scoring updated in 2B-4 |
+| Related Prompts | 1 week | ✅ Phase 1 done (Session 74), scoring refined in 2B-9 (IDF-weighted) |
 | Image Lightbox | 3-4 days | Click to zoom |
 | Notification System | 2 weeks | In-app notifications |
 | Search Improvements | 2 weeks | Autocomplete, filters |
@@ -447,5 +450,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 3.8 (Phase 2B Session - Category Taxonomy Revamp: 2B-1 through 2B-8 complete)
+**Version:** 3.9 (Phase 2B-9 — IDF-weighted scoring, stop-word infrastructure, published-only counting)
 **Last Updated:** February 10, 2026

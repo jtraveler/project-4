@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from django.utils.html import escape
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import models
-from prompts.models import Prompt, Comment
+from prompts.models import Prompt, Comment, SlugRedirect
 from django.views import generic
 from django.db.models import Q, Prefetch, Count
 from django.core.cache import cache
@@ -340,6 +340,17 @@ def prompt_detail(request, slug):
     URL: /prompt/<slug>/
     """
     start_time = time.time()
+
+    # Check for slug redirect (admin changed slug → 301 to current URL)
+    slug_redirect = SlugRedirect.objects.select_related('prompt').filter(
+        old_slug=slug
+    ).first()
+    if slug_redirect:
+        return redirect(
+            'prompts:prompt_detail',
+            slug=slug_redirect.prompt.slug,
+            permanent=True
+        )
 
     # SEO Phase 2: Check for permanently deleted prompts first
     # If prompt was hard-deleted, check DeletedPrompt table for redirect info

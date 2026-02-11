@@ -1596,6 +1596,29 @@ class Prompt(models.Model):
         return False
 
 
+class SlugRedirect(models.Model):
+    """
+    Stores old slugs when admin changes a prompt's slug.
+    Enables 301 redirects from old URLs to new ones.
+    Prevents broken links and preserves SEO juice.
+    """
+    old_slug = models.SlugField(max_length=200, unique=True)
+    prompt = models.ForeignKey(
+        'Prompt',
+        on_delete=models.CASCADE,
+        related_name='slug_redirects'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Slug Redirect'
+        verbose_name_plural = 'Slug Redirects'
+
+    def __str__(self):
+        return f'{self.old_slug} → {self.prompt.slug}'
+
+
 class DeletedPrompt(models.Model):
     """
     Model for tracking permanently deleted prompts for SEO redirects.

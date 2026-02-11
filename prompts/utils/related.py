@@ -30,8 +30,9 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 # Items appearing on more than this fraction of published prompts get zero weight.
-# At 51 prompts, threshold = 13. Auto-adjusts as library grows.
-STOP_WORD_THRESHOLD = 0.25
+# Set to 1.0 (disabled) — too aggressive at 51 prompts, zeroing out signals that
+# still carry meaning in a small library. Re-enable at 0.25 when library reaches 200+.
+STOP_WORD_THRESHOLD = 1.0
 
 
 def _get_tag_idf_weights(total_prompts):

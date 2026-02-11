@@ -43,11 +43,20 @@ def _get_tag_idf_weights(total_prompts):
 
     Tags on >25% of prompts (e.g., "portrait", "ai-art") get zeroed so they
     don't drown out rare, meaningful tags like "giraffe" or "motorcycle".
+
+    Only counts published, non-deleted prompts (excludes drafts and trash).
     """
     from taggit.models import Tag
+    from prompts.models import Prompt
     cutoff = total_prompts * STOP_WORD_THRESHOLD
+    published_ids = Prompt.objects.filter(
+        status=1, deleted_at__isnull=True
+    ).values('id')
     tag_counts = Tag.objects.annotate(
-        prompt_count=Count('taggit_taggeditem_items')
+        prompt_count=Count(
+            'taggit_taggeditem_items',
+            filter=Q(taggit_taggeditem_items__object_id__in=published_ids),
+        )
     ).values_list('id', 'prompt_count')
     return {
         tag_id: (0.0 if count > cutoff else 1.0 / log(count + 1)) if count > 0 else 0.0
@@ -61,11 +70,16 @@ def _get_category_idf_weights(total_prompts):
 
     Same IDF + stop-word principle as tags. Categories on >25% of prompts
     (e.g., "Photorealistic", "Portrait") get zeroed.
+
+    Only counts published, non-deleted prompts.
     """
     from prompts.models import SubjectCategory
     cutoff = total_prompts * STOP_WORD_THRESHOLD
     cat_counts = SubjectCategory.objects.annotate(
-        prompt_count=Count('prompts')
+        prompt_count=Count(
+            'prompts',
+            filter=Q(prompts__status=1, prompts__deleted_at__isnull=True),
+        )
     ).values_list('id', 'prompt_count')
     return {
         cat_id: (0.0 if count > cutoff else 1.0 / log(count + 1)) if count > 0 else 0.0
@@ -79,11 +93,16 @@ def _get_descriptor_idf_weights(total_prompts):
 
     Same IDF + stop-word principle as tags/categories. Descriptors on >25% of
     prompts (e.g., "Warm Tones", "Female", "Young Adult") get zeroed.
+
+    Only counts published, non-deleted prompts.
     """
     from prompts.models import SubjectDescriptor
     cutoff = total_prompts * STOP_WORD_THRESHOLD
     desc_counts = SubjectDescriptor.objects.annotate(
-        prompt_count=Count('prompts')
+        prompt_count=Count(
+            'prompts',
+            filter=Q(prompts__status=1, prompts__deleted_at__isnull=True),
+        )
     ).values_list('id', 'prompt_count')
     return {
         desc_id: (0.0 if count > cutoff else 1.0 / log(count + 1)) if count > 0 else 0.0

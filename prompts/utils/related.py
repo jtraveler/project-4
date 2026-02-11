@@ -18,6 +18,10 @@ Phase 2B-9b: Added inverse frequency weighting for tags and categories.
 Phase 2B-9c: Extended IDF weighting to descriptors. Rebalanced weights to
   prioritize descriptors (35%) over tags (30%) and categories (25%) because
   key content signals (ethnicity, mood, setting) live in descriptors.
+Phase 2B-9d: Stop-word filtering. Tags/categories/descriptors appearing on
+  >25% of published prompts get zero weight — standard IR practice to prevent
+  ubiquitous items (e.g., "portrait", "Photorealistic", "Female") from
+  drowning out rare but meaningful signals.
 """
 
 from math import log
@@ -25,58 +29,64 @@ from math import log
 from django.db.models import Count, Q
 from django.utils import timezone
 
+# Items appearing on more than this fraction of published prompts get zero weight.
+# At 51 prompts, threshold = 13. Auto-adjusts as library grows.
+STOP_WORD_THRESHOLD = 0.25
 
-def _get_tag_idf_weights():
+
+def _get_tag_idf_weights(total_prompts):
     """
     Return inverse-frequency weights for all tags, keyed by tag ID.
 
     Formula: weight = 1 / log(prompt_count + 1)
+    Stop-word rule: weight = 0.0 if prompt_count > total_prompts * STOP_WORD_THRESHOLD
 
-    Examples (approximate):
-      "giraffe" (1 prompt)    -> 1/log(2)  = 1.44 (high value)
-      "portrait" (31 prompts) -> 1/log(32) = 0.29 (low value)
-      "ai-art" (27 prompts)   -> 1/log(28) = 0.30 (low value)
+    Tags on >25% of prompts (e.g., "portrait", "ai-art") get zeroed so they
+    don't drown out rare, meaningful tags like "giraffe" or "motorcycle".
     """
     from taggit.models import Tag
+    cutoff = total_prompts * STOP_WORD_THRESHOLD
     tag_counts = Tag.objects.annotate(
         prompt_count=Count('taggit_taggeditem_items')
     ).values_list('id', 'prompt_count')
     return {
-        tag_id: 1.0 / log(count + 1) if count > 0 else 0.0
+        tag_id: (0.0 if count > cutoff else 1.0 / log(count + 1)) if count > 0 else 0.0
         for tag_id, count in tag_counts
     }
 
 
-def _get_category_idf_weights():
+def _get_category_idf_weights(total_prompts):
     """
     Return inverse-frequency weights for all categories, keyed by category ID.
 
-    Same principle: rare categories worth more than common ones.
+    Same IDF + stop-word principle as tags. Categories on >25% of prompts
+    (e.g., "Photorealistic", "Portrait") get zeroed.
     """
     from prompts.models import SubjectCategory
+    cutoff = total_prompts * STOP_WORD_THRESHOLD
     cat_counts = SubjectCategory.objects.annotate(
         prompt_count=Count('prompts')
     ).values_list('id', 'prompt_count')
     return {
-        cat_id: 1.0 / log(count + 1) if count > 0 else 0.0
+        cat_id: (0.0 if count > cutoff else 1.0 / log(count + 1)) if count > 0 else 0.0
         for cat_id, count in cat_counts
     }
 
 
-def _get_descriptor_idf_weights():
+def _get_descriptor_idf_weights(total_prompts):
     """
     Return inverse-frequency weights for all descriptors, keyed by descriptor ID.
 
-    Same principle as tags/categories: rare descriptors worth more.
-    General-purpose — works for any descriptor type (ethnicity, mood, setting, etc.)
-    without hardcoding specific types.
+    Same IDF + stop-word principle as tags/categories. Descriptors on >25% of
+    prompts (e.g., "Warm Tones", "Female", "Young Adult") get zeroed.
     """
     from prompts.models import SubjectDescriptor
+    cutoff = total_prompts * STOP_WORD_THRESHOLD
     desc_counts = SubjectDescriptor.objects.annotate(
         prompt_count=Count('prompts')
     ).values_list('id', 'prompt_count')
     return {
-        desc_id: 1.0 / log(count + 1) if count > 0 else 0.0
+        desc_id: (0.0 if count > cutoff else 1.0 / log(count + 1)) if count > 0 else 0.0
         for desc_id, count in desc_counts
     }
 
@@ -144,10 +154,16 @@ def get_related_prompts(prompt, limit=60):
     if not candidate_list:
         return []
 
+    # Total published prompts for stop-word threshold calculation
+    total_prompts = Prompt.objects.filter(
+        status=1, deleted_at__isnull=True
+    ).count()
+
     # Cache IDF weights ONCE — 3 queries total, reused for all candidates
-    tag_idf = _get_tag_idf_weights()
-    cat_idf = _get_category_idf_weights()
-    desc_idf = _get_descriptor_idf_weights()
+    # Stop-word items (>25% of prompts) get weight 0.0
+    tag_idf = _get_tag_idf_weights(total_prompts)
+    cat_idf = _get_category_idf_weights(total_prompts)
+    desc_idf = _get_descriptor_idf_weights(total_prompts)
 
     # Build lookup dicts to avoid N+1 (use prefetched .all(), not .values_list())
     candidate_tags_map = {}
@@ -173,7 +189,11 @@ def get_related_prompts(prompt, limit=60):
             shared_tags = prompt_tags & candidate_tags
             weighted_shared = sum(tag_idf.get(t, 0) for t in shared_tags)
             max_possible = sum(tag_idf.get(t, 0) for t in prompt_tags)
-            tag_score = weighted_shared / max_possible if max_possible > 0 else 0.0
+            if max_possible > 0:
+                tag_score = weighted_shared / max_possible
+            else:
+                # All source tags are stop words — fall back to simple count ratio
+                tag_score = len(shared_tags) / len(prompt_tags)
         else:
             tag_score = 0.0
 
@@ -182,7 +202,11 @@ def get_related_prompts(prompt, limit=60):
             shared_cats = prompt_categories & candidate_categories
             weighted_shared = sum(cat_idf.get(c, 0) for c in shared_cats)
             max_possible = sum(cat_idf.get(c, 0) for c in prompt_categories)
-            category_score = weighted_shared / max_possible if max_possible > 0 else 0.0
+            if max_possible > 0:
+                category_score = weighted_shared / max_possible
+            else:
+                # All source categories are stop words — fall back to simple count ratio
+                category_score = len(shared_cats) / len(prompt_categories)
         else:
             category_score = 0.0
 
@@ -191,7 +215,11 @@ def get_related_prompts(prompt, limit=60):
             shared_descs = prompt_descriptors & candidate_descriptors
             weighted_shared = sum(desc_idf.get(d, 0) for d in shared_descs)
             max_possible = sum(desc_idf.get(d, 0) for d in prompt_descriptors)
-            descriptor_score = weighted_shared / max_possible if max_possible > 0 else 0.0
+            if max_possible > 0:
+                descriptor_score = weighted_shared / max_possible
+            else:
+                # All source descriptors are stop words — fall back to simple count ratio
+                descriptor_score = len(shared_descs) / len(prompt_descriptors)
         else:
             descriptor_score = 0.0
 

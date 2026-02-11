@@ -1,12 +1,60 @@
 # prompts/admin.py
+import re
+
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django_summernote.admin import SummernoteModelAdmin
 from django.urls import reverse, path
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 from taggit.models import Tag
 from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect
+
+# Reserved slugs that conflict with system URLs
+RESERVED_SLUGS = {
+    'upload', 'admin', 'about', 'contact', 'login', 'logout', 'signup',
+    'register', 'settings', 'profile', 'users', 'api', 'search',
+    'collections', 'leaderboard', 'categories', 'browse', 'tags',
+    'processing', 'sitemap.xml', 'robots.txt', 'favicon.ico',
+    'static', 'media', 'accounts', 'trash',
+}
+
+
+class PromptAdminForm(forms.ModelForm):
+    """Custom form for PromptAdmin with slug validation in clean_slug()."""
+
+    class Meta:
+        model = Prompt
+        fields = '__all__'
+
+    def clean_slug(self):
+        slug = self.cleaned_data.get('slug', '')
+        if not slug:
+            raise forms.ValidationError('Slug is required.')
+
+        # Format validation
+        if not re.match(r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?$', slug):
+            raise forms.ValidationError(
+                'Slug must contain only lowercase letters, numbers, and hyphens. '
+                'Must start and end with a letter or number.'
+            )
+
+        # Reserved slug check
+        if slug in RESERVED_SLUGS:
+            raise forms.ValidationError(
+                f'"{slug}" is a reserved system URL. Choose a different slug.'
+            )
+
+        # Uniqueness check (exclude current instance)
+        qs = Prompt.all_objects.filter(slug=slug)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(
+                f'"{slug}" is already used by another prompt.'
+            )
+
+        return slug
 
 
 class SlugRedirectInline(admin.TabularInline):
@@ -20,6 +68,7 @@ class SlugRedirectInline(admin.TabularInline):
 
 @admin.register(Prompt)
 class PromptAdmin(SummernoteModelAdmin):
+    form = PromptAdminForm
     inlines = [SlugRedirectInline]
     list_display = (
         'title', 'order', 'slug', 'status', 'moderation_badge', 'created_on',
@@ -66,17 +115,21 @@ class PromptAdmin(SummernoteModelAdmin):
             ),
         }),
         ('Media Preview', {
-            'fields': ('image_preview',),
+            'fields': ('media_preview_display',),
         }),
         ('B2 Media URLs', {
-            'classes': ('collapse',),
             'fields': (
                 'b2_image_url', 'b2_thumb_url', 'b2_medium_url',
                 'b2_large_url', 'b2_webp_url',
                 'b2_video_url', 'b2_video_thumb_url',
                 'video_width', 'video_height',
             ),
-            'description': 'B2/Cloudflare CDN URLs — read only, for debugging.',
+            'description': (
+                'B2/Cloudflare CDN URLs — read only, for debugging. '
+                'Image prompts use b2_image/thumb/medium/large/webp. '
+                'Video prompts only have b2_video_url and b2_video_thumb_url '
+                '(image fields will be empty — this is normal).'
+            ),
         }),
         ('Publishing', {
             'fields': ('author', 'status', 'ai_generator', 'order'),
@@ -89,17 +142,14 @@ class PromptAdmin(SummernoteModelAdmin):
             'description': 'AI moderation status and manual review',
         }),
         ('Soft Delete', {
-            'classes': ('collapse',),
             'fields': ('deleted_at', 'deleted_by', 'deletion_reason', 'original_status'),
             'description': '🚨 Managed by the trash system. Edit with extreme caution.',
         }),
         ('Processing Status', {
-            'classes': ('collapse',),
             'fields': ('processing_uuid', 'processing_complete'),
             'description': 'Background processing status for optimistic upload flow',
         }),
         ('Timestamps', {
-            'classes': ('collapse',),
             'fields': ('created_on', 'updated_on'),
             'description': 'Automatically managed timestamps',
         }),
@@ -110,7 +160,7 @@ class PromptAdmin(SummernoteModelAdmin):
         'b2_image_url', 'b2_thumb_url', 'b2_medium_url', 'b2_large_url',
         'b2_webp_url', 'b2_video_url', 'b2_video_thumb_url',
         'video_width', 'video_height',
-        'created_on', 'updated_on', 'moderation_completed_at', 'image_preview',
+        'created_on', 'updated_on', 'moderation_completed_at', 'media_preview_display',
         'processing_uuid', 'processing_complete',
         'deleted_at', 'deleted_by', 'deletion_reason',
     )
@@ -119,40 +169,43 @@ class PromptAdmin(SummernoteModelAdmin):
         form = super().get_form(request, obj, **kwargs)
         if 'title' in form.base_fields:
             form.base_fields['title'].help_text = (
-                '📏 <strong>10-80 characters recommended.</strong> '
+                '📏 <strong>10-80 characters recommended.</strong><br>'
                 'Titles appear in Google results (truncated at ~60 chars), '
-                'OG/Twitter cards, and browser tabs. '
+                'OG/Twitter cards, and browser tabs.<br>'
                 '⚠️ Changing the title does NOT update the stored B2 filename or alt tag.'
             )
+            form.base_fields['title'].widget.attrs['maxlength'] = 80
         if 'slug' in form.base_fields:
             form.base_fields['slug'].help_text = (
-                '🔗 <strong>URL-safe identifier.</strong> '
-                'Lowercase letters, numbers, and hyphens only. Max 200 chars. '
-                '✅ Changing the slug auto-creates a 301 redirect from the old URL. '
+                '🔗 <strong>URL-safe identifier.</strong><br>'
+                'Lowercase letters, numbers, and hyphens only. Max 200 chars.<br>'
+                '✅ Changing the slug auto-creates a 301 redirect from the old URL.<br>'
                 '🚫 Reserved: upload, admin, about, collections, browse, search, trash.'
             )
+            form.base_fields['slug'].widget.attrs['maxlength'] = 200
         if 'excerpt' in form.base_fields:
             form.base_fields['excerpt'].help_text = (
-                '📄 <strong>AI-generated description for SEO.</strong> '
-                '150-300 words recommended. '
+                '📄 <strong>AI-generated description for SEO.</strong><br>'
+                '150-300 words recommended. Max 2000 characters.<br>'
                 '🔍 Used in: meta description, OG cards, search result snippets.'
             )
+            form.base_fields['excerpt'].widget.attrs['maxlength'] = 2000
         if 'categories' in form.base_fields:
             form.base_fields['categories'].help_text = (
-                '📂 <strong>1-5 categories recommended.</strong> '
-                '📊 Categories = 25% of related prompts score. '
+                '📂 <strong>1-5 categories recommended.</strong><br>'
+                '📊 Categories = 25% of related prompts score.<br>'
                 '🚨 0 categories = algorithm loses 25% matching signal.'
             )
         if 'descriptors' in form.base_fields:
             form.base_fields['descriptors'].help_text = (
-                '🏷️ <strong>4-8 descriptors recommended.</strong> '
-                'Should span multiple types: gender, ethnicity, mood, color, setting. '
+                '🏷️ <strong>4-8 descriptors recommended.</strong><br>'
+                'Should span multiple types: gender, ethnicity, mood, color, setting.<br>'
                 '📊 Descriptors = 35% of related prompts score — the single biggest factor.'
             )
         if 'ai_generator' in form.base_fields:
             form.base_fields['ai_generator'].help_text = (
-                '🤖 The AI tool used to create this image/video. '
-                '📊 5% of related prompts score. '
+                '🤖 The AI tool used to create this image/video.<br>'
+                '📊 5% of related prompts score.<br>'
                 '⚠️ Changing this does NOT update the stored B2 filename.'
             )
         return form
@@ -160,9 +213,9 @@ class PromptAdmin(SummernoteModelAdmin):
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == 'tags':
             kwargs['help_text'] = (
-                '🏷️ <strong>Up to 10 tags.</strong> '
-                '🚨 ai-art or ai-generated mandatory. '
-                '📊 Tags = 30% of related prompts score. '
+                '🏷️ <strong>Up to 10 tags.</strong><br>'
+                '🚨 ai-art or ai-generated mandatory.<br>'
+                '📊 Tags = 30% of related prompts score.<br>'
                 '💡 New tags auto-created if typed manually.'
             )
         return super().formfield_for_manytomany(db_field, request, **kwargs)
@@ -186,34 +239,39 @@ class PromptAdmin(SummernoteModelAdmin):
         return obj.descriptors.count()
     descriptor_count.short_description = 'Descs'
 
-    def image_preview(self, obj):
-        """Display image/video preview in admin"""
-        if obj.is_video() and obj.featured_video:
-            # For videos, show thumbnail from middle frame
-            thumbnail_url = obj.get_thumbnail_url(width=950)
-            if thumbnail_url:
-                return mark_safe(
-                    f'<div style="margin: 10px 0;">'
-                    f'<p><strong>Video Preview (middle frame):</strong></p>'
-                    f'<img src="{thumbnail_url}" style="max-width: 950px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
-                    f'<p style="margin-top: 5px; color: #666; font-size: 12px;">Duration: {obj.video_duration or "Unknown"} seconds</p>'
-                    f'</div>'
+    def media_preview_display(self, obj):
+        """Display image/video preview using B2 CDN URLs with fallbacks."""
+        if obj.is_video():
+            thumb_url = obj.b2_video_thumb_url or obj.display_thumb_url
+            if thumb_url:
+                return format_html(
+                    '<div style="margin: 10px 0;">'
+                    '<p><strong>Video Thumbnail:</strong></p>'
+                    '<img src="{}" style="max-width: 950px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
+                    '<p style="margin-top: 5px; color: #666; font-size: 12px;">Duration: {} seconds</p>'
+                    '</div>',
+                    thumb_url, obj.video_duration or "Unknown"
                 )
-        elif obj.featured_image:
-            # For images, show the actual image
-            image_url = obj.featured_image.url
+        else:
+            image_url = obj.b2_large_url or obj.display_large_url
+            if not image_url and obj.featured_image:
+                try:
+                    image_url = obj.featured_image.url
+                except Exception:
+                    pass
             if image_url:
-                return mark_safe(
-                    f'<div style="margin: 10px 0;">'
-                    f'<p><strong>Image Preview:</strong></p>'
-                    f'<img src="{image_url}" style="max-width: 950px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
-                    f'</div>'
+                return format_html(
+                    '<div style="margin: 10px 0;">'
+                    '<p><strong>Image Preview:</strong></p>'
+                    '<img src="{}" style="max-width: 950px; height: auto; border: 1px solid #ddd; border-radius: 4px;" />'
+                    '</div>',
+                    image_url
                 )
 
-        return mark_safe(
+        return format_html(
             '<p style="color: #999; font-style: italic;">No image or video</p>'
         )
-    image_preview.short_description = 'Media Preview'
+    media_preview_display.short_description = 'Media Preview'
 
     def image_validation(self, obj):
         """Check if Cloudinary image/video is valid and accessible"""
@@ -609,23 +667,12 @@ class PromptAdmin(SummernoteModelAdmin):
             for user_id in range(1, 20):  # Adjust range based on your user count
                 cache.delete(f"prompt_detail_{prompt.slug}_{user_id}")
 
-    # Reserved slugs that conflict with system URLs
-    RESERVED_SLUGS = {
-        'upload', 'admin', 'about', 'contact', 'login', 'logout', 'signup',
-        'register', 'settings', 'profile', 'users', 'api', 'search',
-        'collections', 'leaderboard', 'categories', 'browse', 'tags',
-        'processing', 'sitemap.xml', 'robots.txt', 'favicon.ico',
-        'static', 'media', 'accounts', 'trash',
-    }
-
     def save_model(self, request, obj, form, change):
-        """Slug redirect + validation + cache clearing on save.
+        """Create slug redirect on slug change + title warnings + cache clearing.
 
-        Note: Early return on slug validation failure prevents save of ALL
-        fields (Django admin limitation). Move to form clean() if this
-        becomes a UX issue.
+        Slug validation (format, reserved, uniqueness) is handled by
+        PromptAdminForm.clean_slug() — errors show inline on the form field.
         """
-        import re
         from django.db import transaction
 
         if change and 'slug' in form.changed_data:
@@ -634,35 +681,6 @@ class PromptAdmin(SummernoteModelAdmin):
             new_slug = obj.slug
 
             if old_slug != new_slug:
-                # Validate format
-                if not re.match(r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?$', new_slug):
-                    self.message_user(
-                        request,
-                        f'🚫 Slug "{new_slug}" contains invalid characters. '
-                        f'Use only lowercase letters, numbers, and hyphens.',
-                        level='error'
-                    )
-                    return
-
-                # Check reserved
-                if new_slug in self.RESERVED_SLUGS:
-                    self.message_user(
-                        request,
-                        f'🚫 Slug "{new_slug}" is reserved (system URL). '
-                        f'Choose a different slug.',
-                        level='error'
-                    )
-                    return
-
-                # Check uniqueness against other prompts
-                if Prompt.all_objects.filter(slug=new_slug).exclude(pk=obj.pk).exists():
-                    self.message_user(
-                        request,
-                        f'🚫 Slug "{new_slug}" is already used by another prompt.',
-                        level='error'
-                    )
-                    return
-
                 with transaction.atomic():
                     # Prevent circular redirects
                     SlugRedirect.objects.filter(old_slug=new_slug).delete()

@@ -32,7 +32,13 @@ class PromptAdminForm(forms.ModelForm):
         if not slug:
             raise forms.ValidationError('Slug is required.')
 
-        # Format validation
+        # Max length (defense in depth — model has max_length=200)
+        if len(slug) > 200:
+            raise forms.ValidationError(
+                f'Slug is {len(slug)} characters (max 200).'
+            )
+
+        # Format validation (blocks dots, slashes, percent — prevents path traversal)
         if not re.match(r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?$', slug):
             raise forms.ValidationError(
                 'Slug must contain only lowercase letters, numbers, and hyphens. '
@@ -485,6 +491,14 @@ class PromptAdmin(SummernoteModelAdmin):
 
     def regenerate_ai_content(self, request, queryset):
         """Re-run AI content generation for selected prompts."""
+        if not request.user.is_superuser:
+            self.message_user(
+                request,
+                '🚫 Only superusers can regenerate AI content (API cost control).',
+                level='error'
+            )
+            return
+
         from taggit.models import Tag as TagModel
         from prompts.tasks import (
             _call_openai_vision, _sanitize_content,
@@ -675,29 +689,18 @@ class PromptAdmin(SummernoteModelAdmin):
         """
         from django.db import transaction
 
+        # Capture old slug before save (must read from DB before transaction)
+        old_slug = None
+        new_slug = None
+        slug_changed = False
+
         if change and 'slug' in form.changed_data:
             old_prompt = Prompt.all_objects.get(pk=obj.pk)
             old_slug = old_prompt.slug
             new_slug = obj.slug
+            slug_changed = old_slug != new_slug
 
-            if old_slug != new_slug:
-                with transaction.atomic():
-                    # Prevent circular redirects
-                    SlugRedirect.objects.filter(old_slug=new_slug).delete()
-                    # Create or update redirect for old slug
-                    SlugRedirect.objects.update_or_create(
-                        old_slug=old_slug,
-                        defaults={'prompt': obj}
-                    )
-
-                self.message_user(
-                    request,
-                    f'✅ Slug changed: "{old_slug}" → "{new_slug}". '
-                    f'🔗 301 redirect created automatically.',
-                    level='success'
-                )
-
-        # Title length warnings (non-blocking)
+        # Title length warnings (non-blocking, outside transaction)
         if obj.title:
             title_len = len(obj.title)
             if title_len > 80:
@@ -713,7 +716,27 @@ class PromptAdmin(SummernoteModelAdmin):
                     level='warning'
                 )
 
-        super().save_model(request, obj, form, change)
+        # Atomic: both prompt save and redirect creation succeed or both roll back
+        with transaction.atomic():
+            super().save_model(request, obj, form, change)
+
+            if slug_changed:
+                # Prevent circular redirects
+                SlugRedirect.objects.filter(old_slug=new_slug).delete()
+                # Create or update redirect for old slug
+                SlugRedirect.objects.update_or_create(
+                    old_slug=old_slug,
+                    defaults={'prompt': obj}
+                )
+
+        # Messages after successful commit
+        if slug_changed:
+            self.message_user(
+                request,
+                f'✅ Slug changed: "{old_slug}" → "{new_slug}". '
+                f'🔗 301 redirect created automatically.',
+                level='success'
+            )
 
         if change and 'order' in form.changed_data:
             self.clear_prompt_caches()
@@ -1976,6 +1999,9 @@ class SlugRedirectAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
     def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
 
 

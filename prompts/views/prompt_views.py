@@ -1340,11 +1340,12 @@ def prompt_delete(request, slug):
         restore_url = reverse('prompts:prompt_restore', args=[slug])
         csrf_token = get_token(request)
         # Store the referer (page where delete button was clicked)
-        current_url = request.META.get('HTTP_REFERER', request.path)
+        current_url = escape(request.META.get('HTTP_REFERER', request.path))
+        safe_title = escape(prompt.title)
 
         messages.add_message(
             request, messages.SUCCESS,
-            f'"{prompt.title}" moved to trash. It will be permanently deleted '
+            f'"{safe_title}" moved to trash. It will be permanently deleted '
             f'in {retention_days} days. '
             f'<a href="{trash_url}" class="alert-link">View Trash</a> | '
             f'<form method="post" action="{restore_url}" style="display:inline;" class="d-inline" onsubmit="this.querySelector(\'button\').disabled=true;">'

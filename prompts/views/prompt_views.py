@@ -680,6 +680,7 @@ def related_prompts_ajax(request, slug):
     })
 
 
+@login_required
 def comment_edit(request, slug, comment_id):
     """
     Allow users to edit their own comments on prompts.
@@ -752,6 +753,8 @@ def comment_edit(request, slug, comment_id):
 
 
 
+@login_required
+@require_POST
 def comment_delete(request, slug, comment_id):
     """
     Allow users to delete their own comments.
@@ -795,6 +798,7 @@ def comment_delete(request, slug, comment_id):
 
 
 
+@login_required
 def prompt_edit(request, slug):
     """
     Allow users to edit their own AI prompts.
@@ -1298,6 +1302,8 @@ def prompt_create(request):
 
 
 
+@login_required
+@require_POST
 def prompt_delete(request, slug):
     """
     Allow users to delete their own AI prompts.

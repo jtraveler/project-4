@@ -738,9 +738,12 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i>&nbsp; Cancel
                 </button>
-                <a href="#" id="confirmDeleteBtn" class="btn btn-danger">
-                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>&nbsp; Delete
-                </a>
+                <form id="deleteForm" method="post" action="#" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" id="confirmDeleteBtn" class="btn btn-danger">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>&nbsp; Delete
+                    </button>
+                </form>
             </div>
         </div>
     </div>

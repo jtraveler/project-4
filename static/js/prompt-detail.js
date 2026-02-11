@@ -276,7 +276,7 @@
             confirmBtn.innerHTML = '<i class="fas fa-trash"></i>&nbsp; Move to Trash';
         }
 
-        confirmBtn.href = deleteUrl;
+        document.getElementById('deleteForm').action = deleteUrl;
         var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
         deleteModal.show();
     };

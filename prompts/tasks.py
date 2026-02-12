@@ -277,6 +277,124 @@ def _call_openai_vision(
         return {'error': f"OpenAI API error: {str(e)}"}
 
 
+def _call_openai_vision_tags_only(
+    image_url: str,
+    prompt_text: str,
+    title: str,
+    categories: list,
+    descriptors: list,
+) -> dict:
+    """
+    Call OpenAI Vision API to generate ONLY tags for a prompt.
+
+    Uses a focused, cheaper prompt that only returns a JSON array of tags.
+    Passes existing title/categories/descriptors as context so tags complement them.
+
+    Returns dict with 'tags' key (list of strings) or 'error' key on failure.
+    """
+    try:
+        from openai import OpenAI, APITimeoutError, APIConnectionError
+        from prompts.constants import OPENAI_TIMEOUT
+
+        api_key = getattr(settings, 'OPENAI_API_KEY', None)
+        if not api_key:
+            import os
+            api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return {'error': 'OPENAI_API_KEY not configured'}
+
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
+
+        cats_str = ', '.join(categories) if categories else '(none)'
+        descs_str = ', '.join(descriptors) if descriptors else '(none)'
+
+        system_prompt = f'''You are analyzing an AI-generated image that already has metadata assigned.
+
+Existing metadata (DO NOT regenerate — use as context only):
+- Title: {title}
+- Categories: {cats_str}
+- Descriptors: {descs_str}
+- User prompt: {prompt_text[:300] if prompt_text else "(none)"}
+
+Generate exactly 10 SEO-optimized tags for this image.
+
+TAG RULES:
+- Specific, searchable keywords (not generic like "art" or "beautiful")
+- Complementary to the existing categories and descriptors — avoid duplicating them
+- Use hyphens for multi-word tags (e.g., "golden-hour", "neon-lights")
+- Include demographic terms (gender) when a person is visible:
+  * Adults: include BOTH "woman" AND "female", or "man" AND "male"
+  * Teens: "teen-boy"/"teen-girl" + "teenager"
+  * Children: "boy"/"girl" + "child"
+- Do NOT include ANY ethnicity or race terms as tags — not standalone and not
+  as part of compound tags. Banned: "african-american", "black", "caucasian",
+  "white", "asian", "hispanic", "latino", "latina", "arab", "middle-eastern",
+  "indian", "desi", "european", "pacific-islander", "indigenous", "native",
+  and any compounds like "black-woman", "white-man", "asian-girl", etc.
+- Do NOT include: "ai-art", "ai-generated", "ai-prompt" or any generic AI tags
+- Include niche terms when applicable: "linkedin-headshot", "ai-influencer",
+  "boudoir", "youtube-thumbnail", "maternity-shoot", "3d-photo",
+  "forced-perspective", "facebook-3d", "photo-restoration"
+- Include US/UK spelling variants when applicable: "coloring-book" AND
+  "colouring-book", "watercolor" AND "watercolour"
+- Include mood, style, subject, and specific visual elements
+
+Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
+
+        # Download and encode image as base64
+        image_result = _download_and_encode_image(image_url)
+        if not image_result:
+            image_content = {
+                "type": "image_url",
+                "image_url": {"url": image_url, "detail": "low"}
+            }
+        else:
+            image_data, media_type = image_result
+            image_content = {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{media_type};base64,{image_data}",
+                    "detail": "low"
+                }
+            }
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": system_prompt},
+                        image_content
+                    ]
+                }
+            ],
+            max_tokens=300,
+            temperature=0.7,
+            response_format={"type": "json_object"}
+        )
+
+        content = response.choices[0].message.content
+        result = _parse_ai_response(content)
+
+        if 'error' in result:
+            return result
+
+        # Normalize: handle both {"tags": [...]} and bare [...] responses
+        tags = result.get('tags', [])
+        if not isinstance(tags, list):
+            tags = []
+
+        return {'tags': tags}
+
+    except (APITimeoutError, APIConnectionError) as e:
+        logger.warning(f"[AI Tags-Only] OpenAI API timeout/connection error: {e}")
+        return {'error': f"OpenAI API timeout: {str(e)}"}
+    except Exception as e:
+        logger.exception(f"[AI Tags-Only] OpenAI API error: {e}")
+        return {'error': f"OpenAI API error: {str(e)}"}
+
+
 def _is_safe_image_url(url: str) -> bool:
     """
     Validate that URL is from an allowed domain (SSRF protection).
@@ -506,7 +624,7 @@ Wedding & Engagement, Couple & Romance, Group & Crowd, Cosplay, Tattoo & Body Ar
 Underwater, Aerial & Drone View, Concept Art, Wallpaper & Background, Character Design,
 Pixel Art, 3D Render, Watercolor & Traditional, Surreal & Dreamlike,
 AI Influencer / AI Avatar, Headshot, Boudoir, YouTube Thumbnail / Cover Art,
-Pets & Domestic Animals, Maternity Shoot, 3D Photo / Forced Perspective,
+Pets & Domestic Animals, Maternity Shoot, 3D Photo / Facebook 3D / Forced Perspective,
 Photo Restoration
 
 SPECIAL RULES:
@@ -520,7 +638,7 @@ SPECIAL RULES:
   arrow/circle graphics. Must be intentionally designed as a clickable cover/preview.
 - "Maternity Shoot": Pregnant subject + styled photoshoot elements (flowing gowns, belly poses,
   dreamy lighting, partner involvement, baby props). Genre intent, not just pregnancy visible.
-- "3D Photo / Forced Perspective": At least 2 of: fisheye/wide-angle distortion, object projected
+- "3D Photo / Facebook 3D / Forced Perspective": At least 2 of: fisheye/wide-angle distortion, object projected
   toward viewer in extreme foreground, three-layer depth separation, breaking frame boundaries,
   worm's-eye perspective, dramatic scale distortion.
 - "Photo Restoration": At least 2 of: before/after layout, colorized B&W, enhanced old photo

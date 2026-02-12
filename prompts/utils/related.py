@@ -34,6 +34,15 @@ from django.utils import timezone
 # still carry meaning in a small library. Re-enable at 0.25 when library reaches 200+.
 STOP_WORD_THRESHOLD = 1.0
 
+# Scoring weights for the related prompts algorithm.
+# Single source of truth — admin.py imports these for help text.
+W_TAG = 0.30
+W_CATEGORY = 0.25
+W_DESCRIPTOR = 0.35
+W_GENERATOR = 0.05
+W_ENGAGEMENT = 0.03
+W_RECENCY = 0.02
+
 
 def _get_tag_idf_weights(total_prompts):
     """
@@ -204,7 +213,7 @@ def get_related_prompts(prompt, limit=60):
         candidate_categories = candidate_categories_map.get(candidate.id, set())
         candidate_descriptors = candidate_descriptors_map.get(candidate.id, set())
 
-        # 1. Tag overlap (30%) — IDF-weighted similarity (rare tags worth more)
+        # 1. Tag overlap (W_TAG) — IDF-weighted similarity (rare tags worth more)
         if prompt_tags and candidate_tags:
             shared_tags = prompt_tags & candidate_tags
             weighted_shared = sum(tag_idf.get(t, 0) for t in shared_tags)
@@ -217,7 +226,7 @@ def get_related_prompts(prompt, limit=60):
         else:
             tag_score = 0.0
 
-        # 2. Category overlap (25%) — IDF-weighted similarity (rare categories worth more)
+        # 2. Category overlap (W_CATEGORY) — IDF-weighted similarity (rare categories worth more)
         if prompt_categories and candidate_categories:
             shared_cats = prompt_categories & candidate_categories
             weighted_shared = sum(cat_idf.get(c, 0) for c in shared_cats)
@@ -230,7 +239,7 @@ def get_related_prompts(prompt, limit=60):
         else:
             category_score = 0.0
 
-        # 3. Descriptor overlap (35%) — IDF-weighted similarity (rare descriptors worth more)
+        # 3. Descriptor overlap (W_DESCRIPTOR) — IDF-weighted similarity (rare descriptors worth more)
         if prompt_descriptors and candidate_descriptors:
             shared_descs = prompt_descriptors & candidate_descriptors
             weighted_shared = sum(desc_idf.get(d, 0) for d in shared_descs)
@@ -243,25 +252,25 @@ def get_related_prompts(prompt, limit=60):
         else:
             descriptor_score = 0.0
 
-        # 4. Same AI generator (5%) — Binary tiebreaker
+        # 4. Same AI generator (W_GENERATOR) — Binary tiebreaker
         generator_score = 1.0 if candidate.ai_generator == prompt.ai_generator else 0.0
 
-        # 5. Similar engagement (3%) — Inverse normalized difference (tiebreaker)
+        # 5. Similar engagement (W_ENGAGEMENT) — Inverse normalized difference (tiebreaker)
         candidate_likes = candidate.likes_count  # Use annotated count
         max_likes = max(prompt_likes, candidate_likes, 1)  # Avoid div by zero
         engagement_score = 1.0 - (abs(prompt_likes - candidate_likes) / max_likes)
 
-        # 6. Recency (2%) — Linear decay over 90 days (tiebreaker)
+        # 6. Recency (W_RECENCY) — Linear decay over 90 days (tiebreaker)
         days_old = (now - candidate.created_on).days
         recency_score = max(0.0, 1.0 - (days_old / 90))
 
         total = (
-            tag_score * 0.30 +
-            category_score * 0.25 +
-            descriptor_score * 0.35 +
-            generator_score * 0.05 +
-            engagement_score * 0.03 +
-            recency_score * 0.02
+            tag_score * W_TAG +
+            category_score * W_CATEGORY +
+            descriptor_score * W_DESCRIPTOR +
+            generator_score * W_GENERATOR +
+            engagement_score * W_ENGAGEMENT +
+            recency_score * W_RECENCY
         )
 
         scored.append((candidate, total))

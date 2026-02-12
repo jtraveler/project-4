@@ -1,0 +1,62 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Regenerate AI Content: {{ prompt.title }}{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:prompts_prompt_changelist' %}">Prompts</a>
+    &rsaquo; <a href="{% url 'admin:prompts_prompt_change' prompt.pk %}">{{ prompt.title|truncatechars:40 }}</a>
+    &rsaquo; Regenerate AI Content
+  </div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 20px 0;">
+  <h2>Regenerate AI Content</h2>
+
+  <div style="background: #fef3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 15px; margin: 15px 0;">
+    <strong>Warning:</strong> This will overwrite the following fields with new AI-generated content:
+    <ul style="margin: 10px 0 0 20px;">
+      <li><strong>Title</strong> (currently: "{{ prompt.title|truncatechars:60 }}")</li>
+      <li><strong>Description</strong></li>
+      <li><strong>Tags</strong></li>
+      <li><strong>Categories</strong></li>
+      <li><strong>Descriptors</strong></li>
+    </ul>
+  </div>
+
+  <div style="background: #d4edda; border: 1px solid #28a745; border-radius: 4px; padding: 15px; margin: 15px 0;">
+    <strong>Preserved:</strong> The slug <code>{{ prompt.slug }}</code> will NOT change.
+    Existing URLs will continue to work.
+  </div>
+
+  <table style="margin: 15px 0; border-collapse: collapse;">
+    <tr>
+      <td style="padding: 5px 15px 5px 0; font-weight: bold;">Prompt ID:</td>
+      <td>{{ prompt.pk }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 15px 5px 0; font-weight: bold;">Current Slug:</td>
+      <td><code>{{ prompt.slug }}</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 15px 5px 0; font-weight: bold;">Current Tags:</td>
+      <td>{{ prompt.tags.all|join:", "|default:"(none)" }}</td>
+    </tr>
+  </table>
+
+  <form method="post">
+    {% csrf_token %}
+    <div style="margin-top: 20px;">
+      <input type="submit" value="Regenerate AI Content" class="default"
+             style="padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+      <a href="{% url 'admin:prompts_prompt_change' prompt.pk %}"
+         style="margin-left: 15px; padding: 8px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

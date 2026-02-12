@@ -36,14 +36,24 @@ class PromptAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Enforce character limits (must be set here, after form init)
+        # Enforce character limits and field widths (must be set here, after form init)
         if 'slug' in self.fields:
             self.fields['slug'].widget.attrs['maxlength'] = 200
             self.fields['slug'].widget.attrs['autocomplete'] = 'off'
+            self.fields['slug'].widget.attrs['style'] = 'width: 40em;'
+            self.fields['slug'].help_text = (
+                '🔗 <strong>URL-safe identifier.</strong> '
+                'Lowercase letters, numbers, and hyphens only. Max 200 chars.<br>'
+                '✅ <strong>Safe to edit:</strong> old URLs auto-redirect (301) to preserve '
+                'links, bookmarks, and SEO rankings.<br>'
+                '🚫 Reserved slugs blocked on save: upload, admin, about, collections, browse, search, trash.'
+            )
         if 'title' in self.fields:
             self.fields['title'].widget.attrs['maxlength'] = 80
+            self.fields['title'].widget.attrs['style'] = 'width: 40em;'
         if 'excerpt' in self.fields:
             self.fields['excerpt'].widget.attrs['maxlength'] = 2000
+            self.fields['excerpt'].widget.attrs['style'] = 'width: 100%;'
 
         # Restore tag autocomplete widget (Select2 via django-autocomplete-light)
         if 'tags' in self.fields:
@@ -231,13 +241,7 @@ class PromptAdmin(SummernoteModelAdmin):
                 'OG/Twitter cards, and browser tabs.<br>'
                 '⚠️ Changing the title does NOT update the stored B2 filename or alt tag.'
             )
-        if 'slug' in form.base_fields:
-            form.base_fields['slug'].help_text = (
-                '🔗 <strong>URL-safe identifier.</strong><br>'
-                'Lowercase letters, numbers, and hyphens only. Max 200 chars.<br>'
-                '✅ Changing the slug auto-creates a 301 redirect from the old URL.<br>'
-                '🚫 Reserved: upload, admin, about, collections, browse, search, trash.'
-            )
+        # slug help_text is set in PromptAdminForm.__init__ (with widget attrs)
         if 'excerpt' in form.base_fields:
             form.base_fields['excerpt'].help_text = (
                 '📄 <strong>AI-generated description for SEO.</strong><br>'

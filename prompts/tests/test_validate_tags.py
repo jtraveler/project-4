@@ -295,6 +295,36 @@ class TestLegacyWhitelistPreserved(TestCase):
         self.assertNotIn('out', result)
         self.assertNotIn('effect', result)
 
+    def test_xray_preserved(self):
+        """x-ray is a real word and should not be split."""
+        result = _validate_and_fix_tags(['x-ray', 'medical', 'portrait'])
+        self.assertIn('x-ray', result)
+
+    def test_3d_render_preserved(self):
+        """3d-render is a real term and should not be split."""
+        result = _validate_and_fix_tags(['3d-render', 'digital', 'art'])
+        self.assertIn('3d-render', result)
+
+    def test_3d_photo_preserved(self):
+        """3d-photo is a real term and should not be split."""
+        result = _validate_and_fix_tags(['3d-photo', 'portrait'])
+        self.assertIn('3d-photo', result)
+
+    def test_kpop_preserved(self):
+        """k-pop is a real word and should not be split."""
+        result = _validate_and_fix_tags(['k-pop', 'music', 'portrait'])
+        self.assertIn('k-pop', result)
+
+    def test_tshirt_preserved(self):
+        """t-shirt is a real word and should not be split."""
+        result = _validate_and_fix_tags(['t-shirt', 'fashion', 'portrait'])
+        self.assertIn('t-shirt', result)
+
+    def test_unknown_single_char_compound_still_split(self):
+        """Random single-char compounds not in preserve list should still split."""
+        result = _validate_and_fix_tags(['z-thing', 'portrait'])
+        self.assertNotIn('z-thing', result)
+
 
 # ---------------------------------------------------------------------------
 # 3. Stop-word compounds are SPLIT

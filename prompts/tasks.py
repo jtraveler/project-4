@@ -293,6 +293,8 @@ def _validate_and_fix_tags(tags, prompt_id=None):
         """Only split if the compound contains filler/stop words or single-char parts."""
         if compound_tag in PRESERVE_DESPITE_STOP_WORDS:
             return False
+        if compound_tag in PRESERVE_SINGLE_CHAR_COMPOUNDS:
+            return False
         parts = compound_tag.split('-')
         if len(parts) < 2:
             return False
@@ -505,7 +507,16 @@ TAG RULES — FOLLOW EXACTLY:
      "colouring-book", "watercolor" AND "watercolour")
 
 6. INCLUDE a mix of: primary subject, mood/atmosphere, art style, and
-   specific visual elements."""
+   specific visual elements.
+
+7. SELF-CHECK before returning:
+   Confirm each hyphenated tag is a real search term and actual word.
+   Ask yourself: "Would a real user type this into a search bar?"
+   - GOOD: "double-exposure" (real photography term), "x-ray" (real word),
+     "social-media-graphic" (real search query), "ai-influencer" (real category)
+   - BAD: "beautiful-sunset" (not a single concept — use two separate tags),
+     "the-big-house" (contains filler words), "running-fast" (not a search term)
+   If a hyphenated tag fails this check, split it into separate tags."""
 
 # =============================================================================
 # TAG VALIDATION CONSTANTS
@@ -527,6 +538,17 @@ SPLIT_THESE_WORDS = {
 # Compounds containing stop words that are still legitimate terms.
 PRESERVE_DESPITE_STOP_WORDS = {
     'depth-of-field',
+}
+
+# Hyphenated words with single-character parts that are real words/terms.
+# Without this, the single-char check in _should_split_compound() would split them.
+PRESERVE_SINGLE_CHAR_COMPOUNDS = {
+    'x-ray', 'x-rays',
+    '3d-render', '3d-photo', '3d-effect', '3d-model', '3d-art',
+    'k-pop',
+    'e-commerce', 'e-sports',
+    'j-pop',
+    't-shirt', 't-shirts',
 }
 
 # Tags that should never appear (AI-related tags waste slots)
@@ -642,7 +664,11 @@ WEIGHTING RULES:
 
 {TAG_RULES_BLOCK}
 
-Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
+Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...], "compounds_check": "Confirm each hyphenated tag is a real search term and actual word"}}
+
+IMPORTANT: The "compounds_check" field forces you to review your hyphenated tags.
+Write a brief confirmation that each compound tag is a legitimate search term.
+If any compound fails the check, fix it in the "tags" array before returning.'''
 
         # Download and encode image as base64
         # FAIL-FAST: No URL fallback — raw URLs cause garbage responses
@@ -671,7 +697,7 @@ Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
                     ]
                 }
             ],
-            max_tokens=300,
+            max_tokens=400,
             temperature=0.3,
             response_format={"type": "json_object"}
         )
@@ -897,6 +923,9 @@ FIELD 3: "tags" (array of strings, up to 10)
 SEO-optimized keyword tags. Use hyphens for multi-word tags (e.g., "african-american").
 
 ''' + TAG_RULES_BLOCK + '''
+
+After generating your tags array, add a "compounds_check" field with a brief
+confirmation that each hyphenated tag is a real search term and actual word.
 
 ═══════════════════════════════════════════════════
 FIELD 4: "categories" (array of strings, up to 5)

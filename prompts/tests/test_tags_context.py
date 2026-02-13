@@ -54,7 +54,7 @@ class TestExcerptInPrompt(TestCase):
     """Verify that excerpt text appears in the system prompt sent to OpenAI."""
 
     @override_settings(OPENAI_API_KEY='test-key')
-    @patch('prompts.tasks._download_and_encode_image', return_value=None)
+    @patch('prompts.tasks._download_and_encode_image', return_value=('dGVzdA==', 'image/jpeg'))
     @patch('openai.OpenAI')
     def test_excerpt_included_in_system_prompt(self, MockOpenAI, _mock_dl):
         """When excerpt is provided, it should appear in the GPT system prompt."""
@@ -75,7 +75,7 @@ class TestExcerptInPrompt(TestCase):
         self.assertIn('Description:', prompt_text)
 
     @override_settings(OPENAI_API_KEY='test-key')
-    @patch('prompts.tasks._download_and_encode_image', return_value=None)
+    @patch('prompts.tasks._download_and_encode_image', return_value=('dGVzdA==', 'image/jpeg'))
     @patch('openai.OpenAI')
     def test_excerpt_truncated_at_500_chars(self, MockOpenAI, _mock_dl):
         """Excerpt longer than 500 chars should be truncated in the prompt."""
@@ -107,7 +107,7 @@ class TestExcerptBackwardsCompat(TestCase):
     """Verify the function works when excerpt is not provided."""
 
     @override_settings(OPENAI_API_KEY='test-key')
-    @patch('prompts.tasks._download_and_encode_image', return_value=None)
+    @patch('prompts.tasks._download_and_encode_image', return_value=('dGVzdA==', 'image/jpeg'))
     @patch('openai.OpenAI')
     def test_no_excerpt_shows_not_available(self, MockOpenAI, _mock_dl):
         """When excerpt is empty, '(not available)' should appear in the prompt."""
@@ -127,7 +127,7 @@ class TestExcerptBackwardsCompat(TestCase):
         self.assertIn('Description: (not available)', prompt_text)
 
     @override_settings(OPENAI_API_KEY='test-key')
-    @patch('prompts.tasks._download_and_encode_image', return_value=None)
+    @patch('prompts.tasks._download_and_encode_image', return_value=('dGVzdA==', 'image/jpeg'))
     @patch('openai.OpenAI')
     def test_empty_string_excerpt_shows_not_available(self, MockOpenAI, _mock_dl):
         """Explicitly passing excerpt='' should also show (not available)."""
@@ -154,7 +154,7 @@ class TestGibberishPromptText(TestCase):
     """Verify that garbage/gibberish input doesn't cause errors."""
 
     @override_settings(OPENAI_API_KEY='test-key')
-    @patch('prompts.tasks._download_and_encode_image', return_value=None)
+    @patch('prompts.tasks._download_and_encode_image', return_value=('dGVzdA==', 'image/jpeg'))
     @patch('openai.OpenAI')
     def test_gibberish_prompt_text_returns_tags(self, MockOpenAI, _mock_dl):
         """Gibberish prompt_text should not crash — function should still return tags."""
@@ -175,7 +175,7 @@ class TestGibberishPromptText(TestCase):
         self.assertGreater(len(result['tags']), 0)
 
     @override_settings(OPENAI_API_KEY='test-key')
-    @patch('prompts.tasks._download_and_encode_image', return_value=None)
+    @patch('prompts.tasks._download_and_encode_image', return_value=('dGVzdA==', 'image/jpeg'))
     @patch('openai.OpenAI')
     def test_unicode_excerpt_returns_tags(self, MockOpenAI, _mock_dl):
         """Unicode characters in excerpt should not crash the function."""
@@ -202,7 +202,7 @@ class TestWeightingRulesInPrompt(TestCase):
     """Verify WEIGHTING RULES section appears in the system prompt."""
 
     @override_settings(OPENAI_API_KEY='test-key')
-    @patch('prompts.tasks._download_and_encode_image', return_value=None)
+    @patch('prompts.tasks._download_and_encode_image', return_value=('dGVzdA==', 'image/jpeg'))
     @patch('openai.OpenAI')
     def test_weighting_rules_present(self, MockOpenAI, _mock_dl):
         """The WEIGHTING RULES section must appear in the system prompt."""

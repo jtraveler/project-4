@@ -22,8 +22,11 @@ Usage:
     python manage.py backfill_ai_content --tags-only --prompt-id 799
 """
 
+import logging
 import time
 from datetime import timedelta
+
+import requests
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -31,6 +34,8 @@ from django.db.models import Count
 from django.utils import timezone
 
 from prompts.models import Prompt, SubjectCategory, SubjectDescriptor
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -116,12 +121,48 @@ class Command(BaseCommand):
                 single_prompt_id, skip_recent_days, published_only,
             )
 
+    @staticmethod
+    def _check_image_accessible(url: str, prompt_id: int) -> bool:
+        """
+        Verify image URL returns HTTP 200 with an image/video content-type.
+        Uses HEAD request to avoid downloading the full image.
+        """
+        if not url:
+            logger.warning(f"Prompt {prompt_id}: No image URL available")
+            return False
+
+        try:
+            response = requests.head(url, timeout=10, allow_redirects=True)
+
+            if response.status_code != 200:
+                logger.warning(
+                    f"Prompt {prompt_id}: Image URL returned HTTP {response.status_code}: {url}"
+                )
+                return False
+
+            content_type = response.headers.get('content-type', '')
+            if not content_type.startswith(('image/', 'video/')):
+                logger.warning(
+                    f"Prompt {prompt_id}: Unexpected content-type '{content_type}': {url}"
+                )
+                return False
+
+            return True
+
+        except requests.RequestException as e:
+            logger.warning(f"Prompt {prompt_id}: URL check failed: {e}")
+            return False
+
     def _handle_tags_only(self, dry_run, batch_size, delay, limit,
                           single_prompt_id, skip_recent_days, under_tag_limit,
                           published_only=False):
         """Regenerate ONLY tags. Title, description, slug, categories, descriptors untouched."""
         from taggit.models import Tag
-        from prompts.tasks import _call_openai_vision_tags_only
+        from prompts.tasks import (
+            _call_openai_vision_tags_only,
+            _is_quality_tag_response,
+            _validate_and_fix_tags,
+        )
 
         mode_label = 'TAGS-ONLY MODE'
         if dry_run:
@@ -181,6 +222,16 @@ class Command(BaseCommand):
                 skipped += 1
                 continue
 
+            # URL pre-check: verify image is accessible before calling AI
+            if not dry_run and not self._check_image_accessible(image_url, prompt.pk):
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'  [{i+1}/{total}] Skipping {prompt.pk}: Image not accessible'
+                    )
+                )
+                skipped += 1
+                continue
+
             # Show current tags
             current_tags = sorted(t.name for t in prompt.tags.all())
             current_cats = sorted(c.name for c in prompt.categories.all())
@@ -219,12 +270,22 @@ class Command(BaseCommand):
                 tags = ai_result.get('tags', [])
                 # Tags are already validated by _call_openai_vision_tags_only,
                 # but run through validator again for safety
-                from prompts.tasks import _validate_and_fix_tags
                 clean_tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk)
 
                 if not clean_tags:
                     self.stdout.write(
                         self.style.WARNING('    No valid tags returned by AI')
+                    )
+                    errors += 1
+                    continue
+
+                # Quality gate: reject generic/garbage responses
+                if not _is_quality_tag_response(clean_tags, prompt_id=prompt.pk):
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f'    Quality check failed — existing tags preserved. '
+                            f'Returned: {clean_tags}'
+                        )
                     )
                     errors += 1
                     continue
@@ -246,7 +307,7 @@ class Command(BaseCommand):
                     )
                 )
                 self.stdout.write(
-                    self.style.SUCCESS(f'    ✅ Updated')
+                    self.style.SUCCESS(f'    Updated')
                 )
                 updated += 1
                 processed += 1
@@ -268,7 +329,8 @@ class Command(BaseCommand):
         self.stdout.write('\n' + '=' * 60)
         self.stdout.write(
             self.style.SUCCESS(
-                f'Done. {updated}/{total} prompts updated. {errors} errors.'
+                f'Done. {updated}/{total} prompts updated. '
+                f'{skipped} skipped. {errors} errors.'
             )
         )
         if dry_run:
@@ -280,8 +342,10 @@ class Command(BaseCommand):
         from taggit.models import Tag
         from prompts.tasks import (
             _call_openai_vision,
+            _is_quality_tag_response,
             _sanitize_content,
             _generate_unique_slug_with_retry,
+            _validate_and_fix_tags,
         )
 
         if dry_run:
@@ -342,6 +406,16 @@ class Command(BaseCommand):
                 skipped += 1
                 continue
 
+            # URL pre-check: verify image is accessible before calling AI
+            if not dry_run and not self._check_image_accessible(image_url, prompt.pk):
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'  [{i+1}/{total}] Skipping {prompt.pk}: Image not accessible'
+                    )
+                )
+                skipped += 1
+                continue
+
             if dry_run:
                 self.stdout.write(f'  [{i+1}/{total}] Would analyze: {prompt.title[:50]}...')
                 processed += 1
@@ -384,6 +458,22 @@ class Command(BaseCommand):
                 matched_cats = []
                 matched_descs = []
 
+                # Validate and fix tags
+                clean_tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk) if tags else []
+
+                # Quality gate for tags — skip tag update if garbage
+                tags_passed_quality = _is_quality_tag_response(
+                    clean_tags, prompt_id=prompt.pk
+                ) if clean_tags else False
+
+                if not tags_passed_quality and clean_tags:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f'    Tag quality check failed — tags will NOT be updated. '
+                            f'Returned: {clean_tags}'
+                        )
+                    )
+
                 # Apply updates inside transaction
                 with transaction.atomic():
                     # Generate new SEO slug
@@ -395,10 +485,8 @@ class Command(BaseCommand):
                     prompt.slug = slug
                     prompt.save(update_fields=['title', 'excerpt', 'slug'])
 
-                    # Update tags — validate and fix before saving
-                    if tags:
-                        from prompts.tasks import _validate_and_fix_tags
-                        clean_tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk)
+                    # Update tags ONLY if quality check passed
+                    if tags_passed_quality and clean_tags:
                         tag_objects = []
                         for tag_name in clean_tags:
                             if tag_name:
@@ -428,8 +516,8 @@ class Command(BaseCommand):
                             )
 
                     # Update descriptors — Layer 4 anti-hallucination
+                    all_descriptor_names = []
                     if descriptors_dict and isinstance(descriptors_dict, dict):
-                        all_descriptor_names = []
                         for dtype_values in descriptors_dict.values():
                             if isinstance(dtype_values, list):
                                 all_descriptor_names.extend(
@@ -486,11 +574,13 @@ class Command(BaseCommand):
                 # Build summary for output (show matched counts, not raw AI counts)
                 matched_cat_count = len(matched_cats)
                 matched_desc_count = len(matched_descs)
+                tag_note = '' if tags_passed_quality else ' (tags skipped: quality check failed)'
                 self.stdout.write(
                     self.style.SUCCESS(
                         f'  [{i+1}/{total}] Updated {prompt.pk}: '
                         f'"{title[:40]}..." | '
-                        f'{len(tags)} tags | {matched_cat_count} cats | {matched_desc_count} descs'
+                        f'{len(clean_tags)} tags | {matched_cat_count} cats | '
+                        f'{matched_desc_count} descs{tag_note}'
                     )
                 )
                 updated += 1

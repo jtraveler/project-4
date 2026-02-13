@@ -231,22 +231,20 @@ def _call_openai_vision(
         system_prompt = _build_analysis_prompt(prompt_text, ai_generator, available_tags)
 
         # Download and encode image as base64 for reliability
+        # FAIL-FAST: No URL fallback — raw URLs cause garbage responses
         image_result = _download_and_encode_image(image_url)
         if not image_result:
-            # Fall back to URL-based analysis
-            image_content = {
-                "type": "image_url",
-                "image_url": {"url": image_url, "detail": "low"}
+            logger.error(f"[AI Generation] Image download failed, aborting: {image_url}")
+            return {'error': f'Image download failed: {image_url}'}
+
+        image_data, media_type = image_result
+        image_content = {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{media_type};base64,{image_data}",
+                "detail": "low"
             }
-        else:
-            image_data, media_type = image_result
-            image_content = {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{media_type};base64,{image_data}",
-                    "detail": "low"
-                }
-            }
+        }
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -455,6 +453,60 @@ def _validate_and_fix_tags(tags, prompt_id=None):
     return deduped
 
 
+# Generic tags that indicate OpenAI couldn't properly analyze the image.
+# These are valid English words but too vague to be useful as tags.
+GENERIC_TAGS = {
+    'portraits', 'portrait', 'close-ups', 'close-up', 'landscapes',
+    'landscape', 'nature', 'photography', 'art', 'design', 'image',
+    'photo', 'picture', 'illustration', 'digital', 'creative',
+    'beautiful', 'artistic', 'professional', 'background', 'style',
+    'color', 'modern', 'abstract',
+}
+
+
+def _is_quality_tag_response(tags: list, prompt_id: int = None) -> bool:
+    """
+    Validate that AI-generated tags are specific enough to be useful.
+    Returns False if the response appears to be generic/garbage.
+
+    Quality checks:
+    1. Minimum tag count (at least 3 tags)
+    2. Not all capitalized (indicates raw/unprocessed response)
+    3. Not majority generic (at least 40% must be non-generic)
+    """
+    log_prefix = f"[Quality Gate] Prompt {prompt_id}" if prompt_id else "[Quality Gate]"
+
+    # Filter out empty/whitespace-only tags before checking
+    clean = [t for t in (tags or []) if t and t.strip()]
+
+    if len(clean) < 3:
+        logger.warning(f"{log_prefix}: Only {len(clean)} tags returned (minimum 3)")
+        return False
+
+    # Check if all tags are capitalized (raw/unprocessed response)
+    capitalized_count = sum(1 for t in clean if t[0].isupper())
+    if capitalized_count == len(clean):
+        logger.warning(
+            f"{log_prefix}: All {len(clean)} tags capitalized — likely generic response. "
+            f"Tags: {clean}"
+        )
+        return False
+
+    # Check generic ratio
+    normalized = {t.lower().strip() for t in clean}
+    generic_count = len(normalized & GENERIC_TAGS)
+    generic_ratio = generic_count / len(clean)
+
+    if generic_ratio > 0.6:
+        logger.warning(
+            f"{log_prefix}: {generic_count}/{len(clean)} tags are generic "
+            f"({generic_ratio:.0%}) — likely failed analysis. Tags: {clean}"
+        )
+        return False
+
+    return True
+
+
 def _call_openai_vision_tags_only(
     image_url: str,
     prompt_text: str,
@@ -573,21 +625,20 @@ TAG RULES — FOLLOW EXACTLY:
 Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
 
         # Download and encode image as base64
+        # FAIL-FAST: No URL fallback — raw URLs cause garbage responses
         image_result = _download_and_encode_image(image_url)
         if not image_result:
-            image_content = {
-                "type": "image_url",
-                "image_url": {"url": image_url, "detail": "low"}
+            logger.error(f"[AI Tags-Only] Image download failed, aborting: {image_url}")
+            return {'error': f'Image download failed: {image_url}'}
+
+        image_data, media_type = image_result
+        image_content = {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{media_type};base64,{image_data}",
+                "detail": "low"
             }
-        else:
-            image_data, media_type = image_result
-            image_content = {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{media_type};base64,{image_data}",
-                    "detail": "low"
-                }
-            }
+        }
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",

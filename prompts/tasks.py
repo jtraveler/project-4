@@ -416,10 +416,11 @@ def _validate_and_fix_tags(tags, prompt_id=None):
 # These are valid English words but too vague to be useful as tags.
 GENERIC_TAGS = {
     'portraits', 'portrait', 'close-ups', 'close-up', 'landscapes',
-    'landscape', 'nature', 'photography', 'art', 'design', 'image',
-    'photo', 'picture', 'illustration', 'digital', 'creative',
-    'beautiful', 'artistic', 'professional', 'background', 'style',
-    'color', 'modern', 'abstract',
+    'landscape', 'nature', 'photography', 'art', 'design', 'designs',
+    'image', 'images', 'photo', 'photos', 'picture', 'pictures',
+    'illustration', 'illustrations', 'digital', 'creative',
+    'beautiful', 'artistic', 'professional', 'background', 'backgrounds',
+    'style', 'styles', 'color', 'colors', 'modern', 'abstract',
 }
 
 # =============================================================================

@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 12, 2026
+**Last Updated:** February 13, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -42,7 +42,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Phase 2B (1-9) + Tag Pipeline | Feb 9-12, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata editing, security hardening |
+| Phase 2B (1-9) + Tag Pipeline + Hardening | Feb 9-13, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata, security hardening, backfill hardening |
 | Phase 2B (1-8) | Feb 9-10, 2026 | Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill, demographic SEO rules |
 | Subject Categories P2 | Feb 9, 2026 | AI-assigned prompt classification (25 categories, cache-first logic) |
 | Related Prompts P1 | Feb 7, 2026 | "You Might Also Like" section on prompt detail (scoring algorithm, AJAX Load More) |
@@ -227,6 +227,18 @@ Full design in `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`, execution roadmap in `
 - Helper: `_should_split_compound(tag)` returns True only if split should occur
 - GPT prompt includes COMPOUND TAG RULE instructing AI to use hyphens for multi-word concepts
 
+**Backfill Hardening (Session 82):**
+Three-layer defense against silent data corruption during backfill:
+1. **Fail-fast download:** `_download_and_encode_image()` returns `None` on failure → callers (`_call_openai_vision`, `_call_openai_vision_tags_only`) return `{'error': ...}` instead of falling back to raw URL
+2. **Quality gate:** `_is_quality_tag_response()` checks min 3 tags, no all-caps responses, max 60% generic ratio. Uses `GENERIC_TAGS` constant (25 terms with singular/plural forms)
+3. **URL pre-check:** `_check_image_accessible()` HEAD request in backfill before calling OpenAI
+
+If any layer fails, existing tags are PRESERVED — never overwritten with garbage.
+
+**GPT Temperature Settings:**
+- Full generation (`_call_openai_vision`): temperature=0.5 (titles need some creativity)
+- Tags-only (`_call_openai_vision_tags_only`): temperature=0.3 (strict rule compliance)
+
 **WEIGHTING RULES in GPT Prompt:**
 - PRIMARY source: The image itself (what you see)
 - SECONDARY: Title + description (if provided)
@@ -301,6 +313,10 @@ Regenerates title, slug, description, tags, categories, and descriptors for exis
 
 - **OpenAI Vision inconsistency:** Same image can return different demographics across runs
 - **Auto-flag gap:** `needs_seo_review` doesn't trigger when neither gender nor ethnicity assigned (only when gender present but ethnicity missing)
+- **Compound edge cases:** `thoughtful-expression` (prompt #799) and `social-media-graphic` (prompt #795) passed validator — preserve-by-default allows overly-specific compounds where both words are non-stop-words. Low priority: consider max-parts check for 3+ word compounds.
+- **Two GPT prompt copies:** `_call_openai_vision_tags_only()` and `_build_analysis_prompt()` have nearly identical tag rules sections. Future cleanup: extract shared sections into constant or builder function.
+- **~~WEIGHTING RULES parity~~** — CLOSED: Upload path calls `_call_openai_vision()` with empty prompt_text (user hasn't submitted yet), so WEIGHTING RULES don't apply. Not a gap.
+- **~~Anti-compound coverage gap~~** — CLOSED: Both GPT prompts already have identical WRONG examples covering all reported gaps. Session 81 validator catches remainder.
 
 ### Technical Patterns (Session 74)
 
@@ -411,6 +427,12 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 | `prompts/templates/prompts/collection_detail.html` | Grid column fix, video autoplay observer, CSS overrides (S74) |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
 | `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
+
+**Committed in Session 82 (Feb 13, 2026):**
+- `prompts/tasks.py` - Fail-fast image download (return error instead of raw URL fallback), `_is_quality_tag_response()` quality gate, `GENERIC_TAGS` constant (25 terms with singular/plural), module-level tag validation constants, removed dead `LEGACY_APPROVED_COMPOUNDS`, fixed `_handle_ai_failure` fallback tags, temperature 0.7→0.5
+- `prompts/management/commands/backfill_ai_content.py` - `_check_image_accessible()` HEAD request pre-check, quality gate before `prompt.tags.set()`
+- `prompts/tests/test_backfill_hardening.py` - NEW: 44 tests for backfill hardening (quality gate, fail-fast, URL pre-check, tag preservation)
+- `prompts/tests/test_tags_context.py` - Updated 7 tests for fail-fast compatibility (mock returns tuple instead of None)
 
 **Committed in Sessions 80-81 (Feb 11-12, 2026):**
 - `prompts/models.py` - SlugRedirect model for SEO-preserving slug changes
@@ -844,5 +866,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.9 (Sessions 80-81 — Admin metadata editing, security hardening, tag validation pipeline, compound preservation)
-**Last Updated:** February 12, 2026
+**Version:** 4.10 (Session 82 — Backfill hardening, quality gate, fail-fast download, tasks.py cleanup)
+**Last Updated:** February 13, 2026

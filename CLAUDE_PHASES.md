@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** February 12, 2026
+**Last Updated:** February 13, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -389,6 +389,9 @@ Plus: Admin metadata editing, security hardening, tag validation pipeline, compo
 | S81: GPT Context | ✅ Complete | COMPOUND TAG RULE, WEIGHTING RULES, excerpt in tags-only prompt |
 | S81: Audit | ✅ Complete | `audit_tags` command, root-level audit scripts, `cleanup_old_tags` rewrite |
 | S81: Tests | ✅ Complete | 130 new tests (113 validate + 17 context), all passing |
+| S82: Hardening | ✅ Complete | Fail-fast download, `_is_quality_tag_response()` quality gate, `GENERIC_TAGS`, `_check_image_accessible()` |
+| S82: Cleanup | ✅ Complete | Module-level constants, removed dead code, fixed fallback tags, temperature 0.7→0.5 |
+| S82: Tests | ✅ Complete | 44 new tests (`test_backfill_hardening.py`), 7 existing tests updated, total 472 |
 
 ### Remaining From Original Agenda
 
@@ -396,6 +399,9 @@ Plus: Admin metadata editing, security hardening, tag validation pipeline, compo
 |------|--------|-------|
 | Cloudinary → B2 media migration | 🔲 Not started | Original 2B-6 in agenda, independent of taxonomy |
 | Browse/Filter UI | 🔲 Not started | Original 2B-7 in agenda, needs all data in place |
+| Backfill re-run with hardening | 🔲 Not started | Re-run `backfill_ai_content --tags-only` with quality gate + fail-fast active |
+| Tag audit post-hardening | 🔲 Not started | Run `audit_tags` after backfill re-run to verify improvement |
+| IDF stop-word threshold | 🔲 Not started | Enable at 0.25 threshold when 200+ prompts (currently disabled at 1.0) |
 
 ---
 
@@ -459,5 +465,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.0 (Sessions 80-81 — Admin metadata editing, security hardening, tag validation pipeline, compound preservation)
-**Last Updated:** February 12, 2026
+**Version:** 4.1 (Session 82 — Backfill hardening, quality gate, fail-fast download, tasks.py cleanup)
+**Last Updated:** February 13, 2026

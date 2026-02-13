@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 12, 2026
+**Last Updated:** February 13, 2026
 **Project:** PromptFinder (Django 5.2.9)
 **Current Phase:** Phase 2B (2B-1 through 2B-9 + tag pipeline complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~427 passing (43% coverage, threshold 40%)
+**Total Tests:** ~472 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -17,7 +17,7 @@
 | **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
 | **SVG Icons** | 32 | static/icons/sprite.svg |
 | **Migrations** | 56 | prompts/migrations/ (54), about/migrations/ (2) |
-| **Test Files** | 15 | prompts/tests/ |
+| **Test Files** | 16 | prompts/tests/ |
 | **Management Commands** | 25 | prompts/management/commands/ |
 | **Services** | 11 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
@@ -82,7 +82,7 @@ live-working-project/
 │   │       ├── _prompt_card_list.html   # Related prompts AJAX partial (Session 74)
 │   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
-│   ├── tests/                    # 15 test files
+│   ├── tests/                    # 16 test files
 │   └── views/                    # 11 view modules (refactored)
 │       ├── __init__.py           # Package exports
 │       ├── admin_views.py        # Admin dashboard views
@@ -297,7 +297,7 @@ prompts/views/
 
 ---
 
-## Test Files (15 files, ~427 tests)
+## Test Files (16 files, ~472 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
@@ -316,6 +316,7 @@ prompts/views/
 | `test_video_processor.py` | Multiple | Video processing tests |
 | `test_tags_context.py` | 17 | Tag context enhancement: excerpt in GPT prompt, weighting rules, backfill queryset (Session 81) |
 | `test_validate_tags.py` | 113 | Tag validation pipeline: 7 checks, compound splitting, GPT integration (Session 81) |
+| `test_backfill_hardening.py` | 44 | Backfill hardening: quality gate, fail-fast download, URL pre-check, tag preservation (Session 82) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -989,7 +990,7 @@ python manage.py test -v 2
 
 ### Test Statistics
 
-- **Total Tests:** ~427 passing (12 skipped - Selenium)
+- **Total Tests:** ~472 passing (12 skipped - Selenium)
 - **Pass Rate:** 100% in CI
 - **Coverage:** ~43% (enforced minimum: 40%)
 - **Priority Areas:** CRUD, authentication, rate limiting, URL migration
@@ -1399,11 +1400,18 @@ prompts/management/commands/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.15
-**Audit Date:** February 12, 2026
+**Version:** 3.16
+**Audit Date:** February 13, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.16 (February 13, 2026 - Session 82 End-of-Session Docs Update):**
+- Added `test_backfill_hardening.py` (44 tests) to test files (count 15→16)
+- Updated total test count: ~427→~472
+- Added Session 82 committed block to CLAUDE.md
+- Updated CLAUDE_CHANGELOG.md with Session 82 entry
+- Updated CLAUDE_PHASES.md with Session 82 sub-phase rows
 
 **v3.15 (February 12, 2026 - Sessions 80-81 End-of-Session Docs Update):**
 - Added `audit_tags.py` and `remove_mandatory_tags.py` management commands (count 23→25)

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 12, 2026
+**Last Updated:** February 13, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,44 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Session 82 - February 13, 2026
+
+**Focus:** Backfill Hardening, Quality Gate, Tasks.py Cleanup
+
+**Context:** Session 80's tag audit revealed prompts 231/270 had garbage tags because image download failures fell back to raw URLs — OpenAI returned generic tags — `prompt.tags.set()` replaced good tags with garbage. This session added a 3-layer defense system and cleaned up technical debt in tasks.py.
+
+**Completed:**
+
+| Task | What It Does | Commit |
+|------|--------------|--------|
+| Fail-fast image download | `_download_and_encode_image` returns error dict instead of falling back to raw URL | `d6be34e` |
+| `_is_quality_tag_response()` quality gate | 3 checks: min count >= 3, not all capitalized, generic ratio <= 60% | `d6be34e` |
+| `GENERIC_TAGS` constant | 25 terms with singular/plural forms (portrait/portraits, landscape/landscapes, etc.) | `d6be34e` |
+| `_check_image_accessible()` | HEAD request pre-validation in backfill before sending to OpenAI | `d6be34e` |
+| Tag preservation in backfill | Quality gate prevents `prompt.tags.set()` from replacing good tags with garbage | `d6be34e` |
+| 44 new tests | `test_backfill_hardening.py`: quality gate, fail-fast, URL pre-check, tag preservation | `d6be34e` |
+| 7 existing tests updated | `test_tags_context.py`: mock returns tuple instead of None for fail-fast compatibility | `d6be34e` |
+| Remove wasted AI tag examples | Removed `ai-restoration`/`ai-colorize` from GPT niche term examples | `6ad9c63` |
+| Module-level constants | Moved `SPLIT_THESE_WORDS`, `PRESERVE_DESPITE_STOP_WORDS`, `BANNED_AI_TAGS`, `BANNED_ETHNICITY` from function body to module level; removed dead `LEGACY_APPROVED_COMPOUNDS` | `6ad9c63` |
+| Fix fallback tags | Changed `_handle_ai_failure` from capitalized/banned `"AI Art", "Digital Art", "Artwork"` to lowercase/compliant `"digital-art", "artwork", "creative"` | `6ad9c63` |
+| Lower temperature | `_call_openai_vision` temperature 0.7 to 0.5 for fewer compound tag violations | `6ad9c63` |
+
+**Files Created:**
+- `prompts/tests/test_backfill_hardening.py` - 44 tests for backfill hardening (466 lines)
+
+**Files Modified:**
+- `prompts/tasks.py` - Fail-fast download, `_is_quality_tag_response()`, `GENERIC_TAGS`, module-level constants, fallback tag fix, temperature change
+- `prompts/management/commands/backfill_ai_content.py` - `_check_image_accessible()`, quality gate before `prompt.tags.set()`
+- `prompts/tests/test_tags_context.py` - 7 tests updated for fail-fast compatibility
+
+**Agent Ratings:**
+- Backfill hardening: django-pro 9/10, code-reviewer 8/10, test-automator 7.5/10 (avg 8.2)
+- Tasks cleanup: code-reviewer 9/10, test-automator 7/10 (avg 8.0)
+
+**Test Coverage:** 45 new tests (44 + 1 singular form test), total suite 472 passing.
+
+---
 
 ### Session 81 - February 12, 2026
 
@@ -1276,5 +1314,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.9 (Sessions 80-81 — Admin metadata editing, security hardening, tag validation pipeline, compound preservation)
-**Last Updated:** February 12, 2026
+**Version:** 4.10 (Session 82 — Backfill hardening, quality gate, fail-fast download, tasks.py cleanup)
+**Last Updated:** February 13, 2026

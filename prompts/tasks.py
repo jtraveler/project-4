@@ -424,6 +424,82 @@ GENERIC_TAGS = {
 }
 
 # =============================================================================
+# TAG RULES (GPT PROMPT BLOCK)
+# =============================================================================
+# Canonical tag rules shared by _call_openai_vision_tags_only() and
+# _build_analysis_prompt(). Single source of truth — edit ONLY here to
+# update tag instructions for both GPT prompts.
+
+TAG_RULES_BLOCK = """\
+TAG RULES — FOLLOW EXACTLY:
+
+1. GENDER (mandatory when person visible):
+   Include BOTH forms as SEPARATE, STANDALONE tags: "man" + "male" OR "woman" + "female"
+   NEVER combine gender into compound tags like "middle-aged-male", "young-woman",
+   "working-class-man", "athletic-female", etc. These are WRONG.
+   Age qualifiers go in a SEPARATE tag: "middle-aged", "young", "elderly"
+   For children: "boy" ALWAYS requires "male". "girl" ALWAYS requires "female".
+     WRONG: girl, child → RIGHT: girl, female, child
+     WRONG: teen-boy, sports → RIGHT: teen-boy, male, sports
+   For babies: "baby" + "infant"
+   For couples: include ALL FOUR gender tags: man, male, woman, female
+     WRONG: couple, man, woman → RIGHT: couple, man, male, woman, female
+   If gender is not clearly identifiable (below ~80% visual confidence),
+   use age-appropriate neutral terms instead: "person", "teenager", "child",
+   or "baby". Do NOT guess.
+
+2. ETHNICITY — BANNED from tags:
+   NEVER include any of these words in tags, standalone or in compounds:
+   african-american, african, asian, black, caucasian, chinese, east-asian,
+   european, hispanic, indian, japanese, korean, latino, latina,
+   middle-eastern, south-asian, white, arab, desi, pacific-islander,
+   indigenous, native.
+   Banned compounds: "black-woman", "white-man", "asian-girl", etc.
+   Ethnicity belongs ONLY in title, description, and descriptors — NEVER in tags.
+
+3. COMPOUND TAG RULE:
+   Keep established multi-word terms as single hyphenated tags.
+   Examples of CORRECT compound tags (DO NOT split these):
+     double-exposure, long-exposure, high-contrast, low-key, high-key,
+     mixed-media, time-lapse, slow-motion, stop-motion, tilt-shift,
+     cross-processing, warm-tones, cool-tones, split-toning,
+     hard-light, soft-light, back-lit, rim-light, lens-flare,
+     depth-of-field, shallow-focus, motion-blur, light-painting,
+     film-noir, pop-art, art-deco, art-nouveau, neo-noir,
+     full-body, close-up, wide-angle, bird-eye, worm-eye,
+     street-style, old-school, hand-drawn, line-art, pixel-art,
+     hyper-realistic, photo-realistic, ultra-detailed, semi-realistic
+
+   Only use hyphens for terms that are commonly searched as a SINGLE concept.
+   Do NOT hyphenate random word pairs — "beautiful-sunset" should be two
+   separate tags: "beautiful" and "sunset".
+
+4. NO AI TAGS: Never include "ai-art", "ai-generated", "ai-prompt",
+   "ai-influencer", or any generic AI tags. Every prompt on this site is
+   AI-generated — these waste tag slots.
+
+5. NICHE TERMS — include when applicable:
+   - LinkedIn photos: "linkedin-headshot", "linkedin-profile-photo",
+     "professional-headshot", "corporate-portrait", "business-portrait"
+   - Boudoir: "boudoir", "burlesque", "pin-up", "glamour"
+   - YouTube: "youtube-thumbnail", "thumbnail-design", "cover-art",
+     "video-thumbnail", "podcast-cover"
+   - Maternity: "maternity-shoot", "maternity-photography",
+     "pregnancy-photoshoot", "baby-bump", "expecting-mother", "maternity-portrait"
+   - 3D/Perspective: "3d-photo", "forced-perspective", "facebook-3d",
+     "3d-effect", "fisheye-portrait", "pop-out-effect", "parallax-photo"
+   - Photo restoration: "photo-restoration", "restore-old-photo",
+     "colorized-photo", "vintage-restoration"
+   - Character/person design: "character-design", "fantasy-character"
+   - Commercial/stock: "product-photography", "stock-photo"
+   - Social media: "tiktok-aesthetic", "instagram-aesthetic"
+   - US/UK variants: include BOTH when applicable ("coloring-book" AND
+     "colouring-book", "watercolor" AND "watercolour")
+
+6. INCLUDE a mix of: primary subject, mood/atmosphere, art style, and
+   specific visual elements."""
+
+# =============================================================================
 # TAG VALIDATION CONSTANTS
 # =============================================================================
 # Used by _validate_and_fix_tags() to enforce tag quality rules.
@@ -550,73 +626,7 @@ WEIGHTING RULES:
 - User prompt is TERTIARY and UNRELIABLE — it may be gibberish or unrelated. Only use it if it provides clear, specific terms that clearly match what you see in the image
 - NEVER generate tags based solely on text that contradicts what the image shows
 
-TAG RULES — FOLLOW EXACTLY:
-
-1. GENDER (mandatory when person visible):
-   Include BOTH forms as SEPARATE, STANDALONE tags: "man" + "male" OR "woman" + "female"
-   NEVER combine gender into compound tags like "middle-aged-male", "young-woman",
-   "working-class-man", "athletic-female", etc. These are WRONG.
-   Age qualifiers go in a SEPARATE tag: "middle-aged", "young", "elderly"
-   For children: "boy" ALWAYS requires "male". "girl" ALWAYS requires "female".
-     WRONG: girl, child → RIGHT: girl, female, child
-     WRONG: teen-boy, sports → RIGHT: teen-boy, male, sports
-   For babies: "baby" + "infant"
-   For couples: include ALL FOUR gender tags: man, male, woman, female
-     WRONG: couple, man, woman → RIGHT: couple, man, male, woman, female
-   If gender is not clearly identifiable (below ~80% visual confidence),
-   use age-appropriate neutral terms instead: "person", "teenager", "child",
-   or "baby". Do NOT guess.
-
-2. ETHNICITY — BANNED from tags:
-   NEVER include any of these words in tags, standalone or in compounds:
-   african-american, african, asian, black, caucasian, chinese, east-asian,
-   european, hispanic, indian, japanese, korean, latino, latina,
-   middle-eastern, south-asian, white, arab, desi, pacific-islander,
-   indigenous, native.
-   Banned compounds: "black-woman", "white-man", "asian-girl", etc.
-   Ethnicity belongs ONLY in title, description, and descriptors — NEVER in tags.
-
-3. COMPOUND TAG RULE:
-   Keep established multi-word terms as single hyphenated tags.
-   Examples of CORRECT compound tags (DO NOT split these):
-     double-exposure, long-exposure, high-contrast, low-key, high-key,
-     mixed-media, time-lapse, slow-motion, stop-motion, tilt-shift,
-     cross-processing, warm-tones, cool-tones, split-toning,
-     hard-light, soft-light, back-lit, rim-light, lens-flare,
-     depth-of-field, shallow-focus, motion-blur, light-painting,
-     film-noir, pop-art, art-deco, art-nouveau, neo-noir,
-     full-body, close-up, wide-angle, bird-eye, worm-eye,
-     street-style, old-school, hand-drawn, line-art, pixel-art,
-     hyper-realistic, photo-realistic, ultra-detailed, semi-realistic
-
-   Only use hyphens for terms that are commonly searched as a SINGLE concept.
-   Do NOT hyphenate random word pairs — "beautiful-sunset" should be two
-   separate tags: "beautiful" and "sunset".
-
-4. NO AI TAGS: Never include "ai-art", "ai-generated", "ai-prompt",
-   "ai-influencer", or any generic AI tags. Every prompt on this site is
-   AI-generated — these waste tag slots.
-
-5. NICHE TERMS — include when applicable:
-   - LinkedIn photos: "linkedin-headshot", "linkedin-profile-photo",
-     "professional-headshot", "corporate-portrait", "business-portrait"
-   - Boudoir: "boudoir", "burlesque", "pin-up", "glamour"
-   - YouTube: "youtube-thumbnail", "thumbnail-design", "cover-art",
-     "video-thumbnail", "podcast-cover", "social-media-graphic"
-   - Maternity: "maternity-shoot", "maternity-photography",
-     "pregnancy-photoshoot", "baby-bump", "expecting-mother", "maternity-portrait"
-   - 3D/Perspective: "3d-photo", "forced-perspective", "facebook-3d",
-     "3d-effect", "fisheye-portrait", "pop-out-effect", "parallax-photo"
-   - Photo restoration: "photo-restoration", "restore-old-photo",
-     "colorized-photo", "vintage-restoration"
-   - Character/person design: "character-design", "fantasy-character"
-   - Commercial/stock: "product-photography", "stock-photo"
-   - Social media: "tiktok-aesthetic", "instagram-aesthetic"
-   - US/UK variants: include BOTH when applicable ("coloring-book" AND
-     "colouring-book", "watercolor" AND "watercolour")
-
-6. INCLUDE a mix of: primary subject, mood/atmosphere, art style, and
-   specific visual elements.
+{TAG_RULES_BLOCK}
 
 Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
 
@@ -872,69 +882,7 @@ FIELD 3: "tags" (array of strings, up to 10)
 ═══════════════════════════════════════════════════
 SEO-optimized keyword tags. Use hyphens for multi-word tags (e.g., "african-american").
 
-Include:
-- Primary subject (e.g., "portrait", "landscape")
-- MANDATORY when people are visible:
-  * Gender tags using age-appropriate terms:
-    - Adults: "man" AND "male", or "woman" AND "female"
-    - Teens: "teen-boy" or "teen-girl", plus "teenager" AND "teen"
-    - Children: "boy" or "girl", plus "child" AND "kid"
-    - Babies: "baby" AND "infant"
-    - If gender is not clearly identifiable (~80%+ confidence), use neutral terms
-      instead: "person", "teenager", "child", or "baby"
-    - ALWAYS include both the specific term AND the general term
-      (e.g., "woman" AND "female", or "boy" AND "child")
-    - NEVER combine gender, age, or descriptors into compound tags.
-      These are WRONG: "middle-aged-male", "young-woman",
-      "working-class-man", "athletic-female", "elderly-woman",
-      "curvy-woman", "muscular-man", "businesswoman-portrait",
-      "confident-woman", "oil-painting-man".
-      Instead use SEPARATE tags: "man", "male", "middle-aged" as
-      three individual tags.
-  * Do NOT include generic tags like "ai-art", "ai-generated", or "ai-prompt" —
-    these appear on every prompt and waste tag slots. Use all 10 slots for
-    descriptive, content-specific keywords that differentiate this prompt.
-  * Do NOT include ANY ethnicity or race terms as tags — not standalone and not
-    as part of compound tags. Banned tag words include: "african-american", "african",
-    "black", "caucasian", "white", "asian", "hispanic", "latino", "latina", "arab",
-    "middle-eastern", "indian", "desi", "european", "pacific-islander", "indigenous",
-    "native", and any compounds like "black-woman",
-    "white-man", "asian-girl", etc. Ethnicity belongs ONLY in the title,
-    description, and descriptors — NEVER in tags.
-- Mood/atmosphere keywords
-- Art style (e.g., "photorealistic", "oil-painting")
-- Specific elements (e.g., "coffee", "red-car", "neon-lights")
-- LinkedIn photos: include "linkedin-headshot", "linkedin-profile-photo", "professional-headshot",
-  "corporate-portrait", "business-portrait" (triggered by professional attire + corporate mood,
-  ANY framing — not limited to shoulders-up headshots)
-- Other niche terms when applicable: "ai-influencer", "ai-avatar", "virtual-photoshoot",
-  "boudoir", "burlesque", "pin-up", "glamour-photography"
-- YouTube thumbnails: include "youtube-thumbnail", "thumbnail-design", "cover-art",
-  "video-thumbnail", "podcast-cover", "social-media-graphic"
-- Maternity shoots: include "maternity-shoot", "maternity-photography", "pregnancy-photoshoot",
-  "baby-bump", "expecting-mother", "maternity-portrait"
-- 3D/forced perspective: include "3d-photo", "forced-perspective", "facebook-3d", "3d-effect",
-  "fisheye-portrait", "pop-out-effect", "parallax-photo"
-- Photo restoration: include "photo-restoration", "restore-old-photo",
-  "colorized-photo", "vintage-restoration"
-- US/UK spelling variants: include BOTH spellings when applicable, e.g. "coloring-book" AND
-  "colouring-book", "watercolor" AND "watercolour"
-
-COMPOUND TAG RULE: Keep established multi-word terms as single hyphenated tags.
-Examples of CORRECT compound tags (DO NOT split these):
-  double-exposure, long-exposure, high-contrast, low-key, high-key,
-  mixed-media, time-lapse, slow-motion, stop-motion, tilt-shift,
-  cross-processing, warm-tones, cool-tones, split-toning,
-  hard-light, soft-light, back-lit, rim-light, lens-flare,
-  depth-of-field, shallow-focus, motion-blur, light-painting,
-  film-noir, pop-art, art-deco, art-nouveau, neo-noir,
-  full-body, close-up, wide-angle, bird-eye, worm-eye,
-  street-style, old-school, hand-drawn, line-art, pixel-art,
-  hyper-realistic, photo-realistic, ultra-detailed, semi-realistic
-
-Only use hyphens for terms that are commonly searched as a SINGLE concept.
-Do NOT hyphenate random word pairs — "beautiful-sunset" should be two separate tags:
-"beautiful" and "sunset".
+''' + TAG_RULES_BLOCK + '''
 
 ═══════════════════════════════════════════════════
 FIELD 4: "categories" (array of strings, up to 5)
@@ -1057,7 +1005,7 @@ EXAMPLE RESPONSE
 {
   "title": "Cinematic African-American Woman Golden Hour Portrait",
   "description": "A stunning cinematic portrait of a young African-American woman bathed in golden hour light. This photorealistic image captures the Black female subject with natural afro hair, wearing elegant gold jewelry against a warm urban backdrop. The dramatic lighting and rich warm tones create a powerful, aspirational mood perfect for AI avatar and virtual photoshoot inspiration. Ideal for creators seeking diverse, high-quality portrait prompts featuring African-American beauty and cinematic photography techniques.",
-  "tags": ["portrait", "woman", "female", "cinematic", "golden-hour", "photorealistic", "natural-hair", "afro", "urban-portrait", "ai-avatar"],
+  "tags": ["portrait", "woman", "female", "cinematic", "golden-hour", "photorealistic", "natural-hair", "afro", "urban-portrait", "warm-tones"],
   "categories": ["Portrait", "AI Influencer / AI Avatar", "Photorealistic", "Fashion & Style"],
   "descriptors": {
     "gender": ["Female"],

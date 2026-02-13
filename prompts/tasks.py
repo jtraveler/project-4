@@ -290,12 +290,14 @@ def _validate_and_fix_tags(tags, prompt_id=None):
         List of validated, cleaned tag strings.
     """
     def _should_split_compound(compound_tag):
-        """Only split if the compound contains filler/stop words or single-char parts."""
+        """Only split if the compound contains filler/stop words, single-char parts, or 3+ parts."""
         if compound_tag in PRESERVE_DESPITE_STOP_WORDS:
             return False
         parts = compound_tag.split('-')
         if len(parts) < 2:
             return False
+        if len(parts) >= 3:
+            return True
         for part in parts:
             if part in SPLIT_THESE_WORDS:
                 return True
@@ -519,6 +521,9 @@ SPLIT_THESE_WORDS = {
 # Compounds containing stop words that are still legitimate terms.
 PRESERVE_DESPITE_STOP_WORDS = {
     'depth-of-field',
+    'linkedin-profile-photo',
+    'restore-old-photo',
+    'pop-out-effect',
 }
 
 # Tags that should never appear (AI-related tags waste slots)

@@ -271,6 +271,30 @@ class TestLegacyWhitelistPreserved(TestCase):
         result = _validate_and_fix_tags(['avant-garde'])
         self.assertIn('avant-garde', result)
 
+    def test_linkedin_profile_photo_preserved(self):
+        """3-part compound in PRESERVE_DESPITE_STOP_WORDS is kept intact."""
+        result = _validate_and_fix_tags(['linkedin-profile-photo'])
+        self.assertIn('linkedin-profile-photo', result)
+        self.assertNotIn('linkedin', result)
+        self.assertNotIn('profile', result)
+        self.assertNotIn('photo', result)
+
+    def test_restore_old_photo_preserved(self):
+        """3-part compound in PRESERVE_DESPITE_STOP_WORDS is kept intact."""
+        result = _validate_and_fix_tags(['restore-old-photo'])
+        self.assertIn('restore-old-photo', result)
+        self.assertNotIn('restore', result)
+        self.assertNotIn('old', result)
+        self.assertNotIn('photo', result)
+
+    def test_pop_out_effect_preserved(self):
+        """3-part compound in PRESERVE_DESPITE_STOP_WORDS is kept intact."""
+        result = _validate_and_fix_tags(['pop-out-effect'])
+        self.assertIn('pop-out-effect', result)
+        self.assertNotIn('pop', result)
+        self.assertNotIn('out', result)
+        self.assertNotIn('effect', result)
+
 
 # ---------------------------------------------------------------------------
 # 3. Stop-word compounds are SPLIT
@@ -322,6 +346,30 @@ class TestStopWordSplitting(TestCase):
         # 'z' is single char, so it splits
         self.assertIn('z', result)
         self.assertIn('test', result)
+
+    def test_three_part_cinematic_urban_portrait_splits(self):
+        """3-part compounds without preserve exemption are split."""
+        result = _validate_and_fix_tags(['cinematic-urban-portrait'])
+        self.assertIn('cinematic', result)
+        self.assertIn('urban', result)
+        self.assertIn('portrait', result)
+        self.assertNotIn('cinematic-urban-portrait', result)
+
+    def test_three_part_moody_dark_fantasy_splits(self):
+        """3-part compounds without preserve exemption are split."""
+        result = _validate_and_fix_tags(['moody-dark-fantasy'])
+        self.assertIn('moody', result)
+        self.assertIn('dark', result)
+        self.assertIn('fantasy', result)
+        self.assertNotIn('moody-dark-fantasy', result)
+
+    def test_three_part_elegant_evening_gown_splits(self):
+        """3-part compounds without preserve exemption are split."""
+        result = _validate_and_fix_tags(['elegant-evening-gown'])
+        self.assertIn('elegant', result)
+        self.assertIn('evening', result)
+        self.assertIn('gown', result)
+        self.assertNotIn('elegant-evening-gown', result)
 
 
 # ---------------------------------------------------------------------------

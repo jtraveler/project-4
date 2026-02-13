@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 10, 2026
+**Last Updated:** February 12, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,128 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Session 81 - February 12, 2026
+
+**Focus:** Tag Validation Pipeline, Compound Preservation, GPT Context Enhancement
+
+**Context:** Following Session 80's admin metadata editing, this session built a comprehensive tag quality system: 7-check validation pipeline, compound tag preservation (replacing the old split-all approach), GPT prompt enhancements with WEIGHTING RULES and COMPOUND TAG RULE, backfill command improvements, tag audit tooling, and 130 new tests.
+
+**Completed:**
+
+| Task | What It Does | Commit |
+|------|--------------|--------|
+| `--tags-only` backfill flag | Regenerate only tags via `_call_openai_vision_tags_only()` without touching title/description/categories | `31517b3` |
+| `--under-tag-limit` flag | Only process prompts with fewer than N tags | `31517b3` |
+| `--published-only` flag | Filter backfill to published prompts only (default: all including drafts) | `31517b3` |
+| Category rename | Renamed "3D Photo / Forced Perspective" to include "Facebook 3D" | `7bc6636` |
+| `_validate_and_fix_tags()` | 7-check post-processing pipeline: strip, lowercase, length, numeric, special chars, max count, compound splitting | `b4235ec` |
+| `_should_split_compound()` | Compound splitting helper: only splits when both halves are stop words from `SPLIT_THESE_WORDS` set | `b4235ec` |
+| COMPOUND TAG RULE | GPT prompt instruction: "Use hyphens for multi-word concepts (double-exposure, not double + exposure)" | `b4235ec` |
+| WEIGHTING RULES | GPT prompt: image PRIMARY > title+desc SECONDARY > prompt TERTIARY > prompt style UNRELIABLE | `b4235ec` |
+| Excerpt in tags-only | `_call_openai_vision_tags_only()` receives excerpt for richer context | `b4235ec` |
+| `test_validate_tags.py` | 113 tests covering all 7 validation checks + compound splitting + GPT integration | `b4235ec` |
+| `test_tags_context.py` | 17 tests for excerpt context, weighting rules, backfill queryset, backwards compatibility | `b4235ec` |
+| `cleanup_old_tags` rewrite | Rewritten to use orphan detection + capitalized duplicate merge (was just delete-all) | `cde1fd9` |
+| `audit_tags` command | Management command: fragment pairs, orphan fragments, missing compounds, CSV export | `3eb0193` |
+| Root-level audit scripts | `audit_nsfw_tags.py`, `audit_tags_vs_descriptions.py` for one-off quality checks | `3eb0193` |
+| Session report | `docs/SESSION_REPORT_TAGS_AND_SEO_PROMPT_FIXES.md` (863 lines) | `043c631` |
+
+**Files Created:**
+- `prompts/tests/test_validate_tags.py` - 113 tests for tag validation pipeline (630 lines)
+- `prompts/tests/test_tags_context.py` - 17 tests for tag context enhancement (347 lines)
+- `prompts/management/commands/audit_tags.py` - Tag audit with 3 check types, CSV export (314 lines)
+- `prompts/migrations/0054_rename_3d_photo_category.py` - Category rename migration
+- `audit_nsfw_tags.py` - Root-level NSFW tag audit script
+- `audit_tags_vs_descriptions.py` - Root-level tag vs description audit script
+- `docs/SESSION_REPORT_TAGS_AND_SEO_PROMPT_FIXES.md` - Completion report
+
+**Files Modified:**
+- `prompts/tasks.py` - `_validate_and_fix_tags()`, `_should_split_compound()`, SPLIT_THESE_WORDS (30 words), PRESERVE_DESPITE_STOP_WORDS exemptions, COMPOUND TAG RULE, WEIGHTING RULES, excerpt parameter (~350 lines added)
+- `prompts/management/commands/backfill_ai_content.py` - `--tags-only`, `--under-tag-limit`, `--published-only` flags, `_handle_tags_only()` method (~214 lines added)
+- `prompts/management/commands/cleanup_old_tags.py` - Complete rewrite with orphan detection + capitalized merge (~157 lines rewritten)
+- `prompts/views/upload_views.py` - Tag validation on upload submit
+- `prompts/admin.py` - Minor tag-related fixes
+
+**Key Technical Changes:**
+- Tag validation pipeline: 7 sequential checks run on every GPT response before saving to database
+- Compound preservation: "preserve by default, split only if both halves are stop words" replaces old "split all except whitelist" approach
+- `SPLIT_THESE_WORDS`: 30 stop/filler words (a, the, in, at, with, for, etc.)
+- `PRESERVE_DESPITE_STOP_WORDS`: exemptions for known terms like "pin-up"
+- `_should_split_compound(tag)`: splits "in-the" but preserves "double-exposure"
+- WEIGHTING RULES: image (PRIMARY) > title+description (SECONDARY) > prompt text (TERTIARY) > style inference (UNRELIABLE)
+- Excerpt truncated at 500 chars when passed to GPT tags-only prompt
+- `--tags-only` mode calls `_call_openai_vision_tags_only()` directly, skipping full AI generation
+
+**Test Coverage:** 130 new tests (113 + 17), all passing. Total test suite ~427.
+
+**Phase Status:** Tag pipeline complete. All tests passing.
+
+---
+
+### Session 80 - February 11, 2026
+
+**Focus:** Admin Metadata Editing, Security Hardening, SlugRedirect Model
+
+**Context:** Building admin-side editing capabilities for prompt metadata (title, slug, excerpt, tags) with security safeguards. Previously, admins couldn't edit SEO-critical fields without direct database access. This session added full metadata editing with XSS protection, slug redirect preservation, and auth decorator hardening.
+
+**Completed:**
+
+| Task | What It Does | Commit |
+|------|--------------|--------|
+| SlugRedirect model | Auto-creates 301 redirect when admin changes slug (migration 0053) | `b1941c7` |
+| Enhanced PromptAdmin | Full metadata editing: title, slug, excerpt, tags with safeguards | `681ceee` |
+| B2 preview in admin | Thumbnail image previews via `_b2_preview()` method | `d5ea64b` |
+| XSS protection | `format_html()` for all admin HTML output, form validation | `d5ea64b` |
+| Security review fixes | Admin save_model hardened, ownership validation | `375e011` |
+| Auth decorators | `@login_required` + `@require_POST` on `prompt_delete`, `prompt_toggle_visibility` | `3d89f3f` |
+| CSRF on delete | Prompt detail delete button uses POST form with CSRF token (was GET link) | `3d89f3f` |
+| Tag autocomplete restore | Restored django-taggit autocomplete after initial removal | `85aa3e5` |
+| Character limits | Title 200 chars, excerpt 500 chars enforced server-side | `85aa3e5` |
+| Mandatory tags removal | `remove_mandatory_tags` command, AI-related tags no longer forced | `85aa3e5` |
+| Dynamic weights | Related prompts weights editable via admin, reads from `related.py` | `dae21ce` |
+| Regenerate button | "Regenerate AI Content" object tool in admin change form | `dae21ce` |
+| Slug protection | Admin change auto-creates SlugRedirect for SEO preservation | `dae21ce` |
+| Slug autocomplete disable | Prevented browser autocomplete from overwriting slugs | `0edb82a` |
+| Weight audit | Audited/fixed hardcoded weight percentages in admin display | `0edb82a` |
+| Field widening | Title/slug/excerpt fields widened in admin form | `33a53ce` |
+| Slug help text | Improved slug field help text for admin users | `33a53ce` |
+
+**Files Created:**
+- `prompts/migrations/0053_add_slug_redirect.py` - SlugRedirect model (old_slug, prompt, created_at)
+- `prompts/management/commands/remove_mandatory_tags.py` - Remove mandatory AI-related tags
+- `templates/admin/prompts/prompt/change_form_object_tools.html` - Regenerate button in admin
+- `templates/admin/prompts/prompt/regenerate_confirm.html` - Regenerate confirmation page
+
+**Files Modified:**
+- `prompts/models.py` - SlugRedirect model (23 lines added)
+- `prompts/admin.py` - Complete PromptAdmin rewrite (~500+ lines): metadata editing, B2 preview, XSS safeguards, form validation, dynamic weights, regenerate button, tag autocomplete, slug protection
+- `prompts/views/prompt_views.py` - SlugRedirect lookup (301 redirect), auth decorators on delete/toggle
+- `prompts/views/admin_views.py` - `regenerate_ai_content` view (19 lines)
+- `prompts/utils/related.py` - Dynamic weight reading, hardcoded percentage audit
+- `prompts/tasks.py` - Minor: removed mandatory tag enforcement
+- `prompts/templates/prompts/prompt_detail.html` - CSRF POST form for delete button
+- `prompts_manager/settings.py` - INSTALLED_APPS additions
+- `prompts_manager/urls.py` - Admin regenerate URL
+- `static/js/prompt-detail.js` - Delete uses POST form
+
+**Key Technical Changes:**
+- SlugRedirect model: `old_slug` → `prompt` FK, `prompt_views.py` checks SlugRedirect before 404
+- Admin `save_model()`: uses `format_html()` for all output, validates ownership, auto-creates SlugRedirect on slug change
+- `clean_title()` / `clean_excerpt()` enforce character limits server-side
+- CSRF protection: prompt delete changed from GET `<a>` link to POST `<form>` with `{% csrf_token %}`
+- Dynamic weights in admin read from `related.py` module-level variables
+- Regenerate button: admin object tool calls `backfill_ai_content --prompt-id`
+
+**Security Fixes:**
+- `prompt_delete`: added `@login_required` + `@require_POST` (was unprotected GET)
+- `prompt_toggle_visibility`: added `@login_required` + `@require_POST`
+- Admin HTML output: all `mark_safe()` replaced with `format_html()`
+- Form validation: server-side char limits prevent oversized input
+
+**Phase Status:** Admin metadata editing complete. Security hardening complete.
+
+---
 
 ### Phase 2B-9 Session - February 10, 2026
 
@@ -1125,6 +1247,8 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 12, 2026 | 81 | Tag validation pipeline (7 checks), compound preservation, GPT context enhancement, 130 new tests, audit tooling |
+| Feb 11, 2026 | 80 | Admin metadata editing, SlugRedirect model, security hardening (auth decorators, CSRF, XSS), regenerate button |
 | Feb 10, 2026 | 2B-9 | Related Prompts scoring refinement: IDF weighting, published-only counting, stop-word infrastructure |
 | Feb 9-10, 2026 | 2B | Phase 2B Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill (51 prompts), demographic SEO, tag filter fix |
 | Feb 7-9, 2026 | 74 | Related Prompts P1, Subject Categories P2, collection fixes, video autoplay, B2 thumbnails, Phase 2B design |
@@ -1152,5 +1276,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.8 (Phase 2B-9 — IDF-weighted scoring, stop-word infrastructure, published-only counting)
-**Last Updated:** February 10, 2026
+**Version:** 4.9 (Sessions 80-81 — Admin metadata editing, security hardening, tag validation pipeline, compound preservation)
+**Last Updated:** February 12, 2026

@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 10, 2026
+**Last Updated:** February 12, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase 2B Category Taxonomy Revamp (2B-1 through 2B-9 complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** 298 passing (43% coverage, threshold 40%)
+**Current Phase:** Phase 2B (2B-1 through 2B-9 + tag pipeline complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~427 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -16,9 +16,9 @@
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
 | **SVG Icons** | 32 | static/icons/sprite.svg |
-| **Migrations** | 53 | prompts/migrations/ (52), about/migrations/ (1) |
-| **Test Files** | 13 | prompts/tests/ |
-| **Management Commands** | 23 | prompts/management/commands/ |
+| **Migrations** | 56 | prompts/migrations/ (54), about/migrations/ (2) |
+| **Test Files** | 15 | prompts/tests/ |
+| **Management Commands** | 25 | prompts/management/commands/ |
 | **Services** | 11 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
@@ -38,7 +38,7 @@ live-working-project/
 ├── .flake8                       # Flake8 linting configuration
 ├── .bandit                       # Bandit security scan configuration
 ├── about/                        # Secondary Django app (7 files)
-│   ├── migrations/               # 1 migration
+│   ├── migrations/               # 2 migrations
 │   ├── templates/about/          # 1 template
 │   │   └── about.html
 │   ├── __init__.py
@@ -70,8 +70,8 @@ live-working-project/
 │   └── PHASE_2B1-6_COMPLETION_REPORT.md    # 6 Phase 2B sub-phase completion reports (Phase 2B Session)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
-│   │   └── commands/             # 23 management commands + __init__.py
-│   ├── migrations/               # 52 migrations + __init__.py
+│   │   └── commands/             # 25 management commands + __init__.py
+│   ├── migrations/               # 54 migrations + __init__.py
 │   ├── services/                 # 11 service modules
 │   ├── utils/                    # Utility modules (SEO filenames, related prompts scoring)
 │   ├── storage_backends.py       # B2 storage backend + CDN (Phase L)
@@ -82,7 +82,7 @@ live-working-project/
 │   │       ├── _prompt_card_list.html   # Related prompts AJAX partial (Session 74)
 │   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
-│   ├── tests/                    # 13 test files
+│   ├── tests/                    # 15 test files
 │   └── views/                    # 11 view modules (refactored)
 │       ├── __init__.py           # Package exports
 │       ├── admin_views.py        # Admin dashboard views
@@ -126,7 +126,7 @@ live-working-project/
 ├── staticfiles/                  # Collected static (production)
 └── templates/                    # Global Django templates (18 files)
     ├── account/                  # 6 authentication templates
-    ├── admin/                    # 8 admin customization templates
+    ├── admin/                    # 11 admin customization templates (incl. prompts/prompt/ sub-dir)
     ├── registration/             # 1 template
     ├── base.html                 # Main template (~1400 lines after JS extraction)
     ├── 404.html
@@ -135,7 +135,7 @@ live-working-project/
 
 ---
 
-## Management Commands (23 total)
+## Management Commands (25 total)
 
 | Command | Purpose | Schedule |
 |---------|---------|----------|
@@ -161,7 +161,9 @@ live-working-project/
 | `regenerate_video_thumbnails` | Regenerate Cloudinary video thumbnails with correct aspect ratio | Manual |
 | `minify_assets` | Minify CSS/JS files in STATIC_ROOT (run after collectstatic) | Manual / CI |
 | `backfill_categories` | Backfill subject categories for existing prompts (superseded by backfill_ai_content) | Manual |
-| `backfill_ai_content` | Regenerate ALL AI content (title, description, tags, categories, descriptors, slug) for existing prompts | Manual |
+| `backfill_ai_content` | Regenerate ALL AI content (title, description, tags, categories, descriptors, slug) for existing prompts. Supports `--tags-only`, `--under-tag-limit`, `--published-only` | Manual |
+| `audit_tags` | Audit existing prompt tags for compound fragments, orphan fragments, and quality issues. Supports `--fix`, `--export`, `--prompt-id` | Manual |
+| `remove_mandatory_tags` | Remove mandatory AI-related tags (ai-prompt, ai-art, ai-generated) from all prompts | Manual |
 
 ---
 
@@ -257,7 +259,8 @@ prompts/views/
 | `404.html` | Not found error page |
 | `429.html` | Rate limit error page (WCAG AA) |
 | `account/*.html` | 6 authentication templates (login, signup, logout, password reset) |
-| `admin/*.html` | 9 admin customization templates (incl. `seo_review_queue.html`) |
+| `admin/*.html` | 11 admin customization templates (incl. `seo_review_queue.html`, `trash_dashboard.html`) |
+| `admin/prompts/prompt/*.html` | 2 prompt-specific admin templates (`change_form_object_tools.html`, `regenerate_confirm.html`) (Session 80) |
 | `registration/login.html` | Login page override |
 
 ### Prompts App Templates (prompts/templates/prompts/) - 23 files
@@ -294,12 +297,13 @@ prompts/views/
 
 ---
 
-## Test Files (13 files, 298 tests)
+## Test Files (15 files, ~427 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
-| `test_b2_presign.py` | 22 | B2 presigned URL generation (Phase L8-DIRECT) ← NEW |
+| `test_b2_presign.py` | 22 | B2 presigned URL generation (Phase L8-DIRECT) |
 | `test_user_profiles.py` | Multiple | User profile CRUD operations |
+| `test_user_profile_auth.py` | Multiple | User profile authentication |
 | `test_rate_limiting.py` | 23 | Rate limiting enforcement |
 | `test_generator_page.py` | 24 | AI generator category pages |
 | `test_url_migration.py` | 12 | Phase I URL redirects |
@@ -309,8 +313,9 @@ prompts/views/
 | `test_email_preferences_safety.py` | Multiple | Email preference safety |
 | `test_user_profile_header.py` | Multiple | Profile header UI |
 | `test_user_profile_javascript.py` | Multiple | Profile JavaScript |
-| `test_models.py` | Multiple | Model tests |
-| `test_views.py` | Multiple | View tests |
+| `test_video_processor.py` | Multiple | Video processing tests |
+| `test_tags_context.py` | 17 | Tag context enhancement: excerpt in GPT prompt, weighting rules, backfill queryset (Session 81) |
+| `test_validate_tags.py` | 113 | Tag validation pipeline: 7 checks, compound splitting, GPT integration (Session 81) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -332,7 +337,7 @@ prompts/views/
 | File | Lines | Purpose |
 |------|-------|---------|
 | `views/` | ~3,929 | View package (11 modules) ✅ REFACTORED |
-| `models.py` | ~2,076 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, etc.) |
+| `models.py` | ~2,100 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, etc.) |
 | `admin.py` | ~500 | Django admin configuration |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
@@ -984,9 +989,9 @@ python manage.py test -v 2
 
 ### Test Statistics
 
-- **Total Tests:** 298 passing (12 skipped - Selenium)
+- **Total Tests:** ~427 passing (12 skipped - Selenium)
 - **Pass Rate:** 100% in CI
-- **Coverage:** 43% (enforced minimum: 40%)
+- **Coverage:** ~43% (enforced minimum: 40%)
 - **Priority Areas:** CRUD, authentication, rate limiting, URL migration
 - **CI Integration:** Tests run on every push/PR via GitHub Actions
 
@@ -1280,6 +1285,98 @@ docs/
 
 ---
 
+## Sessions 80-81 Files (Admin Metadata + Security + Tag Pipeline)
+
+### Files Created (Session 80 — Admin Metadata & Security)
+
+```
+prompts/migrations/
+└── 0053_add_slug_redirect.py             # NEW - SlugRedirect model for SEO-safe slug editing
+
+templates/admin/prompts/prompt/
+├── change_form_object_tools.html         # NEW - "Regenerate AI Content" button in admin
+└── regenerate_confirm.html               # NEW - Confirmation page for AI regeneration
+
+prompts/management/commands/
+└── remove_mandatory_tags.py              # NEW - Remove mandatory AI-related tags from all prompts
+```
+
+### Files Created (Session 81 — Tag Pipeline)
+
+```
+prompts/migrations/
+└── 0054_rename_3d_photo_category.py      # NEW - Rename "3D Photo / Forced Perspective" to include Facebook 3D
+
+prompts/management/commands/
+└── audit_tags.py                         # NEW - Audit tags for compound fragments, orphans, quality issues (315 lines)
+
+prompts/tests/
+├── test_tags_context.py                  # NEW - 17 tests for tag context (excerpt in GPT, weighting rules, backfill queryset)
+└── test_validate_tags.py                 # NEW - 113 tests for tag validation pipeline (7 checks, compound splitting)
+
+# Root-level audit scripts
+audit_nsfw_tags.py                        # NEW - NSFW tag audit script
+audit_tags_vs_descriptions.py             # NEW - Tag vs description mismatch audit script
+
+docs/
+└── SESSION_REPORT_TAGS_AND_SEO_PROMPT_FIXES.md  # NEW - Session 81 completion report (863 lines)
+```
+
+### Files Modified (Session 80 — Admin Metadata & Security)
+
+```
+prompts/
+├── models.py                             # SlugRedirect model (old_slug, prompt, created_at)
+├── admin.py                              # Enhanced PromptAdmin: full metadata editing, B2 preview,
+│                                         # XSS safeguards, char limits, dynamic weights, regenerate button,
+│                                         # tag autocomplete, slug protection (~500+ lines rewritten)
+└── views/
+    ├── prompt_views.py                   # SlugRedirect lookup, @login_required + @require_POST on delete/toggle
+    └── admin_views.py                    # regenerate_ai_content view
+
+prompts/utils/
+└── related.py                            # Dynamic weight reading for admin, hardcoded percentages audited
+
+prompts/templates/prompts/
+└── prompt_detail.html                    # CSRF POST form for delete button (was GET link)
+
+prompts_manager/
+├── settings.py                           # INSTALLED_APPS additions for admin
+└── urls.py                               # Admin regenerate URL
+
+static/js/
+└── prompt-detail.js                      # Delete uses POST form
+```
+
+### Files Modified (Session 81 — Tag Pipeline)
+
+```
+prompts/
+├── tasks.py                              # _validate_and_fix_tags() 7-check pipeline,
+│                                         # _should_split_compound(), SPLIT_THESE_WORDS set (30 words),
+│                                         # PRESERVE_DESPITE_STOP_WORDS exemptions,
+│                                         # COMPOUND TAG RULE in GPT prompt, WEIGHTING RULES,
+│                                         # excerpt parameter in _call_openai_vision_tags_only(),
+│                                         # tags-only backfill support (~350 lines added)
+├── admin.py                              # Minor tag-related fixes
+└── views/
+    └── upload_views.py                   # Tag validation on upload submit
+
+prompts/management/commands/
+├── backfill_ai_content.py                # --tags-only, --under-tag-limit, --published-only flags (~214 lines added)
+└── cleanup_old_tags.py                   # Rewritten: orphan detection + capitalized duplicate merge (~157 lines rewritten)
+```
+
+### Database Fields (Sessions 80-81)
+
+| Field | Type | Status |
+|-------|------|--------|
+| `SlugRedirect.old_slug` | SlugField(max_length=200, unique=True) | ✅ Added (0053) |
+| `SlugRedirect.prompt` | ForeignKey → Prompt | ✅ Added (0053) |
+| `SlugRedirect.created_at` | DateTimeField(auto_now_add=True) | ✅ Added (0053) |
+
+---
+
 ## Related Documentation
 
 | Document | Location | Purpose |
@@ -1294,6 +1391,7 @@ docs/
 | DESIGN_CATEGORY_TAXONOMY_REVAMP.md | docs/ | Phase 2B category taxonomy revamp (Session 74) |
 | PHASE_2B_AGENDA.md | docs/ | Phase 2B execution roadmap (Session 74) |
 | PHASE_2B1-6_COMPLETION_REPORT.md | docs/ | Phase 2B sub-phase completion reports (Phase 2B Session) |
+| SESSION_REPORT_TAGS_AND_SEO_PROMPT_FIXES.md | docs/ | Session 81 tag pipeline completion report (Session 81) |
 
 ---
 
@@ -1301,11 +1399,23 @@ docs/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.14
-**Audit Date:** February 10, 2026
+**Version:** 3.15
+**Audit Date:** February 12, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.15 (February 12, 2026 - Sessions 80-81 End-of-Session Docs Update):**
+- Added `audit_tags.py` and `remove_mandatory_tags.py` management commands (count 23→25)
+- Added migrations 0053-0054 (count 53→56 total: 54 prompts + 2 about)
+- Added `test_tags_context.py` (17 tests) and `test_validate_tags.py` (113 tests) to test files (count 13→15)
+- Updated total test count: 298→~427
+- Added Sessions 80-81 Files section with all created/modified files and database fields
+- Added `SlugRedirect` model to models.py description
+- Added 2 admin prompt templates (`change_form_object_tools.html`, `regenerate_confirm.html`)
+- Updated admin templates count (8→11, corrected pre-existing undercount)
+- Added `SESSION_REPORT_TAGS_AND_SEO_PROMPT_FIXES.md` to Related Documentation
+- Updated test files list: added `test_user_profile_auth.py`, `test_video_processor.py` (previously missing from docs)
 
 **v3.14 (February 10, 2026 - Phase 2B-9 Documentation Update):**
 - Updated `related.py` description to reflect IDF-weighted scoring and 276-line count

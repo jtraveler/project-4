@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** February 10, 2026
+**Last Updated:** February 12, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -29,7 +29,7 @@
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
 | **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
-| **2B** | **Category Taxonomy Revamp** | **✅ 2B-1 through 2B-9 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring** |
+| **2B** | **Category Taxonomy Revamp + Tag Pipeline** | **✅ 2B-1 through 2B-9 + S80-81 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring, tag validation pipeline, admin metadata** |
 
 ---
 
@@ -167,7 +167,7 @@ processing_complete = models.BooleanField(default=False)
 
 ### ⚠️ DON'T FORGET: This is unfinished and needs to be resumed!
 
-**Status:** 95% Complete - Paused in December 2025  
+**Status:** ~96% Complete - Paused in December 2025
 **Why Paused:** Needed to build media infrastructure (Phase L) and video moderation (Phase M) first  
 **When to Resume:** After Phase N is complete and deployed
 
@@ -351,9 +351,9 @@ static/css/style.css                 # Lines ~700-793 have modal styles
 
 ---
 
-## ✅ Phase 2B: Category Taxonomy Revamp (2B-1 through 2B-9 COMPLETE)
+## ✅ Phase 2B: Category Taxonomy Revamp + Tag Pipeline (2B-1 through 2B-9 + S80-81 COMPLETE)
 
-**Completed:** February 9-10, 2026
+**Completed:** February 9-12, 2026
 **Design Doc:** `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`
 **Execution Roadmap:** `docs/PHASE_2B_AGENDA.md`
 
@@ -363,6 +363,8 @@ Three-tier taxonomy system for prompt classification:
 - **Tier 1:** 46 subject categories (expanded from 25)
 - **Tier 2:** 109 descriptors across 10 types (gender, ethnicity, age, features, profession, mood, color, holiday, season, setting)
 - **Tier 3:** Up to 10 tags per prompt (increased from 5)
+
+Plus: Admin metadata editing, security hardening, tag validation pipeline, compound preservation, audit tooling.
 
 ### Sub-Phases
 
@@ -380,6 +382,13 @@ Three-tier taxonomy system for prompt classification:
 | 2B-9b | ✅ Complete | IDF weighting for tags and categories |
 | 2B-9c | ✅ Complete | IDF weighting for descriptors, rebalanced to 30/25/35/5/3/2 |
 | 2B-9d | ✅ Complete | Stop-word filtering (infrastructure ready, disabled at 51 prompts), published-only IDF counting |
+| S80: Admin | ✅ Complete | Enhanced PromptAdmin, SlugRedirect model, B2 preview, XSS safeguards, dynamic weights, regenerate button |
+| S80: Security | ✅ Complete | Auth decorators on destructive views, CSRF on delete, form validation |
+| S81: Backfill | ✅ Complete | `--tags-only`, `--under-tag-limit`, `--published-only` flags |
+| S81: Validation | ✅ Complete | `_validate_and_fix_tags()` 7-check pipeline, compound preservation |
+| S81: GPT Context | ✅ Complete | COMPOUND TAG RULE, WEIGHTING RULES, excerpt in tags-only prompt |
+| S81: Audit | ✅ Complete | `audit_tags` command, root-level audit scripts, `cleanup_old_tags` rewrite |
+| S81: Tests | ✅ Complete | 130 new tests (113 validate + 17 context), all passing |
 
 ### Remaining From Original Agenda
 
@@ -450,5 +459,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 3.9 (Phase 2B-9 — IDF-weighted scoring, stop-word infrastructure, published-only counting)
-**Last Updated:** February 10, 2026
+**Version:** 4.0 (Sessions 80-81 — Admin metadata editing, security hardening, tag validation pipeline, compound preservation)
+**Last Updated:** February 12, 2026

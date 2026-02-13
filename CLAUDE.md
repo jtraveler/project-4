@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 10, 2026
+**Last Updated:** February 12, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -42,6 +42,7 @@ Do NOT edit or reference this document without reading all three.
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Phase 2B (1-9) + Tag Pipeline | Feb 9-12, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata editing, security hardening |
 | Phase 2B (1-8) | Feb 9-10, 2026 | Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill, demographic SEO rules |
 | Subject Categories P2 | Feb 9, 2026 | AI-assigned prompt classification (25 categories, cache-first logic) |
 | Related Prompts P1 | Feb 7, 2026 | "You Might Also Like" section on prompt detail (scoring algorithm, AJAX Load More) |
@@ -201,13 +202,41 @@ Full design in `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`, execution roadmap in `
 | **Auto-flag** | `needs_seo_review` | Flagged when gender detected but ethnicity missing |
 | **AI-related tags** | Tags | At least one mandatory: ai-prompt, ai-art, or ai-generated |
 
-### Tag System Rules (Phase 2B)
+### Tag System Rules (Phase 2B + Sessions 80-81)
 
 - 10 tags per prompt (increased from 5)
-- At least one AI-related tag mandatory: `ai-prompt`, `ai-art`, or `ai-generated`
 - 17 ethnicity terms banned from tags (african-american, asian, caucasian, etc.)
 - Gender tags retained (man/woman/male/female) — zero SEO controversy
 - Tags created via `get_or_create` (new tags auto-created for long-tail SEO)
+- **AI-related tags no longer mandatory** (removed via `remove_mandatory_tags` command, Session 80)
+
+**Tag Validation Pipeline (`_validate_and_fix_tags()` in tasks.py):**
+7-check post-processing pipeline runs on every GPT response before saving:
+1. Strip whitespace from each tag
+2. Lowercase all tags
+3. Reject tags > 50 characters
+4. Reject numeric-only tags
+5. Reject tags with special characters (allow hyphens only)
+6. Enforce 10-tag maximum
+7. Compound tag splitting via `_should_split_compound()`
+
+**Compound Tag Preservation (COMPOUND TAG RULE):**
+- Default: **preserve compound tags** (e.g., "double-exposure" stays as-is)
+- Only split if **both** halves are stop/filler words from `SPLIT_THESE_WORDS` set (30 words)
+- `PRESERVE_DESPITE_STOP_WORDS` exemption set for known terms (e.g., "pin-up")
+- Helper: `_should_split_compound(tag)` returns True only if split should occur
+- GPT prompt includes COMPOUND TAG RULE instructing AI to use hyphens for multi-word concepts
+
+**WEIGHTING RULES in GPT Prompt:**
+- PRIMARY source: The image itself (what you see)
+- SECONDARY: Title + description (if provided)
+- TERTIARY: User's prompt text (often vague/misleading)
+- UNRELIABLE: Never assume style from prompt text alone
+
+**Tag Context Enhancement:**
+- `_call_openai_vision_tags_only()` receives excerpt for context
+- Excerpt truncated at 500 chars in GPT prompt
+- Backfill passes `excerpt=prompt.excerpt` to tags function
 
 ### Title Generation Rules (Phase 2B-6)
 
@@ -221,6 +250,31 @@ Full design in `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md`, execution roadmap in `
 - `Prompt.slug` max_length: 200 (was 50)
 - Code limit in `_generate_unique_slug_with_retry`: 200 (was 50)
 - `SubjectCategory.slug` max_length: 200
+
+### Admin Metadata Editing (Session 80)
+
+Enhanced PromptAdmin with full metadata editing capabilities and safeguards:
+
+| Feature | Details |
+|---------|---------|
+| **SlugRedirect model** | Auto-creates 301 redirect when admin changes slug (migration 0053) |
+| **B2 preview images** | Thumbnail previews in admin via `_b2_preview()` method |
+| **XSS protection** | `format_html()` used for all admin HTML output |
+| **Character limits** | Title 200 chars, excerpt 500 chars — enforced in admin form |
+| **Dynamic weights** | Related prompts weights editable via admin (reads from `related.py`) |
+| **Regenerate button** | "Regenerate AI Content" object tool in admin change form |
+| **Slug protection** | Admin change auto-creates SlugRedirect for SEO preservation |
+| **Tag autocomplete** | django-taggit autocomplete restored after initial removal |
+| **Admin templates** | `change_form_object_tools.html`, `regenerate_confirm.html` |
+
+### Security Hardening (Session 80)
+
+| Fix | Details |
+|-----|---------|
+| **Auth decorators** | `@login_required` + `@require_POST` added to `prompt_delete`, `prompt_toggle_visibility` |
+| **CSRF on delete** | Prompt detail delete button uses POST form with CSRF token (was GET link) |
+| **Admin save_model** | XSS-safe `format_html()`, ownership validation, SlugRedirect auto-creation |
+| **Form validation** | `clean_title()` / `clean_excerpt()` enforce character limits server-side |
 
 ### Tag Filter System (Phase 2B-8)
 
@@ -236,9 +290,12 @@ python manage.py backfill_ai_content --limit 10                # Process 10
 python manage.py backfill_ai_content --prompt-id 42            # Single prompt
 python manage.py backfill_ai_content --batch-size 10 --delay 3 # Rate control
 python manage.py backfill_ai_content --skip-recent 7           # Skip last 7 days
+python manage.py backfill_ai_content --tags-only               # Regenerate tags only (Session 81)
+python manage.py backfill_ai_content --under-tag-limit 5       # Only prompts with < N tags (Session 81)
+python manage.py backfill_ai_content --published-only           # Published prompts only (default: all)
 ```
 
-Regenerates title, slug, description, tags, categories, and descriptors for existing prompts using Phase 2B three-tier taxonomy prompt.
+Regenerates title, slug, description, tags, categories, and descriptors for existing prompts using Phase 2B three-tier taxonomy prompt. `--tags-only` mode skips title/description/categories/descriptors and only regenerates tags via `_call_openai_vision_tags_only()`.
 
 ### Known Issues/Limitations (Phase 2B)
 
@@ -354,6 +411,32 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 | `prompts/templates/prompts/collection_detail.html` | Grid column fix, video autoplay observer, CSS overrides (S74) |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
 | `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
+
+**Committed in Sessions 80-81 (Feb 11-12, 2026):**
+- `prompts/models.py` - SlugRedirect model for SEO-preserving slug changes
+- `prompts/admin.py` - Enhanced PromptAdmin: full metadata editing, B2 preview, XSS safeguards, dynamic weights, regenerate button, tag autocomplete
+- `prompts/tasks.py` - `_validate_and_fix_tags()` pipeline, `_should_split_compound()`, COMPOUND TAG RULE, WEIGHTING RULES, excerpt in tags-only prompt
+- `prompts/views/prompt_views.py` - SlugRedirect lookup, auth decorators on delete/toggle, CSRF protection
+- `prompts/views/admin_views.py` - `regenerate_ai_content` view
+- `prompts/views/upload_views.py` - Tag validation on upload submit
+- `prompts/utils/related.py` - Dynamic weight reading for admin, hardcoded weight percentages audited
+- `prompts/management/commands/backfill_ai_content.py` - `--tags-only`, `--under-tag-limit`, `--published-only` flags
+- `prompts/management/commands/audit_tags.py` - NEW: Tag audit for compound fragments and quality issues
+- `prompts/management/commands/remove_mandatory_tags.py` - NEW: Remove mandatory AI-related tags
+- `prompts/management/commands/cleanup_old_tags.py` - Rewritten: orphan detection + capitalized merge
+- `prompts/tests/test_tags_context.py` - NEW: 17 tests for tag context enhancement
+- `prompts/tests/test_validate_tags.py` - NEW: 113 tests for tag validation pipeline
+- `prompts/migrations/0053_add_slug_redirect.py` - NEW: SlugRedirect model
+- `prompts/migrations/0054_rename_3d_photo_category.py` - NEW: Rename "3D Photo / Forced Perspective" category
+- `prompts/templates/prompts/prompt_detail.html` - CSRF POST form for delete button
+- `prompts_manager/settings.py` - INSTALLED_APPS additions for admin
+- `prompts_manager/urls.py` - Admin regenerate URL
+- `templates/admin/prompts/prompt/change_form_object_tools.html` - NEW: Admin regenerate button
+- `templates/admin/prompts/prompt/regenerate_confirm.html` - NEW: Regenerate confirmation page
+- `static/js/prompt-detail.js` - Delete uses POST form (was GET link)
+- `audit_nsfw_tags.py` - NEW: Root-level NSFW tag audit script
+- `audit_tags_vs_descriptions.py` - NEW: Root-level tag vs description audit script
+- `docs/SESSION_REPORT_TAGS_AND_SEO_PROMPT_FIXES.md` - NEW: Session 81 completion report
 
 **Committed in Phase 2B Session (Feb 9-10, 2026):**
 - `prompts/models.py` - SubjectDescriptor model, Prompt.descriptors M2M, slug max_length 200
@@ -761,5 +844,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.8 (Phase 2B-9 — IDF-weighted scoring, stop-word infrastructure, published-only counting)
-**Last Updated:** February 10, 2026
+**Version:** 4.9 (Sessions 80-81 — Admin metadata editing, security hardening, tag validation pipeline, compound preservation)
+**Last Updated:** February 12, 2026

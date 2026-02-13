@@ -258,7 +258,7 @@ def _call_openai_vision(
                 }
             ],
             max_tokens=1500,
-            temperature=0.7,
+            temperature=0.5,
             response_format={"type": "json_object"}  # Enforce JSON output
         )
 
@@ -289,35 +289,6 @@ def _validate_and_fix_tags(tags, prompt_id=None):
     Returns:
         List of validated, cleaned tag strings.
     """
-    # Legacy whitelist — kept for reference only; no longer used in logic.
-    # The validator now preserves ALL compounds by default unless they contain
-    # stop/filler words (see SPLIT_THESE_WORDS below).
-    LEGACY_APPROVED_COMPOUNDS = {
-        'digital-art', 'sci-fi', 'close-up', 'avant-garde', 'middle-aged',
-        'high-contrast', 'full-body', '3d-render', 'golden-hour', 'high-fashion',
-        'oil-painting', 'teen-boy', 'teen-girl',
-        'character-design', 'fantasy-character', 'stock-photo',
-        'youtube-thumbnail', 'instagram-aesthetic', 'tiktok-aesthetic',
-        'linkedin-headshot', 'open-plan', 'living-room', 'comic-style',
-        'coloring-book', 'colouring-book', 'pin-up', 'baby-bump',
-        'cover-art', 'maternity-shoot', 'forced-perspective', '3d-photo',
-        'thumbnail-design',
-    }
-
-    # Words that are NEVER meaningful as part of a compound tag.
-    # If a hyphenated tag contains any of these, split it.
-    SPLIT_THESE_WORDS = {
-        'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-        'and', 'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been',
-        'very', 'really', 'just', 'also', 'some', 'any', 'this', 'that',
-        'big', 'small', 'good', 'bad', 'nice', 'great',
-    }
-
-    # Compounds containing stop words that are still legitimate terms.
-    PRESERVE_DESPITE_STOP_WORDS = {
-        'depth-of-field',
-    }
-
     def _should_split_compound(compound_tag):
         """Only split if the compound contains filler/stop words or single-char parts."""
         if compound_tag in PRESERVE_DESPITE_STOP_WORDS:
@@ -331,18 +302,6 @@ def _validate_and_fix_tags(tags, prompt_id=None):
             if len(part) <= 1:
                 return True
         return False
-
-    BANNED_AI_TAGS = {
-        'ai-art', 'ai-generated', 'ai-prompt', 'ai-influencer', 'ai-colorize',
-    }
-
-    BANNED_ETHNICITY = {
-        'caucasian', 'african-american', 'asian', 'hispanic', 'latino', 'latina',
-        'black', 'white', 'european', 'african', 'middle-eastern', 'arab',
-        'south-asian', 'east-asian', 'southeast-asian', 'pacific-islander',
-        'indigenous', 'native-american', 'mixed-race', 'biracial', 'multiracial',
-        'ethnicity',
-    }
 
     log_prefix = f"[Tag Validator] Prompt {prompt_id}" if prompt_id else "[Tag Validator]"
     validated = []
@@ -461,6 +420,42 @@ GENERIC_TAGS = {
     'photo', 'picture', 'illustration', 'digital', 'creative',
     'beautiful', 'artistic', 'professional', 'background', 'style',
     'color', 'modern', 'abstract',
+}
+
+# =============================================================================
+# TAG VALIDATION CONSTANTS
+# =============================================================================
+# Used by _validate_and_fix_tags() to enforce tag quality rules.
+# Module-level for performance (not re-created per call) and testability.
+# Note: The original ACCEPTABLE_COMPOUNDS whitelist (32 entries) was replaced by
+# preserve-by-default logic in Session 80. See SPLIT_THESE_WORDS below.
+
+# Words that are NEVER meaningful as part of a compound tag.
+# If a hyphenated tag contains any of these, split it.
+SPLIT_THESE_WORDS = {
+    'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+    'and', 'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been',
+    'very', 'really', 'just', 'also', 'some', 'any', 'this', 'that',
+    'big', 'small', 'good', 'bad', 'nice', 'great',
+}
+
+# Compounds containing stop words that are still legitimate terms.
+PRESERVE_DESPITE_STOP_WORDS = {
+    'depth-of-field',
+}
+
+# Tags that should never appear (AI-related tags waste slots)
+BANNED_AI_TAGS = {
+    'ai-art', 'ai-generated', 'ai-prompt', 'ai-influencer', 'ai-colorize',
+}
+
+# Ethnicity terms banned from tags (belong in title/description/descriptors only)
+BANNED_ETHNICITY = {
+    'caucasian', 'african-american', 'asian', 'hispanic', 'latino', 'latina',
+    'black', 'white', 'european', 'african', 'middle-eastern', 'arab',
+    'south-asian', 'east-asian', 'southeast-asian', 'pacific-islander',
+    'indigenous', 'native-american', 'mixed-race', 'biracial', 'multiracial',
+    'ethnicity',
 }
 
 
@@ -611,8 +606,8 @@ TAG RULES — FOLLOW EXACTLY:
      "pregnancy-photoshoot", "baby-bump", "expecting-mother", "maternity-portrait"
    - 3D/Perspective: "3d-photo", "forced-perspective", "facebook-3d",
      "3d-effect", "fisheye-portrait", "pop-out-effect", "parallax-photo"
-   - Photo restoration: "photo-restoration", "ai-restoration",
-     "restore-old-photo", "colorized-photo", "ai-colorize", "vintage-restoration"
+   - Photo restoration: "photo-restoration", "restore-old-photo",
+     "colorized-photo", "vintage-restoration"
    - Character/person design: "character-design", "fantasy-character"
    - Commercial/stock: "product-photography", "stock-photo"
    - Social media: "tiktok-aesthetic", "instagram-aesthetic"
@@ -919,8 +914,8 @@ Include:
   "baby-bump", "expecting-mother", "maternity-portrait"
 - 3D/forced perspective: include "3d-photo", "forced-perspective", "facebook-3d", "3d-effect",
   "fisheye-portrait", "pop-out-effect", "parallax-photo"
-- Photo restoration: include "photo-restoration", "ai-restoration", "restore-old-photo",
-  "colorized-photo", "ai-colorize", "vintage-restoration"
+- Photo restoration: include "photo-restoration", "restore-old-photo",
+  "colorized-photo", "vintage-restoration"
 - US/UK spelling variants: include BOTH spellings when applicable, e.g. "coloring-book" AND
   "colouring-book", "watercolor" AND "watercolour"
 
@@ -1352,8 +1347,8 @@ def _handle_ai_failure(prompt, error_message: str) -> dict:
         prompt.needs_seo_review = True  # Flag for manual review
         prompt.save(update_fields=['title', 'excerpt', 'slug', 'processing_complete', 'needs_seo_review'])
 
-        # Add generic tags
-        prompt.tags.add("AI Art", "Digital Art", "Artwork")
+        # Add generic fallback tags (lowercase, no AI tags per validator rules)
+        prompt.tags.add("digital-art", "artwork", "creative")
 
     return {
         'status': 'fallback',

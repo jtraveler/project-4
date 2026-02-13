@@ -532,8 +532,10 @@ def upload_submit(request):
             # Non-blocking: rename failure shouldn't break the upload flow
             logger.warning(f"Prompt {prompt.pk}: Failed to queue SEO rename: {e}")
 
-    # Add tags before moderation
-    for tag_name in tags[:7]:
+    # Validate and fix tags (compound splitting, ethnicity/AI removal, etc.)
+    from prompts.tasks import _validate_and_fix_tags
+    validated_tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk)
+    for tag_name in validated_tags:
         tag, _ = Tag.objects.get_or_create(name=tag_name)
         prompt.tags.add(tag)
 

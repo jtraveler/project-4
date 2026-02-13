@@ -512,7 +512,8 @@ class PromptAdmin(SummernoteModelAdmin):
 
         tags = ai_result.get('tags', [])
         if tags:
-            clean_tags = [str(t).strip()[:100] for t in tags[:10] if t]
+            from prompts.tasks import _validate_and_fix_tags
+            clean_tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk)
             tag_objects = [
                 TagModel.objects.get_or_create(name=name)[0]
                 for name in clean_tags if name

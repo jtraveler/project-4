@@ -86,6 +86,12 @@ class Command(BaseCommand):
             help='Only process prompts with fewer than 10 tags. '
                  'Combine with --tags-only to fill free tag slots.',
         )
+        parser.add_argument(
+            '--published-only',
+            action='store_true',
+            default=False,
+            help='Only process published prompts (default: process all including drafts)',
+        )
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
@@ -96,20 +102,23 @@ class Command(BaseCommand):
         skip_recent_days = options['skip_recent']
         tags_only = options['tags_only']
         under_tag_limit = options['under_tag_limit']
+        published_only = options['published_only']
 
         if tags_only:
             self._handle_tags_only(
                 dry_run, batch_size, delay, limit,
                 single_prompt_id, skip_recent_days, under_tag_limit,
+                published_only,
             )
         else:
             self._handle_full(
                 dry_run, batch_size, delay, limit,
-                single_prompt_id, skip_recent_days,
+                single_prompt_id, skip_recent_days, published_only,
             )
 
     def _handle_tags_only(self, dry_run, batch_size, delay, limit,
-                          single_prompt_id, skip_recent_days, under_tag_limit):
+                          single_prompt_id, skip_recent_days, under_tag_limit,
+                          published_only=False):
         """Regenerate ONLY tags. Title, description, slug, categories, descriptors untouched."""
         from taggit.models import Tag
         from prompts.tasks import _call_openai_vision_tags_only
@@ -125,9 +134,10 @@ class Command(BaseCommand):
             queryset = Prompt.objects.filter(pk=single_prompt_id)
         else:
             queryset = Prompt.objects.filter(
-                status=1,
                 deleted_at__isnull=True,
             ).select_related('author')
+            if published_only:
+                queryset = queryset.filter(status=1)
 
             if skip_recent_days:
                 cutoff = timezone.now() - timedelta(days=skip_recent_days)
@@ -194,6 +204,7 @@ class Command(BaseCommand):
                     title=prompt.title or '',
                     categories=current_cats,
                     descriptors=current_descs,
+                    excerpt=prompt.excerpt or '',
                 )
 
                 if ai_result.get('error'):
@@ -206,14 +217,10 @@ class Command(BaseCommand):
                     continue
 
                 tags = ai_result.get('tags', [])
-                clean_tags = [str(t).strip().lower()[:100] for t in tags[:10] if t]
-
-                # Filter out banned tags
-                banned = {
-                    'ai-art', 'ai-generated', 'ai-prompt', 'ai-image',
-                    'ai-artwork', 'ai-creation',
-                }
-                clean_tags = [t for t in clean_tags if t not in banned]
+                # Tags are already validated by _call_openai_vision_tags_only,
+                # but run through validator again for safety
+                from prompts.tasks import _validate_and_fix_tags
+                clean_tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk)
 
                 if not clean_tags:
                     self.stdout.write(
@@ -268,7 +275,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('\nDRY RUN — No changes were made'))
 
     def _handle_full(self, dry_run, batch_size, delay, limit,
-                     single_prompt_id, skip_recent_days):
+                     single_prompt_id, skip_recent_days, published_only=False):
         """Full backfill: title, description, tags, categories, descriptors, slug."""
         from taggit.models import Tag
         from prompts.tasks import (
@@ -285,9 +292,10 @@ class Command(BaseCommand):
             queryset = Prompt.objects.filter(pk=single_prompt_id)
         else:
             queryset = Prompt.objects.filter(
-                status=1,  # Published only
-                deleted_at__isnull=True,  # Not soft-deleted
+                deleted_at__isnull=True,
             ).select_related('author')
+            if published_only:
+                queryset = queryset.filter(status=1)
 
             if skip_recent_days:
                 cutoff = timezone.now() - timedelta(days=skip_recent_days)
@@ -387,9 +395,10 @@ class Command(BaseCommand):
                     prompt.slug = slug
                     prompt.save(update_fields=['title', 'excerpt', 'slug'])
 
-                    # Update tags — only replace if AI returned tags
+                    # Update tags — validate and fix before saving
                     if tags:
-                        clean_tags = [str(t).strip()[:100] for t in tags[:10] if t]
+                        from prompts.tasks import _validate_and_fix_tags
+                        clean_tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk)
                         tag_objects = []
                         for tag_name in clean_tags:
                             if tag_name:

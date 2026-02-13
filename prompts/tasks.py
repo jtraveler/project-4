@@ -277,12 +277,191 @@ def _call_openai_vision(
         return {'error': f"OpenAI API error: {str(e)}"}
 
 
+def _validate_and_fix_tags(tags, prompt_id=None):
+    """
+    Post-process AI-generated tags to enforce all tag rules.
+
+    Checks: compound splitting, lowercase, AI tag removal, ethnicity removal,
+    deduplication, tag count enforcement, and gender pair warnings.
+
+    Args:
+        tags: List of tag strings from AI API response.
+        prompt_id: Optional prompt ID for logging context.
+
+    Returns:
+        List of validated, cleaned tag strings.
+    """
+    # Legacy whitelist — kept for reference only; no longer used in logic.
+    # The validator now preserves ALL compounds by default unless they contain
+    # stop/filler words (see SPLIT_THESE_WORDS below).
+    LEGACY_APPROVED_COMPOUNDS = {
+        'digital-art', 'sci-fi', 'close-up', 'avant-garde', 'middle-aged',
+        'high-contrast', 'full-body', '3d-render', 'golden-hour', 'high-fashion',
+        'oil-painting', 'teen-boy', 'teen-girl',
+        'character-design', 'fantasy-character', 'stock-photo',
+        'youtube-thumbnail', 'instagram-aesthetic', 'tiktok-aesthetic',
+        'linkedin-headshot', 'open-plan', 'living-room', 'comic-style',
+        'coloring-book', 'colouring-book', 'pin-up', 'baby-bump',
+        'cover-art', 'maternity-shoot', 'forced-perspective', '3d-photo',
+        'thumbnail-design',
+    }
+
+    # Words that are NEVER meaningful as part of a compound tag.
+    # If a hyphenated tag contains any of these, split it.
+    SPLIT_THESE_WORDS = {
+        'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+        'and', 'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been',
+        'very', 'really', 'just', 'also', 'some', 'any', 'this', 'that',
+        'big', 'small', 'good', 'bad', 'nice', 'great',
+    }
+
+    # Compounds containing stop words that are still legitimate terms.
+    PRESERVE_DESPITE_STOP_WORDS = {
+        'depth-of-field',
+    }
+
+    def _should_split_compound(compound_tag):
+        """Only split if the compound contains filler/stop words or single-char parts."""
+        if compound_tag in PRESERVE_DESPITE_STOP_WORDS:
+            return False
+        parts = compound_tag.split('-')
+        if len(parts) < 2:
+            return False
+        for part in parts:
+            if part in SPLIT_THESE_WORDS:
+                return True
+            if len(part) <= 1:
+                return True
+        return False
+
+    BANNED_AI_TAGS = {
+        'ai-art', 'ai-generated', 'ai-prompt', 'ai-influencer', 'ai-colorize',
+    }
+
+    BANNED_ETHNICITY = {
+        'caucasian', 'african-american', 'asian', 'hispanic', 'latino', 'latina',
+        'black', 'white', 'european', 'african', 'middle-eastern', 'arab',
+        'south-asian', 'east-asian', 'southeast-asian', 'pacific-islander',
+        'indigenous', 'native-american', 'mixed-race', 'biracial', 'multiracial',
+        'ethnicity',
+    }
+
+    log_prefix = f"[Tag Validator] Prompt {prompt_id}" if prompt_id else "[Tag Validator]"
+    validated = []
+
+    for tag in tags:
+        tag = str(tag).strip()
+        if not tag:
+            continue
+
+        # Check 2: Lowercase enforcement
+        if tag != tag.lower():
+            logger.info(f"{log_prefix} Lowercased: '{tag}' -> '{tag.lower()}'")
+            tag = tag.lower()
+
+        def _is_banned(t):
+            """Check if a tag part is banned (ethnicity or AI)."""
+            if t in BANNED_ETHNICITY:
+                logger.info(f"{log_prefix} Removed ethnicity tag: '{t}'")
+                return True
+            if t in BANNED_AI_TAGS or t.startswith('ai-'):
+                logger.info(f"{log_prefix} Removed AI tag: '{t}'")
+                return True
+            return False
+
+        # Handle tags with spaces (e.g., "Modern Architecture" -> split)
+        if ' ' in tag:
+            parts = [p.strip() for p in tag.split() if p.strip()]
+            logger.info(f"{log_prefix} Split space-separated: '{tag}' -> {parts}")
+            for part in parts:
+                if not _is_banned(part):
+                    validated.append(part)
+            continue
+
+        # Check 3: AI tag removal (whole tag)
+        if tag in BANNED_AI_TAGS or tag.startswith('ai-'):
+            logger.info(f"{log_prefix} Removed AI tag: '{tag}'")
+            continue
+
+        # Check 4: Ethnicity tag removal (whole tag)
+        if tag in BANNED_ETHNICITY:
+            logger.info(f"{log_prefix} Removed ethnicity tag: '{tag}'")
+            continue
+
+        # Check 1: Compound tag handling (preserve by default)
+        if '-' in tag:
+            parts = [p.strip() for p in tag.split('-') if p.strip()]
+
+            # If any part is a banned term, split and filter
+            has_banned_part = any(
+                p in BANNED_ETHNICITY or p in BANNED_AI_TAGS or p.startswith('ai-')
+                for p in parts
+            )
+            if has_banned_part:
+                clean_parts = [p for p in parts if not _is_banned(p)]
+                if clean_parts:
+                    logger.info(f"{log_prefix} Split compound with banned part: '{tag}' -> {clean_parts}")
+                    validated.extend(clean_parts)
+                continue
+
+            # Split only if compound contains stop/filler words
+            if _should_split_compound(tag):
+                logger.info(f"{log_prefix} Split stop-word compound: '{tag}' -> {parts}")
+                validated.extend(parts)
+                continue
+
+            # Default: preserve the compound tag
+            validated.append(tag)
+            continue
+
+        validated.append(tag)
+
+    # Check 5: Deduplicate (preserve order)
+    seen = set()
+    deduped = []
+    for tag in validated:
+        if tag not in seen:
+            seen.add(tag)
+            deduped.append(tag)
+        else:
+            logger.info(f"{log_prefix} Removed duplicate: '{tag}'")
+
+    # Check 6: Enforce tag count = 10
+    if len(deduped) > 10:
+        logger.info(f"{log_prefix} Trimmed from {len(deduped)} to 10 tags")
+        deduped = deduped[:10]
+    elif len(deduped) < 10:
+        logger.warning(f"{log_prefix} Only {len(deduped)} tags after validation (expected 10)")
+
+    # Check 7: Gender pair warnings (log only, no auto-fix)
+    tag_set = set(deduped)
+    if 'man' in tag_set and 'male' not in tag_set:
+        logger.warning(f"{log_prefix} Gender pair incomplete: 'man' without 'male'")
+    if 'woman' in tag_set and 'female' not in tag_set:
+        logger.warning(f"{log_prefix} Gender pair incomplete: 'woman' without 'female'")
+    if 'male' in tag_set and 'man' not in tag_set and 'boy' not in tag_set and 'teen-boy' not in tag_set:
+        logger.warning(f"{log_prefix} Gender pair incomplete: 'male' without 'man'/'boy'/'teen-boy'")
+    if 'female' in tag_set and 'woman' not in tag_set and 'girl' not in tag_set and 'teen-girl' not in tag_set:
+        logger.warning(f"{log_prefix} Gender pair incomplete: 'female' without 'woman'/'girl'/'teen-girl'")
+    if 'girl' in tag_set and 'female' not in tag_set:
+        logger.warning(f"{log_prefix} Gender pair incomplete: 'girl' without 'female'")
+    if 'boy' in tag_set and 'male' not in tag_set:
+        logger.warning(f"{log_prefix} Gender pair incomplete: 'boy' without 'male'")
+    if 'teen-boy' in tag_set and 'male' not in tag_set:
+        logger.warning(f"{log_prefix} Gender pair incomplete: 'teen-boy' without 'male'")
+    if 'teen-girl' in tag_set and 'female' not in tag_set:
+        logger.warning(f"{log_prefix} Gender pair incomplete: 'teen-girl' without 'female'")
+
+    return deduped
+
+
 def _call_openai_vision_tags_only(
     image_url: str,
     prompt_text: str,
     title: str,
     categories: list,
     descriptors: list,
+    excerpt: str = '',
 ) -> dict:
     """
     Call OpenAI Vision API to generate ONLY tags for a prompt.
@@ -308,36 +487,88 @@ def _call_openai_vision_tags_only(
         cats_str = ', '.join(categories) if categories else '(none)'
         descs_str = ', '.join(descriptors) if descriptors else '(none)'
 
-        system_prompt = f'''You are analyzing an AI-generated image that already has metadata assigned.
+        system_prompt = f'''You are a senior SEO specialist for an AI art prompt sharing platform (similar to PromptHero, Lexica, and Civitai). Your job is to generate exactly 10 high-traffic search tags that maximize this image's discoverability. Every tag must be a term that real users actively search for on prompt sharing sites.
 
-Existing metadata (DO NOT regenerate — use as context only):
-- Title: {title}
+IMAGE CONTEXT (use to improve tag accuracy — do NOT copy these verbatim as tags):
+- Title: {title or '(not available)'}
+- Description: {excerpt[:500] if excerpt else '(not available)'}
 - Categories: {cats_str}
 - Descriptors: {descs_str}
-- User prompt: {prompt_text[:300] if prompt_text else "(none)"}
+- User prompt: {prompt_text[:300] if prompt_text else '(not available)'}
 
-Generate exactly 10 SEO-optimized tags for this image.
+WEIGHTING RULES:
+- The IMAGE is your PRIMARY source — tags must describe what is visually present
+- Title and Description are SECONDARY — use them to confirm visual observations and pick more specific tags (e.g., if the description mentions "cat", look for a cat in the image and tag it)
+- User prompt is TERTIARY and UNRELIABLE — it may be gibberish or unrelated. Only use it if it provides clear, specific terms that clearly match what you see in the image
+- NEVER generate tags based solely on text that contradicts what the image shows
 
-TAG RULES:
-- Specific, searchable keywords (not generic like "art" or "beautiful")
-- Complementary to the existing categories and descriptors — avoid duplicating them
-- Use hyphens for multi-word tags (e.g., "golden-hour", "neon-lights")
-- Include demographic terms (gender) when a person is visible:
-  * Adults: include BOTH "woman" AND "female", or "man" AND "male"
-  * Teens: "teen-boy"/"teen-girl" + "teenager"
-  * Children: "boy"/"girl" + "child"
-- Do NOT include ANY ethnicity or race terms as tags — not standalone and not
-  as part of compound tags. Banned: "african-american", "black", "caucasian",
-  "white", "asian", "hispanic", "latino", "latina", "arab", "middle-eastern",
-  "indian", "desi", "european", "pacific-islander", "indigenous", "native",
-  and any compounds like "black-woman", "white-man", "asian-girl", etc.
-- Do NOT include: "ai-art", "ai-generated", "ai-prompt" or any generic AI tags
-- Include niche terms when applicable: "linkedin-headshot", "ai-influencer",
-  "boudoir", "youtube-thumbnail", "maternity-shoot", "3d-photo",
-  "forced-perspective", "facebook-3d", "photo-restoration"
-- Include US/UK spelling variants when applicable: "coloring-book" AND
-  "colouring-book", "watercolor" AND "watercolour"
-- Include mood, style, subject, and specific visual elements
+TAG RULES — FOLLOW EXACTLY:
+
+1. GENDER (mandatory when person visible):
+   Include BOTH forms as SEPARATE, STANDALONE tags: "man" + "male" OR "woman" + "female"
+   NEVER combine gender into compound tags like "middle-aged-male", "young-woman",
+   "working-class-man", "athletic-female", etc. These are WRONG.
+   Age qualifiers go in a SEPARATE tag: "middle-aged", "young", "elderly"
+   For children: "boy" ALWAYS requires "male". "girl" ALWAYS requires "female".
+     WRONG: girl, child → RIGHT: girl, female, child
+     WRONG: teen-boy, sports → RIGHT: teen-boy, male, sports
+   For babies: "baby" + "infant"
+   For couples: include ALL FOUR gender tags: man, male, woman, female
+     WRONG: couple, man, woman → RIGHT: couple, man, male, woman, female
+   If gender is not clearly identifiable (below ~80% visual confidence),
+   use age-appropriate neutral terms instead: "person", "teenager", "child",
+   or "baby". Do NOT guess.
+
+2. ETHNICITY — BANNED from tags:
+   NEVER include any of these words in tags, standalone or in compounds:
+   african-american, african, asian, black, caucasian, chinese, east-asian,
+   european, hispanic, indian, japanese, korean, latino, latina,
+   middle-eastern, south-asian, white, arab, desi, pacific-islander,
+   indigenous, native.
+   Banned compounds: "black-woman", "white-man", "asian-girl", etc.
+   Ethnicity belongs ONLY in title, description, and descriptors — NEVER in tags.
+
+3. COMPOUND TAG RULE:
+   Keep established multi-word terms as single hyphenated tags.
+   Examples of CORRECT compound tags (DO NOT split these):
+     double-exposure, long-exposure, high-contrast, low-key, high-key,
+     mixed-media, time-lapse, slow-motion, stop-motion, tilt-shift,
+     cross-processing, warm-tones, cool-tones, split-toning,
+     hard-light, soft-light, back-lit, rim-light, lens-flare,
+     depth-of-field, shallow-focus, motion-blur, light-painting,
+     film-noir, pop-art, art-deco, art-nouveau, neo-noir,
+     full-body, close-up, wide-angle, bird-eye, worm-eye,
+     street-style, old-school, hand-drawn, line-art, pixel-art,
+     hyper-realistic, photo-realistic, ultra-detailed, semi-realistic
+
+   Only use hyphens for terms that are commonly searched as a SINGLE concept.
+   Do NOT hyphenate random word pairs — "beautiful-sunset" should be two
+   separate tags: "beautiful" and "sunset".
+
+4. NO AI TAGS: Never include "ai-art", "ai-generated", "ai-prompt",
+   "ai-influencer", or any generic AI tags. Every prompt on this site is
+   AI-generated — these waste tag slots.
+
+5. NICHE TERMS — include when applicable:
+   - LinkedIn photos: "linkedin-headshot", "linkedin-profile-photo",
+     "professional-headshot", "corporate-portrait", "business-portrait"
+   - Boudoir: "boudoir", "burlesque", "pin-up", "glamour"
+   - YouTube: "youtube-thumbnail", "thumbnail-design", "cover-art",
+     "video-thumbnail", "podcast-cover", "social-media-graphic"
+   - Maternity: "maternity-shoot", "maternity-photography",
+     "pregnancy-photoshoot", "baby-bump", "expecting-mother", "maternity-portrait"
+   - 3D/Perspective: "3d-photo", "forced-perspective", "facebook-3d",
+     "3d-effect", "fisheye-portrait", "pop-out-effect", "parallax-photo"
+   - Photo restoration: "photo-restoration", "ai-restoration",
+     "restore-old-photo", "colorized-photo", "ai-colorize", "vintage-restoration"
+   - Character/person design: "character-design", "fantasy-character"
+   - Commercial/stock: "product-photography", "stock-photo"
+   - Social media: "tiktok-aesthetic", "instagram-aesthetic"
+   - US/UK variants: include BOTH when applicable ("coloring-book" AND
+     "colouring-book", "watercolor" AND "watercolour")
+
+6. INCLUDE a mix of: primary subject, mood/atmosphere, art style, and
+   specific visual elements.
 
 Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
 
@@ -370,7 +601,7 @@ Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
                 }
             ],
             max_tokens=300,
-            temperature=0.7,
+            temperature=0.3,
             response_format={"type": "json_object"}
         )
 
@@ -385,6 +616,9 @@ Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
         if not isinstance(tags, list):
             tags = []
 
+        # Post-processing validation: split compounds, enforce rules
+        tags = _validate_and_fix_tags(tags)
+
         return {'tags': tags}
 
     except (APITimeoutError, APIConnectionError) as e:
@@ -393,7 +627,7 @@ Return ONLY a JSON object: {{"tags": ["tag-one", "tag-two", ...]}}'''
     except Exception as e:
         logger.exception(f"[AI Tags-Only] OpenAI API error: {e}")
         return {'error': f"OpenAI API error: {str(e)}"}
-
+    
 
 def _is_safe_image_url(url: str) -> bool:
     """
@@ -491,7 +725,12 @@ def _build_analysis_prompt(prompt_text: str, ai_generator: str, available_tags: 
     Args kept for backwards compatibility but ai_generator and available_tags
     are no longer interpolated into the prompt to reduce hallucination risk.
     """
-    return '''IMPORTANT CONTEXT: This is a diversity-focused AI art discovery platform where users
+    return '''You are a senior SEO specialist for an AI art prompt sharing platform (similar to
+PromptHero, Lexica, and Civitai). Your job is to maximize this image's discoverability through
+search-optimized titles, descriptions, tags, categories, and descriptors. Every field you
+generate should prioritize terms that real users actively search for.
+
+IMPORTANT CONTEXT: This is a diversity-focused AI art discovery platform where users
 search for representation. Ethnicity and gender descriptors are ESSENTIAL for discoverability.
 When people are clearly visible in an image, you MUST identify and include their apparent
 ethnicity and gender in the title, description, and descriptors. Omitting ethnicity when a person
@@ -564,6 +803,23 @@ SPELLING VARIANTS — always include both US and UK spellings in descriptions an
 
 Naturally weave in 2-3 synonym variants of key terms without keyword stuffing.
 
+LONG-TAIL KEYWORDS — naturally include 2-3 multi-word search phrases that users type
+into Google or prompt sharing sites:
+  * Portrait examples: "cinematic portrait photography", "dramatic lighting portrait",
+    "professional headshot photography"
+  * Landscape examples: "fantasy landscape wallpaper", "sci-fi concept art",
+    "dreamy nature photography"
+  * Style examples: "AI-generated avatar", "photorealistic digital art",
+    "anime character design"
+  * Character examples: "fantasy character design", "anime girl portrait",
+    "character concept art"
+  * Commercial examples: "product photography style", "stock photo aesthetic",
+    "thumbnail template design"
+  * Use-case examples: "linkedin profile picture", "cosplay reference photo",
+    "virtual influencer portrait"
+  These should flow naturally within sentences, not be listed or stuffed awkwardly.
+  The goal is to match real search queries.
+
 ═══════════════════════════════════════════════════
 FIELD 3: "tags" (array of strings, up to 10)
 ═══════════════════════════════════════════════════
@@ -581,6 +837,13 @@ Include:
       instead: "person", "teenager", "child", or "baby"
     - ALWAYS include both the specific term AND the general term
       (e.g., "woman" AND "female", or "boy" AND "child")
+    - NEVER combine gender, age, or descriptors into compound tags.
+      These are WRONG: "middle-aged-male", "young-woman",
+      "working-class-man", "athletic-female", "elderly-woman",
+      "curvy-woman", "muscular-man", "businesswoman-portrait",
+      "confident-woman", "oil-painting-man".
+      Instead use SEPARATE tags: "man", "male", "middle-aged" as
+      three individual tags.
   * Do NOT include generic tags like "ai-art", "ai-generated", or "ai-prompt" —
     these appear on every prompt and waste tag slots. Use all 10 slots for
     descriptive, content-specific keywords that differentiate this prompt.
@@ -609,6 +872,22 @@ Include:
   "colorized-photo", "ai-colorize", "vintage-restoration"
 - US/UK spelling variants: include BOTH spellings when applicable, e.g. "coloring-book" AND
   "colouring-book", "watercolor" AND "watercolour"
+
+COMPOUND TAG RULE: Keep established multi-word terms as single hyphenated tags.
+Examples of CORRECT compound tags (DO NOT split these):
+  double-exposure, long-exposure, high-contrast, low-key, high-key,
+  mixed-media, time-lapse, slow-motion, stop-motion, tilt-shift,
+  cross-processing, warm-tones, cool-tones, split-toning,
+  hard-light, soft-light, back-lit, rim-light, lens-flare,
+  depth-of-field, shallow-focus, motion-blur, light-painting,
+  film-noir, pop-art, art-deco, art-nouveau, neo-noir,
+  full-body, close-up, wide-angle, bird-eye, worm-eye,
+  street-style, old-school, hand-drawn, line-art, pixel-art,
+  hyper-realistic, photo-realistic, ultra-detailed, semi-realistic
+
+Only use hyphens for terms that are commonly searched as a SINGLE concept.
+Do NOT hyphenate random word pairs — "beautiful-sunset" should be two separate tags:
+"beautiful" and "sunset".
 
 ═══════════════════════════════════════════════════
 FIELD 4: "categories" (array of strings, up to 5)
@@ -848,6 +1127,9 @@ def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
     # Sanitize content (strip control characters, limit length)
     title = _sanitize_content(title, max_length=200)
     description = _sanitize_content(description, max_length=2000)
+
+    # Validate and fix tags (compound splitting, ethnicity/AI removal, etc.)
+    tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk)
 
     # Use transaction to ensure atomicity of prompt save + tag adds
     with transaction.atomic():
@@ -1260,14 +1542,8 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
         categories = ai_result.get('categories', [])
         descriptors = ai_result.get('descriptors', {})
 
-        # Clean tags - lowercase, trimmed, unique
-        clean_tags = []
-        seen = set()
-        for tag in tags[:10]:  # Max 10 tags
-            tag_clean = str(tag).strip().lower()[:50]
-            if tag_clean and tag_clean not in seen:
-                clean_tags.append(tag_clean)
-                seen.add(tag_clean)
+        # Validate and fix tags (compound splitting, ethnicity/AI removal, etc.)
+        clean_tags = _validate_and_fix_tags(tags)
 
         # Clean categories - trimmed, unique, max 5
         clean_categories = []

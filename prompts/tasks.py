@@ -290,14 +290,12 @@ def _validate_and_fix_tags(tags, prompt_id=None):
         List of validated, cleaned tag strings.
     """
     def _should_split_compound(compound_tag):
-        """Only split if the compound contains filler/stop words, single-char parts, or 3+ parts."""
+        """Only split if the compound contains filler/stop words or single-char parts."""
         if compound_tag in PRESERVE_DESPITE_STOP_WORDS:
             return False
         parts = compound_tag.split('-')
         if len(parts) < 2:
             return False
-        if len(parts) >= 3:
-            return True
         for part in parts:
             if part in SPLIT_THESE_WORDS:
                 return True
@@ -323,6 +321,8 @@ def _validate_and_fix_tags(tags, prompt_id=None):
             if t in BANNED_ETHNICITY:
                 logger.info(f"{log_prefix} Removed ethnicity tag: '{t}'")
                 return True
+            if t in ALLOWED_AI_TAGS:
+                return False
             if t in BANNED_AI_TAGS or t.startswith('ai-'):
                 logger.info(f"{log_prefix} Removed AI tag: '{t}'")
                 return True
@@ -338,7 +338,7 @@ def _validate_and_fix_tags(tags, prompt_id=None):
             continue
 
         # Check 3: AI tag removal (whole tag)
-        if tag in BANNED_AI_TAGS or tag.startswith('ai-'):
+        if tag not in ALLOWED_AI_TAGS and (tag in BANNED_AI_TAGS or tag.startswith('ai-')):
             logger.info(f"{log_prefix} Removed AI tag: '{tag}'")
             continue
 
@@ -353,7 +353,7 @@ def _validate_and_fix_tags(tags, prompt_id=None):
 
             # If any part is a banned term, split and filter
             has_banned_part = any(
-                p in BANNED_ETHNICITY or p in BANNED_AI_TAGS or p.startswith('ai-')
+                p in BANNED_ETHNICITY or (p not in ALLOWED_AI_TAGS and (p in BANNED_AI_TAGS or p.startswith('ai-')))
                 for p in parts
             )
             if has_banned_part:
@@ -476,16 +476,20 @@ TAG RULES — FOLLOW EXACTLY:
    Do NOT hyphenate random word pairs — "beautiful-sunset" should be two
    separate tags: "beautiful" and "sunset".
 
-4. NO AI TAGS: Never include "ai-art", "ai-generated", "ai-prompt",
-   "ai-influencer", or any generic AI tags. Every prompt on this site is
-   AI-generated — these waste tag slots.
+4. NO GENERIC AI TAGS: Never include "ai-art", "ai-generated", "ai-prompt",
+   or any generic AI tags — every prompt on this site is AI-generated so
+   these waste tag slots.
+   EXCEPTION: AI product-category tags like "ai-influencer", "ai-avatar",
+   "ai-headshot", "ai-girlfriend", "ai-boyfriend" ARE allowed because they
+   describe a specific niche, not just the medium.
 
 5. NICHE TERMS — include when applicable:
    - LinkedIn photos: "linkedin-headshot", "linkedin-profile-photo",
      "professional-headshot", "corporate-portrait", "business-portrait"
-   - Boudoir: "boudoir", "burlesque", "pin-up", "glamour"
+   - Boudoir: "boudoir", "burlesque", "pin-up", "glamour",
+     "glamour-photography", "virtual-photoshoot"
    - YouTube: "youtube-thumbnail", "thumbnail-design", "cover-art",
-     "video-thumbnail", "podcast-cover"
+     "video-thumbnail", "podcast-cover", "social-media-graphic"
    - Maternity: "maternity-shoot", "maternity-photography",
      "pregnancy-photoshoot", "baby-bump", "expecting-mother", "maternity-portrait"
    - 3D/Perspective: "3d-photo", "forced-perspective", "facebook-3d",
@@ -495,6 +499,8 @@ TAG RULES — FOLLOW EXACTLY:
    - Character/person design: "character-design", "fantasy-character"
    - Commercial/stock: "product-photography", "stock-photo"
    - Social media: "tiktok-aesthetic", "instagram-aesthetic"
+   - AI personas: "ai-influencer", "ai-avatar", "ai-headshot",
+     "ai-girlfriend", "ai-boyfriend"
    - US/UK variants: include BOTH when applicable ("coloring-book" AND
      "colouring-book", "watercolor" AND "watercolour")
 
@@ -521,14 +527,17 @@ SPLIT_THESE_WORDS = {
 # Compounds containing stop words that are still legitimate terms.
 PRESERVE_DESPITE_STOP_WORDS = {
     'depth-of-field',
-    'linkedin-profile-photo',
-    'restore-old-photo',
-    'pop-out-effect',
 }
 
 # Tags that should never appear (AI-related tags waste slots)
 BANNED_AI_TAGS = {
-    'ai-art', 'ai-generated', 'ai-prompt', 'ai-influencer', 'ai-colorize',
+    'ai-art', 'ai-generated', 'ai-prompt', 'ai-colorize',
+}
+
+# AI-prefixed tags that ARE legitimate search terms (exceptions to startswith('ai-') ban).
+# These represent real product categories and high-traffic search queries.
+ALLOWED_AI_TAGS = {
+    'ai-influencer', 'ai-avatar', 'ai-headshot', 'ai-girlfriend', 'ai-boyfriend',
 }
 
 # Ethnicity terms banned from tags (belong in title/description/descriptors only)

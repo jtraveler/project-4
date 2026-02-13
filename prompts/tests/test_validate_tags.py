@@ -272,7 +272,7 @@ class TestLegacyWhitelistPreserved(TestCase):
         self.assertIn('avant-garde', result)
 
     def test_linkedin_profile_photo_preserved(self):
-        """3-part compound in PRESERVE_DESPITE_STOP_WORDS is kept intact."""
+        """3-part compound with no stop words is naturally preserved."""
         result = _validate_and_fix_tags(['linkedin-profile-photo'])
         self.assertIn('linkedin-profile-photo', result)
         self.assertNotIn('linkedin', result)
@@ -280,7 +280,7 @@ class TestLegacyWhitelistPreserved(TestCase):
         self.assertNotIn('photo', result)
 
     def test_restore_old_photo_preserved(self):
-        """3-part compound in PRESERVE_DESPITE_STOP_WORDS is kept intact."""
+        """3-part compound with no stop words is naturally preserved."""
         result = _validate_and_fix_tags(['restore-old-photo'])
         self.assertIn('restore-old-photo', result)
         self.assertNotIn('restore', result)
@@ -288,7 +288,7 @@ class TestLegacyWhitelistPreserved(TestCase):
         self.assertNotIn('photo', result)
 
     def test_pop_out_effect_preserved(self):
-        """3-part compound in PRESERVE_DESPITE_STOP_WORDS is kept intact."""
+        """3-part compound with no stop words is naturally preserved."""
         result = _validate_and_fix_tags(['pop-out-effect'])
         self.assertIn('pop-out-effect', result)
         self.assertNotIn('pop', result)
@@ -347,29 +347,29 @@ class TestStopWordSplitting(TestCase):
         self.assertIn('z', result)
         self.assertIn('test', result)
 
-    def test_three_part_cinematic_urban_portrait_splits(self):
-        """3-part compounds without preserve exemption are split."""
+    def test_three_part_cinematic_urban_portrait_preserved(self):
+        """3-part compound with no stop words is naturally preserved."""
         result = _validate_and_fix_tags(['cinematic-urban-portrait'])
-        self.assertIn('cinematic', result)
-        self.assertIn('urban', result)
-        self.assertIn('portrait', result)
-        self.assertNotIn('cinematic-urban-portrait', result)
+        self.assertIn('cinematic-urban-portrait', result)
+        self.assertNotIn('cinematic', result)
+        self.assertNotIn('urban', result)
+        self.assertNotIn('portrait', result)
 
-    def test_three_part_moody_dark_fantasy_splits(self):
-        """3-part compounds without preserve exemption are split."""
+    def test_three_part_moody_dark_fantasy_preserved(self):
+        """3-part compound with no stop words is naturally preserved."""
         result = _validate_and_fix_tags(['moody-dark-fantasy'])
-        self.assertIn('moody', result)
-        self.assertIn('dark', result)
-        self.assertIn('fantasy', result)
-        self.assertNotIn('moody-dark-fantasy', result)
+        self.assertIn('moody-dark-fantasy', result)
+        self.assertNotIn('moody', result)
+        self.assertNotIn('dark', result)
+        self.assertNotIn('fantasy', result)
 
-    def test_three_part_elegant_evening_gown_splits(self):
-        """3-part compounds without preserve exemption are split."""
+    def test_three_part_elegant_evening_gown_preserved(self):
+        """3-part compound with no stop words is naturally preserved."""
         result = _validate_and_fix_tags(['elegant-evening-gown'])
-        self.assertIn('elegant', result)
-        self.assertIn('evening', result)
-        self.assertIn('gown', result)
-        self.assertNotIn('elegant-evening-gown', result)
+        self.assertIn('elegant-evening-gown', result)
+        self.assertNotIn('elegant', result)
+        self.assertNotIn('evening', result)
+        self.assertNotIn('gown', result)
 
 
 # ---------------------------------------------------------------------------
@@ -437,9 +437,11 @@ class TestAITagRemoval(TestCase):
         result = _validate_and_fix_tags(['ai-prompt'])
         self.assertNotIn('ai-prompt', result)
 
-    def test_ai_influencer_removed(self):
+    def test_ai_influencer_kept(self):
+        """ai-influencer is in ALLOWED_AI_TAGS and should pass through."""
         result = _validate_and_fix_tags(['ai-influencer', 'woman'])
-        self.assertNotIn('ai-influencer', result)
+        self.assertIn('ai-influencer', result)
+        self.assertIn('woman', result)
 
     def test_ai_colorize_removed(self):
         result = _validate_and_fix_tags(['ai-colorize'])
@@ -455,6 +457,50 @@ class TestAITagRemoval(TestCase):
         result = _validate_and_fix_tags(['ai-restoration', 'portrait'])
         self.assertNotIn('ai-restoration', result)
         self.assertIn('portrait', result)
+
+
+# ---------------------------------------------------------------------------
+# 6b. ALLOWED_AI_TAGS exceptions
+# ---------------------------------------------------------------------------
+class TestAllowedAITags(TestCase):
+    """Test that AI product-category tags in ALLOWED_AI_TAGS pass through."""
+
+    def test_allowed_ai_tag_influencer(self):
+        """ai-influencer is a legitimate niche tag and should be kept."""
+        result = _validate_and_fix_tags(['ai-influencer', 'woman', 'portrait'])
+        self.assertIn('ai-influencer', result)
+
+    def test_allowed_ai_tag_avatar(self):
+        """ai-avatar is a legitimate niche tag and should be kept."""
+        result = _validate_and_fix_tags(['ai-avatar', 'character-design'])
+        self.assertIn('ai-avatar', result)
+
+    def test_allowed_ai_tag_headshot(self):
+        """ai-headshot is a legitimate niche tag and should be kept."""
+        result = _validate_and_fix_tags(['ai-headshot', 'professional'])
+        self.assertIn('ai-headshot', result)
+
+    def test_allowed_ai_tag_girlfriend(self):
+        """ai-girlfriend is a legitimate niche tag and should be kept."""
+        result = _validate_and_fix_tags(['ai-girlfriend'])
+        self.assertIn('ai-girlfriend', result)
+
+    def test_allowed_ai_tag_boyfriend(self):
+        """ai-boyfriend is a legitimate niche tag and should be kept."""
+        result = _validate_and_fix_tags(['ai-boyfriend'])
+        self.assertIn('ai-boyfriend', result)
+
+    def test_banned_ai_art_still_removed(self):
+        """ai-art is NOT in ALLOWED_AI_TAGS and must still be removed."""
+        result = _validate_and_fix_tags(['ai-art', 'portrait'])
+        self.assertNotIn('ai-art', result)
+        self.assertIn('portrait', result)
+
+    def test_unknown_ai_prefix_still_removed(self):
+        """ai-portrait is not in ALLOWED_AI_TAGS; startswith('ai-') ban catches it."""
+        result = _validate_and_fix_tags(['ai-portrait', 'cinematic'])
+        self.assertNotIn('ai-portrait', result)
+        self.assertIn('cinematic', result)
 
 
 # ---------------------------------------------------------------------------

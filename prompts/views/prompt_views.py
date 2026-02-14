@@ -1526,6 +1526,10 @@ def prompt_publish(request, slug):
         prompt.status = 1  # Published
         prompt.save(update_fields=['status'])
 
+        # Queue Pass 2 SEO review (Layer 3: background expert review with GPT-4o)
+        from prompts.tasks import queue_pass2_review
+        queue_pass2_review(prompt.pk)
+
         # Clear caches
         cache.delete(f"prompt_detail_{slug}_{request.user.id}")
         cache.delete(f"prompt_detail_{slug}_anonymous")
@@ -1557,6 +1561,10 @@ def prompt_publish(request, slug):
 
         if moderation_result.get('overall_status') == 'approved':
             # Orchestrator already set status=1
+            # Queue Pass 2 SEO review (Layer 3: background expert review)
+            from prompts.tasks import queue_pass2_review
+            queue_pass2_review(prompt.pk)
+
             messages.success(
                 request,
                 f'Your prompt "{escape(prompt.title)}" has been published!'

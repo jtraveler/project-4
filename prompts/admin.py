@@ -204,7 +204,7 @@ class PromptAdmin(SummernoteModelAdmin):
             'description': '🚨 Managed by the trash system. Edit with extreme caution.',
         }),
         ('Processing Status', {
-            'fields': ('processing_uuid', 'processing_complete'),
+            'fields': ('processing_uuid', 'processing_complete', 'seo_pass2_at'),
             'description': 'Background processing status for optimistic upload flow',
         }),
         ('Timestamps', {
@@ -219,7 +219,7 @@ class PromptAdmin(SummernoteModelAdmin):
         'b2_webp_url', 'b2_video_url', 'b2_video_thumb_url',
         'video_width', 'video_height',
         'created_on', 'updated_on', 'moderation_completed_at', 'media_preview_display',
-        'processing_uuid', 'processing_complete',
+        'processing_uuid', 'processing_complete', 'seo_pass2_at',
         'deleted_at', 'deleted_by', 'deletion_reason',
     )
 

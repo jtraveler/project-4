@@ -657,6 +657,10 @@ def upload_submit(request):
             'Your prompt has been created and published successfully!'
         )
 
+        # Queue Pass 2 SEO review (Layer 3: background expert review with GPT-4o)
+        from prompts.tasks import queue_pass2_review
+        queue_pass2_review(prompt.pk)
+
     # N4-Refactor: Clean up AI job from cache
     if ai_job_id:
         cache.delete(f'ai_job_{ai_job_id}')

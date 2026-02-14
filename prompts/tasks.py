@@ -1784,3 +1784,324 @@ def rename_prompt_files_for_seo(prompt_id: int) -> dict:
         'fields': updated_fields,
         'details': results,
     }
+
+
+# =============================================================================
+# PASS 2: BACKGROUND SEO EXPERT REVIEW
+# =============================================================================
+# Layer 3 of the 3-Layer Tag Quality Architecture.
+# Runs post-publish using GPT-4o (more powerful than Layer 1's gpt-4o-mini)
+# to review and improve tags and description quality.
+#
+# Architecture:
+#   Layer 1 — GPT Pass 1 (gpt-4o-mini): Fast initial generation during upload
+#   Layer 2 — Validator (_validate_and_fix_tags): Mechanical safety net
+#   Layer 3 — Pass 2 (gpt-4o): Senior SEO expert review post-publish
+#
+# Trigger: Queued with 45-second delay after prompt is published.
+# Idempotent: Safe to re-run; updates seo_pass2_at on completion.
+
+PASS2_SEO_SYSTEM_PROMPT = """\
+You are a senior SEO strategist reviewing AI-generated metadata for a prompt \
+sharing platform (similar to PromptHero, Lexica, and Civitai). A junior SEO \
+specialist already generated the initial tags and description using a fast model. \
+Your job is to review their work and fix any quality issues.
+
+You are reviewing ONE prompt. You will receive:
+- The image (base64-encoded)
+- The current title, description (excerpt), and tags
+- The current categories and descriptors
+
+YOUR TASK — review the existing tags and description, then return corrected versions.
+
+REVIEW CHECKLIST:
+1. TAGS — Are there exactly 10 tags? Are they all genuine search terms?
+   - Remove any tag that is NOT a term real users would type into a search bar
+   - Remove any tag that duplicates meaning with another tag (e.g., "portrait" + \
+"portraits")
+   - Replace vague/generic tags with specific, high-traffic alternatives
+   - Ensure compound tags (hyphenated) are real search concepts, not random word \
+pairs
+   - Ensure gender pairs are complete (man+male, woman+female, boy+male, \
+girl+female)
+   - Ensure NO ethnicity terms appear in tags (they belong only in description)
+   - Ensure NO generic AI tags (ai-art, ai-generated, ai-prompt)
+2. DESCRIPTION — Is it 4-6 sentences with natural keyword integration?
+   - Must include ethnicity + gender synonyms when person visible
+   - Must include 2-3 long-tail keyword phrases naturally woven in
+   - Must NOT be keyword-stuffed or read unnaturally
+   - Must include US/UK spelling variants where applicable
+3. TITLE — Is it 40-60 characters of pure SEO keywords?
+   - No filler words (in, at, with, the, and)
+   - Ethnicity + gender early if person visible
+
+""" + TAG_RULES_BLOCK + """
+
+RESPOND WITH ONLY a JSON object:
+{
+  "tags": ["tag-one", "tag-two", ...],
+  "description": "Updated description...",
+  "title": "Updated Title If Needed",
+  "changes_made": "Brief summary of what you changed and why",
+  "compounds_check": "Confirm each hyphenated tag is a real search term"
+}
+
+If everything looks good and no changes are needed, return the SAME values \
+with changes_made set to "No changes needed — quality approved"."""
+
+
+def _build_pass2_prompt(prompt) -> str:
+    """
+    Build the user-message prompt for Pass 2 SEO review.
+
+    Includes current title, description, tags, categories, and descriptors
+    so GPT-4o can review the existing work and suggest improvements.
+    All user-controlled content is escaped to prevent prompt injection.
+    """
+    from django.utils.html import escape
+
+    current_tags = list(prompt.tags.values_list('name', flat=True))
+    current_cats = list(prompt.categories.values_list('name', flat=True))
+
+    # Build descriptor summary
+    descriptor_parts = []
+    for desc in prompt.descriptors.all():
+        descriptor_parts.append(f"{desc.descriptor_type}: {desc.name}")
+    descriptors_str = '; '.join(descriptor_parts) if descriptor_parts else '(none)'
+
+    # Escape user-controlled content to prevent injection
+    safe_title = escape(prompt.title) if prompt.title else '(none)'
+    safe_excerpt = escape(prompt.excerpt) if prompt.excerpt else '(none)'
+    safe_tags = ', '.join(escape(t) for t in current_tags) if current_tags else '(none)'
+    safe_cats = ', '.join(escape(c) for c in current_cats) if current_cats else '(none)'
+
+    return f"""Review this prompt's SEO metadata:
+
+CURRENT TITLE: {safe_title}
+CURRENT DESCRIPTION: {safe_excerpt}
+CURRENT TAGS: {safe_tags}
+CURRENT CATEGORIES: {safe_cats}
+CURRENT DESCRIPTORS: {descriptors_str}
+
+Analyze the image and review whether the above metadata is SEO-optimal. \
+Fix any issues following the review checklist."""
+
+
+def run_seo_pass2_review(prompt_id: int) -> dict:
+    """
+    Background SEO Pass 2 review using GPT-4o.
+
+    Reviews and improves tags, description, and title for a published prompt.
+    This is Layer 3 of the 3-Layer Tag Quality Architecture.
+
+    Args:
+        prompt_id: ID of the Prompt to review
+
+    Returns:
+        dict with status, changes_made, and updated fields
+    """
+    from prompts.models import Prompt
+
+    try:
+        prompt = Prompt.objects.get(pk=prompt_id)
+    except Prompt.DoesNotExist:
+        logger.error(f"[Pass 2] Prompt {prompt_id} not found")
+        return {'status': 'error', 'error': 'Prompt not found'}
+
+    # Only review published prompts
+    if prompt.status != 1:
+        logger.info(f"[Pass 2] Prompt {prompt_id} not published (status={prompt.status}), skipping")
+        return {'status': 'skipped', 'reason': 'not_published'}
+
+    # Idempotency: skip if already reviewed within the last 5 minutes
+    from django.utils import timezone as tz
+    if prompt.seo_pass2_at:
+        age = tz.now() - prompt.seo_pass2_at
+        if age.total_seconds() < 300:
+            logger.info(
+                f"[Pass 2] Prompt {prompt_id} already reviewed "
+                f"{int(age.total_seconds())}s ago, skipping duplicate"
+            )
+            return {'status': 'skipped', 'reason': 'recently_reviewed'}
+
+    # Get image URL for analysis
+    image_url = _get_analysis_url(prompt)
+    if not image_url:
+        logger.warning(f"[Pass 2] Prompt {prompt_id} has no image URL, skipping")
+        return {'status': 'skipped', 'reason': 'no_image'}
+
+    try:
+        from openai import OpenAI, APITimeoutError, APIConnectionError
+        from prompts.constants import OPENAI_TIMEOUT
+
+        api_key = getattr(settings, 'OPENAI_API_KEY', None)
+        if not api_key:
+            import os
+            api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return {'status': 'error', 'error': 'OPENAI_API_KEY not configured'}
+
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT)
+
+        # Download and encode image
+        image_result = _download_and_encode_image(image_url)
+        if not image_result:
+            logger.error(f"[Pass 2] Image download failed for prompt {prompt_id}: {image_url}")
+            return {'status': 'error', 'error': 'Image download failed'}
+
+        image_data, media_type = image_result
+
+        # Build the review prompt
+        user_prompt = _build_pass2_prompt(prompt)
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": PASS2_SEO_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{media_type};base64,{image_data}",
+                                "detail": "low"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=1500,
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+
+        content = response.choices[0].message.content
+        result = _parse_ai_response(content)
+
+        if 'error' in result:
+            logger.warning(f"[Pass 2] Parse error for prompt {prompt_id}: {result['error']}")
+            return {'status': 'error', 'error': result['error']}
+
+        changes_made = result.get('changes_made', '')
+        logger.info(f"[Pass 2] Prompt {prompt_id}: {changes_made}")
+
+        # Apply improvements atomically to prevent partial updates
+        updated_fields = []
+
+        with transaction.atomic():
+            # Update tags if provided
+            new_tags = result.get('tags', [])
+            if new_tags and isinstance(new_tags, list):
+                # Run through validator (Layer 2)
+                validated_tags = _validate_and_fix_tags(new_tags, prompt_id=prompt_id)
+
+                # Quality gate: only apply if we got enough tags
+                if _is_quality_tag_response(validated_tags, prompt_id=prompt_id):
+                    from taggit.models import Tag
+                    prompt.tags.clear()
+                    for tag_name in validated_tags:
+                        tag, _ = Tag.objects.get_or_create(name=tag_name)
+                        prompt.tags.add(tag)
+                    updated_fields.append('tags')
+                else:
+                    logger.warning(
+                        f"[Pass 2] Prompt {prompt_id}: Tags failed quality gate, "
+                        f"keeping originals"
+                    )
+
+            # Update description if provided and different
+            new_description = result.get('description', '')
+            if new_description and new_description != prompt.excerpt:
+                prompt.excerpt = _sanitize_content(new_description, max_length=2000)
+                updated_fields.append('excerpt')
+
+            # Update title if provided and different
+            new_title = result.get('title', '')
+            if new_title and new_title != prompt.title:
+                old_slug = prompt.slug
+                prompt.title = _sanitize_content(new_title, max_length=200)
+                # Regenerate slug from new title
+                new_slug = _generate_unique_slug_with_retry(prompt, new_title)
+                prompt.slug = new_slug
+                updated_fields.append('title')
+                updated_fields.append('slug')
+
+                # Create SlugRedirect to preserve SEO (301 from old URL)
+                if old_slug and old_slug != new_slug:
+                    from prompts.models import SlugRedirect
+                    # Prevent circular redirects
+                    SlugRedirect.objects.filter(old_slug=new_slug).delete()
+                    SlugRedirect.objects.update_or_create(
+                        old_slug=old_slug,
+                        defaults={'prompt': prompt}
+                    )
+                    logger.info(
+                        f"[Pass 2] Created SlugRedirect: {old_slug} -> {new_slug}"
+                    )
+
+            # Mark Pass 2 as complete (tz imported at top of function)
+            prompt.seo_pass2_at = tz.now()
+            updated_fields.append('seo_pass2_at')
+
+            # Save all changes
+            save_fields = [f for f in updated_fields if f != 'tags']
+            if save_fields:
+                prompt.save(update_fields=save_fields)
+
+        logger.info(
+            f"[Pass 2] Prompt {prompt_id} complete: "
+            f"updated={updated_fields}, changes='{changes_made}'"
+        )
+
+        return {
+            'status': 'success',
+            'prompt_id': prompt_id,
+            'changes_made': changes_made,
+            'updated_fields': updated_fields,
+        }
+
+    except (APITimeoutError, APIConnectionError) as e:
+        logger.warning(f"[Pass 2] OpenAI timeout for prompt {prompt_id}: {e}")
+        return {'status': 'error', 'error': f'OpenAI timeout: {e}'}
+    except Exception as e:
+        logger.exception(f"[Pass 2] Error for prompt {prompt_id}: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+def queue_pass2_review(prompt_id: int) -> bool:
+    """
+    Queue a Pass 2 SEO review with a 45-second delay.
+
+    The delay ensures the initial save (title, tags, description) has fully
+    committed before the review reads current state.
+
+    Args:
+        prompt_id: ID of the Prompt to review
+
+    Returns:
+        True if queued successfully, False on error
+    """
+    try:
+        from django_q.tasks import async_task
+        from datetime import timedelta
+        from django.utils import timezone as tz
+
+        # Schedule with 45-second delay (timezone-aware)
+        run_at = tz.now() + timedelta(seconds=45)
+
+        async_task(
+            'prompts.tasks.run_seo_pass2_review',
+            prompt_id,
+            task_name=f'seo-pass2-{prompt_id}',
+            schedule_type='O',  # One-time schedule
+            next_run=run_at,
+        )
+        logger.info(f"[Pass 2] Queued review for prompt {prompt_id} (in 45s)")
+        return True
+
+    except Exception as e:
+        # Non-blocking: Pass 2 failure shouldn't break publish flow
+        logger.warning(f"[Pass 2] Failed to queue review for prompt {prompt_id}: {e}")
+        return False

@@ -955,6 +955,13 @@ class Prompt(models.Model):
         help_text="True when AI content generation is complete"
     )
 
+    # Pass 2: Background SEO expert review timestamp
+    seo_pass2_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the background SEO Pass 2 review last ran"
+    )
+
     # Custom managers
     objects = PromptManager()  # Default: excludes soft-deleted prompts
     all_objects = models.Manager()  # Include deleted prompts

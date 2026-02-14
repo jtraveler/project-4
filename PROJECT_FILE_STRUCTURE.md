@@ -3,7 +3,7 @@
 **Last Updated:** February 13, 2026
 **Project:** PromptFinder (Django 5.2.9)
 **Current Phase:** Phase 2B (2B-1 through 2B-9 + tag pipeline complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~472 passing (43% coverage, threshold 40%)
+**Total Tests:** ~498 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -297,7 +297,7 @@ prompts/views/
 
 ---
 
-## Test Files (16 files, ~472 tests)
+## Test Files (16 files, ~498 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
@@ -315,7 +315,7 @@ prompts/views/
 | `test_user_profile_javascript.py` | Multiple | Profile JavaScript |
 | `test_video_processor.py` | Multiple | Video processing tests |
 | `test_tags_context.py` | 17 | Tag context enhancement: excerpt in GPT prompt, weighting rules, backfill queryset (Session 81) |
-| `test_validate_tags.py` | 113 | Tag validation pipeline: 7 checks, compound splitting, GPT integration (Session 81) |
+| `test_validate_tags.py` | 200 | Tag validation pipeline: 8 checks, compound splitting, GPT self-check, demographic reorder, stop-word discard (Sessions 81, 83) |
 | `test_backfill_hardening.py` | 44 | Backfill hardening: quality gate, fail-fast download, URL pre-check, tag preservation (Session 82) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
@@ -990,9 +990,10 @@ python manage.py test -v 2
 
 ### Test Statistics
 
-- **Total Tests:** ~472 passing (12 skipped - Selenium)
+- **Total Tests:** ~498 passing (12 skipped - Selenium)
 - **Pass Rate:** 100% in CI
 - **Coverage:** ~43% (enforced minimum: 40%)
+- **Note:** `prompts/tests.py` (stale stub) was deleted in Session 83 — conflicted with `prompts/tests/` directory discovery
 - **Priority Areas:** CRUD, authentication, rate limiting, URL migration
 - **CI Integration:** Tests run on every push/PR via GitHub Actions
 
@@ -1353,12 +1354,15 @@ static/js/
 
 ```
 prompts/
-├── tasks.py                              # _validate_and_fix_tags() 7-check pipeline,
+├── tasks.py                              # _validate_and_fix_tags() 8-check pipeline,
+│                                         # TAG_RULES_BLOCK shared constant (~76 lines),
 │                                         # _should_split_compound(), SPLIT_THESE_WORDS set (30 words),
-│                                         # PRESERVE_DESPITE_STOP_WORDS exemptions,
-│                                         # COMPOUND TAG RULE in GPT prompt, WEIGHTING RULES,
+│                                         # PRESERVE_DESPITE_STOP_WORDS, PRESERVE_SINGLE_CHAR_COMPOUNDS (12),
+│                                         # ALLOWED_AI_TAGS (5), DEMOGRAPHIC_TAGS (16), GENERIC_TAGS (32),
+│                                         # COMPOUND TAG RULE + WEIGHTING RULES in GPT prompt,
+│                                         # GPT self-check (rule 7 + compounds_check chain-of-thought),
 │                                         # excerpt parameter in _call_openai_vision_tags_only(),
-│                                         # tags-only backfill support (~350 lines added)
+│                                         # tags-only backfill support
 ├── admin.py                              # Minor tag-related fixes
 └── views/
     └── upload_views.py                   # Tag validation on upload submit
@@ -1400,11 +1404,18 @@ prompts/management/commands/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.16
-**Audit Date:** February 13, 2026
+**Version:** 3.17
+**Audit Date:** February 14, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.17 (February 14, 2026 - Session 83 End-of-Session Docs Update):**
+- Updated total test count: ~472→~498
+- Updated `test_validate_tags.py` from 113 → 200 tests (8-check pipeline, GPT self-check, demographic reorder)
+- Updated `tasks.py` description with new constants: TAG_RULES_BLOCK, ALLOWED_AI_TAGS, PRESERVE_SINGLE_CHAR_COMPOUNDS, DEMOGRAPHIC_TAGS, GENERIC_TAGS (32 entries)
+- Noted `prompts/tests.py` deletion (stale stub conflicting with tests/ directory)
+- Updated test statistics section with deletion note
 
 **v3.16 (February 13, 2026 - Session 82 End-of-Session Docs Update):**
 - Added `test_backfill_hardening.py` (44 tests) to test files (count 15→16)

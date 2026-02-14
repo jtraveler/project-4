@@ -395,7 +395,12 @@ def _validate_and_fix_tags(tags, prompt_id=None):
     elif len(deduped) < 10:
         logger.warning(f"{log_prefix} Only {len(deduped)} tags after validation (expected 10)")
 
-    # Check 7: Gender pair warnings (log only, no auto-fix)
+    # Check 7: Move demographic tags to end for consistent UX
+    content_tags = [t for t in deduped if t not in DEMOGRAPHIC_TAGS]
+    demo_tags = [t for t in deduped if t in DEMOGRAPHIC_TAGS]
+    deduped = content_tags + demo_tags
+
+    # Check 8: Gender pair warnings (log only, no auto-fix)
     tag_set = set(deduped)
     if 'man' in tag_set and 'male' not in tag_set:
         logger.warning(f"{log_prefix} Gender pair incomplete: 'man' without 'male'")
@@ -550,6 +555,16 @@ PRESERVE_SINGLE_CHAR_COMPOUNDS = {
     'e-commerce', 'e-sports',
     'j-pop',
     't-shirt', 't-shirts',
+}
+
+# Demographic/gender tags that should appear at the END of the tag list for UX.
+# Users see descriptive, content-specific tags first; standard demographic tags last.
+# This is display ordering only — no SEO impact.
+DEMOGRAPHIC_TAGS = {
+    'man', 'male', 'woman', 'female',
+    'boy', 'girl', 'teen-boy', 'teen-girl',
+    'child', 'kid', 'baby', 'infant',
+    'teenager', 'teen', 'person', 'couple',
 }
 
 # Tags that should never appear (AI-related tags waste slots)

@@ -9,7 +9,7 @@ enforcement, and gender pair warnings.
 import logging
 from unittest import TestCase
 
-from prompts.tasks import _validate_and_fix_tags
+from prompts.tasks import _validate_and_fix_tags, DEMOGRAPHIC_TAGS
 
 
 # ---------------------------------------------------------------------------
@@ -687,7 +687,69 @@ class TestTagCountEnforcement(TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 10. Gender pair warnings
+# 10. Demographic tag reordering
+# ---------------------------------------------------------------------------
+class TestDemographicTagReordering(TestCase):
+    """Test that demographic/gender tags are moved to end of tag list."""
+
+    def test_demographic_tags_moved_to_end(self):
+        """Demographic tags should appear after all content tags."""
+        tags = ['man', 'male', 'cinematic', 'portrait', 'warm-tones',
+                'soft-light', 'beard', 'photorealistic', 'middle-aged', 'thoughtful-expression']
+        result = _validate_and_fix_tags(tags)
+        # man and male should be at the end
+        self.assertIn(result[-1], ('male', 'man'))
+        self.assertIn(result[-2], ('male', 'man'))
+        # Content tags should be before demographic tags
+        man_idx = result.index('man')
+        male_idx = result.index('male')
+        cinematic_idx = result.index('cinematic')
+        self.assertLess(cinematic_idx, man_idx)
+        self.assertLess(cinematic_idx, male_idx)
+
+    def test_demographic_reorder_preserves_all_tags(self):
+        """Reordering should not add or remove any tags."""
+        tags = ['woman', 'female', 'portrait', 'fashion', 'elegant',
+                'studio', 'lighting', 'model', 'glamour', 'photorealistic']
+        result = _validate_and_fix_tags(tags)
+        self.assertEqual(len(result), 10)
+        self.assertIn('woman', result)
+        self.assertIn('female', result)
+        self.assertIn('portrait', result)
+
+    def test_no_demographic_tags_order_unchanged(self):
+        """When no demographic tags present, order should be unchanged."""
+        tags = ['landscape', 'mountain', 'sunset', 'golden-hour', 'panoramic',
+                'nature', 'clouds', 'dramatic', 'wilderness', 'scenic']
+        result = _validate_and_fix_tags(tags)
+        self.assertEqual(result[0], 'landscape')
+        self.assertEqual(result[1], 'mountain')
+
+    def test_multiple_demographic_tags_all_at_end(self):
+        """Multiple demographic tags (e.g., couple) should all be at end."""
+        tags = ['man', 'male', 'woman', 'female', 'couple', 'romantic',
+                'sunset', 'beach', 'silhouette', 'warm-tones']
+        result = _validate_and_fix_tags(tags)
+        # All 5 demographic tags at end
+        content_section = result[:5]
+        demo_section = result[5:]
+        for tag in demo_section:
+            self.assertIn(tag, DEMOGRAPHIC_TAGS)
+        for tag in content_section:
+            self.assertNotIn(tag, DEMOGRAPHIC_TAGS)
+
+    def test_child_tags_moved_to_end(self):
+        """Child-related demographic tags should also move to end."""
+        tags = ['boy', 'male', 'child', 'playground', 'happy',
+                'outdoor', 'colorful', 'summer', 'candid', 'portrait']
+        result = _validate_and_fix_tags(tags)
+        boy_idx = result.index('boy')
+        playground_idx = result.index('playground')
+        self.assertLess(playground_idx, boy_idx)
+
+
+# ---------------------------------------------------------------------------
+# 11. Gender pair warnings
 # ---------------------------------------------------------------------------
 class TestGenderPairWarnings(TestCase):
     """Test gender pair warnings are logged (no auto-fix)."""

@@ -367,8 +367,9 @@ def _validate_and_fix_tags(tags, prompt_id=None):
 
             # Split only if compound contains stop/filler words
             if _should_split_compound(tag):
-                logger.info(f"{log_prefix} Split stop-word compound: '{tag}' -> {parts}")
-                validated.extend(parts)
+                clean_parts = [p for p in parts if p not in SPLIT_THESE_WORDS and len(p) > 1]
+                logger.info(f"{log_prefix} Split stop-word compound: '{tag}' -> {clean_parts}")
+                validated.extend(clean_parts)
                 continue
 
             # Default: preserve the compound tag

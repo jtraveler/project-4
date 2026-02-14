@@ -334,48 +334,83 @@ class TestStopWordSplitting(TestCase):
 
     def test_the_sunset_splits(self):
         result = _validate_and_fix_tags(['the-sunset'])
-        self.assertIn('the', result)
+        self.assertNotIn('the', result)
         self.assertIn('sunset', result)
         self.assertNotIn('the-sunset', result)
 
     def test_a_portrait_splits(self):
         result = _validate_and_fix_tags(['a-portrait'])
-        self.assertIn('a', result)
+        self.assertNotIn('a', result)
         self.assertIn('portrait', result)
         self.assertNotIn('a-portrait', result)
 
     def test_very_nice_splits(self):
+        """Both parts are stop words — neither should survive."""
         result = _validate_and_fix_tags(['very-nice'])
-        self.assertIn('very', result)
-        self.assertIn('nice', result)
+        self.assertNotIn('very', result)
+        self.assertNotIn('nice', result)
         self.assertNotIn('very-nice', result)
 
     def test_in_studio_splits(self):
         result = _validate_and_fix_tags(['in-studio'])
-        self.assertIn('in', result)
+        self.assertNotIn('in', result)
         self.assertIn('studio', result)
 
     def test_with_flowers_splits(self):
         result = _validate_and_fix_tags(['with-flowers'])
-        self.assertIn('with', result)
+        self.assertNotIn('with', result)
         self.assertIn('flowers', result)
 
     def test_big_portrait_splits(self):
         result = _validate_and_fix_tags(['big-portrait'])
-        self.assertIn('big', result)
+        self.assertNotIn('big', result)
         self.assertIn('portrait', result)
 
     def test_good_lighting_splits(self):
         result = _validate_and_fix_tags(['good-lighting'])
-        self.assertIn('good', result)
+        self.assertNotIn('good', result)
         self.assertIn('lighting', result)
 
     def test_single_char_part_splits(self):
-        """Compounds with single-character parts should be split."""
+        """Compounds with single-character parts: the single char is discarded."""
         result = _validate_and_fix_tags(['z-test'])
-        # 'z' is single char, so it splits
-        self.assertIn('z', result)
+        # 'z' is single char, so it's discarded
+        self.assertNotIn('z', result)
         self.assertIn('test', result)
+
+    def test_art_for_kids_discards_stop_word(self):
+        """'for' is a stop word — only 'art' and 'kids' survive."""
+        result = _validate_and_fix_tags(['art-for-kids'])
+        self.assertIn('art', result)
+        self.assertIn('kids', result)
+        self.assertNotIn('for', result)
+        self.assertNotIn('art-for-kids', result)
+
+    def test_people_in_the_city_discards_stop_words(self):
+        """'in' and 'the' are stop words — only 'people' and 'city' survive."""
+        result = _validate_and_fix_tags(['people-in-the-city'])
+        self.assertIn('people', result)
+        self.assertIn('city', result)
+        self.assertNotIn('in', result)
+        self.assertNotIn('the', result)
+        self.assertNotIn('people-in-the-city', result)
+
+    def test_day_of_the_dead_discards_stop_words(self):
+        """'of' and 'the' are stop words — only 'day' and 'dead' survive."""
+        result = _validate_and_fix_tags(['day-of-the-dead'])
+        self.assertIn('day', result)
+        self.assertIn('dead', result)
+        self.assertNotIn('of', result)
+        self.assertNotIn('the', result)
+        self.assertNotIn('day-of-the-dead', result)
+
+    def test_a_big_portrait_all_stop_words_except_portrait(self):
+        """'a' and 'big' are stop words — only 'portrait' survives."""
+        result = _validate_and_fix_tags(['a-big-portrait'])
+        self.assertIn('portrait', result)
+        self.assertNotIn('a', result)
+        self.assertNotIn('big', result)
+        self.assertNotIn('a-big-portrait', result)
 
     def test_three_part_cinematic_urban_portrait_preserved(self):
         """3-part compound with no stop words is naturally preserved."""

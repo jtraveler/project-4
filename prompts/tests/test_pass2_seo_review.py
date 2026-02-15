@@ -8,8 +8,7 @@ Tests cover:
 3. run_seo_pass2_review() — success, errors, skips, edge cases
 4. queue_pass2_review() — scheduling behavior
 5. Management command run_pass2_review
-6. View trigger integration (upload_submit, prompt_publish)
-7. Model field seo_pass2_at
+6. Model field seo_pass2_at
 """
 
 import json
@@ -23,6 +22,7 @@ from django.utils import timezone
 
 from prompts.tasks import (
     PASS2_SEO_SYSTEM_PROMPT,
+    PROTECTED_TAGS,
     TAG_RULES_BLOCK,
     _build_pass2_prompt,
     run_seo_pass2_review,
@@ -30,6 +30,29 @@ from prompts.tasks import (
     _validate_and_fix_tags,
     _is_quality_tag_response,
 )
+
+
+# ---------------------------------------------------------------------------
+# Helper: build new-format GPT-4o mock responses
+# ---------------------------------------------------------------------------
+def _make_pass2_response(keep=None, remove=None, add=None, reasoning='',
+                         quality='good', improved_description='', reasons=None,
+                         compounds_check='All verified'):
+    """Build a JSON string matching the new Pass 2 response format."""
+    return json.dumps({
+        'tags_review': {
+            'keep': keep or [],
+            'remove': remove or [],
+            'add': add or [],
+            'reasoning': reasoning,
+        },
+        'description_review': {
+            'quality': quality,
+            'improved_description': improved_description,
+            'reasons': reasons or [],
+        },
+        'compounds_check': compounds_check,
+    })
 
 
 # ===========================================================================
@@ -42,29 +65,34 @@ class TestPass2SystemPrompt(TestCase):
         self.assertIsInstance(PASS2_SEO_SYSTEM_PROMPT, str)
         self.assertGreater(len(PASS2_SEO_SYSTEM_PROMPT), 100)
 
-    def test_prompt_contains_tag_rules_block(self):
-        """TAG_RULES_BLOCK must be embedded in the system prompt."""
-        # TAG_RULES_BLOCK starts with "TAG RULES"
-        self.assertIn('TAG RULES', PASS2_SEO_SYSTEM_PROMPT)
+    def test_prompt_contains_tag_rules_placeholder(self):
+        """TAG_RULES_BLOCK placeholder must exist for interpolation."""
+        self.assertIn('{tag_rules_block}', PASS2_SEO_SYSTEM_PROMPT)
 
     def test_prompt_mentions_senior_seo(self):
         """Prompt must establish the senior SEO persona."""
         self.assertIn('senior SEO', PASS2_SEO_SYSTEM_PROMPT)
 
-    def test_prompt_mentions_review_checklist(self):
-        self.assertIn('REVIEW CHECKLIST', PASS2_SEO_SYSTEM_PROMPT)
+    def test_prompt_mentions_prompthero(self):
+        """Prompt must reference competitor platforms."""
+        self.assertIn('PromptHero', PASS2_SEO_SYSTEM_PROMPT)
 
     def test_prompt_mentions_json_response(self):
         self.assertIn('JSON', PASS2_SEO_SYSTEM_PROMPT)
 
-    def test_prompt_includes_tags_field(self):
-        self.assertIn('"tags"', PASS2_SEO_SYSTEM_PROMPT)
+    def test_prompt_includes_tags_review_field(self):
+        self.assertIn('"tags_review"', PASS2_SEO_SYSTEM_PROMPT)
 
-    def test_prompt_includes_description_field(self):
-        self.assertIn('"description"', PASS2_SEO_SYSTEM_PROMPT)
+    def test_prompt_includes_description_review_field(self):
+        self.assertIn('"description_review"', PASS2_SEO_SYSTEM_PROMPT)
 
-    def test_prompt_includes_changes_made_field(self):
-        self.assertIn('"changes_made"', PASS2_SEO_SYSTEM_PROMPT)
+    def test_prompt_includes_keep_add_remove(self):
+        self.assertIn('"keep"', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('"add"', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('"remove"', PASS2_SEO_SYSTEM_PROMPT)
+
+    def test_prompt_includes_quality_field(self):
+        self.assertIn('"quality"', PASS2_SEO_SYSTEM_PROMPT)
 
     def test_prompt_includes_compounds_check(self):
         self.assertIn('compounds_check', PASS2_SEO_SYSTEM_PROMPT)
@@ -73,16 +101,53 @@ class TestPass2SystemPrompt(TestCase):
         """Ethnicity must be banned from tags in the prompt."""
         self.assertIn('ethnicity', PASS2_SEO_SYSTEM_PROMPT.lower())
 
-    def test_prompt_mentions_no_changes_needed(self):
-        """Prompt must handle the case where no changes are needed."""
-        self.assertIn('No changes needed', PASS2_SEO_SYSTEM_PROMPT)
+    def test_prompt_has_priority_ordering(self):
+        """Prompt must have the 4-priority tag review ordering."""
+        self.assertIn('PRIORITY 1', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('PRIORITY 2', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('PRIORITY 3', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('PRIORITY 4', PASS2_SEO_SYSTEM_PROMPT)
+
+    def test_prompt_has_description_quality_gate(self):
+        """Prompt must distinguish good vs needs_improvement."""
+        self.assertIn('needs_improvement', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('"good"', PASS2_SEO_SYSTEM_PROMPT)
+
+    def test_prompt_does_not_mention_title(self):
+        """Pass 2 must NOT review or modify titles."""
+        # Title is not in the output format
+        self.assertNotIn('"title"', PASS2_SEO_SYSTEM_PROMPT)
+
+    def test_prompt_has_interpolation_placeholders(self):
+        """Prompt must contain all required interpolation placeholders."""
+        self.assertIn('{current_tags_json}', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('{current_description}', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('{tag_rules_block}', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('{banned_ethnicity_list}', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('{banned_ai_tags_list}', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('{allowed_ai_tags_list}', PASS2_SEO_SYSTEM_PROMPT)
+
+    def test_prompt_has_anti_injection_instruction(self):
+        """Prompt must contain anti-injection security note."""
+        self.assertIn('SECURITY NOTE', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('<user_content>', PASS2_SEO_SYSTEM_PROMPT)
+
+    def test_protected_tags_constant_exists_and_contains_portrait(self):
+        """PROTECTED_TAGS must exist and include high-traffic 'portrait'."""
+        self.assertIsInstance(PROTECTED_TAGS, set)
+        self.assertIn('portrait', PROTECTED_TAGS)
+
+    def test_prompt_contains_protected_tags_section(self):
+        """System prompt must include the PROTECTED TAGS instruction block."""
+        self.assertIn('PROTECTED TAGS', PASS2_SEO_SYSTEM_PROMPT)
+        self.assertIn('{protected_tags_list}', PASS2_SEO_SYSTEM_PROMPT)
 
 
 # ===========================================================================
 # 2. _build_pass2_prompt() output formatting
 # ===========================================================================
 class TestBuildPass2Prompt(DjangoTestCase):
-    """Test the user-message prompt builder for Pass 2."""
+    """Test the system prompt builder for Pass 2."""
 
     def setUp(self):
         self.user = User.objects.create_user(
@@ -104,11 +169,6 @@ class TestBuildPass2Prompt(DjangoTestCase):
         prompt.save()
         return prompt
 
-    def test_includes_current_title(self):
-        prompt = self._make_prompt(title='My Amazing Title')
-        result = _build_pass2_prompt(prompt)
-        self.assertIn('My Amazing Title', result)
-
     def test_includes_current_description(self):
         prompt = self._make_prompt(excerpt='This is my description.')
         result = _build_pass2_prompt(prompt)
@@ -124,45 +184,43 @@ class TestBuildPass2Prompt(DjangoTestCase):
     def test_handles_no_tags(self):
         prompt = self._make_prompt()
         result = _build_pass2_prompt(prompt)
-        self.assertIn('(none)', result)
+        # Empty tags list as JSON
+        self.assertIn('[]', result)
 
     def test_handles_no_excerpt(self):
         prompt = self._make_prompt(excerpt='')
         result = _build_pass2_prompt(prompt)
-        self.assertIn('CURRENT DESCRIPTION: (none)', result)
+        self.assertIn('(empty)', result)
 
-    def test_includes_categories(self):
-        prompt = self._make_prompt()
-        from prompts.models import SubjectCategory
-        cat, _ = SubjectCategory.objects.get_or_create(
-            slug='portrait', defaults={'name': 'Portrait'}
-        )
-        prompt.categories.add(cat)
-        result = _build_pass2_prompt(prompt)
-        self.assertIn(cat.name, result)
-
-    def test_includes_descriptors(self):
-        prompt = self._make_prompt()
-        from prompts.models import SubjectDescriptor
-        desc, _ = SubjectDescriptor.objects.get_or_create(
-            slug='female',
-            defaults={'name': 'Female', 'descriptor_type': 'gender'}
-        )
-        prompt.descriptors.add(desc)
-        result = _build_pass2_prompt(prompt)
-        self.assertIn(desc.name, result)
-
-    def test_output_contains_review_instruction(self):
+    def test_interpolates_tag_rules_block(self):
+        """TAG_RULES_BLOCK must be interpolated into the output."""
         prompt = self._make_prompt()
         result = _build_pass2_prompt(prompt)
-        self.assertIn('SEO-optimal', result)
+        # TAG_RULES_BLOCK content starts with "TAG RULES"
+        self.assertIn('TAG RULES', result)
 
-    def test_escapes_html_in_title(self):
-        """User-controlled title content must be HTML-escaped."""
-        prompt = self._make_prompt(title='<script>alert("xss")</script>')
+    def test_interpolates_banned_ethnicity(self):
+        """Banned ethnicity list must be interpolated."""
+        prompt = self._make_prompt()
         result = _build_pass2_prompt(prompt)
-        self.assertNotIn('<script>', result)
-        self.assertIn('&lt;script&gt;', result)
+        self.assertIn('african-american', result)
+
+    def test_interpolates_protected_tags(self):
+        """Protected tags list must be interpolated into the output."""
+        prompt = self._make_prompt()
+        result = _build_pass2_prompt(prompt)
+        self.assertIn('portrait', result)
+        self.assertIn('PROTECTED TAGS', result)
+
+    def test_output_is_valid_system_prompt(self):
+        """Output must be a complete system prompt (no placeholders left)."""
+        prompt = self._make_prompt()
+        result = _build_pass2_prompt(prompt)
+        # No unresolved placeholders should remain
+        self.assertNotIn('{current_tags_json}', result)
+        self.assertNotIn('{current_description}', result)
+        self.assertNotIn('{tag_rules_block}', result)
+        self.assertNotIn('{protected_tags_list}', result)
 
     def test_escapes_html_in_excerpt(self):
         """User-controlled description must be HTML-escaped."""
@@ -171,6 +229,22 @@ class TestBuildPass2Prompt(DjangoTestCase):
         self.assertNotIn('<b>', result)
         self.assertIn('&amp;', result)
         self.assertIn('&lt;b&gt;', result)
+
+    def test_wraps_tags_in_user_content_delimiters(self):
+        """Tags must be wrapped in <user_content> XML delimiters for injection defense."""
+        prompt = self._make_prompt()
+        prompt.tags.add('portrait', 'cinematic')
+        result = _build_pass2_prompt(prompt)
+        # Tags should be inside <user_content> delimiters as raw JSON
+        self.assertIn('<user_content>[', result)
+        self.assertIn(']</user_content>', result)
+
+    def test_wraps_description_in_user_content_delimiters(self):
+        """Description must be wrapped in <user_content> XML delimiters."""
+        prompt = self._make_prompt(excerpt='Test description for SEO.')
+        result = _build_pass2_prompt(prompt)
+        self.assertIn('<user_content>', result)
+        self.assertIn('Test description for SEO.', result)
 
 
 # ===========================================================================
@@ -268,17 +342,15 @@ class TestRunSeoPass2ReviewSuccess(DjangoTestCase):
     def test_successful_review_updates_tags(self, mock_openai_cls, mock_download):
         mock_download.return_value = ('base64data', 'image/jpeg')
 
-        # Mock OpenAI response
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            'tags': ['portrait', 'woman', 'female', 'cinematic', 'golden-hour',
-                     'photorealistic', 'warm-tones', 'urban', 'dramatic', 'headshot'],
-            'description': 'Updated description with better SEO.',
-            'title': 'Original Title',
-            'changes_made': 'Added missing gender pair, improved tags',
-            'compounds_check': 'All compounds verified',
-        })
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['woman', 'cinematic', 'portrait'],
+            remove=[],
+            add=['female', 'golden-hour', 'photorealistic', 'warm-tones',
+                 'urban', 'dramatic', 'headshot'],
+            reasoning='Added missing gender pair and long-tail terms',
+        )
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_cls.return_value = mock_client
@@ -297,14 +369,11 @@ class TestRunSeoPass2ReviewSuccess(DjangoTestCase):
 
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            'tags': ['portrait', 'woman', 'female', 'cinematic', 'warm-tones',
-                     'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
-            'description': 'Original description.',
-            'title': 'Original Title',
-            'changes_made': 'No changes needed — quality approved',
-            'compounds_check': 'All verified',
-        })
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['portrait', 'woman', 'cinematic', 'female', 'warm-tones',
+                  'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
+            reasoning='No changes needed — quality approved',
+        )
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_cls.return_value = mock_client
@@ -319,91 +388,180 @@ class TestRunSeoPass2ReviewSuccess(DjangoTestCase):
 
     @patch('prompts.tasks._download_and_encode_image')
     @patch('openai.OpenAI')
-    def test_review_updates_description(self, mock_openai_cls, mock_download):
+    def test_review_updates_description_when_needs_improvement(self, mock_openai_cls, mock_download):
+        """Description IS updated when quality=needs_improvement with valid replacement."""
         mock_download.return_value = ('base64data', 'image/jpeg')
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            'tags': ['portrait', 'woman', 'female', 'cinematic', 'warm-tones',
-                     'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
-            'description': 'A much better SEO-optimized description.',
-            'title': 'Original Title',
-            'changes_made': 'Improved description',
-            'compounds_check': 'All verified',
-        })
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
-        mock_openai_cls.return_value = mock_client
-
-        prompt = self._make_prompt()
-        run_seo_pass2_review(prompt.pk)
-
-        prompt.refresh_from_db()
-        self.assertEqual(prompt.excerpt, 'A much better SEO-optimized description.')
-
-    @patch('prompts.tasks._download_and_encode_image')
-    @patch('openai.OpenAI')
-    def test_review_updates_title_and_slug(self, mock_openai_cls, mock_download):
-        mock_download.return_value = ('base64data', 'image/jpeg')
-
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            'tags': ['portrait', 'woman', 'female', 'cinematic', 'warm-tones',
-                     'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
-            'description': 'Original description.',
-            'title': 'Better SEO Title Keywords',
-            'changes_made': 'Improved title',
-            'compounds_check': 'All verified',
-        })
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
-        mock_openai_cls.return_value = mock_client
-
-        prompt = self._make_prompt()
-        run_seo_pass2_review(prompt.pk)
-
-        prompt.refresh_from_db()
-        self.assertEqual(prompt.title, 'Better SEO Title Keywords')
-        self.assertIn('better-seo-title', prompt.slug)
-
-    @patch('prompts.tasks._download_and_encode_image')
-    @patch('openai.OpenAI')
-    def test_slug_change_creates_redirect(self, mock_openai_cls, mock_download):
-        """Changing the slug must create a SlugRedirect for SEO."""
-        from prompts.models import SlugRedirect
-
-        mock_download.return_value = ('base64data', 'image/jpeg')
-
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            'tags': ['portrait', 'woman', 'female', 'cinematic', 'warm-tones',
-                     'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
-            'description': 'Original description.',
-            'title': 'Completely Different Title Keywords',
-            'changes_made': 'Changed title for SEO',
-            'compounds_check': 'All verified',
-        })
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_response
-        mock_openai_cls.return_value = mock_client
-
-        prompt = self._make_prompt()
-        old_slug = prompt.slug
-
-        run_seo_pass2_review(prompt.pk)
-
-        prompt.refresh_from_db()
-        # Slug should have changed
-        self.assertNotEqual(prompt.slug, old_slug)
-        # A redirect from old slug should exist
-        self.assertTrue(
-            SlugRedirect.objects.filter(
-                old_slug=old_slug, prompt=prompt
-            ).exists()
+        improved_desc = (
+            'A much better SEO-optimized description with cinematic portrait photography '
+            'techniques. Features a stunning African-American woman in golden-hour lighting '
+            'with warm tones and dramatic shadows. Perfect for professional headshot inspiration.'
         )
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['portrait', 'woman', 'cinematic', 'female', 'warm-tones',
+                  'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
+            quality='needs_improvement',
+            improved_description=improved_desc,
+            reasons=['Missing ethnicity terms', 'No long-tail keyword phrases'],
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        run_seo_pass2_review(prompt.pk)
+
+        prompt.refresh_from_db()
+        self.assertEqual(prompt.excerpt, improved_desc)
+
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_description_not_updated_when_quality_good(self, mock_openai_cls, mock_download):
+        """Description NOT updated when quality=good (the quality gate)."""
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['portrait', 'woman', 'cinematic', 'female', 'warm-tones',
+                  'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
+            quality='good',
+            improved_description='',
+            reasons=[],
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        original_excerpt = prompt.excerpt
+        run_seo_pass2_review(prompt.pk)
+
+        prompt.refresh_from_db()
+        self.assertEqual(prompt.excerpt, original_excerpt)
+
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_description_not_updated_when_replacement_too_short(self, mock_openai_cls, mock_download):
+        """Description NOT updated when needs_improvement but replacement is empty/short."""
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['portrait', 'woman', 'cinematic', 'female', 'warm-tones',
+                  'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
+            quality='needs_improvement',
+            improved_description='Too short.',  # Under 50 chars
+            reasons=['Description too vague'],
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        original_excerpt = prompt.excerpt
+        run_seo_pass2_review(prompt.pk)
+
+        prompt.refresh_from_db()
+        self.assertEqual(prompt.excerpt, original_excerpt)
+
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_title_and_slug_never_modified(self, mock_openai_cls, mock_download):
+        """Title and slug must NEVER be modified by Pass 2, even if GPT returns a title."""
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        # Simulate GPT sneaking a title field into the response
+        response_data = {
+            'tags_review': {
+                'keep': ['portrait', 'woman', 'cinematic', 'female', 'warm-tones',
+                         'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
+                'remove': [],
+                'add': [],
+                'reasoning': 'All good',
+            },
+            'description_review': {
+                'quality': 'good',
+                'improved_description': '',
+                'reasons': [],
+            },
+            'title': 'This Should Be Ignored',
+            'compounds_check': 'All verified',
+        }
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = json.dumps(response_data)
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        original_title = prompt.title
+        original_slug = prompt.slug
+
+        run_seo_pass2_review(prompt.pk)
+
+        prompt.refresh_from_db()
+        self.assertEqual(prompt.title, original_title)
+        self.assertEqual(prompt.slug, original_slug)
+
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_tags_computed_as_keep_plus_add(self, mock_openai_cls, mock_download):
+        """Tags are computed as keep + add → validated → applied."""
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['woman', 'cinematic', 'portrait'],
+            remove=[],
+            add=['female', 'golden-hour', 'photorealistic', 'warm-tones',
+                 'urban', 'dramatic', 'headshot'],
+            reasoning='Added long-tail terms',
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        run_seo_pass2_review(prompt.pk)
+
+        prompt.refresh_from_db()
+        tag_names = set(prompt.tags.values_list('name', flat=True))
+        # All keep + add tags should be present
+        expected = {'woman', 'cinematic', 'portrait', 'female', 'golden-hour',
+                    'photorealistic', 'warm-tones', 'urban', 'dramatic', 'headshot'}
+        self.assertEqual(tag_names, expected)
+
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_tags_unchanged_when_same_as_current(self, mock_openai_cls, mock_download):
+        """Tags NOT re-applied when keep + add equals current tags (no unnecessary clear/re-add)."""
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        # Return exactly the same tags that already exist
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['portrait', 'woman', 'cinematic'],
+            remove=[],
+            add=[],
+            reasoning='No changes needed',
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        result = run_seo_pass2_review(prompt.pk)
+
+        self.assertEqual(result['status'], 'success')
+        # Tags should NOT be in updated_fields since they didn't change
+        self.assertNotIn('tags', result['updated_fields'])
 
     @patch('prompts.tasks._download_and_encode_image')
     @patch('openai.OpenAI')
@@ -414,14 +572,11 @@ class TestRunSeoPass2ReviewSuccess(DjangoTestCase):
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         # Include an ethnicity tag that should be filtered by validator
-        mock_response.choices[0].message.content = json.dumps({
-            'tags': ['portrait', 'african-american', 'woman', 'female', 'cinematic',
-                     'warm-tones', 'photorealistic', 'headshot', 'urban', 'dramatic'],
-            'description': 'Original description.',
-            'title': 'Original Title',
-            'changes_made': 'Fixed tags',
-            'compounds_check': 'All verified',
-        })
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['portrait', 'african-american', 'woman', 'female', 'cinematic'],
+            add=['warm-tones', 'photorealistic', 'headshot', 'urban', 'dramatic'],
+            reasoning='Fixed tags',
+        )
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_cls.return_value = mock_client
@@ -491,13 +646,10 @@ class TestRunSeoPass2ReviewErrors(DjangoTestCase):
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         # Return only 2 generic tags (fails quality gate)
-        mock_response.choices[0].message.content = json.dumps({
-            'tags': ['art', 'image'],
-            'description': 'Original description.',
-            'title': 'Error Test Prompt',
-            'changes_made': 'Simplified tags',
-            'compounds_check': 'N/A',
-        })
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['art', 'image'],
+            reasoning='Simplified tags',
+        )
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_cls.return_value = mock_client
@@ -535,14 +687,10 @@ class TestRunSeoPass2ReviewErrors(DjangoTestCase):
 
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            'tags': ['portrait', 'woman', 'female', 'cinematic', 'warm-tones',
-                     'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
-            'description': 'Test.',
-            'title': 'Error Test Prompt',
-            'changes_made': 'None',
-            'compounds_check': 'OK',
-        })
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['portrait', 'woman', 'cinematic', 'female', 'warm-tones',
+                  'photorealistic', 'headshot', 'urban', 'dramatic', 'golden-hour'],
+        )
         mock_client = MagicMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai_cls.return_value = mock_client

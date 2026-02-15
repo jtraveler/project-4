@@ -1,8 +1,15 @@
 {% load i18n admin_urls %}
-{% block object-tools-items %}
+{% if show_seo_review_button %}
+<li>
+    <form method="POST" action="{{ seo_review_url }}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" style="background: #0d6efd; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: inherit; line-height: inherit;">&#127919; SEO Review Only</button>
+    </form>
+</li>
+{% endif %}
 {% if show_regenerate_button %}
 <li>
-    <a href="{{ regenerate_url }}" style="background: #dc3545;">Regenerate AI Content</a>
+    <a href="{{ regenerate_url }}" style="background: #dc3545;">&#128260; Regenerate All</a>
 </li>
 {% endif %}
 <li>
@@ -10,4 +17,3 @@
     <a href="{% add_preserved_filters history_url %}" class="historylink">{% translate "History" %}</a>
 </li>
 {% if has_absolute_url %}<li><a href="{{ absolute_url }}" class="viewsitelink">{% translate "View on site" %}</a></li>{% endif %}
-{% endblock %}

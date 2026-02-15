@@ -139,7 +139,7 @@ class PromptAdmin(SummernoteModelAdmin):
     filter_horizontal = ('categories', 'descriptors')
     ordering = ['order', '-created_on']
     # Order matters: most important/common actions first
-    actions = ['approve_and_publish', 'make_published', 'make_draft', 'reset_order_to_date', 'regenerate_ai_content']
+    actions = ['approve_and_publish', 'make_published', 'make_draft', 'reset_order_to_date', 'run_seo_review', 'regenerate_ai_content']
     list_editable = ('order',)
     list_per_page = 50  # Pagination for performance
     date_hierarchy = 'created_on'
@@ -230,6 +230,16 @@ class PromptAdmin(SummernoteModelAdmin):
             extra_context['regenerate_url'] = reverse(
                 'admin:prompts_prompt_regenerate', args=[object_id],
             )
+            # SEO Review button — only for published prompts
+            try:
+                prompt = Prompt.objects.only('status').get(pk=object_id)
+                if prompt.status == 1:
+                    extra_context['show_seo_review_button'] = True
+                    extra_context['seo_review_url'] = reverse(
+                        'admin:prompts_prompt_seo_review', args=[object_id],
+                    )
+            except Prompt.DoesNotExist:
+                pass
         return super().change_view(request, object_id, form_url, extra_context)
 
     def get_form(self, request, obj=None, **kwargs):
@@ -541,6 +551,54 @@ class PromptAdmin(SummernoteModelAdmin):
             if matched:
                 prompt.descriptors.set(matched)
 
+    def run_seo_review(self, request, queryset):
+        """
+        Admin action: Run Pass 2 SEO review on selected prompts.
+
+        This ONLY optimizes existing tags and description — it does NOT
+        regenerate title, categories, or descriptors. Use this when the
+        current content is good but tags could be better.
+
+        Only works on published prompts (drafts are skipped).
+        """
+        from prompts.tasks import queue_pass2_review
+
+        queued = 0
+        skipped_draft = 0
+        skipped_recent = 0
+
+        for prompt in queryset:
+            if prompt.status != 1:
+                skipped_draft += 1
+                continue
+
+            result = queue_pass2_review(prompt.pk)
+            if result:
+                queued += 1
+            else:
+                skipped_recent += 1
+
+        parts = []
+        if queued:
+            parts.append(
+                f'✅ Queued SEO review for {queued} prompt(s). '
+                f'Tags and descriptions will be optimized in ~45 seconds'
+            )
+        if skipped_draft:
+            parts.append(
+                f'⏭️ Skipped {skipped_draft} draft(s) — only published prompts can be reviewed'
+            )
+        if skipped_recent:
+            parts.append(
+                f'⏭️ Skipped {skipped_recent} recently-reviewed prompt(s) — reviewed within last 5 minutes'
+            )
+
+        message = '. '.join(parts) if parts else 'No prompts selected.'
+        self.message_user(request, message)
+    run_seo_review.short_description = (
+        '🎯 SEO Review ONLY (Pass 2) — Optimize tags & description without changing title'
+    )
+
     def regenerate_ai_content(self, request, queryset):
         """Re-run AI content generation for selected prompts."""
         if not request.user.is_superuser:
@@ -610,22 +668,35 @@ class PromptAdmin(SummernoteModelAdmin):
                         prompt, ai_result, all_categories, all_descriptors,
                     )
                 success += 1
+                # Queue Pass 2 SEO review for published prompts
+                if prompt.status == 1:
+                    from prompts.tasks import queue_pass2_review
+                    queue_pass2_review(prompt.pk)
             except Exception as e:
                 errors.append(f'{prompt.title[:30]}: {str(e)[:50]}')
+
+        pass2_note = ''
+        published_count = queryset.filter(status=1).count()
+        pass2_note = ''
+        if published_count:
+            pass2_note = (
+                f' SEO optimization of tags will follow automatically in ~45 seconds.'
+            )
 
         if errors:
             self.message_user(
                 request,
-                f'⚠️ Regenerated {success}/{count}. Errors: {"; ".join(errors)}',
+                f'⚠️ Regenerated {success}/{count}.{pass2_note} Errors: {"; ".join(errors)}',
                 level='warning'
             )
         else:
             self.message_user(
                 request,
-                f'✅ Regenerated AI content for {success} prompt(s).'
+                f'✅ Regenerated AI content for {success} prompt(s).{pass2_note}'
             )
     regenerate_ai_content.short_description = (
-        '🔄 Regenerate AI content (🚨 overwrites title/desc/tags/cats/descs — slug preserved)'
+        '🔄 Regenerate ALL AI Content (Pass 1 + Pass 2) — Rebuilds title, description, tags, '
+        'categories from scratch, then queues SEO optimization'
     )
 
     def get_urls(self):
@@ -647,6 +718,11 @@ class PromptAdmin(SummernoteModelAdmin):
                 '<int:pk>/regenerate/',
                 self.admin_site.admin_view(self.regenerate_view),
                 name='prompts_prompt_regenerate',
+            ),
+            path(
+                '<int:pk>/seo-review/',
+                self.admin_site.admin_view(self.seo_review_view),
+                name='prompts_prompt_seo_review',
             ),
         ]
         return custom_urls + urls
@@ -784,13 +860,70 @@ class PromptAdmin(SummernoteModelAdmin):
                     prompt, ai_result, all_categories, all_descriptors,
                 )
 
-            messages.success(
-                request,
-                f'✅ Regenerated AI content for "{title}" (slug preserved: {prompt.slug}).'
-            )
+            # Queue Pass 2 SEO review for published prompts
+            if prompt.status == 1:
+                from prompts.tasks import queue_pass2_review
+                queue_pass2_review(prompt.pk)
+                messages.success(
+                    request,
+                    f'🔄 AI content regenerated for "{title}". '
+                    f'Title and description updated. '
+                    f'SEO optimization of tags will run automatically in ~45 seconds. '
+                    f'Refresh the page after a minute to see final tag improvements.',
+                )
+            else:
+                messages.success(
+                    request,
+                    f'🔄 AI content regenerated for "{title}". '
+                    f'Title and description updated (slug preserved: {prompt.slug}).',
+                )
         except Exception as e:
             logger.exception('Regeneration failed for prompt pk=%s', pk)
             messages.error(request, f'Regeneration failed: {str(e)[:100]}')
+
+        return redirect('admin:prompts_prompt_change', pk)
+
+    def seo_review_view(self, request, pk):
+        """Individual prompt page: Run Pass 2 SEO review only (POST only)."""
+        from django.shortcuts import get_object_or_404, redirect
+        from django.contrib import messages
+        from prompts.tasks import queue_pass2_review
+
+        if request.method != 'POST':
+            return redirect('admin:prompts_prompt_change', pk)
+
+        if not request.user.is_superuser:
+            messages.error(
+                request,
+                '⛔ Only superusers can run SEO reviews.',
+            )
+            return redirect('admin:prompts_prompt_changelist')
+
+        prompt = get_object_or_404(Prompt, pk=pk)
+
+        if prompt.status != 1:
+            messages.warning(
+                request,
+                f'⚠️ SEO Review skipped — "{prompt.title}" is a draft. '
+                f'Publish the prompt first, then run SEO Review.',
+            )
+            return redirect('admin:prompts_prompt_change', pk)
+
+        result = queue_pass2_review(prompt.pk)
+
+        if result:
+            messages.success(
+                request,
+                f'🎯 SEO Review queued for "{prompt.title}". '
+                f'Tags and description will be optimized in ~45 seconds. '
+                f'Refresh the page after a minute to see changes.',
+            )
+        else:
+            messages.info(
+                request,
+                f'⏭️ SEO Review skipped — "{prompt.title}" was already reviewed '
+                f'within the last 5 minutes. Wait a bit and try again.',
+            )
 
         return redirect('admin:prompts_prompt_change', pk)
 

@@ -1,0 +1,27 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls admin_modify %}
+
+{% block object-tools %}
+{% if change and not is_popup %}
+  <ul class="object-tools">
+    {% block object-tools-items %}
+      {% change_form_object_tools %}
+    {% endblock %}
+  </ul>
+  {% if show_seo_review_button or show_regenerate_button %}
+  <div style="clear: both; width: 100%; margin: 8px 0 16px 0; padding: 10px 14px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px; color: #555; line-height: 1.6; box-sizing: border-box;">
+      <p style="margin: 0 0 4px 0;">
+          <strong>&#127919; SEO Review Only:</strong> Optimizes tags &amp; description
+          for better search rankings. Does NOT change the title, slug, categories,
+          or descriptors. Safe and non-destructive. Results apply in ~45 seconds.
+      </p>
+      <p style="margin: 0;">
+          <strong>&#128260; Regenerate All:</strong> Rebuilds EVERYTHING from scratch &mdash;
+          title, description, tags, categories, and descriptors. Use when the
+          current content is wrong or low quality. The slug is preserved (URLs
+          won't break). SEO optimization runs automatically after.
+      </p>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

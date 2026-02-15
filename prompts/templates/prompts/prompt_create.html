@@ -69,7 +69,7 @@
                     <span class="popular-tags-label">Available tags (you may also create a new tag if it's not shown below):</span>
                     <div class="popular-tags-list">
                         {% for tag in existing_tags %}
-                            <span type="button" class="tag-badge" onclick="addTag('{{ tag.name }}')">{{ tag.name }}</span>
+                            <span type="button" class="tag-badge" onclick="addTag('{{ tag.name|escapejs }}')">{{ tag.name }}</span>
                         {% endfor %}
                     </div>
                 </div>

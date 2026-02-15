@@ -26,7 +26,7 @@ Please read these 4 core documents from project knowledge:
    - Code sharing rules (Manual vs CC vs Terminal)
    - **DUAL AGENT SYSTEM** (wshobson/agents + Agent Testing)
    - Agent testing (you orchestrate automatically)
-   - When creating CC specs, include: "Read docs/CC_COMMUNICATION_PROTOCOL.md first"
+   - When creating CC specs, include: "Read CC_COMMUNICATION_PROTOCOL.md first"
 
 2. AGENT_TESTING_SYSTEM.md
    - 8 specialized review personas (you act as these)

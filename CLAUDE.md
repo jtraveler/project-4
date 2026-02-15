@@ -23,6 +23,26 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
+## 🚫 DO NOT MOVE — Core Root Documents
+
+The following files MUST stay in the project root. They are referenced by CLAUDE.md, handoff templates, and CC specs. Moving them to `docs/` or elsewhere will break cross-references.
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | Core project reference (1 of 3) |
+| `CLAUDE_PHASES.md` | Phase specs & unfinished work (2 of 3) |
+| `CLAUDE_CHANGELOG.md` | Session history (3 of 3) |
+| `CC_COMMUNICATION_PROTOCOL.md` | Agent requirements for Claude Code |
+| `CC_SPEC_TEMPLATE.md` | Standard template for CC specifications |
+| `AGENT_TESTING_SYSTEM.md` | 8-persona review system |
+| `HANDOFF_TEMPLATE_STRUCTURE.md` | Session handoff document template |
+| `PROJECT_FILE_STRUCTURE.md` | Complete file tree |
+| `README.md` | Public-facing project README |
+
+> **If you reorganize the repo**, update every cross-reference in all nine files above plus any active specs.
+
+---
+
 ## 📋 Quick Status Dashboard
 
 ### What's Active Right Now
@@ -880,8 +900,8 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 |----------|------------------|
 | **CLAUDE_PHASES.md** (2 of 3) | Detailed phase specs, especially Phase K unfinished work |
 | **CLAUDE_CHANGELOG.md** (3 of 3) | Session history, what was done when |
-| `docs/CC_COMMUNICATION_PROTOCOL.md` | Agent requirements for Claude Code |
-| `docs/CC_SPEC_TEMPLATE.md` | Template for writing specs |
+| `CC_COMMUNICATION_PROTOCOL.md` | Agent requirements for Claude Code |
+| `CC_SPEC_TEMPLATE.md` | Template for writing specs |
 | `PROJECT_FILE_STRUCTURE.md` | Complete file tree |
 | `docs/DESIGN_RELATED_PROMPTS.md` | Related Prompts system reference (Phase 2B-9 complete) |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | Phase 2B category taxonomy revamp design |

@@ -1,6 +1,6 @@
 # Claude Code Specification Template
 
-**Last Updated:** November 4, 2025
+**Last Updated:** February 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
 
@@ -16,7 +16,7 @@ Every specification for Claude Code MUST include the following sections in this 
 
 **BEFORE starting this task, Claude Code MUST:**
 
-1. **Read `docs/CC_COMMUNICATION_PROTOCOL.md`** - Contains mandatory agent usage requirements
+1. **Read `CC_COMMUNICATION_PROTOCOL.md`** - Contains mandatory agent usage requirements
 2. **Read this entire specification** - Don't skip sections
 3. **Use required agents** - Minimum 2-3 agents appropriate for the task
 4. **Report agent usage** - Include ratings and findings in completion summary
@@ -26,6 +26,8 @@ Every specification for Claude Code MUST include the following sections in this 
 ---
 
 ## 📋 OVERVIEW
+
+**Modifies UI/Templates:** Yes / No
 
 ### [Task Name]
 
@@ -81,7 +83,7 @@ Step-by-step what needs to be done.
 
 ---
 
-## 📁 FILES TO MODIFY
+## 📝 FILES TO MODIFY
 
 ### File 1: [filename]
 
@@ -109,7 +111,7 @@ Step-by-step what needs to be done.
 
 **MANDATORY: Use wshobson/agents during implementation**
 
-Per `docs/CC_COMMUNICATION_PROTOCOL.md`, CC must use appropriate agents for this task.
+Per `CC_COMMUNICATION_PROTOCOL.md`, CC must use appropriate agents for this task.
 
 ### Required Agents (Minimum 2-3)
 
@@ -149,6 +151,33 @@ Overall Assessment: [APPROVED/NEEDS REVIEW]
 
 ---
 
+## 🖥️ TEMPLATE / UI CHANGE DETECTION
+
+**If this spec modifies ANY of the following, the MANUAL BROWSER CHECK below is MANDATORY:**
+- HTML templates (.html files)
+- CSS or inline styles
+- JavaScript files
+- Admin template overrides
+- Any file in a `templates/` directory
+- Any file in a `static/` directory
+
+### MANUAL BROWSER CHECK (Required for UI/template changes)
+
+⚠️ **DO NOT commit until the developer has visually verified in a browser.**
+
+After implementation, the developer MUST:
+1. Open the affected page(s) in a browser at 127.0.0.1:8000
+2. Check layout at desktop width (1200px+)
+3. Check layout at tablet width (~768px) if responsive
+4. Verify no overlapping elements, broken floats, or text wrapping issues
+5. Verify the change matches the intended layout described in this spec
+6. Screenshot or confirm visual verification before accepting agent scores
+
+**CC agents cannot verify visual rendering — only a human in a browser can.**
+**Agent UI scores above 8 require visual verification to be valid.**
+
+---
+
 ## 🧪 TESTING CHECKLIST
 
 ### Pre-Implementation Testing
@@ -181,7 +210,7 @@ Overall Assessment: [APPROVED/NEEDS REVIEW]
 
 [Agent report as specified above]
 
-## 📁 FILES MODIFIED
+## 📝 FILES MODIFIED
 
 [List of files with line counts]
 

@@ -747,6 +747,56 @@ class TestDemographicTagReordering(TestCase):
         playground_idx = result.index('playground')
         self.assertLess(playground_idx, boy_idx)
 
+    def test_male_always_after_man(self):
+        """'male' must be the very last tag when both 'man' and 'male' present."""
+        tags = ['portrait', 'male', 'man', 'cinematic', 'warm-tones',
+                'soft-light', 'beard', 'photorealistic', 'moody', 'dramatic']
+        result = _validate_and_fix_tags(tags)
+        self.assertEqual(result[-1], 'male')
+        man_idx = result.index('man')
+        male_idx = result.index('male')
+        self.assertLess(man_idx, male_idx)
+
+    def test_female_always_after_woman(self):
+        """'female' must be the very last tag when both 'woman' and 'female' present."""
+        tags = ['portrait', 'female', 'woman', 'warm-tones', 'elegant',
+                'soft-light', 'fashion', 'photorealistic', 'glamour', 'studio']
+        result = _validate_and_fix_tags(tags)
+        self.assertEqual(result[-1], 'female')
+        woman_idx = result.index('woman')
+        female_idx = result.index('female')
+        self.assertLess(woman_idx, female_idx)
+
+    def test_no_gender_tag_demo_still_at_end(self):
+        """When no male/female present, other demographic tags still go to end."""
+        tags = ['portrait', 'man', 'cinematic', 'warm-tones', 'soft-light',
+                'beard', 'photorealistic', 'moody', 'dramatic', 'editorial']
+        result = _validate_and_fix_tags(tags)
+        self.assertEqual(result[-1], 'man')
+        # All content tags before 'man'
+        man_idx = result.index('man')
+        for tag in result[:man_idx]:
+            self.assertNotIn(tag, DEMOGRAPHIC_TAGS)
+
+    def test_multiple_demo_with_male_female_last(self):
+        """With multiple demographic tags, male/female are absolute last."""
+        tags = ['man', 'male', 'woman', 'female', 'couple', 'romantic',
+                'sunset', 'beach', 'silhouette', 'warm-tones']
+        result = _validate_and_fix_tags(tags)
+        # male and female should be the last two (distinct)
+        self.assertIn(result[-1], ('male', 'female'))
+        self.assertIn(result[-2], ('male', 'female'))
+        self.assertNotEqual(result[-1], result[-2])
+        # man, woman, couple should be before male/female
+        male_idx = result.index('male')
+        female_idx = result.index('female')
+        man_idx = result.index('man')
+        woman_idx = result.index('woman')
+        couple_idx = result.index('couple')
+        self.assertLess(man_idx, male_idx)
+        self.assertLess(woman_idx, female_idx)
+        self.assertLess(couple_idx, male_idx)
+
 
 # ---------------------------------------------------------------------------
 # 11. Gender pair warnings
@@ -849,3 +899,117 @@ class TestEdgeCases(TestCase):
         self.assertIn('portrait', result)
         self.assertNotIn('with-lighting', result)
         self.assertIn('lighting', result)
+
+
+# ---------------------------------------------------------------------------
+# 14. reorder_tags management command
+# ---------------------------------------------------------------------------
+from io import StringIO
+
+from django.core.management import call_command
+from django.test import TestCase as DjangoTestCase
+from django.contrib.auth.models import User
+from taggit.models import Tag
+
+
+class TestReorderTagsCommand(DjangoTestCase):
+    """Tests for the reorder_tags management command."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='reorder_test_user', password='testpass'
+        )
+
+    def _make_prompt(self, tag_names):
+        """Create a published prompt with tags in the given order."""
+        from prompts.models import Prompt
+        prompt = Prompt(
+            author=self.user,
+            title='Test Prompt',
+            content='test content',
+            excerpt='test excerpt',
+            status=1,
+            b2_image_url='https://example.com/test.jpg',
+        )
+        prompt.save()
+        # Add tags one at a time to guarantee insertion order
+        for name in tag_names:
+            tag_obj, _ = Tag.objects.get_or_create(name=name)
+            prompt.tags.add(tag_obj)
+        return prompt
+
+    def test_reorder_command_fixes_demographic_order(self):
+        """Command should reorder tags so demographics are last, male/female very last."""
+        # Create prompt with male/man BEFORE content tags (wrong order)
+        prompt = self._make_prompt([
+            'male', 'man', 'portrait', 'cinematic', 'warm-tones',
+            'soft-light', 'photorealistic', 'moody', 'dramatic', 'editorial',
+        ])
+
+        out = StringIO()
+        call_command('reorder_tags', f'--prompt-id={prompt.pk}', stdout=out)
+
+        # Verify tags are reordered in the database
+        from taggit.models import TaggedItem
+        ordered_tags = list(
+            TaggedItem.objects
+            .filter(
+                content_type__app_label='prompts',
+                content_type__model='prompt',
+                object_id=prompt.pk,
+            )
+            .order_by('id')
+            .values_list('tag__name', flat=True)
+        )
+
+        # male should be last, man second-to-last
+        self.assertEqual(ordered_tags[-1], 'male')
+        self.assertEqual(ordered_tags[-2], 'man')
+
+        # Content tags should precede demographics
+        man_idx = ordered_tags.index('man')
+        for tag in ordered_tags[:man_idx]:
+            self.assertNotIn(tag, DEMOGRAPHIC_TAGS)
+
+        self.assertIn('reordered', out.getvalue())
+
+    def test_reorder_command_dry_run_no_changes(self):
+        """--dry-run should preview changes without modifying the database."""
+        prompt = self._make_prompt([
+            'male', 'man', 'portrait', 'cinematic', 'warm-tones',
+            'soft-light', 'photorealistic', 'moody', 'dramatic', 'editorial',
+        ])
+
+        # Record original TaggedItem IDs
+        from taggit.models import TaggedItem
+        original_ids = list(
+            TaggedItem.objects
+            .filter(
+                content_type__app_label='prompts',
+                content_type__model='prompt',
+                object_id=prompt.pk,
+            )
+            .order_by('id')
+            .values_list('id', flat=True)
+        )
+
+        out = StringIO()
+        call_command('reorder_tags', f'--prompt-id={prompt.pk}', '--dry-run', stdout=out)
+
+        # TaggedItem IDs should be unchanged (no DB modification)
+        after_ids = list(
+            TaggedItem.objects
+            .filter(
+                content_type__app_label='prompts',
+                content_type__model='prompt',
+                object_id=prompt.pk,
+            )
+            .order_by('id')
+            .values_list('id', flat=True)
+        )
+        self.assertEqual(original_ids, after_ids)
+
+        output = out.getvalue()
+        self.assertIn('WOULD reorder', output)
+        self.assertIn('DRY RUN', output)
+

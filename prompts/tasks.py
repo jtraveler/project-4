@@ -396,9 +396,11 @@ def _validate_and_fix_tags(tags, prompt_id=None):
         logger.warning(f"{log_prefix} Only {len(deduped)} tags after validation (expected 10)")
 
     # Check 7: Move demographic tags to end for consistent UX
+    # Within demographics, "male"/"female" go last (after man/woman/middle-aged/etc.)
     content_tags = [t for t in deduped if t not in DEMOGRAPHIC_TAGS]
-    demo_tags = [t for t in deduped if t in DEMOGRAPHIC_TAGS]
-    deduped = content_tags + demo_tags
+    demo_other = [t for t in deduped if t in DEMOGRAPHIC_TAGS and t not in GENDER_LAST_TAGS]
+    demo_gender = [t for t in deduped if t in GENDER_LAST_TAGS]
+    deduped = content_tags + demo_other + demo_gender
 
     # Check 8: Gender pair warnings (log only, no auto-fix)
     tag_set = set(deduped)
@@ -566,6 +568,11 @@ DEMOGRAPHIC_TAGS = {
     'child', 'kid', 'baby', 'infant',
     'teenager', 'teen', 'person', 'couple',
 }
+
+# Within DEMOGRAPHIC_TAGS, these go last (after man/woman/middle-aged/etc.).
+# "male" and "female" are generic gender identifiers — less visually descriptive,
+# so they display after the more specific demographic terms.
+GENDER_LAST_TAGS = {'male', 'female'}
 
 # Tags that should never appear (AI-related tags waste slots)
 BANNED_AI_TAGS = {
@@ -1213,14 +1220,18 @@ def _update_prompt_with_ai_content(prompt, ai_result: dict) -> None:
         prompt.processing_complete = True
         prompt.save(update_fields=['title', 'excerpt', 'slug', 'processing_complete'])
 
-        # Add tags (using django-taggit)
+        # Add tags (using django-taggit) — sequential add() preserves
+        # validated order so TaggedItem.id matches display order
         if tags:
-            # Filter to only tags that exist in our database
-            existing_tags = Tag.objects.filter(name__in=tags).values_list('name', flat=True)
-            prompt.tags.add(*existing_tags)
-
-            # Log if any tags were skipped
-            skipped = set(tags) - set(existing_tags)
+            existing_tag_names = set(
+                Tag.objects.filter(name__in=tags).values_list('name', flat=True)
+            )
+            skipped = []
+            for tag_name in tags:
+                if tag_name in existing_tag_names:
+                    prompt.tags.add(tag_name)
+                else:
+                    skipped.append(tag_name)
             if skipped:
                 logger.info(f"[AI Generation] Skipped non-existent tags for prompt {prompt.pk}: {skipped}")
 
@@ -2167,6 +2178,26 @@ def run_seo_pass2_review(prompt_id: int) -> dict:
             if keep_tags or add_tags:
                 # Reconstruct: keep + add → validate → clear + apply
                 new_tags = list(keep_tags) + list(add_tags)
+
+                # CODE-LEVEL ENFORCEMENT: Re-add any PROTECTED_TAGS that
+                # GPT omitted from its keep list. Prompt-level guidance
+                # asks GPT to keep these, but GPT ignores it ~30% of the
+                # time (e.g. removing "portrait" as "too generic").
+                original_tag_names = set(
+                    prompt.tags.values_list('name', flat=True)
+                )
+                new_tag_names = set(new_tags)
+                protected_re_added = []
+                for tag in original_tag_names:
+                    if tag in PROTECTED_TAGS and tag not in new_tag_names:
+                        new_tags.append(tag)
+                        protected_re_added.append(tag)
+                if protected_re_added:
+                    logger.info(
+                        f"[Pass 2] Prompt {prompt_id}: PROTECTED_TAGS kept "
+                        f"(GPT wanted to remove): {protected_re_added}"
+                    )
+
                 validated_tags = _validate_and_fix_tags(new_tags, prompt_id=prompt_id)
 
                 if _is_quality_tag_response(validated_tags, prompt_id=prompt_id):
@@ -2176,11 +2207,12 @@ def run_seo_pass2_review(prompt_id: int) -> dict:
                     # Only apply if there are actual changes
                     if original_tags != new_tag_set:
                         from taggit.models import Tag
-                        tag_objects = []
+                        # clear() + ordered add() guarantees TaggedItem.id
+                        # sequence matches list order from _validate_and_fix_tags()
+                        prompt.tags.clear()
                         for tag_name in validated_tags:
-                            tag, _ = Tag.objects.get_or_create(name=tag_name)
-                            tag_objects.append(tag)
-                        prompt.tags.set(tag_objects)
+                            tag_obj, _ = Tag.objects.get_or_create(name=tag_name)
+                            prompt.tags.add(tag_obj)
                         updated_fields.append('tags')
 
                         added = new_tag_set - original_tags

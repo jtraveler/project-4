@@ -589,6 +589,148 @@ class TestRunSeoPass2ReviewSuccess(DjangoTestCase):
         # african-american should be removed by validator
         self.assertNotIn('african-american', tag_names)
 
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_pass2_tags_applied_in_order(self, mock_openai_cls, mock_download):
+        """TaggedItem rows should have sequential IDs matching validated tag order.
+
+        Verifies that clear() + ordered add() produces database rows whose
+        id sequence matches the list order from _validate_and_fix_tags(),
+        with demographic tags (man) after content tags and male/female last.
+        """
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['cinematic', 'portrait', 'warm-tones'],
+            add=['man', 'male', 'soft-light', 'photorealistic',
+                 'dramatic', 'beard', 'moody'],
+            reasoning='Added demographic and style tags',
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        run_seo_pass2_review(prompt.pk)
+
+        # Get tags ordered by TaggedItem.id (the display order)
+        from taggit.models import TaggedItem
+        tagged_items = (
+            TaggedItem.objects
+            .filter(
+                content_type__app_label='prompts',
+                content_type__model='prompt',
+                object_id=prompt.pk,
+            )
+            .order_by('id')
+            .values_list('tag__name', flat=True)
+        )
+        ordered_tags = list(tagged_items)
+
+        # 'man' (demographic, non-gender) should be second-to-last
+        # 'male' (gender) should be absolute last
+        self.assertEqual(ordered_tags[-1], 'male')
+        self.assertEqual(ordered_tags[-2], 'man')
+
+        # All content tags should precede 'man'
+        man_idx = ordered_tags.index('man')
+        for tag in ordered_tags[:man_idx]:
+            self.assertNotIn(tag, {'man', 'male', 'woman', 'female',
+                                    'boy', 'girl', 'couple', 'child'})
+
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_protected_tag_not_removed_by_pass2(self, mock_openai_cls, mock_download):
+        """PROTECTED_TAGS must survive Pass 2 even when GPT recommends removal."""
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        # GPT recommends removing 'portrait' (protected) from keep list
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['woman', 'cinematic'],  # 'portrait' deliberately omitted
+            remove=['portrait'],
+            add=['female', 'golden-hour', 'photorealistic', 'warm-tones',
+                 'urban', 'dramatic', 'headshot'],
+            reasoning='Removed portrait for being too generic',
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        # Ensure 'portrait' is in original tags
+        prompt.tags.add('portrait')
+        self.assertIn('portrait', set(prompt.tags.values_list('name', flat=True)))
+
+        run_seo_pass2_review(prompt.pk)
+
+        prompt.refresh_from_db()
+        final_tags = set(prompt.tags.values_list('name', flat=True))
+        self.assertIn('portrait', final_tags)
+
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_protected_tag_logged_when_kept(self, mock_openai_cls, mock_download):
+        """When a protected tag is re-added, it should be logged."""
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['woman', 'cinematic'],  # 'portrait' deliberately omitted
+            remove=['portrait'],
+            add=['female', 'golden-hour', 'photorealistic', 'warm-tones',
+                 'urban', 'dramatic', 'headshot'],
+            reasoning='Removed portrait for being too generic',
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        prompt.tags.add('portrait')
+
+        with self.assertLogs('prompts.tasks', level='INFO') as cm:
+            run_seo_pass2_review(prompt.pk)
+
+        self.assertTrue(
+            any('PROTECTED_TAGS kept' in msg and 'portrait' in msg
+                for msg in cm.output),
+            f"Expected 'PROTECTED_TAGS kept' log with 'portrait', got: {cm.output}"
+        )
+
+    @patch('prompts.tasks._download_and_encode_image')
+    @patch('openai.OpenAI')
+    def test_non_protected_tag_still_removed(self, mock_openai_cls, mock_download):
+        """Non-protected tags should still be removable by GPT."""
+        mock_download.return_value = ('base64data', 'image/jpeg')
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = _make_pass2_response(
+            keep=['portrait', 'cinematic'],  # 'whimsical' deliberately omitted
+            remove=['whimsical'],
+            add=['woman', 'female', 'golden-hour', 'photorealistic',
+                 'warm-tones', 'urban', 'dramatic', 'headshot'],
+            reasoning='Removed whimsical — low search volume',
+        )
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_cls.return_value = mock_client
+
+        prompt = self._make_prompt()
+        prompt.tags.add('whimsical')
+        self.assertIn('whimsical', set(prompt.tags.values_list('name', flat=True)))
+
+        run_seo_pass2_review(prompt.pk)
+
+        prompt.refresh_from_db()
+        final_tags = set(prompt.tags.values_list('name', flat=True))
+        self.assertNotIn('whimsical', final_tags)
+
 
 class TestRunSeoPass2ReviewErrors(DjangoTestCase):
     """Test error handling in run_seo_pass2_review."""

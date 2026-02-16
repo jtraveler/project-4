@@ -11,7 +11,7 @@ from django_summernote.admin import SummernoteModelAdmin
 from django.urls import reverse, path
 from django.utils.html import format_html
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect, Notification
 from .utils.related import (
     W_TAG, W_CATEGORY, W_DESCRIPTOR, W_GENERATOR, W_ENGAGEMENT, W_RECENCY,
 )
@@ -2257,6 +2257,16 @@ class SlugRedirectAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['recipient', 'sender', 'notification_type', 'category', 'is_read', 'created_at']
+    list_filter = ['notification_type', 'category', 'is_read', 'is_admin_notification']
+    search_fields = ['recipient__username', 'sender__username', 'title']
+    raw_id_fields = ['recipient', 'sender']
+    readonly_fields = ['created_at']
+    list_per_page = 50
 
 
 # Set custom admin index template

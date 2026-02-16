@@ -2706,3 +2706,92 @@ class CollectionItem(models.Model):
 
     def __str__(self):
         return f"{self.prompt.title} in {self.collection.title}"
+
+
+# --- Type-to-Category mapping for notifications ---
+NOTIFICATION_TYPE_CATEGORY_MAP = {
+    'comment_on_prompt': 'comments',
+    'reply_to_comment': 'comments',
+    'prompt_liked': 'likes',
+    'new_follower': 'follows',
+    'prompt_saved': 'collections',
+    'system': 'system',
+}
+
+
+class Notification(models.Model):
+    """In-app notification for user actions."""
+
+    class NotificationType(models.TextChoices):
+        COMMENT_ON_PROMPT = 'comment_on_prompt', 'Commented on your prompt'
+        REPLY_TO_COMMENT = 'reply_to_comment', 'Replied to your comment'
+        PROMPT_LIKED = 'prompt_liked', 'Liked your prompt'
+        NEW_FOLLOWER = 'new_follower', 'Started following you'
+        PROMPT_SAVED = 'prompt_saved', 'Saved your prompt to a collection'
+        SYSTEM = 'system', 'System notification'
+
+    class Category(models.TextChoices):
+        COMMENTS = 'comments', 'Comments'
+        LIKES = 'likes', 'Likes'
+        FOLLOWS = 'follows', 'Follows'
+        COLLECTIONS = 'collections', 'Collections'
+        SYSTEM = 'system', 'System'
+
+    # Core fields
+    recipient = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='notifications',
+        db_index=True
+    )
+    sender = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='sent_notifications',
+        null=True, blank=True  # null for system notifications
+    )
+
+    # Classification
+    notification_type = models.CharField(
+        max_length=30,
+        choices=NotificationType.choices
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=Category.choices
+    )
+
+    # Content
+    title = models.CharField(max_length=200)
+    message = models.TextField(max_length=500, blank=True)
+    link = models.CharField(max_length=500, blank=True)
+
+    # State
+    is_read = models.BooleanField(default=False, db_index=True)
+    is_admin_notification = models.BooleanField(default=False)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['recipient', 'is_read', '-created_at'],
+                name='notif_recipient_unread'
+            ),
+            models.Index(
+                fields=['recipient', 'category', '-created_at'],
+                name='notif_recipient_category'
+            ),
+            models.Index(
+                fields=['is_read', 'created_at'],
+                name='notif_cleanup'
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_notification_type_display()} → {self.recipient.username}"
+
+    def mark_as_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.save(update_fields=['is_read'])

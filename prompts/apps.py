@@ -14,3 +14,5 @@ class PromptsConfig(AppConfig):
         are registered and active.
         """
         import prompts.signals  # noqa: F401
+        import prompts.notification_signals  # noqa: F401
+        prompts.notification_signals.connect_m2m_signals()

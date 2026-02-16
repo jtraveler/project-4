@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 13, 2026
+**Last Updated:** February 16, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase 2B (2B-1 through 2B-9 + tag pipeline complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~498 passing (43% coverage, threshold 40%)
+**Current Phase:** Phase 2B (2B-1 through 2B-9 + tag pipeline + Pass 2 SEO complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~595 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -16,9 +16,9 @@
 | **CSS Files** | 6 | static/css/ |
 | **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
 | **SVG Icons** | 32 | static/icons/sprite.svg |
-| **Migrations** | 56 | prompts/migrations/ (54), about/migrations/ (2) |
-| **Test Files** | 16 | prompts/tests/ |
-| **Management Commands** | 25 | prompts/management/commands/ |
+| **Migrations** | 57 | prompts/migrations/ (55), about/migrations/ (2) |
+| **Test Files** | 18 | prompts/tests/ |
+| **Management Commands** | 27 | prompts/management/commands/ |
 | **Services** | 11 | prompts/services/ |
 | **View Modules** | 11 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
@@ -338,8 +338,8 @@ prompts/views/
 | File | Lines | Purpose |
 |------|-------|---------|
 | `views/` | ~3,929 | View package (11 modules) ✅ REFACTORED |
-| `models.py` | ~2,100 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, etc.) |
-| `admin.py` | ~500 | Django admin configuration |
+| `models.py` | ~2,100 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, etc.) + `seo_pass2_at` field + `ordered_tags()` method |
+| `admin.py` | ~2,300 | Django admin (PromptAdmin with two-button system, SEO Review + Rebuild actions, M2M ordering) |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
 | `signals.py` | ~100 | Django signals (auto-create profiles) |
@@ -1382,12 +1382,79 @@ prompts/management/commands/
 
 ---
 
+## Session 85 Files (Pass 2 SEO System + Admin UX + Tag Ordering)
+
+### Files Created (Session 85)
+
+```
+prompts/migrations/
+└── 0055_add_seo_pass2_at.py             # NEW - seo_pass2_at DateTimeField for tracking Pass 2 runs
+
+prompts/management/commands/
+├── reorder_tags.py                       # NEW - Reorder existing tags per validation rules (demographic to end)
+└── run_pass2_review.py                   # NEW - Run Pass 2 SEO review on published prompts (131 lines)
+
+prompts/tests/
+├── test_pass2_seo_review.py             # NEW - 60+ tests for Pass 2 SEO system (1045 lines)
+└── test_admin_actions.py                # NEW - 23 tests for admin actions, button labels, tag ordering
+
+templates/admin/prompts/prompt/
+└── change_form.html                     # NEW - Admin change form with two-button layout + help text
+
+docs/
+├── REPORT_ADMIN_ACTIONS_AGENT_REVIEW.md # NEW - Admin actions review report
+└── REPORT_DEMOGRAPHIC_TAG_ORDERING_FIX.md # NEW - Tag ordering fix report
+
+# Root-level docs reorganized from docs/
+AGENT_TESTING_SYSTEM.md                   # Moved to root (was in docs/)
+HANDOFF_TEMPLATE_STRUCTURE.md             # Renamed from HANDOFF_TEMPLATE_STRUCTURE/ (was in docs/)
+PHASE_N_DETAILED_OUTLINE.md               # Moved to root (was in docs/)
+```
+
+### Files Modified (Session 85)
+
+```
+prompts/
+├── tasks.py                              # Pass 2 SEO system: queue_pass2_review(), _run_pass2_seo_review(),
+│                                         # PROTECTED_TAGS constant, GENDER_LAST_TAGS constant,
+│                                         # rewritten Pass 2 GPT system prompt (~550 lines added)
+├── models.py                             # seo_pass2_at DateTimeField, ordered_tags() method
+├── admin.py                              # Two-button system (SEO Review + Rebuild), button labels updated,
+│                                         # _apply_ai_m2m_updates tag ordering (clear() + add()),
+│                                         # updated success messages, bulk action labels
+└── views/
+    ├── prompt_views.py                   # ordered_tags() in detail/edit contexts
+    └── upload_views.py                   # ordered_tags() in create context
+
+prompts/templates/prompts/
+├── prompt_detail.html                    # escapejs on tag onclick, ordered_tags usage
+├── prompt_create.html                    # ordered_tags usage
+└── prompt_edit.html                      # ordered_tags usage
+
+prompts/tests/
+└── test_validate_tags.py                 # Expanded with tag ordering tests (+266 lines)
+
+templates/admin/prompts/prompt/
+└── change_form_object_tools.html         # Updated button labels (Optimize Tags & Description / Rebuild All Content),
+                                          # rounded styling (border-radius: 20px)
+
+CC_COMMUNICATION_PROTOCOL.md              # Reorganized to project root, content refresh
+```
+
+### Database Fields (Session 85)
+
+| Field | Type | Status |
+|-------|------|--------|
+| `Prompt.seo_pass2_at` | DateTimeField(null=True, blank=True) | ✅ Added (0055) |
+
+---
+
 ## Related Documentation
 
 | Document | Location | Purpose |
 |----------|----------|---------|
 | CLAUDE.md | Root | Master project documentation |
-| CC_COMMUNICATION_PROTOCOL.md | docs/ | Agent usage requirements |
+| CC_COMMUNICATION_PROTOCOL.md | Root | Agent usage requirements |
 | UI_STYLE_GUIDE.md | design-references/ | UI/UX standards |
 | PROJECT_FILE_STRUCTURE_AUDIT_REPORT.md | docs/reports/ | Latest audit findings |
 | L8_TIMEOUT_COMPLETION_REPORT.md | docs/reports/ | L8-TIMEOUT implementation details |
@@ -1404,11 +1471,22 @@ prompts/management/commands/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.17
-**Audit Date:** February 14, 2026
+**Version:** 3.18
+**Audit Date:** February 16, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.18 (February 16, 2026 - Session 85 End-of-Session Docs Update):**
+- Updated total test count: ~498→~595
+- Added `reorder_tags.py` and `run_pass2_review.py` management commands (count 25→27)
+- Added migration 0055 (count 56→57)
+- Added `test_pass2_seo_review.py` (60+ tests) and `test_admin_actions.py` (23 tests) to test files (count 16→18)
+- Added Session 85 Files section with all created/modified files and database fields
+- Updated `models.py` description: `seo_pass2_at` field, `ordered_tags()` method
+- Updated `admin.py` description: two-button system, ~2,300 lines
+- Updated CC_COMMUNICATION_PROTOCOL.md location from docs/ to Root
+- Added `change_form.html` admin template
 
 **v3.17 (February 14, 2026 - Session 83 End-of-Session Docs Update):**
 - Updated total test count: ~472→~498

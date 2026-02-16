@@ -277,8 +277,8 @@ class TestAdminActionRegistration(AdminActionTestBase):
 
     def test_actions_have_short_descriptions(self):
         """Both actions must have descriptive labels for admin UI."""
-        self.assertIn('SEO Review ONLY', self.admin.run_seo_review.short_description)
-        self.assertIn('Regenerate ALL', self.admin.regenerate_ai_content.short_description)
+        self.assertIn('Optimize Tags & Description', self.admin.run_seo_review.short_description)
+        self.assertIn('Rebuild All Content', self.admin.regenerate_ai_content.short_description)
 
 
 class TestSeoReviewView(AdminActionTestBase):
@@ -296,7 +296,7 @@ class TestSeoReviewView(AdminActionTestBase):
         # Verify success message
         messages = [str(m) for m in request._messages]
         self.assertEqual(len(messages), 1)
-        self.assertIn('SEO Review queued', messages[0])
+        self.assertIn('optimization queued', messages[0])
         self.assertIn('~45 seconds', messages[0])
         self.assertIn('Refresh', messages[0])
 
@@ -389,3 +389,33 @@ class TestSeoReviewView(AdminActionTestBase):
         response = self.admin.change_view(request, str(draft.pk))
 
         self.assertFalse(response.context_data.get('show_seo_review_button'))
+
+
+class TestButtonLabelsUpdated(AdminActionTestBase):
+    """Verify button labels match the updated UX copy."""
+
+    def test_button_labels_updated(self):
+        """Both action short_description values use the new label text."""
+        seo_desc = self.admin.run_seo_review.short_description
+        regen_desc = self.admin.regenerate_ai_content.short_description
+
+        self.assertIn('Optimize Tags & Description', seo_desc)
+        self.assertIn('Pass 2', seo_desc)
+        self.assertIn('Rebuild All Content', regen_desc)
+        self.assertIn('Pass 1 + 2', regen_desc)
+
+    def test_help_text_contains_pass_labels(self):
+        """Admin change form template includes Pass 2 and Pass 1 + 2 help text."""
+        prompt = self._make_prompt(status=1)
+        request = self.factory.get(f'/admin/prompts/prompt/{prompt.pk}/change/')
+        request.user = self.superuser
+        from django.contrib.messages.storage.fallback import FallbackStorage
+        setattr(request, 'session', 'session')
+        setattr(request, '_messages', FallbackStorage(request))
+
+        response = self.admin.change_view(request, str(prompt.pk))
+        response.render()
+        content = response.content.decode()
+
+        self.assertIn('Pass 2', content)
+        self.assertIn('Pass 1 + 2', content)

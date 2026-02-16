@@ -524,12 +524,12 @@ class PromptAdmin(SummernoteModelAdmin):
         if tags:
             from prompts.tasks import _validate_and_fix_tags
             clean_tags = _validate_and_fix_tags(tags, prompt_id=prompt.pk)
-            tag_objects = [
-                TagModel.objects.get_or_create(name=name)[0]
-                for name in clean_tags if name
-            ]
-            if tag_objects:
-                prompt.tags.set(tag_objects)
+            if clean_tags:
+                prompt.tags.clear()
+                for tag_name in clean_tags:
+                    if tag_name:
+                        tag_obj, _ = TagModel.objects.get_or_create(name=tag_name)
+                        prompt.tags.add(tag_obj)
 
         categories = ai_result.get('categories', [])
         if categories:
@@ -596,7 +596,7 @@ class PromptAdmin(SummernoteModelAdmin):
         message = '. '.join(parts) if parts else 'No prompts selected.'
         self.message_user(request, message)
     run_seo_review.short_description = (
-        '🎯 SEO Review ONLY (Pass 2) — Optimize tags & description without changing title'
+        '🎯 Optimize Tags & Description (Pass 2)'
     )
 
     def regenerate_ai_content(self, request, queryset):
@@ -695,8 +695,7 @@ class PromptAdmin(SummernoteModelAdmin):
                 f'✅ Regenerated AI content for {success} prompt(s).{pass2_note}'
             )
     regenerate_ai_content.short_description = (
-        '🔄 Regenerate ALL AI Content (Pass 1 + Pass 2) — Rebuilds title, description, tags, '
-        'categories from scratch, then queues SEO optimization'
+        '🔄 Rebuild All Content (Pass 1 + 2)'
     )
 
     def get_urls(self):
@@ -866,15 +865,14 @@ class PromptAdmin(SummernoteModelAdmin):
                 queue_pass2_review(prompt.pk)
                 messages.success(
                     request,
-                    f'🔄 AI content regenerated for "{title}". '
-                    f'Title and description updated. '
-                    f'SEO optimization of tags will run automatically in ~45 seconds. '
-                    f'Refresh the page after a minute to see final tag improvements.',
+                    f'🔄 All content rebuilt for "{title}". '
+                    f'Tag optimization will follow automatically in ~45 seconds. '
+                    f'Refresh the page after a minute to see final improvements.',
                 )
             else:
                 messages.success(
                     request,
-                    f'🔄 AI content regenerated for "{title}". '
+                    f'🔄 All content rebuilt for "{title}". '
                     f'Title and description updated (slug preserved: {prompt.slug}).',
                 )
         except Exception as e:
@@ -914,8 +912,8 @@ class PromptAdmin(SummernoteModelAdmin):
         if result:
             messages.success(
                 request,
-                f'🎯 SEO Review queued for "{prompt.title}". '
-                f'Tags and description will be optimized in ~45 seconds. '
+                f'🎯 Tags & description optimization queued for "{prompt.title}". '
+                f'Results apply in ~45 seconds. '
                 f'Refresh the page after a minute to see changes.',
             )
         else:

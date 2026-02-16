@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 14, 2026
+**Last Updated:** February 16, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,68 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Session 85 - February 15-16, 2026
+
+**Focus:** Pass 2 Background SEO System, Admin Two-Button UX, Tag Ordering, Security Hardening
+
+**Context:** Following Session 83's tag pipeline completion, this session built the Layer 3 Pass 2 background SEO expert review system (previously marked "future/not built"), redesigned the admin two-button UX with clear labels and help text, implemented tag ordering preservation across the pipeline, added XSS protection for tag onclick handlers, and reorganized core docs to project root.
+
+**Completed:**
+
+| Task | What It Does | Commit |
+|------|--------------|--------|
+| Pass 2 SEO system | `queue_pass2_review()` + `_run_pass2_seo_review()` — background SEO review via Django-Q2 + gpt-4o-mini | `e5e09ad` |
+| Pass 2 GPT prompt rewrite | Rewrote Pass 2 system prompt, added `PROTECTED_TAGS` constant (title, slug, categories, descriptors never modified) | `7703177` |
+| Admin SEO Review button | Added "Optimize Tags & Description" button to admin change form, improved action UX | `ccf5a57` |
+| XSS protection | `escapejs` filter on tag name onclick handlers in prompt_detail, prompt_create, prompt_edit | `bc961b6` |
+| Docs reorganization | Core docs moved to project root (AGENT_TESTING_SYSTEM.md, HANDOFF_TEMPLATE_STRUCTURE.md, etc.) | `936d44d` |
+| Tag ordering | `GENDER_LAST_TAGS` constant, `PROTECTED_TAGS` enforcement, `reorder_tags` management command | `89e9d06` |
+| Tag display ordering | `ordered_tags()` model method — tags display in validated insertion order on detail/edit pages | `3cc6c2c` |
+| Admin button UX clarity | Renamed labels: "Optimize Tags & Description (Pass 2)" / "Rebuild All Content (Pass 1+2)", rounded buttons, help text block | uncommitted |
+| Help text cleanup | Removed duplicate old help text, fixed positioning with `clear: both` | uncommitted |
+| Tag ordering in Pass 1 | `_apply_ai_m2m_updates()` uses `clear()` + sequential `add()` instead of `tags.set()` | uncommitted |
+
+**Architecture Decisions:**
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Pass 2 model | gpt-4o-mini | Cost-effective for tag/description review |
+| PROTECTED_TAGS | title, slug, categories, descriptors | Pass 2 should never change structural content |
+| Tag ordering | `clear()` + sequential `add()` | `tags.set()` doesn't preserve insertion order |
+| `ordered_tags()` | Query `TaggedItem` by `id` | Insertion order = validation pipeline order |
+| Button labels | "Optimize Tags & Description" / "Rebuild All Content" | Clear intent, avoids jargon ("SEO Review") |
+
+**Test Coverage:**
+- New test files: `test_pass2_seo_review.py` (60+ tests), `test_admin_actions.py` (23 tests)
+- Tag validation tests expanded with ordering tests
+- Full suite: 498 → 595 (+97 total)
+- 0 failures, 12 skipped (Selenium)
+
+**Files Created:**
+- `prompts/migrations/0055_add_seo_pass2_at.py` - seo_pass2_at DateTimeField
+- `prompts/management/commands/reorder_tags.py` - Tag reordering command
+- `prompts/management/commands/run_pass2_review.py` - Pass 2 review command
+- `prompts/tests/test_pass2_seo_review.py` - 60+ tests for Pass 2 system (1045 lines)
+- `prompts/tests/test_admin_actions.py` - 23 tests for admin actions
+- `templates/admin/prompts/prompt/change_form.html` - Admin two-button layout with help text
+- `docs/REPORT_ADMIN_ACTIONS_AGENT_REVIEW.md` - Admin actions review report
+- `docs/REPORT_DEMOGRAPHIC_TAG_ORDERING_FIX.md` - Tag ordering fix report
+
+**Files Modified:**
+- `prompts/tasks.py` - Pass 2 SEO system (~550 lines added), PROTECTED_TAGS, GENDER_LAST_TAGS
+- `prompts/admin.py` - Two-button system, label updates, tag ordering fix, success messages
+- `prompts/models.py` - `seo_pass2_at` field, `ordered_tags()` method
+- `prompts/views/prompt_views.py` - `ordered_tags()` in detail/edit contexts
+- `prompts/views/upload_views.py` - `ordered_tags()` in create context
+- `prompts/tests/test_validate_tags.py` - Expanded with ordering tests
+- `prompts/templates/prompts/prompt_detail.html` - `escapejs` + `ordered_tags`
+- `templates/admin/prompts/prompt/change_form_object_tools.html` - Button labels, rounded styling
+- `CC_COMMUNICATION_PROTOCOL.md` - Reorganized to root, content refresh
+
+**Phase Status:** Pass 2 SEO system built (was "future/not built"). 3-layer tag quality system fully operational. Admin UX polished.
+
+---
 
 ### Session 83 - February 14, 2026
 
@@ -1372,4 +1434,4 @@ For quick reference, here are key milestones:
 ---
 
 **Version:** 4.11 (Session 83 — Tag pipeline refinements, 3-layer quality system, TAG_RULES_BLOCK, SEO architecture, full backfill)
-**Last Updated:** February 14, 2026
+**Last Updated:** February 16, 2026

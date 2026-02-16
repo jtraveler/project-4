@@ -123,7 +123,7 @@
     },
     "datePublished": "{{ prompt.created_on|date:'c' }}",
     "dateModified": "{{ prompt.updated_on|date:'c' }}",
-    {% if prompt.tags.all %}"keywords": "{% for tag in prompt.tags.all %}{{ tag.name|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}",{% endif %}
+    {% if ordered_tags %}"keywords": "{% for tag in ordered_tags %}{{ tag.name|escapejs }}{% if not forloop.last %}, {% endif %}{% endfor %}",{% endif %}
     "creator": {
         "@type": "Organization",
         "name": "PromptFinder",
@@ -472,12 +472,12 @@
             </div>
 
             <!-- Tags Card -->
-            {% if prompt.tags.all %}
+            {% if ordered_tags %}
             {% cache 300 prompt_tags prompt.id %}
             <div class="rail-card">
                 <h2 class="rail-card-title">Tags</h2>
                 <div class="tags-container">
-                    {% for tag in prompt.tags.all %}
+                    {% for tag in ordered_tags %}
                         <a href="{% url 'prompts:home' %}?tag={{ tag.name|urlencode }}"
                            class="tag-badge"
                            title="Browse prompts tagged with {{ tag.name }}">

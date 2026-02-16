@@ -1103,6 +1103,12 @@ class Prompt(models.Model):
         """Check if prompt is currently in trash"""
         return self.deleted_at is not None
 
+    def ordered_tags(self):
+        """Return tags in insertion order (as written by the tag pipeline)."""
+        # taggit_taggeditem_items is django-taggit's default reverse relation
+        # from Tag to TaggedItem; ordering by TaggedItem.id = insertion order
+        return self.tags.all().order_by('taggit_taggeditem_items__id')
+
     def number_of_likes(self):
         """
         Return the total number of likes for this prompt.

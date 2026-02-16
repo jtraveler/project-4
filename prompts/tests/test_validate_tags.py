@@ -1013,3 +1013,105 @@ class TestReorderTagsCommand(DjangoTestCase):
         self.assertIn('WOULD reorder', output)
         self.assertIn('DRY RUN', output)
 
+
+# ---------------------------------------------------------------------------
+# Tag Display Ordering Tests
+# ---------------------------------------------------------------------------
+from django.test import Client
+
+
+class TestOrderedTagsModelMethod(DjangoTestCase):
+    """Tests for the Prompt.ordered_tags() model method."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='tag_order_user', password='testpass'
+        )
+
+    def test_ordered_tags_model_method(self):
+        """ordered_tags() returns tags ordered by TaggedItem.id ascending."""
+        from prompts.models import Prompt
+        prompt = Prompt(
+            author=self.user,
+            title='Ordered Tags Test',
+            content='test content',
+            excerpt='test excerpt',
+            status=1,
+            b2_image_url='https://example.com/test.jpg',
+        )
+        prompt.save()
+
+        # Add tags in specific order: content first, demographics last
+        for name in ['cinematic', 'warm-tones', 'portrait', 'man', 'male']:
+            tag_obj, _ = Tag.objects.get_or_create(name=name)
+            prompt.tags.add(tag_obj)
+
+        result = list(prompt.ordered_tags().values_list('name', flat=True))
+        self.assertEqual(
+            result,
+            ['cinematic', 'warm-tones', 'portrait', 'man', 'male'],
+        )
+
+
+class TestPromptDetailTagOrder(DjangoTestCase):
+    """Tests for tag ordering in prompt detail and list views."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='view_tag_user', password='testpass'
+        )
+
+    def _make_prompt(self, title, tag_names):
+        from prompts.models import Prompt
+        prompt = Prompt(
+            author=self.user,
+            title=title,
+            slug=title.lower().replace(' ', '-'),
+            content='test content',
+            excerpt='test excerpt',
+            status=1,
+            b2_image_url='https://example.com/test.jpg',
+        )
+        prompt.save()
+        for name in tag_names:
+            tag_obj, _ = Tag.objects.get_or_create(name=name)
+            prompt.tags.add(tag_obj)
+        return prompt
+
+    def test_prompt_detail_tags_ordered_by_insertion(self):
+        """Prompt detail page renders tags in insertion order (demographics last)."""
+        prompt = self._make_prompt('Detail Order Test', [
+            'cinematic', 'portrait', 'moody', 'man', 'male',
+        ])
+
+        response = self.client.get(f'/prompt/{prompt.slug}/')
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode()
+
+        # Verify tag badges appear in correct order in the tags section
+        # Template renders tags inside <a class="tag-badge"> elements
+        import re
+        tag_badges = re.findall(
+            r'class="tag-badge"[^>]*>\s*(\S+)\s*</a>', content
+        )
+        self.assertEqual(
+            tag_badges,
+            ['cinematic', 'portrait', 'moody', 'man', 'male'],
+            'Tag badges should appear in insertion order',
+        )
+
+    def test_prompt_list_tags_still_present(self):
+        """Prompt list page still includes tags after ordering refactor (regression check)."""
+        prompt = self._make_prompt('List Order Test', [
+            'photorealistic', 'dramatic', 'woman', 'female',
+        ])
+
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode()
+        # Verify prompt card exists with tags
+        self.assertIn('photorealistic', content)
+        self.assertIn('dramatic', content)

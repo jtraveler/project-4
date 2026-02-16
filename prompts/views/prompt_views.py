@@ -609,6 +609,7 @@ def prompt_detail(request, slug):
         "prompts/prompt_detail.html",
         {
             "prompt": prompt,
+            "ordered_tags": prompt.ordered_tags(),
             "comments": comments,
             "comment_count": comment_count,
             "comment_form": comment_form,

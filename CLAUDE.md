@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 16, 2026
+**Last Updated:** February 17, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -62,6 +62,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Phase R1 | Feb 17, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page, shared tab components) |
 | Phase 2B (1-9) + Tag Pipeline + Hardening + Pass 2 SEO | Feb 9-16, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata, security hardening, backfill hardening, tag pipeline refinements, Pass 2 background SEO, admin UX |
 | Phase 2B (1-8) | Feb 9-10, 2026 | Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill, demographic SEO rules |
 | Subject Categories P2 | Feb 9, 2026 | AI-assigned prompt classification (25 categories, cache-first logic) |
@@ -477,6 +478,18 @@ All text must meet WCAG 2.1 AA minimum contrast ratios:
 
 **This pattern caused WCAG violations in Phase R1 Fixes v3 and v5. Always verify contrast when selecting text colors for de-emphasis.**
 
+### Shared UI Components (Session 86)
+
+| Component | File | Used By |
+|-----------|------|---------|
+| Overflow Tabs JS | `static/js/overflow-tabs.js` | notifications.html, user_profile.html, collections_profile.html |
+| Profile Tabs CSS | `static/css/components/profile-tabs.css` | Same 3 templates |
+| Pexels Dropdown | `templates/base.html` (IIFE) | Explore, Profile, Bell icon dropdowns |
+
+Options for `initOverflowTabs()`:
+- `centerActiveTab: true/false` — auto-scroll active tab to center on load
+- `centerWhenFits: true/false` — center tabs when they all fit (no overflow)
+
 ### Resolved Blockers (Session 64-66)
 
 | Issue | Resolution | Session |
@@ -555,6 +568,29 @@ All text must meet WCAG 2.1 AA minimum contrast ratios:
 | `prompts/templates/prompts/collection_detail.html` | Grid column fix, video autoplay observer, CSS overrides (S74) |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
 | `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
+
+**Committed in Session 86 (Feb 17, 2026):**
+- `prompts/models.py` - Notification model (6 types, 5 categories, 3 DB indexes)
+- `prompts/services/notifications.py` - NEW: Notification service layer (create, count, mark-read, 60s duplicate prevention)
+- `prompts/signals/__init__.py` - NEW: Signals package init
+- `prompts/signals/notification_signals.py` - NEW: Signal handlers for comment, like (M2M), follow, collection save
+- `prompts/views/notification_views.py` - NEW: API endpoints (unread-count, mark-all-read, mark-read) + notifications page
+- `prompts/templates/prompts/notifications.html` - NEW: Full notifications page with category tab filtering
+- `prompts/templates/prompts/partials/_notification_list.html` - NEW: AJAX notification list partial
+- `prompts/tests/test_notifications.py` - NEW: 54 notification tests
+- `prompts/migrations/0056_add_notification_model.py` - NEW: Notification model migration
+- `static/js/overflow-tabs.js` - NEW: Shared overflow tab scroll module (187 lines)
+- `static/js/notifications.js` - NEW: Notifications page JS
+- `static/css/components/profile-tabs.css` - NEW: Shared tab component CSS
+- `static/css/pages/notifications.css` - NEW: Notifications page CSS
+- `templates/base.html` - Bell icon dropdown with pexels dropdown, notification polling
+- `static/js/navbar.js` - Notification polling (60s), keyboard nav (WAI-ARIA roving focus), badge updates
+- `static/css/navbar.css` - Notification badge styles, bell icon positioning
+- `prompts/urls.py` - Notification URL patterns (page, API endpoints)
+- `prompts/apps.py` - Notification signals registration
+- `prompts/templatetags/notification_tags.py` - Updated notification template tags
+- `prompts/templates/prompts/user_profile.html` - Migrated to shared profile-tabs system
+- `prompts/templates/prompts/collections_profile.html` - Migrated to shared profile-tabs system, removed 75 lines inline CSS
 
 **Committed in Session 85 (Feb 15-16, 2026):**
 - `prompts/tasks.py` - Pass 2 SEO system (`queue_pass2_review()`, `_run_pass2_seo_review()`), `PROTECTED_TAGS` constant, `GENDER_LAST_TAGS` constant, rewritten Pass 2 GPT prompt
@@ -1036,5 +1072,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.12 (Session 85 — Pass 2 SEO system built, admin two-button UX, tag ordering, PROTECTED_TAGS, reorder_tags command)
-**Last Updated:** February 16, 2026
+**Version:** 4.13 (Session 86 — Phase R1 notification system complete, shared tab components, WCAG docs, inline extraction risk pattern)
+**Last Updated:** February 17, 2026

@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** February 16, 2026
+**Last Updated:** February 17, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -30,6 +30,7 @@
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
 | **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
 | **2B** | **Category Taxonomy Revamp + Tag Pipeline** | **✅ 2B-1 through 2B-9 + S80-81 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring, tag validation pipeline, admin metadata** |
+| **R1** | **User Notifications** | **✅ Complete (S86)** | **Deploy to Heroku** |
 
 ---
 
@@ -405,6 +406,46 @@ Plus: Admin metadata editing, security hardening, tag validation pipeline, compo
 
 ---
 
+## ✅ Phase R1: User Frontend Notifications (COMPLETE — Session 86)
+
+**Completed:** February 17, 2026
+**Tests:** 54 new tests (649 total)
+
+### What Was Built
+
+Full in-app notification system with bell dropdown and dedicated notifications page:
+
+- **Notification model:** 6 types (comment, like, follow, collection_save, system, admin), 5 categories, 3 DB indexes
+- **Signal handlers:** comment (post_save), like (m2m_changed), follow (post_save), collection save (post_save)
+- **Service layer:** create with 60s duplicate prevention, count unread, mark-read (single/all)
+- **API endpoints:** unread-count (GET), mark-all-read (POST), mark-single-read (POST)
+- **Bell icon dropdown:** Pexels dropdown reuse, 220px constrained width, centered below icon
+- **60-second polling:** Page Visibility API pause/resume, badge updates via aria-live
+- **Notifications page:** Category tab filtering (profile-tabs style), mark-as-read, empty states
+- **WAI-ARIA keyboard navigation:** Roving focus, ArrowDown/Up, Escape, role="menu"/"menuitem"
+- **Shared components:** overflow-tabs.js (187 lines), profile-tabs.css — used by notifications, user profile, collections
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `prompts/models.py` | Notification model |
+| `prompts/services/notifications.py` | Service layer |
+| `prompts/signals/notification_signals.py` | Signal handlers |
+| `prompts/views/notification_views.py` | API + page views |
+| `prompts/migrations/0056_add_notification_model.py` | Migration |
+| `static/js/overflow-tabs.js` | Shared overflow tab scroll |
+| `static/css/components/profile-tabs.css` | Shared tab CSS |
+| `static/js/notifications.js` | Notifications page JS |
+| `static/css/pages/notifications.css` | Notifications page CSS |
+
+### Pending
+
+- Heroku deployment
+- End-to-end testing with real user actions
+
+---
+
 ## 📋 Future Features (After Phase N)
 
 ### Pre-Launch Checklist
@@ -433,7 +474,7 @@ Plus: Admin metadata editing, security hardening, tag validation pipeline, compo
 |---------|--------|-------|
 | Related Prompts | 1 week | ✅ Phase 1 done (Session 74), scoring refined in 2B-9 (IDF-weighted) |
 | Image Lightbox | 3-4 days | Click to zoom |
-| Notification System | 2 weeks | In-app notifications |
+| Notification System | - | ✅ Phase R1 done (Session 86): model, signals, bell dropdown, notifications page, shared tabs |
 | Search Improvements | 2 weeks | Autocomplete, filters |
 
 ---
@@ -465,5 +506,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.1 (Session 82 — Backfill hardening, quality gate, fail-fast download, tasks.py cleanup)
-**Last Updated:** February 16, 2026
+**Version:** 4.2 (Session 86 — Phase R1 notification system complete, shared tab components)
+**Last Updated:** February 17, 2026

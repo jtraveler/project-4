@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 16, 2026
+**Last Updated:** February 17, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,89 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Session 86 - February 17, 2026
+
+**Focus:** Phase R1 — Complete User Notification System
+
+**Context:** Built the entire Phase R1 notification system from spec creation through 8 rounds of implementation and polish (R1-A/B/C + fix specs v2-v6.2). Established shared component architecture for tabs/overflow arrows, documented WCAG compliance rules, inline code extraction risks, and agent re-verification protocol in CLAUDE.md.
+
+**Completed:**
+
+| Task | What It Does | Commit |
+|------|--------------|--------|
+| R1-A Backend | Notification model (6 types, 5 categories), signals, services, template tag, migration 0056 | Consolidated |
+| R1-B Bell Dropdown | API endpoints (unread-count, mark-all-read, mark-read), bell icon with pexels dropdown, 60s polling | Consolidated |
+| R1-C Notifications Page | Full page with category tab filtering, mark-as-read, empty states | Consolidated |
+| Fix v2: Dropdown Reuse | Replaced custom dark dropdown with existing pexels dropdown system | Consolidated |
+| Fix v3: Profile Tabs | Notification tabs use profile-tabs-wrapper with counts, overflow arrows | Consolidated |
+| Fix v4: Shared Module | Extracted overflow-tabs.js (187 lines), migrated inline CSS to profile-tabs.css, CSS variables | Consolidated |
+| Fix v5: UX Polish | Removed "All" tab, mobile bell opens dropdown, auto-center active tab, aria-live badges | Consolidated |
+| Fix v6/6.1: Width + WCAG | Dropdown constrained to 220px, WCAG audit (14 elements, 0 failures), CLAUDE.md docs | Consolidated |
+| Fix v6.2: Keyboard A11y | WAI-ARIA roving focus, ArrowDown/Up, Escape, role="menu"/"menuitem" | Consolidated |
+| Collections Tabs | Aligned collections_profile.html with shared tab system, removed 75 lines inline CSS | Consolidated |
+
+**Architecture Decisions:**
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Dropdown system | Reuse pexels dropdown (not custom) | 3 failed attempts with custom styling; existing system works |
+| Tab component | Shared profile-tabs.css + overflow-tabs.js | Eliminates 464 lines duplicated inline code across 3 templates |
+| Notification counts | JS polling only (no template tag) | 1 fewer DB query per page load; counts update in ~200ms |
+| Category auto-derive | Map from notification_type | Prevents manual entry errors, single source of truth |
+| WCAG minimum gray | --gray-500 (#737373) on white | 4.6:1 ratio, documented safe minimum after 3 contrast violations |
+
+**Agent Ratings (Final State):**
+
+| Agent | Score | Notes |
+|-------|-------|-------|
+| @ui-visual-validator | 8.7/10 | Re-verified after WCAG fixes |
+| @code-reviewer | 9.5/10 | Caught critical script tag regression in v4 |
+| @accessibility | 9.0/10 | Keyboard roving focus, aria-live compliance |
+| @performance-engineer | 9.0/10 | Confirmed DB query reduction |
+
+**Tests:** 595 → 649 (54 new notification tests)
+
+**Files Created:**
+- `prompts/services/notifications.py` - Notification service layer (create, count, mark-read, 60s duplicate prevention)
+- `prompts/signals/__init__.py` - Signals package init
+- `prompts/signals/notification_signals.py` - Signal handlers for comment, like (M2M), follow, collection save
+- `prompts/views/notification_views.py` - API endpoints (unread-count, mark-all-read, mark-read) + notifications page
+- `prompts/templates/prompts/notifications.html` - Full notifications page with category tab filtering
+- `prompts/templates/prompts/partials/_notification_list.html` - AJAX notification list partial
+- `prompts/tests/test_notifications.py` - 54 notification tests
+- `prompts/migrations/0056_add_notification_model.py` - Notification model migration
+- `static/js/overflow-tabs.js` - Shared overflow tab scroll module (187 lines)
+- `static/js/notifications.js` - Notifications page JS
+- `static/css/components/profile-tabs.css` - Shared tab component CSS
+- `static/css/pages/notifications.css` - Notifications page CSS
+
+**Files Modified:**
+- `prompts/models.py` - Notification model (6 types, 5 categories, 3 DB indexes)
+- `templates/base.html` - Bell icon dropdown with pexels dropdown, notification polling
+- `static/js/navbar.js` - Notification polling (60s), keyboard nav (WAI-ARIA roving focus), badge updates
+- `static/css/navbar.css` - Notification badge styles, bell icon positioning
+- `prompts/urls.py` - Notification URL patterns (page, API endpoints)
+- `prompts/apps.py` - Notification signals registration
+- `prompts/templatetags/notification_tags.py` - Notification template tags
+- `prompts/templates/prompts/user_profile.html` - Migrated to shared profile-tabs system
+- `prompts/templates/prompts/collections_profile.html` - Migrated to shared profile-tabs system, removed 75 lines inline CSS
+
+**Documentation Added to CLAUDE.md:**
+- WCAG Contrast Compliance rules (safe/unsafe gray table)
+- Inline Code Extraction risk pattern (with example)
+- Agent Rating Protocol (re-run requirement)
+- Shared UI Components table (overflow-tabs.js, profile-tabs.css)
+
+**Key Lessons:**
+1. Reuse existing UI patterns before building custom ones
+2. --gray-400 and opacity for text de-emphasis fail WCAG AA
+3. Inline code extraction breaks shared script blocks — always check surroundings
+4. Agent re-verification catches issues "projected" scores miss
+
+**Phase R1 Status:** ✅ Complete. Pending Heroku deployment and end-to-end testing with real user actions.
+
+---
 
 ### Session 85 - February 15-16, 2026
 
@@ -1402,6 +1485,8 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 17, 2026 | 86 | Phase R1 complete: notification system (model, signals, API, bell dropdown, notifications page), shared tab components (overflow-tabs.js, profile-tabs.css), WCAG docs, 54 new tests |
+| Feb 15-16, 2026 | 85 | Pass 2 SEO system built, admin two-button UX, tag ordering, PROTECTED_TAGS, reorder_tags command, 97 new tests |
 | Feb 14, 2026 | 83 | Tag pipeline refinements: 3-layer quality system, TAG_RULES_BLOCK, GPT self-check, ALLOWED_AI_TAGS, demographic reorder, full backfill 51/51 |
 | Feb 13, 2026 | 82 | Backfill hardening: fail-fast download, quality gate, GENERIC_TAGS, URL pre-check, 44 new tests |
 | Feb 12, 2026 | 81 | Tag validation pipeline (7→8 checks), compound preservation, GPT context enhancement, 130 new tests, audit tooling |
@@ -1433,5 +1518,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.11 (Session 83 — Tag pipeline refinements, 3-layer quality system, TAG_RULES_BLOCK, SEO architecture, full backfill)
-**Last Updated:** February 16, 2026
+**Version:** 4.13 (Session 86 — Phase R1 notification system complete, shared tab components, 54 new tests, WCAG/inline extraction docs)
+**Last Updated:** February 17, 2026

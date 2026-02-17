@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 16, 2026
+**Last Updated:** February 17, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase 2B (2B-1 through 2B-9 + tag pipeline + Pass 2 SEO complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~595 passing (43% coverage, threshold 40%)
+**Current Phase:** Phase R1 (complete), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~649 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -13,14 +13,14 @@
 |----------|-------|----------|
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
-| **CSS Files** | 6 | static/css/ |
-| **JavaScript Files** | 7 | static/js/ (2 deleted in Session 61) |
+| **CSS Files** | 8 | static/css/ |
+| **JavaScript Files** | 9 | static/js/ (2 deleted in Session 61, 2 added in Session 86) |
 | **SVG Icons** | 32 | static/icons/sprite.svg |
-| **Migrations** | 57 | prompts/migrations/ (55), about/migrations/ (2) |
-| **Test Files** | 18 | prompts/tests/ |
+| **Migrations** | 58 | prompts/migrations/ (56), about/migrations/ (2) |
+| **Test Files** | 19 | prompts/tests/ |
 | **Management Commands** | 27 | prompts/management/commands/ |
-| **Services** | 11 | prompts/services/ |
-| **View Modules** | 11 | prompts/views/ |
+| **Services** | 12 | prompts/services/ |
+| **View Modules** | 12 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
 | **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
 
@@ -72,7 +72,11 @@ live-working-project/
 │   ├── management/
 │   │   └── commands/             # 25 management commands + __init__.py
 │   ├── migrations/               # 54 migrations + __init__.py
-│   ├── services/                 # 11 service modules
+│   ├── services/                 # 12 service modules
+│   │   └── notifications.py      # Notification service (create, count, mark-read) (Session 86)
+│   ├── signals/                   # Signal handlers (Session 86)
+│   │   ├── __init__.py
+│   │   └── notification_signals.py  # Notification signal handlers
 │   ├── utils/                    # Utility modules (SEO filenames, related prompts scoring)
 │   ├── storage_backends.py       # B2 storage backend + CDN (Phase L)
 │   ├── templates/prompts/        # 23 templates
@@ -80,16 +84,18 @@ live-working-project/
 │   │       ├── _masonry_grid.html
 │   │       ├── _prompt_card.html
 │   │       ├── _prompt_card_list.html   # Related prompts AJAX partial (Session 74)
+│   │       ├── _notification_list.html  # Notification list AJAX partial (Session 86)
 │   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
 │   ├── tests/                    # 16 test files
-│   └── views/                    # 11 view modules (refactored)
+│   └── views/                    # 12 view modules (refactored)
 │       ├── __init__.py           # Package exports
 │       ├── admin_views.py        # Admin dashboard views
 │       ├── api_views.py          # REST API endpoints (Phase L)
 │       ├── collection_views.py   # Collection API and page views (Phase K)
 │       ├── generator_views.py    # AI generator category pages
 │       ├── leaderboard_views.py  # Leaderboard functionality
+│       ├── notification_views.py # Notification API + page views (Phase R1)
 │       ├── prompt_views.py       # Prompt detail, edit, delete views
 │       ├── redirect_views.py     # URL redirects and legacy routes
 │       ├── social_views.py       # Follow, like, share views
@@ -118,10 +124,12 @@ live-working-project/
 │   │   └── style.css
 │   ├── icons/                    # SVG icon sprite (Phase J.2)
 │   │   └── sprite.svg            # 30 icons from Lucide Icons
-│   └── js/                       # 4 JavaScript files
+│   └── js/                       # 6 JavaScript files
 │       ├── collections.js        # Collections modal interactions (Phase K, ~760 lines)
 │       ├── like-button.js        # Centralized like button handler
-│       ├── navbar.js             # Extracted navbar JavaScript (~650 lines)
+│       ├── navbar.js             # Extracted navbar JavaScript (~650 lines) + notification polling (Session 86)
+│       ├── notifications.js      # Notifications page interactions (Session 86)
+│       ├── overflow-tabs.js      # Shared overflow tab scroll module (Session 86, 187 lines)
 │       └── prompt-detail.js      # Prompt detail page interactions
 ├── staticfiles/                  # Collected static (production)
 └── templates/                    # Global Django templates (18 files)
@@ -173,12 +181,13 @@ live-working-project/
 prompts/services/
 ├── __init__.py              # Service exports
 ├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT)
-├── b2_rename.py             # B2 file renaming via copy-verify-delete (Phase N4h) ← NEW
+├── b2_rename.py             # B2 file renaming via copy-verify-delete (Phase N4h)
 ├── b2_upload_service.py     # B2 upload orchestration (Phase L)
 ├── cloudinary_moderation.py # OpenAI Vision moderation for images and videos
 ├── content_generation.py    # GPT-4o content generation for uploads
 ├── image_processor.py       # Pillow image optimization (Phase L)
 ├── leaderboard.py           # Leaderboard calculations (Phase G)
+├── notifications.py         # Notification service: create, count, mark-read, duplicate prevention (Phase R1)
 ├── openai_moderation.py     # OpenAI text moderation API
 ├── orchestrator.py          # Moderation orchestration (multi-layer)
 ├── profanity_filter.py      # Profanity detection and filtering
@@ -203,6 +212,7 @@ prompts/utils/
 | **content_generation** | GPT-4o-mini for AI-generated titles, descriptions, tags | ~$0.00255/upload |
 | **image_processor** | Pillow-based image optimization (thumb, medium, large, webp) | N/A |
 | **leaderboard** | User ranking by views, activity, engagement | N/A |
+| **notifications** | Notification service: create with 60s dedup, count unread, mark-read (Phase R1) | N/A |
 | **openai_moderation** | OpenAI text moderation API | FREE |
 | **orchestrator** | Multi-layer moderation coordination | Combined |
 | **profanity_filter** | Custom profanity word detection | N/A |
@@ -223,6 +233,7 @@ prompts/views/
 ├── collection_views.py   # Collection API and page views (Phase K)
 ├── generator_views.py    # AI generator category pages
 ├── leaderboard_views.py  # Leaderboard rankings, filters
+├── notification_views.py # Notification API + page views (Phase R1)
 ├── prompt_views.py       # Prompt detail, edit, delete, list views
 ├── redirect_views.py     # URL redirects and legacy routes
 ├── social_views.py       # Follow/unfollow, likes, shares
@@ -240,6 +251,7 @@ prompts/views/
 | **collection_views** | ~9 | Collection CRUD, API endpoints, profile tab, pagination |
 | **generator_views** | ~5 | AI generator category pages with filtering |
 | **leaderboard_views** | ~4 | Rankings, time filters, user stats |
+| **notification_views** | ~6 | Notification API (unread-count, mark-read), notifications page, category filtering |
 | **prompt_views** | ~20 | Prompt detail, edit, delete, list, homepage views |
 | **redirect_views** | ~3 | URL redirects, legacy route handling |
 | **social_views** | ~10 | Follow system, likes, shares, reports |
@@ -275,6 +287,7 @@ prompts/views/
 | `user_profile.html` | User profile with tabs |
 | `upload.html` | Single-page upload (Phase N - replaces step 1 & 2) |
 | `collection_edit.html` | Collection edit form (Phase K - Session 64) |
+| `notifications.html` | Notifications page with category tab filtering (Phase R1 - Session 86) |
 | `trash_bin.html` | User trash bin |
 
 **Deleted in Session 61:**
@@ -297,7 +310,7 @@ prompts/views/
 
 ---
 
-## Test Files (16 files, ~498 tests)
+## Test Files (19 files, ~649 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
@@ -317,6 +330,7 @@ prompts/views/
 | `test_tags_context.py` | 17 | Tag context enhancement: excerpt in GPT prompt, weighting rules, backfill queryset (Session 81) |
 | `test_validate_tags.py` | 200 | Tag validation pipeline: 8 checks, compound splitting, GPT self-check, demographic reorder, stop-word discard (Sessions 81, 83) |
 | `test_backfill_hardening.py` | 44 | Backfill hardening: quality gate, fail-fast download, URL pre-check, tag preservation (Session 82) |
+| `test_notifications.py` | 54 | Notification system: model, signals, service, API, page views, bell dropdown (Session 86) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -338,7 +352,7 @@ prompts/views/
 | File | Lines | Purpose |
 |------|-------|---------|
 | `views/` | ~3,929 | View package (11 modules) ✅ REFACTORED |
-| `models.py` | ~2,100 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, etc.) + `seo_pass2_at` field + `ordered_tags()` method |
+| `models.py` | ~2,200 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, Notification, etc.) + `seo_pass2_at` field + `ordered_tags()` method |
 | `admin.py` | ~2,300 | Django admin (PromptAdmin with two-button system, SEO Review + Rebuild actions, M2M ordering) |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
@@ -353,18 +367,20 @@ prompts/views/
 
 ```
 static/css/
-├── navbar.css           # 1,136 lines - Extracted navbar styles
+├── navbar.css           # 1,136 lines - Extracted navbar styles + notification badge (Session 86)
 ├── style.css            # ~1,800 lines - Main stylesheet + shared media container component (Session 66)
 ├── upload.css           # ~880 lines - Upload page styles, warning toast, error card (rewritten S66, expanded S68)
 ├── components/
 │   ├── icons.css        # ~250 lines - SVG icon system (Phase J.2)
-│   └── masonry-grid.css # 255 lines - Masonry grid component
+│   ├── masonry-grid.css # 255 lines - Masonry grid component
+│   └── profile-tabs.css # ~200 lines - Shared tab component (Session 86)
 └── pages/
+    ├── notifications.css # ~150 lines - Notifications page styles (Session 86)
     ├── prompt-detail.css # 1,515 lines - Prompt detail page + related prompts section (Phase J.1, Session 74)
     └── prompt-list.css   # 304 lines - Prompt list page styles
 ```
 
-**Total CSS:** ~6,090 lines across 7 files
+**Total CSS:** ~6,440 lines across 9 files
 
 **Shared CSS Components (Session 66):**
 - `.media-container-shell` / `.media-container` - Shared image/video container used by upload preview and prompt detail
@@ -430,7 +446,9 @@ static/js/
 | File | Lines | Purpose |
 |------|-------|---------|
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
-| **navbar.js** | ~650 | Dropdowns, search, mobile menu, scroll |
+| **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling + keyboard nav (Phase R1) |
+| **notifications.js** | ~200 | Notifications page mark-as-read, category filtering (Phase R1) |
+| **overflow-tabs.js** | ~187 | Shared overflow tab scroll with auto-center options (Phase R1) |
 | **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
 | **like-button.js** | ~155 | Centralized like handler with optimistic UI |
 | **upload-core.js** | ~640 | B2 presigned upload, drag-drop, local preview, orphan cleanup, 30s warning toast (Phase N) |
@@ -466,7 +484,7 @@ static/js/
 | State Reset | ~60 | Reset modal state on close |
 | Error Handling | ~100 | Loading states, error messages |
 
-**Total JavaScript:** ~3,573 lines across 7 files (after Session 61 cleanup)
+**Total JavaScript:** ~4,160 lines across 9 files (after Session 61 cleanup, 2 added in Session 86)
 **Extraction Benefit:** base.html reduced from ~2000 lines to ~1400 lines
 
 ---
@@ -990,7 +1008,7 @@ python manage.py test -v 2
 
 ### Test Statistics
 
-- **Total Tests:** ~498 passing (12 skipped - Selenium)
+- **Total Tests:** ~649 passing (12 skipped - Selenium)
 - **Pass Rate:** 100% in CI
 - **Coverage:** ~43% (enforced minimum: 40%)
 - **Note:** `prompts/tests.py` (stale stub) was deleted in Session 83 — conflicted with `prompts/tests/` directory discovery
@@ -1449,6 +1467,83 @@ CC_COMMUNICATION_PROTOCOL.md              # Reorganized to project root, content
 
 ---
 
+## Session 86 Files (Phase R1 — User Notifications)
+
+### Files Created (Session 86)
+
+```
+prompts/services/
+└── notifications.py                     # NEW - Notification service: create, count, mark-read, 60s dedup
+
+prompts/signals/
+├── __init__.py                          # NEW - Signals package init
+└── notification_signals.py              # NEW - Signal handlers for comment, like, follow, collection save
+
+prompts/views/
+└── notification_views.py                # NEW - Notification API (unread-count, mark-all-read, mark-read) + page
+
+prompts/templates/prompts/
+├── notifications.html                   # NEW - Notifications page with category tabs, empty states
+└── partials/
+    └── _notification_list.html          # NEW - AJAX notification list partial
+
+prompts/tests/
+└── test_notifications.py                # NEW - 54 notification tests (model, signals, service, API, page views)
+
+prompts/migrations/
+└── 0056_add_notification_model.py       # NEW - Notification model (6 types, 5 categories, 3 indexes)
+
+static/js/
+├── overflow-tabs.js                     # NEW - Shared overflow tab scroll module (187 lines)
+└── notifications.js                     # NEW - Notifications page JS (mark-as-read, category filtering)
+
+static/css/
+├── components/
+│   └── profile-tabs.css                 # NEW - Shared tab component CSS (used by 3 templates)
+└── pages/
+    └── notifications.css                # NEW - Notifications page styles
+```
+
+### Files Modified (Session 86)
+
+```
+prompts/
+├── models.py                            # Notification model (6 types, 5 categories, 3 DB indexes)
+├── apps.py                              # Notification signals registration
+├── urls.py                              # Notification URL patterns (page + API endpoints)
+└── templatetags/
+    └── notification_tags.py             # Notification template tags
+
+templates/
+└── base.html                            # Bell icon dropdown (pexels dropdown), notification polling JS
+
+static/js/
+└── navbar.js                            # Notification polling (60s), keyboard nav (WAI-ARIA roving focus),
+                                          # badge updates via aria-live
+
+static/css/
+└── navbar.css                           # Notification badge styles, bell icon positioning
+
+prompts/templates/prompts/
+├── user_profile.html                    # Migrated to shared profile-tabs system (overflow-tabs.js)
+└── collections_profile.html             # Migrated to shared profile-tabs system, removed 75 lines inline CSS
+```
+
+### Database Fields (Session 86)
+
+| Field | Type | Status |
+|-------|------|--------|
+| `Notification.recipient` | ForeignKey → User | ✅ Added (0056) |
+| `Notification.sender` | ForeignKey → User (nullable) | ✅ Added (0056) |
+| `Notification.notification_type` | CharField (6 choices) | ✅ Added (0056) |
+| `Notification.category` | CharField (5 choices, auto-derived) | ✅ Added (0056) |
+| `Notification.message` | TextField | ✅ Added (0056) |
+| `Notification.is_read` | BooleanField (default=False) | ✅ Added (0056) |
+| `Notification.related_prompt` | ForeignKey → Prompt (nullable) | ✅ Added (0056) |
+| `Notification.created_at` | DateTimeField(auto_now_add=True) | ✅ Added (0056) |
+
+---
+
 ## Related Documentation
 
 | Document | Location | Purpose |
@@ -1471,11 +1566,26 @@ CC_COMMUNICATION_PROTOCOL.md              # Reorganized to project root, content
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.18
-**Audit Date:** February 16, 2026
+**Version:** 3.19
+**Audit Date:** February 17, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.19 (February 17, 2026 - Session 86 End-of-Session Docs Update):**
+- Updated total test count: ~595→~649
+- Added `notifications.py` service (count 11→12)
+- Added `notification_views.py` view module (count 11→12)
+- Added `signals/` package with `notification_signals.py`
+- Added migration 0056 (count 57→58)
+- Added `test_notifications.py` (54 tests) to test files (count 18→19)
+- Added `overflow-tabs.js` and `notifications.js` to JS files (count 7→9)
+- Added `profile-tabs.css` and `notifications.css` to CSS files (count 7→9)
+- Added `notifications.html` and `_notification_list.html` to templates
+- Added Session 86 Files section with all created/modified files and database fields
+- Updated `models.py` description: added Notification model (~2,100→~2,200 lines)
+- Updated `navbar.js` description: notification polling + keyboard nav (~650→~750 lines)
+- Updated current phase in header to include Phase R1 (complete)
 
 **v3.18 (February 16, 2026 - Session 85 End-of-Session Docs Update):**
 - Updated total test count: ~498→~595

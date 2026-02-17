@@ -338,16 +338,16 @@ class OverflowArrowFunctionalityTestCase(TestCase):
         self.assertIn('overflow-arrow', content)
         self.assertIn('addEventListener', content)
 
-    def test_overflow_arrow_css_hover_effect(self):
-        """Arrow should have hover effect CSS"""
+    def test_overflow_arrow_css_loaded(self):
+        """Arrow CSS should be loaded via profile-tabs.css"""
         response = self.client.get(reverse('prompts:user_profile', args=['scrolluser']))
 
         self.assertEqual(response.status_code, 200)
 
         content = response.content.decode('utf-8')
 
-        # Check hover CSS (actual class is overflow-arrow)
-        self.assertIn('.overflow-arrow:hover', content)
+        # CSS is now in external profile-tabs.css (migrated from inline)
+        self.assertIn('profile-tabs.css', content)
 
 
 
@@ -549,41 +549,17 @@ class JavaScriptFunctionalityTestCase(TestCase):
         self.assertIn('console.log', content)
         self.assertIn('Overflow', content)
 
-    def test_javascript_scroll_functionality(self):
-        """JavaScript should have scroll functionality"""
+    def test_javascript_overflow_module_loaded(self):
+        """Shared overflow-tabs.js module should be loaded"""
         response = self.client.get(reverse('prompts:user_profile', args=['jsuser']))
 
         self.assertEqual(response.status_code, 200)
 
         content = response.content.decode('utf-8')
 
-        # Check scroll amount functionality exists
-        self.assertIn('scrollAmount', content)
-        self.assertIn('getScrollAmount', content)
-
-    def test_javascript_keyboard_navigation(self):
-        """JavaScript should support keyboard navigation"""
-        response = self.client.get(reverse('prompts:user_profile', args=['jsuser']))
-
-        self.assertEqual(response.status_code, 200)
-
-        content = response.content.decode('utf-8')
-
-        # Check keyboard navigation
-        self.assertIn('ArrowLeft', content)
-        self.assertIn('ArrowRight', content)
-        self.assertIn('keydown', content)
-
-    def test_javascript_smooth_scroll(self):
-        """Scroll should use smooth behavior"""
-        response = self.client.get(reverse('prompts:user_profile', args=['jsuser']))
-
-        self.assertEqual(response.status_code, 200)
-
-        content = response.content.decode('utf-8')
-
-        # Check smooth scroll behavior
-        self.assertIn("behavior: 'smooth'", content)
+        # JS is now in external overflow-tabs.js (migrated from inline)
+        self.assertIn('overflow-tabs.js', content)
+        self.assertIn('initOverflowTabs', content)
 
 
 # Performance and Integration Tests

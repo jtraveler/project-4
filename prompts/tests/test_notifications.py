@@ -1,14 +1,16 @@
 """
-Tests for the Notification system (Phase R1-A).
+Tests for the Notification system (Phase R1).
 
-Covers: model, service layer, signal handlers, template tag.
+Covers: model, service layer, signal handlers, template tag,
+        API endpoints (R1-B), notifications page (R1-C).
 """
 from datetime import timedelta
 from unittest.mock import MagicMock
 
 from django.contrib.auth.models import User
 from django.template import Context, Template
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, Client
+from django.urls import reverse
 from django.utils import timezone
 
 from prompts.models import (
@@ -594,3 +596,273 @@ class TestNotificationTemplateTag(NotificationTestBase):
         context = Context({'request': request})
         rendered = template.render(context)
         self.assertEqual(rendered.strip(), '0')
+
+
+
+# ═══════════════════════════════════════════════════
+# API ENDPOINT TESTS (Phase R1-B)
+# ═══════════════════════════════════════════════════
+
+class TestUnreadCountAPI(NotificationTestBase):
+    """Tests for GET /api/notifications/unread-count/."""
+
+    def test_returns_counts(self):
+        """Returns total and per-category counts."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='Like',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Follow',
+        )
+        response = self.client.get(
+            reverse('prompts:notification_unread_count_api')
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['total'], 2)
+        self.assertEqual(data['categories']['likes'], 1)
+        self.assertEqual(data['categories']['follows'], 1)
+        self.assertEqual(data['categories']['comments'], 0)
+
+    def test_requires_login(self):
+        """Anonymous request redirects to login."""
+        response = self.client.get(
+            reverse('prompts:notification_unread_count_api')
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_post_not_allowed(self):
+        """POST returns 405."""
+        self.client.force_login(self.user1)
+        response = self.client.post(
+            reverse('prompts:notification_unread_count_api')
+        )
+        self.assertEqual(response.status_code, 405)
+
+    def test_zero_when_empty(self):
+        """Returns 0 when no notifications exist."""
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notification_unread_count_api')
+        )
+        data = response.json()
+        self.assertEqual(data['total'], 0)
+
+
+class TestMarkAllReadAPI(NotificationTestBase):
+    """Tests for POST /api/notifications/mark-all-read/."""
+
+    def test_marks_all_read(self):
+        """Marks all notifications as read."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='One',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Two',
+        )
+        response = self.client.post(
+            reverse('prompts:notification_mark_all_read_api')
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'ok')
+        self.assertEqual(data['marked'], 2)
+        self.assertEqual(get_unread_count(self.user1), 0)
+
+    def test_marks_by_category(self):
+        """Category filter only marks that category."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='Like',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Follow',
+        )
+        response = self.client.post(
+            reverse('prompts:notification_mark_all_read_api') + '?category=likes'
+        )
+        data = response.json()
+        self.assertEqual(data['marked'], 1)
+        self.assertEqual(get_unread_count(self.user1), 1)
+
+    def test_requires_login(self):
+        """Anonymous request redirects."""
+        response = self.client.post(
+            reverse('prompts:notification_mark_all_read_api')
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_get_not_allowed(self):
+        """GET returns 405."""
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notification_mark_all_read_api')
+        )
+        self.assertEqual(response.status_code, 405)
+
+
+class TestMarkReadAPI(NotificationTestBase):
+    """Tests for POST /api/notifications/<id>/read/."""
+
+    def test_marks_single_read(self):
+        """Marks a specific notification as read."""
+        self.client.force_login(self.user1)
+        n = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='Test',
+        )
+        response = self.client.post(
+            reverse('prompts:notification_mark_read_api', args=[n.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        n.refresh_from_db()
+        self.assertTrue(n.is_read)
+
+    def test_wrong_user_gets_404(self):
+        """Can't mark another user's notification."""
+        self.client.force_login(self.user2)
+        n = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='Test',
+        )
+        response = self.client.post(
+            reverse('prompts:notification_mark_read_api', args=[n.id])
+        )
+        self.assertEqual(response.status_code, 404)
+        n.refresh_from_db()
+        self.assertFalse(n.is_read)
+
+    def test_nonexistent_notification(self):
+        """Non-existent ID returns 404."""
+        self.client.force_login(self.user1)
+        response = self.client.post(
+            reverse('prompts:notification_mark_read_api', args=[99999])
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_requires_login(self):
+        """Anonymous request redirects."""
+        response = self.client.post(
+            reverse('prompts:notification_mark_read_api', args=[1])
+        )
+        self.assertEqual(response.status_code, 302)
+
+
+class TestNotificationsPage(NotificationTestBase):
+    """Tests for GET /notifications/ page."""
+
+    def test_page_loads(self):
+        """Notifications page returns 200 for logged-in user."""
+        self.client.force_login(self.user1)
+        response = self.client.get(reverse('prompts:notifications'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'prompts/notifications.html')
+
+    def test_requires_login(self):
+        """Anonymous users get redirected."""
+        response = self.client.get(reverse('prompts:notifications'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_defaults_to_comments_category(self):
+        """Page defaults to comments category when no param provided."""
+        self.client.force_login(self.user1)
+        response = self.client.get(reverse('prompts:notifications'))
+        self.assertEqual(response.context['active_category'], 'comments')
+
+    def test_shows_notifications(self):
+        """Notifications appear in context for the active category."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Bob started following you',
+        )
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=follows'
+        )
+        self.assertEqual(len(response.context['notifications']), 1)
+
+    def test_category_filter(self):
+        """Category query param filters notifications."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='Like',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Follow',
+        )
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=likes'
+        )
+        self.assertEqual(len(response.context['notifications']), 1)
+        self.assertEqual(response.context['active_category'], 'likes')
+
+    def test_invalid_category_defaults_to_comments(self):
+        """Invalid category param falls back to comments."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='Test',
+        )
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=invalid'
+        )
+        self.assertEqual(response.context['active_category'], 'comments')
+        # System notification not shown when viewing comments
+        self.assertEqual(len(response.context['notifications']), 0)
+
+    def test_only_own_notifications(self):
+        """User only sees their own notifications."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user2,
+            notification_type='system',
+            title='Not mine',
+        )
+        response = self.client.get(reverse('prompts:notifications'))
+        self.assertEqual(len(response.context['notifications']), 0)
+
+    def test_context_has_category_tabs(self):
+        """Response context includes category tabs with unread counts."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='Like',
+        )
+        response = self.client.get(reverse('prompts:notifications'))
+        self.assertIn('category_tabs', response.context)
+        likes_tab = next(
+            t for t in response.context['category_tabs'] if t['value'] == 'likes'
+        )
+        self.assertEqual(likes_tab['count'], 1)

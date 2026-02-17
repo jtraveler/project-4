@@ -441,6 +441,42 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 - **CSS:** Styles in `static/css/style.css` under "Trash video styling" section (~line 2555-2590)
 - **Specificity Note:** `.trash-prompt-wrapper .trash-video-play` uses specificity 0,2,0 to beat `masonry-grid.css` `.video-play-icon` (0,1,0) which loads later
 
+### Known Risk Pattern: Inline Code Extraction (CRITICAL)
+
+When extracting inline `<script>` or `<style>` blocks to external files:
+
+1. **Identify ALL code within the same tag** before making changes. The block being extracted may share a `<script>` or `<style>` tag with unrelated code.
+2. **Verify tag balance after editing.** Run `grep -n '<script\|</script' [file]` to confirm every `<script>` has a matching `</script>`.
+3. **Check what comes AFTER the extracted code.** If there is more JS/CSS after the removed section, ensure it's still inside a valid tag.
+4. **Test ALL interactive elements** on the affected page after extraction.
+
+**Origin:** Session 86 (Phase R1 FIX SPEC v4) — extracting overflow IIFE from `user_profile.html` left ~640 lines of follow/unfollow/modal JS outside `<script>` tags, rendering as raw text. Caught by @code-reviewer agent.
+
+### WCAG Contrast Compliance (CRITICAL)
+
+All text must meet WCAG 2.1 AA minimum contrast ratios:
+- **Normal text (< 18px or < 14px bold):** 4.5:1 minimum
+- **Large text (≥ 18px or ≥ 14px bold):** 3:1 minimum
+
+**Safe text colors on white backgrounds:**
+- `var(--gray-500, #737373)` — 4.6:1 ✅ (minimum safe for normal text)
+- `var(--gray-600, #525252)` — 7.1:1 ✅
+- `var(--gray-700, #404040)` — 9.7:1 ✅
+- `var(--gray-800, #262626)` — 14.5:1 ✅
+
+**UNSAFE text colors on white backgrounds (DO NOT USE for body text):**
+- `var(--gray-400, #A3A3A3)` — 2.7:1 ❌ FAILS AA
+- `var(--gray-300, #D4D4D4)` — 1.5:1 ❌ FAILS AA
+- `opacity: 0.6` on any gray — ❌ ALWAYS CHECK, usually fails
+
+**Rules:**
+1. NEVER use `opacity` to de-emphasize text. Use an explicit `color` value instead. Opacity affects the entire element and makes contrast unpredictable.
+2. NEVER use `--gray-400` or lighter for readable text on white backgrounds.
+3. For de-emphasized but readable text, use `--gray-500` (#737373) as the minimum. It passes AA at 4.6:1.
+4. For placeholder text or truly decorative text that isn't essential for understanding, `--gray-400` is acceptable per WCAG 1.4.3 (incidental text).
+
+**This pattern caused WCAG violations in Phase R1 Fixes v3 and v5. Always verify contrast when selecting text colors for de-emphasis.**
+
 ### Resolved Blockers (Session 64-66)
 
 | Issue | Resolution | Session |
@@ -922,6 +958,19 @@ We learned the hard way: **big specs fail**. Claude Code ignores details in long
 | After coding | System 2 | Claude.ai review personas |
 
 **Required:** 8+/10 average rating before committing
+
+### Agent Rating Protocol
+
+When an agent scores below 8/10 and issues are fixed inline:
+
+1. The agent MUST be re-run after fixes are applied to confirm the post-fix score meets the 8+/10 threshold.
+2. "Projected" or "estimated" post-fix scores are NOT acceptable. The agent must actually re-evaluate the fixed code.
+3. If re-running the full agent is impractical, run the agent on ONLY the specific files/issues that were fixed and report the focused re-evaluation score.
+4. Document both the initial score and the confirmed post-fix score in the completion report.
+
+**Example:**
+- ❌ "@accessibility: 7.4/10 → ~8.2/10 (projected)" — NOT acceptable
+- ✅ "@accessibility: 7.4/10 → 8.3/10 (re-verified after contrast fix)" — Acceptable
 
 ### File Size Warning for Claude Code
 

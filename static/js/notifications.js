@@ -1,6 +1,7 @@
 /**
  * Notifications Page JavaScript
  * Phase R1-C: Click-to-mark-read, mark-all-as-read button handler.
+ * Phase R1-D: Updated for card layout — mark read on action button click.
  */
 (function() {
     'use strict';
@@ -8,11 +9,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         var csrfToken = document.querySelector('meta[name="csrf-token"]');
 
-        // Mark notification as read when clicking an unread item
-        var notifItems = document.querySelectorAll('.notif-item.notif-unread');
-        notifItems.forEach(function(item) {
-            item.addEventListener('click', function() {
-                var notifId = item.dataset.notificationId;
+        // Mark notification as read when clicking an action button inside an unread card
+        var actionBtns = document.querySelectorAll('.notif-card.notif-unread .notif-action-btn');
+        actionBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var card = btn.closest('.notif-card');
+                var notifId = card ? card.dataset.notificationId : null;
                 if (!notifId || !csrfToken) return;
 
                 // Fire-and-forget mark as read
@@ -44,10 +46,11 @@
                 })
                 .then(function(response) {
                     if (!response.ok) return;
-                    // Remove unread styling from all items
-                    document.querySelectorAll('.notif-unread').forEach(function(item) {
-                        item.classList.remove('notif-unread');
+                    // Remove unread styling from all cards
+                    document.querySelectorAll('.notif-unread').forEach(function(card) {
+                        card.classList.remove('notif-unread');
                     });
+                    // Remove unread dots
                     document.querySelectorAll('.notif-unread-dot').forEach(function(dot) {
                         dot.remove();
                     });

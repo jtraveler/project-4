@@ -80,7 +80,7 @@ def notifications_page(request):
     qs = Notification.objects.filter(
         recipient=request.user,
         category=category,
-    ).select_related('sender').order_by('-created_at')
+    ).select_related('sender', 'sender__userprofile').order_by('-created_at')
 
     notifications = qs[:50]
 

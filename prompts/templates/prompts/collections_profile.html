@@ -5,6 +5,10 @@
 
 {% block title %}{{ profile_user.username }}'s Collections - PromptFinder{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/components/profile-tabs.css' %}">
+{% endblock %}
+
 {% block content %}
 <!-- CSRF Token for AJAX requests -->
 {% csrf_token %}
@@ -135,7 +139,9 @@
     white-space: nowrap;
 }
 
-/* SECTIONS 3 & 4: TAB NAVIGATION + FILTERS */
+/* SECTIONS 3 & 4: TAB NAVIGATION + FILTERS
+   Tab styles (.profile-tab, .profile-tabs-wrapper, etc.) are in
+   profile-tabs.css — loaded via extra_head block. */
 .profile-navigation-row {
     display: flex;
     justify-content: space-between;
@@ -143,84 +149,6 @@
     padding: 0 0 24px;
     gap: 20px;
     background: transparent;
-}
-
-.profile-tabs-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    flex: 1;
-}
-
-.profile-tabs-container {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    -ms-overflow-style: none;
-    flex: 1;
-    flex-wrap: nowrap;
-    padding-bottom: 10px;
-    border-radius: var(--radius-pill);
-}
-
-.profile-tabs-container::-webkit-scrollbar {
-    display: none;
-}
-
-.profile-tab {
-    padding: 12px 20px;
-    font-size: 17px;
-    font-weight: 500;
-    color: #6b7280;
-    background: transparent;
-    border: none;
-    border-radius: 40px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.profile-tab:hover:not(.profile-tab-active) {
-    background: #f3f4f6;
-    color: #1f2937;
-}
-
-.profile-tab-active {
-    background: #000000;
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.profile-tab-active:hover {
-    color: #ffffff;
-    text-decoration: none;
-}
-
-.profile-tab-count {
-    font-size: 17px;
-    opacity: 0.7;
-    margin-left: 5px;
-    display: inline-block;
-    min-width: 40px;
-    text-align: left;
-    font-variant-numeric: tabular-nums;
-}
-
-.stat-badge {
-    display: inline-block;
-    min-width: 40px;
-    text-align: center;
-    padding-right: 4px;
-    font-weight: normal;
-    transition: none;
-    font-variant-numeric: tabular-nums;
 }
 
 /* Filter controls */
@@ -362,7 +290,7 @@
 
 .collections-empty-state p {
     font-size: 16px;
-    color: var(--gray-400, #9ca3af);
+    color: var(--gray-500, #737373);
 }
 
 /* Responsive */
@@ -373,9 +301,7 @@
         align-items: stretch;
     }
 
-    .profile-tabs-wrapper {
-        width: 100%;
-    }
+    /* .profile-tabs-wrapper width: 100% handled by profile-tabs.css @1024px */
 
     .profile-filters-container {
         width: 100%;
@@ -519,8 +445,14 @@
          TABS + FILTERS ROW
          ============================================ -->
     <div class="profile-navigation-row">
-        <!-- Left side: Tabs -->
+        <!-- Left side: Tabs with wrapper shell -->
         <div class="profile-tabs-wrapper">
+            <!-- LEFT ARROW - Outside scrolling container, positioned to wrapper -->
+            <button class="overflow-arrow-left" aria-label="Scroll tabs left" tabindex="-1">
+                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+            </button>
+
+            <!-- SCROLLING TABS CONTAINER - Only tabs inside -->
             <div class="profile-tabs-container">
                 <a href="{% url 'prompts:user_profile' username=profile_user.username %}"
                    class="profile-tab"
@@ -554,9 +486,15 @@
                    style="text-decoration: none;">
                     <svg class="icon icon-sm" aria-hidden="true" style="margin-right: 6px;"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
                     Trash
+                    <span class="profile-tab-count stat-badge">{{ total_trash_count|default:0 }}</span>
                 </a>
                 {% endif %}
             </div>
+
+            <!-- RIGHT ARROW - Outside scrolling container, positioned to wrapper -->
+            <button class="overflow-arrow" aria-label="Scroll tabs right" tabindex="-1">
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            </button>
         </div>
 
         <!-- Right side: Create button + Sort filter -->
@@ -1061,6 +999,17 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
     tooltipTriggerList.forEach(function(tooltipTriggerEl) {
         new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+<!-- Overflow tabs: scroll arrows + keyboard navigation -->
+<script src="{% static 'js/overflow-tabs.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initOverflowTabs('.profile-tabs-wrapper', {
+        centerActiveTab: true,
+        centerWhenFits: false
     });
 });
 </script>

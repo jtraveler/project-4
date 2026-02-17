@@ -1083,6 +1083,12 @@ body.mobile-menu-open {
         right: auto !important;
         left: 5% !important;  /* Mirror positioning for RTL languages */
     }
+
+    /* Notification dropdown — prevent overflow on very small screens */
+    #notifDropdown,
+    #notifDropdown.dropdown-centered {
+        right: 5% !important;
+    }
 }
 
 /* Profile link styles - Phase F UX Fix */
@@ -1131,6 +1137,114 @@ a.profile-link:hover {
     color: #e0e0e0;
     text-decoration: none;
     opacity: 0.9;
+}
+
+/* ========================================
+   NOTIFICATION BADGE (Phase R1-B)
+   Uses existing pexels-dropdown system for
+   the dropdown panel — only badges are custom.
+   ======================================== */
+
+/* Red unread count badge on bell icon */
+.notification-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    background: var(--error, #dc2626);  /* Fallback matches --error token; 4.83:1 with white text */
+    color: var(--white, #fff);
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* Mobile badge variant */
+.notification-badge-mobile {
+    top: 4px;
+    right: 4px;
+}
+
+/* Per-category inline count text in dropdown */
+.notif-count-text {
+    font-weight: 400;
+    color: var(--gray-500, #737373);
+    margin-left: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Notification dropdown — fixed positioning, constrained width, right-aligned near bell */
+#notifDropdown {
+    position: fixed !important;
+    top: var(--navbar-height) !important;
+    width: 220px;
+    min-width: 220px;
+    max-width: 220px;
+}
+
+/* Override dropdown-centered on notification dropdown — use right-aligned positioning
+   instead of left: 50% + transform (which stretches between left/right on fixed elements) */
+#notifDropdown.dropdown-centered {
+    left: auto;
+    right: 10%;
+    transform: none;
+}
+
+/* Use non-centered animations (no translateX) since we override centering above */
+#notifDropdown.dropdown-centered.show {
+    animation: dropdownFade 0.2s ease forwards;
+}
+
+#notifDropdown.dropdown-centered.hiding {
+    animation: dropdownFadeOut 0.2s ease forwards;
+}
+
+/* Loading state for notification counts before first poll */
+.notif-count-text.count-loading {
+    opacity: 0.4;
+    transition: opacity 0.2s ease;
+}
+
+/* Mark All as Read — match regular dropdown item styling */
+.notif-mark-all-btn {
+    width: 100%;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: inherit;
+    text-align: left;
+}
+
+.notif-mark-all-btn .pexels-dropdown-title {
+    color: var(--gray-500, #737373);
+    font-weight: 500;
+}
+
+.notif-mark-all-btn:hover .pexels-dropdown-title {
+    color: var(--gray-800, #262626);
+}
+
+/* Mobile: adjust notification dropdown positioning */
+@media (max-width: 768px) {
+    #notifDropdown {
+        top: var(--navbar-height-mobile) !important;
+        right: 10% !important;
+        width: 200px;
+        min-width: 200px;
+        max-width: 200px;
+    }
+
+    #notifDropdown.dropdown-centered {
+        left: auto;
+        right: 10% !important;
+        transform: none;
+    }
 }
 
 footer { color: var(--gray-600)}

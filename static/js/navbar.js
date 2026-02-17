@@ -419,7 +419,7 @@ function selectMobileSearchType(type) {
 // ========================================
 
 document.addEventListener('keydown', function(event) {
-    // Escape key
+    // Escape key — close dropdown and return focus to trigger button
     if (event.key === 'Escape') {
         const mobileMenu = document.getElementById('pexelsMobileMenu');
         if (mobileMenu && mobileMenu.classList.contains('show')) {
@@ -427,9 +427,22 @@ document.addEventListener('keydown', function(event) {
             return;
         }
 
+        // Find trigger button to restore focus (before closing dropdowns)
+        // Uses first visible trigger matching aria-controls (desktop or mobile)
+        let triggerButton = null;
+        const activeMenu = document.activeElement ? document.activeElement.closest('[role="menu"]') : null;
+        if (activeMenu && activeMenu.id) {
+            triggerButton = Array.from(
+                document.querySelectorAll('[aria-controls="' + activeMenu.id + '"]')
+            ).find(function(btn) {
+                return btn.offsetParent !== null;
+            }) || null;
+        }
+
         const dropdowns = document.querySelectorAll('.pexels-dropdown.show, .search-dropdown-menu.show');
         dropdowns.forEach(dropdown => {
-            dropdown.classList.remove('show');
+            dropdown.classList.remove('show', 'hiding');
+            dropdown.style.willChange = 'auto';
         });
 
         document.querySelectorAll('[aria-expanded="true"]').forEach(button => {
@@ -438,6 +451,30 @@ document.addEventListener('keydown', function(event) {
 
         currentOpenDropdown = null;
         clickLockedDropdown = null;
+
+        // Restore focus to trigger button
+        if (triggerButton) {
+            triggerButton.focus();
+        }
+    }
+
+    // Tab key — close dropdown when tabbing out (let default Tab behavior proceed)
+    if (event.key === 'Tab') {
+        const tabMenu = document.activeElement ? document.activeElement.closest('[role="menu"]') : null;
+        if (tabMenu && tabMenu.classList.contains('show')) {
+            clearTimeout(hoverTimeout);
+            clearTimeout(animationTimeout);
+
+            tabMenu.classList.remove('show', 'hiding');
+            tabMenu.style.willChange = 'auto';
+
+            document.querySelectorAll('[aria-expanded="true"]').forEach(function(button) {
+                button.setAttribute('aria-expanded', 'false');
+            });
+
+            currentOpenDropdown = null;
+            clickLockedDropdown = null;
+        }
     }
 
     // Arrow key navigation
@@ -483,12 +520,63 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// Add keyboard support to dropdown buttons
+// Add keyboard support to dropdown buttons (WAI-ARIA Menu Button pattern)
 document.querySelectorAll('[aria-haspopup="true"]').forEach(button => {
     button.addEventListener('keydown', function(event) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             button.click();
+        }
+
+        // ArrowDown on trigger button — open dropdown and focus first item
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            const dropdownId = button.getAttribute('aria-controls');
+            const dropdown = dropdownId ? document.getElementById(dropdownId) : null;
+            if (!dropdown) return;
+
+            // Open dropdown if not already open — button.click() triggers
+            // toggleDropdown which sets clickLockedDropdown, preventing
+            // hover-away from closing. This is intentional for keyboard
+            // users who expect the dropdown to stay open until dismissed.
+            if (!dropdown.classList.contains('show')) {
+                button.click();
+            }
+
+            // Focus first menuitem after dropdown renders (RAF ensures
+            // the .show class has been applied and the browser has painted)
+            requestAnimationFrame(function() {
+                const items = dropdown.querySelectorAll('[role="menuitem"]');
+                if (items.length > 0) {
+                    items.forEach(function(item, index) {
+                        item.setAttribute('tabindex', index === 0 ? '0' : '-1');
+                    });
+                    items[0].focus();
+                }
+            });
+        }
+
+        // ArrowUp on trigger button — open dropdown and focus last item (per APG spec)
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            const dropdownId = button.getAttribute('aria-controls');
+            const dropdown = dropdownId ? document.getElementById(dropdownId) : null;
+            if (!dropdown) return;
+
+            if (!dropdown.classList.contains('show')) {
+                button.click();
+            }
+
+            requestAnimationFrame(function() {
+                const items = dropdown.querySelectorAll('[role="menuitem"]');
+                if (items.length > 0) {
+                    const lastIndex = items.length - 1;
+                    items.forEach(function(item, index) {
+                        item.setAttribute('tabindex', index === lastIndex ? '0' : '-1');
+                    });
+                    items[lastIndex].focus();
+                }
+            });
         }
     });
 });
@@ -634,3 +722,165 @@ document.addEventListener('DOMContentLoaded', function() {
         mobileMenu.style.overflowY = 'auto';
     }
 });
+
+// ========================================
+// NOTIFICATION BELL POLLING (Phase R1-B)
+// ========================================
+
+(function() {
+    'use strict';
+
+    var POLL_INTERVAL = 60000; // 60 seconds
+    var pollTimer = null;
+
+    /**
+     * Fetch unread notification counts and update badge + dropdown.
+     */
+    function fetchNotificationCounts() {
+        return fetch('/api/notifications/unread-count/', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        })
+        .then(function(response) {
+            if (!response.ok) return null;
+            return response.json();
+        })
+        .then(function(data) {
+            if (!data) return;
+            updateBadge(data.total);
+            updateCategoryBadges(data.categories);
+        })
+        .catch(function() {
+            // Silent fail — polling will retry
+        });
+    }
+
+    /**
+     * Update the bell icon badge (desktop + mobile).
+     */
+    function updateBadge(total) {
+        // Desktop badge
+        var desktopBadge = document.getElementById('notifBadge');
+        var bellWrapper = document.getElementById('notificationBell');
+        if (bellWrapper) {
+            var bellLink = bellWrapper.querySelector('.pexels-icon-btn');
+            if (total > 0) {
+                if (!desktopBadge) {
+                    desktopBadge = document.createElement('span');
+                    desktopBadge.className = 'notification-badge';
+                    desktopBadge.id = 'notifBadge';
+                    desktopBadge.setAttribute('aria-live', 'polite');
+                    desktopBadge.setAttribute('aria-atomic', 'true');
+                    if (bellLink) bellLink.appendChild(desktopBadge);
+                }
+                desktopBadge.textContent = total > 99 ? '99+' : total;
+            } else if (desktopBadge) {
+                desktopBadge.remove();
+            }
+        }
+
+        // Mobile badge
+        var mobileBell = document.getElementById('mobileBellBtn');
+        if (mobileBell) {
+            var mobileBadge = mobileBell.querySelector('.notification-badge-mobile');
+            if (total > 0) {
+                if (!mobileBadge) {
+                    mobileBadge = document.createElement('span');
+                    mobileBadge.className = 'notification-badge notification-badge-mobile';
+                    mobileBadge.setAttribute('aria-live', 'polite');
+                    mobileBadge.setAttribute('aria-atomic', 'true');
+                    mobileBell.appendChild(mobileBadge);
+                }
+                mobileBadge.textContent = total > 99 ? '99+' : total;
+            } else if (mobileBadge) {
+                mobileBadge.remove();
+            }
+        }
+    }
+
+    /**
+     * Update per-category counts in the dropdown.
+     */
+    function updateCategoryBadges(categories) {
+        if (!categories) return;
+        var countSpans = document.querySelectorAll('.notif-count-text');
+        countSpans.forEach(function(span) {
+            var cat = span.dataset.category;
+            var count = categories[cat] || 0;
+            span.textContent = count;
+        });
+    }
+
+    /**
+     * Handle Mark All as Read button.
+     */
+    function setupMarkAllRead() {
+        var btn = document.getElementById('markAllReadBtn');
+        if (!btn) return;
+
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) return;
+
+            fetch('/api/notifications/mark-all-read/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRFToken': csrfToken.content,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(function(response) {
+                if (!response.ok) return;
+                return response.json();
+            })
+            .then(function(data) {
+                if (!data) return;
+                // Immediately clear all badges
+                updateBadge(0);
+                updateCategoryBadges({});
+            })
+            .catch(function() {
+                // Silent fail
+            });
+        });
+    }
+
+    /**
+     * Start polling. Only runs for authenticated users (bell exists in DOM).
+     */
+    function initNotificationPolling() {
+        var bellWrapper = document.getElementById('notificationBell');
+        if (!bellWrapper) return; // Not logged in — no bell in DOM
+
+        // Mark counts as loading until first poll completes
+        var countSpans = document.querySelectorAll('.notif-count-text');
+        countSpans.forEach(function(span) { span.classList.add('count-loading'); });
+
+        // Initial fetch on page load — remove loading state on completion
+        fetchNotificationCounts().then(function() {
+            countSpans.forEach(function(span) { span.classList.remove('count-loading'); });
+        });
+
+        // Poll every 60 seconds
+        pollTimer = setInterval(fetchNotificationCounts, POLL_INTERVAL);
+
+        // Pause polling when tab is hidden, resume when visible
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            } else {
+                fetchNotificationCounts(); // Immediate fetch on return
+                pollTimer = setInterval(fetchNotificationCounts, POLL_INTERVAL);
+            }
+        });
+
+        setupMarkAllRead();
+    }
+
+    document.addEventListener('DOMContentLoaded', initNotificationPolling);
+})();

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static notification_tags %}
 {% url 'prompts:home' as home_url %}
 {% url 'prompts:collaborate' as collaborate_url %}
 {% url 'account_login' as login_url %}
@@ -274,7 +274,7 @@
                         <div class="pexels-dropdown-title">Imprint & Terms</div>
                     </div>
                 </a>
-                <div class="pexels-dropdown-divider"></div>
+                <div class="pexels-dropdown-divider" role="separator"></div>
                 <a href="{% url 'about' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                     <div class="pexels-dropdown-content">
                         <div class="pexels-dropdown-title">About</div>
@@ -288,12 +288,25 @@
                 </div>
             </div>
 
-            <!-- Bell Icon (Notifications) - Only show for logged-in users -->
+            <!-- Bell Icon - Only show for logged-in users (dropdown moved outside .pexels-nav-items for mobile) -->
             {% if user.is_authenticated %}
-            <button class="pexels-icon-btn" aria-label="Notifications">
-                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
-                <!-- <span class="notification-badge"></span> --> <!-- Uncomment when notifications active -->
-            </button>
+            <div class="pexels-dropdown-wrapper" id="notificationBell">
+                <button class="pexels-icon-btn"
+                        onmouseenter="showDropdown('notifDropdown', this)"
+                        onmouseleave="hideDropdown('notifDropdown', this)"
+                        onclick="toggleDropdown('notifDropdown', event)"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="notifDropdown"
+                        aria-label="Notifications"
+                        id="notifBellBtn">
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+                    {% unread_notification_count as notif_count %}
+                    {% if notif_count > 0 %}
+                    <span class="notification-badge" id="notifBadge" aria-live="polite" aria-atomic="true">{{ notif_count }}</span>
+                    {% endif %}
+                </button>
+            </div>
             {% endif %}
 
             <!-- Profile Button -->
@@ -351,13 +364,53 @@
                     <div class="pexels-dropdown-title">Trash</div>
                 </div>
             </a>
-            <div class="pexels-dropdown-divider"></div>
+            <div class="pexels-dropdown-divider" role="separator"></div>
             <a href="{% url 'account_logout' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                 <svg class="icon icon-sm pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-login"/></svg>
                 <div class="pexels-dropdown-content">
                     <div class="pexels-dropdown-title">Logout</div>
                 </div>
             </a>
+        </div>
+        {% endif %}
+
+        <!-- Notification Dropdown (shared by desktop and mobile) - Must be OUTSIDE .pexels-nav-items to work on mobile -->
+        {% if user.is_authenticated %}
+        <div class="pexels-dropdown dropdown-centered" id="notifDropdown"
+             onmouseenter="keepDropdownOpen('notifDropdown')"
+             onmouseleave="hideDropdown('notifDropdown', document.querySelector('[onmouseenter*=notifDropdown]'))"
+             role="menu" aria-label="Notification categories">
+            <a href="{% url 'prompts:notifications' %}?category=comments" class="pexels-dropdown-item" role="menuitem" tabindex="0">
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Comments <span class="notif-count-text" data-category="comments" aria-live="polite">0</span></div>
+                </div>
+            </a>
+            <a href="{% url 'prompts:notifications' %}?category=likes" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Likes <span class="notif-count-text" data-category="likes" aria-live="polite">0</span></div>
+                </div>
+            </a>
+            <a href="{% url 'prompts:notifications' %}?category=follows" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Follows <span class="notif-count-text" data-category="follows" aria-live="polite">0</span></div>
+                </div>
+            </a>
+            <a href="{% url 'prompts:notifications' %}?category=collections" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Collections <span class="notif-count-text" data-category="collections" aria-live="polite">0</span></div>
+                </div>
+            </a>
+            <a href="{% url 'prompts:notifications' %}?category=system" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">System <span class="notif-count-text" data-category="system" aria-live="polite">0</span></div>
+                </div>
+            </a>
+            <div class="pexels-dropdown-divider" role="separator"></div>
+            <button type="button" class="pexels-dropdown-item notif-mark-all-btn" id="markAllReadBtn" role="menuitem" tabindex="-1">
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">Mark All as Read</div>
+                </div>
+            </button>
         </div>
         {% endif %}
 
@@ -373,10 +426,19 @@
                 <svg class="icon icon-md" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-search"/></svg>
             </button>
 
-            <!-- Bell Icon (Notifications) - Only show for logged-in users -->
+            <!-- Bell Icon (Notifications) - Mobile - Opens dropdown (same as desktop) -->
             {% if user.is_authenticated %}
-            <button class="pexels-mobile-icon-btn mobile-bell-btn" aria-label="Notifications">
+            <button type="button" class="pexels-mobile-icon-btn mobile-bell-btn"
+                    onclick="toggleDropdown('notifDropdown', event)"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="notifDropdown"
+                    aria-label="Notifications"
+                    id="mobileBellBtn">
                 <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+                {% if notif_count > 0 %}
+                <span class="notification-badge notification-badge-mobile" aria-live="polite" aria-atomic="true">{{ notif_count }}</span>
+                {% endif %}
             </button>
             {% endif %}
 

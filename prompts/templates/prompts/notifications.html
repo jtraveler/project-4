@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Notifications - PromptFinder{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/components/profile-tabs.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/notifications.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="notifications-page">
+    <!-- Header — matches leaderboard page pattern -->
+    <div class="notifications-header">
+        <h1 class="notifications-title">Notifications</h1>
+        {% if total_unread > 0 %}
+        <button type="button" class="notif-page-mark-all" id="markAllReadPageBtn">Mark all as read</button>
+        {% endif %}
+    </div>
+
+    <!-- Category tabs — reuses profile-tabs-wrapper pattern with overflow arrows -->
+    <div class="profile-tabs-wrapper">
+        <button class="overflow-arrow-left" aria-label="Scroll tabs left" tabindex="-1">
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <div class="profile-tabs-container">
+            {% for tab in category_tabs %}
+            <a href="{% url 'prompts:notifications' %}?category={{ tab.value }}"
+               class="profile-tab {% if active_category == tab.value %}profile-tab-active{% endif %}">
+                {{ tab.label }}
+                <span class="profile-tab-count stat-badge">{{ tab.count }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        <button class="overflow-arrow" aria-label="Scroll tabs right" tabindex="-1">
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <!-- Notification list -->
+    <div class="notif-list">
+        {% for notification in notifications %}
+        <a href="{{ notification.link }}"
+           class="notif-item {% if not notification.is_read %}notif-unread{% endif %}"
+           data-notification-id="{{ notification.id }}">
+            <div class="notif-item-content">
+                <div class="notif-item-title">{{ notification.title }}</div>
+                {% if notification.message %}
+                <div class="notif-item-message">{{ notification.message|truncatewords:30 }}</div>
+                {% endif %}
+                <div class="notif-item-time">{{ notification.created_at|timesince }} ago</div>
+            </div>
+            {% if not notification.is_read %}
+            <span class="notif-unread-dot"></span>
+            {% endif %}
+        </a>
+        {% empty %}
+        <div class="notif-empty">
+            <svg class="icon icon-xl" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+            <p>No notifications yet</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extras %}
+<script src="{% static 'js/notifications.js' %}"></script>
+<script src="{% static 'js/overflow-tabs.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initOverflowTabs('.notifications-page .profile-tabs-wrapper', {
+        centerActiveTab: true,
+        centerWhenFits: true
+    });
+});
+</script>
+{% endblock %}

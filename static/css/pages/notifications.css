@@ -1,0 +1,160 @@
+/* ===================================================================
+   NOTIFICATIONS.CSS - Full Notifications Page Styles
+   Phase R1-C: Tabbed notification page
+   Tabs reuse .profile-tabs-wrapper from user_profile.html
+   =================================================================== */
+
+/* Page layout — full width, matches leaderboard page */
+.notifications-page {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    padding: 0;
+    padding-top: calc(var(--space-12) + var(--space-4));
+}
+
+/* Header — centered, matches leaderboard header */
+.notifications-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+}
+
+.notifications-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+/* Mark all as read button (page version) */
+.notif-page-mark-all {
+    background: none;
+    border: 1px solid var(--gray-300, #d1d5db);
+    color: var(--gray-600, #4b5563);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    transition: color var(--transition-base), background var(--transition-base), border-color var(--transition-base);
+    font-family: inherit;
+    margin-top: var(--space-3);
+}
+
+.notif-page-mark-all:hover {
+    color: var(--gray-900);
+    background: var(--gray-100);
+    border-color: var(--gray-400, #9ca3af);
+}
+
+/* Center tabs on notifications page when they fit without overflow */
+.notifications-page .profile-tabs-container.tabs-centered {
+    justify-content: center;
+}
+
+/* === NOTIFICATION LIST === */
+.notif-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: var(--space-4);
+}
+
+.notif-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--gray-100);
+    text-decoration: none;
+    color: var(--gray-700);
+    transition: background var(--transition-base);
+}
+
+.notif-item:hover {
+    background: var(--gray-50);
+    text-decoration: none;
+    color: var(--gray-700);
+}
+
+.notif-unread {
+    background: #eff6ff;  /* Slightly adjusted for contrast — gray-500 text achieves 4.5:1+ */
+}
+
+/* Ensure message text passes WCAG on the tinted unread background */
+.notif-unread .notif-item-message {
+    color: var(--gray-600, #525252);  /* 7.36:1 on white, 6.9:1 on #eff6ff */
+}
+
+.notif-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-item-title {
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--gray-900);
+    margin-bottom: 2px;
+}
+
+.notif-unread .notif-item-title {
+    font-weight: 600;
+}
+
+.notif-item-message {
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 500px;
+}
+
+.notif-item-time {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500, #737373);  /* WCAG AA: 4.75:1 on white (was --gray-400 at 2.52:1) */
+    margin-top: 2px;
+}
+
+.notif-unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    flex-shrink: 0;
+    margin-left: var(--space-3);
+}
+
+/* === EMPTY STATE === */
+.notif-empty {
+    text-align: center;
+    padding: var(--space-8) var(--space-4);
+    color: var(--gray-500, #737373);  /* WCAG AA: 4.75:1 on white (was --gray-400 at 2.52:1) */
+}
+
+.notif-empty .icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--space-3);
+    stroke: var(--gray-300);
+}
+
+.notif-empty p {
+    font-size: var(--font-size-base);
+    margin: 0;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .notifications-page {
+        padding: var(--space-4);
+    }
+
+    .notifications-title {
+        font-size: 1.5rem;
+    }
+
+    .notif-item-message {
+        max-width: 250px;
+    }
+}

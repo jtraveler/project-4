@@ -1,0 +1,233 @@
+/* ===================================================================
+   PROFILE-TABS.CSS - Shared pill-shaped tab component
+   Used by: user_profile.html, notifications.html
+   Single source of truth — no inline tab styles in templates.
+   =================================================================== */
+
+/* Wrapper shell for tabs + optional overflow arrows */
+.profile-tabs-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    flex: 1;
+}
+
+/* Scrolling tabs container */
+.profile-tabs-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    -ms-overflow-style: none;
+    flex: 1;
+    flex-wrap: nowrap;
+    padding-bottom: 10px;
+    border-radius: var(--radius-pill);
+}
+
+/* Hide scrollbar for Chrome/Safari */
+.profile-tabs-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Individual tab — pill shape */
+.profile-tab {
+    padding: 6px 8px 6px 25px;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--gray-500, #6b7280);
+    background: transparent;
+    border: none;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+.profile-tab:hover:not(.profile-tab-active) {
+    background: var(--gray-100, #f3f4f6);
+    color: var(--gray-800, #1f2937);
+    text-decoration: none;
+}
+
+/* Active tab — dark pill */
+.profile-tab-active {
+    background: var(--black, #000000);
+    color: var(--white, #ffffff);
+    font-weight: 600;
+}
+
+.profile-tab-active:hover {
+    color: var(--white, #ffffff);
+    text-decoration: none;
+}
+
+/* Inline count next to tab label */
+.profile-tab-count {
+    font-size: 17px;
+    margin-left: 5px;
+    display: inline-block;
+    min-width: 40px;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+    /* opacity removed — was 0.7, caused WCAG failure (2.76:1 on inactive tabs).
+       De-emphasis provided by font-weight: normal vs tab's 500. */
+}
+
+/* Fixed-width badge to prevent layout shift */
+.stat-badge {
+    display: inline-block;
+    min-width: 40px;
+    text-align: center;
+    padding-right: 4px;
+    font-weight: normal;
+    transition: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-badge.wide {
+    min-width: 50px;
+}
+
+/* === OVERFLOW ARROWS === */
+
+/* Right arrow button */
+.overflow-arrow {
+    background: linear-gradient(
+        to left,
+        var(--gray-50, #f7f7f7) 0%,
+        rgba(247, 247, 247, 0.95) 20%,
+        rgba(247, 247, 247, 0.7) 50%,
+        rgba(247, 247, 247, 0) 100%
+    );
+    border-radius: var(--radius-pill);
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 50px;
+    border: none;
+    padding: 0;
+    background-color: transparent;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: opacity 0.15s ease-out;
+    opacity: 0;
+}
+
+/* Left arrow button */
+.overflow-arrow-left {
+    background: linear-gradient(
+        to right,
+        var(--gray-50, #f7f7f7) 0%,
+        rgba(247, 247, 247, 0.95) 20%,
+        rgba(247, 247, 247, 0.7) 50%,
+        rgba(247, 247, 247, 0) 100%
+    );
+    border-radius: var(--radius-pill);
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 50px;
+    border: none;
+    padding: 0;
+    background-color: transparent;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: opacity 0.15s ease-out;
+    opacity: 0;
+}
+
+/* Arrow icon styling */
+.overflow-arrow i {
+    color: var(--gray-500, #6b7280);
+    font-size: 20px;
+    padding-right: 16px;
+    transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+    pointer-events: none;
+}
+
+.overflow-arrow:hover i {
+    color: var(--gray-800, #1f2937);
+    transform: translateX(2px);
+}
+
+.overflow-arrow:active {
+    transform: none;
+}
+
+.overflow-arrow:active i {
+    transform: scale(0.95);
+}
+
+.overflow-arrow-left i {
+    color: var(--gray-500, #6b7280);
+    font-size: 20px;
+    padding-left: 16px;
+    transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+    pointer-events: none;
+}
+
+.overflow-arrow-left:hover i {
+    color: var(--gray-800, #1f2937);
+    transform: translateX(-2px);
+}
+
+.overflow-arrow-left:active {
+    transform: none;
+}
+
+.overflow-arrow-left:active i {
+    transform: translateX(-2px) scale(0.95);
+}
+
+/* === RESPONSIVE === */
+
+/* Tablet and below */
+@media (max-width: 1024px) {
+    .profile-tabs-wrapper {
+        width: 100%;
+    }
+
+    .profile-tabs-container {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .profile-tabs-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    .profile-tab {
+        flex-shrink: 0;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .profile-tabs-container {
+        overflow-x: scroll;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+}

@@ -4,6 +4,7 @@ from . import views
 from . import views_admin
 from .views import api_views
 from .views import admin_views  # For prompt ordering functions
+from .views import notification_views
 
 app_name = 'prompts'
 
@@ -133,6 +134,12 @@ urlpatterns = [
 
     # N4-Refactor: AI job status polling endpoint (cache-based)
     path('api/ai-job-status/<str:job_id>/', api_views.ai_job_status, name='ai_job_status'),
+
+    # Notification pages and API (Phase R1)
+    path('notifications/', notification_views.notifications_page, name='notifications'),
+    path('api/notifications/unread-count/', notification_views.unread_count_api, name='notification_unread_count_api'),
+    path('api/notifications/mark-all-read/', notification_views.mark_all_read_api, name='notification_mark_all_read_api'),
+    path('api/notifications/<int:notification_id>/read/', notification_views.mark_read_api, name='notification_mark_read_api'),
 
     # Admin moderation dashboard
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),

@@ -110,6 +110,14 @@ from .collection_views import (
     user_collections,
 )
 
+# Import notification views (Phase R1)
+from .notification_views import (
+    unread_count_api,
+    mark_all_read_api,
+    mark_read_api,
+    notifications_page,
+)
+
 # Import utility views
 from .utility_views import (
     get_client_ip,
@@ -207,6 +215,12 @@ __all__ = [
     'collection_permanent_delete',
     'empty_collections_trash',
     'user_collections',
+
+    # Notification views (Phase R1)
+    'unread_count_api',
+    'mark_all_read_api',
+    'mark_read_api',
+    'notifications_page',
 
     # Utility views
     'get_client_ip',

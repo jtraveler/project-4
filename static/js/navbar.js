@@ -730,7 +730,7 @@ document.addEventListener('DOMContentLoaded', function() {
 (function() {
     'use strict';
 
-    var POLL_INTERVAL = 60000; // 60 seconds
+    var POLL_INTERVAL = 15000; // 15 seconds
     var pollTimer = null;
 
     /**
@@ -865,7 +865,7 @@ document.addEventListener('DOMContentLoaded', function() {
             countSpans.forEach(function(span) { span.classList.remove('count-loading'); });
         });
 
-        // Poll every 60 seconds
+        // Poll every 15 seconds
         pollTimer = setInterval(fetchNotificationCounts, POLL_INTERVAL);
 
         // Pause polling when tab is hidden, resume when visible

@@ -367,6 +367,109 @@ class TestNotificationService(NotificationTestBase):
         self.assertEqual(count, 1)
         self.assertEqual(get_unread_count(self.user1), 1)  # follow still unread
 
+    def test_different_comments_same_prompt_not_deduped(self):
+        """Multiple different comments from same sender within 60s each create a notification."""
+        n1 = create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='comment_on_prompt',
+            title='bob commented on your prompt',
+            message='Great work!',
+            link='/prompt/test-prompt/#comments',
+        )
+        n2 = create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='comment_on_prompt',
+            title='bob commented on your prompt',
+            message='Love the colors!',
+            link='/prompt/test-prompt/#comments',
+        )
+        self.assertIsNotNone(n1)
+        self.assertIsNotNone(n2)
+        self.assertNotEqual(n1.id, n2.id)
+
+    def test_same_sender_different_prompts_not_deduped(self):
+        """Comments on different prompts from same sender within 60s each create a notification."""
+        n1 = create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='comment_on_prompt',
+            title='bob commented on your prompt',
+            message='Nice!',
+            link='/prompt/prompt-one/#comments',
+        )
+        n2 = create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='comment_on_prompt',
+            title='bob commented on your prompt',
+            message='Nice!',
+            link='/prompt/prompt-two/#comments',
+        )
+        self.assertIsNotNone(n1)
+        self.assertIsNotNone(n2)
+        self.assertNotEqual(n1.id, n2.id)
+
+    def test_true_duplicate_still_deduped(self):
+        """Exact same notification (same sender, type, link, message) within 60s is deduped."""
+        n1 = create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='comment_on_prompt',
+            title='bob commented on your prompt',
+            message='Great work!',
+            link='/prompt/test-prompt/#comments',
+        )
+        n2 = create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='comment_on_prompt',
+            title='bob commented on your prompt',
+            message='Great work!',
+            link='/prompt/test-prompt/#comments',
+        )
+        self.assertIsNotNone(n1)
+        self.assertIsNone(n2)  # Should be deduped
+
+    def test_different_link_no_message_not_deduped(self):
+        """Same type, different link, no message — not deduped (isolates link guard)."""
+        n1 = create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='bob liked your prompt',
+            link='/prompt/prompt-one/',
+        )
+        n2 = create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='bob liked your prompt',
+            link='/prompt/prompt-two/',
+        )
+        self.assertIsNotNone(n1)
+        self.assertIsNotNone(n2)
+        self.assertNotEqual(n1.id, n2.id)
+
+    def test_different_message_no_link_not_deduped(self):
+        """Same type, different message, no link — not deduped (isolates message guard)."""
+        n1 = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='System update',
+            message='Version 1.0 released',
+        )
+        n2 = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='System update',
+            message='Version 2.0 released',
+        )
+        self.assertIsNotNone(n1)
+        self.assertIsNotNone(n2)
+        self.assertNotEqual(n1.id, n2.id)
+
 
 # ═══════════════════════════════════════════════════
 # SIGNAL TESTS

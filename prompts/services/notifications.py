@@ -50,7 +50,9 @@ def create_notification(
         logger.warning(f"Unknown notification type: {notification_type}")
         return None
 
-    # Check for duplicate (same recipient, sender, type, within window)
+    # Check for duplicate (same recipient, sender, type, link, message within window)
+    # Including link and message ensures unique comments/actions are not suppressed.
+    # The dedup only catches true signal double-fires (identical in every field).
     cutoff = timezone.now() - timedelta(seconds=DUPLICATE_WINDOW_SECONDS)
     duplicate_filter = Q(
         recipient=recipient,
@@ -59,6 +61,10 @@ def create_notification(
     )
     if sender:
         duplicate_filter &= Q(sender=sender)
+    if link:
+        duplicate_filter &= Q(link=link)
+    if message:
+        duplicate_filter &= Q(message=message)
 
     if Notification.objects.filter(duplicate_filter).exists():
         return None

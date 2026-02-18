@@ -40,10 +40,17 @@
 
     <!-- Notification list -->
     <div class="notif-list" role="list" aria-label="Notifications">
+        
         {% for notification in notifications %}
         <div class="notif-card {% if not notification.is_read %}notif-unread{% endif %}{% if not notification.message %} notif-card--no-quote{% endif %}"
              data-notification-id="{{ notification.id }}"
              role="listitem">
+
+             <div class="notif-unread-dot-shell">
+                {% if not notification.is_read %}
+                    <span class="notif-unread-dot" aria-hidden="true"></span>
+                    {% endif %}
+            </div>
 
             <!-- Avatar -->
             <div class="notif-avatar-wrapper">
@@ -88,9 +95,6 @@
 
             <!-- Actions -->
             <div class="notif-actions">
-                {% if not notification.is_read %}
-                <span class="notif-unread-dot" aria-hidden="true"></span>
-                {% endif %}
 
                 {% if notification.link %}
                     {% if notification.notification_type == 'comment_on_prompt' or notification.notification_type == 'reply_to_comment' %}

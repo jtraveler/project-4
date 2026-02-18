@@ -89,7 +89,7 @@
     padding: 35px 40px 50px;
     border: 1px solid var(--gray-200, #e5e7eb);
     border-radius: var(--radius-lg, 12px);
-    background: var(--white, #fff);
+    background: var(--gray-100, #f5f5f5);
     transition: box-shadow var(--transition-base), background var(--transition-base), border-color var(--transition-base);
 }
 
@@ -101,7 +101,7 @@
 /* Unread card tint */
 .notif-card.notif-unread {
     
-    background: var(--gray-70);
+    background: #f5eafa;
 }
 
 /* === AVATAR === */

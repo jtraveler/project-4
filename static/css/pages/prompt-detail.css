@@ -1513,3 +1513,8 @@ a.model-name:hover {
         margin-bottom: 1rem;
     }
 }
+
+/* Phase R1-D: Offset anchor scroll for sticky navbar */
+#comments {
+    scroll-margin-top: 100px;
+}

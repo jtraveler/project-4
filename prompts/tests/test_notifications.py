@@ -417,6 +417,18 @@ class TestNotificationSignals(NotificationTestBase):
         )
         self.assertIn(self.prompt.slug, n.link)
 
+    def test_comment_notification_link_has_anchor(self):
+        """Comment notification link includes #comments anchor."""
+        Comment.objects.create(
+            prompt=self.prompt,
+            author=self.user2,
+            body='Great work!',
+        )
+        n = Notification.objects.get(
+            recipient=self.user1, notification_type='comment_on_prompt'
+        )
+        self.assertTrue(n.link.endswith('#comments'))
+
     def test_comment_update_no_duplicate(self):
         """Updating existing comment doesn't create new notification."""
         comment = Comment.objects.create(

@@ -31,7 +31,7 @@ def on_comment_created(sender, instance, created, **kwargs):
             notification_type='comment_on_prompt',
             title=f'{commenter.username} commented on your prompt',
             message=instance.body[:200] if instance.body else '',
-            link=f'/prompt/{prompt.slug}/',
+            link=f'/prompt/{prompt.slug}/#comments',
         )
     except Exception:
         logger.exception("Error creating comment notification")

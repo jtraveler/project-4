@@ -94,6 +94,42 @@
             });
         }
 
+        // Sync with bell dropdown "Mark all as read" (navbar.js dispatches this event)
+        document.addEventListener('notifications:all-read', function() {
+            // Remove unread styling from all cards
+            document.querySelectorAll('.notif-unread').forEach(function(card) {
+                card.classList.remove('notif-unread');
+            });
+            // Remove unread dots
+            document.querySelectorAll('.notif-unread-dot').forEach(function(dot) {
+                dot.remove();
+            });
+            // Move focus before removing buttons (WCAG 2.4.3)
+            var focused = document.activeElement;
+            document.querySelectorAll('.notif-mark-read-btn').forEach(function(btn) {
+                if (btn.contains(focused)) {
+                    var safeTarget = document.querySelector('.notif-card');
+                    if (safeTarget) safeTarget.focus();
+                }
+                btn.remove();
+            });
+            // Hide the page-level "Mark all as read" button
+            var pageMarkAllBtn = document.getElementById('markAllReadPageBtn');
+            if (pageMarkAllBtn) {
+                pageMarkAllBtn.style.display = 'none';
+            }
+            // Update tab badge counts to 0
+            document.querySelectorAll('.profile-tab-count').forEach(function(badge) {
+                badge.textContent = '0';
+            });
+            // Delay announcement to avoid collision with bell badge live region
+            setTimeout(function() {
+                if (statusMsg) {
+                    statusMsg.textContent = 'All notifications marked as read.';
+                }
+            }, 150);
+        });
+
         // Trigger 3: "Mark all as read" button
         var markAllBtn = document.getElementById('markAllReadPageBtn');
         if (markAllBtn) {

@@ -842,6 +842,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Immediately clear all badges
                 updateBadge(0);
                 updateCategoryBadges({});
+                // Notify notifications page (if open) to sync DOM
+                document.dispatchEvent(new CustomEvent('notifications:all-read'));
             })
             .catch(function() {
                 // Silent fail

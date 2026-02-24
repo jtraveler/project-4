@@ -2,7 +2,7 @@
 
 **Purpose:** This document defines the complete agent testing toolkit available for code quality assurance. Agents are specialized review personas that catch issues before commits.
 
-**Last Updated:** February 2026
+**Last Updated:** February 24, 2026 (v2.0 alignment)
 **Project:** PromptFinder (Django Prompts Manager)
 **Status:** Active Reference Document
 
@@ -99,6 +99,10 @@
 - Signal handling correctness
 - Migration safety
 - Admin interface best practices
+- **Data migration awareness** (v2.0):
+  - Do backend changes affect existing database records?
+  - Are backfill commands or data migrations needed?
+  - Signal handler changes: do they affect old records or only new ones?
 - Security vulnerabilities (CSRF, XSS, SQL injection)
 - Form validation patterns
 - Django-specific anti-patterns
@@ -126,6 +130,8 @@ Recommendations:
 - Add ensure_email_preferences_exist signal
 - Implement admin deletion warnings
 - Update list_display to show all 8 fields
+
+[REJECTION CHECK] Data migration: ✅ No existing data affected / ⚠️ Backfill planned / ❌ Existing data affected with no migration
 ```
 
 **Real Example from Project:**
@@ -331,6 +337,10 @@ Recommendations:
 - Form usability
 - Visual hierarchy
 - Microcopy (button labels, help text)
+- **Rejection criteria compliance** (v2.0):
+  - DOM nesting matches spec tree diagrams
+  - Text contrast: minimum --gray-500 (#737373) for text on light backgrounds
+  - Accessibility built inline (not bolted on after review)
 
 **Output Format:**
 ```
@@ -367,6 +377,10 @@ Recommendations:
 - Remove "Back" button (confusing)
 - Fix duplicate messages
 - Center Save button
+
+[REJECTION CHECK] DOM nesting: ✅ Matches spec tree diagram / ❌ Mismatch found
+[REJECTION CHECK] Text contrast: ✅ All text uses --gray-500+ / ❌ Found --gray-400 usage
+[REJECTION CHECK] A11y approach: ✅ Built inline / ❌ Missing, would need bolt-on
 ```
 
 ### Visual Verification Requirement
@@ -617,6 +631,54 @@ For ANY review that involves template or UI changes:
 
 **This applies to:** HTML templates, CSS changes, JavaScript UI code, admin
 template overrides, and any change that affects what users see on screen.
+
+### ⛔ Minimum Rejection Criteria (v2.0)
+
+**Added:** February 2026 — Aligned with CC_SPEC_TEMPLATE v2.0
+
+These criteria give agents **explicit permission to auto-score below 6** for structural failures. This prevents "close enough" implementations from passing review.
+
+**Context:** In Phase R1-D (Sessions 86-87), accessibility agents started at 6.5 twice because accessibility was bolted on after implementation. CC also substituted "close enough" SVG icons and nested DOM elements incorrectly. These rejection criteria prevent those patterns.
+
+#### Hard Rejection Rules (Score MUST be below 6 if any are true):
+
+| Agent | Rejection Trigger | Why |
+|-------|-------------------|-----|
+| **@ux-reviewer** | DOM nesting does not match spec's tree diagram | Wrong nesting = broken layout that code review can't catch |
+| **@ux-reviewer** | Layout has wrong number of columns or wrong element hierarchy | Structural failure, not a styling issue |
+| **@ux-reviewer** | Any text element uses `--gray-400` (#A3A3A3) or lighter for text content | WCAG AA violation: insufficient contrast on white/light backgrounds |
+| **@code-quality** | Exact-copy content (SVG paths, specific strings) was substituted with alternatives | Spec said COPY EXACTLY; substitution breaks functionality or consistency |
+| **@django-pro** | Backend logic change has no data migration plan when existing data is affected | Old records become stale/broken without backfill |
+| **@accessibility** (or @ux-reviewer doing a11y) | Interactive elements removed from DOM without focus management | Keyboard users lose their place — accessibility regression |
+| **@accessibility** | Missing `aria-label` on interactive elements with no visible text | Screen reader users cannot identify the control |
+| **@accessibility** | Accessibility requirements were bolted on after implementation instead of built inline | Pattern we're breaking — a11y must be in the first pass, not a fix round |
+
+#### How to Apply:
+
+1. **During review:** Check each rejection trigger relevant to the code being reviewed
+2. **If triggered:** Score MUST be below 6 with explicit note: `[REJECTION TRIGGER] [description]`
+3. **Cannot override:** Even if the visual appearance "looks right," structural failures require rejection
+4. **Re-score after fix:** Once the rejection trigger is resolved, re-score normally
+
+#### Example Usage:
+```
+@ux-reviewer Review:
+UX Score: 5.5/10
+
+[REJECTION TRIGGER] DOM nesting does not match spec
+  - Spec shows .quote-column as sibling of .body-column
+  - Implementation nests .quote-column inside .body-column
+  - This will break the 4-column layout and cannot pass regardless of visual appearance
+
+[REJECTION TRIGGER] Text uses --gray-400
+  - Notification timestamp uses color: var(--gray-400)
+  - WCAG AA requires minimum 4.5:1 contrast
+  - --gray-400 (#A3A3A3) on white (#FFF) = 2.7:1 ratio (FAIL)
+  - Must use --gray-500 (#737373) or darker
+
+Other Issues:
+[LOW] Button hover state could be more visible
+```
 
 ---
 
@@ -913,7 +975,8 @@ for CC to add the signal."
 
 ## 📚 RELATED DOCUMENTS
 
-- `PROJECT_COMMUNICATION_PROTOCOL.md` - How to communicate
+- `CC_COMMUNICATION_PROTOCOL.md` - How to communicate (v2.0+ with rejection criteria)
+- `CC_SPEC_TEMPLATE.md` - Specification template with rejection criteria (v2.0)
 - `CLAUDE_CODE_INTEGRATION.md` - How CC executes fixes
 - `PROJECT_FILE_STRUCTURE.md` - Where code lives
 

@@ -26,7 +26,7 @@
     -ms-overflow-style: none;
     flex: 1;
     flex-wrap: nowrap;
-    padding-bottom: 30px;
+    padding-bottom: 15px 0;
     border-radius: var(--radius-pill);
 }
 

@@ -2,12 +2,11 @@
 
 **Purpose:** Instructions for Claude Code when executing specifications. Read this at the start of EVERY task to understand expectations and communication standards.
 
-**Version:** 2.0
-**Last Updated:** February 18, 2026
-**Project:** PromptFinder (Django AI Prompt Sharing Platform)
+**Version:** 1.1
+**Last Updated:** November 4, 2025
+**Project:** PromptFlow (Django Prompts Manager)
 **For:** Claude Code (CC) - VS Code Extension
 **Status:** Active Reference Document
-**Changelog:** v2.1 — Added PRE-AGENT SELF-CHECK section. v2.0 added accessibility-first, exact-copy enforcement, data migration awareness, DOM structure compliance, agent rejection criteria. Updated project structure. Standardized agent reporting to Rating/10 format.
 
 ---
 
@@ -20,22 +19,17 @@
 ### Template Structure
 
 The template includes:
-- ⛔ Mandatory "CRITICAL: READ FIRST" header
+- ⚠️ Mandatory "CRITICAL: READ FIRST" header
 - Agent usage requirements (minimum 2-3 agents)
 - Quality standards (8+/10 ratings required)
-- ♿ Inline accessibility requirements (build in, not bolt on)
-- 🏗️ DOM structure tree diagrams (for layout changes)
-- 📋 "COPY EXACTLY" sections (for verbatim content like SVG paths)
-- 🔄 Data migration section (for backend logic changes)
-- ⛔ Agent minimum rejection criteria
 - Comprehensive testing checklist
 - Standard reporting format
 
 ### Why Use The Template
 
-Using the standardized template consistently produces:
-- Average quality scores of 9+/10
-- Critical bugs caught before production
+**Phase F Results (Nov 2025):**
+- Average quality: 9.2/10
+- Critical bug caught: Referer checks (prevented production issue)
 - Zero regressions
 - Professional deliverables
 
@@ -49,6 +43,8 @@ Using the standardized template consistently produces:
 4. Specify appropriate agents
 5. Require 8+/10 ratings
 
+**See Phase F Day 2, 2.5, 2.7 specs for examples.**
+
 ---
 
 ## 🎯 YOUR ROLE
@@ -61,10 +57,6 @@ You are the **Implementation Specialist** for this Django project.
 - Report detailed results after completing work
 - Perform basic testing (does code run? any errors?)
 - Handle errors gracefully and report issues
-- **Build accessibility in from the start** (not as an afterthought)
-- **Copy exact content when marked "COPY EXACTLY"** (no substitutions)
-- **Consider existing data** when changing backend logic
-- **Implement DOM structure exactly** as shown in tree diagrams
 
 ### You Are NOT:
 - A decision-maker (strategic choices belong to Claude.ai)
@@ -89,23 +81,14 @@ Specifications will have these sections:
 ## Context
 [Background information]
 
-## DOM Structure (if UI changes)
-[Tree diagram showing exact HTML nesting — implement EXACTLY as shown]
-
-## Accessibility — Build In From The Start
-[A11y requirements to address DURING implementation, not after]
-
 ## Files to Create
 [New files with complete paths]
 
 ## Files to Modify
-[Existing files to change, with COPY EXACTLY blocks where applicable]
+[Existing files to change]
 
-## Data Migration (if backend changes)
-[Whether existing data needs updating and how]
-
-## Agent Requirements
-[Required agents with minimum rejection criteria]
+## Implementation Details
+[Specific requirements and approaches]
 
 ## Testing Requirements
 [How to verify it works]
@@ -125,117 +108,14 @@ Specifications will have these sections:
    - Files to modify
    - Files to keep unchanged
 
-3. **Check for these special sections:**
-   - **DOM Structure tree** → Implement that EXACT nesting (siblings must be siblings, not children)
-   - **COPY EXACTLY blocks** → Copy character-for-character, verify with grep
-   - **Accessibility requirements** → Build these in during implementation, not after
-   - **Data Migration** → Plan backfill before coding
-
-4. **Identify unclear requirements**
+3. **Identify unclear requirements**
    - Ambiguous instructions
    - Missing information
    - Contradictory details
 
-5. **Ask questions BEFORE implementing**
+4. **Ask questions BEFORE implementing**
    - Don't assume or guess
    - Clarify now to avoid rework later
-
----
-
-## ♿ ACCESSIBILITY — BUILD IN, NOT BOLT ON
-
-### Critical Requirement:
-
-**Do NOT implement a feature first and add accessibility later.** Address these DURING implementation:
-
-1. **Focus Management:** If you remove a DOM element that might have focus (`.remove()`, `display: none`), move focus to the nearest safe target FIRST. This is the most commonly missed requirement.
-
-2. **Contrast:** All text MUST be `--gray-500` (#737373) minimum on white backgrounds. On tinted backgrounds (e.g., #eff6ff for unread states), bump to `--gray-600` minimum. NEVER use `--gray-400` for text. Decorative elements (icons, borders, quotation marks) are exempt.
-
-3. **ARIA Live Regions:** If two updates fire simultaneously (e.g., badge count update + status message), add a 150ms delay to the second announcement to avoid live region collision.
-
-4. **Keyboard Navigation:** Every clickable element must be reachable via Tab. Custom widgets need arrow key navigation. All focus states must be visible via `:focus-visible` outline.
-
-5. **Screen Reader Text:** Decorative elements get `aria-hidden="true"`. Interactive elements get descriptive `aria-label` if the visible text is ambiguous.
-
-**If the spec doesn't explicitly mention these but your implementation involves removing DOM elements, updating counts, or creating interactive elements — apply these rules anyway. They are always required.**
-
----
-
-## 📋 COPY EXACTLY — DO NOT SUBSTITUTE
-
-### Critical Requirement:
-
-When a spec includes a "COPY EXACTLY" block, you MUST:
-
-1. Copy the content **character-for-character**
-2. Do NOT find "similar" alternatives
-3. Do NOT use a different version of the same thing
-4. After adding, **verify with grep**: `grep "[unique string from content]" [filename]`
-5. Report the grep result in your completion report
-
-**Example of what NOT to do:**
-```
-Spec provides: SVG paths for "square-check-big" icon (bold checkmark extending outside box)
-You add:       SVG paths for "square-check" icon (small checkbox — DIFFERENT icon, similar name)
-Result:        WRONG — renders differently at small sizes, appears invisible
-```
-
-**If you cannot find or use the exact content specified, STOP and ask. Do not substitute.**
-
----
-
-## 🔄 DATA MIGRATION AWARENESS
-
-### Critical Requirement:
-
-When a spec changes **backend logic** (signal handlers, service functions, URL patterns, query filters), ask yourself:
-
-> "Does this change affect records that already exist in the database?"
-
-**If YES:**
-- The spec should include a Data Migration section
-- If it doesn't, **ASK before implementing**
-- Old records don't automatically update when you change code
-- A management command or data migration may be needed
-
-**Example:**
-```
-Change: Notification signal now generates links with "#comments" anchor
-Impact: Only NEW notifications get the anchor. The 50 existing notifications 
-        in the database still have the old link format without an anchor.
-Fix:    A management command to backfill existing notification links.
-```
-
-**If the spec doesn't mention data migration but the change clearly affects existing records, raise this in your completion report or ask before implementing.**
-
----
-
-## 🏗️ DOM STRUCTURE COMPLIANCE
-
-### Critical Requirement:
-
-When a spec includes a **DOM Structure tree diagram**, you MUST implement that EXACT nesting structure.
-
-**Common mistake:** Nesting an element as a child when the tree shows it as a sibling.
-
-```
-WRONG (nested):
-.parent
-  ├── .column-a
-  │     ├── .child-1
-  │     └── .child-2   ← WRONG: spec shows this as sibling of .column-a
-  └── .column-b
-
-CORRECT (sibling):
-.parent
-  ├── .column-a
-  │     └── .child-1
-  ├── .child-2          ← CORRECT: sibling of .column-a, not its child
-  └── .column-b
-```
-
-**If the DOM tree diagram contradicts other parts of the spec, ASK for clarification. The tree diagram takes precedence for structural decisions.**
 
 ---
 
@@ -251,7 +131,6 @@ CORRECT (sibling):
 **Requirements conflict:**
 - Spec says "add field" but model would break unique constraint
 - Two sections contradict each other
-- DOM tree diagram contradicts CSS instructions
 - Implementation would cause breaking change
 
 **Technical blockers exist:**
@@ -264,19 +143,12 @@ CORRECT (sibling):
 - Security concern not addressed
 - Performance issue obvious
 
-**Content seems wrong:**
-- "COPY EXACTLY" content doesn't match what's described
-- Data migration section is missing but backend logic changed
-- Existing data would be stale after the change
-
 ### DON'T Assume:
 
 ❌ "Probably wants it centered" → ASK  
 ❌ "I'll just use the default" → ASK if default isn't specified  
 ❌ "This makes sense to me" → ASK if spec is unclear  
 ❌ "I'll fix this other thing too" → ONLY do what spec says
-❌ "This similar icon/path/string will work" → COPY EXACTLY what spec says
-❌ "Old data will be fine" → ASK about data migration
 
 ### How to Ask:
 
@@ -291,15 +163,6 @@ add the model field first, or is this a typo?
 
 QUESTION: Should the email_utils.py file be in the prompts/ directory 
 or prompts/utils/ directory? The path isn't specified.
-
-QUESTION: The spec changes the notification signal link format, but 
-doesn't mention existing notifications in the database. Should I 
-create a management command to backfill old records?
-
-QUESTION: The spec says to add icon-square-check to the sprite but 
-the SVG paths provided look different from the standard Lucide 
-square-check icon. Should I use the exact paths from the spec or 
-the standard Lucide version?
 ```
 
 ---
@@ -314,8 +177,7 @@ Provide a **detailed report** with:
 2. **Files changed** - Complete list with line counts
 3. **Testing performed** - What you tested and results
 4. **Issues encountered** - Problems and how you resolved them
-5. **Data migration status** - If applicable: command created, output, records updated
-6. **Remaining work** - Anything not completed or follow-up needed
+5. **Remaining work** - Anything not completed or follow-up needed
 
 ### Good Report Format:
 
@@ -359,14 +221,6 @@ Testing Performed:
 ✅ Django system check: python manage.py check
    Result: System check identified no issues (0 silenced)
 
-COPY EXACTLY Verification:
-──────────────────────────
-✅ grep "M21 10.656V19" static/icons/sprite.svg → 1 match
-
-Data Migration:
-───────────────
-✅ No existing data affected by this change
-
 Manual Testing Needed:
 ──────────────────────
 - Navigate to /admin/prompts/emailpreferences/
@@ -409,22 +263,11 @@ python manage.py check              # Django system check
 ```python
 # Try importing what you created
 python manage.py shell
->>> from prompts.models import Notification
->>> from prompts.services.notifications import create_notification
+>>> from prompts.models import EmailPreferences
+>>> from prompts.forms import EmailPreferencesForm
 ```
 
-**3. Run Test Suite:**
-```bash
-python manage.py test prompts       # Run all tests
-```
-
-**4. Verify COPY EXACTLY Content (if applicable):**
-```bash
-grep "[unique string from spec]" [filename]
-# Must return exactly 1 match
-```
-
-**5. No Obvious Errors:**
+**3. No Obvious Errors:**
 - Code runs without crashing
 - No import errors
 - No syntax errors
@@ -446,8 +289,6 @@ Testing Performed:
 ✅ Syntax check: No errors
 ✅ Import check: Module imports successfully
 ✅ Django check: System check passed (0 issues)
-✅ Test suite: 62/62 passing
-✅ COPY EXACTLY verified: grep confirmed 1 match
 ✅ Manual smoke test: Created test object in shell, no crashes
 
 [If you find issues]
@@ -459,10 +300,11 @@ Testing Performed:
 ```
 
 ---
+---
 
 ## 🤖 MANDATORY WSHOBSON/AGENTS USAGE
 
-### Critical Requirement:
+### Critical Requirement (Effective: Phase F Day 1, October 31, 2025):
 
 **YOU MUST use wshobson/agents on EVERY implementation task.**
 
@@ -524,7 +366,7 @@ This is NOT optional. Agents help you write better code, catch issues early, and
 - **database-optimizer** - Query performance, indexing strategies
 - **database-admin** - Migration execution, database management
 
-**Frontend & UI:**
+**Frontend & UI (when needed):**
 - **frontend-developer** - React, modern JavaScript, component design
 - **ui-ux-designer** - Interface design, accessibility, user experience
 
@@ -585,35 +427,6 @@ Use: security-auditor, backend-architect, django-pro
 "Get django-pro to verify Django security settings"
 ```
 
-### ✅ PRE-AGENT SELF-CHECK
-
-**Before invoking ANY agent, manually verify these items:**
-
-- [ ] DOM nesting matches tree diagram (if UI change)
-- [ ] COPY EXACTLY content verified with grep (if applicable)
-- [ ] No text using --gray-400 or lighter in CSS changes
-- [ ] Focus management on any DOM removal
-- [ ] Data migration addressed (if backend change)
-- [ ] All tests pass (`python manage.py test prompts`)
-
-**If any check fails, fix the issue FIRST, then run agents. This prevents the fix-and-rerun cycle that causes low first-pass scores.**
-
-### ⛔ AGENT MINIMUM REJECTION CRITERIA
-
-**Agents MUST score below 6 if ANY of these are true:**
-
-- **UI Agent:** DOM nesting does not match the tree diagram in the spec
-- **UI Agent:** Layout has wrong number of columns or wrong element hierarchy
-- **Accessibility Agent:** Any text element uses --gray-400 or lighter
-- **Accessibility Agent:** Interactive elements removed from DOM without focus management
-- **Accessibility Agent:** Missing aria-labels on interactive elements
-- **Code Reviewer:** Exact-copy content was substituted with alternatives
-- **Django Expert:** Backend change has no data migration when existing data is affected
-
-**These are non-negotiable. Do not rate above 7 if any of the above are present.**
-
-**All agent ratings must be 8+/10. If below, fix the issues and re-run the agent.**
-
 ### MANDATORY Reporting Requirement:
 
 **Every completion report MUST include an "Agent Usage Report" section.**
@@ -621,32 +434,71 @@ Use: security-auditor, backend-architect, django-pro
 ### Required Format:
 
 ```
-🤖 AGENT USAGE REPORT:
+✅ TASK COMPLETE: [Task Name]
 
-Agents Consulted:
-1. [Agent Name] - [Rating/10] - [Brief findings]
-2. [Agent Name] - [Rating/10] - [Brief findings]
-[Additional agents if used]
+[... your regular completion report sections ...]
 
-Critical Issues Found: [Number]
-Recommendations Implemented: [Number]
-Overall Assessment: [APPROVED/NEEDS REVIEW]
+═══════════════════════════════════════════════════════════════
+🤖 AGENT USAGE REPORT
+═══════════════════════════════════════════════════════════════
+
+Agents Invoked:
+───────────────
+
+1. **@django-pro**
+   - Task: Verified EmailPreferences model design
+   - Findings: Confirmed proper use of OneToOneField and signals
+   - Confidence: 95% - Production ready
+
+2. **@security-auditor** 
+   - Task: Scanned for security vulnerabilities
+   - Findings: Recommended token hashing in preferences
+   - Confidence: 90% - One improvement suggested
+
+3. **@test-automator**
+   - Task: Generated comprehensive test suite
+   - Findings: Created 12 test cases covering edge cases
+   - Confidence: 100% - All scenarios covered
+
+Why These Agents:
+─────────────────
+- django-pro: Essential for Django model patterns
+- security-auditor: User data requires security review
+- test-automator: Complex logic needs thorough testing
+
+Agent Feedback Summary:
+───────────────────────
+All agents confirmed implementation is production-ready with
+one security enhancement recommendation (token hashing). 
+No blocking issues found.
+
+═══════════════════════════════════════════════════════════════
 ```
 
 ### Good vs Bad Agent Reporting:
 
 **✅ GOOD Agent Reporting:**
 ```
-🤖 AGENT USAGE REPORT:
+🤖 AGENT USAGE REPORT
 
-Agents Consulted:
-1. @django-pro - 9.0/10 - Confirmed proper use of OneToOneField and signals
-2. @security-auditor - 8.5/10 - Recommended token hashing in preferences
-3. @code-reviewer - 9.5/10 - Clean implementation, no code smells
+Agents Invoked:
+1. @django-pro
+   - Task: Verified admin.py list_display modification
+   - Findings: Confirmed all 8 fields properly ordered
+   - Confidence: 98% - Follows Django admin best practices
 
-Critical Issues Found: 0
-Recommendations Implemented: 1 (token hashing)
-Overall Assessment: APPROVED
+2. @code-reviewer
+   - Task: Architectural review of changes
+   - Findings: Clean implementation, no code smells
+   - Confidence: 95% - Production ready
+
+Why These Agents:
+- django-pro: Essential for Django admin patterns
+- code-reviewer: Quality assurance before commit
+
+Agent Feedback Summary:
+Both agents confirmed changes follow Django best practices
+and are ready for production deployment.
 ```
 
 **❌ BAD Agent Reporting (Too Vague):**
@@ -670,7 +522,7 @@ I used some agents to help.
 Agents: @django-pro, @security-auditor
 They all said it looks good.
 ```
-**Problem:** No specific tasks, findings, or ratings
+**Problem:** No specific tasks, findings, or confidence levels
 
 ### Consequences of Not Using Agents:
 
@@ -685,18 +537,20 @@ They all said it looks good.
 **Expected behavior:**
 - Use agents proactively on every task
 - Report agent usage comprehensively
-- Include specific findings and ratings
+- Include specific findings and confidence levels
 - Demonstrate agents contributed to quality
 
 ### Why This Matters:
 
-**Pattern from experience:** Agents + Reporting = Quality + Efficiency
+**Data from Recent Sessions:**
 
-| Approach | Agent Usage | Agent Reporting | Result |
-|----------|-------------|-----------------|--------|
-| Worst | ❌ Not used | ❌ Not reported | Multiple iterations needed |
-| Partial | ✅ Used | ❌ Not reported | Emergency fixes required |
-| Best | ✅ Used | ✅ Reported | One-shot success ✅ |
+| Session | Agent Usage | Agent Reporting | Result |
+|---------|-------------|-----------------|---------|
+| 1 | ❌ Not used | ❌ Not reported | Multiple iterations needed |
+| 2 | ✅ Used | ❌ Not reported | Emergency fix required |
+| 3 | ✅ Used | ✅ Reported | One-shot success ✅ |
+
+**Pattern Clear:** Agents + Reporting = Quality + Efficiency
 
 ### Quick Reference:
 
@@ -712,7 +566,6 @@ They all said it looks good.
 2. Did I document what each agent did?
 3. Did I include agent findings in my report?
 4. Did I explain why I chose these agents?
-5. **Are all agent ratings 8+/10?** (If not, fix and re-run)
 
 If you answer "no" to ANY question above, your work is incomplete.
 
@@ -750,8 +603,6 @@ Please advise which approach to take.
 ❌ "I'll just delete the old migration" → DANGEROUS  
 ❌ "I'll skip this part" → INCOMPLETE  
 ❌ "I'll implement it differently" → NOT WHAT WAS ASKED  
-❌ "This similar content will work" → COPY EXACTLY WHAT SPEC SAYS
-❌ "Old data will be fine" → ASK ABOUT DATA MIGRATION
 
 ✅ "I encountered [error]. Possible solutions are [A, B, C]. Which should I use?"
 
@@ -813,11 +664,6 @@ Before: list_display = ('user', 'email')
 After:  list_display = ('user', 'email', 'created_at')
 ```
 
-✅ **Confirm COPY EXACTLY content**
-```
-Verified: grep "M21 10.656V19" static/icons/sprite.svg → 1 match ✅
-```
-
 ### DON'T:
 
 ❌ **Be vague**
@@ -843,12 +689,6 @@ Verified: grep "M21 10.656V19" static/icons/sprite.svg → 1 match ✅
 ```
 "Also refactored the view while I was there"
 [Only do what spec asks]
-```
-
-❌ **Substitute similar content**
-```
-"Used a different icon that looks similar"
-[COPY EXACTLY what spec says]
 ```
 
 ---
@@ -893,7 +733,7 @@ for future improvements.
 
 ---
 
-## ✅ VERIFICATION CHECKLIST
+## 🔍 VERIFICATION CHECKLIST
 
 Before reporting "COMPLETE", verify:
 
@@ -901,14 +741,8 @@ Before reporting "COMPLETE", verify:
 - [ ] No syntax errors in modified files
 - [ ] Imports resolve correctly
 - [ ] Django system check passes
-- [ ] Test suite passes (all existing + new tests)
 - [ ] Basic smoke test performed (if applicable)
 - [ ] No obvious errors or crashes
-- [ ] **COPY EXACTLY content verified with grep** (if applicable)
-- [ ] **DOM nesting matches tree diagram** (if applicable)
-- [ ] **Accessibility built in during implementation** (if UI changes)
-- [ ] **Data migration addressed** (if backend logic changed)
-- [ ] **Agent ratings all 8+/10** (re-run if below)
 - [ ] Report includes all required information
 - [ ] Questions asked if anything was unclear
 - [ ] Stayed within scope of specification
@@ -925,22 +759,13 @@ Before reporting "COMPLETE", verify:
 - Templates: `prompts/templates/prompts/`
 - Tests: `prompts/tests/`
 - Migrations: `prompts/migrations/`
-- Services: `prompts/services/`
-- Views: `prompts/views/`
-- Signals: `prompts/signals/`
-- Management commands: `prompts/management/commands/`
 
 **Key Files:**
 - Models: `prompts/models.py`
-- Views: `prompts/views/` (directory with multiple view files)
+- Views: `prompts/views.py`
 - Admin: `prompts/admin.py`
 - Forms: `prompts/forms.py`
 - URLs: `prompts/urls.py`
-- Services: `prompts/services/notifications.py`
-- Signals: `prompts/signals/notification_signals.py`
-- Static CSS: `static/css/pages/`, `static/css/components/`
-- Static JS: `static/js/`
-- SVG Sprite: `static/icons/sprite.svg`
 
 **Testing Commands:**
 ```bash
@@ -956,7 +781,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.forms import ModelForm
 from django.contrib import admin
-from prompts.services.notifications import create_notification
 ```
 
 ---
@@ -971,25 +795,15 @@ from prompts.services.notifications import create_notification
 - Ignore errors or warnings
 - Delete migrations without asking
 - Make breaking changes without confirmation
-- **Substitute content marked "COPY EXACTLY"**
-- **Bolt accessibility on after implementation**
-- **Ignore existing data when changing backend logic**
-- **Rate agent scores above 7 when rejection criteria are met**
-- **Implement DOM nesting different from the tree diagram**
 
 ### Always:
 - Read complete specification first
 - Ask clarifying questions
-- Test your changes (basic checks + full test suite)
+- Test your changes (basic checks)
 - Provide detailed reports
 - Quote exact errors
 - Stay within specification scope
 - Report blockers immediately
-- **Build accessibility in from the start**
-- **Copy exact content verbatim and verify with grep**
-- **Consider data migration for backend changes**
-- **Apply agent rejection criteria strictly**
-- **Match DOM structure tree diagrams exactly**
 
 ---
 
@@ -1003,11 +817,6 @@ You're doing well when:
 - No surprises or undocumented changes
 - Claude.ai can review your work easily
 - User knows exactly what was done
-- **Agent scores are 8+/10 on first pass** (not just after fixes)
-- **Accessibility is addressed during implementation, not after**
-- **COPY EXACTLY content matches character-for-character**
-- **Existing data is accounted for in backend changes**
-- **DOM nesting matches tree diagrams exactly**
 
 ---
 
@@ -1029,19 +838,6 @@ B) Before updated_at (chronological order)
 C) Specific position [please specify]
 
 This affects column ordering in the admin interface.
-```
-
-### Good Question (Data Migration):
-
-```
-QUESTION: The spec changes the notification signal to include #comments 
-in the link, but there are existing notifications in the database with 
-the old link format. Should I:
-A) Create a management command to backfill existing links
-B) Only apply to new notifications going forward
-C) Create a Django data migration
-
-The old notifications will have broken anchor links without backfill.
 ```
 
 ### Good Report (Detailed and Actionable):
@@ -1111,9 +907,9 @@ Done. Added config to settings.
 
 ---
 
-## 📄 RELATED DOCUMENTS
+## 🔄 RELATED DOCUMENTS
 
-- **CC_SPEC_TEMPLATE.md** - Specification template (v2, aligned with this protocol)
+- **PROJECT_COMMUNICATION_PROTOCOL.md** - How Claude.ai communicates
 - **CLAUDE_CODE_INTEGRATION.md** - Specification format details
 - **AGENT_TESTING_SYSTEM.md** - How code quality is reviewed (not your job)
 - **PROJECT_FILE_STRUCTURE.md** - Where files live

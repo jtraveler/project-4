@@ -3,7 +3,7 @@
 **Last Updated:** February 18, 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
-**Changelog:** v2.1 — Added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
+**Changelog:** v2 — Added 5 new sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
 
 ---
 
@@ -195,23 +195,6 @@ RIGHT: .column-3 as a sibling of .column-2
 | [Model] | [filter criteria] | [fields] | [estimate] |
 
 **IMPORTANT:** The management command or migration must be run AFTER the code changes are deployed. Include the run command in the completion report.
-
----
-
-## ✅ PRE-AGENT SELF-CHECK (Required Before Running Any Agent)
-
-⛔ **Before invoking ANY agent, CC must manually verify these items. Do NOT call an agent until all applicable checks pass.**
-
-- [ ] **DOM nesting matches tree diagram** (if UI change) — Open the HTML you wrote and trace the nesting. Are siblings actually siblings, not children?
-- [ ] **COPY EXACTLY content verified** — Run `grep "[unique string]" [filename]` and confirm exactly 1 match
-- [ ] **No text using --gray-400 or lighter** — Search your CSS changes for `gray-400`. If found on any text element, fix before agent run
-- [ ] **Focus management on DOM removal** — If you `.remove()` or hide any element, verify focus moves to a safe target FIRST
-- [ ] **Existing data migration addressed** (if backend change) — Did you create the management command/migration, or confirm no backfill needed?
-- [ ] **All tests pass** — Run `python manage.py test prompts` before calling agents
-
-**Why this matters:** Agents consistently rate 6-7 on first pass when these items are missed, then require a fix-and-rerun cycle. Catching them before the agent run saves an entire iteration.
-
-**If any check fails, fix the issue FIRST, then run agents.**
 
 ---
 

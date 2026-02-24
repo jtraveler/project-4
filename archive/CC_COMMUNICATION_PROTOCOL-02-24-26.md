@@ -7,7 +7,7 @@
 **Project:** PromptFinder (Django AI Prompt Sharing Platform)
 **For:** Claude Code (CC) - VS Code Extension
 **Status:** Active Reference Document
-**Changelog:** v2.1 — Added PRE-AGENT SELF-CHECK section. v2.0 added accessibility-first, exact-copy enforcement, data migration awareness, DOM structure compliance, agent rejection criteria. Updated project structure. Standardized agent reporting to Rating/10 format.
+**Changelog:** v2.0 — Added 5 new sections (accessibility-first, exact-copy enforcement, data migration awareness, DOM structure compliance, agent rejection criteria). Updated project structure. Standardized agent reporting to Rating/10 format. Removed outdated session references.
 
 ---
 
@@ -584,19 +584,6 @@ Use: security-auditor, backend-architect, django-pro
 "Use backend-architect for secure API design"
 "Get django-pro to verify Django security settings"
 ```
-
-### ✅ PRE-AGENT SELF-CHECK
-
-**Before invoking ANY agent, manually verify these items:**
-
-- [ ] DOM nesting matches tree diagram (if UI change)
-- [ ] COPY EXACTLY content verified with grep (if applicable)
-- [ ] No text using --gray-400 or lighter in CSS changes
-- [ ] Focus management on any DOM removal
-- [ ] Data migration addressed (if backend change)
-- [ ] All tests pass (`python manage.py test prompts`)
-
-**If any check fails, fix the issue FIRST, then run agents. This prevents the fix-and-rerun cycle that causes low first-pass scores.**
 
 ### ⛔ AGENT MINIMUM REJECTION CRITERIA
 

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 17, 2026
+**Last Updated:** February 18, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,76 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Session 87 - February 18, 2026
+
+**Focus:** Phase R1-D Notifications Page Redesign, CC Documentation v2.0
+
+**Context:** Following Session 86's notification infrastructure (model, signals, service layer, bell dropdown, 649 tests), this session redesigned the notifications page through 6 iterative specifications (v1-v6), then codified lessons learned into updated CC documentation.
+
+**Completed:**
+
+| Task | What It Does | Notes |
+|------|--------------|-------|
+| Notifications page redesign (v1) | Card-based layout with sender avatars, decorative quotation marks, contextual action buttons (Reply/View/View Profile), WCAG AA compliance | Initial implementation |
+| Layout fix (v2) | Moved quote block from child of .notif-body to sibling — fixed 3-column to 4-column layout | DOM nesting correction |
+| Per-card mark-as-read + anchors (v3) | Per-notification "Mark as read" button, comment Reply links with #comments anchor, checkmark icon in "Mark all as read" | 6 files, 178 insertions |
+| Icon + scroll fix (v4) | Replaced wrong square-check SVG with correct square-check-big paths, added scroll-margin-top for sticky nav offset on #comments anchor | Surgical 4-file fix |
+| Bell dropdown sync (v5) | Custom DOM event 'notifications:all-read' dispatched from navbar.js, notifications.js listens and instantly updates page DOM | Cross-script communication pattern |
+| Dedup filter fix (v6) | Added link and message to duplicate detection Q filter — prevents unique comments from being silently dropped | 2 lines + 5 new tests |
+| CC_SPEC_TEMPLATE.md v2.0 | Added 5 new sections: inline accessibility, DOM structure diagrams, COPY EXACTLY enforcement, data migration awareness, agent rejection criteria | Based on R1-D lessons |
+| CC_COMMUNICATION_PROTOCOL.md v2.0 | Matching updates: project name fix, updated Key Files, standardized agent reporting to Rating/10, all 5 new sections | 1,108 lines (was 916) |
+| Notification polling | Reduced from 60s to 15s for more responsive bell badge UX | Performance improvement |
+
+**Architecture Decisions:**
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Card layout | 4-column (avatar\|body\|quote\|actions) for comments, 3-column for others | Quote column provides visual context; .notif-card--no-quote modifier expands body |
+| Unread tint | Purple (#f5eafa) on --gray-100 base | Clearer distinction than blue tint; decorative, not informational |
+| Cross-script sync | Custom DOM event 'notifications:all-read' | Decoupled: navbar.js dispatches, notifications.js listens — no shared state |
+| Comment anchors | #comments (section heading) | More stable than individual comment IDs; scroll-margin-top offsets sticky nav |
+| Dedup filter | link + message with truthiness guards | Empty defaults preserve original 3-field behavior for likes/follows |
+
+**Agent Scores (across 6 iterations):**
+
+| Agent | Range | Notes |
+|-------|-------|-------|
+| @code-reviewer | 7.0–9.5/10 | Lowest when missing test branches |
+| @ui-ux-designer | 7.8–9.7/10 | Lowest on initial layout (DOM nesting wrong) |
+| @accessibility | 6.5–9.5/10 | Lowest when focus management missing |
+| @django-pro | 8.5/10 | Consistent on backend work |
+
+**Files Created:**
+- `prompts/management/commands/backfill_comment_anchors.py` - Idempotent backfill for comment notification link anchors
+
+**Files Modified:**
+- `prompts/templates/prompts/notifications.html` - Card-based layout with avatars, quotes, action buttons, per-card mark-as-read, aria-live status region
+- `prompts/signals/notification_signals.py` - Comment links include #comments anchor
+- `prompts/services/notifications.py` - Dedup filter: added link + message to Q filter
+- `prompts/tests/test_notifications.py` - 5 new dedup edge case tests (57→62 total)
+- `static/css/pages/notifications.css` - Card styling, button styles, 4-column layout, unread purple tint
+- `static/css/pages/prompt-detail.css` - scroll-margin-top: 100px on #comments
+- `static/js/notifications.js` - Event delegation, mark-as-read, bell sync listener
+- `static/js/navbar.js` - Dispatch 'notifications:all-read' custom event, polling 60s→15s
+- `static/icons/sprite.svg` - Added square-check-big icon
+- `static/css/style.css` - Design tokens update (removed --gray-70)
+- `CC_SPEC_TEMPLATE.md` - v2.0: 5 new sections
+- `CC_COMMUNICATION_PROTOCOL.md` - v2.0: aligned with spec template
+
+**Key Design Patterns Established:**
+- Custom DOM events for cross-script communication (navbar ↔ notifications page)
+- Fire-and-forget API calls on navigation actions
+- Event delegation for dynamically rendered content
+- Idempotent management commands for data backfills
+- scroll-margin-top for anchor offset with sticky nav
+- Agent minimum rejection criteria for structural quality assurance
+
+**Tests:** ~649 → ~657 (5 new dedup tests + corrected baseline counts)
+
+**Phase R1 Status:** ✅ Complete. R1-D notifications page redesign delivered through 6 iterative specs.
+
+---
 
 ### Session 86 - February 17, 2026
 
@@ -1485,6 +1555,7 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Feb 18, 2026 | 87 | Phase R1-D: notifications page redesign (avatars, quotes, per-card mark-as-read, bell sync, dedup fix), CC docs v2.0, 5 new tests |
 | Feb 17, 2026 | 86 | Phase R1 complete: notification system (model, signals, API, bell dropdown, notifications page), shared tab components (overflow-tabs.js, profile-tabs.css), WCAG docs, 54 new tests |
 | Feb 15-16, 2026 | 85 | Pass 2 SEO system built, admin two-button UX, tag ordering, PROTECTED_TAGS, reorder_tags command, 97 new tests |
 | Feb 14, 2026 | 83 | Tag pipeline refinements: 3-layer quality system, TAG_RULES_BLOCK, GPT self-check, ALLOWED_AI_TAGS, demographic reorder, full backfill 51/51 |
@@ -1518,5 +1589,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.13 (Session 86 — Phase R1 notification system complete, shared tab components, 54 new tests, WCAG/inline extraction docs)
-**Last Updated:** February 17, 2026
+**Version:** 4.14 (Session 87 — Phase R1-D notifications redesign, per-card mark-as-read, bell sync, dedup fix, CC docs v2.0, 5 new tests)
+**Last Updated:** February 18, 2026

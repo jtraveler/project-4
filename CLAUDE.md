@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 17, 2026
+**Last Updated:** February 18, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -62,7 +62,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Phase R1 | Feb 17, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page, shared tab components) |
+| Phase R1 + R1-D | Feb 17-18, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page redesign with avatars/quotes/action buttons, per-card mark-as-read, bell sync, dedup fix, shared tab components) |
 | Phase 2B (1-9) + Tag Pipeline + Hardening + Pass 2 SEO | Feb 9-16, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata, security hardening, backfill hardening, tag pipeline refinements, Pass 2 background SEO, admin UX |
 | Phase 2B (1-8) | Feb 9-10, 2026 | Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill, demographic SEO rules |
 | Subject Categories P2 | Feb 9, 2026 | AI-assigned prompt classification (25 categories, cache-first logic) |
@@ -569,6 +569,21 @@ Options for `initOverflowTabs()`:
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
 | `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
 
+**Committed in Session 87 (Feb 18, 2026):**
+- `prompts/templates/prompts/notifications.html` - Card-based redesign with avatars, quotes, action buttons, per-card mark-as-read
+- `prompts/signals/notification_signals.py` - Comment links include #comments anchor
+- `prompts/services/notifications.py` - Dedup filter: added link + message to Q filter
+- `prompts/tests/test_notifications.py` - 5 new dedup edge case tests (57→62 total)
+- `static/css/pages/notifications.css` - Card styling, 4-column layout, unread purple tint
+- `static/css/pages/prompt-detail.css` - scroll-margin-top: 100px on #comments
+- `static/js/notifications.js` - Event delegation, mark-as-read, bell sync listener
+- `static/js/navbar.js` - Dispatch 'notifications:all-read' custom event, polling 60s→15s
+- `static/icons/sprite.svg` - Added square-check-big icon
+- `static/css/style.css` - Design tokens update (removed --gray-70)
+- `prompts/management/commands/backfill_comment_anchors.py` - NEW: Idempotent backfill for comment notification link anchors
+- `CC_SPEC_TEMPLATE.md` - v2.0: 5 new sections (accessibility, DOM diagrams, COPY EXACTLY, data migration, agent rejection)
+- `CC_COMMUNICATION_PROTOCOL.md` - v2.0: aligned with spec template, standardized agent reporting
+
 **Committed in Session 86 (Feb 17, 2026):**
 - `prompts/models.py` - Notification model (6 types, 5 categories, 3 DB indexes)
 - `prompts/services/notifications.py` - NEW: Notification service layer (create, count, mark-read, 60s duplicate prevention)
@@ -1072,5 +1087,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.13 (Session 86 — Phase R1 notification system complete, shared tab components, WCAG docs, inline extraction risk pattern)
-**Last Updated:** February 17, 2026
+**Version:** 4.14 (Session 87 — Phase R1-D notifications redesign, per-card mark-as-read, bell sync, dedup fix, CC docs v2.0)
+**Last Updated:** February 18, 2026

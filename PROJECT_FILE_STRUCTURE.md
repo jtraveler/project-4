@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 17, 2026
+**Last Updated:** February 18, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase R1 (complete), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~649 passing (43% coverage, threshold 40%)
+**Current Phase:** Phase R1 + R1-D (complete), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~657 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -13,12 +13,12 @@
 |----------|-------|----------|
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
-| **CSS Files** | 8 | static/css/ |
+| **CSS Files** | 9 | static/css/ |
 | **JavaScript Files** | 9 | static/js/ (2 deleted in Session 61, 2 added in Session 86) |
-| **SVG Icons** | 32 | static/icons/sprite.svg |
+| **SVG Icons** | 33 | static/icons/sprite.svg |
 | **Migrations** | 58 | prompts/migrations/ (56), about/migrations/ (2) |
 | **Test Files** | 19 | prompts/tests/ |
-| **Management Commands** | 27 | prompts/management/commands/ |
+| **Management Commands** | 28 | prompts/management/commands/ |
 | **Services** | 12 | prompts/services/ |
 | **View Modules** | 12 | prompts/views/ |
 | **CI/CD Config Files** | 3 | .github/workflows/, root |
@@ -70,7 +70,7 @@ live-working-project/
 │   └── PHASE_2B1-6_COMPLETION_REPORT.md    # 6 Phase 2B sub-phase completion reports (Phase 2B Session)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
-│   │   └── commands/             # 25 management commands + __init__.py
+│   │   └── commands/             # 28 management commands + __init__.py
 │   ├── migrations/               # 54 migrations + __init__.py
 │   ├── services/                 # 12 service modules
 │   │   └── notifications.py      # Notification service (create, count, mark-read) (Session 86)
@@ -87,7 +87,7 @@ live-working-project/
 │   │       ├── _notification_list.html  # Notification list AJAX partial (Session 86)
 │   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
-│   ├── tests/                    # 16 test files
+│   ├── tests/                    # 19 test files
 │   └── views/                    # 12 view modules (refactored)
 │       ├── __init__.py           # Package exports
 │       ├── admin_views.py        # Admin dashboard views
@@ -113,24 +113,30 @@ live-working-project/
 ├── static_root/                  # Root-level files served by WhiteNoise (no hashing)
 │   └── robots.txt                # Search engine crawl directives (Session 69)
 ├── static/                       # Source static files
-│   ├── css/                      # 6 CSS files (~105KB total)
+│   ├── css/                      # 9 CSS files (~105KB total)
 │   │   ├── components/
 │   │   │   ├── icons.css         # SVG icon system styles
-│   │   │   └── masonry-grid.css
+│   │   │   ├── masonry-grid.css
+│   │   │   └── profile-tabs.css  # Shared tab component CSS (Session 86)
 │   │   ├── pages/
+│   │   │   ├── notifications.css # Notifications page styles (Session 86, ~350 lines)
 │   │   │   ├── prompt-detail.css # Prompt detail page styles (1,515 lines, includes related prompts section)
 │   │   │   └── prompt-list.css
 │   │   ├── navbar.css
+│   │   ├── upload.css            # Upload page styles (~920 lines, rewritten Session 66)
 │   │   └── style.css
 │   ├── icons/                    # SVG icon sprite (Phase J.2)
-│   │   └── sprite.svg            # 30 icons from Lucide Icons
-│   └── js/                       # 6 JavaScript files
+│   │   └── sprite.svg            # 33 icons from Lucide Icons
+│   └── js/                       # 9 JavaScript files
 │       ├── collections.js        # Collections modal interactions (Phase K, ~760 lines)
 │       ├── like-button.js        # Centralized like button handler
-│       ├── navbar.js             # Extracted navbar JavaScript (~650 lines) + notification polling (Session 86)
-│       ├── notifications.js      # Notifications page interactions (Session 86)
+│       ├── navbar.js             # Extracted navbar JavaScript (~650 lines) + notification polling (15s, Session 87)
+│       ├── notifications.js      # Notifications page interactions (Session 86, ~300 lines)
 │       ├── overflow-tabs.js      # Shared overflow tab scroll module (Session 86, 187 lines)
-│       └── prompt-detail.js      # Prompt detail page interactions
+│       ├── prompt-detail.js      # Prompt detail page interactions
+│       ├── upload-core.js        # File selection, drag-drop, B2 upload, preview
+│       ├── upload-form.js        # Form handling, NSFW status display
+│       └── upload-guards.js      # Navigation guards, idle timeout detection
 ├── staticfiles/                  # Collected static (production)
 └── templates/                    # Global Django templates (18 files)
     ├── account/                  # 6 authentication templates
@@ -143,7 +149,7 @@ live-working-project/
 
 ---
 
-## Management Commands (25 total)
+## Management Commands (28 total)
 
 | Command | Purpose | Schedule |
 |---------|---------|----------|
@@ -172,10 +178,13 @@ live-working-project/
 | `backfill_ai_content` | Regenerate ALL AI content (title, description, tags, categories, descriptors, slug) for existing prompts. Supports `--tags-only`, `--under-tag-limit`, `--published-only` | Manual |
 | `audit_tags` | Audit existing prompt tags for compound fragments, orphan fragments, and quality issues. Supports `--fix`, `--export`, `--prompt-id` | Manual |
 | `remove_mandatory_tags` | Remove mandatory AI-related tags (ai-prompt, ai-art, ai-generated) from all prompts | Manual |
+| `reorder_tags` | Reorder existing prompt tags per validation pipeline rules (demographic to end) | Manual |
+| `run_pass2_review` | Run Pass 2 SEO expert review on published prompts (tags + description only) | Manual |
+| `backfill_comment_anchors` | Idempotent backfill to add #comments anchor to existing comment notification links | Manual |
 
 ---
 
-## Service Layer Architecture (11 modules)
+## Service Layer Architecture (12 modules)
 
 ```
 prompts/services/
@@ -287,7 +296,7 @@ prompts/views/
 | `user_profile.html` | User profile with tabs |
 | `upload.html` | Single-page upload (Phase N - replaces step 1 & 2) |
 | `collection_edit.html` | Collection edit form (Phase K - Session 64) |
-| `notifications.html` | Notifications page with category tab filtering (Phase R1 - Session 86) |
+| `notifications.html` | Notifications page with card layout, avatars, quotes, per-card mark-as-read (Phase R1/R1-D - Sessions 86-87) |
 | `trash_bin.html` | User trash bin |
 
 **Deleted in Session 61:**
@@ -310,27 +319,29 @@ prompts/views/
 
 ---
 
-## Test Files (19 files, ~649 tests)
+## Test Files (19 files, ~657 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
 | `test_b2_presign.py` | 22 | B2 presigned URL generation (Phase L8-DIRECT) |
-| `test_user_profiles.py` | Multiple | User profile CRUD operations |
-| `test_user_profile_auth.py` | Multiple | User profile authentication |
-| `test_rate_limiting.py` | 23 | Rate limiting enforcement |
-| `test_generator_page.py` | 24 | AI generator category pages |
-| `test_url_migration.py` | 12 | Phase I URL redirects |
-| `test_prompts_hub.py` | Multiple | Prompts hub functionality |
-| `test_inspiration.py` | 14 | Inspiration page tests |
-| `test_follows.py` | Multiple | Follow system |
-| `test_email_preferences_safety.py` | Multiple | Email preference safety |
-| `test_user_profile_header.py` | Multiple | Profile header UI |
-| `test_user_profile_javascript.py` | Multiple | Profile JavaScript |
-| `test_video_processor.py` | Multiple | Video processing tests |
+| `test_user_profiles.py` | 56 | User profile CRUD operations |
+| `test_user_profile_auth.py` | 20 | User profile authentication |
+| `test_rate_limiting.py` | 25 | Rate limiting enforcement |
+| `test_generator_page.py` | 26 | AI generator category pages |
+| `test_url_migration.py` | 10 | Phase I URL redirects |
+| `test_prompts_hub.py` | 18 | Prompts hub functionality |
+| `test_inspiration.py` | 16 | Inspiration page tests |
+| `test_follows.py` | 10 | Follow system |
+| `test_email_preferences_safety.py` | 8 | Email preference safety |
+| `test_user_profile_header.py` | 31 | Profile header UI |
+| `test_user_profile_javascript.py` | 12 | Profile JavaScript |
+| `test_video_processor.py` | 42 | Video processing tests |
 | `test_tags_context.py` | 17 | Tag context enhancement: excerpt in GPT prompt, weighting rules, backfill queryset (Session 81) |
-| `test_validate_tags.py` | 200 | Tag validation pipeline: 8 checks, compound splitting, GPT self-check, demographic reorder, stop-word discard (Sessions 81, 83) |
+| `test_validate_tags.py` | 150 | Tag validation pipeline: 8 checks, compound splitting, GPT self-check, demographic reorder, stop-word discard (Sessions 81, 83) |
 | `test_backfill_hardening.py` | 44 | Backfill hardening: quality gate, fail-fast download, URL pre-check, tag preservation (Session 82) |
-| `test_notifications.py` | 54 | Notification system: model, signals, service, API, page views, bell dropdown (Session 86) |
+| `test_pass2_seo_review.py` | 65 | Pass 2 SEO system: queue, review, PROTECTED_TAGS, GPT prompt (Session 85) |
+| `test_admin_actions.py` | 23 | Admin actions: two-button system, bulk actions, tag ordering (Session 85) |
+| `test_notifications.py` | 62 | Notification system: model, signals, service, API, page views, bell dropdown, dedup edge cases (Sessions 86-87) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -375,7 +386,7 @@ static/css/
 │   ├── masonry-grid.css # 255 lines - Masonry grid component
 │   └── profile-tabs.css # ~200 lines - Shared tab component (Session 86)
 └── pages/
-    ├── notifications.css # ~150 lines - Notifications page styles (Session 86)
+    ├── notifications.css # ~350 lines - Notifications page styles, card layout, per-card mark-as-read (Sessions 86-87)
     ├── prompt-detail.css # 1,515 lines - Prompt detail page + related prompts section (Phase J.1, Session 74)
     └── prompt-list.css   # 304 lines - Prompt list page styles
 ```
@@ -446,8 +457,8 @@ static/js/
 | File | Lines | Purpose |
 |------|-------|---------|
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
-| **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling + keyboard nav (Phase R1) |
-| **notifications.js** | ~200 | Notifications page mark-as-read, category filtering (Phase R1) |
+| **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling (15s) + keyboard nav + bell sync dispatch (Phase R1/R1-D) |
+| **notifications.js** | ~300 | Notifications page mark-as-read, category filtering, event delegation, bell sync listener (Phase R1/R1-D) |
 | **overflow-tabs.js** | ~187 | Shared overflow tab scroll with auto-center options (Phase R1) |
 | **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
 | **like-button.js** | ~155 | Centralized like handler with optimistic UI |
@@ -497,10 +508,10 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `sprite.svg` | static/icons/ | SVG sprite with 32 icon definitions |
+| `sprite.svg` | static/icons/ | SVG sprite with 33 icon definitions |
 | `icons.css` | static/css/components/ | Icon utility classes |
 
-### Available Icons (32 total)
+### Available Icons (33 total)
 
 **Phase 1 Icons (Navigation) - 5 icons:**
 - `icon-image` - Photos filter indicator
@@ -509,7 +520,7 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 - `icon-trophy` - Leaderboard dropdown icon
 - `icon-lightbulb` - Prompts dropdown icon
 
-**Phase 2 Icons (Actions) - 11 icons:**
+**Phase 2 Icons (Actions) - 12 icons:**
 - `icon-comment` - Comment indicator
 - `icon-heart` - Heart outline (unliked state)
 - `icon-heart-filled` - Solid pink heart (liked state)
@@ -521,6 +532,7 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 - `icon-copy` - Copy to clipboard
 - `icon-login` - Sign in/out
 - `icon-bell` - Notifications
+- `icon-square-check-big` - Mark as read checkmark (Session 87)
 
 **Phase 3 Icons (Profile) - 3 icons:**
 - `icon-user` - User profile
@@ -1008,7 +1020,7 @@ python manage.py test -v 2
 
 ### Test Statistics
 
-- **Total Tests:** ~649 passing (12 skipped - Selenium)
+- **Total Tests:** ~657 passing (12 skipped - Selenium)
 - **Pass Rate:** 100% in CI
 - **Coverage:** ~43% (enforced minimum: 40%)
 - **Note:** `prompts/tests.py` (stale stub) was deleted in Session 83 — conflicted with `prompts/tests/` directory discovery
@@ -1566,11 +1578,26 @@ prompts/templates/prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.19
-**Audit Date:** February 17, 2026
+**Version:** 3.20
+**Audit Date:** February 18, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.20 (February 18, 2026 - Session 87 End-of-Session Docs Update):**
+- Updated total test count: ~649→~657 (actual method count, 5 new dedup tests + corrected baseline)
+- Added `backfill_comment_anchors.py` management command (count 27→28)
+- Added `reorder_tags` and `run_pass2_review` to management commands table (were missing from Session 85)
+- Added `test_pass2_seo_review.py` and `test_admin_actions.py` to test files table (were missing from Session 85)
+- Updated all test file counts from "Multiple" to actual method counts
+- Added `icon-square-check-big` to SVG icons (count 32→33)
+- Updated `test_notifications.py` test count: 54→62 (corrected from actual file)
+- Updated `notifications.html` description: card-based redesign with avatars, quotes, per-card mark-as-read
+- Updated `notifications.css` line count: ~150→~350 (card layout, button styles, unread tint)
+- Updated `notifications.js` line count: ~200→~300 (event delegation, bell sync listener)
+- Updated `navbar.js` description: polling 60s→15s, bell sync dispatch
+- Updated current phase in header to include R1-D (complete)
+- Fixed stale counts: CSS files 8→9, test files tree 16→19, management commands heading 26→28, SVG tree 30→33, services heading 11→12
 
 **v3.19 (February 17, 2026 - Session 86 End-of-Session Docs Update):**
 - Updated total test count: ~595→~649

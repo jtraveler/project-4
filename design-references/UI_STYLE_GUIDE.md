@@ -2,7 +2,7 @@
 
 **Based on:** Pexels.com + Vimeo.com Design Systems
 **Created:** November 8, 2025
-**Last Updated:** December 28, 2025 (Session 28: Collections Modal Reference Implementation)
+**Last Updated:** February 24, 2026 (v2.0 Accessibility Alignment — Session 88)
 **Purpose:** Reference guide for complete UI redesign
 **Project:** PromptFinder - AI Prompt Sharing Platform
 
@@ -345,6 +345,9 @@ These colors are used for Django flash messages and alert banners throughout the
 - ✅ Interactive elements: Minimum 3:1 ratio
 - ✅ Media filter tabs: `#1d4ed8` (was `#3b82f6` - fixed for accessibility)
 - Use tools: [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
+- ⛔ **Hard rule:** Text on white/light backgrounds MUST use `--gray-500` (#737373) or darker
+- ❌ **NEVER** use `--gray-400` (#A3A3A3) for text — fails WCAG AA (2.7:1 ratio)
+- ✅ Decorative elements (borders, icons with labels) are exempt from this rule
 
 ---
 
@@ -896,6 +899,13 @@ input:focus {
 }
 ```
 
+**Focus Management After DOM Removal:**
+```css
+/* When an element is removed from DOM, focus the next logical element */
+/* Never leave focus on a removed element — keyboard users lose their place */
+/* Announce removal via aria-live="polite" with 150ms stagger for multiple updates */
+```
+
 ### Animations & Transitions
 
 **Timing Functions:**
@@ -1145,6 +1155,85 @@ input:focus {
 - ARIA labels on icon buttons
 - Alt text on all images
 - Role attributes on custom components
+
+### ⛔ Hard Contrast Rules (v2.0)
+
+**Added:** February 2026 — Aligned with CC_SPEC_TEMPLATE v2.0 accessibility requirements.
+
+These rules are **non-negotiable** and are enforced by agent rejection criteria in the CC spec template.
+
+#### Minimum Text Color: `--gray-500` (#737373)
+
+| Context | Minimum Color | Contrast on White | Status |
+|---------|---------------|-------------------|--------|
+| Body text | `--gray-700` (#404040) | 9.7:1 | ✅ Preferred |
+| Secondary text | `--gray-600` (#525252) | 7.4:1 | ✅ Acceptable |
+| Tertiary text (timestamps, metadata) | `--gray-500` (#737373) | 4.6:1 | ✅ Minimum allowed |
+| **NEVER for text** | `--gray-400` (#A3A3A3) | 2.7:1 | ❌ FAILS WCAG AA |
+| **NEVER for text** | `--gray-300` (#D4D4D4) | 1.6:1 | ❌ FAILS WCAG AA |
+
+**Rule:** Any text element rendered on a white or `--gray-50` background MUST use `--gray-500` (#737373) or darker. This includes:
+- Timestamps and dates
+- Metadata labels
+- Helper text
+- Category labels
+- Notification text
+- "X days ago" text
+
+**Exempt elements** (decorative, not conveying text information):
+- Border colors
+- Background tints
+- Decorative icons that have adjacent text labels
+- Placeholder text in focused inputs (has separate WCAG treatment)
+
+**Agent enforcement:** The @ux-reviewer and @accessibility agents will auto-reject (score below 6) any implementation that uses `--gray-400` or lighter for text content.
+
+#### Focus Management on Element Removal
+
+When JavaScript removes an element from the DOM (e.g., deleting a notification card, removing a list item):
+
+1. **Move focus to the next logical element** — the next sibling card, the previous card if last, or a heading/container if the list is now empty
+2. **Announce the removal** — use `aria-live="polite"` region with status message (e.g., "Notification deleted")
+3. **If two updates fire simultaneously** (e.g., badge count update + status message), add a **150ms delay** to the second to avoid ARIA live region collision
+4. **Never leave focus on a removed element** — this causes keyboard users to lose their place
+
+```css
+/* Example: scroll to and focus next card after deletion */
+.notif-card:focus-visible {
+    outline: 2px solid var(--accent-color-for-text-icons);
+    outline-offset: 2px;
+}
+```
+
+```javascript
+// Example: focus management after card deletion
+// Note: target elements must have tabindex="-1" for programmatic focus
+function deleteCard(card) {
+    const liveRegion = document.getElementById('notif-live-region');
+    const nextCard = card.nextElementSibling || card.previousElementSibling;
+    card.remove();
+
+    if (nextCard) {
+        nextCard.setAttribute('tabindex', '-1');
+        nextCard.focus();
+    } else {
+        document.querySelector('.notifications-heading')?.focus();
+    }
+
+    // Delayed announcement to avoid live region collision
+    setTimeout(() => {
+        liveRegion.textContent = 'Notification deleted';
+    }, 150);
+}
+```
+
+#### ARIA Live Region Collision Prevention
+
+When multiple ARIA live regions update simultaneously, screen readers may drop one announcement. Rule:
+
+- **Never update two `aria-live` regions within 150ms of each other**
+- If two updates are triggered by the same action (e.g., "item deleted" + "3 items remaining"), stagger them with `setTimeout`
+- Primary status message fires immediately; secondary badge/count update fires after 150ms delay
 
 ---
 
@@ -1520,7 +1609,7 @@ The Collections Modal established key UI patterns that serve as reference implem
 
 *This document is a living reference. Update as design evolves and new patterns emerge.*
 
-**Version:** 1.3
-**Last Updated:** November 17, 2025
+**Version:** 1.4
+**Last Updated:** February 24, 2026
 **Maintainer:** PromptFinder Design Team
-**Next Review:** January 2026
+**Next Review:** April 2026

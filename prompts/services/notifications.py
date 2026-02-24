@@ -137,3 +137,30 @@ def mark_all_as_read(user, category=None):
         qs = qs.filter(category=category)
     count = qs.update(is_read=True)
     return count
+
+
+def delete_notification(user, notification_id):
+    """
+    Delete a single notification.
+    Returns True if deleted, False if not found or not owned by user.
+    Caller is responsible for focus management after deletion.
+    """
+    try:
+        notification = Notification.objects.get(id=notification_id, recipient=user)
+        notification.delete()
+        return True
+    except Notification.DoesNotExist:
+        return False
+
+
+def delete_all_notifications(user, category=None):
+    """
+    Delete all notifications for a user, optionally filtered by category.
+    Returns the count of deleted notifications.
+    Caller is responsible for focus management after deletion.
+    """
+    queryset = Notification.objects.filter(recipient=user)
+    if category:
+        queryset = queryset.filter(category=category)
+    count, _ = queryset.delete()
+    return count

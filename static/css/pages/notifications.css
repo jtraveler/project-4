@@ -14,17 +14,26 @@
     padding-top: calc(var(--space-12) + var(--space-4));
 }
 
-/* Header — centered, matches leaderboard header */
+/* Header — flex row with title and action buttons */
 .notifications-header {
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: var(--space-8);
 }
 
-.notifications-title {
+.notifications-heading {
     font-size: 2rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: var(--space-2);
+    margin: 0;
+}
+
+/* ─── Header Actions ─── */
+.notifications-header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 
 /* Mark all as read button (page version) */
@@ -42,7 +51,6 @@
     border-radius: var(--radius-md);
     transition: color var(--transition-base), background var(--transition-base), border-color var(--transition-base);
     font-family: inherit;
-    margin-top: var(--space-3);
 }
 
 .notif-page-mark-all .icon {
@@ -304,8 +312,13 @@
         padding-top: calc(var(--space-8) + var(--space-4));
     }
 
-    .notifications-title {
+    .notifications-heading {
         font-size: 1.5rem;
+    }
+
+    .notifications-header {
+        flex-wrap: wrap;
+        gap: var(--space-2);
     }
 
     .notif-avatar,
@@ -344,4 +357,193 @@
     .notif-quote-text {
         flex: 1;
     }
+}
+
+/* ═══════════════════════════════════════════════════
+   Phase R1-D v7: Delete, Confirmation Dialog, Load More
+   ═══════════════════════════════════════════════════ */
+
+/* ─── Delete All Button ─── */
+.delete-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--error);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-family: inherit;
+}
+
+.delete-all-btn:hover {
+    background: var(--error);
+    color: var(--white);
+}
+
+.delete-all-btn:focus-visible {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
+}
+
+.delete-all-btn .icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* ─── Per-Card Delete Button ─── */
+.notif-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.notif-delete-btn:hover {
+    background: #fef2f2;
+    color: var(--error);
+}
+
+.notif-delete-btn:focus-visible {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
+}
+
+/* ─── Confirmation Dialog ─── */
+.delete-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-confirm-dialog {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.delete-confirm-dialog h2 {
+    margin: 0 0 8px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.delete-confirm-dialog p {
+    margin: 0 0 20px;
+    font-size: 0.9375rem;
+    color: var(--gray-600);
+    line-height: 1.5;
+}
+
+.delete-confirm-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.delete-confirm-cancel {
+    padding: 8px 20px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-family: inherit;
+}
+
+.delete-confirm-cancel:hover {
+    background: var(--gray-100);
+}
+
+.delete-confirm-cancel:focus-visible {
+    outline: 2px solid var(--accent-color-for-text-icons);
+    outline-offset: 2px;
+}
+
+.delete-confirm-submit {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    background: var(--error);
+    color: var(--white);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-family: inherit;
+}
+
+.delete-confirm-submit:hover {
+    background: #dc2626;
+}
+
+.delete-confirm-submit:focus-visible {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
+}
+
+/* ─── Load More ─── */
+.load-more-container {
+    text-align: center;
+    padding: 24px 0;
+}
+
+.load-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 32px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--gray-700);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    font-family: inherit;
+}
+
+.load-more-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.load-more-btn:focus-visible {
+    outline: 2px solid var(--accent-color-for-text-icons);
+    outline-offset: 2px;
+}
+
+.load-more-btn[aria-busy="true"] {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* ─── Card Removal Animation ─── */
+.notif-card.removing {
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
 }

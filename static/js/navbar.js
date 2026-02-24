@@ -884,5 +884,11 @@ document.addEventListener('DOMContentLoaded', function() {
         setupMarkAllRead();
     }
 
+    // Listen for count updates from notifications page (delete actions)
+    document.addEventListener('notifications:count-updated', function(e) {
+        var count = (e.detail && e.detail.count !== undefined) ? e.detail.count : 0;
+        updateBadge(count);
+    });
+
     document.addEventListener('DOMContentLoaded', initNotificationPolling);
 })();

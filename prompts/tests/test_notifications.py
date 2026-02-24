@@ -18,7 +18,8 @@ from prompts.models import (
     NOTIFICATION_TYPE_CATEGORY_MAP, Prompt,
 )
 from prompts.services.notifications import (
-    create_notification, get_unread_count, get_unread_count_by_category,
+    create_notification, delete_all_notifications, delete_notification,
+    get_unread_count, get_unread_count_by_category,
     mark_all_as_read, mark_as_read,
 )
 
@@ -981,3 +982,340 @@ class TestNotificationsPage(NotificationTestBase):
             t for t in response.context['category_tabs'] if t['value'] == 'likes'
         )
         self.assertEqual(likes_tab['count'], 1)
+
+
+# ═══════════════════════════════════════════════════
+# DELETE TESTS (Phase R1-D v7)
+# ═══════════════════════════════════════════════════
+
+class TestNotificationDeleteService(NotificationTestBase):
+    """Tests for delete_notification() and delete_all_notifications() service functions."""
+
+    def test_delete_single_notification(self):
+        """delete_notification() removes a notification and returns True."""
+        n = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='Test',
+        )
+        result = delete_notification(self.user1, n.id)
+        self.assertTrue(result)
+        self.assertEqual(Notification.objects.filter(id=n.id).count(), 0)
+
+    def test_delete_single_notification_wrong_user(self):
+        """Cannot delete another user's notification."""
+        n = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='Test',
+        )
+        result = delete_notification(self.user2, n.id)
+        self.assertFalse(result)
+        self.assertEqual(Notification.objects.filter(id=n.id).count(), 1)
+
+    def test_delete_single_notification_not_found(self):
+        """Deleting non-existent notification returns False."""
+        result = delete_notification(self.user1, 99999)
+        self.assertFalse(result)
+
+    def test_delete_all_notifications(self):
+        """delete_all_notifications() removes all for user."""
+        create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='One',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Two',
+        )
+        count = delete_all_notifications(self.user1)
+        self.assertEqual(count, 2)
+        self.assertEqual(Notification.objects.filter(recipient=self.user1).count(), 0)
+
+    def test_delete_all_with_category(self):
+        """delete_all_notifications() with category only removes that category."""
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='Like',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Follow',
+        )
+        count = delete_all_notifications(self.user1, category='likes')
+        self.assertEqual(count, 1)
+        self.assertEqual(Notification.objects.filter(recipient=self.user1).count(), 1)
+
+    def test_delete_all_does_not_affect_other_users(self):
+        """delete_all_notifications() only removes for the specified user."""
+        create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='User1 notif',
+        )
+        create_notification(
+            recipient=self.user2,
+            notification_type='system',
+            title='User2 notif',
+        )
+        delete_all_notifications(self.user1)
+        self.assertEqual(Notification.objects.filter(recipient=self.user1).count(), 0)
+        self.assertEqual(Notification.objects.filter(recipient=self.user2).count(), 1)
+
+
+class TestDeleteNotificationAPI(NotificationTestBase):
+    """Tests for POST /notifications/delete/<id>/."""
+
+    def test_delete_single_returns_ok(self):
+        """DELETE single notification via API returns success."""
+        self.client.force_login(self.user1)
+        n = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='Test',
+        )
+        response = self.client.post(
+            reverse('prompts:delete_notification', args=[n.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'ok')
+        self.assertIn('unread_count', data)
+        self.assertEqual(Notification.objects.filter(id=n.id).count(), 0)
+
+    def test_delete_returns_updated_unread_count(self):
+        """Delete response includes updated unread count."""
+        self.client.force_login(self.user1)
+        n1 = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='One',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Two',
+        )
+        response = self.client.post(
+            reverse('prompts:delete_notification', args=[n1.id])
+        )
+        data = response.json()
+        self.assertEqual(data['unread_count'], 1)
+
+    def test_delete_not_owned_returns_404(self):
+        """Cannot delete another user's notification."""
+        self.client.force_login(self.user2)
+        n = create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='Test',
+        )
+        response = self.client.post(
+            reverse('prompts:delete_notification', args=[n.id])
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_nonexistent_returns_404(self):
+        """Deleting non-existent notification returns 404."""
+        self.client.force_login(self.user1)
+        response = self.client.post(
+            reverse('prompts:delete_notification', args=[99999])
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_requires_login(self):
+        """Delete endpoint requires authentication."""
+        response = self.client.post(
+            reverse('prompts:delete_notification', args=[1])
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_delete_requires_post(self):
+        """Delete endpoint rejects GET requests."""
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:delete_notification', args=[1])
+        )
+        self.assertEqual(response.status_code, 405)
+
+
+class TestDeleteAllNotificationsAPI(NotificationTestBase):
+    """Tests for POST /notifications/delete-all/."""
+
+    def test_delete_all_returns_ok(self):
+        """DELETE all notifications returns success with count."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='One',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Two',
+        )
+        response = self.client.post(
+            reverse('prompts:delete_all_notifications')
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'ok')
+        self.assertEqual(data['deleted_count'], 2)
+        self.assertIn('unread_count', data)
+
+    def test_delete_all_with_category_filter(self):
+        """DELETE all with category filter only removes that category."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='Like',
+        )
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='Follow',
+        )
+        response = self.client.post(
+            reverse('prompts:delete_all_notifications'),
+            data={'category': 'likes'},
+        )
+        data = response.json()
+        self.assertEqual(data['deleted_count'], 1)
+        self.assertEqual(Notification.objects.filter(recipient=self.user1).count(), 1)
+
+    def test_delete_all_does_not_affect_other_users(self):
+        """DELETE all only removes notifications for the requesting user."""
+        self.client.force_login(self.user1)
+        create_notification(
+            recipient=self.user1,
+            notification_type='system',
+            title='Mine',
+        )
+        create_notification(
+            recipient=self.user2,
+            notification_type='system',
+            title='Not mine',
+        )
+        self.client.post(reverse('prompts:delete_all_notifications'))
+        self.assertEqual(Notification.objects.filter(recipient=self.user2).count(), 1)
+
+    def test_delete_all_requires_login(self):
+        """DELETE all endpoint requires authentication."""
+        response = self.client.post(
+            reverse('prompts:delete_all_notifications')
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_delete_all_requires_post(self):
+        """DELETE all endpoint rejects GET requests."""
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:delete_all_notifications')
+        )
+        self.assertEqual(response.status_code, 405)
+
+
+# ═══════════════════════════════════════════════════
+# PAGINATION TESTS (Phase R1-D v7)
+# ═══════════════════════════════════════════════════
+
+class TestNotificationPagination(NotificationTestBase):
+    """Tests for notification pagination (Load More)."""
+
+    def _create_many_notifications(self, count, category='comments'):
+        """Helper to create N notifications in a specific category."""
+        type_map = {
+            'comments': 'comment_on_prompt',
+            'likes': 'prompt_liked',
+            'follows': 'new_follower',
+            'system': 'system',
+        }
+        notif_type = type_map.get(category, 'system')
+        notifications = []
+        for i in range(count):
+            n = Notification.objects.create(
+                recipient=self.user1,
+                sender=self.user2 if notif_type != 'system' else None,
+                notification_type=notif_type,
+                category=category,
+                title=f'Notification {i}',
+            )
+            notifications.append(n)
+        return notifications
+
+    def test_page_returns_limited_notifications(self):
+        """Page returns at most NOTIFICATIONS_PER_PAGE items."""
+        self._create_many_notifications(20)
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=comments'
+        )
+        self.assertEqual(len(response.context['notifications']), 15)
+
+    def test_has_more_flag_when_more_exist(self):
+        """has_more is True when more notifications exist beyond the page."""
+        self._create_many_notifications(20)
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=comments'
+        )
+        self.assertTrue(response.context['has_more'])
+
+    def test_has_more_false_at_end(self):
+        """has_more is False when all notifications have been returned."""
+        self._create_many_notifications(5)
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=comments'
+        )
+        self.assertFalse(response.context['has_more'])
+
+    def test_offset_pagination(self):
+        """offset parameter skips the correct number of notifications."""
+        self._create_many_notifications(20)
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=comments&offset=15'
+        )
+        self.assertEqual(len(response.context['notifications']), 5)
+        self.assertFalse(response.context['has_more'])
+
+    def test_ajax_returns_json(self):
+        """AJAX request returns JSON with html, has_more, next_offset."""
+        self._create_many_notifications(20)
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=comments&offset=0',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('html', data)
+        self.assertIn('has_more', data)
+        self.assertIn('next_offset', data)
+        self.assertTrue(data['has_more'])
+        self.assertEqual(data['next_offset'], 15)
+
+    def test_pagination_with_category_filter(self):
+        """Pagination works correctly when filtered by category."""
+        self._create_many_notifications(10, category='likes')
+        self._create_many_notifications(5, category='comments')
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=likes'
+        )
+        self.assertEqual(len(response.context['notifications']), 10)
+        self.assertFalse(response.context['has_more'])

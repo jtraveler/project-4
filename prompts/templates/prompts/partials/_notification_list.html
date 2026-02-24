@@ -1,0 +1,78 @@
+{% load static %}
+{% for notification in notifications %}
+<div class="notif-card {% if not notification.is_read %}notif-unread{% endif %}{% if not notification.message %} notif-card--no-quote{% endif %}"
+     data-notification-id="{{ notification.id }}"
+     data-category="{{ notification.category }}"
+     role="listitem">
+
+     <div class="notif-unread-dot-shell">
+        {% if not notification.is_read %}
+            <span class="notif-unread-dot" aria-hidden="true"></span>
+            {% endif %}
+    </div>
+
+    <!-- Avatar -->
+    <div class="notif-avatar-wrapper">
+        {% if notification.sender %}
+            {% if notification.sender.userprofile.avatar and notification.sender.userprofile.avatar.url %}
+            <img src="{{ notification.sender.userprofile.avatar.url }}"
+                 alt="{{ notification.sender.username }}'s avatar"
+                 class="notif-avatar"
+                 loading="lazy"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="notif-avatar-placeholder" style="display: none; background: var(--avatar-gradient-{{ notification.sender.userprofile.get_avatar_color_index }}, var(--main-blue));" role="img" aria-label="{{ notification.sender.username }}'s avatar">
+                {{ notification.sender.username|first|upper }}
+            </div>
+            {% else %}
+            <div class="notif-avatar-placeholder"
+                 style="background: var(--avatar-gradient-{{ notification.sender.userprofile.get_avatar_color_index }}, var(--main-blue));"
+                 role="img" aria-label="{{ notification.sender.username }}'s avatar">
+                {{ notification.sender.username|first|upper }}
+            </div>
+            {% endif %}
+        {% else %}
+        <div class="notif-avatar-placeholder" style="background: var(--gray-600, #525252);" role="img" aria-label="System notification">
+            <svg class="icon" aria-hidden="true" width="20" height="20"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Body: title + timestamp only -->
+    <div class="notif-body">
+        <div class="notif-body-title">{{ notification.title }}</div>
+        <div class="notif-time">{{ notification.created_at|timesince }} ago</div>
+    </div>
+
+    <!-- Quoted comment (separate column, only for messages) -->
+    {% if notification.message %}
+    <div class="notif-quote">
+        <span class="notif-quote-mark" aria-hidden="true">&ldquo;</span>
+        <span class="notif-quote-text">{{ notification.message|truncatewords:20 }}</span>
+        <span class="notif-quote-mark" aria-hidden="true">&rdquo;</span>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="notif-actions">
+
+        {% if notification.link %}
+            {% if notification.notification_type == 'comment_on_prompt' or notification.notification_type == 'reply_to_comment' %}
+            <a href="{{ notification.link }}" class="notif-action-btn">Reply</a>
+            {% elif notification.notification_type == 'new_follower' %}
+            <a href="{{ notification.link }}" class="notif-action-btn">View Profile</a>
+            {% else %}
+            <a href="{{ notification.link }}" class="notif-action-btn">View</a>
+            {% endif %}
+        {% endif %}
+        {% if not notification.is_read %}
+        <button type="button" class="notif-mark-read-btn" aria-label="Mark &quot;{{ notification.title|truncatewords:6 }}&quot; as read">Mark as read</button>
+        {% endif %}
+        <button type="button"
+                class="notif-delete-btn"
+                data-notification-id="{{ notification.id }}"
+                aria-label="Delete this notification">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+        </button>
+    </div>
+</div>
+{% endfor %}

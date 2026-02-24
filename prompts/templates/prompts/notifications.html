@@ -10,15 +10,23 @@
 
 {% block content %}
 <div class="notifications-page">
-    <!-- Header — matches leaderboard page pattern -->
+    <!-- Header — flex row with title and action buttons -->
     <div class="notifications-header">
-        <h1 class="notifications-title">Notifications</h1>
-        {% if total_unread > 0 %}
-        <button type="button" class="notif-page-mark-all" id="markAllReadPageBtn">
-            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-square-check"/></svg>
-            Mark all as read
-        </button>
-        {% endif %}
+        <h1 class="notifications-heading">Notifications</h1>
+        <div class="notifications-header-actions">
+            {% if total_unread > 0 %}
+            <button type="button" class="notif-page-mark-all" id="markAllReadPageBtn">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-square-check"/></svg>
+                Mark all as read
+            </button>
+            {% endif %}
+            <button type="button"
+                    class="delete-all-btn"
+                    aria-label="Delete all notifications">
+                <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+                Delete All
+            </button>
+        </div>
     </div>
 
     <!-- Category tabs — reuses profile-tabs-wrapper pattern with overflow arrows -->
@@ -30,6 +38,7 @@
             {% for tab in category_tabs %}
             <a href="{% url 'prompts:notifications' %}?category={{ tab.value }}"
                class="profile-tab {% if active_category == tab.value %}profile-tab-active{% endif %}"
+               data-category="{{ tab.value }}"
                {% if active_category == tab.value %}aria-current="page"{% endif %}>
                 {{ tab.label }}
                 <span class="profile-tab-count stat-badge">{{ tab.count }}</span>
@@ -46,10 +55,11 @@
 
     <!-- Notification list -->
     <div class="notif-list" role="list" aria-label="Notifications">
-        
+
         {% for notification in notifications %}
         <div class="notif-card {% if not notification.is_read %}notif-unread{% endif %}{% if not notification.message %} notif-card--no-quote{% endif %}"
              data-notification-id="{{ notification.id }}"
+             data-category="{{ notification.category }}"
              role="listitem">
 
              <div class="notif-unread-dot-shell">
@@ -114,6 +124,12 @@
                 {% if not notification.is_read %}
                 <button type="button" class="notif-mark-read-btn" aria-label="Mark &quot;{{ notification.title|truncatewords:6 }}&quot; as read">Mark as read</button>
                 {% endif %}
+                <button type="button"
+                        class="notif-delete-btn"
+                        data-notification-id="{{ notification.id }}"
+                        aria-label="Delete this notification">
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"></use></svg>
+                </button>
             </div>
         </div>
         {% empty %}
@@ -122,6 +138,33 @@
             <p>No notifications yet</p>
         </div>
         {% endfor %}
+    </div>
+
+    {% if has_more %}
+    <div class="load-more-container">
+        <button type="button"
+                class="load-more-btn"
+                data-next-offset="{{ next_offset }}"
+                aria-label="Load more notifications">
+            Load More
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete All Confirmation Dialog -->
+<div class="delete-confirm-overlay" id="deleteConfirmOverlay" style="display: none;"
+     role="alertdialog"
+     aria-modal="true"
+     aria-labelledby="delete-confirm-title"
+     aria-describedby="delete-confirm-message">
+    <div class="delete-confirm-dialog">
+        <h2 id="delete-confirm-title">Delete All Notifications</h2>
+        <p id="delete-confirm-message">This will permanently delete all your notifications. This action cannot be undone.</p>
+        <div class="delete-confirm-actions">
+            <button type="button" class="delete-confirm-cancel">Cancel</button>
+            <button type="button" class="delete-confirm-submit">Delete All</button>
+        </div>
     </div>
 </div>
 {% endblock %}

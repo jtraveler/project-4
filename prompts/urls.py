@@ -140,6 +140,8 @@ urlpatterns = [
     path('api/notifications/unread-count/', notification_views.unread_count_api, name='notification_unread_count_api'),
     path('api/notifications/mark-all-read/', notification_views.mark_all_read_api, name='notification_mark_all_read_api'),
     path('api/notifications/<int:notification_id>/read/', notification_views.mark_read_api, name='notification_mark_read_api'),
+    path('notifications/delete/<int:notification_id>/', notification_views.delete_notification_view, name='delete_notification'),
+    path('notifications/delete-all/', notification_views.delete_all_notifications_view, name='delete_all_notifications'),
 
     # Admin moderation dashboard
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),

@@ -30,7 +30,7 @@
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
 | **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
 | **2B** | **Category Taxonomy Revamp + Tag Pipeline** | **✅ 2B-1 through 2B-9 + S80-81 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring, tag validation pipeline, admin metadata** |
-| **R1** | **User Notifications** | **✅ Complete (S86)** | **Deploy to Heroku** |
+| **R1 + R1-D** | **User Notifications** | **✅ Complete (S86-87)** | **Infrastructure (S86) + notifications page redesign (S87). Deploy to Heroku** |
 
 ---
 
@@ -406,15 +406,16 @@ Plus: Admin metadata editing, security hardening, tag validation pipeline, compo
 
 ---
 
-## ✅ Phase R1: User Frontend Notifications (COMPLETE — Session 86)
+## ✅ Phase R1 + R1-D: User Frontend Notifications (COMPLETE — Sessions 86-87)
 
-**Completed:** February 17, 2026
-**Tests:** 54 new tests (649 total)
+**Completed:** February 17-18, 2026 (R1: S86, R1-D: S87)
+**Tests:** 62 notification tests (~657 total)
 
 ### What Was Built
 
 Full in-app notification system with bell dropdown and dedicated notifications page:
 
+**R1 Infrastructure (Session 86):**
 - **Notification model:** 6 types (comment, like, follow, collection_save, system, admin), 5 categories, 3 DB indexes
 - **Signal handlers:** comment (post_save), like (m2m_changed), follow (post_save), collection save (post_save)
 - **Service layer:** create with 60s duplicate prevention, count unread, mark-read (single/all)
@@ -424,6 +425,17 @@ Full in-app notification system with bell dropdown and dedicated notifications p
 - **Notifications page:** Category tab filtering (profile-tabs style), mark-as-read, empty states
 - **WAI-ARIA keyboard navigation:** Roving focus, ArrowDown/Up, Escape, role="menu"/"menuitem"
 - **Shared components:** overflow-tabs.js (187 lines), profile-tabs.css — used by notifications, user profile, collections
+
+**R1-D Notifications Page Redesign (Session 87):**
+- **Card-based layout:** Sender avatars, decorative quotation marks for comment context
+- **4-column layout:** avatar|body|quote|actions for comments, 3-column for other notification types
+- **Per-notification "Mark as read":** Button with event delegation for dynamically rendered cards
+- **Comment anchors:** Reply links include #comments anchor + scroll-margin-top offset for sticky nav
+- **Checkmark icon:** square-check-big SVG in "Mark all as read" button
+- **Bell ↔ page sync:** Custom DOM event ('notifications:all-read') for cross-script communication
+- **Dedup filter fix:** Added link + message to Q filter — prevents unique comments from being silently dropped
+- **Backfill command:** `backfill_comment_anchors` management command for existing comment notification links
+- **Polling interval:** Reduced from 60s to 15s for more responsive bell badge UX
 
 ### Key Files
 

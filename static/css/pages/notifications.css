@@ -19,7 +19,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-8);
+    margin-bottom: 50px;
+    flex-direction: column;
+    gap: 30px;
 }
 
 .notifications-heading {
@@ -206,7 +208,7 @@
 /* === ACTIONS COLUMN === */
 .notif-actions {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: flex-end;
     gap: var(--space-2);
     flex-shrink: 0;
@@ -226,11 +228,12 @@
     flex-shrink: 0;
 }
 
-/* Action button — black pill */
+/* Action button — black pill (used on <a> and <button> elements) */
 .notif-action-btn {
     display: inline-block;
     padding: 6px 16px;
     font-size: var(--font-size-sm, 14px);
+    font-family: inherit;
     font-weight: 500;
     color: var(--white, #fff);
     background: var(--gray-900, #171717);
@@ -238,6 +241,7 @@
     border-radius: 9999px;
     text-decoration: none;
     white-space: nowrap;
+    cursor: pointer;
     transition: background var(--transition-base);
     line-height: 1.4;
 }
@@ -258,33 +262,6 @@
     transform: scale(0.97);
 }
 
-/* Per-card "Mark as read" text button */
-.notif-mark-read-btn {
-    background: none;
-    border: none;
-    padding: var(--space-1) var(--space-2);
-    font-family: inherit;
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    color: var(--gray-500, #737373);
-    cursor: pointer;
-    transition: color var(--transition-base);
-    white-space: nowrap;
-}
-
-/* WCAG: --gray-500 is ~4.1:1 on --gray-70 (#F4F4F4). Bump to --gray-600 on unread cards. */
-.notif-unread .notif-mark-read-btn {
-    color: var(--gray-600, #525252);
-}
-
-.notif-mark-read-btn:hover {
-    color: var(--gray-900, #171717);
-}
-
-.notif-mark-read-btn:focus-visible {
-    outline: 2px solid var(--gray-600, #525252);
-    outline-offset: 2px;
-}
 
 /* === EMPTY STATE === */
 .notif-empty {

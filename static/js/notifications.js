@@ -187,7 +187,16 @@
                     return; // Prevent other handlers
                 }
 
-                // Trigger 1: Action button (Reply/View/View Profile) on unread card
+                // Trigger 1: Per-card "Mark as read" button (checked before .notif-action-btn
+                // because the mark-read button also carries .notif-action-btn for styling)
+                var readBtn = target.closest('.notif-mark-read-btn');
+                if (readBtn) {
+                    var targetCard = readBtn.closest('.notif-card');
+                    markSingleRead(targetCard);
+                    return;
+                }
+
+                // Trigger 2: Action button (Reply/View/View Profile) on unread card
                 var actionBtn = target.closest('.notif-action-btn');
                 if (actionBtn) {
                     var actionCard = actionBtn.closest('.notif-card.notif-unread');
@@ -205,14 +214,6 @@
                             }).catch(function() {});
                         }
                     }
-                    return;
-                }
-
-                // Trigger 2: Per-card "Mark as read" button
-                var readBtn = target.closest('.notif-mark-read-btn');
-                if (readBtn) {
-                    var targetCard = readBtn.closest('.notif-card');
-                    markSingleRead(targetCard);
                     return;
                 }
             });

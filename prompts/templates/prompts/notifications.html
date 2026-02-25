@@ -122,7 +122,7 @@
                     {% endif %}
                 {% endif %}
                 {% if not notification.is_read %}
-                <button type="button" class="notif-mark-read-btn" aria-label="Mark &quot;{{ notification.title|truncatewords:6 }}&quot; as read">Mark as read</button>
+                <button type="button" class="notif-action-btn notif-mark-read-btn" aria-label="Mark &quot;{{ notification.title|truncatewords:6 }}&quot; as read">Mark as read</button>
                 {% endif %}
                 <button type="button"
                         class="notif-delete-btn"

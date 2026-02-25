@@ -246,11 +246,7 @@
     line-height: 1.4;
 }
 
-.notif-action-btn:hover {
-    background: var(--gray-700, #404040);
-    color: var(--white, #fff);
-    text-decoration: none;
-}
+
 
 .notif-action-btn:focus-visible {
     outline: 2px solid var(--gray-900, #171717);
@@ -377,18 +373,14 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 6px;
+    padding: 6px 0 6px;
+    margin-left: 10px;
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: var(--gray-500);
+    color: var(--gray-600);
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.notif-delete-btn:hover {
-    background: #fef2f2;
-    color: var(--error);
 }
 
 .notif-delete-btn:focus-visible {
@@ -523,4 +515,26 @@
     transform: translateX(20px);
     transition: opacity 0.25s ease, transform 0.25s ease;
     pointer-events: none;
+}
+
+/* ─── Staggered Fade-In for Load More ─── */
+.notif-card.notif-entering {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+.notif-card.notif-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 150ms ease, transform 150ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .notif-card.notif-entering {
+        opacity: 1;
+        transform: none;
+    }
+    .notif-card.notif-enter-active {
+        transition: none;
+    }
 }

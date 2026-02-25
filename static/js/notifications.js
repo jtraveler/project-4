@@ -448,10 +448,28 @@
                 })
                 .then(function(response) { return response.json(); })
                 .then(function(data) {
-                    // Append new cards
+                    // Append new cards with staggered fade-in
                     var list = document.querySelector('.notif-list');
                     if (list && data.html) {
-                        list.insertAdjacentHTML('beforeend', data.html);
+                        // Parse HTML into individual cards
+                        var temp = document.createElement('div');
+                        temp.innerHTML = data.html;
+                        var newCards = Array.from(temp.children);
+
+                        newCards.forEach(function(card, index) {
+                            // Start hidden
+                            card.classList.add('notif-entering');
+                            list.appendChild(card);
+
+                            // Stagger: 50ms delay per card, then trigger transition
+                            setTimeout(function() {
+                                card.classList.add('notif-enter-active');
+                                // Clean up classes after animation completes
+                                setTimeout(function() {
+                                    card.classList.remove('notif-entering', 'notif-enter-active');
+                                }, 150);
+                            }, index * 50);
+                        });
                     }
 
                     // Update Load More button

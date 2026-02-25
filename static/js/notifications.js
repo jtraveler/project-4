@@ -123,6 +123,7 @@
                 var deleteBtn = target.closest('.notif-delete-btn');
                 if (deleteBtn) {
                     var card = deleteBtn.closest('.notif-card');
+                    if (!card || card.classList.contains('removing')) return; // Prevent double-delete
                     var notifId = deleteBtn.dataset.notificationId || card.dataset.notificationId;
 
                     // ♿ Find next focus target BEFORE removing card
@@ -154,35 +155,45 @@
                     })
                     .catch(function() {}); // Fire-and-forget
 
-                    // Remove card after animation
+                    // Phase 1: Slide out (400ms), then Phase 2: Collapse gap (300ms)
                     setTimeout(function() {
-                        card.remove();
+                        // Capture current height before collapsing
+                        card.style.maxHeight = card.offsetHeight + 'px';
+                        // Force reflow so max-height is applied before transition starts
+                        card.offsetHeight;
+                        card.classList.add('collapsing');
 
-                        // ♿ Focus management — CRITICAL
-                        if (nextCard) {
-                            nextCard.setAttribute('tabindex', '-1');
-                            nextCard.focus();
-                        } else {
-                            var heading = document.querySelector('.notifications-heading');
-                            if (heading) {
-                                heading.setAttribute('tabindex', '-1');
-                                heading.focus();
-                            }
-                        }
-
-                        // ♿ Announce deletion (150ms stagger to avoid live region collision)
+                        // Phase 3: Remove from DOM after collapse completes
                         setTimeout(function() {
-                            if (statusMsg) {
-                                statusMsg.textContent = 'Notification deleted';
+                            card.remove();
+
+                            // ♿ Focus management — CRITICAL
+                            // Verify nextCard still exists in DOM (may have been deleted during animation)
+                            if (nextCard && document.body.contains(nextCard)) {
+                                nextCard.setAttribute('tabindex', '-1');
+                                nextCard.focus();
+                            } else {
+                                var heading = document.querySelector('.notifications-heading');
+                                if (heading) {
+                                    heading.setAttribute('tabindex', '-1');
+                                    heading.focus();
+                                }
                             }
-                        }, 150);
 
-                        // Update tab badge counts
-                        updateTabBadgeCounts();
+                            // ♿ Announce deletion (150ms stagger to avoid live region collision)
+                            setTimeout(function() {
+                                if (statusMsg) {
+                                    statusMsg.textContent = 'Notification deleted';
+                                }
+                            }, 150);
 
-                        // Check if list is now empty
-                        checkEmptyState();
-                    }, 250); // Match CSS transition duration
+                            // Update tab badge counts
+                            updateTabBadgeCounts();
+
+                            // Check if list is now empty
+                            checkEmptyState();
+                        }, 300); // Phase 2: collapse duration
+                    }, 400); // Phase 1: slide-out duration
 
                     return; // Prevent other handlers
                 }
@@ -468,7 +479,7 @@
                                 setTimeout(function() {
                                     card.classList.remove('notif-entering', 'notif-enter-active');
                                 }, 150);
-                            }, index * 50);
+                            }, index * 100);
                         });
                     }
 

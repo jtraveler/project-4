@@ -509,12 +509,23 @@
     cursor: wait;
 }
 
-/* ─── Card Removal Animation ─── */
+/* ─── Card Removal Animation (two-phase: slide-out → collapse) ─── */
 .notif-card.removing {
     opacity: 0;
-    transform: translateX(20px);
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    transform: translateX(30px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
     pointer-events: none;
+}
+
+.notif-card.collapsing {
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease, border-width 0.3s ease;
 }
 
 /* ─── Staggered Fade-In for Load More ─── */
@@ -526,7 +537,7 @@
 .notif-card.notif-enter-active {
     opacity: 1;
     transform: translateY(0);
-    transition: opacity 150ms ease, transform 150ms ease;
+    transition: opacity 400ms ease, transform 400ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {

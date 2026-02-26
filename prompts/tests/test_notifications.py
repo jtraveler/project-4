@@ -1682,3 +1682,855 @@ class TestSortedNotificationCategories(NotificationTestBase):
 
         result = sorted_notification_categories(context)
         self.assertEqual(result, [])
+
+
+# =============================================================================
+# SYSTEM NOTIFICATIONS ADMIN (Phase P2-A)
+# =============================================================================
+
+
+class TestSystemNotificationsAccess(TestCase):
+    """Tests for system notifications page access control."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.regular_user = User.objects.create_user(
+            'regular', 'regular@example.com', 'pass'
+        )
+        cls.staff_user = User.objects.create_user(
+            'staffuser', 'staff@example.com', 'pass',
+            is_staff=True,
+        )
+
+    def test_system_notifications_page_requires_staff(self):
+        """Non-staff user is redirected to admin login."""
+        self.client.force_login(self.regular_user)
+        response = self.client.get(
+            reverse('prompts:system_notifications')
+        )
+        # @staff_member_required redirects non-staff to admin login
+        self.assertEqual(response.status_code, 302)
+
+    def test_system_notifications_page_loads_for_staff(self):
+        """Staff user gets 200."""
+        self.client.force_login(self.staff_user)
+        response = self.client.get(
+            reverse('prompts:system_notifications')
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'System Notifications')
+
+    def test_system_notifications_page_requires_login(self):
+        """Anonymous user is redirected to login."""
+        response = self.client.get(
+            reverse('prompts:system_notifications')
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response.url)
+
+
+class TestComposeSystemNotification(TestCase):
+    """Tests for composing and sending system notifications."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user(
+            'admin', 'admin@example.com', 'pass', is_staff=True,
+        )
+        cls.user1 = User.objects.create_user(
+            'alice', 'alice@example.com', 'pass'
+        )
+        cls.user2 = User.objects.create_user(
+            'bob', 'bob@example.com', 'pass'
+        )
+
+    def test_compose_system_notification_all_users(self):
+        """POST with action=send creates notifications for all active users."""
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'send',
+                'message': 'Test System Message body',
+                'audience': 'all',
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Sent to 3 users.')
+        # Title is auto-derived from message
+        notifs = Notification.objects.filter(
+            notification_type='system',
+            title='Test System Message body',
+        )
+        self.assertEqual(notifs.count(), 3)
+        # Verify system notification contract fields
+        notif = notifs.first()
+        self.assertTrue(notif.is_admin_notification)
+        self.assertIsNone(notif.sender)
+        self.assertEqual(notif.category, 'system')
+        self.assertEqual(notif.message, 'Test System Message body')
+
+    def test_compose_system_notification_staff_only(self):
+        """POST with audience=staff only sends to staff."""
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'send',
+                'message': 'Staff Only Notice',
+                'audience': 'staff',
+            },
+        )
+        self.assertContains(response, 'Sent to 1 users.')
+        count = Notification.objects.filter(
+            notification_type='system',
+            title='Staff Only Notice',
+        ).count()
+        # Only 1 staff user
+        self.assertEqual(count, 1)
+        notif = Notification.objects.get(
+            notification_type='system',
+            title='Staff Only Notice',
+        )
+        self.assertEqual(notif.recipient, self.staff_user)
+
+    def test_compose_requires_message(self):
+        """POST without message shows error."""
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'send',
+                'message': '',
+                'audience': 'all',
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Message is required')
+        self.assertEqual(
+            Notification.objects.filter(notification_type='system').count(), 0
+        )
+
+    def test_invalid_audience_defaults_to_all(self):
+        """Invalid audience value defaults to 'all', sends to all users."""
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'send',
+                'message': 'Invalid audience test',
+                'audience': 'hackers',
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # Should default to 'all' and send to all 3 active users
+        count = Notification.objects.filter(
+            notification_type='system',
+            title='Invalid audience test',
+        ).count()
+        self.assertEqual(count, 3)
+
+    def test_compose_with_html_message(self):
+        """HTML message derives plain-text title."""
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'send',
+                'message': '<p><b>Important</b> update for all users</p>',
+                'audience': 'all',
+            },
+        )
+        self.assertContains(response, 'Sent to 3 users.')
+        notif = Notification.objects.filter(
+            notification_type='system',
+        ).first()
+        self.assertEqual(notif.title, 'Important update for all users')
+
+
+class TestSystemNotificationDisplay(NotificationTestBase):
+    """Tests for system notification visibility in user feeds."""
+
+    def test_system_notification_appears_in_user_feed(self):
+        """Created system notification appears on notifications page."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        create_system_notification(
+            message='Welcome to PromptFinder!',
+            audience='all',
+        )
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=system'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Welcome to PromptFinder!')
+
+    def test_expired_notifications_hidden_from_feed(self):
+        """Expired notifications don't appear in user's notification list."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        create_system_notification(
+            message='Old announcement',
+            audience='all',
+        )
+        # Manually expire them
+        Notification.objects.filter(
+            title='Old announcement'
+        ).update(is_expired=True)
+
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=system'
+        )
+        self.assertNotContains(response, 'Old announcement')
+
+    def test_expired_notifications_hidden_from_unread_count(self):
+        """Expired notifications don't count in unread badge."""
+        from prompts.services.notifications import (
+            create_system_notification,
+            get_unread_count,
+        )
+        create_system_notification(
+            message='Expiring notice',
+            audience='all',
+        )
+        count_before = get_unread_count(self.user1)
+        self.assertGreater(count_before, 0)
+
+        Notification.objects.filter(
+            title='Expiring notice'
+        ).update(is_expired=True)
+
+        count_after = get_unread_count(self.user1)
+        self.assertEqual(count_after, count_before - 1)
+
+
+class TestDeleteSystemNotification(TestCase):
+    """Tests for deleting system notification batches."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user(
+            'admin', 'admin@example.com', 'pass', is_staff=True,
+        )
+        cls.user1 = User.objects.create_user(
+            'alice', 'alice@example.com', 'pass'
+        )
+
+    def test_delete_batch_removes_notifications(self):
+        """Delete action hard-deletes matching batch."""
+        from prompts.services.notifications import (
+            create_system_notification,
+            get_system_notification_batches,
+        )
+        create_system_notification(
+            message='Maintenance Notice',
+            audience='all',
+        )
+        self.assertGreater(
+            Notification.objects.filter(title='Maintenance Notice').count(), 0
+        )
+
+        # Use batch timestamps from the service (matches how template works)
+        batches = get_system_notification_batches()
+        batch = [b for b in batches if b['title'] == 'Maintenance Notice'][0]
+
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'delete_batch',
+                'batch_title': 'Maintenance Notice',
+                'batch_after': batch['first_sent'].isoformat(),
+                'batch_before': batch['last_sent'].isoformat(),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # Notifications should be hard-deleted
+        self.assertEqual(
+            Notification.objects.filter(title='Maintenance Notice').count(), 0
+        )
+
+    def test_delete_batch_missing_title(self):
+        """Delete action with missing batch_title returns error."""
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'delete_batch',
+                'batch_after': '2026-01-01T00:00:00+00:00',
+                'batch_before': '2026-01-02T00:00:00+00:00',
+            },
+        )
+        self.assertContains(response, 'Invalid batch parameters')
+
+    def test_invalid_tab_defaults_to_blast(self):
+        """Unknown tab value falls back to blast tab."""
+        self.client.force_login(self.staff_user)
+        response = self.client.get(
+            reverse('prompts:system_notifications') + '?tab=garbage',
+        )
+        self.assertEqual(response.context['active_tab'], 'blast')
+
+
+class TestNavLinkVisibility(TestCase):
+    """Tests for the System Notifications nav link in profile dropdown."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.regular_user = User.objects.create_user(
+            'regular', 'regular@example.com', 'pass'
+        )
+        cls.staff_user = User.objects.create_user(
+            'staffuser', 'staff@example.com', 'pass',
+            is_staff=True,
+        )
+
+    def test_nav_link_visible_for_staff(self):
+        """Profile dropdown shows System Notifications link for staff."""
+        self.client.force_login(self.staff_user)
+        response = self.client.get(reverse('prompts:home'))
+        self.assertContains(response, 'System Notifications')
+        self.assertContains(
+            response, reverse('prompts:system_notifications')
+        )
+
+    def test_nav_link_hidden_for_non_staff(self):
+        """Profile dropdown hides System Notifications link for regular users."""
+        self.client.force_login(self.regular_user)
+        response = self.client.get(reverse('prompts:home'))
+        self.assertNotContains(
+            response, reverse('prompts:system_notifications')
+        )
+
+
+class TestSystemNotificationValidation(TestCase):
+    """Tests for server-side validation on system notification fields."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user(
+            'admin_val', 'admin_val@example.com', 'pass', is_staff=True,
+        )
+        cls.user1 = User.objects.create_user(
+            'valuser', 'valuser@example.com', 'pass'
+        )
+
+    def test_link_field_ignored(self):
+        """Link field is not processed (removed from form)."""
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'send',
+                'message': 'No Link Field',
+                'link': 'https://example.com/ignored',
+                'audience': 'all',
+            },
+        )
+        self.assertContains(response, 'Sent to')
+        notif = Notification.objects.filter(
+            title='No Link Field'
+        ).first()
+        # Link field is no longer processed — notification has empty link
+        self.assertEqual(notif.link, '')
+
+
+class TestDeleteAccessControl(TestCase):
+    """Tests for delete action authorization."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.regular_user = User.objects.create_user(
+            'nonadmin_expire', 'nonadmin@example.com', 'pass'
+        )
+        cls.staff_user = User.objects.create_user(
+            'admin_expire', 'admin_expire@example.com', 'pass',
+            is_staff=True,
+        )
+
+    def test_delete_action_requires_staff(self):
+        """Non-staff user cannot delete notification batches."""
+        self.client.force_login(self.regular_user)
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'delete_batch',
+                'batch_title': 'Test',
+                'batch_after': '2026-01-01T00:00:00+00:00',
+                'batch_before': '2026-01-01T00:00:00+00:00',
+            },
+        )
+        # @staff_member_required redirects non-staff to admin login
+        self.assertEqual(response.status_code, 302)
+
+
+class TestExpiresAtAutoExpiry(NotificationTestBase):
+    """Tests for expires_at datetime auto-expiry in display queries."""
+
+    def test_notification_with_past_expires_at_hidden_from_feed(self):
+        """Notification with expires_at in the past is excluded from feed."""
+        from prompts.services.notifications import create_system_notification
+
+        create_system_notification(
+            message='Past Expiry Notice',
+            audience='all',
+            expires_at=timezone.now() - timedelta(hours=1),
+        )
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=system'
+        )
+        self.assertNotContains(response, 'Past Expiry Notice')
+
+    def test_notification_with_past_expires_at_excluded_from_unread(self):
+        """Notification with expires_at in the past excluded from unread."""
+        from prompts.services.notifications import (
+            create_system_notification, get_unread_count,
+        )
+
+        count_before = get_unread_count(self.user1)
+        create_system_notification(
+            message='Expires Soon Notice',
+            audience='all',
+            expires_at=timezone.now() - timedelta(hours=1),
+        )
+        count_after = get_unread_count(self.user1)
+        # Should NOT increase because expires_at is in the past
+        self.assertEqual(count_after, count_before)
+
+    def test_notification_with_future_expires_at_shown_in_feed(self):
+        """Notification with expires_at in the future IS shown."""
+        from prompts.services.notifications import create_system_notification
+
+        create_system_notification(
+            message='Future Expiry Notice',
+            audience='all',
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=system'
+        )
+        self.assertContains(response, 'Future Expiry Notice')
+
+
+class TestSystemNotificationRateLimit(TestCase):
+    """Tests for rate limiting on system notification sends."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user(
+            'admin_rl', 'admin_rl@example.com', 'pass', is_staff=True,
+        )
+        cls.user1 = User.objects.create_user(
+            'rluser', 'rluser@example.com', 'pass'
+        )
+
+    def test_rate_limit_blocks_rapid_sends(self):
+        """Second send within 60s is blocked."""
+        self.client.force_login(self.staff_user)
+        # First send succeeds
+        self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'send',
+                'message': 'First Send',
+                'audience': 'all',
+            },
+        )
+        # Second send should be rate-limited
+        response = self.client.post(
+            reverse('prompts:system_notifications'),
+            {
+                'action': 'send',
+                'message': 'Second Send',
+                'audience': 'all',
+            },
+        )
+        self.assertContains(response, 'Please wait')
+        # Only first send created notifications
+        self.assertEqual(
+            Notification.objects.filter(title='Second Send').count(), 0
+        )
+
+
+# =============================================================================
+# CLICK TRACKING TESTS (Phase P2-A-fix)
+# =============================================================================
+
+
+class TestClickTracking(TestCase):
+    """Tests for notification click tracking endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user1 = User.objects.create_user(
+            'clickuser', 'click@example.com', 'pass'
+        )
+        cls.user2 = User.objects.create_user(
+            'otheruser', 'other@example.com', 'pass'
+        )
+
+    def test_click_count_defaults_to_zero(self):
+        """New notification has click_count=0."""
+        notif = Notification.objects.create(
+            recipient=self.user1,
+            notification_type='system',
+            category='system',
+            title='Test',
+            message='Test',
+            is_admin_notification=True,
+        )
+        self.assertEqual(notif.click_count, 0)
+
+    def test_click_increments_count(self):
+        """POST to click endpoint increments click_count."""
+        notif = Notification.objects.create(
+            recipient=self.user1,
+            notification_type='system',
+            category='system',
+            title='Click Test',
+            message='Click Test',
+            is_admin_notification=True,
+        )
+        self.client.force_login(self.user1)
+        response = self.client.post(
+            reverse('prompts:notification_click', args=[notif.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        notif.refresh_from_db()
+        self.assertEqual(notif.click_count, 1)
+
+    def test_click_requires_auth(self):
+        """Anonymous user gets redirected."""
+        notif = Notification.objects.create(
+            recipient=self.user1,
+            notification_type='system',
+            category='system',
+            title='Auth Test',
+            message='Auth Test',
+            is_admin_notification=True,
+        )
+        response = self.client.post(
+            reverse('prompts:notification_click', args=[notif.id])
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_click_wrong_user_no_increment(self):
+        """Click from non-recipient does not increment count."""
+        notif = Notification.objects.create(
+            recipient=self.user1,
+            notification_type='system',
+            category='system',
+            title='Wrong User Test',
+            message='Wrong User Test',
+            is_admin_notification=True,
+        )
+        self.client.force_login(self.user2)
+        response = self.client.post(
+            reverse('prompts:notification_click', args=[notif.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        notif.refresh_from_db()
+        # Should not increment because user2 is not the recipient
+        self.assertEqual(notif.click_count, 0)
+
+    def test_click_rejects_get(self):
+        """GET request to click endpoint should return 405."""
+        notif = Notification.objects.create(
+            recipient=self.user1,
+            notification_type='system',
+            category='system',
+            title='GET Test',
+            message='GET Test',
+            is_admin_notification=True,
+        )
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notification_click', args=[notif.id])
+        )
+        self.assertEqual(response.status_code, 405)
+
+    def test_click_nonexistent_notification(self):
+        """Click on nonexistent notification returns 200 (fire-and-forget)."""
+        self.client.force_login(self.user1)
+        response = self.client.post(
+            reverse('prompts:notification_click', args=[99999])
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'ok')
+
+    def test_double_click_increments_twice(self):
+        """Two sequential clicks increment click_count to 2."""
+        notif = Notification.objects.create(
+            recipient=self.user1,
+            notification_type='system',
+            category='system',
+            title='Double Click',
+            message='Double Click',
+            is_admin_notification=True,
+        )
+        self.client.force_login(self.user1)
+        url = reverse('prompts:notification_click', args=[notif.id])
+        self.client.post(url)
+        self.client.post(url)
+        notif.refresh_from_db()
+        self.assertEqual(notif.click_count, 2)
+
+
+# =============================================================================
+# SERVICE FUNCTION TESTS (Phase P2-A-fix)
+# =============================================================================
+
+
+class TestCreateSystemNotificationNewAPI(TestCase):
+    """Tests for the updated create_system_notification() API."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user1 = User.objects.create_user(
+            'svcuser1', 'svc1@example.com', 'pass'
+        )
+
+    def test_derives_title_from_plain_message(self):
+        """Plain text message becomes title."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        result = create_system_notification(
+            message='Scheduled maintenance tonight',
+            audience='all',
+        )
+        self.assertEqual(result['count'], 1)
+        notif = Notification.objects.filter(
+            notification_type='system'
+        ).first()
+        self.assertEqual(notif.title, 'Scheduled maintenance tonight')
+
+    def test_strips_html_for_title(self):
+        """HTML tags are stripped from message to derive title."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        create_system_notification(
+            message='<p><strong>Breaking</strong> news for <em>everyone</em></p>',
+            audience='all',
+        )
+        notif = Notification.objects.filter(
+            notification_type='system'
+        ).first()
+        self.assertEqual(notif.title, 'Breaking news for everyone')
+
+    def test_title_truncated_to_200_chars(self):
+        """Long message produces title truncated at 200 chars."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        long_message = 'x' * 300
+        create_system_notification(
+            message=long_message,
+            audience='all',
+        )
+        notif = Notification.objects.filter(
+            notification_type='system'
+        ).first()
+        self.assertEqual(len(notif.title), 200)
+
+    def test_empty_html_gets_default_title(self):
+        """HTML with no text content gets default title."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        create_system_notification(
+            message='<p><br></p>',
+            audience='all',
+        )
+        notif = Notification.objects.filter(
+            notification_type='system'
+        ).first()
+        self.assertEqual(notif.title, 'System Notification')
+
+    def test_created_by_in_log(self):
+        """created_by parameter doesn't crash (audit trail only)."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        with self.assertLogs('prompts.services.notifications', level='INFO') as cm:
+            result = create_system_notification(
+                message='Audit trail test',
+                audience='all',
+                created_by='admin_user',
+            )
+        self.assertEqual(result['count'], 1)
+        self.assertTrue(
+            any('admin_user' in msg for msg in cm.output),
+            'created_by should appear in log output',
+        )
+
+    def test_bleach_sanitizes_stored_message(self):
+        """Dangerous HTML tags stripped from stored message by bleach."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        create_system_notification(
+            message='<p>Hello</p><script>alert("xss")</script><b>bold</b>',
+            audience='all',
+        )
+        notif = Notification.objects.filter(
+            notification_type='system'
+        ).first()
+        # script tag should be stripped; p and b are allowed
+        self.assertNotIn('<script>', notif.message)
+        self.assertIn('<p>', notif.message)
+        self.assertIn('<b>', notif.message)
+
+    def test_staff_audience_filter(self):
+        """Staff audience only creates notifications for staff users."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        # user1 is not staff
+        result = create_system_notification(
+            message='Staff Only',
+            audience='staff',
+        )
+        # Only 0 staff users in this test class (user1 is not staff)
+        self.assertEqual(result['count'], 0)
+
+
+class TestDeleteSystemNotificationBatch(TestCase):
+    """Tests for the delete_system_notification_batch() service."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user1 = User.objects.create_user(
+            'deluser', 'del@example.com', 'pass'
+        )
+
+    def test_delete_removes_matching_notifications(self):
+        """delete_system_notification_batch hard-deletes matching rows."""
+        from prompts.services.notifications import (
+            create_system_notification,
+            delete_system_notification_batch,
+        )
+        create_system_notification(
+            message='Delete Me',
+            audience='all',
+        )
+        notif = Notification.objects.filter(
+            title='Delete Me'
+        ).first()
+        count = delete_system_notification_batch(
+            title='Delete Me',
+            created_after=notif.created_at,
+            created_before=notif.created_at,
+        )
+        self.assertEqual(count, 1)
+        self.assertEqual(
+            Notification.objects.filter(title='Delete Me').count(), 0
+        )
+
+    def test_delete_no_matching_rows_returns_zero(self):
+        """Delete with no matches returns 0 without error."""
+        from prompts.services.notifications import (
+            delete_system_notification_batch,
+        )
+        count = delete_system_notification_batch(
+            title='Nonexistent Title',
+            created_after=timezone.now(),
+            created_before=timezone.now(),
+        )
+        self.assertEqual(count, 0)
+
+    def test_delete_does_not_affect_other_batches(self):
+        """Deleting batch A does not delete batch B."""
+        from prompts.services.notifications import (
+            create_system_notification,
+            delete_system_notification_batch,
+        )
+        create_system_notification(message='Batch A', audience='all')
+        create_system_notification(message='Batch B', audience='all')
+
+        notif_a = Notification.objects.filter(title='Batch A').first()
+        delete_system_notification_batch(
+            title='Batch A',
+            created_after=notif_a.created_at,
+            created_before=notif_a.created_at,
+        )
+        self.assertEqual(
+            Notification.objects.filter(title='Batch A').count(), 0
+        )
+        self.assertGreater(
+            Notification.objects.filter(title='Batch B').count(), 0
+        )
+
+
+class TestBatchClickCounts(TestCase):
+    """Tests for click count aggregation in batch display."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user(
+            'batchstaff', 'batchstaff@example.com', 'pass', is_staff=True,
+        )
+        cls.user1 = User.objects.create_user(
+            'batchuser', 'batchuser@example.com', 'pass'
+        )
+
+    def test_batches_include_total_clicks(self):
+        """get_system_notification_batches includes total_clicks."""
+        from prompts.services.notifications import (
+            create_system_notification,
+            get_system_notification_batches,
+        )
+        create_system_notification(
+            message='Click Stats Test',
+            audience='all',
+        )
+        # Simulate some clicks
+        notifs = Notification.objects.filter(title='Click Stats Test')
+        recipient_count = notifs.count()
+        notifs.update(click_count=5)
+
+        batches = get_system_notification_batches()
+        batch = batches[0]
+        self.assertEqual(
+            batch['total_clicks'], recipient_count * 5
+        )
+        self.assertEqual(batch['read_percentage'], 0)
+
+    def test_batch_zero_clicks_defaults(self):
+        """Batch with no clicks shows total_clicks=0 and read_percentage=0."""
+        from prompts.services.notifications import (
+            create_system_notification,
+            get_system_notification_batches,
+        )
+        create_system_notification(
+            message='Zero Clicks Test',
+            audience='all',
+        )
+        batches = get_system_notification_batches()
+        batch = batches[0]
+        self.assertEqual(batch['total_clicks'], 0)
+        self.assertEqual(batch['read_percentage'], 0)
+
+    def test_sent_tab_renders_clicks_column(self):
+        """Sent Notifications tab shows Clicks column header."""
+        from prompts.services.notifications import (
+            create_system_notification,
+        )
+        create_system_notification(
+            message='Tab Render Test',
+            audience='all',
+        )
+        self.client.force_login(self.staff_user)
+        response = self.client.get(
+            reverse('prompts:system_notifications') + '?tab=sent'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Clicks')

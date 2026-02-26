@@ -1546,3 +1546,139 @@ class NotificationReverseSignalTests(NotificationTestBase):
         # This CASCADE-deletes the comment, firing on_comment_deleted
         self.prompt.delete()
         # Should not raise — the handler's getattr guard handles this
+
+
+# ═══════════════════════════════════════════════════
+# P1: NOTIFICATION UX IMPROVEMENTS (Session 89)
+# ═══════════════════════════════════════════════════
+
+
+class TestFollowBackButton(NotificationTestBase):
+    """Tests for the Follow Back button on follow notification cards."""
+
+    def test_follow_back_button_visible_for_follow_notification(self):
+        """Follow notification shows Follow Back button when user doesn't follow sender."""
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='bob started following you',
+            link='/users/bob/',
+        )
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=follows'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Follow Back')
+        self.assertContains(response, 'notif-follow-back-btn')
+
+    def test_follow_back_button_hidden_when_already_following(self):
+        """Follow notification hides Follow Back when user already follows sender."""
+        Follow.objects.create(follower=self.user1, following=self.user2)
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='bob started following you',
+            link='/users/bob/',
+        )
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=follows'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'View Profile')
+        self.assertNotContains(response, 'notif-follow-back-btn')
+
+
+class TestActionButtonLabels(NotificationTestBase):
+    """Tests for notification action button labels."""
+
+    def test_like_notification_shows_view_liked_prompt(self):
+        """Like notification renders 'View Liked Prompt' label."""
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_liked',
+            title='bob liked your prompt',
+            link='/prompt/test-prompt/',
+        )
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=likes'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'View Liked Prompt')
+
+    def test_collection_notification_shows_view_saved_prompt(self):
+        """Collection notification renders 'View Saved Prompt' label."""
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='prompt_saved',
+            title='bob saved your prompt',
+            link='/prompt/test-prompt/',
+        )
+        self.client.force_login(self.user1)
+        response = self.client.get(
+            reverse('prompts:notifications') + '?category=collections'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'View Saved Prompt')
+
+
+class TestSortedNotificationCategories(NotificationTestBase):
+    """Tests for the sorted_notification_categories template tag."""
+
+    def test_sorted_notification_categories_returns_sorted(self):
+        """Template tag sorts categories by most recent notification."""
+        from prompts.templatetags.notification_tags import (
+            sorted_notification_categories,
+        )
+
+        # Create notifications in different categories at different times
+        create_notification(
+            recipient=self.user1,
+            sender=self.user2,
+            notification_type='new_follower',
+            title='follow notification',
+            link='/users/bob/',
+        )
+        # Create a like notification slightly later
+        create_notification(
+            recipient=self.user1,
+            sender=self.user3,
+            notification_type='prompt_liked',
+            title='like notification',
+            link='/prompt/test-prompt/',
+        )
+
+        factory = RequestFactory()
+        request = factory.get('/')
+        request.user = self.user1
+        context = Context({'request': request})
+
+        result = sorted_notification_categories(context)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 5)
+        # Likes should be first (most recent), follows second
+        values = [c['value'] for c in result]
+        likes_idx = values.index('likes')
+        follows_idx = values.index('follows')
+        self.assertLess(likes_idx, follows_idx)
+
+    def test_sorted_notification_categories_anonymous_user(self):
+        """Template tag returns empty list for anonymous users."""
+        from prompts.templatetags.notification_tags import (
+            sorted_notification_categories,
+        )
+        from django.contrib.auth.models import AnonymousUser
+
+        factory = RequestFactory()
+        request = factory.get('/')
+        request.user = AnonymousUser()
+        context = Context({'request': request})
+
+        result = sorted_notification_categories(context)
+        self.assertEqual(result, [])

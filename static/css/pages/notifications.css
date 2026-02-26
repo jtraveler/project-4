@@ -110,7 +110,7 @@
 
 /* Unread card tint */
 .notif-card.notif-unread {
-    
+
     background: #f5eafa;
 }
 
@@ -260,6 +260,14 @@
 .notif-action-btn:active {
     background: var(--gray-800, #262626);
     transform: scale(0.97);
+}
+
+/* Follow Back button — confirmed "Following" state */
+.notif-action-btn.notif-followed {
+    background: var(--gray-600, #525252);
+    color: var(--white, #fff);
+    cursor: default;
+    pointer-events: none;
 }
 
 

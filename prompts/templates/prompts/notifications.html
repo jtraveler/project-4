@@ -124,6 +124,16 @@
                     <a href="{{ notification.link }}" class="notif-action-btn">Reply</a>
                     {% elif notification.notification_type == 'new_follower' %}
                     <a href="{{ notification.link }}" class="notif-action-btn">View Profile</a>
+                    {% if notification.sender_id not in following_ids %}
+                    <button type="button"
+                            class="notif-action-btn notif-follow-back-btn"
+                            data-username="{{ notification.sender.username }}"
+                            aria-label="Follow back {{ notification.sender.username }}">Follow Back</button>
+                    {% endif %}
+                    {% elif notification.notification_type == 'prompt_liked' %}
+                    <a href="{{ notification.link }}" class="notif-action-btn">View Liked Prompt</a>
+                    {% elif notification.notification_type == 'prompt_saved' %}
+                    <a href="{{ notification.link }}" class="notif-action-btn">View Saved Prompt</a>
                     {% else %}
                     <a href="{{ notification.link }}" class="notif-action-btn">View</a>
                     {% endif %}

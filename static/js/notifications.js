@@ -216,7 +216,44 @@
                     return;
                 }
 
-                // Trigger 2: Action button (Reply/View/View Profile) on unread card
+                // Trigger 2: Follow Back button
+                var followBtn = target.closest('.notif-follow-back-btn');
+                if (followBtn) {
+                    var username = followBtn.dataset.username;
+                    if (!username) return;
+                    followBtn.disabled = true;
+                    followBtn.textContent = 'Following…';
+                    fetch('/users/' + encodeURIComponent(username) + '/follow/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'same-origin',
+                    }).then(function(response) {
+                        if (response.ok) {
+                            followBtn.textContent = 'Following \u2713';
+                            followBtn.classList.add('notif-followed');
+                            followBtn.setAttribute('aria-label', 'Now following ' + username);
+                            if (statusMsg) statusMsg.textContent = 'Now following ' + username + '.';
+                        } else if (response.status === 400) {
+                            // Already following — show confirmed state
+                            followBtn.textContent = 'Following \u2713';
+                            followBtn.classList.add('notif-followed');
+                            followBtn.setAttribute('aria-label', 'Already following ' + username);
+                            if (statusMsg) statusMsg.textContent = 'Already following ' + username + '.';
+                        } else {
+                            followBtn.textContent = 'Follow Back';
+                            followBtn.disabled = false;
+                        }
+                    }).catch(function() {
+                        followBtn.textContent = 'Follow Back';
+                        followBtn.disabled = false;
+                    });
+                    return;
+                }
+
+                // Trigger 3: Action button (Reply/View/View Profile) on unread card
                 var actionBtn = target.closest('.notif-action-btn');
                 if (actionBtn) {
                     var actionCard = actionBtn.closest('.notif-card.notif-unread');

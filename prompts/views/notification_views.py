@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_GET, require_POST
 
-from prompts.models import Notification
+from prompts.models import Follow, Notification
 from prompts.services.notifications import (
     delete_all_notifications,
     delete_notification,
@@ -135,6 +135,12 @@ def notifications_page(request):
     category_counts = get_unread_count_by_category(request.user)
     total_unread = get_unread_count(request.user)
 
+    # Get IDs of users the current user already follows (for Follow Back button)
+    following_ids = set(
+        Follow.objects.filter(follower=request.user)
+        .values_list('following_id', flat=True)
+    )
+
     # Build tab data list for template (Django templates can't do dynamic dict lookups)
     category_tabs = [
         {'value': value, 'label': label, 'count': category_counts.get(value, 0)}
@@ -148,4 +154,5 @@ def notifications_page(request):
         'total_unread': total_unread,
         'has_more': has_more,
         'next_offset': offset + limit,
+        'following_ids': following_ids,
     })

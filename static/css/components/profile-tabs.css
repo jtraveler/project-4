@@ -37,7 +37,7 @@
 
 /* Individual tab — pill shape */
 .profile-tab {
-    padding: 6px 8px 6px 25px;
+    padding: 6px 25px;
     font-size: 17px;
     font-weight: 500;
     color: var(--gray-500, #6b7280);
@@ -74,7 +74,7 @@
     font-size: 17px;
     margin-left: 5px;
     display: inline-block;
-    min-width: 40px;
+    min-width: 25px;
     text-align: left;
     font-variant-numeric: tabular-nums;
     /* opacity removed — was 0.7, caused WCAG failure (2.76:1 on inactive tabs).
@@ -84,7 +84,6 @@
 /* Fixed-width badge to prevent layout shift */
 .stat-badge {
     display: inline-block;
-    min-width: 40px;
     text-align: center;
     padding-right: 4px;
     font-weight: normal;

@@ -22,6 +22,17 @@
             return match ? match[1] : '';
         }
 
+        // ─── Helper: fire-and-forget click tracking ───
+        function trackNotificationClick(notificationId) {
+            var url = '/api/notifications/' + notificationId + '/click/';
+            var token = getCsrfToken();
+            if (navigator.sendBeacon) {
+                var data = new FormData();
+                data.append('csrfmiddlewaretoken', token);
+                navigator.sendBeacon(url, data);
+            }
+        }
+
         // ─── Helper: get active category from tabs ───
         function getActiveCategory() {
             var activeTab = document.querySelector('.profile-tab-active');
@@ -253,22 +264,26 @@
                     return;
                 }
 
-                // Trigger 3: Action button (Reply/View/View Profile) on unread card
+                // Trigger 3: Action button (Reply/View/View Profile)
                 var actionBtn = target.closest('.notif-action-btn');
                 if (actionBtn) {
-                    var actionCard = actionBtn.closest('.notif-card.notif-unread');
+                    var actionCard = actionBtn.closest('.notif-card');
                     if (actionCard) {
-                        // Fire-and-forget: mark as read, let the link navigate
                         var actionNotifId = actionCard.dataset.notificationId;
                         if (actionNotifId) {
-                            fetch('/api/notifications/' + actionNotifId + '/read/', {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRFToken': getCsrfToken(),
-                                    'Content-Type': 'application/json',
-                                },
-                                credentials: 'same-origin',
-                            }).catch(function() {});
+                            // Fire-and-forget: track click
+                            trackNotificationClick(actionNotifId);
+                            // Mark as read if unread
+                            if (actionCard.classList.contains('notif-unread')) {
+                                fetch('/api/notifications/' + actionNotifId + '/read/', {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-CSRFToken': getCsrfToken(),
+                                        'Content-Type': 'application/json',
+                                    },
+                                    credentials: 'same-origin',
+                                }).catch(function() {});
+                            }
                         }
                     }
                     return;

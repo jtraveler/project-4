@@ -143,15 +143,8 @@
 
 /* === BODY === */
 .notif-body {
-    flex: 0 0 auto;
-    min-width: 0;
-    max-width: 280px;
-}
-
-/* When no quote column, let body expand to fill space */
-.notif-card--no-quote .notif-body {
     flex: 1;
-    max-width: none;
+    min-width: 0;
 }
 
 .notif-body-title {
@@ -319,11 +312,6 @@
     /* Stack layout on mobile */
     .notif-card {
         flex-wrap: wrap;
-    }
-
-    .notif-body {
-        max-width: none;
-        flex: 1;
     }
 
     .notif-quote {

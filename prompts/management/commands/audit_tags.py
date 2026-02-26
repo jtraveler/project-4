@@ -231,7 +231,7 @@ class Command(BaseCommand):
         self.stdout.write(f"SUMMARY")
         self.stdout.write(f"{'─'*60}")
         self.stdout.write(f"Total prompts audited:  {total}")
-        self.stdout.write(f"Prompts with issues:    {affected} ({affected*100//max(total,1)}%)")
+        self.stdout.write(f"Prompts with issues:    {affected} ({affected * 100 // max(total, 1)}%)")
         self.stdout.write(f"  HIGH (fragment pairs): {high_count}")
         self.stdout.write(f"  MEDIUM (orphan frags): {medium_count}")
         self.stdout.write(f"  LOW (missing from desc): {affected - high_count - medium_count}")
@@ -271,7 +271,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"    python manage.py backfill_ai_content --tags-only --published-only --batch-size 10 --delay 3")
 
     def _export_csv(self, issues):
-        filepath = '/tmp/tag_audit_report.csv'
+        filepath = '/tmp/tag_audit_report.csv'  # nosec B108 — temporary audit output, not security-sensitive
         with open(filepath, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['prompt_id', 'title', 'current_tags', 'issue_type', 'severity', 'detail'])

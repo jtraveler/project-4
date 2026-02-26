@@ -130,7 +130,7 @@ class PromptAdmin(SummernoteModelAdmin):
     )
     list_display_links = ('title',)
     search_fields = ['title', 'content', 'slug', 'tags__name',
-                      'categories__name', 'descriptors__name', 'author__username']
+                     'categories__name', 'descriptors__name', 'author__username']
     list_filter = (
         'status', 'moderation_status', 'requires_manual_review',
         'deleted_at', 'created_on', 'ai_generator', 'categories',
@@ -325,7 +325,7 @@ class PromptAdmin(SummernoteModelAdmin):
                 try:
                     image_url = obj.featured_image.url
                 except Exception:
-                    pass
+                    pass  # nosec B110 — featured_image may not exist or have no file
             if image_url:
                 return format_html(
                     '<div style="margin: 10px 0;">'
@@ -512,7 +512,7 @@ class PromptAdmin(SummernoteModelAdmin):
             try:
                 image_url = prompt.featured_image.url
             except Exception:
-                pass
+                pass  # nosec B110 — featured_image may not exist or have no file
         return image_url
 
     @staticmethod
@@ -680,7 +680,7 @@ class PromptAdmin(SummernoteModelAdmin):
         pass2_note = ''
         if published_count:
             pass2_note = (
-                f' SEO optimization of tags will follow automatically in ~45 seconds.'
+                ' SEO optimization of tags will follow automatically in ~45 seconds.'
             )
 
         if errors:

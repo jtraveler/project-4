@@ -275,7 +275,7 @@ def _call_openai_vision(
         return {'error': f"OpenAI API error: {str(e)}"}
 
 
-def _validate_and_fix_tags(tags, prompt_id=None):
+def _validate_and_fix_tags(tags, prompt_id=None):  # noqa: C901 — tag validation requires complex branching
     """
     Post-process AI-generated tags to enforce all tag rules.
 
@@ -1704,7 +1704,7 @@ def generate_ai_content_cached(job_id: str, image_url: str) -> dict:
 # Queued as a background task after _update_prompt_with_ai_content completes.
 
 
-def rename_prompt_files_for_seo(prompt_id: int) -> dict:
+def rename_prompt_files_for_seo(prompt_id: int) -> dict:  # noqa: C901 — SEO renaming has many conditional paths
     """
     Rename B2 files for a prompt to SEO-friendly filenames.
 
@@ -2051,7 +2051,7 @@ def _build_pass2_prompt(prompt) -> str:
     )
 
 
-def run_seo_pass2_review(prompt_id: int) -> dict:
+def run_seo_pass2_review(prompt_id: int) -> dict:  # noqa: C901 — multi-step AI review pipeline
     """
     Background SEO Pass 2 review using GPT-4o.
 

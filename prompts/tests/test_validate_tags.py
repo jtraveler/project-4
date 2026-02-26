@@ -300,13 +300,13 @@ class TestLegacyWhitelistPreserved(TestCase):
         result = _validate_and_fix_tags(['x-ray', 'medical', 'portrait'])
         self.assertIn('x-ray', result)
 
-    def test_3d_render_preserved(self):
-        """3d-render is a real term and should not be split."""
+    def test_3d_render_preserved_with_additional_tags(self):
+        """3d-render is a real term and should not be split (with other tags)."""
         result = _validate_and_fix_tags(['3d-render', 'digital', 'art'])
         self.assertIn('3d-render', result)
 
-    def test_3d_photo_preserved(self):
-        """3d-photo is a real term and should not be split."""
+    def test_3d_photo_preserved_with_additional_tags(self):
+        """3d-photo is a real term and should not be split (with other tags)."""
         result = _validate_and_fix_tags(['3d-photo', 'portrait'])
         self.assertIn('3d-photo', result)
 
@@ -904,12 +904,12 @@ class TestEdgeCases(TestCase):
 # ---------------------------------------------------------------------------
 # 14. reorder_tags management command
 # ---------------------------------------------------------------------------
-from io import StringIO
+from io import StringIO  # noqa: E402 — imports for reorder_tags test class below
 
-from django.core.management import call_command
-from django.test import TestCase as DjangoTestCase
-from django.contrib.auth.models import User
-from taggit.models import Tag
+from django.core.management import call_command  # noqa: E402 — imports for reorder_tags test class below
+from django.test import TestCase as DjangoTestCase  # noqa: E402 — imports for reorder_tags test class below
+from django.contrib.auth.models import User  # noqa: E402 — imports for reorder_tags test class below
+from taggit.models import Tag  # noqa: E402 — imports for reorder_tags test class below
 
 
 class TestReorderTagsCommand(DjangoTestCase):
@@ -1017,7 +1017,7 @@ class TestReorderTagsCommand(DjangoTestCase):
 # ---------------------------------------------------------------------------
 # Tag Display Ordering Tests
 # ---------------------------------------------------------------------------
-from django.test import Client
+from django.test import Client  # noqa: E402 — imports for tag display ordering test class below
 
 
 class TestOrderedTagsModelMethod(DjangoTestCase):

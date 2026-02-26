@@ -9,6 +9,7 @@ Covers three layers of defense against silent data corruption:
 """
 
 import logging
+import os
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
@@ -152,6 +153,7 @@ class TestQualityGateEdgeCases(TestCase):
 # ===========================================================================
 # 2. Fail-Fast Image Download (no URL fallback)
 # ===========================================================================
+@patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key-for-ci'})
 class TestFailFastImageDownload(TestCase):
     """When image download fails, AI functions must return error — not fallback to URL."""
 

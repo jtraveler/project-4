@@ -12,6 +12,7 @@ Tests cover:
 """
 
 import json
+import os
 from datetime import datetime, timedelta
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, PropertyMock
@@ -313,6 +314,7 @@ class TestRunSeoPass2ReviewSkips(DjangoTestCase):
         self.assertNotEqual(result.get('reason'), 'recently_reviewed')
 
 
+@patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key-for-ci'})
 class TestRunSeoPass2ReviewSuccess(DjangoTestCase):
     """Test successful Pass 2 review execution."""
 
@@ -638,7 +640,7 @@ class TestRunSeoPass2ReviewSuccess(DjangoTestCase):
         man_idx = ordered_tags.index('man')
         for tag in ordered_tags[:man_idx]:
             self.assertNotIn(tag, {'man', 'male', 'woman', 'female',
-                                    'boy', 'girl', 'couple', 'child'})
+                                   'boy', 'girl', 'couple', 'child'})
 
     @patch('prompts.tasks._download_and_encode_image')
     @patch('openai.OpenAI')
@@ -732,6 +734,7 @@ class TestRunSeoPass2ReviewSuccess(DjangoTestCase):
         self.assertNotIn('whimsical', final_tags)
 
 
+@patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key-for-ci'})
 class TestRunSeoPass2ReviewErrors(DjangoTestCase):
     """Test error handling in run_seo_pass2_review."""
 

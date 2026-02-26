@@ -12,6 +12,8 @@
         var csrfToken = document.querySelector('meta[name="csrf-token"]');
         var notifList = document.querySelector('.notif-list');
         var statusMsg = document.getElementById('notif-status-msg');
+        var loadNewBanner = document.getElementById('loadNewBanner');
+        var lastKnownTotal = null;  // Track notification count for new-notification detection
 
         // ─── Helper: get CSRF token ───
         function getCsrfToken() {
@@ -31,6 +33,10 @@
             document.dispatchEvent(new CustomEvent('notifications:count-updated', {
                 detail: { count: count }
             }));
+            // Tell navbar to refresh dropdown content on next poll
+            document.dispatchEvent(new CustomEvent('notifications:stale'));
+            // Keep banner detection baseline in sync with actions
+            lastKnownTotal = count;
             var badge = document.querySelector('.notification-badge');
             if (badge) {
                 badge.textContent = count;
@@ -55,13 +61,12 @@
             tabs.forEach(function(tab) {
                 var category = tab.dataset.category;
                 var count = document.querySelectorAll(
-                    '.notif-card[data-category="' + category + '"]'
+                    '.notif-card.notif-unread[data-category="' + category + '"]'
                 ).length;
                 var badge = tab.querySelector('.profile-tab-count');
                 if (badge) {
                     badge.textContent = count;
-                    if (count === 0) badge.style.display = 'none';
-                    else badge.style.display = '';
+                    badge.style.display = '';  // Always show — even when 0
                 }
             });
         }
@@ -94,6 +99,10 @@
                 if (readBtn) readBtn.remove();
                 // Decrement active tab count
                 decrementActiveTabCount();
+                // Keep banner detection baseline in sync
+                if (lastKnownTotal > 0) lastKnownTotal--;
+                // Sync bell badge via navbar refresh
+                document.dispatchEvent(new CustomEvent('notifications:stale'));
                 // Announce to screen readers (WCAG 4.1.3)
                 if (statusMsg) statusMsg.textContent = 'Notification marked as read.';
             }).catch(function() {
@@ -299,6 +308,8 @@
                         count.textContent = '0';
                     });
                     markAllBtn.style.display = 'none';
+                    // Sync bell badge — all marked read means 0 unread
+                    updateBellBadge(0);
                     if (statusMsg) statusMsg.textContent = 'All notifications marked as read.';
                 })
                 .catch(function() {
@@ -500,6 +511,94 @@
                     loadMoreBtn.removeAttribute('aria-busy');
                     loadMoreBtn.disabled = false;
                 });
+            });
+        }
+
+        // ─── Real-Time Tab Badge Polling ───
+        // Poll every 15s to keep tab counts in sync (matches bell dropdown interval)
+        var POLL_INTERVAL = 15000;
+        var pollTimer = null;
+
+        function pollCategoryCounts() {
+            fetch('/api/notifications/unread-count/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.categories) {
+                    var tabs = document.querySelectorAll('.profile-tab[data-category]');
+                    var newTotal = 0;
+                    tabs.forEach(function(tab) {
+                        var category = tab.dataset.category;
+                        var count = data.categories[category] || 0;
+                        newTotal += count;
+                        var badge = tab.querySelector('.profile-tab-count');
+                        if (badge) {
+                            badge.textContent = count;
+                        }
+                    });
+
+                    // Detect any change in notification count — show banner
+                    if (lastKnownTotal !== null && newTotal !== lastKnownTotal && loadNewBanner) {
+                        loadNewBanner.classList.add('visible');
+                        // ♿ Announce for screen readers (WCAG 4.1.3)
+                        if (statusMsg) statusMsg.textContent = 'Updates available.';
+                    }
+                    lastKnownTotal = newTotal;
+                }
+            })
+            .catch(function() {}); // Silent fail — next poll will retry
+        }
+
+        function startPolling() {
+            if (pollTimer) return;
+            pollTimer = setInterval(pollCategoryCounts, POLL_INTERVAL);
+        }
+
+        function stopPolling() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        }
+
+        // Pause polling when tab is hidden (Page Visibility API — same pattern as navbar.js)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopPolling();
+            } else {
+                pollCategoryCounts(); // Immediate fetch on return
+                startPolling();
+            }
+        });
+
+        // Start polling on page load
+        startPolling();
+
+        // Set initial total from current tab badges
+        var initialTotal = 0;
+        document.querySelectorAll('.profile-tab[data-category]').forEach(function(tab) {
+            var badge = tab.querySelector('.profile-tab-count');
+            if (badge) initialTotal += parseInt(badge.textContent, 10) || 0;
+        });
+        lastKnownTotal = initialTotal;
+
+        // ─── Load New Notifications Banner ───
+        if (loadNewBanner) {
+            loadNewBanner.addEventListener('click', function() {
+                // Smooth fade-out before reload for polished transition
+                var page = document.querySelector('.notifications-page');
+                if (page) {
+                    page.classList.add('refreshing');
+                    // Skip delay when user prefers reduced motion (transition is instant)
+                    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, reducedMotion ? 0 : 300);
+                } else {
+                    window.location.reload();
+                }
             });
         }
     });

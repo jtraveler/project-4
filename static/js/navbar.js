@@ -890,5 +890,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBadge(count);
     });
 
+    // Listen for stale signal — notifications page modified data, refresh counts immediately
+    document.addEventListener('notifications:stale', function() {
+        fetchNotificationCounts();
+    });
+
     document.addEventListener('DOMContentLoaded', initNotificationPolling);
 })();

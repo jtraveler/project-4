@@ -19,7 +19,7 @@ csscompressor==0.9.5
 distro==1.9.0
 dj-database-url==0.5.0
 dj3-cloudinary-storage==0.0.6
-Django==5.2.9
+Django==5.2.11
 django-allauth==65.13.0
 django-autocomplete-light==3.12.1
 django-crispy-forms==2.4
@@ -75,7 +75,7 @@ tqdm==4.67.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.3
-urllib3==2.6.2
+urllib3==2.6.3
 wcwidth==0.5.3
 webencodings==0.5.1
 whitenoise==6.9.0

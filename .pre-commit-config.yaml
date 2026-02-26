@@ -1,0 +1,33 @@
+# Pre-commit hooks — runs linting & security checks before every commit
+# Install: pip install pre-commit && pre-commit install
+# Docs: https://pre-commit.com
+
+repos:
+  # Basic file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: debug-statements
+
+  # Flake8 — matches CI linting job
+  # Uses .flake8 config file automatically
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        files: ^(prompts|prompts_manager|about)/
+        additional_dependencies: []
+
+  # Bandit — matches CI security scan job
+  # Uses .bandit config file automatically
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.3
+    hooks:
+      - id: bandit
+        args: ["-c", ".bandit", "-r"]
+        files: ^prompts/

@@ -2,11 +2,12 @@
 Signal handlers that auto-create notifications on social actions.
 
 Handles: comment, like (M2M), follow, collection save.
-All handlers call create_notification() from the service module.
+Reverse handlers: unlike (M2M post_remove), unfollow, comment delete.
+All creation handlers call create_notification() from the service module.
 """
 import logging
 
-from django.db.models.signals import post_save, m2m_changed
+from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
@@ -38,8 +39,23 @@ def on_comment_created(sender, instance, created, **kwargs):
 
 
 def _on_prompt_liked(sender, instance, action, pk_set, **kwargs):
-    """Notify prompt author when someone likes their prompt."""
-    if action != 'post_add' or not pk_set:
+    """Notify prompt author when someone likes their prompt; delete on unlike."""
+    if not pk_set:
+        return
+
+    # Unlike: delete the like notification for each removed user
+    if action == 'post_remove':
+        from prompts.models import Notification
+        for user_id in pk_set:
+            Notification.objects.filter(
+                recipient=instance.author,
+                sender_id=user_id,
+                notification_type='prompt_liked',
+                link=f'/prompt/{instance.slug}/',
+            ).delete()
+        return
+
+    if action != 'post_add':
         return
 
     from django.contrib.auth.models import User
@@ -115,6 +131,51 @@ def on_prompt_saved_to_collection(sender, instance, created, **kwargs):
         )
     except Exception:
         logger.exception("Error creating collection save notification")
+
+
+@receiver(post_delete, sender='prompts.Follow')
+def on_user_unfollowed(sender, instance, **kwargs):
+    """Delete follow notification when a user unfollows someone."""
+    from prompts.models import Notification
+
+    try:
+        Notification.objects.filter(
+            recipient=instance.following,
+            sender=instance.follower,
+            notification_type='new_follower',
+        ).delete()
+    except Exception:
+        logger.exception("Error deleting unfollow notification")
+
+
+@receiver(post_delete, sender='prompts.Comment')
+def on_comment_deleted(sender, instance, **kwargs):
+    """Delete comment notification when a comment is deleted."""
+    from prompts.models import Notification
+
+    try:
+        # Build filter — need prompt slug for link matching
+        prompt = getattr(instance, 'prompt', None)
+        if prompt is None:
+            return
+
+        slug = getattr(prompt, 'slug', None)
+        if not slug:
+            return
+
+        filters = dict(
+            recipient=prompt.author,
+            sender=instance.author,
+            notification_type__in=['comment_on_prompt', 'reply_to_comment'],
+            link=f'/prompt/{slug}/#comments',
+        )
+        # Use partial body match to identify the specific comment notification
+        if instance.body:
+            filters['message__contains'] = instance.body[:50]
+
+        Notification.objects.filter(**filters).delete()
+    except Exception:
+        logger.exception("Error deleting comment notification")
 
 
 def connect_m2m_signals():

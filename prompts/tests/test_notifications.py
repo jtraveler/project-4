@@ -572,18 +572,21 @@ class TestNotificationSignals(NotificationTestBase):
             0,
         )
 
-    def test_like_remove_no_notification(self):
-        """Removing a like does not create notification."""
+    def test_like_remove_deletes_notification(self):
+        """Removing a like deletes the like notification."""
         self.prompt.likes.add(self.user2)
-        initial_count = Notification.objects.filter(
-            recipient=self.user1, notification_type='prompt_liked'
-        ).count()
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='prompt_liked'
+            ).count(),
+            1,
+        )
         self.prompt.likes.remove(self.user2)
         self.assertEqual(
             Notification.objects.filter(
                 recipient=self.user1, notification_type='prompt_liked'
             ).count(),
-            initial_count,
+            0,
         )
 
     def test_follow_creates_notification(self):
@@ -1319,3 +1322,227 @@ class TestNotificationPagination(NotificationTestBase):
         )
         self.assertEqual(len(response.context['notifications']), 10)
         self.assertFalse(response.context['has_more'])
+
+
+# ═══════════════════════════════════════════════════
+# REVERSE SIGNAL TESTS (R1-D v7.7)
+# ═══════════════════════════════════════════════════
+
+class NotificationReverseSignalTests(NotificationTestBase):
+    """Tests for notification deletion on reverse actions (unlike, unfollow, comment delete)."""
+
+    def test_unlike_deletes_notification(self):
+        """Unliking a prompt removes the like notification."""
+        self.prompt.likes.add(self.user2)
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='prompt_liked'
+            ).count(),
+            1,
+        )
+        self.prompt.likes.remove(self.user2)
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='prompt_liked'
+            ).count(),
+            0,
+        )
+
+    def test_unlike_only_deletes_own_notification(self):
+        """Unliking only removes that user's notification, not others'."""
+        self.prompt.likes.add(self.user2)
+        self.prompt.likes.add(self.user3)
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='prompt_liked'
+            ).count(),
+            2,
+        )
+        # Only user2 unlikes
+        self.prompt.likes.remove(self.user2)
+        remaining = Notification.objects.filter(
+            recipient=self.user1, notification_type='prompt_liked'
+        )
+        self.assertEqual(remaining.count(), 1)
+        self.assertEqual(remaining.first().sender, self.user3)
+
+    def test_unfollow_deletes_notification(self):
+        """Unfollowing removes the follow notification."""
+        follow = Follow.objects.create(
+            follower=self.user2,
+            following=self.user1,
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='new_follower'
+            ).count(),
+            1,
+        )
+        follow.delete()
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='new_follower'
+            ).count(),
+            0,
+        )
+
+    def test_unfollow_only_deletes_own_notification(self):
+        """Unfollowing only removes that user's follow notification."""
+        follow2 = Follow.objects.create(
+            follower=self.user2,
+            following=self.user1,
+        )
+        Follow.objects.create(
+            follower=self.user3,
+            following=self.user1,
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='new_follower'
+            ).count(),
+            2,
+        )
+        follow2.delete()
+        remaining = Notification.objects.filter(
+            recipient=self.user1, notification_type='new_follower'
+        )
+        self.assertEqual(remaining.count(), 1)
+        self.assertEqual(remaining.first().sender, self.user3)
+
+    def test_comment_delete_removes_notification(self):
+        """Deleting a comment removes its notification."""
+        comment = Comment.objects.create(
+            prompt=self.prompt,
+            author=self.user2,
+            body='Great prompt!',
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1,
+                notification_type='comment_on_prompt',
+            ).count(),
+            1,
+        )
+        comment.delete()
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1,
+                notification_type='comment_on_prompt',
+            ).count(),
+            0,
+        )
+
+    def test_reverse_action_on_read_notification(self):
+        """Reverse action deletes notification even if already read."""
+        self.prompt.likes.add(self.user2)
+        n = Notification.objects.get(
+            recipient=self.user1, notification_type='prompt_liked'
+        )
+        n.mark_as_read()
+        self.assertTrue(n.is_read)
+        # Unlike should still delete it
+        self.prompt.likes.remove(self.user2)
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='prompt_liked'
+            ).count(),
+            0,
+        )
+
+    def test_reverse_action_on_already_deleted_notification(self):
+        """Reverse action when notification already deleted doesn't error."""
+        self.prompt.likes.add(self.user2)
+        # Manually delete the notification first
+        Notification.objects.filter(
+            recipient=self.user1, notification_type='prompt_liked'
+        ).delete()
+        # Unlike should not raise — .delete() on empty queryset is safe
+        self.prompt.likes.remove(self.user2)
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='prompt_liked'
+            ).count(),
+            0,
+        )
+
+    def test_comment_delete_only_deletes_own_notification(self):
+        """Deleting one comment only removes its notification, not another commenter's."""
+        comment2 = Comment.objects.create(
+            prompt=self.prompt,
+            author=self.user2,
+            body='Comment from bob',
+        )
+        Comment.objects.create(
+            prompt=self.prompt,
+            author=self.user3,
+            body='Comment from carol',
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='comment_on_prompt'
+            ).count(),
+            2,
+        )
+        comment2.delete()
+        remaining = Notification.objects.filter(
+            recipient=self.user1, notification_type='comment_on_prompt'
+        )
+        self.assertEqual(remaining.count(), 1)
+        self.assertEqual(remaining.first().sender, self.user3)
+
+    def test_comment_delete_same_author_two_comments(self):
+        """Deleting one comment by same author keeps the other's notification."""
+        comment_a = Comment.objects.create(
+            prompt=self.prompt,
+            author=self.user2,
+            body='First comment from bob',
+        )
+        Comment.objects.create(
+            prompt=self.prompt,
+            author=self.user2,
+            body='Second comment from bob',
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='comment_on_prompt'
+            ).count(),
+            2,
+        )
+        comment_a.delete()
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='comment_on_prompt'
+            ).count(),
+            1,
+        )
+
+    def test_comment_delete_empty_body(self):
+        """Deleting a comment with empty body does not error."""
+        comment = Comment.objects.create(
+            prompt=self.prompt,
+            author=self.user2,
+            body='',
+        )
+        # Empty body skips message__contains filter — still should not crash
+        comment.delete()
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.user1, notification_type='comment_on_prompt'
+            ).count(),
+            0,
+        )
+
+    def test_prompt_cascade_delete_no_error(self):
+        """Deleting a prompt (CASCADE to comments) does not raise in signal handler."""
+        Comment.objects.create(
+            prompt=self.prompt,
+            author=self.user2,
+            body='This will cascade',
+        )
+        self.assertEqual(
+            Notification.objects.filter(notification_type='comment_on_prompt').count(),
+            1,
+        )
+        # This CASCADE-deletes the comment, firing on_comment_deleted
+        self.prompt.delete()
+        # Should not raise — the handler's getattr guard handles this

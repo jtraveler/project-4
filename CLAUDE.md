@@ -11,7 +11,7 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 18, 2026
+**Last Updated:** February 26, 2026
 **Project Status:** Pre-Launch Development
 
 **Owner:** Mateo Johnson - Prompt Finder
@@ -62,7 +62,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Phase R1 + R1-D | Feb 17-18, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page redesign with avatars/quotes/action buttons, per-card mark-as-read, bell sync, dedup fix, shared tab components) |
+| Phase R1 + R1-D | Feb 17-18, 25-26, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page redesign with avatars/quotes/action buttons, per-card mark-as-read, bell sync, dedup fix, shared tab components, delete all/per-card delete, Load More pagination, two-phase delete animation, staggered fade-in, reverse signal handlers, real-time polling, "Updates available" banner, cross-component DOM event sync) |
 | Phase 2B (1-9) + Tag Pipeline + Hardening + Pass 2 SEO | Feb 9-16, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata, security hardening, backfill hardening, tag pipeline refinements, Pass 2 background SEO, admin UX |
 | Phase 2B (1-8) | Feb 9-10, 2026 | Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill, demographic SEO rules |
 | Subject Categories P2 | Feb 9, 2026 | AI-assigned prompt classification (25 categories, cache-first logic) |
@@ -147,6 +147,7 @@ Rebuilding upload flow to feel "instant" by:
 |-------|-------------|--------|
 | **N4h rename not triggering** | `rename_prompt_files_for_seo` task is coded but not generating SEO filenames in production | Files keep UUID names instead of SEO slugs |
 | **Indexes migration pending** | Composite indexes added to models.py but `makemigrations` not yet run | Indexes not active in database |
+| **CI/CD pipeline failing** | All 3 jobs (Django Tests, Code Linting, Security Scan) failing | Blocks merge to main — top priority for Session 89 |
 
 **N4h Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation.
 
@@ -568,6 +569,23 @@ Options for `initOverflowTabs()`:
 | `prompts/templates/prompts/collection_detail.html` | Grid column fix, video autoplay observer, CSS overrides (S74) |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
 | `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
+
+**Committed in Session 88 (Feb 25-26, 2026):**
+- `prompts/notification_signals.py` - Reverse signal handlers: unlike (m2m post_remove), unfollow (post_delete), comment delete (post_delete)
+- `prompts/services/notifications.py` - delete_notification(), delete_all_notifications()
+- `prompts/views/notification_views.py` - Delete endpoints (delete-all, delete/<id>), Load More pagination
+- `prompts/urls.py` - Delete URL patterns
+- `prompts/tests/test_notifications.py` - 23 new delete/pagination tests + 12 reverse signal tests (62→85 total)
+- `prompts/templates/prompts/notifications.html` - Delete buttons, confirmation dialog, Load More, "Updates available" banner
+- `prompts/templates/prompts/partials/_notification_list.html` - Updated AJAX partial for Load More
+- `static/js/notifications.js` - Delete, pagination, polling (15s), banner, two-phase animation, staggered fade-in (~500 lines)
+- `static/js/navbar.js` - notifications:stale + count-updated listeners for bell sync
+- `static/css/pages/notifications.css` - Delete animation, dialog, banner, hover states, Load More styles (~580 lines)
+- `static/css/components/profile-tabs.css` - Tab padding adjustment
+- `AGENT_TESTING_SYSTEM.md` - 8 hard rejection criteria matching CC_SPEC_TEMPLATE v2.0
+- `design-references/UI_STYLE_GUIDE.md` - v1.4: --gray-500 contrast floor, focus management, ARIA stagger rules
+- `CC_COMMUNICATION_PROTOCOL.md` - v2.1: PRE-AGENT SELF-CHECK, accessibility-first, COPY EXACTLY, data migration, DOM compliance
+- `CC_SPEC_TEMPLATE.md` - v2.1: 5 new sections + PRE-AGENT SELF-CHECK
 
 **Committed in Session 87 (Feb 18, 2026):**
 - `prompts/templates/prompts/notifications.html` - Card-based redesign with avatars, quotes, action buttons, per-card mark-as-read
@@ -1087,5 +1105,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.14 (Session 87 — Phase R1-D notifications redesign, per-card mark-as-read, bell sync, dedup fix, CC docs v2.0)
-**Last Updated:** February 18, 2026
+**Version:** 4.15 (Session 88 — Phase R1-D v7 notification management: delete, pagination, animations, reverse signals, real-time polling, document alignment)
+**Last Updated:** February 26, 2026

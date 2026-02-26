@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 18, 2026
+**Last Updated:** February 26, 2026
 **Project:** PromptFinder (Django 5.2.9)
-**Current Phase:** Phase R1 + R1-D (complete), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~657 passing (43% coverage, threshold 40%)
+**Current Phase:** Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~689 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -119,7 +119,7 @@ live-working-project/
 │   │   │   ├── masonry-grid.css
 │   │   │   └── profile-tabs.css  # Shared tab component CSS (Session 86)
 │   │   ├── pages/
-│   │   │   ├── notifications.css # Notifications page styles (Session 86, ~350 lines)
+│   │   │   ├── notifications.css # Notifications page styles (Sessions 86-88, ~580 lines, animations/dialog/banner/hover)
 │   │   │   ├── prompt-detail.css # Prompt detail page styles (1,515 lines, includes related prompts section)
 │   │   │   └── prompt-list.css
 │   │   ├── navbar.css
@@ -131,7 +131,7 @@ live-working-project/
 │       ├── collections.js        # Collections modal interactions (Phase K, ~760 lines)
 │       ├── like-button.js        # Centralized like button handler
 │       ├── navbar.js             # Extracted navbar JavaScript (~650 lines) + notification polling (15s, Session 87)
-│       ├── notifications.js      # Notifications page interactions (Session 86, ~300 lines)
+│       ├── notifications.js      # Notifications page interactions (Sessions 86-88, ~500 lines, delete/pagination/polling/banner/animations)
 │       ├── overflow-tabs.js      # Shared overflow tab scroll module (Session 86, 187 lines)
 │       ├── prompt-detail.js      # Prompt detail page interactions
 │       ├── upload-core.js        # File selection, drag-drop, B2 upload, preview
@@ -221,7 +221,7 @@ prompts/utils/
 | **content_generation** | GPT-4o-mini for AI-generated titles, descriptions, tags | ~$0.00255/upload |
 | **image_processor** | Pillow-based image optimization (thumb, medium, large, webp) | N/A |
 | **leaderboard** | User ranking by views, activity, engagement | N/A |
-| **notifications** | Notification service: create with 60s dedup, count unread, mark-read (Phase R1) | N/A |
+| **notifications** | Notification service: create with 60s dedup, count unread, mark-read, delete, delete-all (Phase R1/R1-D) | N/A |
 | **openai_moderation** | OpenAI text moderation API | FREE |
 | **orchestrator** | Multi-layer moderation coordination | Combined |
 | **profanity_filter** | Custom profanity word detection | N/A |
@@ -260,7 +260,7 @@ prompts/views/
 | **collection_views** | ~9 | Collection CRUD, API endpoints, profile tab, pagination |
 | **generator_views** | ~5 | AI generator category pages with filtering |
 | **leaderboard_views** | ~4 | Rankings, time filters, user stats |
-| **notification_views** | ~6 | Notification API (unread-count, mark-read), notifications page, category filtering |
+| **notification_views** | ~8 | Notification API (unread-count, mark-read, delete, delete-all), notifications page, category filtering, pagination |
 | **prompt_views** | ~20 | Prompt detail, edit, delete, list, homepage views |
 | **redirect_views** | ~3 | URL redirects, legacy route handling |
 | **social_views** | ~10 | Follow system, likes, shares, reports |
@@ -319,7 +319,7 @@ prompts/views/
 
 ---
 
-## Test Files (19 files, ~657 tests)
+## Test Files (19 files, ~689 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
@@ -341,7 +341,7 @@ prompts/views/
 | `test_backfill_hardening.py` | 44 | Backfill hardening: quality gate, fail-fast download, URL pre-check, tag preservation (Session 82) |
 | `test_pass2_seo_review.py` | 65 | Pass 2 SEO system: queue, review, PROTECTED_TAGS, GPT prompt (Session 85) |
 | `test_admin_actions.py` | 23 | Admin actions: two-button system, bulk actions, tag ordering (Session 85) |
-| `test_notifications.py` | 62 | Notification system: model, signals, service, API, page views, bell dropdown, dedup edge cases (Sessions 86-87) |
+| `test_notifications.py` | 85 | Notification system: model, signals, service, API, page views, bell dropdown, dedup edge cases, delete/pagination, reverse signal edge cases (Sessions 86-88) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -386,7 +386,7 @@ static/css/
 │   ├── masonry-grid.css # 255 lines - Masonry grid component
 │   └── profile-tabs.css # ~200 lines - Shared tab component (Session 86)
 └── pages/
-    ├── notifications.css # ~350 lines - Notifications page styles, card layout, per-card mark-as-read (Sessions 86-87)
+    ├── notifications.css # ~580 lines - Notifications page styles, card layout, per-card mark-as-read, delete animation, dialog, banner, hover states (Sessions 86-88)
     ├── prompt-detail.css # 1,515 lines - Prompt detail page + related prompts section (Phase J.1, Session 74)
     └── prompt-list.css   # 304 lines - Prompt list page styles
 ```
@@ -457,8 +457,8 @@ static/js/
 | File | Lines | Purpose |
 |------|-------|---------|
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
-| **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling (15s) + keyboard nav + bell sync dispatch (Phase R1/R1-D) |
-| **notifications.js** | ~300 | Notifications page mark-as-read, category filtering, event delegation, bell sync listener (Phase R1/R1-D) |
+| **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling (15s) + keyboard nav + bell sync dispatch + stale/count-updated listeners (Phase R1/R1-D) |
+| **notifications.js** | ~500 | Notifications page mark-as-read, category filtering, event delegation, bell sync, delete, pagination, real-time polling (15s), "Updates available" banner, two-phase animation (Phase R1/R1-D) |
 | **overflow-tabs.js** | ~187 | Shared overflow tab scroll with auto-center options (Phase R1) |
 | **prompt-detail.js** | ~400 | Like toggle, copy button, comments, delete modal |
 | **like-button.js** | ~155 | Centralized like handler with optimistic UI |
@@ -1583,6 +1583,17 @@ prompts/templates/prompts/
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.21 (February 26, 2026 - Session 88 End-of-Session Docs Update):**
+- Updated test_notifications.py: 62→85 tests (23 delete/pagination + 12 reverse signal)
+- Updated notifications.js description (~300→~500 lines, delete/pagination/polling/banner/animations)
+- Updated notifications.css description (~350→~580 lines, animations/dialog/banner/hover)
+- Updated notification_views.py function count: ~6→~8 (delete, delete-all endpoints)
+- Updated notifications.py service description: added delete, delete-all
+- Updated navbar.js description: stale/count-updated listeners
+- Updated total test count: ~657→~689
+- Updated Phase R1-D status: ✅ Complete → 🔄 ~95% (remaining work identified)
+- Added Session 88 to changelog
 
 **v3.20 (February 18, 2026 - Session 87 End-of-Session Docs Update):**
 - Updated total test count: ~649→~657 (actual method count, 5 new dedup tests + corrected baseline)

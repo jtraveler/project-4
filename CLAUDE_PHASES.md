@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** February 17, 2026
+**Last Updated:** February 26, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -30,7 +30,7 @@
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
 | **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
 | **2B** | **Category Taxonomy Revamp + Tag Pipeline** | **✅ 2B-1 through 2B-9 + S80-81 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring, tag validation pipeline, admin metadata** |
-| **R1 + R1-D** | **User Notifications** | **✅ Complete (S86-87)** | **Infrastructure (S86) + notifications page redesign (S87). Deploy to Heroku** |
+| **R1 + R1-D** | **User Notifications** | **🔄 ~95% (S86-88)** | **Infrastructure (S86) + page redesign (S87) + management features (S88). CI/CD fix, Follow Back, action labels, admin panel** |
 
 ---
 
@@ -406,10 +406,10 @@ Plus: Admin metadata editing, security hardening, tag validation pipeline, compo
 
 ---
 
-## ✅ Phase R1 + R1-D: User Frontend Notifications (COMPLETE — Sessions 86-87)
+## 🔄 Phase R1 + R1-D: User Frontend Notifications (~95% — Sessions 86-88)
 
-**Completed:** February 17-18, 2026 (R1: S86, R1-D: S87)
-**Tests:** 62 notification tests (~657 total)
+**Started:** February 17, 2026 (R1: S86, R1-D: S87-88)
+**Tests:** 85 notification tests (~689 total)
 
 ### What Was Built
 
@@ -437,6 +437,17 @@ Full in-app notification system with bell dropdown and dedicated notifications p
 - **Backfill command:** `backfill_comment_anchors` management command for existing comment notification links
 - **Polling interval:** Reduced from 60s to 15s for more responsive bell badge UX
 
+**R1-D v7 Notification Management (Session 88):**
+- **Delete All:** Confirmation dialog with focus trap, bell badge sync
+- **Per-card delete:** Fire-and-forget with two-phase animation (slide-out 400ms + collapse 300ms)
+- **Load More pagination:** 15 per batch, AJAX partial HTML, staggered fade-in (150ms/50ms)
+- **Mark as Read restyle:** .notif-action-btn class for visual consistency across action buttons
+- **Reverse signal handlers:** Unlike (m2m post_remove), unfollow (post_delete), comment delete (post_delete) — cascade-safe
+- **Real-time polling:** 15s tab badge updates, Page Visibility API pause/resume
+- **"Updates available" banner:** Generic change detection (positive + negative), smooth fade-out reload
+- **Cross-component sync:** Custom DOM events (count-updated, stale, all-read)
+- **Accessibility:** Focus trap in dialog, focus management on card deletion, ARIA live stagger (150ms), prefers-reduced-motion
+
 ### Key Files
 
 | File | Purpose |
@@ -451,8 +462,13 @@ Full in-app notification system with bell dropdown and dedicated notifications p
 | `static/js/notifications.js` | Notifications page JS |
 | `static/css/pages/notifications.css` | Notifications page CSS |
 
-### Pending
+### R1-D Remaining (Session 89+)
 
+- CI/CD pipeline fix (all 3 jobs currently failing — top priority)
+- "Follow Back" button on follow notification cards
+- Better action button labels (Likes: "View Liked Prompt", Collections: "View Prompt Added")
+- Bell dropdown categories sorted by most recent notification
+- System Notifications admin panel (compose, schedule, manage, health monitoring)
 - Heroku deployment
 - End-to-end testing with real user actions
 
@@ -486,7 +502,7 @@ Full in-app notification system with bell dropdown and dedicated notifications p
 |---------|--------|-------|
 | Related Prompts | 1 week | ✅ Phase 1 done (Session 74), scoring refined in 2B-9 (IDF-weighted) |
 | Image Lightbox | 3-4 days | Click to zoom |
-| Notification System | - | ✅ Phase R1 done (Session 86): model, signals, bell dropdown, notifications page, shared tabs |
+| Notification System | - | 🔄 Phase R1 ~95% (Sessions 86-88): model, signals, bell dropdown, notifications page, shared tabs, delete, pagination, reverse signals, real-time polling |
 | Search Improvements | 2 weeks | Autocomplete, filters |
 
 ---
@@ -518,5 +534,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.2 (Session 86 — Phase R1 notification system complete, shared tab components)
-**Last Updated:** February 17, 2026
+**Version:** 4.3 (Session 88 — Phase R1-D v7 notification management, reverse signals, real-time polling)
+**Last Updated:** February 26, 2026

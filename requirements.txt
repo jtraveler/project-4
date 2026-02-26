@@ -61,7 +61,7 @@ pytest==9.0.2
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
 requests==2.32.4
-rich==14.3.1
+rich==14.3.3
 rjsmin==1.2.5
 rst2ansi==0.1.5
 s3transfer==0.10.4

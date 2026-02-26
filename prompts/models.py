@@ -1200,34 +1200,34 @@ class Prompt(models.Model):
         """
         # B2-first pattern: check B2 storage, fall back to Cloudinary
         return bool(self.b2_video_url) or bool(self.featured_video)
-    
+
     def get_media_url(self):
         """
         Get the URL of the media file (video or image).
-        
+
         Returns:
             str: URL of the video if available, otherwise image URL
         """
         if self.is_video():
             return self.featured_video.url
         return self.featured_image.url if self.featured_image else None
-    
+
     def get_thumbnail_url(self, width=824, quality='auto'):
         """
         Get thumbnail URL for the prompt.
-        
+
         For videos, generates a thumbnail from the first frame.
         For images, returns the image URL with specified width.
-        
+
         Args:
             width (int): Desired width of the thumbnail
             quality (str): Quality setting (auto, 80, 90, etc.)
-            
+
         Returns:
             str: Cloudinary URL for the thumbnail
         """
         from django.conf import settings
-        
+
         if self.is_video() and self.featured_video:
             # Generate thumbnail from video at 0 seconds with quality optimization
             return self.featured_video.build_url(
@@ -2767,6 +2767,15 @@ class Notification(models.Model):
     # State
     is_read = models.BooleanField(default=False, db_index=True)
     is_admin_notification = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Auto-expire this notification after this time"
+    )
+    is_expired = models.BooleanField(
+        default=False, db_index=True,
+        help_text="Manually expired by admin"
+    )
+    click_count = models.PositiveIntegerField(default=0)
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}System Notifications - Admin{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/components/profile-tabs.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/system-notifications.css' %}">
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="system-notifications-page">
+
+    <!-- Header -->
+    <h1 class="sn-heading">System Notifications</h1>
+
+    <!-- Success/Error Messages -->
+    {% if success_message %}
+    <div class="sn-alert sn-alert-success" role="status">{{ success_message }}</div>
+    {% endif %}
+    {% if error_message %}
+    <div class="sn-alert sn-alert-error" role="alert">{{ error_message }}</div>
+    {% endif %}
+
+    <!-- Tab Bar — matches notifications.html exactly -->
+    <nav class="profile-tabs-wrapper" aria-label="System notification tabs">
+        <button class="overflow-arrow-left" aria-label="Scroll tabs left" tabindex="-1">
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <div class="profile-tabs-container">
+            <a href="?tab=blast"
+               class="profile-tab {% if active_tab == 'blast' %}profile-tab-active{% endif %}"
+               {% if active_tab == 'blast' %}aria-current="page"{% endif %}>
+                Notification Blast
+            </a>
+            <a href="?tab=sent"
+               class="profile-tab {% if active_tab == 'sent' %}profile-tab-active{% endif %}"
+               {% if active_tab == 'sent' %}aria-current="page"{% endif %}>
+                Sent Notifications
+            </a>
+            <a href="?tab=admin-log"
+               class="profile-tab {% if active_tab == 'admin-log' %}profile-tab-active{% endif %}"
+               {% if active_tab == 'admin-log' %}aria-current="page"{% endif %}>
+                Admin Log
+            </a>
+            <a href="?tab=web-pulse"
+               class="profile-tab {% if active_tab == 'web-pulse' %}profile-tab-active{% endif %}"
+               {% if active_tab == 'web-pulse' %}aria-current="page"{% endif %}>
+                Web Pulse
+            </a>
+        </div>
+        <button class="overflow-arrow" aria-label="Scroll tabs right" tabindex="-1">
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </button>
+    </nav>
+
+    <!-- Tab 1: Notification Blast -->
+    {% if active_tab == 'blast' %}
+    <section class="sn-section">
+        <h2 class="sn-section-title">Compose New Notification</h2>
+        <form method="post" id="composeForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="send">
+            <input type="hidden" name="message" id="messageHidden" value="{{ form_data.message|default:'' }}">
+
+            <div class="sn-form-group">
+                <label id="editorLabel">Message <span class="sn-required" aria-hidden="true">*</span></label>
+                <div id="quillEditor" aria-labelledby="editorLabel">{{ form_data.message|default:'' }}</div>
+            </div>
+
+            <fieldset class="sn-form-group sn-fieldset">
+                <legend>Audience</legend>
+                <div class="sn-radio-group">
+                    <label class="sn-radio-label">
+                        <input type="radio" name="audience" value="all"
+                               {% if form_data.audience != 'staff' %}checked{% endif %}>
+                        All Users
+                    </label>
+                    <label class="sn-radio-label">
+                        <input type="radio" name="audience" value="staff"
+                               {% if form_data.audience == 'staff' %}checked{% endif %}>
+                        Staff Only
+                    </label>
+                </div>
+            </fieldset>
+
+            <!-- Live Preview -->
+            <div class="sn-preview-section" aria-hidden="true">
+                <h3 class="sn-preview-title">Preview</h3>
+                <div class="notif-card notif-unread sn-preview-card" role="presentation">
+                    <div class="notif-avatar-wrapper">
+                        <div class="notif-avatar-placeholder" style="background: var(--gray-600, #525252);" aria-hidden="true">
+                            <svg class="icon" width="20" height="20"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+                        </div>
+                    </div>
+                    <div class="notif-body">
+                        <div class="notif-body-title" id="previewTitle">Your notification message...</div>
+                        <div class="notif-time">Just now</div>
+                    </div>
+                    <div class="notif-actions"></div>
+                </div>
+            </div>
+
+            <!-- Confirmation: two-step send -->
+            <div class="sn-send-actions">
+                <button type="button" class="sn-btn sn-btn-send" id="previewSendBtn" disabled>
+                    Preview &amp; Send
+                </button>
+            </div>
+
+            <!-- Confirmation dialog (hidden by default) -->
+            <div class="sn-send-confirm" id="sendConfirm" style="display: none;" role="alertdialog" aria-labelledby="sn-confirm-text" aria-modal="true" tabindex="-1">
+                <p class="sn-send-confirm-text" id="sn-confirm-text">
+                    Send this notification to <strong id="confirmAudience">all active users</strong>?
+                    This action cannot be undone.
+                </p>
+                <div class="sn-send-confirm-actions">
+                    <button type="button" class="sn-btn sn-btn-cancel" id="cancelSendBtn">Cancel</button>
+                    <button type="submit" class="sn-btn sn-btn-danger" id="confirmSendBtn">Confirm Send</button>
+                </div>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+
+    <!-- Tab 2: Sent Notifications -->
+    {% if active_tab == 'sent' %}
+    <section class="sn-section">
+        <h2 class="sn-section-title">Sent Notifications</h2>
+        {% if batches %}
+        <div class="sn-table-responsive">
+            <table class="sn-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Title</th>
+                        <th scope="col">Sent</th>
+                        <th scope="col">Recipients</th>
+                        <th scope="col">Read</th>
+                        <th scope="col">Clicks</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batches %}
+                    <tr class="{% if batch.is_expired %}sn-batch-expired{% endif %}">
+                        <td>
+                            <div class="sn-batch-title">{{ batch.title|truncatewords:8 }}</div>
+                            {% if batch.message %}
+                            <div class="sn-batch-message">{{ batch.message|truncatewords:10|striptags }}</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ batch.first_sent|timesince }} ago</td>
+                        <td>{{ batch.recipient_count }}</td>
+                        <td>{{ batch.read_count }} <span class="sn-read-pct">({{ batch.read_percentage }}%)</span></td>
+                        <td>{{ batch.total_clicks }}</td>
+                        <td>
+                            {% if batch.is_expired %}
+                            <span class="sn-badge sn-badge-expired">Expired</span>
+                            {% else %}
+                            <span class="sn-badge sn-badge-active">Active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" class="sn-inline-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_batch">
+                                <input type="hidden" name="batch_title" value="{{ batch.title }}">
+                                <input type="hidden" name="batch_after" value="{{ batch.first_sent|date:'c' }}">
+                                <input type="hidden" name="batch_before" value="{{ batch.last_sent|date:'c' }}">
+                                <button type="submit" class="sn-delete-btn"
+                                        onclick="return confirm('Permanently delete all notifications with this title? This cannot be undone.')">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="sn-empty-state">No system notifications have been sent yet.</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- Tab 3: Admin Log (Placeholder) -->
+    {% if active_tab == 'admin-log' %}
+    <section class="sn-section">
+        <h2 class="sn-section-title">Admin Log</h2>
+        <p class="sn-empty-state">Coming soon — admin activity log will appear here.</p>
+    </section>
+    {% endif %}
+
+    <!-- Tab 4: Web Pulse (Placeholder) -->
+    {% if active_tab == 'web-pulse' %}
+    <section class="sn-section">
+        <h2 class="sn-section-title">Web Pulse</h2>
+        <p class="sn-empty-state">Coming soon — site analytics and pulse data will appear here.</p>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extras %}
+<script src="{% static 'js/overflow-tabs.js' %}"></script>
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize overflow tabs
+    if (typeof initOverflowTabs === 'function') {
+        initOverflowTabs('.system-notifications-page .profile-tabs-wrapper', { centerActiveTab: true, centerWhenFits: true });
+    }
+
+    // Only run compose JS when blast tab is active
+    var previewSendBtn = document.getElementById('previewSendBtn');
+    if (!previewSendBtn) return;
+
+    var hiddenInput = document.getElementById('messageHidden');
+    var previewTitle = document.getElementById('previewTitle');
+    var sendConfirm = document.getElementById('sendConfirm');
+    var cancelSendBtn = document.getElementById('cancelSendBtn');
+    var confirmSendBtn = document.getElementById('confirmSendBtn');
+    var confirmAudience = document.getElementById('confirmAudience');
+    var composeForm = document.getElementById('composeForm');
+
+    // --- Initialize Quill editor ---
+    var quill = new Quill('#quillEditor', {
+        theme: 'snow',
+        placeholder: 'Type your notification message...',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                ['link', 'blockquote'],
+                ['clean']
+            ]
+        }
+    });
+
+    // Associate Quill's contenteditable with the label for screen readers
+    quill.root.setAttribute('aria-labelledby', 'editorLabel');
+    quill.root.setAttribute('aria-required', 'true');
+
+    // --- Sync Quill content to hidden input before form submit ---
+    composeForm.addEventListener('submit', function() {
+        hiddenInput.value = quill.root.innerHTML;
+        // Prevent double-submit
+        confirmSendBtn.disabled = true;
+    });
+
+    // --- Live preview — shows formatted HTML from Quill ---
+    function updatePreview() {
+        var text = quill.getText().trim();
+        if (text) {
+            previewTitle.innerHTML = quill.root.innerHTML;
+        } else {
+            previewTitle.textContent = 'Your notification message...';
+        }
+    }
+
+    // --- Disabled state — disable send button when editor is empty ---
+    function updateSendBtnState() {
+        var text = quill.getText().trim();
+        previewSendBtn.disabled = !text;
+    }
+
+    quill.on('text-change', function() {
+        updatePreview();
+        updateSendBtnState();
+    });
+    updatePreview();
+    updateSendBtnState();
+
+    // --- Two-step send confirmation ---
+    previewSendBtn.addEventListener('click', function() {
+        var text = quill.getText().trim();
+        if (!text) return;
+        // Sync hidden input before showing confirmation
+        hiddenInput.value = quill.root.innerHTML;
+        var audience = document.querySelector('input[name="audience"]:checked').value;
+        confirmAudience.textContent = audience === 'staff' ? 'all staff users' : 'all active users';
+        sendConfirm.style.display = '';
+        previewSendBtn.style.display = 'none';
+        // Focus first interactive element in dialog
+        cancelSendBtn.focus();
+        // Scroll into view
+        sendConfirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    cancelSendBtn.addEventListener('click', function() {
+        sendConfirm.style.display = 'none';
+        previewSendBtn.style.display = '';
+        previewSendBtn.focus();
+    });
+
+    // --- Focus trap for confirmation dialog ---
+    sendConfirm.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            cancelSendBtn.click();
+            return;
+        }
+        if (e.key !== 'Tab') return;
+        var focusable = sendConfirm.querySelectorAll('button:not([disabled])');
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+            if (document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            }
+        } else {
+            if (document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

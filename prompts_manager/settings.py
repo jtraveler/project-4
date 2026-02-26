@@ -438,6 +438,8 @@ CSP_SCRIPT_SRC = (
     "https://res.cloudinary.com",
     "https://api.cloudinary.com",
     "https://widget.cloudinary.com",
+    "https://code.jquery.com",
+    "https://cdn.quilljs.com",
 )
 
 CSP_STYLE_SRC = (
@@ -447,6 +449,7 @@ CSP_STYLE_SRC = (
     "https://cdn.jsdelivr.net",
     "https://cdnjs.cloudflare.com",
     "https://res.cloudinary.com",
+    "https://cdn.quilljs.com",
 )
 
 CSP_IMG_SRC = (
@@ -492,6 +495,8 @@ CSP_FRAME_SRC = (
 )
 
 # Django Summernote Configuration
+SUMMERNOTE_THEME = 'lite'
+
 SUMMERNOTE_CONFIG = {
     # Use iframe for editor (required for Summernote to work properly)
     'iframe': True,
@@ -505,14 +510,14 @@ SUMMERNOTE_CONFIG = {
             ['font', ['bold', 'underline', 'italic', 'clear']],
             ['para', ['ul', 'ol', 'paragraph']],
             ['insert', ['link']],
-            ['view', ['fullscreen', 'codeview']],
+            ['view', ['fullscreen']],
         ],
     },
 
-    # Attachment settings
+    # Attachment settings — require auth; staff-only page + bleach sanitization
+    # Note: disable_attachment=True breaks widget rendering (django-summernote bug)
     'disable_attachment': False,
     'attachment_require_authentication': True,
-    'attachment_filesize_limit': 1024 * 1024 * 10,  # 10MB
 }
 
 # ==============================================================================

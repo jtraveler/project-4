@@ -1,0 +1,406 @@
+/* ===================================================================
+   SYSTEM-NOTIFICATIONS.CSS - Admin System Notifications Dashboard
+   Phase P2-A-fix: Tabbed dashboard with Quill editor, click tracking, delete
+   Tabs use profile-tabs.css as-is (pill style, matching notifications page)
+   =================================================================== */
+
+/* Page layout — matches notifications page */
+.system-notifications-page {
+    width: 100%;
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+    padding-top: calc(var(--space-12) + var(--space-4));
+}
+
+.sn-heading {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 var(--space-6);
+    text-align: center;
+}
+
+/* Center tabs when they fit without overflow */
+.system-notifications-page .profile-tabs-container.tabs-centered {
+    justify-content: center;
+}
+
+/* === ALERTS === */
+.sn-alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-md, 8px);
+    margin-bottom: var(--space-6);
+    font-size: var(--font-size-sm, 14px);
+    font-weight: 500;
+}
+
+.sn-alert-success {
+    background: var(--success-light, #d1fae5);
+    color: #065f46;
+    border: 1px solid var(--success, #059669);
+}
+
+.sn-alert-error {
+    background: var(--error-light, #fee2e2);
+    color: #991b1b;
+    border: 1px solid var(--error, #dc2626);
+}
+
+/* === SECTIONS === */
+.sn-section {
+    background: var(--white, #fff);
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+    padding: 24px 28px;
+    margin-top: var(--space-6);
+}
+
+.sn-section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 20px;
+}
+
+/* === FORM === */
+.sn-form-group {
+    margin-bottom: 20px;
+}
+
+.sn-form-group label,
+.sn-form-group legend {
+    display: block;
+    font-size: var(--font-size-sm, 14px);
+    font-weight: 600;
+    color: var(--gray-700, #404040);
+    margin-bottom: 6px;
+}
+
+.sn-fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 20px;
+}
+
+.sn-fieldset legend {
+    padding: 0;
+}
+
+.sn-required {
+    color: var(--error, #dc2626);
+}
+
+/* === QUILL EDITOR OVERRIDES === */
+.system-notifications-page .ql-toolbar.ql-snow {
+    border-color: var(--gray-300, #d1d5db);
+    border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0;
+    background: var(--gray-50, #fafafa);
+}
+
+.system-notifications-page .ql-container.ql-snow {
+    border-color: var(--gray-300, #d1d5db);
+    border-radius: 0 0 var(--radius-md, 8px) var(--radius-md, 8px);
+    font-size: var(--font-size-base, 16px);
+    font-family: inherit;
+    min-height: 150px;
+}
+
+.system-notifications-page .ql-editor {
+    min-height: 150px;
+    max-height: 400px;
+    overflow-y: auto;
+    line-height: 1.6;
+    color: var(--gray-900);
+}
+
+.system-notifications-page .ql-editor.ql-blank::before {
+    color: var(--gray-500, #737373);
+    font-style: normal;
+}
+
+.system-notifications-page .ql-container.ql-snow:focus-within {
+    border-color: var(--main-blue, #2563eb);
+    outline: 2px solid var(--main-blue, #2563eb);
+    outline-offset: -2px;
+}
+
+.system-notifications-page .ql-editor a {
+    color: var(--main-blue, #2563eb);
+    text-decoration: underline;
+}
+
+/* === RADIO BUTTONS === */
+.sn-radio-group {
+    display: flex;
+    gap: 24px;
+}
+
+.sn-radio-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-base, 16px);
+    font-weight: 400;
+    color: var(--gray-700, #404040);
+    cursor: pointer;
+}
+
+.sn-radio-label input[type="radio"] {
+    accent-color: var(--main-blue);
+}
+
+/* === PREVIEW === */
+.sn-preview-section {
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    padding: 16px;
+    background: var(--gray-50, #fafafa);
+    margin-bottom: 20px;
+}
+
+.sn-preview-title {
+    font-size: var(--font-size-sm, 14px);
+    font-weight: 600;
+    color: var(--gray-600, #525252);
+    margin: 0 0 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sn-preview-card {
+    pointer-events: none;
+}
+
+/* === SEND ACTIONS === */
+.sn-send-actions {
+    margin-top: 8px;
+}
+
+.sn-btn {
+    padding: 10px 24px;
+    font-size: var(--font-size-sm, 14px);
+    font-weight: 600;
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    font-family: inherit;
+    min-width: auto;
+    border: none;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.sn-btn:focus-visible {
+    outline: 2px solid var(--gray-900, #171717);
+    outline-offset: 2px;
+}
+
+.sn-btn:active {
+    transform: scale(0.98);
+}
+
+.sn-btn-send {
+    background: var(--main-blue, #2563eb);
+    color: var(--white, #fff);
+}
+
+.sn-btn-send:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.sn-btn-send:disabled {
+    background: var(--gray-300, #d1d5db);
+    color: var(--gray-500, #737373);
+    cursor: not-allowed;
+}
+
+.sn-btn-cancel {
+    background: var(--white, #fff);
+    border: 1px solid var(--gray-300, #d1d5db);
+    color: var(--gray-700, #404040);
+}
+
+.sn-btn-cancel:hover {
+    background: var(--gray-100, #f5f5f5);
+}
+
+.sn-btn-danger {
+    background: var(--error, #dc2626);
+    color: var(--white, #fff);
+}
+
+.sn-btn-danger:hover {
+    background: #b91c1c;
+}
+
+/* === SEND CONFIRMATION === */
+.sn-send-confirm {
+    background: #fffbeb;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius-md, 8px);
+    padding: 16px;
+    margin-top: 12px;
+}
+
+.sn-send-confirm-text {
+    margin: 0 0 12px;
+    font-size: var(--font-size-sm, 14px);
+    color: var(--gray-700, #404040);
+}
+
+.sn-send-confirm-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* === MANAGEMENT TABLE === */
+.sn-table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sn-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm, 14px);
+}
+
+.sn-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    color: var(--gray-600, #525252);
+    border-bottom: 2px solid var(--gray-200, #e5e7eb);
+    white-space: nowrap;
+}
+
+.sn-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--gray-100, #f5f5f5);
+    color: var(--gray-700, #404040);
+    vertical-align: top;
+}
+
+.sn-table tbody tr:hover {
+    background: var(--gray-50, #fafafa);
+}
+
+.sn-batch-title {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.sn-batch-message {
+    font-size: var(--font-size-xs, 12px);
+    color: var(--gray-600, #525252);
+    margin-top: 2px;
+}
+
+.sn-batch-expired td {
+    color: var(--gray-500, #737373);
+}
+
+.sn-batch-expired .sn-batch-title {
+    color: var(--gray-500, #737373);
+}
+
+.sn-read-pct {
+    color: var(--gray-500, #737373);
+    font-size: var(--font-size-xs, 12px);
+}
+
+/* === STATUS BADGES === */
+.sn-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sn-badge-active {
+    background: var(--success-light, #d1fae5);
+    color: #065f46;
+}
+
+.sn-badge-expired {
+    background: var(--gray-100, #f5f5f5);
+    color: var(--gray-600, #525252);
+}
+
+/* === DELETE BUTTON === */
+.sn-delete-btn {
+    padding: 4px 12px;
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 500;
+    border: 1px solid var(--error, #dc2626);
+    border-radius: var(--radius-md, 8px);
+    background: var(--white, #fff);
+    color: var(--error, #dc2626);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sn-delete-btn:hover {
+    background: var(--error, #dc2626);
+    color: var(--white, #fff);
+}
+
+.sn-delete-btn:focus-visible {
+    outline: 2px solid var(--error, #dc2626);
+    outline-offset: 2px;
+}
+
+.sn-inline-form {
+    display: inline;
+}
+
+/* === EMPTY STATE === */
+.sn-empty-state {
+    text-align: center;
+    padding: var(--space-6);
+    color: var(--gray-500, #737373);
+    font-size: var(--font-size-base, 16px);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .system-notifications-page {
+        padding: var(--space-4);
+        padding-top: calc(var(--space-8) + var(--space-4));
+    }
+
+    .sn-heading {
+        font-size: 1.5rem;
+    }
+
+    .sn-section {
+        padding: 16px;
+    }
+
+    .sn-radio-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .sn-send-confirm-actions {
+        flex-direction: column;
+    }
+
+    .sn-table th,
+    .sn-table td {
+        padding: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sn-btn,
+    .sn-delete-btn {
+        transition: none;
+    }
+
+    .sn-btn:active {
+        transform: none;
+    }
+}

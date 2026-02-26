@@ -23,6 +23,55 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February 2026 Sessions
 
+### Session 89 - February 26, 2026
+
+**Focus:** Fix CI/CD Pipeline + Dependency Security + CI Automation
+
+**Context:** All 3 CI jobs (Django Tests, Code Linting, Security Scan) were failing after Session 88's notification work. This session diagnosed and fixed all failures, upgraded vulnerable dependencies, and added proactive CI tooling.
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| CI/CD Fix: Flake8 | Fixed 15 violations: E127, F541, C901 noqa x3, F811 renames x2, E402 noqa x6 | 9.0/10 |
+| CI/CD Fix: Bandit | Fixed 3 findings: B110 nosec x2, B108 nosec x1 | 9.0/10 |
+| CI/CD Fix: Tests | Added OPENAI_API_KEY env mock to 3 test classes (14 failures → 0) | 9.2/10 |
+| Dep Upgrade: pillow | 10.4.0 → 12.1.1 (CVE-2026-25990: out-of-bounds write on PSD) | N/A |
+| Dep Upgrade: sqlparse | 0.5.3 → 0.5.4 (GHSA-27jp: hang on long tuple formatting) | N/A |
+| Dep Upgrade: django | 5.2.9 → 5.2.11 (6 CVEs: SQL injection, DoS, timing attack) | N/A |
+| Dep Upgrade: urllib3 | 2.6.2 → 2.6.3 (CVE-2026-21441: decompression bomb) | N/A |
+| Dependabot | Auto-creates PRs for vulnerable/outdated deps (weekly Monday scan) | N/A |
+| Pre-commit hooks | Blocks commits failing flake8 or bandit locally (mirrors CI) | N/A |
+
+**Files Modified:**
+- `prompts/admin.py` — Fixed E127, F541, added 2x `# nosec B110`
+- `prompts/tasks.py` — Added 3x `# noqa: C901`
+- `prompts/tests/test_pass2_seo_review.py` — Fixed E127, added API key mock to 2 test classes
+- `prompts/tests/test_validate_tags.py` — Renamed 2 duplicate tests, added 6x `# noqa: E402`
+- `prompts/tests/test_backfill_hardening.py` — Added API key mock to 1 test class
+- `prompts/management/commands/audit_tags.py` — Added `# nosec B108`
+- `requirements.txt` — Upgraded pillow, sqlparse, django, urllib3
+
+**Files Created:**
+- `.github/dependabot.yml` — Dependabot config (pip + github-actions, weekly Monday)
+- `.pre-commit-config.yaml` — Pre-commit hooks (trailing whitespace, flake8, bandit)
+
+**Key Decisions:**
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| C901 functions | noqa suppress, not refactor | Inherently complex (tag validation, SEO pipeline) — refactoring is separate work |
+| Test API key fix | Class-level @patch.dict | Covers all methods without touching individual test logic |
+| Pillow major upgrade | 10.4→12.1 | CVE fix; 691 tests confirmed zero regressions |
+| Pre-commit scope | flake8 + bandit only | Mirrors CI linting + security jobs; full test suite too slow for commit hooks |
+
+**Key Lesson:**
+- Dependency CVEs cascade: fixing pillow/sqlparse revealed django/urllib3 CVEs in the next CI run. Dependabot prevents this whack-a-mole pattern.
+
+**Test Results:** 691 tests passing (was 689 — 2 shadowed duplicate tests now execute), 12 skipped, 0 failures
+
+---
+
 ### Session 88 - February 25-26, 2026
 
 **Focus:** Phase R1-D v7 — Notification Management Features + Document Alignment
@@ -1657,5 +1706,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.14 (Session 87 — Phase R1-D notifications redesign, per-card mark-as-read, bell sync, dedup fix, CC docs v2.0, 5 new tests)
-**Last Updated:** February 18, 2026
+**Version:** 4.16 (Session 89 — CI/CD pipeline fix, dependency upgrades, Dependabot + pre-commit hooks)
+**Last Updated:** February 26, 2026

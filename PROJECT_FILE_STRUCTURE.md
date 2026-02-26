@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
 **Last Updated:** February 26, 2026
-**Project:** PromptFinder (Django 5.2.9)
+**Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~689 passing (43% coverage, threshold 40%)
+**Total Tests:** ~691 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -21,7 +21,7 @@
 | **Management Commands** | 28 | prompts/management/commands/ |
 | **Services** | 12 | prompts/services/ |
 | **View Modules** | 12 | prompts/views/ |
-| **CI/CD Config Files** | 3 | .github/workflows/, root |
+| **CI/CD Config Files** | 5 | .github/workflows/, .github/, root |
 | **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
 
 ---
@@ -33,9 +33,12 @@ live-working-project/
 ├── .claude/                      # Claude Code settings
 ├── .github/                      # GitHub configuration
 │   ├── ISSUE_TEMPLATE/           # Issue templates
-│   └── workflows/
-│       └── django-ci.yml         # CI/CD pipeline (3 jobs)
+│   ├── workflows/
+│   │   └── django-ci.yml         # CI/CD pipeline (3 jobs)
+│   ├── dependabot.yml            # Dependabot auto-update config (Session 89)
+│   └── pull_request_template.md
 ├── .flake8                       # Flake8 linting configuration
+├── .pre-commit-config.yaml       # Pre-commit hooks: flake8 + bandit (Session 89)
 ├── .bandit                       # Bandit security scan configuration
 ├── about/                        # Secondary Django app (7 files)
 │   ├── migrations/               # 2 migrations
@@ -425,6 +428,8 @@ static/css/
 | `.flake8` | Linting rules | max-line-length=120, exclude migrations |
 | `.bandit` | Security scan | Skip B101 (assert), target prompts/ |
 | `django-ci.yml` | Pipeline definition | Python 3.12, PostgreSQL 14 |
+| `.pre-commit-config.yaml` | Pre-commit hooks | flake8, bandit, trailing whitespace |
+| `.github/dependabot.yml` | Auto dependency updates | pip weekly Monday, github-actions weekly |
 
 ### Pipeline Features
 

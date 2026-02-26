@@ -30,7 +30,7 @@
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
 | **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
 | **2B** | **Category Taxonomy Revamp + Tag Pipeline** | **✅ 2B-1 through 2B-9 + S80-81 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring, tag validation pipeline, admin metadata** |
-| **R1 + R1-D** | **User Notifications** | **🔄 ~95% (S86-88)** | **Infrastructure (S86) + page redesign (S87) + management features (S88). CI/CD fix, Follow Back, action labels, admin panel** |
+| **R1 + R1-D** | **User Notifications** | **🔄 ~95% (S86-89)** | **Infrastructure (S86) + page redesign (S87) + management features (S88) + CI/CD fix (S89). Follow Back, action labels, admin panel** |
 
 ---
 
@@ -242,7 +242,7 @@ class CollectionItem(models.Model):
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE)
     prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE)
     added_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         unique_together = ['collection', 'prompt']  # Can't add same prompt twice
 ```
@@ -406,10 +406,10 @@ Plus: Admin metadata editing, security hardening, tag validation pipeline, compo
 
 ---
 
-## 🔄 Phase R1 + R1-D: User Frontend Notifications (~95% — Sessions 86-88)
+## 🔄 Phase R1 + R1-D: User Frontend Notifications (~95% — Sessions 86-89)
 
 **Started:** February 17, 2026 (R1: S86, R1-D: S87-88)
-**Tests:** 85 notification tests (~689 total)
+**Tests:** 85 notification tests (~691 total)
 
 ### What Was Built
 
@@ -464,7 +464,7 @@ Full in-app notification system with bell dropdown and dedicated notifications p
 
 ### R1-D Remaining (Session 89+)
 
-- CI/CD pipeline fix (all 3 jobs currently failing — top priority)
+- ~~CI/CD pipeline fix~~ — **DONE (Session 89):** All 3 jobs green, 691 tests passing, dependency upgrades, Dependabot + pre-commit hooks
 - "Follow Back" button on follow notification cards
 - Better action button labels (Likes: "View Liked Prompt", Collections: "View Prompt Added")
 - Bell dropdown categories sorted by most recent notification

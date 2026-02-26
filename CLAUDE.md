@@ -147,7 +147,7 @@ Rebuilding upload flow to feel "instant" by:
 |-------|-------------|--------|
 | **N4h rename not triggering** | `rename_prompt_files_for_seo` task is coded but not generating SEO filenames in production | Files keep UUID names instead of SEO slugs |
 | **Indexes migration pending** | Composite indexes added to models.py but `makemigrations` not yet run | Indexes not active in database |
-| **CI/CD pipeline failing** | All 3 jobs (Django Tests, Code Linting, Security Scan) failing | Blocks merge to main — top priority for Session 89 |
+| **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests pass, flake8 clean, bandit clean) | ✅ All 3 jobs green |
 
 **N4h Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation.
 
@@ -761,7 +761,7 @@ Options for `initOverflowTabs()`:
 
 | Layer | Technology | Version | Notes |
 |-------|------------|---------|-------|
-| **Framework** | Django | 5.2.9 | Python web framework |
+| **Framework** | Django | 5.2.11 | Python web framework |
 | **Language** | Python | 3.12 | Backend logic |
 | **Database** | PostgreSQL | - | Hosted on Heroku |
 | **Media Storage** | Backblaze B2 | - | Images, videos, thumbnails |
@@ -1105,5 +1105,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.15 (Session 88 — Phase R1-D v7 notification management: delete, pagination, animations, reverse signals, real-time polling, document alignment)
+**Version:** 4.16 (Session 89 — CI/CD pipeline fix, dependency upgrades, Dependabot + pre-commit hooks)
 **Last Updated:** February 26, 2026

@@ -81,6 +81,7 @@ from .admin_views import (
     prompt_move_down,
     prompt_set_order,
     bulk_reorder_prompts,
+    system_notifications_view,
 )
 
 # Import AI generator category views
@@ -115,6 +116,9 @@ from .notification_views import (
     unread_count_api,
     mark_all_read_api,
     mark_read_api,
+    delete_notification_view,
+    delete_all_notifications_view,
+    notification_click,
     notifications_page,
 )
 
@@ -194,6 +198,7 @@ __all__ = [
     'bulk_delete_no_media',
     'bulk_set_draft_no_media',
     'bulk_set_published_no_media',
+    'system_notifications_view',
 
     # Generator views
     'inspiration_index',
@@ -220,6 +225,9 @@ __all__ = [
     'unread_count_api',
     'mark_all_read_api',
     'mark_read_api',
+    'delete_notification_view',
+    'delete_all_notifications_view',
+    'notification_click',
     'notifications_page',
 
     # Utility views

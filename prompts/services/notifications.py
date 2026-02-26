@@ -8,8 +8,10 @@ Notification objects directly.
 import logging
 from datetime import timedelta
 
-from django.db.models import Count, Q
+import bleach
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 from prompts.models import Notification, NOTIFICATION_TYPE_CATEGORY_MAP
 
@@ -93,8 +95,11 @@ def get_unread_count(user):
     """
     if not user or not user.is_authenticated:
         return 0
+    now = timezone.now()
     return Notification.objects.filter(
         recipient=user, is_read=False
+    ).exclude(is_expired=True).exclude(
+        expires_at__lte=now
     ).count()
 
 
@@ -106,9 +111,12 @@ def get_unread_count_by_category(user):
     if not user or not user.is_authenticated:
         return {c: 0 for c in Notification.Category.values}
 
+    now = timezone.now()
     counts = (
         Notification.objects
         .filter(recipient=user, is_read=False)
+        .exclude(is_expired=True)
+        .exclude(expires_at__lte=now)
         .values('category')
         .annotate(count=Count('id'))
     )
@@ -163,4 +171,131 @@ def delete_all_notifications(user, category=None):
     if category:
         queryset = queryset.filter(category=category)
     count, _ = queryset.delete()
+    return count
+
+
+# =============================================================================
+# SYSTEM NOTIFICATION FUNCTIONS (Phase P2-A)
+# =============================================================================
+
+# HTML tags allowed in system notification messages (from Summernote)
+ALLOWED_HTML_TAGS = [
+    'p', 'br', 'b', 'strong', 'i', 'em', 'u',
+    'ul', 'ol', 'li', 'a',
+]
+ALLOWED_HTML_ATTRIBUTES = {'a': ['href']}
+
+
+def create_system_notification(message, link='', audience='all',
+                               expires_at=None, created_by=None):
+    """
+    Create a system notification for the specified audience.
+
+    Args:
+        message: Notification body (required, may contain HTML from Summernote)
+        link: Optional link URL (must be http/https)
+        audience: 'all' | 'staff' | list of user IDs
+        expires_at: Optional datetime for auto-expiry
+        created_by: Username of staff member (audit trail only)
+
+    Returns:
+        dict with 'count' (notifications created), or 'error' on failure
+    """
+    from django.contrib.auth.models import User
+
+    # Sanitize HTML from Summernote (defense-in-depth)
+    message = bleach.clean(
+        message,
+        tags=ALLOWED_HTML_TAGS,
+        attributes=ALLOWED_HTML_ATTRIBUTES,
+        strip=True,
+    )
+
+    # Auto-derive title from message (strip HTML, first 200 chars)
+    plain_text = strip_tags(message).strip()
+    title = plain_text[:200] if plain_text else 'System Notification'
+
+    if audience == 'all':
+        recipients = User.objects.filter(is_active=True)
+    elif audience == 'staff':
+        recipients = User.objects.filter(is_active=True, is_staff=True)
+    elif isinstance(audience, (list, set)):
+        recipients = User.objects.filter(id__in=audience, is_active=True)
+    else:
+        return {'count': 0, 'error': 'Invalid audience'}
+
+    notifications = []
+    for user in recipients.iterator():
+        notifications.append(Notification(
+            recipient=user,
+            sender=None,
+            notification_type='system',
+            category='system',
+            title=title,
+            message=message,
+            link=link,
+            is_admin_notification=True,
+            expires_at=expires_at,
+        ))
+
+    created = Notification.objects.bulk_create(notifications, batch_size=500)
+
+    logger.info(
+        "System notification sent: title=%r, audience=%s, count=%d, "
+        "created_by=%s",
+        title, audience, len(created), created_by,
+    )
+
+    return {
+        'count': len(created),
+    }
+
+
+def get_system_notification_batches():
+    """
+    Get all system notification batches for the management table.
+    Groups by title + message + link to identify batches.
+    Returns list of dicts with title, message, created_at, recipient_count,
+    read_count, read_percentage, total_clicks, is_expired status.
+    """
+    from django.db.models import Min, Max
+
+    batches = (
+        Notification.objects
+        .filter(is_admin_notification=True, notification_type='system')
+        .values('title', 'message', 'link')
+        .annotate(
+            recipient_count=Count('id'),
+            read_count=Count('id', filter=Q(is_read=True)),
+            first_sent=Min('created_at'),
+            last_sent=Max('created_at'),
+            expired_count=Count('id', filter=Q(is_expired=True)),
+            total_clicks=Sum('click_count'),
+        )
+        .order_by('-first_sent')
+    )
+
+    result = list(batches)
+    for batch in result:
+        batch['is_expired'] = batch['expired_count'] > 0
+        batch['total_clicks'] = batch['total_clicks'] or 0
+        batch['read_percentage'] = (
+            round(batch['read_count'] / batch['recipient_count'] * 100)
+            if batch['recipient_count'] > 0 else 0
+        )
+    return result
+
+
+def delete_system_notification_batch(title, created_after, created_before):
+    """
+    Hard-delete all system notifications matching a batch (by title and time range).
+    Returns count of deleted notifications.
+    """
+    count, _ = Notification.objects.filter(
+        is_admin_notification=True,
+        notification_type='system',
+        title=title,
+        created_at__gte=created_after,
+        created_at__lte=created_before,
+    ).delete()
     return count

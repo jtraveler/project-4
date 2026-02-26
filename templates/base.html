@@ -364,6 +364,14 @@
                     <div class="pexels-dropdown-title">Trash</div>
                 </div>
             </a>
+            {% if user.is_staff %}
+            <a href="{% url 'prompts:system_notifications' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
+                <svg class="icon icon-sm pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+                <div class="pexels-dropdown-content">
+                    <div class="pexels-dropdown-title">System Notifications</div>
+                </div>
+            </a>
+            {% endif %}
             <div class="pexels-dropdown-divider" role="separator"></div>
             <a href="{% url 'account_logout' %}" class="pexels-dropdown-item" role="menuitem" tabindex="-1">
                 <svg class="icon icon-sm pexels-dropdown-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-login"/></svg>

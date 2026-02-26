@@ -93,6 +93,17 @@ def delete_all_notifications_view(request):
 
 
 @login_required
+@require_POST
+def notification_click(request, notification_id):
+    """POST /api/notifications/<id>/click/ — fire-and-forget click tracking."""
+    from django.db.models import F
+    Notification.objects.filter(
+        id=notification_id, recipient=request.user
+    ).update(click_count=F('click_count') + 1)
+    return JsonResponse({'status': 'ok'})
+
+
+@login_required
 def notifications_page(request):
     """
     GET /notifications/
@@ -108,9 +119,15 @@ def notifications_page(request):
     offset = int(request.GET.get('offset', 0))
     limit = NOTIFICATIONS_PER_PAGE
 
+    from django.utils import timezone
+    now = timezone.now()
     qs = Notification.objects.filter(
         recipient=request.user,
         category=category,
+    ).exclude(
+        is_expired=True
+    ).exclude(
+        expires_at__lte=now
     ).select_related('sender', 'sender__userprofile').order_by('-created_at')
 
     # Fetch one extra to determine if more exist

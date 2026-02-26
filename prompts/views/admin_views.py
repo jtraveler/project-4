@@ -309,28 +309,28 @@ def prompt_move_up(request, slug):
     if not request.user.is_staff:
         messages.error(request, 'Permission denied.')
         return redirect('prompts:home')
-    
+
     prompt = get_object_or_404(Prompt, slug=slug)
-    
+
     # Find the prompt with the next lower order number
     previous_prompt = Prompt.objects.filter(
         order__lt=prompt.order
     ).order_by('-order').first()
-    
+
     if previous_prompt:
         # Swap the order values
         prompt.order, previous_prompt.order = previous_prompt.order, prompt.order
         prompt.save(update_fields=['order'])
         previous_prompt.save(update_fields=['order'])
-        
+
         # Clear caches
         for page in range(1, 5):
             cache.delete(f"prompt_list_None_None_{page}")
-        
+
         messages.success(request, f'Moved "{prompt.title}" up.')
     else:
         messages.warning(request, f'"{prompt.title}" is already at the top.')
-    
+
     return redirect('prompts:home')
 
 
@@ -342,28 +342,28 @@ def prompt_move_down(request, slug):
     if not request.user.is_staff:
         messages.error(request, 'Permission denied.')
         return redirect('prompts:home')
-    
+
     prompt = get_object_or_404(Prompt, slug=slug)
-    
+
     # Find the prompt with the next higher order number
     next_prompt = Prompt.objects.filter(
         order__gt=prompt.order
     ).order_by('order').first()
-    
+
     if next_prompt:
         # Swap the order values
         prompt.order, next_prompt.order = next_prompt.order, prompt.order
         prompt.save(update_fields=['order'])
         next_prompt.save(update_fields=['order'])
-        
+
         # Clear caches
         for page in range(1, 5):
             cache.delete(f"prompt_list_None_None_{page}")
-        
+
         messages.success(request, f'Moved "{prompt.title}" down.')
     else:
         messages.warning(request, f'"{prompt.title}" is already at the bottom.')
-    
+
     return redirect('prompts:home')
 
 
@@ -374,23 +374,23 @@ def prompt_set_order(request, slug):
     """
     if not request.user.is_staff:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
-    
+
     try:
         new_order = float(request.POST.get('order', 0))
     except (ValueError, TypeError):
         return JsonResponse({'error': 'Invalid order value'}, status=400)
-    
+
     prompt = get_object_or_404(Prompt, slug=slug)
     prompt.order = new_order
     prompt.save(update_fields=['order'])
-    
+
     # Clear caches
     for page in range(1, 5):
         cache.delete(f"prompt_list_None_None_{page}")
-    
+
     return JsonResponse({
         'success': True,
         'message': f'Updated order for "{prompt.title}" to {new_order}'
@@ -471,6 +471,109 @@ class TagAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             qs = qs.filter(name__istartswith=self.q)
         return qs
+
+
+# =============================================================================
+# SYSTEM NOTIFICATIONS (Phase P2-A)
+# =============================================================================
+
+
+@staff_member_required
+def system_notifications_view(request):
+    """
+    Admin-only page for composing and managing system notifications.
+    Tabbed dashboard: Notification Blast, Sent Notifications, Admin Log, Web Pulse.
+    GET: Shows tabbed interface.
+    POST: Creates/sends system notifications, or deletes a batch.
+    """
+    from prompts.services.notifications import (
+        create_system_notification,
+        get_system_notification_batches,
+    )
+
+    # Tab handling
+    valid_tabs = ('blast', 'sent', 'admin-log', 'web-pulse')
+    active_tab = request.GET.get('tab', 'blast')
+    if active_tab not in valid_tabs:
+        active_tab = 'blast'
+
+    context = {
+        'batches': get_system_notification_batches(),
+        'success_message': None,
+        'error_message': None,
+        'form_data': {},
+        'active_tab': active_tab,
+    }
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'send':
+            message = request.POST.get('message', '').strip()
+            audience = request.POST.get('audience', 'all')
+
+            # Validate audience
+            if audience not in ('all', 'staff'):
+                audience = 'all'
+
+            # Rate limit: 1 system notification per 60 seconds
+            rate_key = f'sysnotif_rate_{request.user.id}'
+            if cache.get(rate_key):
+                context['error_message'] = (
+                    'Please wait before sending another notification.'
+                )
+                context['form_data'] = request.POST
+            elif not message:
+                context['error_message'] = 'Message is required.'
+                context['form_data'] = request.POST
+            else:
+                result = create_system_notification(
+                    message=message,
+                    audience=audience,
+                    created_by=request.user.username,
+                )
+                if 'error' in result:
+                    context['error_message'] = result['error']
+                else:
+                    cache.set(rate_key, True, 60)
+                    context['success_message'] = (
+                        f"Sent to {result['count']} users."
+                    )
+                    context['batches'] = (
+                        get_system_notification_batches()
+                    )
+                    context['active_tab'] = 'sent'
+
+        elif action == 'delete_batch':
+            batch_title = request.POST.get('batch_title', '')
+            from django.utils.dateparse import parse_datetime
+            created_after = parse_datetime(
+                request.POST.get('batch_after', '')
+            )
+            created_before = parse_datetime(
+                request.POST.get('batch_before', '')
+            )
+
+            if batch_title and created_after and created_before:
+                from prompts.services.notifications import (
+                    delete_system_notification_batch,
+                )
+                count = delete_system_notification_batch(
+                    batch_title, created_after, created_before
+                )
+                context['success_message'] = (
+                    f"Deleted {count} notifications."
+                )
+                context['batches'] = (
+                    get_system_notification_batches()
+                )
+                context['active_tab'] = 'sent'
+            else:
+                context['error_message'] = 'Invalid batch parameters.'
+
+    return render(
+        request, 'prompts/system_notifications.html', context
+    )
 
 
 # =============================================================================

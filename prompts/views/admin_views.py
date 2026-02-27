@@ -7,6 +7,7 @@ from prompts.models import Prompt
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.core.cache import cache
+from django.utils import timezone as tz
 from dal import autocomplete
 from taggit.models import Tag
 import cloudinary.api
@@ -518,9 +519,13 @@ def system_notifications_view(request):
 
             # Rate limit: 1 system notification per 60 seconds
             rate_key = f'sysnotif_rate_{request.user.id}'
-            if cache.get(rate_key):
+            rate_sent_at = cache.get(rate_key)
+            if rate_sent_at:
+                elapsed = (tz.now() - rate_sent_at).total_seconds()
+                remaining = max(1, int(60 - elapsed))
                 context['error_message'] = (
-                    'Please wait before sending another notification.'
+                    f'Please wait {remaining} seconds before '
+                    f'sending another notification.'
                 )
                 context['form_data'] = request.POST
             elif not message:
@@ -535,7 +540,7 @@ def system_notifications_view(request):
                 if 'error' in result:
                     context['error_message'] = result['error']
                 else:
-                    cache.set(rate_key, True, 60)
+                    cache.set(rate_key, tz.now(), 60)
                     context['success_message'] = (
                         f"Sent to {result['count']} users."
                     )
@@ -545,24 +550,16 @@ def system_notifications_view(request):
                     context['active_tab'] = 'sent'
 
         elif action == 'delete_batch':
-            batch_title = request.POST.get('batch_title', '')
-            from django.utils.dateparse import parse_datetime
-            created_after = parse_datetime(
-                request.POST.get('batch_after', '')
-            )
-            created_before = parse_datetime(
-                request.POST.get('batch_before', '')
-            )
+            batch_id = request.POST.get('batch_id', '').strip()
 
-            if batch_title and created_after and created_before:
+            if batch_id:
                 from prompts.services.notifications import (
                     delete_system_notification_batch,
                 )
-                count = delete_system_notification_batch(
-                    batch_title, created_after, created_before
-                )
+                count = delete_system_notification_batch(batch_id)
                 context['success_message'] = (
-                    f"Deleted {count} notifications."
+                    "Notification deleted successfully. "
+                    f"Removed from {count} user feeds."
                 )
                 context['batches'] = (
                     get_system_notification_batches()

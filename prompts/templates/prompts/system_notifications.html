@@ -5,6 +5,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/components/profile-tabs.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/notifications.css' %}">
 <link rel="stylesheet" href="{% static 'css/pages/system-notifications.css' %}">
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 {% endblock %}
@@ -66,7 +67,7 @@
 
             <div class="sn-form-group">
                 <label id="editorLabel">Message <span class="sn-required" aria-hidden="true">*</span></label>
-                <div id="quillEditor" aria-labelledby="editorLabel">{{ form_data.message|default:'' }}</div>
+                <div id="quillEditor" aria-labelledby="editorLabel"></div>
             </div>
 
             <fieldset class="sn-form-group sn-fieldset">
@@ -86,19 +87,24 @@
             </fieldset>
 
             <!-- Live Preview -->
-            <div class="sn-preview-section" aria-hidden="true">
-                <h3 class="sn-preview-title">Preview</h3>
-                <div class="notif-card notif-unread sn-preview-card" role="presentation">
-                    <div class="notif-avatar-wrapper">
-                        <div class="notif-avatar-placeholder" style="background: var(--gray-600, #525252);" aria-hidden="true">
-                            <svg class="icon" width="20" height="20"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+            <div class="sn-form-group">
+                <label>Preview</label>
+                <div class="sn-preview-section" aria-hidden="true">
+                    <div class="notif-card notif-unread sn-preview-card" role="presentation">
+                        <div class="notif-unread-dot-shell">
+                            <span class="notif-unread-dot" aria-hidden="true"></span>
                         </div>
+                        <div class="notif-avatar-wrapper">
+                            <div class="notif-avatar-placeholder" style="background: var(--gray-600, #525252);" aria-hidden="true">
+                                <svg class="icon" aria-hidden="true" width="20" height="20"><use href="{% static 'icons/sprite.svg' %}#icon-bell"/></svg>
+                            </div>
+                        </div>
+                        <div class="notif-body">
+                            <div class="notif-body-title" id="previewTitle">Your notification message...</div>
+                            <div class="notif-time">Just now</div>
+                        </div>
+                        <div class="notif-actions"></div>
                     </div>
-                    <div class="notif-body">
-                        <div class="notif-body-title" id="previewTitle">Your notification message...</div>
-                        <div class="notif-time">Just now</div>
-                    </div>
-                    <div class="notif-actions"></div>
                 </div>
             </div>
 
@@ -136,41 +142,26 @@
                         <th scope="col">Title</th>
                         <th scope="col">Sent</th>
                         <th scope="col">Recipients</th>
-                        <th scope="col">Read</th>
-                        <th scope="col">Clicks</th>
-                        <th scope="col">Status</th>
+                        <th scope="col" title="Based on notification page loads — not guaranteed to have been read.">Most Likely Seen</th>
                         <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for batch in batches %}
-                    <tr class="{% if batch.is_expired %}sn-batch-expired{% endif %}">
+                    <tr>
                         <td>
-                            <div class="sn-batch-title">{{ batch.title|truncatewords:8 }}</div>
-                            {% if batch.message %}
-                            <div class="sn-batch-message">{{ batch.message|truncatewords:10|striptags }}</div>
-                            {% endif %}
+                            <div class="sn-batch-title">{{ batch.title|striptags|truncatewords:8 }}</div>
                         </td>
                         <td>{{ batch.first_sent|timesince }} ago</td>
                         <td>{{ batch.recipient_count }}</td>
                         <td>{{ batch.read_count }} <span class="sn-read-pct">({{ batch.read_percentage }}%)</span></td>
-                        <td>{{ batch.total_clicks }}</td>
-                        <td>
-                            {% if batch.is_expired %}
-                            <span class="sn-badge sn-badge-expired">Expired</span>
-                            {% else %}
-                            <span class="sn-badge sn-badge-active">Active</span>
-                            {% endif %}
-                        </td>
                         <td>
                             <form method="post" class="sn-inline-form">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="delete_batch">
-                                <input type="hidden" name="batch_title" value="{{ batch.title }}">
-                                <input type="hidden" name="batch_after" value="{{ batch.first_sent|date:'c' }}">
-                                <input type="hidden" name="batch_before" value="{{ batch.last_sent|date:'c' }}">
+                                <input type="hidden" name="batch_id" value="{{ batch.batch_id }}">
                                 <button type="submit" class="sn-delete-btn"
-                                        onclick="return confirm('Permanently delete all notifications with this title? This cannot be undone.')">
+                                        onclick="return confirm('Permanently delete this notification batch? This cannot be undone.')">
                                     Delete
                                 </button>
                             </form>
@@ -246,6 +237,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Associate Quill's contenteditable with the label for screen readers
     quill.root.setAttribute('aria-labelledby', 'editorLabel');
     quill.root.setAttribute('aria-required', 'true');
+
+    // Restore content after validation error (hidden input retains HTML)
+    var existingContent = hiddenInput.value;
+    if (existingContent && existingContent.trim()) {
+        quill.root.innerHTML = existingContent;
+    }
 
     // --- Sync Quill content to hidden input before form submit ---
     composeForm.addEventListener('submit', function() {

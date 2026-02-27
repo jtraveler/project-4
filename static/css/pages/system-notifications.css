@@ -153,19 +153,9 @@
 /* === PREVIEW === */
 .sn-preview-section {
     border: 1px solid var(--gray-200, #e5e7eb);
-    border-radius: var(--radius-md, 8px);
+    border-radius: var(--radius-lg, 12px);
     padding: 16px;
     background: var(--gray-50, #fafafa);
-    margin-bottom: 20px;
-}
-
-.sn-preview-title {
-    font-size: var(--font-size-sm, 14px);
-    font-weight: 600;
-    color: var(--gray-600, #525252);
-    margin: 0 0 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
 }
 
 .sn-preview-card {
@@ -199,12 +189,12 @@
 }
 
 .sn-btn-send {
-    background: var(--main-blue, #2563eb);
+    background: var(--gray-800, #262626);
     color: var(--white, #fff);
 }
 
 .sn-btn-send:hover:not(:disabled) {
-    background: #1d4ed8;
+    background: var(--gray-700, #404040);
 }
 
 .sn-btn-send:disabled {

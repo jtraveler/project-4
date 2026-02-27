@@ -2776,6 +2776,10 @@ class Notification(models.Model):
         help_text="Manually expired by admin"
     )
     click_count = models.PositiveIntegerField(default=0)
+    batch_id = models.CharField(
+        max_length=8, blank=True, default='', db_index=True,
+        help_text="Groups notifications from the same blast"
+    )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

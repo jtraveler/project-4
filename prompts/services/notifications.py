@@ -6,10 +6,11 @@ Signal handlers and views should use this module instead of creating
 Notification objects directly.
 """
 import logging
+import uuid
 from datetime import timedelta
 
 import bleach
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 from django.utils.html import strip_tags
 
@@ -184,6 +185,7 @@ ALLOWED_HTML_TAGS = [
     'ul', 'ol', 'li', 'a',
 ]
 ALLOWED_HTML_ATTRIBUTES = {'a': ['href']}
+ALLOWED_LINK_PROTOCOLS = ['http', 'https', 'mailto']
 
 
 def create_system_notification(message, link='', audience='all',
@@ -203,17 +205,20 @@ def create_system_notification(message, link='', audience='all',
     """
     from django.contrib.auth.models import User
 
-    # Sanitize HTML from Summernote (defense-in-depth)
-    message = bleach.clean(
+    # Sanitize HTML from Quill editor (defense-in-depth)
+    sanitized_html = bleach.clean(
         message,
         tags=ALLOWED_HTML_TAGS,
         attributes=ALLOWED_HTML_ATTRIBUTES,
+        protocols=ALLOWED_LINK_PROTOCOLS,
         strip=True,
     )
 
-    # Auto-derive title from message (strip HTML, first 200 chars)
-    plain_text = strip_tags(message).strip()
-    title = plain_text[:200] if plain_text else 'System Notification'
+    # Title stores the sanitized HTML (rendered with |safe in templates).
+    # Message field left empty — system notifications don't use the quote
+    # column. This prevents duplicate display (title + quote).
+    plain_text = strip_tags(sanitized_html).strip()
+    title = sanitized_html if plain_text else 'System Notification'
 
     if audience == 'all':
         recipients = User.objects.filter(is_active=True)
@@ -224,6 +229,8 @@ def create_system_notification(message, link='', audience='all',
     else:
         return {'count': 0, 'error': 'Invalid audience'}
 
+    batch_id = str(uuid.uuid4())[:8]
+
     notifications = []
     for user in recipients.iterator():
         notifications.append(Notification(
@@ -232,10 +239,11 @@ def create_system_notification(message, link='', audience='all',
             notification_type='system',
             category='system',
             title=title,
-            message=message,
+            message='',
             link=link,
             is_admin_notification=True,
             expires_at=expires_at,
+            batch_id=batch_id,
         ))
 
     created = Notification.objects.bulk_create(notifications, batch_size=500)
@@ -254,31 +262,27 @@ def create_system_notification(message, link='', audience='all',
 def get_system_notification_batches():
     """
     Get all system notification batches for the management table.
-    Groups by title + message + link to identify batches.
-    Returns list of dicts with title, message, created_at, recipient_count,
-    read_count, read_percentage, total_clicks, is_expired status.
+    Groups by batch_id for unique blast identification.
+    Returns list of dicts with batch_id, title, recipient_count,
+    read_count, read_percentage, first_sent.
     """
-    from django.db.models import Min, Max
-
     batches = (
         Notification.objects
         .filter(is_admin_notification=True, notification_type='system')
-        .values('title', 'message', 'link')
+        .exclude(batch_id='')
+        .exclude(is_expired=True)
+        .values('batch_id')
         .annotate(
+            title=Max('title'),
             recipient_count=Count('id'),
             read_count=Count('id', filter=Q(is_read=True)),
             first_sent=Min('created_at'),
-            last_sent=Max('created_at'),
-            expired_count=Count('id', filter=Q(is_expired=True)),
-            total_clicks=Sum('click_count'),
         )
         .order_by('-first_sent')
     )
 
     result = list(batches)
     for batch in result:
-        batch['is_expired'] = batch['expired_count'] > 0
-        batch['total_clicks'] = batch['total_clicks'] or 0
         batch['read_percentage'] = (
             round(batch['read_count'] / batch['recipient_count'] * 100)
             if batch['recipient_count'] > 0 else 0
@@ -286,16 +290,15 @@ def get_system_notification_batches():
     return result
 
 
-def delete_system_notification_batch(title, created_after, created_before):
+def delete_system_notification_batch(batch_id):
     """
-    Hard-delete all system notifications matching a batch (by title and time range).
+    Hard-delete all system notifications matching a batch_id.
     Returns count of deleted notifications.
     """
+    if not batch_id:
+        return 0
     count, _ = Notification.objects.filter(
         is_admin_notification=True,
-        notification_type='system',
-        title=title,
-        created_at__gte=created_after,
-        created_at__lte=created_before,
+        batch_id=batch_id,
     ).delete()
     return count

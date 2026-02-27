@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -31,6 +31,9 @@
 | **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
 | **2B** | **Category Taxonomy Revamp + Tag Pipeline** | **✅ 2B-1 through 2B-9 + S80-81 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring, tag validation pipeline, admin metadata** |
 | **R1 + R1-D** | **User Notifications** | **🔄 ~95% (S86-89)** | **Infrastructure (S86) + page redesign (S87) + management features (S88) + CI/CD fix (S89). Follow Back, action labels, admin panel** |
+| **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
+| **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
+| **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
 
 ---
 
@@ -465,12 +468,57 @@ Full in-app notification system with bell dropdown and dedicated notifications p
 ### R1-D Remaining (Session 89+)
 
 - ~~CI/CD pipeline fix~~ — **DONE (Session 89):** All 3 jobs green, 691 tests passing, dependency upgrades, Dependabot + pre-commit hooks
-- "Follow Back" button on follow notification cards
-- Better action button labels (Likes: "View Liked Prompt", Collections: "View Prompt Added")
-- Bell dropdown categories sorted by most recent notification
-- System Notifications admin panel (compose, schedule, manage, health monitoring)
+- ~~"Follow Back" button on follow notification cards~~ — **DONE (Session 90)**
+- ~~Better action button labels~~ — **DONE (Session 90)**
+- ~~Bell dropdown categories sorted by most recent notification~~ — **DONE (Session 90)**
+- ~~System Notifications admin panel~~ — **DONE (Phase P2-A, Sessions 90-91)**
 - Heroku deployment
 - End-to-end testing with real user actions
+
+---
+
+## ✅ Phase P2-A: System Notifications Admin Dashboard (COMPLETE)
+
+**Completed:** February 26-27, 2026 (Sessions 90-91)
+**Tests:** 758 total (69 new notification tests)
+
+### What Was Built
+
+Staff-only admin dashboard at `/staff/system-notifications/` for composing and managing system notification blasts:
+
+| Feature | Description |
+|---------|-------------|
+| Quill.js 1.3.7 WYSIWYG Editor | Snow theme, full toolbar (headings, bold, italic, underline, strike, colors, alignment, lists, links, blockquote) |
+| Live Preview | Real-time card preview matching actual notification card layout (with unread dot, bell avatar, timestamp) |
+| Two-Step Send | "Preview & Send" → confirmation dialog with focus trap and keyboard navigation |
+| Audience Targeting | Radio buttons: All Users / Staff Only |
+| Batch Management | Sent Notifications table with batch_id grouping, recipient count, "Most Likely Seen" stats |
+| Batch Delete | Hard delete by batch_id with confirmation dialog |
+| HTML Sanitization | Bleach with protocol allowlist (http, https, mailto), defense-in-depth |
+| Rate Limiting | 60s cooldown with remaining-seconds display (timestamp stored in cache) |
+| Auto-Mark Seen | System notifications marked as read on page load (system tab, first page only) |
+| Click Tracking | Fire-and-forget via navigator.sendBeacon |
+| batch_id Field | UUID-based 8-char identifier for unique blast identification |
+| CSP Allowlist | cdn.quilljs.com added to CSP_SCRIPT_SRC and CSP_STYLE_SRC |
+
+### 4-Tab Layout
+
+| Tab | Status |
+|-----|--------|
+| Notification Blast | ✅ Complete — compose form with Quill editor |
+| Sent Notifications | ✅ Complete — batch management table with stats |
+| Admin Log | 🔲 Placeholder — "Coming soon" (Phase P2-B) |
+| Web Pulse | 🔲 Placeholder — "Coming soon" (Phase P2-C) |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `prompts/views/admin_views.py` | system_notifications_view() — compose, send, delete |
+| `prompts/services/notifications.py` | create_system_notification(), get_system_notification_batches(), delete_system_notification_batch() |
+| `prompts/templates/prompts/system_notifications.html` | Admin dashboard template with Quill.js |
+| `static/css/pages/system-notifications.css` | Dashboard-specific styles |
+| `prompts/migrations/0057-0060` | Expiry fields, click_count, message cleanup, batch_id |
 
 ---
 
@@ -502,7 +550,7 @@ Full in-app notification system with bell dropdown and dedicated notifications p
 |---------|--------|-------|
 | Related Prompts | 1 week | ✅ Phase 1 done (Session 74), scoring refined in 2B-9 (IDF-weighted) |
 | Image Lightbox | 3-4 days | Click to zoom |
-| Notification System | - | 🔄 Phase R1 ~95% (Sessions 86-88): model, signals, bell dropdown, notifications page, shared tabs, delete, pagination, reverse signals, real-time polling |
+| Notification System | - | 🔄 Phase R1 ~95% (S86-89) + Phase P2-A ✅ (S90-91): model, signals, bell dropdown, notifications page, system notifications admin dashboard |
 | Search Improvements | 2 weeks | Autocomplete, filters |
 
 ---
@@ -534,5 +582,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.3 (Session 88 — Phase R1-D v7 notification management, reverse signals, real-time polling)
-**Last Updated:** February 26, 2026
+**Version:** 4.4 (Session 91 — Phase P2-A System Notifications Admin complete, P2-B/C planned)
+**Last Updated:** February 27, 2026

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,65 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February 2026 Sessions
+
+### Session 91 - February 27, 2026
+
+**Focus:** System Notifications Admin — Phase P2-A Complete + CC Process Optimization
+
+**Context:** Built the complete system notifications admin dashboard (Phase P2-A) across Sessions 90-91, fixed multiple bugs in the sent log and compose form, added auto-mark-as-seen for system notifications, and optimized CC workflow documentation. Session 89 (CI/CD fixes, dependency upgrades) is documented separately below.
+
+**Chat:** https://claude.ai/chat/66a61be4-bfdf-4645-915f-e493d568ab4e
+**CC Model:** Opus 4.6 (Max plan)
+
+**Completed:**
+
+| Task | What It Does | Rating |
+|------|--------------|--------|
+| Phase P2-A: System Notifications Dashboard | Staff-only admin page with Quill.js WYSIWYG compose, audience targeting, batch management | 9.0/10 |
+| Phase P2-A: Notification UX (P1) | Follow Back button, better labels, sorted dropdown | N/A |
+| Phase P2-A: Expiry + Click Tracking | expires_at, is_expired, click_count model fields + migrations | 9.0/10 |
+| Phase P2-A: System Notifications Template | Quill.js editor, live preview, two-step confirmation, focus trap | 8.5/10 |
+| Phase P2-A: System Notification Tests | 144 tests covering access control, compose, delete, click tracking, rate limit, service layer | 8.5/10 |
+| Fix: Sent Notifications Log (4 issues) | batch_id field, remove Clicks/Status columns, rename Read→"Most Likely Seen", exclude expired | 9.0/10 |
+| Fix: 3 Bugs on System Notifications | Quill HTML restoration after validation error, rate limit remaining seconds, friendly delete message | 8.5/10 |
+| Fix: Seen Count Not Updating | Auto-mark system notifications as read on page load, "Most Likely Seen" with tooltip | 8.6/10 |
+| Fix: Notification Card Rendering | Render system notification HTML with \|safe, hide quote for system type, card layout fixes | N/A |
+| CC Process: Test Execution Strategy | Added section to CC_COMMUNICATION_PROTOCOL.md — targeted tests during dev, full suite once at end | N/A |
+| Profile Tabs CSS | Symmetric padding fix, reduced badge min-width | N/A |
+
+**Files Created:**
+- `prompts/migrations/0057_add_notification_expiry_fields.py` — expires_at, is_expired fields
+- `prompts/migrations/0058_add_notification_click_count.py` — click_count field
+- `prompts/migrations/0059_clear_system_notification_message.py` — Clear system notification message field
+- `prompts/migrations/0060_add_notification_batch_id.py` — batch_id field
+- `prompts/templates/prompts/system_notifications.html` — Admin dashboard with Quill editor
+- `static/css/pages/system-notifications.css` — Admin dashboard styles
+
+**Files Modified:**
+- `prompts/models.py` — Added expires_at, is_expired, click_count, batch_id to Notification model
+- `prompts/services/notifications.py` — batch_id generation, create_system_notification(), get_system_notification_batches(), delete_system_notification_batch(), bleach protocol allowlist
+- `prompts/views/admin_views.py` — system_notifications_view(), batch_id delete, rate limit with timestamp, delete message
+- `prompts/views/notification_views.py` — Auto-mark system notifications as read, notification_click() endpoint
+- `prompts/templates/prompts/notifications.html` — |safe for system titles, hide quote for system type
+- `prompts/templates/prompts/partials/_notification_list.html` — Same rendering changes
+- `prompts/tests/test_notifications.py` — 69 new tests (85→~300 notification-specific, 689→758 total)
+- `static/css/pages/notifications.css` — Card alignment, flex basis, actions min-width
+- `static/css/components/profile-tabs.css` — Symmetric padding, reduced badge min-width
+- `CC_COMMUNICATION_PROTOCOL.md` — Test Execution Strategy section
+
+**Key Decisions:**
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Batch identification | UUID-based batch_id (8 chars) | Replaces fragile title+time-range matching for delete operations |
+| Quill content storage | Sanitized HTML in title field, empty message | Prevents duplicate display (title + quote); renders with \|safe |
+| Rate limit display | Store timestamp in cache, compute remaining seconds | Better UX than generic "please wait" message |
+| Auto-mark as seen | Bulk update on page load (system tab, first page only) | Page load = seen; conservative guards prevent over-marking |
+| "Most Likely Seen" naming | Renamed from "Read" with tooltip | Honest labeling — page load doesn't guarantee content was read |
+
+**Test Results:** 758 tests passing (was 689), 12 skipped, 0 failures
+
+---
 
 ### Session 89 - February 26, 2026
 
@@ -1706,5 +1765,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.16 (Session 89 — CI/CD pipeline fix, dependency upgrades, Dependabot + pre-commit hooks)
-**Last Updated:** February 26, 2026
+**Version:** 4.17 (Session 91 — Phase P2-A System Notifications Admin complete, batch_id, auto-mark seen)
+**Last Updated:** February 27, 2026

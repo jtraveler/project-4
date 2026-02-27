@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~691 passing (43% coverage, threshold 40%)
+**Current Phase:** Phase P2-A (complete), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~758 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -12,11 +12,11 @@
 | Category | Count | Location |
 |----------|-------|----------|
 | **Python Files** | 96 | Various directories |
-| **HTML Templates** | 43 | templates/, prompts/templates/, about/templates/ |
-| **CSS Files** | 9 | static/css/ |
+| **HTML Templates** | 44 | templates/, prompts/templates/, about/templates/ |
+| **CSS Files** | 10 | static/css/ |
 | **JavaScript Files** | 9 | static/js/ (2 deleted in Session 61, 2 added in Session 86) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 58 | prompts/migrations/ (56), about/migrations/ (2) |
+| **Migrations** | 62 | prompts/migrations/ (60), about/migrations/ (2) |
 | **Test Files** | 19 | prompts/tests/ |
 | **Management Commands** | 28 | prompts/management/commands/ |
 | **Services** | 12 | prompts/services/ |
@@ -74,7 +74,7 @@ live-working-project/
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
-│   ├── migrations/               # 54 migrations + __init__.py
+│   ├── migrations/               # 60 migrations + __init__.py
 │   ├── services/                 # 12 service modules
 │   │   └── notifications.py      # Notification service (create, count, mark-read) (Session 86)
 │   ├── signals/                   # Signal handlers (Session 86)
@@ -124,7 +124,8 @@ live-working-project/
 │   │   ├── pages/
 │   │   │   ├── notifications.css # Notifications page styles (Sessions 86-88, ~580 lines, animations/dialog/banner/hover)
 │   │   │   ├── prompt-detail.css # Prompt detail page styles (1,515 lines, includes related prompts section)
-│   │   │   └── prompt-list.css
+│   │   │   ├── prompt-list.css
+│   │   │   └── system-notifications.css # System notifications admin dashboard styles (Phase P2-A, Sessions 90-91)
 │   │   ├── navbar.css
 │   │   ├── upload.css            # Upload page styles (~920 lines, rewritten Session 66)
 │   │   └── style.css
@@ -224,7 +225,7 @@ prompts/utils/
 | **content_generation** | GPT-4o-mini for AI-generated titles, descriptions, tags | ~$0.00255/upload |
 | **image_processor** | Pillow-based image optimization (thumb, medium, large, webp) | N/A |
 | **leaderboard** | User ranking by views, activity, engagement | N/A |
-| **notifications** | Notification service: create with 60s dedup, count unread, mark-read, delete, delete-all (Phase R1/R1-D) | N/A |
+| **notifications** | Notification service: create with 60s dedup, count unread, mark-read, delete, delete-all, create_system_notification (batch_id, bleach sanitization), get/delete batch (Phase R1/R1-D + P2-A) | N/A |
 | **openai_moderation** | OpenAI text moderation API | FREE |
 | **orchestrator** | Multi-layer moderation coordination | Combined |
 | **profanity_filter** | Custom profanity word detection | N/A |
@@ -273,7 +274,7 @@ prompts/views/
 
 ---
 
-## Templates (42 total)
+## Templates (43 total)
 
 ### Global Templates (templates/) - 18 files
 
@@ -300,6 +301,7 @@ prompts/views/
 | `upload.html` | Single-page upload (Phase N - replaces step 1 & 2) |
 | `collection_edit.html` | Collection edit form (Phase K - Session 64) |
 | `notifications.html` | Notifications page with card layout, avatars, quotes, per-card mark-as-read (Phase R1/R1-D - Sessions 86-87) |
+| `system_notifications.html` | Staff-only system notifications admin dashboard with Quill.js editor (Phase P2-A - Sessions 90-91) |
 | `trash_bin.html` | User trash bin |
 
 **Deleted in Session 61:**
@@ -322,7 +324,7 @@ prompts/views/
 
 ---
 
-## Test Files (19 files, ~689 tests)
+## Test Files (19 files, ~758 tests)
 
 | Test File | Tests | Focus Area |
 |-----------|-------|------------|
@@ -344,7 +346,7 @@ prompts/views/
 | `test_backfill_hardening.py` | 44 | Backfill hardening: quality gate, fail-fast download, URL pre-check, tag preservation (Session 82) |
 | `test_pass2_seo_review.py` | 65 | Pass 2 SEO system: queue, review, PROTECTED_TAGS, GPT prompt (Session 85) |
 | `test_admin_actions.py` | 23 | Admin actions: two-button system, bulk actions, tag ordering (Session 85) |
-| `test_notifications.py` | 85 | Notification system: model, signals, service, API, page views, bell dropdown, dedup edge cases, delete/pagination, reverse signal edge cases (Sessions 86-88) |
+| `test_notifications.py` | ~300 | Notification system: model, signals, service, API, page views, bell dropdown, dedup edge cases, delete/pagination, reverse signals, system notifications admin (access control, compose, batch delete, click tracking, rate limit, auto-mark seen) (Sessions 86-91) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -391,10 +393,11 @@ static/css/
 └── pages/
     ├── notifications.css # ~580 lines - Notifications page styles, card layout, per-card mark-as-read, delete animation, dialog, banner, hover states (Sessions 86-88)
     ├── prompt-detail.css # 1,515 lines - Prompt detail page + related prompts section (Phase J.1, Session 74)
-    └── prompt-list.css   # 304 lines - Prompt list page styles
+    ├── prompt-list.css
+    └── system-notifications.css # ~250 lines - System notifications admin dashboard styles (Phase P2-A, Sessions 90-91)   # 304 lines - Prompt list page styles
 ```
 
-**Total CSS:** ~6,440 lines across 9 files
+**Total CSS:** ~6,690 lines across 10 files
 
 **Shared CSS Components (Session 66):**
 - `.media-container-shell` / `.media-container` - Shared image/video container used by upload preview and prompt detail

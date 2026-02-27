@@ -11,8 +11,8 @@ Do NOT edit or reference this document without reading all three.
 
 ---
 
-**Last Updated:** February 26, 2026
 **Project Status:** Pre-Launch Development
+**Last Updated:** February 27, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -57,11 +57,14 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
 | **Phase K** | ⏸️ ~96% | Collections ("Saves") | Trash video bugs (3), K.2: Download tracking, virtual collections; K.3: Premium limits |
+| **Phase P2-B** | 🔲 Planned | Admin Log Tab | Activity log for staff actions |
+| **Phase P2-C** | 🔲 Planned | Web Pulse Tab | Site analytics and pulse data |
 
 ### Recently Completed
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Phase P2-A | Feb 26-27, 2026 | System Notifications Admin Dashboard (Quill.js editor, batch management, batch_id tracking, rate limiting, auto-mark seen, "Most Likely Seen" stats) |
 | Phase R1 + R1-D | Feb 17-18, 25-26, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page redesign with avatars/quotes/action buttons, per-card mark-as-read, bell sync, dedup fix, shared tab components, delete all/per-card delete, Load More pagination, two-phase delete animation, staggered fade-in, reverse signal handlers, real-time polling, "Updates available" banner, cross-component DOM event sync) |
 | Phase 2B (1-9) + Tag Pipeline + Hardening + Pass 2 SEO | Feb 9-16, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata, security hardening, backfill hardening, tag pipeline refinements, Pass 2 background SEO, admin UX |
 | Phase 2B (1-8) | Feb 9-10, 2026 | Category Taxonomy Revamp: 46 categories, 109 descriptors, AI backfill, demographic SEO rules |
@@ -569,6 +572,23 @@ Options for `initOverflowTabs()`:
 | `prompts/templates/prompts/collection_detail.html` | Grid column fix, video autoplay observer, CSS overrides (S74) |
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
 | `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
+
+**Committed in Sessions 90-91 (Feb 26-27, 2026):**
+- `prompts/models.py` - Added batch_id CharField to Notification model
+- `prompts/services/notifications.py` - batch_id generation, group by batch_id, delete by batch_id, bleach protocol allowlist, sanitized HTML in title
+- `prompts/views/admin_views.py` - batch_id delete, rate limit with remaining seconds, user-friendly delete message, timezone import
+- `prompts/views/notification_views.py` - Auto-mark system notifications as read on page load
+- `prompts/templates/prompts/system_notifications.html` - Quill editor HTML restoration fix, sent table redesign (removed Clicks/Status, "Most Likely Seen"), batch_id-based delete, preview card with unread dot
+- `prompts/templates/prompts/notifications.html` - Render system notification title with |safe, hide quote for system type
+- `prompts/templates/prompts/partials/_notification_list.html` - Same |safe and quote changes for AJAX partial
+- `prompts/tests/test_notifications.py` - 69 new tests (batch_id, rate limit, delete wording, auto-mark seen, expired exclusion, click tracking, system notification service)
+- `prompts/migrations/0057_add_notification_expiry_fields.py` - NEW: expires_at, is_expired fields
+- `prompts/migrations/0058_add_notification_click_count.py` - NEW: click_count field
+- `prompts/migrations/0059_clear_system_notification_message.py` - NEW: Clear message field for system notifications
+- `prompts/migrations/0060_add_notification_batch_id.py` - NEW: batch_id field
+- `static/css/pages/notifications.css` - Card alignment (flex-start), notif-body flex basis, title margin, actions min-width
+- `static/css/pages/system-notifications.css` - Preview border-radius, removed preview title, button color change
+- `CC_COMMUNICATION_PROTOCOL.md` - Added Test Execution Strategy section
 
 **Committed in Session 88 (Feb 25-26, 2026):**
 - `prompts/notification_signals.py` - Reverse signal handlers: unlike (m2m post_remove), unfollow (post_delete), comment delete (post_delete)
@@ -1105,5 +1125,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.16 (Session 89 — CI/CD pipeline fix, dependency upgrades, Dependabot + pre-commit hooks)
-**Last Updated:** February 26, 2026
+**Version:** 4.17 (Session 91 — Phase P2-A System Notifications Admin complete, batch_id, auto-mark seen, CC test strategy)
+**Last Updated:** February 27, 2026

@@ -2808,3 +2808,171 @@ class Notification(models.Model):
         if not self.is_read:
             self.is_read = True
             self.save(update_fields=['is_read'])
+
+
+class BulkGenerationJob(models.Model):
+    """Tracks a batch of AI image generation requests."""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('validating', 'Validating'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    QUALITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+
+    SIZE_CHOICES = [
+        ('1024x1024', 'Square (1:1)'),
+        ('1024x1536', 'Portrait (3:4)'),
+        ('1536x1024', 'Landscape (4:3)'),
+        ('1792x1024', 'Wide (16:9)'),
+    ]
+
+    VISIBILITY_CHOICES = [
+        ('public', 'Public'),
+        ('private', 'Private'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='bulk_generation_jobs'
+    )
+
+    # Job configuration
+    provider = models.CharField(max_length=50, default='openai')
+    model_name = models.CharField(max_length=100, default='gpt-image-1')
+    quality = models.CharField(
+        max_length=10, choices=QUALITY_CHOICES, default='medium'
+    )
+    size = models.CharField(
+        max_length=20, choices=SIZE_CHOICES, default='1024x1024'
+    )
+    images_per_prompt = models.PositiveSmallIntegerField(default=1)
+    visibility = models.CharField(
+        max_length=10, choices=VISIBILITY_CHOICES, default='public'
+    )
+    generator_category = models.CharField(max_length=50, default='ChatGPT')
+
+    # Optional: reference image and character description
+    reference_image_url = models.URLField(blank=True)
+    character_description = models.TextField(blank=True)
+
+    # Job status and progress
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending'
+    )
+    total_prompts = models.PositiveIntegerField(default=0)
+    completed_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+
+    # Cost tracking
+    estimated_cost = models.DecimalField(
+        max_digits=8, decimal_places=4, default=0
+    )
+    actual_cost = models.DecimalField(
+        max_digits=8, decimal_places=4, default=0
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['created_by', '-created_at']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return (
+            f"Job {self.id} ({self.status}) - {self.total_prompts} prompts"
+        )
+
+    @property
+    def total_images(self):
+        """Total images expected (prompts x images_per_prompt)."""
+        return self.total_prompts * self.images_per_prompt
+
+    @property
+    def progress_percent(self):
+        """Completion percentage (0-100)."""
+        if self.total_images == 0:
+            return 0
+        processed = self.completed_count + self.failed_count
+        return min(round((processed / self.total_images) * 100), 100)
+
+    @property
+    def is_active(self):
+        """Whether the job is still running."""
+        return self.status in ('pending', 'validating', 'processing')
+
+
+class GeneratedImage(models.Model):
+    """Individual generated image within a bulk generation job."""
+
+    STATUS_CHOICES = [
+        ('queued', 'Queued'),
+        ('generating', 'Generating'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    job = models.ForeignKey(
+        BulkGenerationJob, on_delete=models.CASCADE, related_name='images'
+    )
+
+    # Input
+    prompt_text = models.TextField()
+    prompt_order = models.PositiveIntegerField()
+    variation_number = models.PositiveSmallIntegerField(default=1)
+
+    # Output
+    image_url = models.URLField(blank=True, max_length=2000)
+    revised_prompt = models.TextField(blank=True)
+
+    # Status
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='queued'
+    )
+    error_message = models.TextField(blank=True)
+
+    # Selection (for gallery review)
+    is_selected = models.BooleanField(default=True)
+
+    # Link to created prompt page (after page creation pipeline)
+    prompt_page = models.ForeignKey(
+        'Prompt', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='generated_from'
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['prompt_order', 'variation_number']
+        indexes = [
+            models.Index(fields=['job', 'status']),
+            models.Index(fields=['job', 'prompt_order']),
+        ]
+
+    def __str__(self):
+        return (
+            f"Image #{self.prompt_order}.{self.variation_number}"
+            f" ({self.status})"
+        )
+
+    @property
+    def is_variation(self):
+        """Whether this is a variation (not the first for its prompt)."""
+        return self.variation_number > 1

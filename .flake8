@@ -12,7 +12,7 @@ max-complexity = 15
 # Exclude non-production directories
 exclude =
     .venv,
-    migrations,
+    */migrations/*,
     __pycache__,
     .git,
     staticfiles,

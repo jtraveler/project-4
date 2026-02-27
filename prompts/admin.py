@@ -11,7 +11,7 @@ from django_summernote.admin import SummernoteModelAdmin
 from django.urls import reverse, path
 from django.utils.html import format_html
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect, Notification
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect, Notification, BulkGenerationJob, GeneratedImage
 from .utils.related import (
     W_TAG, W_CATEGORY, W_DESCRIPTOR, W_GENERATOR, W_ENGAGEMENT, W_RECENCY,
 )
@@ -497,9 +497,9 @@ class PromptAdmin(SummernoteModelAdmin):
         for index, prompt in enumerate(prompts):
             prompt.order = index
             prompt.save(update_fields=['order'])
-        
+
         self.message_user(
-            request, 
+            request,
             f'Reset order for {len(prompts)} prompts based on creation date.'
         )
     reset_order_to_date.short_description = 'Reset order to creation date'
@@ -731,27 +731,27 @@ class PromptAdmin(SummernoteModelAdmin):
         from django.shortcuts import get_object_or_404, redirect
         from django.contrib import messages
         from django.core.cache import cache
-        
+
         prompt = get_object_or_404(Prompt, pk=pk)
-        
+
         # Find the prompt with the next lower order number
         previous_prompt = Prompt.objects.filter(
             order__lt=prompt.order
         ).order_by('-order').first()
-        
+
         if previous_prompt:
             # Swap the order values
             prompt.order, previous_prompt.order = previous_prompt.order, prompt.order
             prompt.save(update_fields=['order'])
             previous_prompt.save(update_fields=['order'])
-            
+
             # Clear all relevant caches
             self.clear_prompt_caches()
-            
+
             messages.success(request, f'Moved "{prompt.title}" up.')
         else:
             messages.warning(request, f'"{prompt.title}" is already at the top.')
-        
+
         return redirect('admin:prompts_prompt_changelist')
 
     def move_down_view(self, request, pk):
@@ -759,27 +759,27 @@ class PromptAdmin(SummernoteModelAdmin):
         from django.shortcuts import get_object_or_404, redirect
         from django.contrib import messages
         from django.core.cache import cache
-        
+
         prompt = get_object_or_404(Prompt, pk=pk)
-        
+
         # Find the prompt with the next higher order number
         next_prompt = Prompt.objects.filter(
             order__gt=prompt.order
         ).order_by('order').first()
-        
+
         if next_prompt:
             # Swap the order values
             prompt.order, next_prompt.order = next_prompt.order, prompt.order
             prompt.save(update_fields=['order'])
             next_prompt.save(update_fields=['order'])
-            
+
             # Clear all relevant caches
             self.clear_prompt_caches()
-            
+
             messages.success(request, f'Moved "{prompt.title}" down.')
         else:
             messages.warning(request, f'"{prompt.title}" is already at the bottom.')
-        
+
         return redirect('admin:prompts_prompt_changelist')
 
     def regenerate_view(self, request, pk):
@@ -928,14 +928,14 @@ class PromptAdmin(SummernoteModelAdmin):
     def clear_prompt_caches(self):
         """Clear all prompt-related caches"""
         from django.core.cache import cache
-        
+
         # Clear list caches for multiple pages and tags
         for page in range(1, 10):  # Clear more pages
             cache.delete(f"prompt_list_None_None_{page}")
             # Clear tag-filtered caches too
             for tag in ['art', 'portrait', 'landscape', 'photography']:  # Add your common tags
                 cache.delete(f"prompt_list_{tag}_None_{page}")
-        
+
         # Clear individual prompt detail caches
         prompts = Prompt.objects.all()[:50]  # Clear recent prompts
         for prompt in prompts:
@@ -1550,7 +1550,7 @@ class SubjectDescriptorAdmin(admin.ModelAdmin):
 class UserProfileAdmin(admin.ModelAdmin):
     """
     Admin interface for UserProfile model.
-    
+
     Features:
     - List view with bio preview, avatar status
     - Search by username, email, bio
@@ -1563,7 +1563,7 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ["user__username", "user__email", "bio"]
     readonly_fields = ["created_at", "updated_at"]
     list_per_page = 50
-    
+
     fieldsets = (
         ("User", {
             "fields": ("user",)
@@ -1579,14 +1579,14 @@ class UserProfileAdmin(admin.ModelAdmin):
             "classes": ("collapse",)
         }),
     )
-    
+
     def bio_preview(self, obj):
         """Show first 50 chars of bio"""
         if obj.bio:
             return obj.bio[:50] + "..." if len(obj.bio) > 50 else obj.bio
         return "(No bio)"
     bio_preview.short_description = "Bio"
-    
+
     def has_avatar(self, obj):
         """Show if user has uploaded avatar"""
         return bool(obj.avatar)
@@ -2269,6 +2269,60 @@ class NotificationAdmin(admin.ModelAdmin):
     list_per_page = 50
 
 
+class GeneratedImageInline(admin.TabularInline):
+    model = GeneratedImage
+    extra = 0
+    can_delete = False
+    readonly_fields = ('id', 'status', 'image_url', 'completed_at')
+    fields = (
+        'prompt_order', 'variation_number', 'prompt_text',
+        'status', 'is_selected', 'image_url', 'completed_at'
+    )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BulkGenerationJob)
+class BulkGenerationJobAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'created_by', 'status', 'provider', 'model_name',
+        'quality', 'total_prompts', 'completed_count', 'failed_count',
+        'created_at'
+    )
+    list_filter = ('status', 'provider', 'quality', 'created_at')
+    search_fields = ('id', 'created_by__username')
+    readonly_fields = (
+        'id', 'created_at', 'started_at', 'completed_at',
+        'total_prompts', 'completed_count', 'failed_count', 'actual_cost'
+    )
+    inlines = [GeneratedImageInline]
+
+    fieldsets = (
+        ('Job Info', {
+            'fields': ('id', 'created_by', 'status')
+        }),
+        ('Configuration', {
+            'fields': (
+                'provider', 'model_name', 'quality', 'size',
+                'images_per_prompt', 'visibility', 'generator_category'
+            )
+        }),
+        ('Reference', {
+            'fields': ('reference_image_url', 'character_description'),
+            'classes': ('collapse',)
+        }),
+        ('Progress', {
+            'fields': (
+                'total_prompts', 'completed_count', 'failed_count',
+                'estimated_cost', 'actual_cost'
+            )
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'started_at', 'completed_at')
+        }),
+    )
+
+
 # Set custom admin index template
 admin.site.index_template = 'admin/custom_index.html'
-

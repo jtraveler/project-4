@@ -202,7 +202,7 @@ When a spec changes **backend logic** (signal handlers, service functions, URL p
 **Example:**
 ```
 Change: Notification signal now generates links with "#comments" anchor
-Impact: Only NEW notifications get the anchor. The 50 existing notifications 
+Impact: Only NEW notifications get the anchor. The 50 existing notifications
         in the database still have the old link format without an anchor.
 Fix:    A management command to backfill existing notification links.
 ```
@@ -281,24 +281,24 @@ CORRECT (sibling):
 ### How to Ask:
 
 ```
-QUESTION: The specification doesn't indicate whether the Save button 
-should be left-aligned, right-aligned, or centered. Which alignment 
+QUESTION: The specification doesn't indicate whether the Save button
+should be left-aligned, right-aligned, or centered. Which alignment
 should I use?
 
-QUESTION: The spec mentions adding notify_mentions to list_display, 
-but I don't see this field in the EmailPreferences model. Should I 
+QUESTION: The spec mentions adding notify_mentions to list_display,
+but I don't see this field in the EmailPreferences model. Should I
 add the model field first, or is this a typo?
 
-QUESTION: Should the email_utils.py file be in the prompts/ directory 
+QUESTION: Should the email_utils.py file be in the prompts/ directory
 or prompts/utils/ directory? The path isn't specified.
 
-QUESTION: The spec changes the notification signal link format, but 
-doesn't mention existing notifications in the database. Should I 
+QUESTION: The spec changes the notification signal link format, but
+doesn't mention existing notifications in the database. Should I
 create a management command to backfill old records?
 
-QUESTION: The spec says to add icon-square-check to the sprite but 
-the SVG paths provided look different from the standard Lucide 
-square-check icon. Should I use the exact paths from the spec or 
+QUESTION: The spec says to add icon-square-check to the sprite but
+the SVG paths provided look different from the standard Lucide
+square-check icon. Should I use the exact paths from the spec or
 the standard Lucide version?
 ```
 
@@ -324,14 +324,14 @@ Provide a **detailed report** with:
 
 Summary:
 ────────
-Updated EmailPreferencesAdmin in prompts/admin.py to display all 8 
+Updated EmailPreferencesAdmin in prompts/admin.py to display all 8
 notification fields in the admin list view.
 
 Files Modified:
 ───────────────
 1. prompts/admin.py
    - Line 45: Updated list_display attribute
-   - Added 'notify_mentions' 
+   - Added 'notify_mentions'
    - Added 'notify_weekly_digest'
    - Total: 2 fields added to tuple
 
@@ -339,7 +339,7 @@ Changes Made:
 ─────────────
 Before:
   list_display = (
-      'user', 'notify_comments', 'notify_replies', 
+      'user', 'notify_comments', 'notify_replies',
       'notify_follows', 'notify_likes', 'notify_updates',
       'notify_marketing', 'updated_at'
   )
@@ -453,10 +453,55 @@ Testing Performed:
 [If you find issues]
 ⚠️ Import error: Missing dependency 'requests'
    Solution: Added to requirements.txt
-   
+
 ❌ Syntax error: Line 45 has invalid indentation
    Status: BLOCKED - Need clarification on correct structure
 ```
+
+---
+
+## 🧪 TEST EXECUTION STRATEGY
+
+### Guiding Principle:
+
+**Run targeted tests during development. Run the full suite once at the end.**
+
+Running the full test suite after every small change wastes time. Instead, use targeted test commands during development and only run the full suite as a final verification step.
+
+### During Development (After Each Change):
+
+```bash
+# Run ONLY the test class or file you're working on:
+python manage.py test prompts.tests.test_notifications.TestAutoMarkSystemNotificationsRead -v2
+
+# Or run a single test method:
+python manage.py test prompts.tests.test_notifications.TestAutoMarkSystemNotificationsRead.test_system_notifications_auto_marked_on_page_load -v2
+
+# Or run the whole test file if changes span multiple classes:
+python manage.py test prompts.tests.test_notifications -v2
+```
+
+### Final Verification (Once, After All Changes Complete):
+
+```bash
+# Full suite — run exactly ONCE at the end:
+python manage.py test prompts -v2
+```
+
+### Why This Matters:
+
+| Approach | Time per Spec | Wasted Time |
+|----------|--------------|-------------|
+| Full suite after every change | ~12 min × 4 runs = 48 min | ~36 min wasted |
+| Targeted tests + 1 full run | ~2 min × 4 + 12 min = 20 min | ~0 min wasted |
+
+### Rules:
+
+1. **Identify the relevant test class(es)** before running any tests
+2. **Run targeted tests** after each code change during development
+3. **Run the full suite exactly once** as the final step before reporting
+4. **If the full suite reveals a failure** in an unrelated test, investigate — don't re-run the entire suite hoping it passes
+5. **Agent reviews happen AFTER the full suite passes** — never before
 
 ---
 
@@ -733,8 +778,8 @@ If you answer "no" to ANY question above, your work is incomplete.
 
 Error: Migration 0030_emailpreferences already exists
 
-This appears to be a conflict with existing migrations. The 
-specification asked me to create this migration, but it already 
+This appears to be a conflict with existing migrations. The
+specification asked me to create this migration, but it already
 exists in prompts/migrations/.
 
 Possible solutions:
@@ -871,7 +916,7 @@ You do: Add notify_mentions ✅
         Also refactor entire admin class ❌
         Also add search_fields ❌
         Also reorganize imports ❌
-        
+
 This is scope creep - stick to the spec.
 ```
 
@@ -881,13 +926,13 @@ This is scope creep - stick to the spec.
 ```
 ✅ TASK COMPLETE: [What was asked]
 
-Note: While implementing this, I noticed that the admin class 
-could benefit from search_fields for better UX. The current 
+Note: While implementing this, I noticed that the admin class
+could benefit from search_fields for better UX. The current
 implementation works as specified, but consider adding:
 
 search_fields = ['user__username', 'user__email']
 
-This is outside the current spec but might be worth considering 
+This is outside the current spec but might be worth considering
 for future improvements.
 ```
 
@@ -1016,11 +1061,11 @@ You're doing well when:
 ### Good Question (Asking for Clarification):
 
 ```
-QUESTION: The specification says to "add notify_mentions to list_display" 
-but doesn't specify where in the tuple it should be positioned. 
+QUESTION: The specification says to "add notify_mentions to list_display"
+but doesn't specify where in the tuple it should be positioned.
 
 Looking at the existing list_display:
-('user', 'notify_comments', 'notify_replies', 'notify_follows', 
+('user', 'notify_comments', 'notify_replies', 'notify_follows',
  'notify_likes', 'notify_updates', 'notify_marketing', 'updated_at')
 
 Should notify_mentions be:
@@ -1034,8 +1079,8 @@ This affects column ordering in the admin interface.
 ### Good Question (Data Migration):
 
 ```
-QUESTION: The spec changes the notification signal to include #comments 
-in the link, but there are existing notifications in the database with 
+QUESTION: The spec changes the notification signal to include #comments
+in the link, but there are existing notifications in the database with
 the old link format. Should I:
 A) Create a management command to backfill existing links
 B) Only apply to new notifications going forward
@@ -1051,7 +1096,7 @@ The old notifications will have broken anchor links without backfill.
 
 Summary:
 ────────
-Modified Django settings to use SQLite in-memory database for tests 
+Modified Django settings to use SQLite in-memory database for tests
 while keeping PostgreSQL for development and production.
 
 Files Modified:
@@ -1080,7 +1125,7 @@ Testing Performed:
    Result: System check identified no issues (0 silenced)
 ✅ Test database creation: python manage.py test --no-input
    Result: Created test database successfully
-   Output: "Creating test database for alias 'default' 
+   Output: "Creating test database for alias 'default'
             ('file:memorydb_default?mode=memory&cache=shared')..."
 
 Verification:

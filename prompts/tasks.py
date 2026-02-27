@@ -763,7 +763,7 @@ If any compound fails the check, fix it in the "tags" array before returning.'''
     except Exception as e:
         logger.exception(f"[AI Tags-Only] OpenAI API error: {e}")
         return {'error': f"OpenAI API error: {str(e)}"}
-    
+
 
 def _is_safe_image_url(url: str) -> bool:
     """
@@ -2316,3 +2316,381 @@ def queue_pass2_review(prompt_id: int) -> bool:
         # Non-blocking: Pass 2 failure shouldn't break publish flow
         logger.warning(f"[Pass 2] Failed to queue review for prompt {prompt_id}: {e}")
         return False
+
+
+# ============================================================
+# Bulk Image Generation Tasks
+# ============================================================
+
+def process_bulk_generation_job(job_id: str) -> None:
+    """
+    Orchestrate image generation for a bulk job.
+
+    Processes images sequentially with rate limiting based on the
+    provider's rate limit. Each image is generated, uploaded to B2,
+    and its status is updated.
+
+    Called via Django-Q async_task from BulkGenerationService.start_job().
+    """
+    from decimal import Decimal
+    from django.utils import timezone as tz
+    from prompts.models import BulkGenerationJob
+    from prompts.services.image_providers import get_provider
+
+    try:
+        job = BulkGenerationJob.objects.get(id=job_id)
+    except BulkGenerationJob.DoesNotExist:
+        logger.error("Bulk generation job %s not found", job_id)
+        return
+
+    if job.status == 'cancelled':
+        logger.info("Job %s was cancelled, skipping", job_id)
+        return
+
+    # Determine if mock mode (no real API key = mock)
+    api_key = getattr(settings, 'OPENAI_API_KEY', '')
+    use_mock = not api_key or api_key == 'test-key'
+
+    provider = get_provider(
+        job.provider,
+        mock_mode=use_mock,
+        api_key=api_key,
+    )
+
+    rate_limit = provider.get_rate_limit()
+    delay_between = 60.0 / rate_limit  # seconds between images
+
+    images = job.images.filter(
+        status='queued'
+    ).order_by('prompt_order', 'variation_number')
+    total_cost = Decimal('0')
+    completed_count = 0
+    failed_count = 0
+
+    for idx, image in enumerate(images):
+        # Check if job was cancelled mid-processing (every 5 images)
+        if idx % 5 == 0:
+            job.refresh_from_db(fields=['status'])
+            if job.status == 'cancelled':
+                logger.info(
+                    "Job %s cancelled during processing", job_id
+                )
+                break
+
+        # Mark as generating
+        image.status = 'generating'
+        image.save(update_fields=['status'])
+
+        # Generate the image
+        try:
+            result = provider.generate(
+                prompt=image.prompt_text,
+                size=job.size,
+                quality=job.quality,
+                reference_image_url=job.reference_image_url,
+            )
+
+            if result.success and result.image_data:
+                # Upload to B2
+                image_url = _upload_generated_image_to_b2(
+                    image_data=result.image_data,
+                    job=job,
+                    image=image,
+                )
+
+                image.status = 'completed'
+                image.image_url = image_url
+                image.revised_prompt = result.revised_prompt
+                image.completed_at = tz.now()
+                image.save(update_fields=[
+                    'status', 'image_url', 'revised_prompt',
+                    'completed_at',
+                ])
+
+                total_cost += Decimal(str(result.cost))
+                completed_count += 1
+
+            else:
+                image.status = 'failed'
+                image.error_message = (
+                    result.error_message or 'Generation failed'
+                )
+                image.save(update_fields=['status', 'error_message'])
+                failed_count += 1
+
+        except Exception as e:
+            logger.error(
+                "Image generation failed for %s: %s", image.id, e
+            )
+            image.status = 'failed'
+            image.error_message = str(e)[:500]
+            image.save(update_fields=['status', 'error_message'])
+            failed_count += 1
+
+        # Update job progress periodically (every 5 images)
+        if (idx + 1) % 5 == 0 or (idx + 1) == images.count():
+            job.completed_count = completed_count
+            job.failed_count = failed_count
+            job.actual_cost = total_cost
+            job.save(update_fields=[
+                'completed_count', 'failed_count', 'actual_cost',
+            ])
+
+        # Rate limiting delay (skip after last image)
+        if delay_between > 0:
+            time.sleep(delay_between)
+
+    # Mark job complete (if not cancelled)
+    job.refresh_from_db(fields=['status'])
+    if job.status != 'cancelled':
+        job.status = 'completed'
+        job.completed_at = tz.now()
+        job.completed_count = completed_count
+        job.failed_count = failed_count
+        job.actual_cost = total_cost
+        job.save(update_fields=[
+            'status', 'completed_at', 'completed_count',
+            'failed_count', 'actual_cost',
+        ])
+
+    logger.info(
+        "Bulk job %s finished: %d completed, %d failed, cost $%s",
+        job_id, job.completed_count, job.failed_count, total_cost,
+    )
+
+
+def _upload_generated_image_to_b2(image_data, job, image):
+    """
+    Upload generated image bytes to B2 storage.
+
+    Uses the existing B2 upload service patterns. Generates a SEO-friendly
+    filename based on the prompt text.
+
+    Args:
+        image_data: Raw image bytes (PNG or JPEG).
+        job: BulkGenerationJob instance.
+        image: GeneratedImage instance.
+
+    Returns:
+        The B2/CDN URL of the uploaded image.
+    """
+    import uuid as uuid_lib
+    from django.core.files.base import ContentFile
+    from prompts.utils.seo import generate_seo_filename
+    from prompts.services.b2_upload_service import (
+        upload_to_b2, get_upload_path,
+    )
+
+    try:
+        # Generate SEO filename from prompt text
+        # Use first 60 chars of prompt for filename generation
+        prompt_snippet = image.prompt_text[:60]
+        seo_filename = generate_seo_filename(
+            title=prompt_snippet,
+            extension='png',
+        )
+
+        # Fallback if SEO generation fails
+        if not seo_filename:
+            seo_filename = 'ai-generated-prompt.png'
+
+        # Ensure unique filename with UUID suffix
+        unique_suffix = str(uuid_lib.uuid4())[:8]
+        if '.' in seo_filename:
+            name, ext = seo_filename.rsplit('.', 1)
+            filename = f"{name}-{unique_suffix}.{ext}"
+        else:
+            filename = f"{seo_filename}-{unique_suffix}.png"
+
+        # Upload to B2 using existing service
+        path = get_upload_path(filename, 'original')
+        content_file = ContentFile(image_data)
+        url = upload_to_b2(content_file, path)
+
+        return url
+
+    except Exception as e:
+        logger.error("B2 upload failed for image %s: %s", image.id, e)
+        raise
+
+
+def create_prompt_pages_from_job(job_id, selected_image_ids):
+    """
+    Create Prompt pages from selected generated images.
+
+    For each selected image:
+    1. Generate AI title, description, and tags (content_generation service)
+    2. Create a Prompt model instance as draft
+    3. Link the GeneratedImage to the created Prompt
+
+    For unselected images:
+    - Mark as not selected
+
+    Args:
+        job_id: UUID string of the BulkGenerationJob.
+        selected_image_ids: List of GeneratedImage UUID strings.
+
+    Returns:
+        dict with 'created_count', 'discarded_count', 'errors'
+    """
+    from prompts.models import BulkGenerationJob, Prompt
+    from prompts.services.content_generation import (
+        ContentGenerationService,
+    )
+
+    try:
+        job = BulkGenerationJob.objects.get(id=job_id)
+    except BulkGenerationJob.DoesNotExist:
+        logger.error("Job %s not found for page creation", job_id)
+        return {
+            'created_count': 0,
+            'discarded_count': 0,
+            'errors': ['Job not found'],
+        }
+
+    created = 0
+    errors = []
+
+    # Mark unselected images
+    unselected = job.images.exclude(id__in=selected_image_ids)
+    discarded = unselected.filter(
+        status='completed'
+    ).update(is_selected=False)
+
+    # Initialize content generation service
+    try:
+        content_service = ContentGenerationService()
+    except Exception as e:
+        logger.error("Failed to init ContentGenerationService: %s", e)
+        return {
+            'created_count': 0,
+            'discarded_count': discarded,
+            'errors': [f'Content service init failed: {e}'],
+        }
+
+    # Process selected images
+    selected_images = job.images.filter(
+        id__in=selected_image_ids,
+        status='completed',
+    ).order_by('prompt_order', 'variation_number')
+
+    for gen_image in selected_images:
+        try:
+            # Generate AI content (title, description, tags)
+            ai_content = content_service.generate_content(
+                image_url=gen_image.image_url,
+                prompt_text=gen_image.prompt_text,
+                ai_generator=job.generator_category,
+            )
+
+            if not ai_content or 'title' not in ai_content:
+                errors.append(
+                    f"AI content generation failed for image "
+                    f"{gen_image.prompt_order}."
+                    f"{gen_image.variation_number}"
+                )
+                continue
+
+            title = ai_content.get('title')
+            if not title:
+                title = (
+                    f'AI Generated Image {gen_image.prompt_order}'
+                )
+
+            # Ensure title uniqueness (Prompt.title has unique=True)
+            title = _ensure_unique_title(title)
+            slug_val = _generate_unique_slug(title)
+
+            # Create the Prompt page as draft
+            prompt_page = Prompt(
+                title=title,
+                slug=slug_val,
+                author=job.created_by,
+                content=gen_image.prompt_text,
+                excerpt=ai_content.get('description', ''),
+                ai_generator=job.generator_category,
+                status=0,  # Draft
+            )
+
+            # Set B2 image URL
+            if hasattr(prompt_page, 'b2_image_url'):
+                prompt_page.b2_image_url = gen_image.image_url
+
+            prompt_page.save()
+
+            # Apply tags if available
+            tags = ai_content.get('suggested_tags', [])
+            if tags and hasattr(prompt_page, 'tags'):
+                prompt_page.tags.add(*tags[:10])
+
+            # Link generated image to prompt page
+            gen_image.prompt_page = prompt_page
+            gen_image.save(update_fields=['prompt_page'])
+
+            created += 1
+
+        except Exception as e:
+            logger.error(
+                "Page creation failed for image %d.%d: %s",
+                gen_image.prompt_order,
+                gen_image.variation_number, e,
+            )
+            errors.append(str(e)[:200])
+
+    logger.info(
+        "Page creation for job %s: %d created, %d discarded, "
+        "%d errors",
+        job_id, created, discarded, len(errors),
+    )
+
+    return {
+        'created_count': created,
+        'discarded_count': discarded,
+        'errors': errors,
+    }
+
+
+def _ensure_unique_title(title, max_retries=3):
+    """
+    Ensure a title is unique in the Prompt table.
+
+    Appends a short UUID suffix if the title already exists.
+    Retries to handle TOCTOU race conditions.
+    """
+    import uuid as uuid_lib
+    from prompts.models import Prompt
+
+    for attempt in range(max_retries):
+        candidate = title if attempt == 0 else (
+            f"{title[:189]} - {uuid_lib.uuid4().hex[:8]}"
+        )
+        if not Prompt.objects.filter(title=candidate).exists():
+            return candidate
+
+    # Final fallback with UUID (virtually guaranteed unique)
+    return f"{title[:189]} - {uuid_lib.uuid4().hex[:8]}"
+
+
+def _generate_unique_slug(title, max_retries=3):
+    """
+    Generate a unique slug from a title.
+
+    Appends a short UUID suffix if the slug already exists.
+    Retries to handle TOCTOU race conditions.
+    """
+    import uuid as uuid_lib
+    from prompts.models import Prompt
+
+    base_slug = slugify(title)[:180]  # Leave room for suffix
+    if not base_slug:
+        base_slug = 'ai-generated'
+
+    for attempt in range(max_retries):
+        candidate = base_slug if attempt == 0 else (
+            f"{base_slug}-{uuid_lib.uuid4().hex[:8]}"
+        )
+        if not Prompt.objects.filter(slug=candidate).exists():
+            return candidate
+
+    # Final fallback
+    return f"{base_slug}-{uuid_lib.uuid4().hex[:8]}"

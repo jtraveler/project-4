@@ -94,7 +94,7 @@
 .notif-card {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--space-6);
     padding: 35px 40px 50px;
     border: 1px solid var(--gray-200, #e5e7eb);
@@ -143,7 +143,7 @@
 
 /* === BODY === */
 .notif-body {
-    flex: 1;
+    flex: 1 470px;
     min-width: 0;
 }
 
@@ -152,6 +152,7 @@
     font-weight: 500;
     color: var(--gray-900);
     line-height: 1.4;
+    margin-bottom: 1rem;
 }
 
 .notif-unread .notif-body-title {
@@ -592,5 +593,14 @@
     }
     .notifications-page.refreshing {
         transition: none;
+    }
+}
+
+
+
+@media screen and (min-width: 989px) {
+    .notif-actions {
+        min-width: 160px;
+        justify-content: right;
     }
 }

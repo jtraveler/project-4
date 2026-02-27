@@ -135,6 +135,16 @@ def notifications_page(request):
     has_more = len(notifications_list) > limit
     notifications_list = notifications_list[:limit]
 
+    # Auto-mark system notifications as seen (page load = seen).
+    # Only system/admin notifications — user notifications (comments, likes,
+    # follows) still require manual "Mark as read".
+    if category == 'system' and offset == 0:
+        Notification.objects.filter(
+            recipient=request.user,
+            is_admin_notification=True,
+            is_read=False,
+        ).update(is_read=True)
+
     # For AJAX requests (Load More), return partial HTML
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         html = render_to_string(

@@ -103,12 +103,12 @@
 
             <!-- Body: title + timestamp only -->
             <div class="notif-body">
-                <div class="notif-body-title">{{ notification.title }}</div>
+                <div class="notif-body-title">{% if notification.is_admin_notification %}{{ notification.title|safe }}{% else %}{{ notification.title }}{% endif %}</div>
                 <div class="notif-time">{{ notification.created_at|timesince }} ago</div>
             </div>
 
-            <!-- Quoted comment (separate column, only for messages) -->
-            {% if notification.message %}
+            <!-- Quoted comment (separate column, only for non-system messages) -->
+            {% if notification.notification_type != 'system' and notification.message %}
             <div class="notif-quote">
                 <span class="notif-quote-mark" aria-hidden="true">&ldquo;</span>
                 <span class="notif-quote-text">{{ notification.message|truncatewords:20 }}</span>

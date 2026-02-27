@@ -5,6 +5,7 @@ from . import views_admin
 from .views import api_views
 from .views import admin_views  # For prompt ordering functions
 from .views import notification_views
+from .views import bulk_generator_views
 
 app_name = 'prompts'
 
@@ -146,6 +147,15 @@ urlpatterns = [
 
     # System Notifications Admin (Phase P2-A)
     path('admin-tools/system-notifications/', admin_views.system_notifications_view, name='system_notifications'),
+
+    # Bulk Image Generator (Phase BG)
+    path('staff/bulk-generator/', bulk_generator_views.bulk_generator_page, name='bulk_generator'),
+    path('staff/bulk-generator/api/validate/', bulk_generator_views.api_validate_prompts, name='bulk_generator_validate'),
+    path('staff/bulk-generator/api/start/', bulk_generator_views.api_start_generation, name='bulk_generator_start'),
+    path('staff/bulk-generator/api/status/<uuid:job_id>/', bulk_generator_views.api_job_status, name='bulk_generator_status'),
+    path('staff/bulk-generator/api/cancel/<uuid:job_id>/', bulk_generator_views.api_cancel_job, name='bulk_generator_cancel'),
+    path('staff/bulk-generator/api/create-pages/', bulk_generator_views.api_create_pages, name='bulk_generator_create_pages'),
+    path('staff/bulk-generator/api/validate-reference/', bulk_generator_views.api_validate_reference_image, name='bulk_generator_validate_reference'),
 
     # Admin moderation dashboard
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),

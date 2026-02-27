@@ -122,6 +122,17 @@ from .notification_views import (
     notifications_page,
 )
 
+# Import bulk generator views (Phase BG)
+from .bulk_generator_views import (
+    bulk_generator_page,
+    api_validate_prompts,
+    api_start_generation,
+    api_job_status,
+    api_cancel_job,
+    api_create_pages,
+    api_validate_reference_image,
+)
+
 # Import utility views
 from .utility_views import (
     get_client_ip,
@@ -229,6 +240,15 @@ __all__ = [
     'delete_all_notifications_view',
     'notification_click',
     'notifications_page',
+
+    # Bulk generator views (Phase BG)
+    'bulk_generator_page',
+    'api_validate_prompts',
+    'api_start_generation',
+    'api_job_status',
+    'api_cancel_job',
+    'api_create_pages',
+    'api_validate_reference_image',
 
     # Utility views
     'get_client_ip',

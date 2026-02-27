@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Bulk Image Generator — Staff Tool{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h1>Bulk Image Generator</h1>
+    <p class="text-muted">Staff-only tool for generating images in bulk. UI coming in Phase 4.</p>
+
+    {% if jobs %}
+    <h2 class="mt-4">Recent Jobs</h2>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Job ID</th>
+                <th>Status</th>
+                <th>Prompts</th>
+                <th>Progress</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td><code>{{ job.id|truncatechars:12 }}</code></td>
+                <td>{{ job.get_status_display }}</td>
+                <td>{{ job.total_prompts }}</td>
+                <td>{{ job.progress_percent }}%</td>
+                <td>{{ job.created_at|timesince }} ago</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="mt-4">No jobs yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

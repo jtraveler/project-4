@@ -260,6 +260,10 @@ LOGOUT_REDIRECT_URL = '/'
 
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 
+# Temporarily close registration (bot prevention)
+# Remove this line to re-enable public signup
+ACCOUNT_ADAPTER = 'prompts.adapters.ClosedAccountAdapter'
+
 # Email backend (for development)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="form-container">
+        <div class="form-header">
+            <h1 class="form-title">Registration Closed</h1>
+            <p class="form-subtitle">We're not accepting new registrations at the moment. Please check back soon!</p>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'account_login' %}" class="btn-primary">
+                <i class="fas fa-user-circle"></i>&nbsp; Sign In
+            </a>
+        </div>
+
+        <div class="modern-form-footer">
+            <p class="modern-form-footer-text">
+                Already have an account? <a href="{% url 'account_login' %}">Sign in here</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock content %}

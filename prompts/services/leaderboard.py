@@ -193,7 +193,8 @@ class LeaderboardService:
             # Activity score: uploads*10 + comments*2 + likes*1
             activity_score=F('uploads_count') * 10 + F('comments_count') * 2 + F('likes_given_count')
         ).filter(
-            activity_score__gt=0
+            activity_score__gt=0,
+            prompt_count__gt=0,
         ).order_by('-activity_score').select_related('userprofile')[:limit]
 
         result = list(queryset)

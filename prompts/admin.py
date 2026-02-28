@@ -2324,5 +2324,28 @@ class BulkGenerationJobAdmin(admin.ModelAdmin):
     )
 
 
+# =============================================================================
+# CUSTOM USER ADMIN
+# =============================================================================
+
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class CustomUserAdmin(BaseUserAdmin):
+    """Extended UserAdmin with signup and last login columns."""
+
+    list_display = (
+        'username', 'email', 'first_name', 'last_name',
+        'is_staff', 'date_joined', 'last_login',
+    )
+    list_filter = BaseUserAdmin.list_filter + (
+        'date_joined', 'last_login',
+    )
+    ordering = ('-date_joined',)
+
+
 # Set custom admin index template
 admin.site.index_template = 'admin/custom_index.html'

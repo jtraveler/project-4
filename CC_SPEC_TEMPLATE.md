@@ -3,7 +3,7 @@
 **Last Updated:** February 18, 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
-**Changelog:** v2.1 — Added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
+**Changelog:** v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
 
 ---
 
@@ -316,6 +316,19 @@ After implementation, the developer MUST:
 
 - [ ] [Existing feature 1 still works]
 - [ ] [Existing feature 2 still works]
+
+### ⛔ FULL SUITE GATE (Required — Do NOT skip)
+
+**Before marking testing complete, answer this question:**
+
+> Did you modify ANY file in `views/`, `models.py`, `urls.py`, `signals/`, `services/`, `tasks.py`, or `admin.py`?
+
+- **YES → Run the full test suite:** `python manage.py test`
+  - All tests must pass. Do NOT skip this step.
+  - Report total tests run and any failures.
+- **NO → Targeted tests are sufficient.**
+
+⚠️ **This is a mandatory gate, not a suggestion.** If you changed backend code and only ran targeted tests, you have not completed the testing checklist.
 
 ---
 

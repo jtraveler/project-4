@@ -32,157 +32,148 @@
 
         <div class="bg-master-grid">
 
-            {# Row 1, Col 1: AI Model #}
-            <div class="bg-setting-group">
-                <label class="bg-setting-label" for="settingModel">AI Model</label>
-                <div class="bg-select-wrapper">
-                    <select class="bg-select" id="settingModel">
-                        <option value="gpt-image-1" selected>GPT-Image-1</option>
-                    </select>
+            {# Column 1: AI Model + Reference Image #}
+            <div class="bg-master-col">
+                <div class="bg-setting-group">
+                    <label class="bg-setting-label" for="settingModel">AI Model</label>
+                    <div class="bg-select-wrapper">
+                        <select class="bg-select" id="settingModel">
+                            <option value="gpt-image-1" selected>GPT-Image-1</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-setting-group">
+                    <span class="bg-setting-label">Reference Image <span class="bg-setting-hint-inline">(optional)</span></span>
+
+                    {# Upload zone — visible when no image #}
+                    <div class="bg-ref-upload" id="refUploadZone" role="button" tabindex="0" aria-label="Upload reference image">
+                        <svg class="icon bg-ref-upload-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
+                        <div class="bg-ref-upload-text">Drop files or <span class="bg-ref-upload-link">click to upload</span></div>
+                        <div class="bg-ref-upload-formats">PNG, JPG, JPEG, WebP &middot; Max 3MB</div>
+                    </div>
+
+                    {# Hidden file input #}
+                    <input type="file" id="refFileInput" accept="image/png,image/jpeg,image/webp" hidden>
+
+                    {# Preview — visible when image uploaded #}
+                    <div class="bg-ref-preview-container" id="refPreviewContainer" style="display: none;">
+                        <div class="bg-ref-thumbnail-wrapper" id="refThumbnailWrapper">
+                            <span class="bg-ref-badge" aria-hidden="true">1</span>
+                            <img class="bg-ref-thumbnail" id="refThumbnail" src="" alt="Reference image">
+                            <button type="button" class="bg-ref-remove-btn" id="refRemoveBtn" aria-label="Remove reference image">
+                                <svg class="icon" aria-hidden="true" width="14" height="14"><use href="{% static 'icons/sprite.svg' %}#icon-x"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {# Status messages #}
+                    <div class="bg-ref-status" id="refStatus" role="status" aria-live="polite"></div>
+
+                    <span class="bg-setting-hint">Must be a clear photo of a person</span>
                 </div>
             </div>
 
-            {# Row 1, Col 2: Character Description #}
-            <div class="bg-setting-group">
-                <label class="bg-setting-label" for="settingCharDesc">Character Description <span class="bg-setting-hint-inline">(optional)</span></label>
-                <div class="bg-char-desc-wrapper">
+            {# Column 2: Character Description + Character Selection #}
+            <div class="bg-master-col">
+                <div class="bg-setting-group">
+                    <div class="bg-setting-label-row">
+                        <label class="bg-setting-label" for="settingCharDesc">Character Description <span class="bg-setting-hint-inline">(optional)</span></label>
+                        <button type="button" class="bg-char-save-btn" id="charSaveBtn" disabled
+                                aria-label="Save character description" title="Coming soon">
+                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-save"/></svg>
+                        </button>
+                    </div>
                     <textarea class="bg-char-textarea"
                               id="settingCharDesc"
                               aria-describedby="charDescHint"
                               placeholder="A chubby woman with green eyes and curly blond hair, mid-30s, warm smile"></textarea>
-                    <button type="button" class="bg-char-save-btn" id="charSaveBtn" disabled aria-label="Save character description">
-                        <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-save"/></svg>
-                    </button>
+                    <span class="bg-setting-hint" id="charDescHint">Prepended to every prompt</span>
                 </div>
-                <span class="bg-setting-hint" id="charDescHint">Prepended to every prompt</span>
-            </div>
-
-            {# Row 1, Col 3: Dimensions (with CSS shape indicators) #}
-            <div class="bg-setting-group">
-                <span class="bg-setting-label">Dimensions</span>
-                <div class="bg-btn-group" id="settingDimensions" role="radiogroup" aria-label="Image dimensions">
-                    <button type="button" class="bg-btn-group-option active" data-value="1024x1024" role="radio" aria-checked="true">
-                        1:1
-                        <span class="bg-dim-icon" data-ratio="1:1"></span>
-                    </button>
-                    <button type="button" class="bg-btn-group-option" data-value="1024x1536" role="radio" aria-checked="false">
-                        2:3
-                        <span class="bg-dim-icon" data-ratio="2:3"></span>
-                    </button>
-                    <button type="button" class="bg-btn-group-option" data-value="1792x1024" role="radio" aria-checked="false">
-                        16:9
-                        <span class="bg-dim-icon" data-ratio="16:9"></span>
-                    </button>
-                    <button type="button" class="bg-btn-group-option" data-value="1536x1024" role="radio" aria-checked="false">
-                        4:3
-                        <span class="bg-dim-icon" data-ratio="4:3"></span>
-                    </button>
-                </div>
-            </div>
-
-            {# Row 1, Col 4: Visibility Toggle #}
-            <div class="bg-setting-group">
-                <span class="bg-setting-label">Visibility</span>
-                <div class="bg-visibility-card">
-                    <div class="bg-visibility-info">
-                        <span class="bg-visibility-label" id="visibilityLabel">Public</span>
+                <div class="bg-setting-group">
+                    <label class="bg-setting-label" for="settingCharacter">Character Selection <span class="bg-setting-hint-inline">(coming soon)</span></label>
+                    <div class="bg-select-wrapper">
+                        <select class="bg-select" id="settingCharacter" disabled>
+                            <option value="">Select a character...</option>
+                        </select>
                     </div>
-                    <label class="bg-toggle-switch">
-                        <input type="checkbox" id="settingVisibility" aria-labelledby="visibilityLabel" checked>
-                        <span class="bg-toggle-slider"></span>
-                    </label>
+                    <span class="bg-setting-hint">Saved characters with reference photos</span>
                 </div>
             </div>
 
-            {# Row 2, Col 1: Reference Image #}
-            <div class="bg-setting-group">
-                <span class="bg-setting-label">Reference Image <span class="bg-setting-hint-inline">(optional)</span></span>
-                <div class="bg-ref-upload" id="refUploadZone" role="button" tabindex="0" aria-label="Upload reference image">
-                    <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
-                    <div class="bg-ref-upload-text">Click or paste URL</div>
-                </div>
-                <input type="url"
-                       class="bg-select"
-                       id="refImageUrl"
-                       aria-label="Reference image URL"
-                       placeholder="https://example.com/photo.jpg"
-                       style="margin-top: 8px;">
-                <div class="bg-ref-preview" id="refPreview">
-                    <img class="bg-ref-thumbnail" id="refThumbnail" src="" alt="Reference image">
-                    <div class="bg-ref-info">
-                        <div class="bg-ref-status" id="refStatus">
-                            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-square-check"/></svg>
-                            <span id="refStatusText">Validating...</span>
-                        </div>
-                        <button type="button" class="bg-ref-remove" id="refRemoveBtn">
-                            <svg class="icon" aria-hidden="true" width="12" height="12"><use href="{% static 'icons/sprite.svg' %}#icon-x"/></svg>
-                            Remove
+            {# Column 3: Dimensions + Images per Prompt + Quality #}
+            <div class="bg-master-col">
+                <div class="bg-setting-group">
+                    <span class="bg-setting-label">Dimensions</span>
+                    <div class="bg-btn-group" id="settingDimensions" role="radiogroup" aria-label="Image dimensions">
+                        <button type="button" class="bg-btn-group-option active" data-value="1024x1024" role="radio" aria-checked="true">
+                            1:1
+                            <span class="bg-dim-icon" data-ratio="1:1"></span>
+                        </button>
+                        <button type="button" class="bg-btn-group-option" data-value="1024x1536" role="radio" aria-checked="false">
+                            2:3
+                            <span class="bg-dim-icon" data-ratio="2:3"></span>
+                        </button>
+                        <button type="button" class="bg-btn-group-option" data-value="1792x1024" role="radio" aria-checked="false">
+                            16:9
+                            <span class="bg-dim-icon" data-ratio="16:9"></span>
+                        </button>
+                        <button type="button" class="bg-btn-group-option" data-value="1536x1024" role="radio" aria-checked="false">
+                            4:3
+                            <span class="bg-dim-icon" data-ratio="4:3"></span>
                         </button>
                     </div>
                 </div>
-                <span class="bg-setting-hint">Must be a clear photo of a person</span>
-            </div>
-
-            {# Row 2, Col 2: Character Selection (disabled placeholder) #}
-            <div class="bg-setting-group">
-                <label class="bg-setting-label" for="settingCharacter">Character Selection <span class="bg-setting-hint-inline">(coming soon)</span></label>
-                <div class="bg-select-wrapper">
-                    <select class="bg-select" id="settingCharacter" disabled>
-                        <option value="">Select a character...</option>
-                    </select>
+                <div class="bg-setting-group">
+                    <span class="bg-setting-label">Images per Prompt</span>
+                    <div class="bg-btn-group" id="settingImagesPerPrompt" role="radiogroup" aria-label="Images per prompt">
+                        <button type="button" class="bg-btn-group-option active" data-value="1" role="radio" aria-checked="true">1</button>
+                        <button type="button" class="bg-btn-group-option" data-value="2" role="radio" aria-checked="false">2</button>
+                        <button type="button" class="bg-btn-group-option" data-value="3" role="radio" aria-checked="false">3</button>
+                        <button type="button" class="bg-btn-group-option" data-value="4" role="radio" aria-checked="false">4</button>
+                    </div>
                 </div>
-                <span class="bg-setting-hint">Saved characters with reference photos</span>
-            </div>
-
-            {# Row 2, Col 3: Images per Prompt #}
-            <div class="bg-setting-group">
-                <span class="bg-setting-label">Images per Prompt</span>
-                <div class="bg-btn-group" id="settingImagesPerPrompt" role="radiogroup" aria-label="Images per prompt">
-                    <button type="button" class="bg-btn-group-option active" data-value="1" role="radio" aria-checked="true">1</button>
-                    <button type="button" class="bg-btn-group-option" data-value="2" role="radio" aria-checked="false">2</button>
-                    <button type="button" class="bg-btn-group-option" data-value="3" role="radio" aria-checked="false">3</button>
-                    <button type="button" class="bg-btn-group-option" data-value="4" role="radio" aria-checked="false">4</button>
+                <div class="bg-setting-group">
+                    <label class="bg-setting-label" for="settingQuality">Quality</label>
+                    <div class="bg-select-wrapper">
+                        <select class="bg-select" id="settingQuality">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            {# Row 2, Col 4: Quality + Reset #}
-            <div class="bg-setting-group">
-                <label class="bg-setting-label" for="settingQuality">Quality</label>
-                <div class="bg-select-wrapper">
-                    <select class="bg-select" id="settingQuality">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                    </select>
+            {# Column 4: Visibility + Reset Master Settings #}
+            <div class="bg-master-col">
+                <div class="bg-setting-group">
+                    <span class="bg-setting-label">Visibility</span>
+                    <div class="bg-visibility-card">
+                        <div class="bg-visibility-info">
+                            <span class="bg-visibility-label" id="visibilityLabel">Public</span>
+                        </div>
+                        <label class="bg-toggle-switch">
+                            <input type="checkbox" id="settingVisibility" aria-labelledby="visibilityLabel" checked>
+                            <span class="bg-toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
-                <button type="button" class="bg-reset-master-btn" id="resetMasterBtn">
-                    <svg class="icon" aria-hidden="true" width="14" height="14"><use href="{% static 'icons/sprite.svg' %}#icon-rotate-ccw"/></svg>
-                    Reset Master Settings
-                </button>
+                <div class="bg-setting-group">
+                    <button type="button" class="bg-reset-master-btn" id="resetMasterBtn">
+                        <svg class="icon" aria-hidden="true" width="14" height="14"><use href="{% static 'icons/sprite.svg' %}#icon-rotate-ccw"/></svg>
+                        Reset Master Settings
+                    </button>
+                </div>
             </div>
 
         </div>{# /.bg-master-grid #}
-
-        {# Generator Category (full-width below grid) #}
-        <div class="bg-setting-group bg-generator-below-grid">
-            <label class="bg-setting-label" for="settingGenerator">Generator Category</label>
-            <div class="bg-select-wrapper">
-                <select class="bg-select" id="settingGenerator">
-                    <option value="ChatGPT" selected>ChatGPT</option>
-                    {% for value, label in generator_choices %}
-                    <option value="{{ label }}">{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <span class="bg-setting-hint">Applied as tag on created pages</span>
-        </div>
     </div>{# /.bg-master-settings #}
 
     {# ===== Prompt Entry Section ===== #}
     <div class="bg-prompt-section-header">
         <h2 class="bg-prompt-section-title">Prompt Entry</h2>
         <button type="button" class="bg-clear-all-btn" id="clearAllBtn">
-            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash-2"/></svg>
+            <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-trash"/></svg>
             Clear All Prompts
         </button>
     </div>

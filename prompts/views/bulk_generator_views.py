@@ -15,7 +15,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
-from prompts.models import BulkGenerationJob, AI_GENERATOR_CHOICES
+from prompts.models import BulkGenerationJob
 from prompts.services.bulk_generation import BulkGenerationService
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,6 @@ def bulk_generator_page(request):
 
     return render(request, 'prompts/bulk_generator.html', {
         'jobs': jobs,
-        'generator_choices': AI_GENERATOR_CHOICES,
     })
 
 
@@ -115,6 +114,15 @@ def api_start_generation(request):
             {'error': 'Invalid JSON'}, status=400,
         )
 
+    # --- Optional: per-prompt source credits ---
+    raw_source_credits = data.get('source_credits', [])
+    if not isinstance(raw_source_credits, list):
+        raw_source_credits = []
+    source_credits = [
+        str(sc)[:200] if isinstance(sc, str) else ''
+        for sc in raw_source_credits
+    ]
+
     # --- Required field ---
     prompts = data.get('prompts')
     if not isinstance(prompts, list) or len(prompts) == 0:
@@ -158,9 +166,14 @@ def api_start_generation(request):
     reference_image_url = data.get('reference_image_url', '').strip()
     if reference_image_url:
         parsed = urlparse(reference_image_url)
-        if parsed.scheme not in ('http', 'https'):
+        allowed_domains = [
+            'f002.backblazeb2.com',
+            's3.us-west-002.backblazeb2.com',
+            'media.promptfinder.net',
+        ]
+        if parsed.scheme not in ('http', 'https') or parsed.netloc not in allowed_domains:
             return JsonResponse(
-                {'error': 'reference_image_url must be an HTTP or HTTPS URL'},
+                {'error': 'reference_image_url must be from an allowed domain'},
                 status=400,
             )
 
@@ -191,6 +204,10 @@ def api_start_generation(request):
         )
 
     # Create and start the job
+    # Pad source_credits to match prompts length
+    while len(source_credits) < len(prompts):
+        source_credits.append('')
+
     job = service.create_job(
         user=request.user,
         prompts=prompts,
@@ -203,6 +220,7 @@ def api_start_generation(request):
         generator_category=data.get('generator_category', 'ChatGPT'),
         reference_image_url=reference_image_url,
         character_description=data.get('character_description', ''),
+        source_credits=source_credits,
     )
 
     service.start_job(job)

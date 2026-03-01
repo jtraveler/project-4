@@ -21,19 +21,18 @@
     // Master settings
     var settingModel = document.getElementById('settingModel');
     var settingQuality = document.getElementById('settingQuality');
-    var settingGenerator = document.getElementById('settingGenerator');
     var settingCharDesc = document.getElementById('settingCharDesc');
     var settingVisibility = document.getElementById('settingVisibility');
     var visibilityLabel = document.getElementById('visibilityLabel');
 
     // Reference image
     var refUploadZone = document.getElementById('refUploadZone');
-    var refImageUrl = document.getElementById('refImageUrl');
-    var refPreview = document.getElementById('refPreview');
+    var refFileInput = document.getElementById('refFileInput');
+    var refPreviewContainer = document.getElementById('refPreviewContainer');
     var refThumbnail = document.getElementById('refThumbnail');
-    var refStatus = document.getElementById('refStatus');
-    var refStatusText = document.getElementById('refStatusText');
     var refRemoveBtn = document.getElementById('refRemoveBtn');
+    var refStatus = document.getElementById('refStatus');
+    var refUploading = false;
 
     // Prompt grid
     var promptGrid = document.getElementById('promptGrid');
@@ -64,6 +63,15 @@
     var validatedRefUrl = '';
     var COST_MAP = { low: 0.015, medium: 0.03, high: 0.05 };
     var IMAGES_PER_MINUTE = 5;
+    var MODEL_CATEGORY_MAP = {
+        'gpt-image-1': 'ChatGPT',
+        'dall-e-3': 'DALL-E',
+        'midjourney': 'Midjourney',
+        'stable-diffusion': 'Stable Diffusion',
+        'firefly': 'Adobe Firefly',
+        'leonardo': 'Leonardo AI',
+        'flux': 'Flux'
+    };
 
     // ─── Utilities ───────────────────────────────────────────────
     function getSpriteBase() {
@@ -98,12 +106,17 @@
             '<div class="bg-box-header">' +
                 '<span class="bg-box-title" id="' + boxId + '-title">Prompt ' + boxIdCounter + '</span>' +
                 '<button type="button" class="bg-box-delete-btn" aria-label="Delete prompt ' + boxIdCounter + '">' +
-                    '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-trash-2"/></svg>' +
+                    '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-trash"/></svg>' +
                 '</button>' +
             '</div>' +
             '<textarea class="bg-box-textarea" id="' + taId + '" aria-label="Prompt ' + boxIdCounter + '" placeholder="Enter your prompt...">' +
                 escapeHtml(promptText || '') +
             '</textarea>' +
+            '<div class="bg-box-source">' +
+                '<label class="bg-box-source-label" for="' + boxId + '-source">Source / Credit <span class="bg-box-optional">(optional)</span></label>' +
+                '<input type="text" class="bg-box-source-input" id="' + boxId + '-source" ' +
+                    'maxlength="200">' +
+            '</div>' +
             '<div class="bg-box-error" role="alert"></div>' +
             '<div class="bg-box-overrides">' +
                 '<div class="bg-box-override-row">' +
@@ -177,25 +190,73 @@
         updateGenerateBtn();
     }
 
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     function deleteBox(box) {
         if (box.classList.contains('removing')) return;
-        // Phase 1: fade + scale down
+
+        // 1. FIRST — Record positions of all remaining boxes
+        var allBoxes = Array.from(promptGrid.querySelectorAll('.bg-prompt-box:not(.removing)'));
+        var positions = new Map();
+        allBoxes.forEach(function (b) {
+            if (b !== box) {
+                positions.set(b, b.getBoundingClientRect());
+            }
+        });
+
+        // 2. REMOVE — Animate the deleted box out
         box.classList.add('removing');
 
-        setTimeout(function () {
-            // Phase 2: collapse height
-            box.style.maxHeight = box.offsetHeight + 'px';
-            // Force reflow before adding collapsing class
-            void box.offsetHeight;
-            box.classList.add('collapsing');
+        var removeDuration = prefersReducedMotion ? 0 : 300;
 
-            setTimeout(function () {
-                box.remove();
-                renumberBoxes();
-                updateCostEstimate();
-                updateGenerateBtn();
-            }, 300);
-        }, 300);
+        // 3. After removal animation completes, remove from DOM and animate reflow
+        setTimeout(function () {
+            // Find the next sibling box to focus after deletion
+            var allCurrent = Array.from(promptGrid.querySelectorAll('.bg-prompt-box:not(.removing)'));
+            var boxIndex = allCurrent.indexOf(box);
+            var nextSibling = allCurrent.filter(function (b) { return b !== box; });
+            var focusTarget = nextSibling[boxIndex] || nextSibling[nextSibling.length - 1];
+
+            box.remove();
+            renumberBoxes();
+
+            // 4. LAST — FLIP: Get new positions and animate the delta
+            if (!prefersReducedMotion) {
+                positions.forEach(function (oldRect, b) {
+                    var newRect = b.getBoundingClientRect();
+                    var deltaX = oldRect.left - newRect.left;
+                    var deltaY = oldRect.top - newRect.top;
+
+                    if (deltaX !== 0 || deltaY !== 0) {
+                        b.style.transform = 'translate(' + deltaX + 'px, ' + deltaY + 'px)';
+                        b.style.transition = 'none';
+
+                        requestAnimationFrame(function () {
+                            requestAnimationFrame(function () {
+                                b.style.transition = 'transform 0.3s ease';
+                                b.style.transform = '';
+
+                                b.addEventListener('transitionend', function handler(ev) {
+                                    if (ev.propertyName !== 'transform') return;
+                                    b.style.transition = '';
+                                    b.removeEventListener('transitionend', handler);
+                                });
+                            });
+                        });
+                    }
+                });
+            }
+
+            // Move focus to nearest remaining box
+            if (focusTarget) {
+                var ta = focusTarget.querySelector('.bg-box-textarea');
+                if (ta) ta.focus();
+            }
+
+            updateCostEstimate();
+            updateGenerateBtn();
+            scheduleSave();
+        }, removeDuration);
     }
 
     function renumberBoxes() {
@@ -247,6 +308,10 @@
         if (e.target.classList.contains('bg-box-textarea')) {
             updateCostEstimate();
             updateGenerateBtn();
+            scheduleSave();
+        }
+        if (e.target.classList.contains('bg-box-source-input')) {
+            scheduleSave();
         }
     });
 
@@ -340,66 +405,190 @@
         visibilityLabel.textContent = settingVisibility.checked ? 'Public' : 'Private';
     });
 
-    // ─── Reference Image ──────────────────────────────────────────
-    var refDebounce = null;
+    // ─── Reference Image Upload ────────────────────────────────────
+    var REF_ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+    var REF_MAX_SIZE = 3 * 1024 * 1024; // 3MB (matches backend presign limit)
+    var refFileKey = '';
 
-    refImageUrl.addEventListener('input', function () {
-        clearTimeout(refDebounce);
-        var url = refImageUrl.value.trim();
-        if (!url) {
-            removeRefImage();
-            return;
-        }
-        refDebounce = setTimeout(function () { validateRefImage(url); }, 600);
+    // Click to upload
+    refUploadZone.addEventListener('click', function () {
+        if (!refUploading) refFileInput.click();
     });
-
-    refUploadZone.addEventListener('click', function () { refImageUrl.focus(); });
     refUploadZone.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if ((e.key === 'Enter' || e.key === ' ') && !refUploading) {
             e.preventDefault();
-            refImageUrl.focus();
+            refFileInput.click();
         }
     });
+
+    // File selected via picker
+    refFileInput.addEventListener('change', function () {
+        if (refFileInput.files && refFileInput.files[0]) {
+            handleRefFile(refFileInput.files[0]);
+        }
+    });
+
+    // Drag and drop
+    refUploadZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        refUploadZone.classList.add('drag-over');
+    });
+    refUploadZone.addEventListener('dragleave', function (e) {
+        if (!refUploadZone.contains(e.relatedTarget)) {
+            refUploadZone.classList.remove('drag-over');
+        }
+    });
+    refUploadZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        refUploadZone.classList.remove('drag-over');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleRefFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Remove button
     refRemoveBtn.addEventListener('click', removeRefImage);
 
-    function validateRefImage(url) {
-        refThumbnail.src = url;
-        refStatusText.textContent = 'Validating...';
-        refStatus.className = 'bg-ref-status';
-        refPreview.classList.add('visible');
-        refUploadZone.style.display = 'none';
+    function handleRefFile(file) {
+        // Client-side validation
+        if (REF_ACCEPTED_TYPES.indexOf(file.type) === -1) {
+            showRefStatus('Unsupported format. Use PNG, JPG, or WebP.', 'error');
+            return;
+        }
+        if (file.size > REF_MAX_SIZE) {
+            showRefStatus('File too large. Maximum 3MB.', 'error');
+            return;
+        }
 
-        fetch(urlValidateRef, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-            body: JSON.stringify({ image_url: url }),
+        // Show instant preview from local file
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            refThumbnail.src = e.target.result;
+            refUploadZone.style.display = 'none';
+            refPreviewContainer.style.display = '';
+            showRefStatus('Uploading...', 'uploading');
+        };
+        reader.readAsDataURL(file);
+
+        // Upload to B2 via presigned URL
+        uploadRefToB2(file);
+    }
+
+    function uploadRefToB2(file) {
+        refUploading = true;
+
+        // Step 1: Get presigned URL (GET with query params, same as upload-core.js)
+        var presignParams = new URLSearchParams({
+            content_type: file.type,
+            content_length: file.size,
+            filename: file.name
+        });
+
+        fetch('/api/upload/b2/presign/?' + presignParams, {
+            method: 'GET',
+            headers: { 'X-CSRFToken': csrf }
         })
         .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data.valid) {
-                refStatusText.textContent = 'Face detected';
-                validatedRefUrl = url;
-            } else {
-                refStatusText.textContent = data.reason || 'Validation failed';
-                refStatus.classList.add('error');
-                validatedRefUrl = '';
+        .then(function (presignData) {
+            if (!presignData.success) {
+                throw new Error(presignData.error || 'Failed to get upload URL');
             }
+
+            // Step 2: Upload directly to B2
+            return fetch(presignData.presigned_url, {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file
+            }).then(function (putRes) {
+                if (!putRes.ok) throw new Error('B2 upload failed: ' + putRes.status);
+                return presignData;
+            });
         })
-        .catch(function () {
-            refStatusText.textContent = 'Validation error';
-            refStatus.classList.add('error');
-            validatedRefUrl = '';
+        .then(function (presignData) {
+            // Step 3: Confirm upload completion
+            return fetch('/api/upload/b2/complete/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({
+                    file_key: presignData.key,
+                    filename: file.name,
+                    content_type: file.type,
+                    resource_type: 'image'
+                })
+            }).then(function (r) { return r.json(); });
+        })
+        .then(function (completeData) {
+            if (!completeData.success) {
+                throw new Error(completeData.error || 'Upload completion failed');
+            }
+
+            var imageUrl = (completeData.urls && completeData.urls.original) || '';
+            refFileKey = completeData.file_key || '';
+
+            if (!imageUrl) {
+                throw new Error('No image URL returned');
+            }
+
+            // Step 4: Run NSFW moderation
+            showRefStatus('Checking content...', 'uploading');
+            return fetch('/api/upload/b2/moderate/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ image_url: imageUrl })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (modData) {
+                return { url: imageUrl, moderation: modData };
+            });
+        })
+        .then(function (result) {
+            refUploading = false;
+
+            // Check moderation result
+            if (result.moderation.status === 'rejected') {
+                deleteRefFromB2();
+                removeRefImage();
+                showRefStatus('Image rejected: content policy violation.', 'error');
+                return;
+            }
+
+            // Success — store validated URL
+            validatedRefUrl = result.url;
+            showRefStatus('Image uploaded', 'success');
+        })
+        .catch(function (err) {
+            refUploading = false;
+            deleteRefFromB2();
+            removeRefImage();
+            showRefStatus('Upload failed. Please try again.', 'error');
+            console.error('Reference image upload error:', err);
         });
     }
 
+    function deleteRefFromB2() {
+        if (!refFileKey) return;
+        fetch('/api/upload/b2/delete/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ file_key: refFileKey, is_video: false })
+        }).catch(function () { /* Cleanup failed silently */ });
+        refFileKey = '';
+    }
+
     function removeRefImage() {
-        refImageUrl.value = '';
         validatedRefUrl = '';
-        refPreview.classList.remove('visible');
-        refUploadZone.style.display = '';
         refThumbnail.src = '';
-        refStatusText.textContent = '';
-        refStatus.className = 'bg-ref-status';
+        refFileInput.value = '';
+        refPreviewContainer.style.display = 'none';
+        refUploadZone.style.display = '';
+        showRefStatus('', '');
+        refFileKey = '';
+        refUploadZone.focus();
+    }
+
+    function showRefStatus(message, type) {
+        refStatus.textContent = message;
+        refStatus.className = 'bg-ref-status' + (type ? ' ' + type : '');
     }
 
     // ─── Cost Estimation ──────────────────────────────────────────
@@ -540,6 +729,7 @@
         });
         hideModal(clearAllModal);
         clearValidationErrors();
+        clearSavedPrompts();
         updateCostEstimate();
         updateGenerateBtn();
     });
@@ -550,7 +740,6 @@
     resetMasterConfirm.addEventListener('click', function () {
         settingModel.value = 'gpt-image-1';
         settingQuality.value = 'medium';
-        settingGenerator.value = 'ChatGPT';
         settingVisibility.checked = true;
         visibilityLabel.textContent = 'Public';
         settingCharDesc.value = '';
@@ -591,11 +780,17 @@
     // ─── Validation + Generation ──────────────────────────────────
     function collectPrompts() {
         var prompts = [];
-        promptGrid.querySelectorAll('.bg-box-textarea').forEach(function (ta) {
-            var text = ta.value.trim();
-            if (text) prompts.push(text);
+        var sourceCredits = [];
+        promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
+            var ta = box.querySelector('.bg-box-textarea');
+            var sc = box.querySelector('.bg-box-source-input');
+            var text = ta ? ta.value.trim() : '';
+            if (text) {
+                prompts.push(text);
+                sourceCredits.push(sc ? sc.value.trim() : '');
+            }
         });
-        return prompts;
+        return { prompts: prompts, sourceCredits: sourceCredits };
     }
 
     function clearValidationErrors() {
@@ -640,7 +835,14 @@
     generateBtn.addEventListener('click', function () {
         clearValidationErrors();
 
-        var prompts = collectPrompts();
+        if (refUploading) {
+            showValidationErrors([{ message: 'Reference image is still uploading. Please wait.' }]);
+            return;
+        }
+
+        var collected = collectPrompts();
+        var prompts = collected.prompts;
+        var sourceCredits = collected.sourceCredits;
         if (prompts.length === 0) {
             showValidationErrors([{ message: 'At least 1 prompt is required.' }]);
             return;
@@ -676,13 +878,14 @@
 
             var payload = {
                 prompts: finalPrompts,
+                source_credits: sourceCredits,
                 provider: 'openai',
                 model: settingModel.value,
                 quality: getMasterQuality(),
                 size: getMasterDimensions(),
                 images_per_prompt: getMasterImagesPerPrompt(),
                 visibility: getVisibility(),
-                generator_category: settingGenerator.value,
+                generator_category: MODEL_CATEGORY_MAP[settingModel.value] || 'ChatGPT',
                 reference_image_url: validatedRefUrl,
                 character_description: charDesc,
             };
@@ -704,6 +907,7 @@
                 resetGenerateBtn();
                 return;
             }
+            clearSavedPrompts();
             generateBtn.innerHTML =
                 '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-sparkles"/></svg> Generation Started!';
             // Future: transition to progress/review state (Phase 5+)
@@ -714,8 +918,128 @@
         });
     });
 
+    // ─── Auto-save to localStorage ────────────────────────────────
+    var STORAGE_KEY = 'bulkgen_prompts';
+    var saveTimer = null;
+    var draftIndicator = null;
+    var draftFadeTimer = null;
+
+    function createDraftIndicator() {
+        var headerRow = document.querySelector('.bg-prompt-section-header');
+        if (!headerRow) return;
+        draftIndicator = document.createElement('span');
+        draftIndicator.className = 'bg-draft-indicator';
+        draftIndicator.textContent = 'Draft saved';
+        draftIndicator.style.display = 'none';
+        draftIndicator.setAttribute('role', 'status');
+        draftIndicator.setAttribute('aria-live', 'polite');
+        // Insert as sibling of the title, not inside it
+        var title = headerRow.querySelector('.bg-prompt-section-title');
+        title.insertAdjacentElement('afterend', draftIndicator);
+    }
+
+    function savePromptsToStorage() {
+        var boxes = promptGrid.querySelectorAll('.bg-prompt-box');
+        var prompts = [];
+        var sourceCredits = [];
+        boxes.forEach(function (box) {
+            var ta = box.querySelector('.bg-box-textarea');
+            var sc = box.querySelector('.bg-box-source-input');
+            prompts.push(ta ? ta.value : '');
+            sourceCredits.push(sc ? sc.value : '');
+        });
+
+        var hasContent = prompts.some(function (p) { return p.trim().length > 0; });
+        if (hasContent) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    prompts: prompts,
+                    sourceCredits: sourceCredits
+                }));
+                showDraftIndicator();
+            } catch (e) {
+                // localStorage full or unavailable — fail silently
+            }
+        } else {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    }
+
+    function showDraftIndicator() {
+        if (!draftIndicator) return;
+        clearTimeout(draftFadeTimer);
+        draftIndicator.style.display = 'inline';
+        draftIndicator.style.opacity = '1';
+
+        draftFadeTimer = setTimeout(function () {
+            if (prefersReducedMotion) {
+                draftIndicator.style.display = 'none';
+            } else {
+                draftIndicator.style.opacity = '0';
+                setTimeout(function () {
+                    draftIndicator.style.display = 'none';
+                }, 300);
+            }
+        }, 2000);
+    }
+
+    function restorePromptsFromStorage() {
+        try {
+            var saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) return;
+
+            var data = JSON.parse(saved);
+
+            // Backward compat: old format was plain array of strings
+            var prompts, sourceCredits;
+            if (Array.isArray(data)) {
+                prompts = data;
+                sourceCredits = [];
+            } else {
+                prompts = data.prompts || [];
+                sourceCredits = data.sourceCredits || [];
+            }
+
+            if (prompts.length === 0) return;
+
+            // Create boxes if we need more than the default 4
+            var currentBoxes = promptGrid.querySelectorAll('.bg-prompt-box');
+            while (currentBoxes.length < prompts.length) {
+                var extraBox = createPromptBox('');
+                promptGrid.appendChild(extraBox);
+                currentBoxes = promptGrid.querySelectorAll('.bg-prompt-box');
+            }
+
+            // Fill in prompts and source credits
+            var boxes = promptGrid.querySelectorAll('.bg-prompt-box');
+            prompts.forEach(function (text, i) {
+                if (boxes[i]) {
+                    var ta = boxes[i].querySelector('.bg-box-textarea');
+                    var sc = boxes[i].querySelector('.bg-box-source-input');
+                    if (ta && text) ta.value = text;
+                    if (sc && sourceCredits[i]) sc.value = sourceCredits[i];
+                }
+            });
+
+            renumberBoxes();
+        } catch (e) {
+            // Corrupted data — fail silently
+        }
+    }
+
+    function clearSavedPrompts() {
+        localStorage.removeItem(STORAGE_KEY);
+    }
+
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(savePromptsToStorage, 500);
+    }
+
     // ─── Initial State ───────────────────────────────────────────
     addBoxes(4);
+    createDraftIndicator();
+    restorePromptsFromStorage();
     updateCostEstimate();
     updateGenerateBtn();
 

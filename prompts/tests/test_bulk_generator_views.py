@@ -78,12 +78,11 @@ class BulkGeneratorPageTests(TestCase):
         self.assertContains(response, 'data-url-start=')
         self.assertContains(response, 'data-url-validate-ref=')
 
-    def test_page_has_generator_choices(self):
-        """Template receives generator choices for dropdown."""
+    def test_page_does_not_include_generator_choices(self):
+        """Generator category is auto-derived from model; no dropdown context needed."""
         self.client.login(username='staffuser', password='testpass')
         response = self.client.get(self.url)
-        self.assertIn('generator_choices', response.context)
-        self.assertTrue(len(response.context['generator_choices']) > 0)
+        self.assertNotIn('generator_choices', response.context)
 
 
 @override_settings(OPENAI_API_KEY='test-key')

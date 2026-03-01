@@ -16,6 +16,7 @@ from csp.decorators import csp_exempt
 from prompts.forms import PromptForm
 from prompts.services import ModerationOrchestrator
 from prompts.constants import DEFAULT_AI_TITLES
+from prompts.utils.source_credit import parse_source_credit
 import json
 import logging
 
@@ -265,6 +266,8 @@ def upload_submit(request):
     ai_generator = request.POST.get('ai_generator', '').strip()
     tags_json = request.POST.get('tags', '[]')
     save_as_draft = request.POST.get('save_as_draft') == '1'  # Check if "Save as Draft" was checked
+    raw_source_credit = request.POST.get('source_credit', '').strip()
+    source_credit_name, source_credit_url = parse_source_credit(raw_source_credit)
 
     # Check if this is a B2 upload (set by upload_step2)
     is_b2_upload = request.session.get('upload_is_b2', False)
@@ -460,6 +463,8 @@ def upload_submit(request):
         content=content,
         excerpt=ai_description[:2000].strip() if ai_description else content[:500].strip(),
         ai_generator=ai_generator,
+        source_credit=source_credit_name,
+        source_credit_url=source_credit_url,
         status=0,
     )
 
@@ -792,5 +797,3 @@ def extend_upload_time(request):
             'success': False,
             'error': str(e)
         })
-
-

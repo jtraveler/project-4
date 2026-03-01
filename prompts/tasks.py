@@ -2537,6 +2537,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
     from prompts.services.content_generation import (
         ContentGenerationService,
     )
+    from prompts.utils.source_credit import parse_source_credit
 
     try:
         job = BulkGenerationJob.objects.get(id=job_id)
@@ -2611,6 +2612,14 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
                 ai_generator=job.generator_category,
                 status=0,  # Draft
             )
+
+            # Apply source credit if present on the generated image
+            if gen_image.source_credit:
+                sc_name, sc_url = parse_source_credit(
+                    gen_image.source_credit
+                )
+                prompt_page.source_credit = sc_name
+                prompt_page.source_credit_url = sc_url
 
             # Set B2 image URL
             if hasattr(prompt_page, 'b2_image_url'):

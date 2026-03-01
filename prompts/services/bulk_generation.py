@@ -95,6 +95,7 @@ class BulkGenerationService:
         generator_category: str = 'ChatGPT',
         reference_image_url: str = '',
         character_description: str = '',
+        source_credits: list[str] | None = None,
     ) -> BulkGenerationJob:
         """
         Create a BulkGenerationJob and its GeneratedImage records.
@@ -138,12 +139,18 @@ class BulkGenerationService:
                     f"{character_description.strip()}. {prompt_text}"
                 )
 
+            # Get source credit for this prompt (if provided)
+            credit = ''
+            if source_credits and order < len(source_credits):
+                credit = source_credits[order]
+
             for variation in range(1, images_per_prompt + 1):
                 images_to_create.append(GeneratedImage(
                     job=job,
                     prompt_text=combined,
                     prompt_order=order,
                     variation_number=variation,
+                    source_credit=credit,
                 ))
 
         GeneratedImage.objects.bulk_create(images_to_create)

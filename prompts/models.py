@@ -820,6 +820,18 @@ class Prompt(models.Model):
         help_text='Select the AI tool used to generate this image/video'
     )
 
+    # Source / Credit (optional — staff-entered provenance)
+    source_credit = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Source or credit for this prompt (e.g., "PromptHero")'
+    )
+    source_credit_url = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text='URL of the original source (staff-only clickable link)'
+    )
+
     # Soft delete fields (Phase D.5)
     deleted_at = models.DateTimeField(
         null=True,
@@ -2935,6 +2947,11 @@ class GeneratedImage(models.Model):
     prompt_text = models.TextField()
     prompt_order = models.PositiveIntegerField()
     variation_number = models.PositiveSmallIntegerField(default=1)
+    source_credit = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Source credit text entered in bulk generator'
+    )
 
     # Output
     image_url = models.URLField(blank=True, max_length=2000)

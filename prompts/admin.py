@@ -190,7 +190,7 @@ class PromptAdmin(SummernoteModelAdmin):
             ),
         }),
         ('Publishing', {
-            'fields': ('author', 'status', 'ai_generator', 'order'),
+            'fields': ('author', 'status', 'ai_generator', 'source_credit', 'source_credit_url', 'order'),
         }),
         ('Moderation', {
             'fields': (

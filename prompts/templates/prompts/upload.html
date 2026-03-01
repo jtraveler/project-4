@@ -112,6 +112,23 @@
                             </div>
                         </div>
 
+                        <!-- Source / Credit (optional, staff only) -->
+                        {% if user.is_staff %}
+                        <div class="form-group">
+                            <label class="form-label" for="sourceCredit">
+                                Source / Credit <span class="optional-label">(optional)</span>
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="sourceCredit"
+                                name="source_credit"
+                                maxlength="200"
+                                disabled
+                            >
+                        </div>
+                        {% endif %}
+
                         <!-- Visibility Toggle -->
                         <div class="form-group">
                             <div class="visibility-card">

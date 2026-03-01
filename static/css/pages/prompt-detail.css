@@ -583,6 +583,35 @@ a.model-name:hover {
 }
 
 /* ==========================================================================
+   Source / Credit Card
+   Shows prompt origin when credited
+   ========================================================================== */
+
+.source-credit-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.source-credit-text {
+    font-size: 0.9375rem;
+    color: var(--text-dark);
+}
+
+.source-credit-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.9375rem;
+    color: var(--text-dark);
+    text-decoration: none;
+}
+
+.source-credit-link:hover {
+    text-decoration: underline;
+}
+
+/* ==========================================================================
    Prompt Text Card
    The actual prompt content with copy button
    Completely flat design - no shadows, borders, or hover effects

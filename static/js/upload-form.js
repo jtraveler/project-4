@@ -328,6 +328,7 @@
             aiGenerator: document.getElementById('aiGenerator'),
             isPublicToggle: document.getElementById('isPublicToggle'),
             isDraftHidden: document.getElementById('isDraftHidden'),
+            sourceCredit: document.getElementById('sourceCredit'),
 
             // Hidden fields (populated by upload-core.js)
             b2FileKey: document.getElementById('b2FileKey'),
@@ -532,6 +533,9 @@
         if (elements.isPublicToggle) {
             elements.isPublicToggle.disabled = false;
         }
+        if (elements.sourceCredit) {
+            elements.sourceCredit.disabled = false;
+        }
 
         // Submit button stays disabled until NSFW check passes
         updateSubmitButton();
@@ -553,6 +557,9 @@
         }
         if (elements.isPublicToggle) {
             elements.isPublicToggle.disabled = true;
+        }
+        if (elements.sourceCredit) {
+            elements.sourceCredit.disabled = true;
         }
 
         updateSubmitButton();
@@ -591,6 +598,9 @@
         }
         if (elements.isDraftHidden) {
             elements.isDraftHidden.value = ''; // Not a draft by default
+        }
+        if (elements.sourceCredit) {
+            elements.sourceCredit.value = '';
         }
 
         // Hide modals/toasts

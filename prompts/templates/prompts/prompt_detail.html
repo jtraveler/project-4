@@ -61,8 +61,8 @@
 {% else %}
     <!-- Preload hero image with responsive hints for LCP optimization -->
     {% if prompt.display_large_url %}
-        <link rel="preload" 
-              as="image" 
+        <link rel="preload"
+              as="image"
               href="{{ prompt.display_large_url }}"
               imagesrcset="{{ prompt.display_medium_url }} 600w, {{ prompt.display_large_url }} 1200w"
               imagesizes="(max-width: 768px) 100vw, 60vw"
@@ -167,7 +167,7 @@
 
 
 
-            
+
 <!-- ============================================================
      SIDE-BY-SIDE LAYOUT (PromptHero Style)
      Left Column: Image, Actions, Title, Description, Comments
@@ -449,6 +449,27 @@
                     {% endif %}
                 </div>
             </div>
+
+            <!-- SOURCE / CREDIT Section (staff-only, if present) -->
+            {% if user.is_staff and prompt.source_credit %}
+            <div class="rail-card source-credit-card">
+                <h2 class="rail-card-title">Source</h2>
+                <div class="source-credit-content">
+                    {% if prompt.source_credit_url %}
+                    <a href="{{ prompt.source_credit_url }}"
+                       target="_blank"
+                       rel="noopener nofollow"
+                       class="source-credit-link"
+                       aria-label="{{ prompt.source_credit }} (opens in new tab)">
+                        {{ prompt.source_credit }}
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-external-link"/></svg>
+                    </a>
+                    {% else %}
+                    <span class="source-credit-text">{{ prompt.source_credit }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Prompt Text Card -->
             <div class="rail-card prompt-card">

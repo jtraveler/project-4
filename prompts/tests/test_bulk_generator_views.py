@@ -1,5 +1,5 @@
 """
-Tests for bulk generator views and API endpoints (Phase 3).
+Tests for bulk generator views and API endpoints (Phase BG).
 
 Tests all 7 view functions: page, validate, start, status, cancel,
 create-pages, validate-reference.
@@ -44,14 +44,14 @@ class BulkGeneratorPageTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 302)
 
-    def test_page_shows_recent_jobs(self):
+    def test_page_passes_jobs_in_context(self):
         self.client.login(username='staffuser', password='testpass')
-        job = BulkGenerationJob.objects.create(
+        BulkGenerationJob.objects.create(
             created_by=self.staff_user,
             total_prompts=5,
         )
         response = self.client.get(self.url)
-        self.assertContains(response, str(job.id)[:9])
+        self.assertEqual(len(response.context['jobs']), 1)
 
     def test_page_only_shows_own_jobs(self):
         self.client.login(username='staffuser', password='testpass')
@@ -64,6 +64,27 @@ class BulkGeneratorPageTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(len(response.context['jobs']), 0)
 
+    def test_page_has_csrf_token(self):
+        """Template embeds CSRF token in data attribute."""
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.get(self.url)
+        self.assertContains(response, 'data-csrf=')
+
+    def test_page_has_api_urls(self):
+        """Template embeds API URLs in data attributes."""
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.get(self.url)
+        self.assertContains(response, 'data-url-validate=')
+        self.assertContains(response, 'data-url-start=')
+        self.assertContains(response, 'data-url-validate-ref=')
+
+    def test_page_has_generator_choices(self):
+        """Template receives generator choices for dropdown."""
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.get(self.url)
+        self.assertIn('generator_choices', response.context)
+        self.assertTrue(len(response.context['generator_choices']) > 0)
+
 
 @override_settings(OPENAI_API_KEY='test-key')
 class ValidatePromptsAPITests(TestCase):
@@ -73,7 +94,7 @@ class ValidatePromptsAPITests(TestCase):
         self.staff_user = User.objects.create_user(
             username='staffuser', password='testpass', is_staff=True,
         )
-        self.url = reverse('prompts:bulk_generator_validate')
+        self.url = reverse('prompts:api_bulk_validate_prompts')
 
     def test_valid_prompts_pass(self):
         self.client.login(username='staffuser', password='testpass')
@@ -162,7 +183,7 @@ class StartGenerationAPITests(TestCase):
         self.staff_user = User.objects.create_user(
             username='staffuser', password='testpass', is_staff=True,
         )
-        self.url = reverse('prompts:bulk_generator_start')
+        self.url = reverse('prompts:api_bulk_start_generation')
 
     @patch('prompts.services.bulk_generation.async_task')
     @patch('prompts.services.image_providers.get_provider')
@@ -336,7 +357,7 @@ class JobStatusAPITests(TestCase):
             status='processing',
         )
         url = reverse(
-            'prompts:bulk_generator_status', args=[str(job.id)],
+            'prompts:api_bulk_job_status', args=[str(job.id)],
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -354,7 +375,7 @@ class JobStatusAPITests(TestCase):
             created_by=other_staff, total_prompts=3,
         )
         url = reverse(
-            'prompts:bulk_generator_status', args=[str(job.id)],
+            'prompts:api_bulk_job_status', args=[str(job.id)],
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
@@ -363,7 +384,7 @@ class JobStatusAPITests(TestCase):
         self.client.login(username='staffuser', password='testpass')
         fake_id = uuid.uuid4()
         url = reverse(
-            'prompts:bulk_generator_status', args=[str(fake_id)],
+            'prompts:api_bulk_job_status', args=[str(fake_id)],
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
@@ -392,7 +413,7 @@ class CancelJobAPITests(TestCase):
                 prompt_order=i, status='queued',
             )
         url = reverse(
-            'prompts:bulk_generator_cancel', args=[str(job.id)],
+            'prompts:api_bulk_cancel_job', args=[str(job.id)],
         )
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
@@ -408,7 +429,7 @@ class CancelJobAPITests(TestCase):
             status='completed',
         )
         url = reverse(
-            'prompts:bulk_generator_cancel', args=[str(job.id)],
+            'prompts:api_bulk_cancel_job', args=[str(job.id)],
         )
         response = self.client.post(url)
         self.assertEqual(response.status_code, 400)
@@ -425,7 +446,7 @@ class CancelJobAPITests(TestCase):
             status='processing',
         )
         url = reverse(
-            'prompts:bulk_generator_cancel', args=[str(job.id)],
+            'prompts:api_bulk_cancel_job', args=[str(job.id)],
         )
         response = self.client.post(url)
         self.assertEqual(response.status_code, 404)
@@ -438,7 +459,7 @@ class CancelJobAPITests(TestCase):
             status='processing',
         )
         url = reverse(
-            'prompts:bulk_generator_cancel', args=[str(job.id)],
+            'prompts:api_bulk_cancel_job', args=[str(job.id)],
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 405)
@@ -452,7 +473,11 @@ class CreatePagesAPITests(TestCase):
         self.staff_user = User.objects.create_user(
             username='staffuser', password='testpass', is_staff=True,
         )
-        self.url = reverse('prompts:bulk_generator_create_pages')
+
+    def _url(self, job_id):
+        return reverse(
+            'prompts:api_bulk_create_pages', args=[str(job_id)],
+        )
 
     @patch('django_q.tasks.async_task')
     def test_queue_page_creation(self, mock_async):
@@ -472,9 +497,8 @@ class CreatePagesAPITests(TestCase):
         )
 
         response = self.client.post(
-            self.url,
+            self._url(job.id),
             data=json.dumps({
-                'job_id': str(job.id),
                 'selected_image_ids': [str(img1.id), str(img2.id)],
             }),
             content_type='application/json',
@@ -485,15 +509,17 @@ class CreatePagesAPITests(TestCase):
         self.assertEqual(data['pages_to_create'], 2)
         mock_async.assert_called_once()
 
-    def test_missing_job_id_returns_400(self):
+    def test_nonexistent_job_returns_404(self):
         self.client.login(username='staffuser', password='testpass')
+        fake_id = uuid.uuid4()
         response = self.client.post(
-            self.url,
-            data=json.dumps({'selected_image_ids': ['abc']}),
+            self._url(fake_id),
+            data=json.dumps({
+                'selected_image_ids': [str(uuid.uuid4())],
+            }),
             content_type='application/json',
         )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('job_id', response.json()['error'])
+        self.assertEqual(response.status_code, 404)
 
     def test_empty_selected_ids_returns_400(self):
         self.client.login(username='staffuser', password='testpass')
@@ -501,9 +527,8 @@ class CreatePagesAPITests(TestCase):
             created_by=self.staff_user, total_prompts=1,
         )
         response = self.client.post(
-            self.url,
+            self._url(job.id),
             data=json.dumps({
-                'job_id': str(job.id),
                 'selected_image_ids': [],
             }),
             content_type='application/json',
@@ -519,9 +544,8 @@ class CreatePagesAPITests(TestCase):
             created_by=other_staff, total_prompts=1,
         )
         response = self.client.post(
-            self.url,
+            self._url(job.id),
             data=json.dumps({
-                'job_id': str(job.id),
                 'selected_image_ids': [str(uuid.uuid4())],
             }),
             content_type='application/json',
@@ -539,9 +563,8 @@ class CreatePagesAPITests(TestCase):
             status='queued',
         )
         response = self.client.post(
-            self.url,
+            self._url(job.id),
             data=json.dumps({
-                'job_id': str(job.id),
                 'selected_image_ids': [str(img.id)],
             }),
             content_type='application/json',
@@ -551,23 +574,14 @@ class CreatePagesAPITests(TestCase):
 
     def test_invalid_json_returns_400(self):
         self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1,
+        )
         response = self.client.post(
-            self.url, data='bad',
+            self._url(job.id), data='bad',
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
-
-    def test_malformed_job_id_returns_404(self):
-        self.client.login(username='staffuser', password='testpass')
-        response = self.client.post(
-            self.url,
-            data=json.dumps({
-                'job_id': 'not-a-uuid',
-                'selected_image_ids': [str(uuid.uuid4())],
-            }),
-            content_type='application/json',
-        )
-        self.assertEqual(response.status_code, 404)
 
 
 @override_settings(OPENAI_API_KEY='test-key')
@@ -578,7 +592,7 @@ class ValidateReferenceImageAPITests(TestCase):
         self.staff_user = User.objects.create_user(
             username='staffuser', password='testpass', is_staff=True,
         )
-        self.url = reverse('prompts:bulk_generator_validate_reference')
+        self.url = reverse('prompts:api_bulk_validate_image')
 
     def test_mock_mode_returns_valid(self):
         """With test-key, mock mode always passes."""

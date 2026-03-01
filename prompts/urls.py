@@ -149,13 +149,13 @@ urlpatterns = [
     path('admin-tools/system-notifications/', admin_views.system_notifications_view, name='system_notifications'),
 
     # Bulk Image Generator (Phase BG)
-    path('staff/bulk-generator/', bulk_generator_views.bulk_generator_page, name='bulk_generator'),
-    path('staff/bulk-generator/api/validate/', bulk_generator_views.api_validate_prompts, name='bulk_generator_validate'),
-    path('staff/bulk-generator/api/start/', bulk_generator_views.api_start_generation, name='bulk_generator_start'),
-    path('staff/bulk-generator/api/status/<uuid:job_id>/', bulk_generator_views.api_job_status, name='bulk_generator_status'),
-    path('staff/bulk-generator/api/cancel/<uuid:job_id>/', bulk_generator_views.api_cancel_job, name='bulk_generator_cancel'),
-    path('staff/bulk-generator/api/create-pages/', bulk_generator_views.api_create_pages, name='bulk_generator_create_pages'),
-    path('staff/bulk-generator/api/validate-reference/', bulk_generator_views.api_validate_reference_image, name='bulk_generator_validate_reference'),
+    path('tools/bulk-ai-generator/', bulk_generator_views.bulk_generator_page, name='bulk_generator'),
+    path('tools/bulk-ai-generator/api/validate/', bulk_generator_views.api_validate_prompts, name='api_bulk_validate_prompts'),
+    path('tools/bulk-ai-generator/api/start/', bulk_generator_views.api_start_generation, name='api_bulk_start_generation'),
+    path('tools/bulk-ai-generator/api/status/<uuid:job_id>/', bulk_generator_views.api_job_status, name='api_bulk_job_status'),
+    path('tools/bulk-ai-generator/api/cancel/<uuid:job_id>/', bulk_generator_views.api_cancel_job, name='api_bulk_cancel_job'),
+    path('tools/bulk-ai-generator/api/create-pages/<uuid:job_id>/', bulk_generator_views.api_create_pages, name='api_bulk_create_pages'),
+    path('tools/bulk-ai-generator/api/validate-reference/', bulk_generator_views.api_validate_reference_image, name='api_bulk_validate_image'),
 
     # Admin moderation dashboard
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),

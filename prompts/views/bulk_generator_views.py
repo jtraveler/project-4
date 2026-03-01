@@ -15,7 +15,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
-from prompts.models import BulkGenerationJob
+from prompts.models import BulkGenerationJob, AI_GENERATOR_CHOICES
 from prompts.services.bulk_generation import BulkGenerationService
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ VALID_VISIBILITIES = {'public', 'private'}
 @require_GET
 def bulk_generator_page(request):
     """
-    GET /staff/bulk-generator/
+    GET /tools/bulk-ai-generator/
     Renders the bulk generator tool page.
     """
     jobs = BulkGenerationJob.objects.filter(
@@ -46,6 +46,7 @@ def bulk_generator_page(request):
 
     return render(request, 'prompts/bulk_generator.html', {
         'jobs': jobs,
+        'generator_choices': AI_GENERATOR_CHOICES,
     })
 
 
@@ -53,7 +54,7 @@ def bulk_generator_page(request):
 @require_POST
 def api_validate_prompts(request):
     """
-    POST /staff/bulk-generator/api/validate/
+    POST /tools/bulk-ai-generator/api/validate/
     Validates a list of prompt texts before generation.
 
     Body JSON: {"prompts": ["prompt 1", "prompt 2", ...]}
@@ -91,7 +92,7 @@ def api_validate_prompts(request):
 @require_POST
 def api_start_generation(request):
     """
-    POST /staff/bulk-generator/api/start/
+    POST /tools/bulk-ai-generator/api/start/
     Creates a bulk generation job and starts processing.
 
     Body JSON: {
@@ -219,7 +220,7 @@ def api_start_generation(request):
 @require_GET
 def api_job_status(request, job_id):
     """
-    GET /staff/bulk-generator/api/status/<uuid:job_id>/
+    GET /tools/bulk-ai-generator/api/status/<uuid:job_id>/
     Returns current job status for polling.
     """
     try:
@@ -239,7 +240,7 @@ def api_job_status(request, job_id):
 @require_POST
 def api_cancel_job(request, job_id):
     """
-    POST /staff/bulk-generator/api/cancel/<uuid:job_id>/
+    POST /tools/bulk-ai-generator/api/cancel/<uuid:job_id>/
     Cancels an in-progress job.
     """
     try:
@@ -266,13 +267,12 @@ def api_cancel_job(request, job_id):
 
 @staff_member_required
 @require_POST
-def api_create_pages(request):
+def api_create_pages(request, job_id):
     """
-    POST /staff/bulk-generator/api/create-pages/
+    POST /tools/bulk-ai-generator/api/create-pages/<uuid:job_id>/
     Creates prompt pages from selected generated images.
 
     Body JSON: {
-        "job_id": "uuid",
         "selected_image_ids": ["uuid1", "uuid2", ...]
     }
     """
@@ -281,12 +281,6 @@ def api_create_pages(request):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse(
             {'error': 'Invalid JSON'}, status=400,
-        )
-
-    job_id = data.get('job_id')
-    if not job_id:
-        return JsonResponse(
-            {'error': 'job_id is required'}, status=400,
         )
 
     selected_image_ids = data.get('selected_image_ids')
@@ -350,7 +344,7 @@ def api_create_pages(request):
 @require_POST
 def api_validate_reference_image(request):
     """
-    POST /staff/bulk-generator/api/validate-reference/
+    POST /tools/bulk-ai-generator/api/validate-reference/
     Validates a reference image URL using OpenAI Vision.
 
     Body JSON: {"image_url": "https://..."}

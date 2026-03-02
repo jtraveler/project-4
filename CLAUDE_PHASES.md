@@ -34,6 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
+| **BG** | **Bulk AI Image Generator** | **🔄 Phase 4/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -522,6 +523,77 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
+## 🔄 Bulk AI Image Generator (Phase 4 of 7 Complete)
+
+**Status:** Phase 4 Complete — Input & Settings UI
+**Started:** Session 92 (February 28, 2026)
+**URL:** `/tools/bulk-ai-generator/` (staff-only)
+**Tests:** ~69 tests (48 view tests + 21 source credit tests)
+**Total Test Count After:** 914 passing
+
+### What This Feature Does
+
+Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Image-1 API. Uses a BYOK (Bring Your Own Key) model where users provide their own OpenAI API key. Competing platforms like PromptHero don't offer this — significant competitive advantage.
+
+### Phase Breakdown
+
+| Phase | Name | Status | Session | What It Covers |
+|-------|------|--------|---------|----------------|
+| 1 | Models + Provider Abstraction | ✅ | 92 | BulkGenerationJob, GeneratedImage, ImageProvider base class, OpenAI adapter |
+| 2 | Django-Q Tasks + Service | ✅ | 92 | BulkGenerationService, generate_single_image task, rate limiting, scheduling |
+| 3 | Views + API Endpoints | ✅ | 92 | 7 endpoints: validate, start, status, cancel, create pages, validate image, retry |
+| 4 | Input & Settings UI | ✅ | 93 | Full page UI, ref image upload, char desc preview, source/credit, auto-save, NSFW modal |
+| 5 | Generating State | 🔲 | — | Progress polling, image gallery, cancel button |
+| 6 | Creating State | 🔲 | — | Image selection, page creation, summary view |
+| 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
+
+### Key Technical Decisions
+
+- **BYOK model:** Users provide their own OpenAI API key (rate limits are per-key, can't share one key across users)
+- **URL:** `/tools/bulk-ai-generator/` (not /admin/, will evolve to premium feature)
+- **Reference images:** Session-only (not persisted), B2 upload + NSFW moderation
+- **Source/Credit:** Two fields — `source_credit` (public display name) + `source_credit_url` (admin-only URL). Auto-detects URLs and extracts domain names. `nofollow` on all links.
+- **Character Description:** 250 char limit, prepended to every prompt, shown as seamless preview in prompt boxes
+- **Auto-save:** localStorage with 500ms debounce, format migration for backward compat
+
+### Migrations
+
+- `0060` - Create BulkGenerationJob model
+- `0061` - Create GeneratedImage model
+- `0062` - Fix image URL max length
+- `0063` - Add source_credit fields to Prompt model
+
+### Files Created/Modified
+
+**New files:**
+- `prompts/templates/prompts/bulk_generator.html`
+- `static/css/pages/bulk-generator.css`
+- `static/js/bulk-generator.js`
+- `prompts/views/bulk_generator_views.py`
+- `prompts/services/bulk_generation.py`
+- `prompts/services/image_providers/__init__.py`
+- `prompts/services/image_providers/base.py`
+- `prompts/services/image_providers/openai_adapter.py`
+- `prompts/utils/source_credit.py`
+- `prompts/tests/test_source_credit.py`
+
+**Modified:**
+- `prompts/models.py` — BulkGenerationJob, GeneratedImage, source_credit fields
+- `prompts/tasks.py` — generate_single_image task
+- `prompts/admin.py` — source_credit in Publishing fieldset
+- `prompts/urls.py` — Bulk generator URL routing
+- `prompts/templates/prompts/upload.html` — Source/credit field (staff-only)
+- `prompts/templates/prompts/prompt_detail.html` — Source display (staff-only)
+- `static/js/upload-form.js` — Source credit integration
+
+### Future Features (Deferred)
+
+- **Multi-image reference upload** (up to 4 images) — See FUTURE_MULTI_IMAGE_REFERENCE.md
+- **Saved Image Library** — Persistent reference images in B2
+- **Content Intelligence Agent** — Automated content generation pipeline
+
+---
+
 ## 📋 Future Features (After Phase N)
 
 ### Pre-Launch Checklist
@@ -582,5 +654,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.4 (Session 91 — Phase P2-A System Notifications Admin complete, P2-B/C planned)
-**Last Updated:** February 27, 2026
+**Version:** 4.5 (Session 93 — Bulk AI Image Generator Phases 1-4 complete, 5-7 remaining)
+**Last Updated:** March 2, 2026

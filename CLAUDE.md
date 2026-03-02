@@ -51,6 +51,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 |-------|--------|-------------|-------------|
 | **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
+| **Bulk Gen** | 🔄 Phase 4 Complete | Bulk AI Image Generator | Phases 5-7: Generation flow, gallery, page creation |
 
 ### What's Paused (Don't Forget!)
 
@@ -76,7 +77,19 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ---
 
-## 🚀 Current Phase: N4 - Optimistic Upload Flow
+## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
+
+### Bulk AI Image Generator (Phases 1-4 complete, 5-7 remaining)
+
+Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
+
+**Phases 1-4 (Sessions 92-93):** Models, Django-Q tasks, 7 API endpoints, complete input UI with reference image upload, character description, source/credit, auto-save, NSFW moderation.
+
+**Phases 5-7 (not started):** Generating state (progress polling), gallery state (image selection), creating state (prompt page creation), integration testing.
+
+---
+
+### N4 - Optimistic Upload Flow
 
 **Status:** ~99% Complete - Lighthouse 96/100/100/100, All Core Features Done
 **Detailed Spec:** See `docs/PHASE_N4_UPLOAD_FLOW_REPORT.md`
@@ -150,7 +163,7 @@ Rebuilding upload flow to feel "instant" by:
 |-------|-------------|--------|
 | **N4h rename not triggering** | `rename_prompt_files_for_seo` task is coded but not generating SEO filenames in production | Files keep UUID names instead of SEO slugs |
 | **Indexes migration pending** | Composite indexes added to models.py but `makemigrations` not yet run | Indexes not active in database |
-| **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests pass, flake8 clean, bandit clean) | ✅ All 3 jobs green |
+| **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests at time of fix; now 914 tests, flake8 clean, bandit clean) | ✅ All 3 jobs green |
 
 **N4h Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation.
 
@@ -191,6 +204,8 @@ Three-tier AI taxonomy for prompt classification, expanded from initial 25-categ
 | **SubjectDescriptor model** | name, slug, descriptor_type — 109 descriptors across 10 types |
 | **Prompt.categories** | M2M field (1-5 categories per prompt) |
 | **Prompt.descriptors** | M2M field (up to 10 descriptors per prompt) |
+| **Prompt.source_credit** | CharField max_255, display name for prompt source (staff-only display) |
+| **Prompt.source_credit_url** | URLField max_500, original URL if source was a link (admin-only) |
 | **AI assignment** | During upload via OpenAI Vision prompt, written to cache at 90% progress |
 | **Descriptor types** | gender, ethnicity, age, features, profession, mood, color, holiday, season, setting |
 | **Migrations** | `0046`-`0047` (initial categories), `0048`-`0049` (descriptors), `0050` (category updates), `0051`-`0052` (fixes) |
@@ -885,6 +900,35 @@ static/js/collections.js                             # Modal JavaScript
 prompts/templates/prompts/partials/_collection_modal.html   # Modal HTML
 ```
 
+### Working on Bulk Generator?
+
+```
+TEMPLATES:
+prompts/templates/prompts/bulk_generator.html   # Full page template
+
+JAVASCRIPT:
+static/js/bulk-generator.js    # All frontend logic (~900 lines)
+
+CSS:
+static/css/pages/bulk-generator.css   # All styles (~1100 lines)
+
+BACKEND:
+prompts/views/bulk_generator_views.py        # 7 API endpoints + page view
+prompts/services/bulk_generation.py          # BulkGenerationService
+prompts/services/image_providers/            # Provider abstraction
+prompts/services/image_providers/base.py     # Abstract base class
+prompts/services/image_providers/openai_adapter.py  # GPT-Image-1 adapter
+prompts/tasks.py                             # generate_single_image task
+prompts/models.py                            # BulkGenerationJob, GeneratedImage
+
+TESTS:
+prompts/tests/test_bulk_generator_views.py   # ~48 tests
+prompts/tests/test_source_credit.py          # 21 tests
+
+UTILITIES:
+prompts/utils/source_credit.py               # parse_source_credit() + KNOWN_SITES
+```
+
 ### Views Package Structure
 
 Views were split into a modular package for maintainability:
@@ -1125,5 +1169,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.17 (Session 91 — Phase P2-A System Notifications Admin complete, batch_id, auto-mark seen, CC test strategy)
-**Last Updated:** February 27, 2026
+**Version:** 4.18 (Session 93 — Bulk AI Image Generator Phases 1-4, Source/Credit feature, charDesc limit 250)
+**Last Updated:** March 2, 2026

@@ -21,7 +21,64 @@ This is a running log of development sessions. Each session entry includes:
 
 ---
 
-## February 2026 Sessions
+## February–March 2026 Sessions
+
+### Session 93 - March 1-2, 2026
+
+**Focus:** Bulk AI Image Generator — Phase 4 (Complete Input & Settings UI) + Source/Credit Feature
+
+**Phase 4 UI Work (8+ specs executed):**
+- Full page layout: centered header, 4-column master settings grid, prompt entry section, sticky bottom bar, 3 modals
+- Master settings column wrapper approach (bg-master-col) for tight vertical stacking
+- Functional reference image upload: B2 presigned URL pipeline, NSFW moderation, drag-drop, thumbnail preview with purple badge + hover close button, domain allowlist security
+- Character description preview: seamless read-only display in prompt boxes, unified scrolling (auto-grow textarea), 250 char limit with live counter
+- Source/Credit feature: 2 new Prompt fields, URL auto-detection with KNOWN_SITES mapping, staff-only display, nofollow links, 21 tests with adversarial coverage
+- NSFW rejection modal at generate time: blocks generation, offers upload new or skip
+- Auto-save: localStorage with format migration (array → object), prompts + char desc, 500ms debounce
+- FLIP delete animations, focus management, prefers-reduced-motion, various a11y fixes
+
+**Specs Executed This Session:**
+1. BULK-GEN-PHASE-4-FIX — 8 targeted UI fixes (grid, trash icon, animations, auto-save)
+2. BULK-GEN-LAYOUT-TWEAKS — Column wrappers, remove URL input, reset button position
+3. SOURCE-CREDIT-FIELD — Full source/credit feature across 3 pages
+4. BULK-GEN-REF-IMAGE-UPLOAD — Functional B2 upload + NSFW
+5. BULK-GEN-CHAR-DESC-PREVIEW — Character description in prompt boxes
+6. BULK-GEN-CHAR-DESC-SEAMLESS — Unified scroll fix (wrapper approach)
+7. BULK-GEN-CHAR-DESC-SCROLL-FIX — Auto-grow textarea
+8. BULK-GEN-AUTOSAVE-AND-REF-MODAL — Char desc auto-save + NSFW modal
+
+**Accessibility + Security hardening (end of session):**
+- Contrast fix: .bg-box-char-preview gray-400 (2.7:1 fail) → gray-500 (4.6:1 pass)
+- Modal `role="dialog"` moved to inner `.bg-modal-dialog` on all 3 modals
+- `aria-hidden` on all decorative spans, visibility checkbox accessible name, upload zone `aria-describedby`, generation status live region
+- Domain allowlist added to `api_validate_reference_image` (SSRF fix, mirrors `api_start_generation`)
+- `character_description` server-side length validation (max 250)
+
+**Tests:** ~893 → 914 passing (21 new source credit tests + test assertion fixes)
+**Agent Ratings:** Range 8.3–9.5/10 across all specs, all met 8+/10 threshold
+**Migration:** 0063_add_source_credit_fields
+
+---
+
+### Session 92 - February 28, 2026
+
+**Focus:** Bulk AI Image Generator — Phases 1-3 (Backend Infrastructure)
+
+**What Was Built:**
+- Phase 1: BulkGenerationJob + GeneratedImage models, ImageProvider abstraction layer with OpenAI GPT-Image-1 adapter, 4 database migrations
+- Phase 2: Django-Q background tasks, BulkGenerationService orchestrator, rate-limited scheduling, generate_single_image task
+- Phase 3: 7 API endpoints (validate prompts, validate reference image, start generation, check status, cancel job, create pages, retry failed), URL routing at /tools/bulk-ai-generator/
+
+**Other Work:**
+- Admin UserAdmin: added date_joined + last_login display columns
+- Registration closed: ClosedAccountAdapter + signup_closed.html template
+- Leaderboard ghost fix: exclude deleted/draft-only users from rankings
+- Bot account cleanup (manual)
+
+**Tests:** ~758 → ~893 passing (135 new tests)
+**Agent Ratings:** Phase 1: 8.5+/10 avg, Phase 2: 8.5+/10 avg, Phase 3: 8.5+/10 avg
+
+---
 
 ### Session 91 - February 27, 2026
 
@@ -1731,6 +1788,10 @@ For quick reference, here are key milestones:
 
 | Date | Session | Milestone |
 |------|---------|-----------|
+| Mar 1-2, 2026 | 93 | Bulk Generator Phase 4: full input UI, ref image upload, char desc preview (250 chars), source/credit, auto-save, NSFW modal, a11y + security hardening, 914 tests |
+| Feb 28, 2026 | 92 | Bulk Generator Phases 1-3: models, provider abstraction, Django-Q tasks, 7 API endpoints, admin improvements, registration closed, leaderboard ghost fix |
+| Feb 27, 2026 | 91 | Phase P2-A System Notifications Admin complete: Quill.js editor, batch_id, rate limiting, auto-mark seen, 758 tests |
+| Feb 26, 2026 | 89 | CI/CD fixed (all 3 jobs), dependency upgrades (pillow, sqlparse, django, urllib3), Dependabot + pre-commit hooks |
 | Feb 18, 2026 | 87 | Phase R1-D: notifications page redesign (avatars, quotes, per-card mark-as-read, bell sync, dedup fix), CC docs v2.0, 5 new tests |
 | Feb 17, 2026 | 86 | Phase R1 complete: notification system (model, signals, API, bell dropdown, notifications page), shared tab components (overflow-tabs.js, profile-tabs.css), WCAG docs, 54 new tests |
 | Feb 15-16, 2026 | 85 | Pass 2 SEO system built, admin two-button UX, tag ordering, PROTECTED_TAGS, reorder_tags command, 97 new tests |
@@ -1765,5 +1826,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.17 (Session 91 — Phase P2-A System Notifications Admin complete, batch_id, auto-mark seen)
-**Last Updated:** February 27, 2026
+**Version:** 4.18 (Session 93 — Bulk AI Image Generator Phases 1-4, Source/Credit feature, a11y + security hardening)
+**Last Updated:** March 2, 2026

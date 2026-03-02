@@ -46,10 +46,11 @@
                     <span class="bg-setting-label">Reference Image <span class="bg-setting-hint-inline">(optional)</span></span>
 
                     {# Upload zone — visible when no image #}
-                    <div class="bg-ref-upload" id="refUploadZone" role="button" tabindex="0" aria-label="Upload reference image">
+                    <div class="bg-ref-upload" id="refUploadZone" role="button" tabindex="0"
+                         aria-label="Upload reference image" aria-describedby="refUploadFormats">
                         <svg class="icon bg-ref-upload-icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
                         <div class="bg-ref-upload-text">Drop files or <span class="bg-ref-upload-link">click to upload</span></div>
-                        <div class="bg-ref-upload-formats">PNG, JPG, JPEG, WebP &middot; Max 3MB</div>
+                        <div class="bg-ref-upload-formats" id="refUploadFormats">PNG, JPG, JPEG, WebP &middot; Max 3MB</div>
                     </div>
 
                     {# Hidden file input #}
@@ -86,8 +87,9 @@
                     <textarea class="bg-char-textarea"
                               id="settingCharDesc"
                               aria-describedby="charDescHint"
+                              maxlength="250"
                               placeholder="A chubby woman with green eyes and curly blond hair, mid-30s, warm smile"></textarea>
-                    <span class="bg-setting-hint" id="charDescHint">Prepended to every prompt</span>
+                    <span class="bg-setting-hint" id="charDescHint">Prepended to every prompt (<span id="charDescCount">0</span>/250)</span>
                 </div>
                 <div class="bg-setting-group">
                     <label class="bg-setting-label" for="settingCharacter">Character Selection <span class="bg-setting-hint-inline">(coming soon)</span></label>
@@ -107,19 +109,19 @@
                     <div class="bg-btn-group" id="settingDimensions" role="radiogroup" aria-label="Image dimensions">
                         <button type="button" class="bg-btn-group-option active" data-value="1024x1024" role="radio" aria-checked="true">
                             1:1
-                            <span class="bg-dim-icon" data-ratio="1:1"></span>
+                            <span class="bg-dim-icon" data-ratio="1:1" aria-hidden="true"></span>
                         </button>
                         <button type="button" class="bg-btn-group-option" data-value="1024x1536" role="radio" aria-checked="false">
                             2:3
-                            <span class="bg-dim-icon" data-ratio="2:3"></span>
+                            <span class="bg-dim-icon" data-ratio="2:3" aria-hidden="true"></span>
                         </button>
                         <button type="button" class="bg-btn-group-option" data-value="1792x1024" role="radio" aria-checked="false">
                             16:9
-                            <span class="bg-dim-icon" data-ratio="16:9"></span>
+                            <span class="bg-dim-icon" data-ratio="16:9" aria-hidden="true"></span>
                         </button>
                         <button type="button" class="bg-btn-group-option" data-value="1536x1024" role="radio" aria-checked="false">
                             4:3
-                            <span class="bg-dim-icon" data-ratio="4:3"></span>
+                            <span class="bg-dim-icon" data-ratio="4:3" aria-hidden="true"></span>
                         </button>
                     </div>
                 </div>
@@ -147,13 +149,13 @@
             {# Column 4: Visibility + Reset Master Settings #}
             <div class="bg-master-col">
                 <div class="bg-setting-group">
-                    <span class="bg-setting-label">Visibility</span>
+                    <span class="bg-setting-label" id="visibilityGroupLabel">Visibility</span>
                     <div class="bg-visibility-card">
                         <div class="bg-visibility-info">
                             <span class="bg-visibility-label" id="visibilityLabel">Public</span>
                         </div>
                         <label class="bg-toggle-switch">
-                            <input type="checkbox" id="settingVisibility" aria-labelledby="visibilityLabel" checked>
+                            <input type="checkbox" id="settingVisibility" aria-labelledby="visibilityGroupLabel visibilityLabel" checked>
                             <span class="bg-toggle-slider"></span>
                         </label>
                     </div>
@@ -190,7 +192,7 @@
     {# ===== Sticky Bottom Bar ===== #}
     <div class="bg-sticky-bar">
         <div class="bg-sticky-bar-inner">
-            <div class="bg-cost-summary">
+            <div class="bg-cost-summary" role="status" aria-live="polite" aria-atomic="true">
                 <div class="bg-cost-item">
                     <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
                     <span id="costImages"><span class="bg-cost-value">0</span> prompts &times; <span class="bg-cost-value">1</span> image = <span class="bg-cost-value">0</span> images</span>
@@ -208,34 +210,51 @@
                 <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-sparkles"/></svg>
                 Generate All
             </button>
-        </div>
-    </div>
-
-    {# ===== Confirmation Modal: Clear All Prompts ===== #}
-    <div class="bg-modal-overlay" id="clearAllModal" aria-modal="true" role="dialog" aria-labelledby="clearAllModalTitle">
-        <div class="bg-modal-dialog">
-            <h3 class="bg-modal-title" id="clearAllModalTitle">Clear All Prompts?</h3>
-            <p class="bg-modal-body">This will remove all prompt text from every box. This action cannot be undone.</p>
-            <div class="bg-modal-actions">
-                <button type="button" class="bg-modal-cancel" id="clearAllCancel">Cancel</button>
-                <button type="button" class="bg-modal-confirm danger" id="clearAllConfirm">Clear All</button>
-            </div>
-        </div>
-    </div>
-
-    {# ===== Confirmation Modal: Reset Master Settings ===== #}
-    <div class="bg-modal-overlay" id="resetMasterModal" aria-modal="true" role="dialog" aria-labelledby="resetMasterModalTitle">
-        <div class="bg-modal-dialog">
-            <h3 class="bg-modal-title" id="resetMasterModalTitle">Reset Master Settings?</h3>
-            <p class="bg-modal-body">This will restore all master settings to their defaults. Per-prompt overrides will not be affected.</p>
-            <div class="bg-modal-actions">
-                <button type="button" class="bg-modal-cancel" id="resetMasterCancel">Cancel</button>
-                <button type="button" class="bg-modal-confirm primary" id="resetMasterConfirm">Reset Settings</button>
-            </div>
+            {# Visually hidden live region for generation status announcements #}
+            <span id="generateStatus" role="status" aria-live="polite" aria-atomic="true" class="visually-hidden"></span>
         </div>
     </div>
 
 </div>{# /.bulk-generator-page #}
+
+{# ===== Modals (outside page container so aria-hidden doesn't cascade) ===== #}
+
+{# ===== Confirmation Modal: Clear All Prompts ===== #}
+<div class="bg-modal-overlay" id="clearAllModal">
+    <div class="bg-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="clearAllModalTitle" aria-describedby="clearAllModalBody">
+        <h3 class="bg-modal-title" id="clearAllModalTitle">Clear All Prompts?</h3>
+        <p class="bg-modal-body" id="clearAllModalBody">This will remove all prompt text from every box. This action cannot be undone.</p>
+        <div class="bg-modal-actions">
+            <button type="button" class="bg-modal-cancel" id="clearAllCancel">Cancel</button>
+            <button type="button" class="bg-modal-confirm danger" id="clearAllConfirm">Clear All</button>
+        </div>
+    </div>
+</div>
+
+{# ===== Confirmation Modal: Reset Master Settings ===== #}
+<div class="bg-modal-overlay" id="resetMasterModal">
+    <div class="bg-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="resetMasterModalTitle" aria-describedby="resetMasterModalBody">
+        <h3 class="bg-modal-title" id="resetMasterModalTitle">Reset Master Settings?</h3>
+        <p class="bg-modal-body" id="resetMasterModalBody">This will restore all master settings to their defaults. Per-prompt overrides will not be affected.</p>
+        <div class="bg-modal-actions">
+            <button type="button" class="bg-modal-cancel" id="resetMasterCancel">Cancel</button>
+            <button type="button" class="bg-modal-confirm primary" id="resetMasterConfirm">Reset Settings</button>
+        </div>
+    </div>
+</div>
+
+{# ===== Modal: Reference Image Issue ===== #}
+<div class="bg-modal-overlay" id="refImageModal">
+    <div class="bg-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="refImageModalTitle" aria-describedby="refImageModalBody">
+        <h3 class="bg-modal-title" id="refImageModalTitle">Reference Image Issue</h3>
+        <p class="bg-modal-body" id="refImageModalBody">Your reference image was rejected due to a content policy violation. Would you like to upload a new image before generating?</p>
+        <div class="bg-modal-actions">
+            <button type="button" class="bg-modal-cancel" id="refImageModalSkip">Generate Without Reference</button>
+            <button type="button" class="bg-modal-confirm primary" id="refImageModalUpload">Upload New Image</button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extras %}

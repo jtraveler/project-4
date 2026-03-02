@@ -336,7 +336,7 @@ class StartGenerationAPITests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('HTTP', response.json()['error'])
+        self.assertIn('allowed domain', response.json()['error'])
 
 
 @override_settings(OPENAI_API_KEY='test-key')
@@ -599,7 +599,7 @@ class ValidateReferenceImageAPITests(TestCase):
         response = self.client.post(
             self.url,
             data=json.dumps({
-                'image_url': 'https://example.com/face.jpg',
+                'image_url': 'https://media.promptfinder.net/face.jpg',
             }),
             content_type='application/json',
         )
@@ -644,7 +644,7 @@ class ValidateReferenceImageAPITests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('HTTP', response.json()['error'])
+        self.assertIn('allowed domain', response.json()['error'])
 
     def test_javascript_url_returns_400(self):
         self.client.login(username='staffuser', password='testpass')

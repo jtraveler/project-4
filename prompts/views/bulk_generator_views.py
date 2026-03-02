@@ -203,6 +203,13 @@ def api_start_generation(request):
             status=400,
         )
 
+    character_description = str(data.get('character_description', '')).strip()
+    if len(character_description) > 250:
+        return JsonResponse(
+            {'error': 'character_description cannot exceed 250 characters'},
+            status=400,
+        )
+
     # Create and start the job
     # Pad source_credits to match prompts length
     while len(source_credits) < len(prompts):
@@ -219,7 +226,7 @@ def api_start_generation(request):
         visibility=visibility,
         generator_category=data.get('generator_category', 'ChatGPT'),
         reference_image_url=reference_image_url,
-        character_description=data.get('character_description', ''),
+        character_description=character_description,
         source_credits=source_credits,
     )
 
@@ -381,9 +388,14 @@ def api_validate_reference_image(request):
         )
 
     parsed = urlparse(image_url)
-    if parsed.scheme not in ('http', 'https'):
+    allowed_domains = [
+        'f002.backblazeb2.com',
+        's3.us-west-002.backblazeb2.com',
+        'media.promptfinder.net',
+    ]
+    if parsed.scheme not in ('http', 'https') or parsed.netloc not in allowed_domains:
         return JsonResponse(
-            {'error': 'image_url must be an HTTP or HTTPS URL'},
+            {'error': 'image_url must be from an allowed domain'},
             status=400,
         )
 

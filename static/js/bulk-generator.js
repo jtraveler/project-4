@@ -1010,10 +1010,7 @@
                 return;
             }
             clearSavedPrompts();
-            generateBtn.innerHTML =
-                '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-sparkles"/></svg> Generation Started!';
-            generateStatus.textContent = 'Generation started! Your images are being created in the background.';
-            // Future: transition to progress/review state (Phase 5+)
+            window.location.href = '/tools/bulk-ai-generator/job/' + data.job_id + '/';
         })
         .catch(function (err) {
             showValidationErrors([{ message: 'Network error: ' + err.message }]);

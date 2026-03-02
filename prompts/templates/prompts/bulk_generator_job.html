@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Bulk Generation — PromptFinder{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/pages/bulk-generator-job.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="bulk-generator-job"
+     data-job-id="{{ job.id }}"
+     data-cost-per-image="{{ cost_per_image }}"
+     data-total-images="{{ total_images }}"
+     data-completed-count="{{ job.completed_count }}"
+     data-job-status="{{ job.status }}"
+     data-status-url="{% url 'prompts:api_bulk_job_status' job.id %}"
+     data-cancel-url="{% url 'prompts:api_bulk_cancel_job' job.id %}"
+     data-csrf="{{ csrf_token }}">
+
+    {# ===== Job Summary Header ===== #}
+    <div class="job-summary-header">
+        <div class="job-summary-title">
+            <h1 class="job-summary-title-text" id="jobTitle">
+                {% if job.status == 'completed' %}Generation Complete
+                {% elif job.status == 'cancelled' %}Generation Cancelled
+                {% elif job.status == 'failed' %}Generation Failed
+                {% elif job.status == 'processing' %}Generation in Progress
+                {% else %}Generation Starting&hellip;{% endif %}
+            </h1>
+            <span class="job-id-badge" title="{{ job.id }}">Job ID: {{ job.id|truncatechars:13 }}</span>
+        </div>
+        <div class="job-summary-meta">
+            <a href="{% url 'prompts:bulk_generator' %}" class="back-to-generator">&larr; Back to Generator</a>
+        </div>
+        <div class="job-summary-settings">
+            <span class="setting-chip">{{ job.model_name }}</span>
+            <span class="setting-chip">{{ display_size }}</span>
+            <span class="setting-chip">{{ job.get_quality_display }} quality</span>
+            <span class="setting-chip">{{ job.images_per_prompt }} per prompt</span>
+            <span class="setting-chip">{{ job.total_prompts }} prompt{{ job.total_prompts|pluralize }}</span>
+        </div>
+    </div>
+
+    {# ===== Progress Section ===== #}
+    <div class="job-progress-section">
+
+        {# Stats row: count/percent on left, time on right #}
+        <div class="progress-stats-row">
+            <div class="progress-text-left">
+                <span class="progress-count" id="progressCount">{{ job.completed_count }} of {{ total_images }} complete</span>
+                <span class="progress-percent" id="progressPercent">({{ job.progress_percent }}%)</span>
+            </div>
+            <div class="progress-text-right">
+                <span class="progress-time" id="progressTime">
+                    {% if job.status == 'completed' or job.status == 'cancelled' or job.status == 'failed' %}
+                        &mdash;
+                    {% else %}
+                        Calculating&hellip;
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        {# Progress bar #}
+        <div class="progress-bar-container"
+             role="progressbar"
+             aria-label="Generation progress"
+             aria-valuenow="{{ job.progress_percent }}"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             id="progressBar">
+            <div class="progress-bar-fill" id="progressBarFill"
+                 style="width: {{ job.progress_percent }}%"></div>
+        </div>
+
+        {# Details row: cost on left, cancel button on right #}
+        <div class="progress-details-row">
+            <div class="cost-tracker"
+                 aria-label="Cost tracking">
+                <span class="cost-spent" id="costSpent">Spent: $0.00</span>
+                <span class="cost-estimated" id="costEstimated">/ Est. total: ${{ estimated_total_cost|floatformat:2 }}</span>
+            </div>
+            <div class="progress-actions">
+                {% if job.status == 'pending' or job.status == 'processing' or job.status == 'validating' %}
+                <button class="btn-cancel" id="cancelBtn" type="button">Cancel Generation</button>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Status message — aria-live for screen reader announcements #}
+        <div class="progress-status-message" aria-live="polite" id="statusMessage">
+            <p id="statusText">
+                {% if job.status == 'pending' or job.status == 'validating' %}
+                    Starting generation&hellip; You can leave this page and come back.
+                {% elif job.status == 'processing' %}
+                    Generating images&hellip; You can leave this page and come back.
+                {% elif job.status == 'completed' %}
+                    All {{ total_images }} image{{ total_images|pluralize }} generated!
+                {% elif job.status == 'cancelled' %}
+                    Cancelled &mdash; {{ job.completed_count }} of {{ total_images }} generated.
+                {% elif job.status == 'failed' %}
+                    Generation failed. Please try again or contact support.
+                {% endif %}
+            </p>
+        </div>
+
+    </div>{# /.job-progress-section #}
+
+    {# ===== Gallery Container (Phase 5B will populate this) ===== #}
+    <div class="job-gallery-container" id="jobGalleryContainer"></div>
+
+</div>{# /#bulk-generator-job #}
+{% endblock %}
+
+{% block extras %}
+<script src="{% static 'js/bulk-generator-job.js' %}" defer></script>
+{% endblock %}

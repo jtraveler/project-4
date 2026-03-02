@@ -1,0 +1,278 @@
+/* =========================================================
+   bulk-generator-job.css — Phase 5A: Job Progress Page
+   ========================================================= */
+
+/* ─── Page Container ─────────────────────────────────────── */
+#bulk-generator-job {
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem 0;
+}
+
+/* ─── Job Summary Header ─────────────────────────────────── */
+.job-summary-header {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.job-summary-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.job-summary-title-text {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    color: var(--gray-800);
+    margin: 0;
+}
+
+.job-summary-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.back-to-generator {
+    color: var(--gray-500);
+    font-size: var(--text-sm);
+    text-decoration: none;
+}
+
+.back-to-generator:hover {
+    color: var(--gray-700);
+    text-decoration: underline;
+}
+
+.job-id-badge {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: var(--gray-500);
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 4px;
+    padding: 0.15rem 0.4rem;
+    word-break: break-all;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-summary-settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.setting-chip {
+    display: inline-flex;
+    align-items: center;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+    line-height: 1.4;
+}
+
+/* ─── Progress Section ───────────────────────────────────── */
+.job-progress-section {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Stats row */
+.progress-stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+    gap: 0.5rem;
+}
+
+.progress-text-left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.progress-count {
+    font-weight: var(--font-medium);
+    color: var(--gray-800);
+    font-size: var(--text-base);
+}
+
+.progress-percent {
+    color: var(--gray-500);
+    font-size: var(--text-sm);
+}
+
+.progress-time {
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+}
+
+/* Progress bar */
+.progress-bar-container {
+    background: var(--gray-200);
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--accent-color-primary);
+    border-radius: 6px;
+    transition: width 0.5s ease;
+    min-width: 0;
+}
+
+/* Terminal state colours on the bar container */
+.progress-bar-container.progress-complete .progress-bar-fill {
+    background: var(--success);
+}
+
+.progress-bar-container.progress-cancelled .progress-bar-fill {
+    background: var(--warning);
+}
+
+.progress-bar-container.progress-failed .progress-bar-fill {
+    background: var(--error);
+}
+
+/* Pending pulse animation */
+@keyframes bgj-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.55; }
+}
+
+/* Applied by JS when status is pending/validating at page load */
+.progress-bar-container.progress-pending .progress-bar-fill {
+    animation: bgj-pulse 1.8s ease-in-out infinite;
+    width: 100% !important;
+}
+
+/* Details row */
+.progress-details-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cost-tracker {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.cost-spent {
+    font-weight: var(--font-medium);
+    color: var(--gray-800);
+    font-size: var(--text-sm);
+}
+
+.cost-estimated {
+    color: var(--gray-500);
+    font-size: var(--text-sm);
+}
+
+.progress-actions {
+    flex-shrink: 0;
+}
+
+/* Cancel button */
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--error);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 0.5rem 1.25rem;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-cancel:hover:not(:disabled) {
+    background: #b91c1c; /* slightly darker red */
+}
+
+.btn-cancel:focus-visible {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
+}
+
+.btn-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Status message */
+.progress-status-message {
+    margin-top: 1rem;
+}
+
+.progress-status-message p {
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    font-style: italic;
+    margin: 0;
+}
+
+/* ─── Gallery Container (Phase 5B placeholder) ───────────── */
+.job-gallery-container {
+    min-height: 200px;
+    margin-top: 2rem;
+}
+
+/* ─── Responsive: ≤ 768px ─────────────────────────────────── */
+@media (max-width: 768px) {
+    #bulk-generator-job {
+        padding: 1rem;
+    }
+
+    .job-summary-header {
+        padding: 1rem;
+    }
+
+    .progress-stats-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .progress-details-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .progress-actions {
+        width: 100%;
+    }
+
+    .btn-cancel {
+        width: 100%;
+    }
+}

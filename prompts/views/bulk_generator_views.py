@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
 from prompts.models import BulkGenerationJob
@@ -21,6 +21,28 @@ from prompts.services.bulk_generation import BulkGenerationService
 logger = logging.getLogger(__name__)
 
 service = BulkGenerationService()
+
+# GPT-Image-1 pricing per image (as of March 2026)
+IMAGE_COST_MAP = {
+    'low': {
+        '1024x1024': 0.011,
+        '1536x1024': 0.016,
+        '1024x1536': 0.016,
+        '1792x1024': 0.016,
+    },
+    'medium': {
+        '1024x1024': 0.034,
+        '1536x1024': 0.046,
+        '1024x1536': 0.046,
+        '1792x1024': 0.046,
+    },
+    'high': {
+        '1024x1024': 0.067,
+        '1536x1024': 0.092,
+        '1024x1536': 0.092,
+        '1792x1024': 0.092,
+    },
+}
 
 # Maximum prompts allowed per job
 MAX_PROMPTS_PER_JOB = 50
@@ -46,6 +68,31 @@ def bulk_generator_page(request):
 
     return render(request, 'prompts/bulk_generator.html', {
         'jobs': jobs,
+    })
+
+
+@staff_member_required
+@require_GET
+def bulk_generator_job_view(request, job_id):
+    """
+    GET /tools/bulk-ai-generator/job/<uuid:job_id>/
+    Renders the job progress page for a bulk generation job.
+    """
+    job = get_object_or_404(BulkGenerationJob, id=job_id, created_by=request.user)
+
+    cost_per_image = IMAGE_COST_MAP.get(job.quality, {}).get(job.size, 0.034)
+    total_images = job.total_prompts * job.images_per_prompt
+    estimated_total_cost = total_images * cost_per_image
+
+    # Format size for display (e.g. "1024x1024" → "1024×1024")
+    display_size = job.size.replace('x', '×')
+
+    return render(request, 'prompts/bulk_generator_job.html', {
+        'job': job,
+        'cost_per_image': cost_per_image,
+        'total_images': total_images,
+        'estimated_total_cost': round(estimated_total_cost, 4),
+        'display_size': display_size,
     })
 
 

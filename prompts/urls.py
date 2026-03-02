@@ -150,6 +150,7 @@ urlpatterns = [
 
     # Bulk Image Generator (Phase BG)
     path('tools/bulk-ai-generator/', bulk_generator_views.bulk_generator_page, name='bulk_generator'),
+    path('tools/bulk-ai-generator/job/<uuid:job_id>/', bulk_generator_views.bulk_generator_job_view, name='bulk_generator_job'),
     path('tools/bulk-ai-generator/api/validate/', bulk_generator_views.api_validate_prompts, name='api_bulk_validate_prompts'),
     path('tools/bulk-ai-generator/api/start/', bulk_generator_views.api_start_generation, name='api_bulk_start_generation'),
     path('tools/bulk-ai-generator/api/status/<uuid:job_id>/', bulk_generator_views.api_job_status, name='api_bulk_job_status'),

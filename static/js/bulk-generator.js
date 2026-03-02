@@ -57,10 +57,16 @@
     var resetMasterModal = document.getElementById('resetMasterModal');
     var resetMasterCancel = document.getElementById('resetMasterCancel');
     var resetMasterConfirm = document.getElementById('resetMasterConfirm');
+    var refImageModal = document.getElementById('refImageModal');
+    var refImageModalBody = document.getElementById('refImageModalBody');
+    var refImageModalUpload = document.getElementById('refImageModalUpload');
+    var refImageModalSkip = document.getElementById('refImageModalSkip');
+    var generateStatus = document.getElementById('generateStatus');
 
     // ─── State ───────────────────────────────────────────────────
     var boxIdCounter = 0;
     var validatedRefUrl = '';
+    var refImageError = '';
     var COST_MAP = { low: 0.015, medium: 0.03, high: 0.05 };
     var IMAGES_PER_MINUTE = 5;
     var MODEL_CATEGORY_MAP = {
@@ -88,6 +94,11 @@
 
     var spriteBase = getSpriteBase();
 
+    function autoGrowTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
     // ─── Prompt Boxes ────────────────────────────────────────────
     function createPromptBox(promptText) {
         boxIdCounter++;
@@ -109,9 +120,12 @@
                     '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-trash"/></svg>' +
                 '</button>' +
             '</div>' +
-            '<textarea class="bg-box-textarea" id="' + taId + '" aria-label="Prompt ' + boxIdCounter + '" placeholder="Enter your prompt...">' +
-                escapeHtml(promptText || '') +
-            '</textarea>' +
+            '<div class="bg-box-text-wrapper">' +
+                '<div class="bg-box-char-preview" aria-hidden="true" style="display:none"></div>' +
+                '<textarea class="bg-box-textarea" id="' + taId + '" aria-label="Prompt ' + boxIdCounter + '" placeholder="Enter your prompt...">' +
+                    escapeHtml(promptText || '') +
+                '</textarea>' +
+            '</div>' +
             '<div class="bg-box-source">' +
                 '<label class="bg-box-source-label" for="' + boxId + '-source">Source / Credit <span class="bg-box-optional">(optional)</span></label>' +
                 '<input type="text" class="bg-box-source-input" id="' + boxId + '-source" ' +
@@ -165,6 +179,14 @@
                     '</div>' +
                 '</div>' +
             '</div>';
+
+        // Set initial character description preview
+        var charPreview = box.querySelector('.bg-box-char-preview');
+        var currentCharDesc = settingCharDesc.value.trim();
+        if (currentCharDesc) {
+            charPreview.textContent = currentCharDesc;
+            charPreview.style.display = '';
+        }
 
         return box;
     }
@@ -269,6 +291,8 @@
             if (ta) ta.setAttribute('aria-label', 'Prompt ' + num);
             var del = box.querySelector('.bg-box-delete-btn');
             if (del) del.setAttribute('aria-label', 'Delete prompt ' + num);
+            var reset = box.querySelector('.bg-box-reset');
+            if (reset) reset.setAttribute('aria-label', 'Reset prompt ' + num + ' to master settings');
         });
     }
 
@@ -306,6 +330,7 @@
 
     promptGrid.addEventListener('input', function (e) {
         if (e.target.classList.contains('bg-box-textarea')) {
+            autoGrowTextarea(e.target);
             updateCostEstimate();
             updateGenerateBtn();
             scheduleSave();
@@ -403,6 +428,31 @@
     // ─── Visibility Toggle ────────────────────────────────────────
     settingVisibility.addEventListener('change', function () {
         visibilityLabel.textContent = settingVisibility.checked ? 'Public' : 'Private';
+    });
+
+    // ─── Character Description Preview Sync ─────────────────────────
+    settingCharDesc.addEventListener('input', function () {
+        var text = settingCharDesc.value.trim();
+        var previews = promptGrid.querySelectorAll('.bg-box-char-preview');
+        previews.forEach(function (preview) {
+            if (text) {
+                preview.textContent = text;
+                preview.style.display = '';
+            } else {
+                preview.textContent = '';
+                preview.style.display = 'none';
+            }
+        });
+        // Re-grow textareas after preview height change
+        promptGrid.querySelectorAll('.bg-box-textarea').forEach(function (ta) {
+            autoGrowTextarea(ta);
+        });
+        // Update character count
+        var countSpan = document.getElementById('charDescCount');
+        if (countSpan) {
+            countSpan.textContent = settingCharDesc.value.length;
+        }
+        scheduleSave();
     });
 
     // ─── Reference Image Upload ────────────────────────────────────
@@ -548,18 +598,21 @@
             if (result.moderation.status === 'rejected') {
                 deleteRefFromB2();
                 removeRefImage();
+                refImageError = 'Your reference image was rejected due to a content policy violation.';
                 showRefStatus('Image rejected: content policy violation.', 'error');
                 return;
             }
 
             // Success — store validated URL
             validatedRefUrl = result.url;
+            refImageError = '';
             showRefStatus('Image uploaded', 'success');
         })
         .catch(function (err) {
             refUploading = false;
             deleteRefFromB2();
             removeRefImage();
+            refImageError = 'Your reference image failed to upload.';
             showRefStatus('Upload failed. Please try again.', 'error');
             console.error('Reference image upload error:', err);
         });
@@ -577,6 +630,7 @@
 
     function removeRefImage() {
         validatedRefUrl = '';
+        refImageError = '';
         refThumbnail.src = '';
         refFileInput.value = '';
         refPreviewContainer.style.display = 'none';
@@ -667,7 +721,13 @@
         modalTriggerEl = document.activeElement;
         overlay.classList.add('visible');
         document.body.style.overflow = 'hidden';
-        page.setAttribute('aria-hidden', 'true');
+        // Hide all body children except the active modal from screen readers
+        Array.prototype.forEach.call(document.body.children, function (child) {
+            if (child !== overlay && !child.hasAttribute('aria-hidden')) {
+                child.setAttribute('aria-hidden', 'true');
+                child.setAttribute('data-modal-hidden', 'true');
+            }
+        });
         var cancel = overlay.querySelector('.bg-modal-cancel');
         if (cancel) cancel.focus();
     }
@@ -675,7 +735,11 @@
     function hideModal(overlay) {
         overlay.classList.remove('visible');
         document.body.style.overflow = '';
-        page.removeAttribute('aria-hidden');
+        // Restore aria-hidden on all body children we hid
+        Array.prototype.forEach.call(document.body.querySelectorAll('[data-modal-hidden]'), function (child) {
+            child.removeAttribute('aria-hidden');
+            child.removeAttribute('data-modal-hidden');
+        });
         if (modalTriggerEl && modalTriggerEl.focus) {
             modalTriggerEl.focus();
             modalTriggerEl = null;
@@ -683,7 +747,7 @@
     }
 
     // Close on overlay background click
-    [clearAllModal, resetMasterModal].forEach(function (modal) {
+    [clearAllModal, resetMasterModal, refImageModal].forEach(function (modal) {
         modal.addEventListener('click', function (e) {
             if (e.target === modal) hideModal(modal);
         });
@@ -721,6 +785,7 @@
     clearAllConfirm.addEventListener('click', function () {
         promptGrid.querySelectorAll('.bg-box-textarea').forEach(function (ta) {
             ta.value = '';
+            autoGrowTextarea(ta);
         });
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             box.classList.remove('has-error');
@@ -743,6 +808,19 @@
         settingVisibility.checked = true;
         visibilityLabel.textContent = 'Public';
         settingCharDesc.value = '';
+
+        // Clear character description previews in all prompt boxes
+        promptGrid.querySelectorAll('.bg-box-char-preview').forEach(function (preview) {
+            preview.textContent = '';
+            preview.style.display = 'none';
+        });
+        // Re-grow textareas after preview removal
+        promptGrid.querySelectorAll('.bg-box-textarea').forEach(function (ta) {
+            autoGrowTextarea(ta);
+        });
+        var countSpan = document.getElementById('charDescCount');
+        if (countSpan) countSpan.textContent = '0';
+
         removeRefImage();
 
         // Reset dimensions to 1:1
@@ -777,6 +855,20 @@
         updateCostEstimate();
     });
 
+    // Reference Image Issue modal
+    refImageModalUpload.addEventListener('click', function () {
+        hideModal(refImageModal);
+        removeRefImage();
+        refFileInput.click();
+    });
+
+    refImageModalSkip.addEventListener('click', function () {
+        hideModal(refImageModal);
+        removeRefImage();
+        refImageError = '';
+        generateBtn.click();
+    });
+
     // ─── Validation + Generation ──────────────────────────────────
     function collectPrompts() {
         var prompts = [];
@@ -804,7 +896,7 @@
     }
 
     function showValidationErrors(errors) {
-        validationBanner.classList.add('visible');
+        // Inject content BEFORE making visible so role="alert" fires reliably in all browsers
         validationBannerList.innerHTML = '';
         errors.forEach(function (err) {
             var li = document.createElement('li');
@@ -821,6 +913,7 @@
                 }
             }
         });
+        validationBanner.classList.add('visible');
         var scrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
         validationBanner.scrollIntoView({ behavior: scrollBehavior, block: 'nearest' });
         validationBanner.focus();
@@ -835,8 +928,15 @@
     generateBtn.addEventListener('click', function () {
         clearValidationErrors();
 
+        if (refImageError) {
+            refImageModalBody.textContent = refImageError + ' Would you like to upload a new image before generating?';
+            showModal(refImageModal);
+            return;
+        }
+
         if (refUploading) {
-            showValidationErrors([{ message: 'Reference image is still uploading. Please wait.' }]);
+            refImageModalBody.textContent = 'Your reference image is still uploading. Please wait for it to finish.';
+            showModal(refImageModal);
             return;
         }
 
@@ -857,6 +957,7 @@
         generateBtn.disabled = true;
         generateBtn.innerHTML =
             '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-sparkles"/></svg> Validating...';
+        generateStatus.textContent = 'Validating prompts...';
 
         // Step 1: Validate
         fetch(urlValidate, {
@@ -875,6 +976,7 @@
             // Step 2: Start generation
             generateBtn.innerHTML =
                 '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-sparkles"/></svg> Starting...';
+            generateStatus.textContent = 'Starting generation...';
 
             var payload = {
                 prompts: finalPrompts,
@@ -910,6 +1012,7 @@
             clearSavedPrompts();
             generateBtn.innerHTML =
                 '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-sparkles"/></svg> Generation Started!';
+            generateStatus.textContent = 'Generation started! Your images are being created in the background.';
             // Future: transition to progress/review state (Phase 5+)
         })
         .catch(function (err) {
@@ -949,12 +1052,14 @@
             sourceCredits.push(sc ? sc.value : '');
         });
 
-        var hasContent = prompts.some(function (p) { return p.trim().length > 0; });
+        var charDesc = settingCharDesc.value;
+        var hasContent = prompts.some(function (p) { return p.trim().length > 0; }) || charDesc.trim().length > 0;
         if (hasContent) {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({
                     prompts: prompts,
-                    sourceCredits: sourceCredits
+                    sourceCredits: sourceCredits,
+                    charDesc: charDesc
                 }));
                 showDraftIndicator();
             } catch (e) {
@@ -991,16 +1096,30 @@
             var data = JSON.parse(saved);
 
             // Backward compat: old format was plain array of strings
-            var prompts, sourceCredits;
+            var prompts, sourceCredits, charDesc;
             if (Array.isArray(data)) {
                 prompts = data;
                 sourceCredits = [];
+                charDesc = '';
             } else {
                 prompts = data.prompts || [];
                 sourceCredits = data.sourceCredits || [];
+                charDesc = data.charDesc || '';
             }
 
-            if (prompts.length === 0) return;
+            if (prompts.length === 0 && !charDesc) return;
+
+            // Restore character description
+            if (charDesc) {
+                settingCharDesc.value = charDesc;
+                var countSpan = document.getElementById('charDescCount');
+                if (countSpan) countSpan.textContent = charDesc.length;
+                var previews = promptGrid.querySelectorAll('.bg-box-char-preview');
+                previews.forEach(function (preview) {
+                    preview.textContent = charDesc;
+                    preview.style.display = '';
+                });
+            }
 
             // Create boxes if we need more than the default 4
             var currentBoxes = promptGrid.querySelectorAll('.bg-prompt-box');
@@ -1016,7 +1135,10 @@
                 if (boxes[i]) {
                     var ta = boxes[i].querySelector('.bg-box-textarea');
                     var sc = boxes[i].querySelector('.bg-box-source-input');
-                    if (ta && text) ta.value = text;
+                    if (ta && text) {
+                        ta.value = text;
+                        autoGrowTextarea(ta);
+                    }
                     if (sc && sourceCredits[i]) sc.value = sourceCredits[i];
                 }
             });
@@ -1042,5 +1164,11 @@
     restorePromptsFromStorage();
     updateCostEstimate();
     updateGenerateBtn();
+
+    // Set initial character count
+    var charDescCountSpan = document.getElementById('charDescCount');
+    if (charDescCountSpan) {
+        charDescCountSpan.textContent = settingCharDesc.value.length;
+    }
 
 })();

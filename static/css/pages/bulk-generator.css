@@ -660,7 +660,7 @@
     border: 1px solid var(--gray-200, #E5E5E5);
     border-radius: var(--radius-md, 8px);
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.8125rem;
     line-height: 1.5;
     color: var(--gray-900, #171717);
     resize: vertical;
@@ -680,6 +680,63 @@
 
 .bg-prompt-box.has-error .bg-box-textarea {
     border-color: var(--red-500, #ef4444);
+}
+
+/* Wrapper makes preview + textarea look like one field */
+.bg-box-text-wrapper {
+    border: 1px solid var(--gray-200, #E5E5E5);
+    border-radius: var(--radius-md, 8px);
+    background: var(--white, #fff);
+    overflow-y: auto;
+    max-height: 200px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Focus ring on wrapper when textarea is focused */
+.bg-box-text-wrapper:focus-within {
+    border-color: var(--primary, #2563EB);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+/* Error state on wrapper */
+.bg-prompt-box.has-error .bg-box-text-wrapper {
+    border-color: var(--red-500, #ef4444);
+}
+
+/* Preview — same font as textarea, just lighter and italic */
+.bg-box-char-preview {
+    font-size: 0.8125rem;
+    font-family: inherit;
+    line-height: 1.5;
+    padding: 10px 12px 0 12px;
+    color: var(--gray-500, #737373);
+    background: transparent;
+    border: none;
+    margin: 0;
+    font-style: italic;
+    word-wrap: break-word;
+}
+
+/* Textarea — no border, wrapper handles it */
+.bg-box-text-wrapper .bg-box-textarea {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    outline: none;
+    box-shadow: none;
+    width: 100%;
+    overflow: hidden;
+    resize: none;
+    min-height: 80px;
+    padding-top: 12px;
+}
+
+/* Remove any focus styles from textarea itself (wrapper handles focus) */
+.bg-box-text-wrapper .bg-box-textarea:focus {
+    border: none;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
 }
 
 /* Box error message */

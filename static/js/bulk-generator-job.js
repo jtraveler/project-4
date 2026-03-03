@@ -542,11 +542,35 @@
         img.alt = 'Generated image ' + (slotIndex + 1) + ' for prompt ' + (groupIndex + 1);
         img.loading = 'lazy';
         img.onload = function () {
-            // Set per-group columns based on first loaded image's aspect ratio
             var groupRow = slot.closest('.prompt-group');
             if (groupRow && !groupRow.dataset.columnsSet) {
+                // Set per-group columns based on first loaded image's aspect ratio
                 setGroupColumns(groupRow, img.naturalWidth, img.naturalHeight);
                 groupRow.dataset.columnsSet = 'true';
+
+                // Update placeholder aspect ratios in this group
+                var imgAspect = img.naturalWidth + ' / ' + img.naturalHeight;
+                var placeholders = groupRow.querySelectorAll(
+                    '.placeholder-loading, .placeholder-empty, .placeholder-failed'
+                );
+                for (var pi = 0; pi < placeholders.length; pi++) {
+                    placeholders[pi].style.aspectRatio = imgAspect;
+                }
+
+                // Hide empty (unused) slots once images are loading in this group
+                var emptySlots = groupRow.querySelectorAll('.prompt-image-slot.is-empty');
+                for (var ei = 0; ei < emptySlots.length; ei++) {
+                    emptySlots[ei].style.display = 'none';
+                }
+
+                // For terminal jobs, hide generating placeholders that never got images
+                if (currentStatus === 'completed' || currentStatus === 'cancelled' || currentStatus === 'failed') {
+                    var loadingEls = groupRow.querySelectorAll('.placeholder-loading');
+                    for (var li = 0; li < loadingEls.length; li++) {
+                        var loadingSlot = loadingEls[li].closest('.prompt-image-slot');
+                        if (loadingSlot) loadingSlot.style.display = 'none';
+                    }
+                }
             }
         };
         img.onerror = function () {

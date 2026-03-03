@@ -16,30 +16,51 @@
      data-job-status="{{ job.status }}"
      data-status-url="{% url 'prompts:api_bulk_job_status' job.id %}"
      data-cancel-url="{% url 'prompts:api_bulk_cancel_job' job.id %}"
-     data-csrf="{{ csrf_token }}">
+     data-csrf="{{ csrf_token }}"
+     data-images-per-prompt="{{ job.images_per_prompt }}"
+     data-quality-display="{{ job.get_quality_display }}"
+     data-size-display="{{ display_size }}"
+     data-sprite-url="{% static 'icons/sprite.svg' %}"
+     data-gallery-aspect="{{ gallery_aspect }}">
 
     {# ===== Job Summary Header ===== #}
     <div class="job-summary-header">
-        <div class="job-summary-title">
-            <h1 class="job-summary-title-text" id="jobTitle">
-                {% if job.status == 'completed' %}Generation Complete
-                {% elif job.status == 'cancelled' %}Generation Cancelled
-                {% elif job.status == 'failed' %}Generation Failed
-                {% elif job.status == 'processing' %}Generation in Progress
-                {% else %}Generation Starting&hellip;{% endif %}
-            </h1>
-            <span class="job-id-badge" title="{{ job.id }}">Job ID: {{ job.id|truncatechars:13 }}</span>
-        </div>
-        <div class="job-summary-meta">
+        <div class="job-summary-top-row">
+            <div class="job-summary-title">
+                <h1 class="job-summary-title-text" id="jobTitle">
+                    {% if job.status == 'completed' %}Generation Complete
+                    {% elif job.status == 'cancelled' %}Generation Cancelled
+                    {% elif job.status == 'failed' %}Generation Failed
+                    {% elif job.status == 'processing' %}Generation in Progress
+                    {% else %}Generation Starting&hellip;{% endif %}
+                </h1>
+                <span class="job-id-badge" title="{{ job.id }}">Job ID: {{ job.id|truncatechars:13 }}</span>
+            </div>
             <a href="{% url 'prompts:bulk_generator' %}" class="back-to-generator">&larr; Back to Generator</a>
         </div>
-        <div class="job-summary-settings">
-            <span class="setting-chip">{{ job.model_name }}</span>
-            <span class="setting-chip">{{ display_size }}</span>
-            <span class="setting-chip">{{ job.get_quality_display }} quality</span>
-            <span class="setting-chip">{{ job.images_per_prompt }} per prompt</span>
-            <span class="setting-chip">{{ job.total_prompts }} prompt{{ job.total_prompts|pluralize }}</span>
-        </div>
+        <div class="job-summary-divider"></div>
+        <dl class="job-summary-settings-grid">
+            <div class="setting-item">
+                <dt class="setting-label">Model</dt>
+                <dd class="setting-value">{{ job.model_name }}</dd>
+            </div>
+            <div class="setting-item">
+                <dt class="setting-label">Size</dt>
+                <dd class="setting-value">{{ display_size }}</dd>
+            </div>
+            <div class="setting-item">
+                <dt class="setting-label">Quality</dt>
+                <dd class="setting-value">{{ job.get_quality_display }}</dd>
+            </div>
+            <div class="setting-item">
+                <dt class="setting-label">Images/Prompt</dt>
+                <dd class="setting-value">{{ job.images_per_prompt }}</dd>
+            </div>
+            <div class="setting-item">
+                <dt class="setting-label">Total Prompts</dt>
+                <dd class="setting-value">{{ job.total_prompts }}</dd>
+            </div>
+        </dl>
     </div>
 
     {# ===== Progress Section ===== #}
@@ -107,7 +128,10 @@
 
     </div>{# /.job-progress-section #}
 
-    {# ===== Gallery Container (Phase 5B will populate this) ===== #}
+    {# ===== Gallery Section ===== #}
+    <p class="gallery-selection-instruction" id="galleryInstruction">
+        Click an image to select your favourite for each prompt group.
+    </p>
     <div class="job-gallery-container" id="jobGalleryContainer"></div>
 
 </div>{# /#bulk-generator-job #}

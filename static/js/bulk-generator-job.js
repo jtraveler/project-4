@@ -48,6 +48,18 @@
     var pollTimer = null;
     var generationStartTime = null; // Set on first poll where completed > 0
 
+    // ─── Gallery State (Phase 5B) ───────────────────────────────
+    var renderedGroups = {};   // { groupIndex: { slots: {0: imageId, ...}, element: domNode } }
+    var selections = {};       // { groupIndex: imageId }
+    var imagesPerPrompt = 1;
+    var galleryContainer = null;
+    var galleryInstruction = null;
+    var spriteUrl = '';
+    var qualityDisplay = '';
+    var sizeDisplay = '';
+    var galleryAspect = '1 / 1'; // aspect ratio for placeholder sizing
+    var announcer = null;      // aria-live region for selection announcements
+
     // ─── CSRF Helper ──────────────────────────────────────────────
     function getCookie(name) {
         var cookieValue = null;
@@ -237,6 +249,11 @@
             handleTerminalState(newStatus, data);
         }
 
+        // Phase 5B: Render gallery images from polling data
+        if (data.images && data.images.length > 0) {
+            renderImages(data.images);
+        }
+
         currentStatus = newStatus;
     }
 
@@ -315,6 +332,616 @@
         });
     }
 
+    // ─── Gallery: Per-Group Column Detection (Phase 5B Round 7) ────
+    function setGroupColumns(groupRow, imageWidth, imageHeight) {
+        var ratio = imageWidth / imageHeight;
+        var grid = groupRow.querySelector('.prompt-group-images');
+        if (!grid) return;
+        if (ratio > 1.6) {
+            // 16:9 or wider -> 2 columns
+            grid.dataset.columns = '2';
+        } else {
+            // 1:1, 2:3, 3:2 -> 4 columns
+            grid.dataset.columns = '4';
+        }
+
+        // Update remaining placeholders to match actual aspect ratio
+        var imgAspect = imageWidth + ' / ' + imageHeight;
+        var remaining = groupRow.querySelectorAll('.placeholder-loading, .placeholder-empty, .placeholder-failed');
+        for (var i = 0; i < remaining.length; i++) {
+            remaining[i].style.aspectRatio = imgAspect;
+        }
+    }
+
+    // ─── Gallery: Render Images (Phase 5B) ────────────────────────
+    function renderImages(images) {
+        if (!galleryContainer) return;
+
+        // Group images by prompt_order
+        var groups = {};
+        for (var i = 0; i < images.length; i++) {
+            var img = images[i];
+            var groupIdx = img.prompt_order;
+            if (!groups[groupIdx]) {
+                groups[groupIdx] = [];
+            }
+            groups[groupIdx].push(img);
+        }
+
+        // Process each group
+        var groupKeys = Object.keys(groups).sort(function (a, b) {
+            return parseInt(a, 10) - parseInt(b, 10);
+        });
+
+        for (var g = 0; g < groupKeys.length; g++) {
+            var groupIndex = parseInt(groupKeys[g], 10);
+            var groupImages = groups[groupIndex];
+            var promptText = groupImages[0].prompt_text || '';
+
+            // Create group row if it doesn't exist yet
+            if (!renderedGroups[groupIndex]) {
+                createGroupRow(groupIndex, promptText);
+            }
+
+            // Fill image slots based on status
+            for (var j = 0; j < groupImages.length; j++) {
+                var image = groupImages[j];
+                var slotIndex = image.variation_number - 1; // variation_number is 1-based
+                if (renderedGroups[groupIndex].slots[slotIndex]) continue; // already filled
+
+                if (image.status === 'completed' && image.image_url) {
+                    fillImageSlot(groupIndex, slotIndex, image);
+                } else if (image.status === 'failed') {
+                    fillFailedSlot(groupIndex, slotIndex);
+                }
+            }
+        }
+    }
+
+    function createGroupRow(groupIndex, promptText) {
+        var group = document.createElement('div');
+        group.className = 'prompt-group';
+        group.setAttribute('data-group-index', groupIndex);
+        group.style.animationDelay = Math.min(groupIndex * 80, 400) + 'ms';
+
+        // Header
+        var header = document.createElement('div');
+        header.className = 'prompt-group-header';
+
+        var number = document.createElement('span');
+        number.className = 'prompt-group-number';
+        number.textContent = 'Prompt ' + (groupIndex + 1);
+
+        var textWrapper = document.createElement('div');
+        textWrapper.className = 'prompt-group-text-wrapper';
+
+        var truncatedText = document.createElement('span');
+        truncatedText.className = 'prompt-group-text';
+        // Smart quotes wrap the text; CSS text-overflow handles truncation
+        truncatedText.textContent = '\u201C' + promptText + '\u201D';
+        truncatedText.setAttribute('tabindex', '0');
+
+        // Overlay (shown on hover via CSS)
+        var overlayId = 'prompt-overlay-' + groupIndex;
+        var overlay = document.createElement('div');
+        overlay.className = 'prompt-group-text-overlay';
+        overlay.id = overlayId;
+        overlay.setAttribute('role', 'tooltip');
+
+        var overlayContent = document.createElement('div');
+        overlayContent.className = 'prompt-overlay-content';
+        overlayContent.textContent = '\u201C' + promptText + '\u201D';
+        overlay.appendChild(overlayContent);
+
+        truncatedText.setAttribute('aria-describedby', overlayId);
+
+        textWrapper.appendChild(truncatedText);
+        textWrapper.appendChild(overlay);
+
+        // Reposition overlay on hover/focus to prevent viewport overflow
+        textWrapper.addEventListener('mouseenter', function () {
+            positionOverlay(textWrapper);
+        });
+        textWrapper.addEventListener('focusin', function () {
+            positionOverlay(textWrapper);
+        });
+
+        var meta = document.createElement('div');
+        meta.className = 'prompt-group-meta';
+
+        var sizeSpan = document.createElement('span');
+        sizeSpan.textContent = sizeDisplay;
+        var qualSpan = document.createElement('span');
+        qualSpan.textContent = qualityDisplay;
+        meta.appendChild(sizeSpan);
+        meta.appendChild(qualSpan);
+
+        header.appendChild(number);
+        header.appendChild(textWrapper);
+        header.appendChild(meta);
+
+        // Images grid
+        var imagesGrid = document.createElement('div');
+        imagesGrid.className = 'prompt-group-images';
+
+        // Always 4 slots: loading for active, dashed empty for unused
+        for (var s = 0; s < 4; s++) {
+            var isUnused = s >= imagesPerPrompt;
+            var slot = document.createElement('div');
+            slot.className = 'prompt-image-slot' + (isUnused ? ' is-placeholder is-empty' : '');
+            slot.setAttribute('data-slot', s);
+            slot.setAttribute('data-group', groupIndex);
+
+            var container = document.createElement('div');
+            container.className = 'prompt-image-container';
+
+            if (isUnused) {
+                // Empty dashed placeholder for unused slots
+                var emptyPlaceholder = document.createElement('div');
+                emptyPlaceholder.className = 'placeholder-empty';
+                emptyPlaceholder.style.aspectRatio = galleryAspect;
+                container.appendChild(emptyPlaceholder);
+            } else {
+                // Loading spinner for active slots
+                var loading = document.createElement('div');
+                loading.className = 'placeholder-loading';
+                loading.style.aspectRatio = galleryAspect;
+                loading.setAttribute('role', 'status');
+                loading.setAttribute('aria-label', 'Image generating');
+
+                var spinner = document.createElement('div');
+                spinner.className = 'loading-spinner';
+
+                var loadingLabel = document.createElement('span');
+                loadingLabel.className = 'loading-text';
+                loadingLabel.textContent = 'Generating\u2026';
+
+                loading.appendChild(spinner);
+                loading.appendChild(loadingLabel);
+                container.appendChild(loading);
+            }
+
+            slot.appendChild(container);
+            imagesGrid.appendChild(slot);
+        }
+
+        group.appendChild(header);
+        group.appendChild(imagesGrid);
+        galleryContainer.appendChild(group);
+
+        // Show selection instruction when first group appears
+        if (galleryInstruction && Object.keys(renderedGroups).length === 0) {
+            galleryInstruction.style.display = 'block';
+        }
+
+        renderedGroups[groupIndex] = { slots: {}, element: group };
+    }
+
+    function fillImageSlot(groupIndex, slotIndex, image) {
+        var groupData = renderedGroups[groupIndex];
+        if (!groupData) return;
+
+        var slot = groupData.element.querySelector('[data-slot="' + slotIndex + '"]');
+        if (!slot) return;
+
+        var container = slot.querySelector('.prompt-image-container');
+        if (!container) return;
+
+        // Remove any placeholder (loading or empty)
+        var placeholder = container.querySelector('.placeholder-loading, .placeholder-empty, .placeholder-failed');
+        if (placeholder) {
+            container.removeChild(placeholder);
+        }
+
+        // Remove is-placeholder class
+        slot.classList.remove('is-placeholder');
+
+        // Create image
+        var img = document.createElement('img');
+        img.src = image.image_url;
+        img.alt = 'Generated image ' + (slotIndex + 1) + ' for prompt ' + (groupIndex + 1);
+        img.loading = 'lazy';
+        img.onload = function () {
+            // Set per-group columns based on first loaded image's aspect ratio
+            var groupRow = slot.closest('.prompt-group');
+            if (groupRow && !groupRow.dataset.columnsSet) {
+                setGroupColumns(groupRow, img.naturalWidth, img.naturalHeight);
+                groupRow.dataset.columnsSet = 'true';
+            }
+        };
+        img.onerror = function () {
+            console.error('Image failed to load:', img.src.substring(0, 100));
+            // Replace broken image with a styled fallback
+            var fallback = document.createElement('div');
+            fallback.className = 'placeholder-empty';
+            fallback.style.display = 'flex';
+            fallback.style.alignItems = 'center';
+            fallback.style.justifyContent = 'center';
+            fallback.style.fontSize = 'var(--text-xs)';
+            fallback.style.color = 'var(--gray-500)';
+            fallback.textContent = 'Failed to load';
+            container.replaceChild(fallback, img);
+        };
+        container.appendChild(img);
+
+        // Create overlay with download + select buttons
+        var overlay = document.createElement('div');
+        overlay.className = 'prompt-image-overlay';
+
+        // Download button
+        var downloadBtn = document.createElement('button');
+        downloadBtn.className = 'btn-download';
+        downloadBtn.type = 'button';
+        downloadBtn.setAttribute('aria-label', 'Download image ' + (slotIndex + 1));
+        var dlSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        dlSvg.setAttribute('aria-hidden', 'true');
+        var dlUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        dlUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', spriteUrl + '#icon-download');
+        dlSvg.appendChild(dlUse);
+        downloadBtn.appendChild(dlSvg);
+
+        // Store image URL on button for download handler
+        downloadBtn.setAttribute('data-image-url', image.image_url);
+        downloadBtn.setAttribute('data-group', groupIndex);
+        downloadBtn.setAttribute('data-slot', slotIndex);
+
+        // Select button
+        var selectBtn = document.createElement('button');
+        selectBtn.className = 'btn-select';
+        selectBtn.type = 'button';
+        selectBtn.setAttribute('aria-label', 'Select image ' + (slotIndex + 1));
+        selectBtn.setAttribute('aria-pressed', 'false');
+        var selSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        selSvg.setAttribute('aria-hidden', 'true');
+        var selUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        selUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', spriteUrl + '#icon-circle-check');
+        selSvg.appendChild(selUse);
+        selectBtn.appendChild(selSvg);
+
+        selectBtn.setAttribute('data-image-id', image.id);
+        selectBtn.setAttribute('data-group', groupIndex);
+        selectBtn.setAttribute('data-slot', slotIndex);
+
+        // Trash button (soft delete / undo)
+        var trashBtn = document.createElement('button');
+        trashBtn.className = 'btn-trash';
+        trashBtn.type = 'button';
+        trashBtn.setAttribute('aria-label', 'Discard image ' + (slotIndex + 1));
+        trashBtn.setAttribute('data-group', groupIndex);
+        trashBtn.setAttribute('data-slot', slotIndex);
+
+        var trashSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        trashSvg.setAttribute('width', '16');
+        trashSvg.setAttribute('height', '16');
+        trashSvg.setAttribute('viewBox', '0 0 24 24');
+        trashSvg.setAttribute('fill', 'none');
+        trashSvg.setAttribute('stroke', 'currentColor');
+        trashSvg.setAttribute('stroke-width', '2');
+        trashSvg.setAttribute('stroke-linecap', 'round');
+        trashSvg.setAttribute('stroke-linejoin', 'round');
+        trashSvg.setAttribute('aria-hidden', 'true');
+
+        var trashLid = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        trashLid.setAttribute('points', '3 6 5 6 21 6');
+        var trashBody = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        trashBody.setAttribute('d', 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2');
+        var trashLine1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        trashLine1.setAttribute('x1', '10');
+        trashLine1.setAttribute('y1', '11');
+        trashLine1.setAttribute('x2', '10');
+        trashLine1.setAttribute('y2', '17');
+        var trashLine2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        trashLine2.setAttribute('x1', '14');
+        trashLine2.setAttribute('y1', '11');
+        trashLine2.setAttribute('x2', '14');
+        trashLine2.setAttribute('y2', '17');
+        trashSvg.appendChild(trashLid);
+        trashSvg.appendChild(trashBody);
+        trashSvg.appendChild(trashLine1);
+        trashSvg.appendChild(trashLine2);
+        trashBtn.appendChild(trashSvg);
+
+        // Order: download | trash | select
+        overlay.appendChild(downloadBtn);
+        overlay.appendChild(trashBtn);
+        overlay.appendChild(selectBtn);
+        container.appendChild(overlay);
+
+        // Magnifying glass button (centered, hover-reveal)
+        var zoomBtn = document.createElement('button');
+        zoomBtn.className = 'btn-zoom';
+        zoomBtn.setAttribute('aria-label', 'View full size');
+        zoomBtn.setAttribute('type', 'button');
+        zoomBtn.dataset.imageUrl = image.image_url;
+        zoomBtn.dataset.promptText = image.prompt_text || '';
+
+        var zoomSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        zoomSvg.setAttribute('width', '24');
+        zoomSvg.setAttribute('height', '24');
+        zoomSvg.setAttribute('viewBox', '0 0 24 24');
+        zoomSvg.setAttribute('fill', 'none');
+        zoomSvg.setAttribute('stroke', 'white');
+        zoomSvg.setAttribute('stroke-width', '2');
+        zoomSvg.setAttribute('stroke-linecap', 'round');
+        zoomSvg.setAttribute('stroke-linejoin', 'round');
+        zoomSvg.setAttribute('aria-hidden', 'true');
+
+        var zoomCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        zoomCircle.setAttribute('cx', '11');
+        zoomCircle.setAttribute('cy', '11');
+        zoomCircle.setAttribute('r', '8');
+        var zoomLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        zoomLine.setAttribute('x1', '21');
+        zoomLine.setAttribute('y1', '21');
+        zoomLine.setAttribute('x2', '16.65');
+        zoomLine.setAttribute('y2', '16.65');
+        zoomSvg.appendChild(zoomCircle);
+        zoomSvg.appendChild(zoomLine);
+        zoomBtn.appendChild(zoomSvg);
+        container.appendChild(zoomBtn);
+
+        // Record that this slot is filled
+        groupData.slots[slotIndex] = image.id;
+    }
+
+    function fillFailedSlot(groupIndex, slotIndex) {
+        var groupData = renderedGroups[groupIndex];
+        if (!groupData) return;
+
+        var slot = groupData.element.querySelector('[data-slot="' + slotIndex + '"]');
+        if (!slot) return;
+
+        var container = slot.querySelector('.prompt-image-container');
+        if (!container) return;
+
+        // Remove any existing placeholder
+        var placeholder = container.querySelector('.placeholder-loading, .placeholder-empty, .placeholder-failed');
+        if (placeholder) {
+            container.removeChild(placeholder);
+        }
+
+        // Show failed indicator
+        var failed = document.createElement('div');
+        failed.className = 'placeholder-failed';
+        failed.style.aspectRatio = galleryAspect;
+        failed.setAttribute('role', 'status');
+        failed.setAttribute('aria-label', 'Image generation failed');
+
+        var failedText = document.createElement('span');
+        failedText.className = 'failed-text';
+        failedText.textContent = 'Failed';
+
+        failed.appendChild(failedText);
+        container.appendChild(failed);
+
+        // Mark slot as filled so we don't re-process
+        groupData.slots[slotIndex] = 'failed';
+    }
+
+    // ─── Gallery: Selection Logic (Phase 5B) ────────────────────
+    function handleSelection(e) {
+        var btn = e.target.closest('.btn-select');
+        if (!btn) return;
+
+        var groupIndex = parseInt(btn.getAttribute('data-group'), 10);
+        var imageId = btn.getAttribute('data-image-id');
+        var slot = btn.closest('.prompt-image-slot');
+        var groupData = renderedGroups[groupIndex];
+        if (!groupData) return;
+
+        // Prevent selecting discarded images
+        if (slot.classList.contains('is-discarded')) return;
+
+        var allSlots = groupData.element.querySelectorAll('.prompt-image-slot:not(.is-placeholder)');
+        var alreadySelected = slot.classList.contains('is-selected');
+
+        if (alreadySelected) {
+            // Deselect — remove all selection classes
+            for (var i = 0; i < allSlots.length; i++) {
+                allSlots[i].classList.remove('is-selected', 'is-deselected');
+                var selBtn = allSlots[i].querySelector('.btn-select');
+                if (selBtn) selBtn.setAttribute('aria-pressed', 'false');
+            }
+            delete selections[groupIndex];
+            announce('Image deselected for prompt ' + (groupIndex + 1));
+        } else {
+            // Select this one, deselect others in group
+            for (var j = 0; j < allSlots.length; j++) {
+                var s = allSlots[j];
+                var sBtn = s.querySelector('.btn-select');
+                if (s === slot) {
+                    s.classList.add('is-selected');
+                    s.classList.remove('is-deselected');
+                    if (sBtn) sBtn.setAttribute('aria-pressed', 'true');
+                } else {
+                    s.classList.remove('is-selected');
+                    s.classList.add('is-deselected');
+                    if (sBtn) sBtn.setAttribute('aria-pressed', 'false');
+                }
+            }
+            selections[groupIndex] = imageId;
+            var slotNum = parseInt(btn.getAttribute('data-slot'), 10) + 1;
+            announce('Image ' + slotNum + ' selected for prompt ' + (groupIndex + 1));
+        }
+    }
+
+    // ─── Gallery: Trash / Soft Delete (Phase 5B Round 4) ─────────
+    function handleTrash(e) {
+        var btn = e.target.closest('.btn-trash');
+        if (!btn) return;
+
+        var slot = btn.closest('.prompt-image-slot');
+        if (!slot) return;
+
+        var isDiscarded = slot.classList.contains('is-discarded');
+
+        if (isDiscarded) {
+            // Undo — restore image
+            slot.classList.remove('is-discarded');
+            btn.setAttribute('aria-label', 'Discard image ' + (parseInt(btn.getAttribute('data-slot'), 10) + 1));
+            announce('Image restored');
+        } else {
+            // Discard — fade to 5% opacity
+            // If this image was selected, deselect it first
+            if (slot.classList.contains('is-selected')) {
+                var groupIndex = parseInt(btn.getAttribute('data-group'), 10);
+                var groupData = renderedGroups[groupIndex];
+                if (groupData) {
+                    var allSlots = groupData.element.querySelectorAll('.prompt-image-slot:not(.is-placeholder)');
+                    for (var i = 0; i < allSlots.length; i++) {
+                        allSlots[i].classList.remove('is-selected', 'is-deselected');
+                        var selBtn = allSlots[i].querySelector('.btn-select');
+                        if (selBtn) selBtn.setAttribute('aria-pressed', 'false');
+                    }
+                    delete selections[groupIndex];
+                }
+            }
+            slot.classList.add('is-discarded');
+            btn.setAttribute('aria-label', 'Restore image ' + (parseInt(btn.getAttribute('data-slot'), 10) + 1));
+            announce('Image discarded');
+        }
+    }
+
+    // ─── Gallery: Download Logic (Phase 5B) ─────────────────────
+    function handleDownload(e) {
+        var btn = e.target.closest('.btn-download');
+        if (!btn) return;
+
+        var url = btn.getAttribute('data-image-url');
+        if (!url) return;
+        // Only allow HTTP(S) or relative URLs as defense-in-depth
+        if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0 && url.indexOf('/') !== 0) return;
+
+        var groupIdx = parseInt(btn.getAttribute('data-group'), 10);
+        var slotIdx = parseInt(btn.getAttribute('data-slot'), 10);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'prompt-' + (groupIdx + 1) + '-image-' + (slotIdx + 1) + '.png';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // ─── Gallery: Aria Announcer (Phase 5B) ─────────────────────
+    function announce(message) {
+        if (!announcer) return;
+        announcer.textContent = message;
+        // Clear after a moment so repeat announcements are detected
+        setTimeout(function () {
+            announcer.textContent = '';
+        }, 1000);
+    }
+
+    // ─── Gallery: Overlay Positioning (Phase 5B Round 3) ──────────
+    function positionOverlay(wrapper) {
+        var overlay = wrapper.querySelector('.prompt-group-text-overlay');
+        if (!overlay) return;
+
+        // Reset position
+        overlay.style.left = '0';
+        overlay.style.right = 'auto';
+
+        // Check if it overflows viewport
+        var rect = overlay.getBoundingClientRect();
+        var viewportWidth = window.innerWidth;
+
+        if (rect.right > viewportWidth - 16) {
+            // Flip to right-aligned
+            overlay.style.left = 'auto';
+            overlay.style.right = '0';
+        }
+    }
+
+    // ─── Gallery: Lightbox (Phase 5B Round 3) ────────────────────
+    var lightboxEl = null;
+    var lightboxTrigger = null; // Element that opened lightbox (for focus restore)
+
+    function createLightbox() {
+        var overlay = document.createElement('div');
+        overlay.className = 'lightbox-overlay';
+        overlay.id = 'imageLightbox';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', 'Image preview');
+
+        var inner = document.createElement('div');
+        inner.className = 'lightbox-inner';
+
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'lightbox-close';
+        closeBtn.setAttribute('aria-label', 'Close preview');
+        closeBtn.setAttribute('type', 'button');
+        closeBtn.innerHTML = '&times;';  /* Safe: hardcoded character */
+
+        var img = document.createElement('img');
+        img.className = 'lightbox-image';
+        img.id = 'lightboxImage';
+        img.alt = '';
+
+        var caption = document.createElement('p');
+        caption.className = 'lightbox-caption';
+        caption.id = 'lightboxCaption';
+
+        inner.appendChild(closeBtn);
+        inner.appendChild(img);
+        inner.appendChild(caption);
+        overlay.appendChild(inner);
+        document.body.appendChild(overlay);
+
+        // Close handlers
+        closeBtn.addEventListener('click', closeLightbox);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeLightbox();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (!overlay.classList.contains('is-open')) return;
+            if (e.key === 'Escape') {
+                closeLightbox();
+                return;
+            }
+            // Focus trap: keep Tab within lightbox (close button is only focusable element)
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                closeBtn.focus();
+            }
+        });
+
+        lightboxEl = overlay;
+        return overlay;
+    }
+
+    function openLightbox(imageUrl, promptText) {
+        // Store trigger element for focus restore on close
+        lightboxTrigger = document.activeElement;
+
+        if (!lightboxEl) createLightbox();
+        var img = document.getElementById('lightboxImage');
+        var caption = document.getElementById('lightboxCaption');
+
+        img.src = imageUrl;
+        img.alt = 'Full size preview';
+        caption.textContent = promptText ? '\u201C' + promptText + '\u201D' : '';
+
+        lightboxEl.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+
+        // Move focus to close button
+        lightboxEl.querySelector('.lightbox-close').focus();
+    }
+
+    function closeLightbox() {
+        if (!lightboxEl) return;
+        lightboxEl.classList.remove('is-open');
+        document.body.style.overflow = '';
+
+        // Restore focus to the element that triggered the lightbox
+        if (lightboxTrigger && typeof lightboxTrigger.focus === 'function') {
+            lightboxTrigger.focus();
+            lightboxTrigger = null;
+        }
+    }
+
     // ─── Init ─────────────────────────────────────────────────────
     function initPage() {
         root = document.getElementById('bulk-generator-job');
@@ -348,6 +975,43 @@
             statusMessage.setAttribute('tabindex', '-1');
         }
 
+        // Phase 5B: Gallery init
+        imagesPerPrompt = parseInt(root.dataset.imagesPerPrompt, 10) || 1;
+        galleryContainer = document.getElementById('jobGalleryContainer');
+        galleryInstruction = document.getElementById('galleryInstruction');
+        spriteUrl = root.dataset.spriteUrl || '';
+        qualityDisplay = root.dataset.qualityDisplay || '';
+        sizeDisplay = root.dataset.sizeDisplay || '';
+        galleryAspect = root.dataset.galleryAspect || '1 / 1';
+
+        // Create aria-live region for selection announcements
+        announcer = document.createElement('div');
+        announcer.className = 'gallery-sr-announcer';
+        announcer.setAttribute('aria-live', 'polite');
+        announcer.setAttribute('role', 'status');
+        root.appendChild(announcer);
+
+        // Delegate click events on gallery container for selection, download & zoom
+        if (galleryContainer) {
+            galleryContainer.addEventListener('click', function (e) {
+                // Zoom button opens lightbox
+                var zoomBtn = e.target.closest('.btn-zoom');
+                if (zoomBtn) {
+                    e.preventDefault();
+                    openLightbox(zoomBtn.dataset.imageUrl, zoomBtn.dataset.promptText);
+                    return;
+                }
+                // Trash button toggles soft delete
+                var trashBtn = e.target.closest('.btn-trash');
+                if (trashBtn) {
+                    handleTrash(e);
+                    return;
+                }
+                handleSelection(e);
+                handleDownload(e);
+            });
+        }
+
         // Cancel button wiring
         if (cancelBtn) {
             cancelBtn.addEventListener('click', handleCancel);
@@ -367,6 +1031,21 @@
             // Already done — apply terminal state immediately without polling.
             // Pass initialCompleted so cost and bar reflect the actual progress.
             handleTerminalState(currentStatus, { completed_count: initialCompleted });
+
+            // Fetch image data once to populate gallery for terminal states
+            fetch(statusUrl, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (data && data.images && data.images.length > 0) {
+                    renderImages(data.images);
+                }
+            })
+            .catch(function (err) {
+                console.warn('[bulk-gen-job] Terminal fetch error:', err.message);
+            });
         } else {
             // Active job — start polling immediately
             startPolling();

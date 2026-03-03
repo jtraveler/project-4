@@ -87,12 +87,21 @@ def bulk_generator_job_view(request, job_id):
     # Format size for display (e.g. "1024x1024" → "1024×1024")
     display_size = job.size.replace('x', '×')
 
+    # Determine default gallery aspect ratio from job size
+    # (per-group columns are set dynamically by JS based on actual image dimensions)
+    try:
+        w, h = job.size.split('x')
+        gallery_aspect = f"{int(w)} / {int(h)}"
+    except (ValueError, ZeroDivisionError):
+        gallery_aspect = "1 / 1"
+
     return render(request, 'prompts/bulk_generator_job.html', {
         'job': job,
         'cost_per_image': cost_per_image,
         'total_images': total_images,
         'estimated_total_cost': round(estimated_total_cost, 4),
         'display_size': display_size,
+        'gallery_aspect': gallery_aspect,
     })
 
 

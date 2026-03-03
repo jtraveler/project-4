@@ -33,17 +33,21 @@
     margin: 0;
 }
 
-.job-summary-meta {
+.job-summary-top-row {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
 }
 
 .back-to-generator {
     color: var(--gray-500);
-    font-size: var(--text-sm);
+    font-size: 14px;
     text-decoration: none;
+    white-space: nowrap;
+    font-weight: 600;
 }
 
 .back-to-generator:hover {
@@ -66,22 +70,38 @@
     white-space: nowrap;
 }
 
-.job-summary-settings {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+.job-summary-divider {
+    height: 1px;
+    background: var(--gray-200);
+    margin-bottom: 1rem;
 }
 
-.setting-chip {
-    display: inline-flex;
-    align-items: center;
-    background: var(--white);
-    border: 1px solid var(--gray-200);
-    border-radius: 999px;
-    padding: 0.25rem 0.75rem;
-    font-size: var(--text-sm);
-    color: var(--gray-700);
-    line-height: 1.4;
+.job-summary-settings-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3.5rem;
+    margin: 0;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.setting-label {
+    font-size: 15px;
+    color: var(--gray-800);
+    letter-spacing: 0.03em;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.setting-value {
+    font-size: 15px;
+    color: var(--gray-800);
+    font-weight: var(--font-medium);
+    margin: 0;
 }
 
 /* ─── Progress Section ───────────────────────────────────── */
@@ -90,7 +110,7 @@
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 3rem;
 }
 
 /* Stats row */
@@ -111,17 +131,17 @@
 .progress-count {
     font-weight: var(--font-medium);
     color: var(--gray-800);
-    font-size: var(--text-base);
+    font-size: 15px;
 }
 
 .progress-percent {
     color: var(--gray-500);
-    font-size: var(--text-sm);
+    font-size: 15px;
 }
 
 .progress-time {
     color: var(--gray-600);
-    font-size: var(--text-sm);
+    font-size: 15px;
     white-space: nowrap;
 }
 
@@ -185,12 +205,12 @@
 .cost-spent {
     font-weight: var(--font-medium);
     color: var(--gray-800);
-    font-size: var(--text-sm);
+    font-size: 15px;
 }
 
 .cost-estimated {
     color: var(--gray-500);
-    font-size: var(--text-sm);
+    font-size: 15px;
 }
 
 .progress-actions {
@@ -206,9 +226,9 @@
     color: #fff;
     border: none;
     border-radius: var(--radius-lg);
-    padding: 0.5rem 1.25rem;
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
+    padding: 0.5rem .85rem;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
     transition: background 0.15s ease, opacity 0.15s ease;
     white-space: nowrap;
@@ -235,15 +255,22 @@
 
 .progress-status-message p {
     color: var(--gray-600);
-    font-size: var(--text-sm);
+    font-size: 15px;
     font-style: italic;
     margin: 0;
 }
 
-/* ─── Gallery Container (Phase 5B placeholder) ───────────── */
+/* ─── Gallery Selection Instruction ─────────────────────────── */
+.gallery-selection-instruction {
+    color: var(--gray-500);
+    font-size: 15px;
+    margin: 0 0 1rem 0;
+    display: none; /* shown by JS when gallery has images */
+}
+
+/* ─── Gallery Container ────────────────────────────────────── */
 .job-gallery-container {
     min-height: 200px;
-    margin-top: 2rem;
 }
 
 /* ─── Responsive: ≤ 768px ─────────────────────────────────── */
@@ -254,6 +281,10 @@
 
     .job-summary-header {
         padding: 1rem;
+    }
+
+    .job-summary-settings-grid {
+        gap: 1rem;
     }
 
     .progress-stats-row {
@@ -275,4 +306,521 @@
     .btn-cancel {
         width: 100%;
     }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* Phase 5B: Gallery Rows + Image Selection                       */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Prompt Group Row ──────────────────────────────────────── */
+.prompt-group {
+    margin-bottom: 2rem;
+    animation: promptGroupFadeIn 300ms ease-out forwards;
+    opacity: 0;
+}
+
+@keyframes promptGroupFadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Prompt Group Header ───────────────────────────────────── */
+.prompt-group-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: nowrap;
+    max-width: 100%;
+}
+
+.prompt-group-number {
+    font-weight: var(--font-bold, 700);
+    color: var(--gray-800);
+    font-size: var(--text-base);
+    white-space: nowrap;
+}
+
+.prompt-group-text-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.prompt-group-text {
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+    cursor: pointer;
+}
+
+.prompt-group-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.prompt-group-meta span {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+}
+
+.prompt-group-meta span + span::before {
+    content: "\00b7";
+    margin-right: 0.5rem;
+}
+
+/* ─── Prompt Text Hover Overlay ─────────────────────────────── */
+.prompt-group-text-overlay {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 10;
+    background: var(--white, #fff);
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: var(--radius-lg, 0.5rem);
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-width: min(500px, calc(100vw - 2rem));
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    pointer-events: none;
+}
+
+.prompt-group-text-wrapper:hover .prompt-group-text-overlay,
+.prompt-group-text-wrapper:focus-within .prompt-group-text-overlay {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.prompt-overlay-content {
+    font-size: var(--text-sm);
+    color: var(--gray-700);
+    line-height: 1.5;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+/* ─── Loading State for Image Slots ────────────────────────── */
+.placeholder-loading {
+    width: 100%;
+    /* aspect-ratio set dynamically by JS based on job size */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--gray-100);
+    border-radius: var(--radius-lg);
+    gap: 0.75rem;
+}
+
+.loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--gray-200);
+    border-top-color: var(--accent-color-primary);
+    border-radius: 50%;
+    animation: spinLoader 0.8s linear infinite;
+}
+
+@keyframes spinLoader {
+    to { transform: rotate(360deg); }
+}
+
+.loading-text {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    font-style: italic;
+}
+
+/* ─── Failed State for Image Slots ─────────────────────────── */
+.placeholder-failed {
+    width: 100%;
+    /* aspect-ratio set dynamically by JS based on job size */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--gray-100);
+    border: 2px dashed var(--error, #ef4444);
+    border-radius: var(--radius-lg);
+    gap: 0.5rem;
+}
+
+.failed-text {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    font-style: italic;
+}
+
+/* ─── Image Grid ────────────────────────────────────────────── */
+.prompt-group-images {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+/* Per-group column override: wide ratios (16:9) get 2 columns */
+.prompt-group-images[data-columns="2"] {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* ─── Image Slot + Container ────────────────────────────────── */
+.prompt-image-slot {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+/* Placeholder slot aspect ratio is set dynamically by JS */
+
+.prompt-image-container {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-lg, 0.5rem);
+    overflow: hidden;
+    background: var(--gray-100);
+}
+
+.prompt-image-container img {
+    width: 100%;
+    height: auto;
+    display: block;
+    animation: imageFadeIn 400ms ease-out;
+}
+
+@keyframes imageFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.placeholder-empty {
+    width: 100%;
+    /* aspect-ratio set dynamically by JS based on job size */
+    background: var(--gray-100);
+    border: 2px dashed var(--gray-200);
+    border-radius: var(--radius-lg);
+}
+
+/* ─── Image Overlay (transparent bg, drop-shadow buttons) ──── */
+.prompt-image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    gap: 6px;
+    background: transparent;
+    pointer-events: none;
+    z-index: 5;
+}
+
+/* All overlay buttons get pointer-events back */
+.prompt-image-overlay > button {
+    pointer-events: auto;
+}
+
+/* Shared button base: transparent with white icons + drop-shadow on SVG */
+.btn-download,
+.btn-select,
+.btn-trash {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: white;
+    transition: background 0.15s ease;
+}
+
+/* Drop shadow on SVG icons — follows icon shape, not button box */
+.btn-download svg,
+.btn-select svg,
+.btn-trash svg {
+    width: 16px;
+    height: 16px;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+
+.btn-download:hover,
+.btn-select:hover,
+.btn-trash:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-download:focus-visible,
+.btn-select:focus-visible,
+.btn-trash:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+/* ─── Selected State ────────────────────────────────────────── */
+.prompt-image-slot.is-selected .btn-select {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--gray-800, #1f2937);
+}
+
+.prompt-image-slot.is-selected .btn-select svg {
+    filter: none;
+}
+
+.prompt-image-slot.is-deselected {
+    opacity: 0.35;
+    transition: opacity 0.3s ease;
+}
+
+.prompt-image-slot.is-deselected:hover {
+    opacity: 0.6;
+}
+
+/* ─── Discarded (Soft Delete) State ────────────────────────── */
+.prompt-image-slot.is-discarded .prompt-image-container img {
+    opacity: 0.05;
+    transition: opacity 0.3s ease;
+}
+
+.prompt-image-slot.is-discarded .btn-download,
+.prompt-image-slot.is-discarded .btn-select,
+.prompt-image-slot.is-discarded .btn-zoom {
+    display: none;
+}
+
+.prompt-image-slot.is-discarded .btn-trash {
+    color: var(--error, #ef4444);
+}
+
+.prompt-image-slot.is-discarded .btn-trash svg {
+    filter: drop-shadow(0 1px 3px rgba(239, 68, 68, 0.4)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.prompt-image-slot.is-discarded .btn-trash:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* ─── Aria Live Region ──────────────────────────────────────── */
+.gallery-sr-announcer {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ─── Zoom Button (centered, hover-reveal) ─────────────────── */
+.btn-zoom {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    z-index: 5;
+    color: white;
+}
+
+.prompt-image-slot:hover .btn-zoom {
+    opacity: 1;
+}
+
+.btn-zoom:hover {
+    background: rgba(0, 0, 0, 0.7);
+    border-color: white;
+}
+
+.btn-zoom:focus-visible {
+    opacity: 1;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 0 0 4px white;
+}
+
+/* Touch devices: always show zoom */
+@media (hover: none) {
+    .btn-zoom {
+        opacity: 0.8;
+    }
+}
+
+/* ─── Lightbox Modal ───────────────────────────────────────── */
+.lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.lightbox-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.lightbox-inner {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -40px;
+    right: -8px;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.15s ease;
+    z-index: 1;
+}
+
+.lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.lightbox-close:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+.lightbox-image {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: var(--radius-lg, 0.5rem);
+}
+
+.lightbox-caption {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: var(--text-sm, 0.875rem);
+    margin-top: 1rem;
+    text-align: center;
+    max-width: 600px;
+    line-height: 1.5;
+}
+
+/* ─── Gallery Responsive ────────────────────────────────────── */
+/* Hide empty placeholder slots below 990px */
+@media (max-width: 990px) {
+    .prompt-image-slot.is-empty {
+        display: none;
+    }
+}
+
+/* Always 2 columns at 989px and below (including mobile) */
+@media (max-width: 989px) {
+    .prompt-group-images,
+    .prompt-group-images[data-columns="2"],
+    .prompt-group-images[data-columns="4"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .prompt-group-text-overlay {
+        max-width: calc(100vw - 3rem);
+    }
+}
+
+@media (max-width: 768px) {
+    .prompt-group-header {
+        flex-wrap: wrap;
+    }
+
+    .prompt-group-text-wrapper {
+        flex-basis: calc(100% - 5rem);
+        order: 1;
+    }
+
+    .prompt-group-meta {
+        order: 2;
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .prompt-group-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .prompt-group-text-wrapper {
+        width: 100%;
+        flex-basis: 100%;
+    }
+
+    .prompt-group-meta {
+        width: 100%;
+    }
+
+    .prompt-group-text-overlay {
+        position: fixed;
+        left: 1rem !important;
+        right: 1rem !important;
+        top: auto;
+        bottom: 1rem;
+        max-width: none;
+        width: auto;
+    }
+}
+
+/* Reduced motion: disable animations for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    .prompt-group { animation: none; opacity: 1; }
+    .loading-spinner { animation: none; }
+    .progress-bar-container.progress-pending .progress-bar-fill { animation: none; }
+    .prompt-image-container img { animation: none; }
+    .lightbox-overlay { transition: none; }
+    .prompt-image-slot.is-discarded .prompt-image-container img { transition: none; }
+}
+
+/* Focus indicator on prompt text for keyboard navigation */
+.prompt-group-text:focus-visible {
+    outline: 2px solid var(--accent-color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
 }

@@ -337,7 +337,7 @@
 .prompt-group-number {
     font-weight: var(--font-bold, 700);
     color: var(--gray-800);
-    font-size: var(--text-base);
+    font-size: 15px;
     white-space: nowrap;
 }
 
@@ -349,7 +349,7 @@
 
 .prompt-group-text {
     color: var(--gray-600);
-    font-size: var(--text-sm);
+    font-size: 15px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -367,7 +367,7 @@
 }
 
 .prompt-group-meta span {
-    font-size: var(--text-xs);
+    font-size: 15px;
     color: var(--gray-500);
 }
 
@@ -479,7 +479,7 @@
 /* ─── Image Slot + Container ────────────────────────────────── */
 .prompt-image-slot {
     position: relative;
-    border-radius: var(--radius-lg);
+    border-radius: 8px;
     overflow: hidden;
     transition: opacity 0.3s ease;
 }
@@ -489,7 +489,7 @@
 .prompt-image-container {
     position: relative;
     width: 100%;
-    border-radius: var(--radius-lg, 0.5rem);
+    border-radius: 8px;
     overflow: hidden;
     background: var(--gray-100);
 }
@@ -539,8 +539,8 @@
 .btn-download,
 .btn-select,
 .btn-trash {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -556,15 +556,15 @@
 .btn-download svg,
 .btn-select svg,
 .btn-trash svg {
-    width: 16px;
-    height: 16px;
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 1px 9px rgba(0, 0, 0, 0.3)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
 }
 
 .btn-download:hover,
 .btn-select:hover,
 .btn-trash:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(000, 000, 000, 0.15);
 }
 
 .btn-download:focus-visible,
@@ -585,7 +585,7 @@
 }
 
 .prompt-image-slot.is-deselected {
-    opacity: 0.35;
+    opacity: 0.20;
     transition: opacity 0.3s ease;
 }
 
@@ -595,7 +595,7 @@
 
 /* ─── Discarded (Soft Delete) State ────────────────────────── */
 .prompt-image-slot.is-discarded .prompt-image-container img {
-    opacity: 0.05;
+    opacity: 0.20;
     transition: opacity 0.3s ease;
 }
 
@@ -603,14 +603,6 @@
 .prompt-image-slot.is-discarded .btn-select,
 .prompt-image-slot.is-discarded .btn-zoom {
     display: none;
-}
-
-.prompt-image-slot.is-discarded .btn-trash {
-    color: var(--error, #ef4444);
-}
-
-.prompt-image-slot.is-discarded .btn-trash svg {
-    filter: drop-shadow(0 1px 3px rgba(239, 68, 68, 0.4)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
 }
 
 .prompt-image-slot.is-discarded .btn-trash:hover {
@@ -640,7 +632,7 @@
     height: 48px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.5);
-    border: 2px solid rgba(255, 255, 255, 0.6);
+    border: 0;
     display: flex;
     align-items: center;
     justify-content: center;

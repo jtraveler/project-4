@@ -226,11 +226,25 @@ class BulkGenerationService:
             s['status']: s['count'] for s in image_statuses
         }
 
+        # Fetch individual image details for gallery rendering
+        images_data = [
+            {
+                'id': str(img.id),
+                'prompt_text': img.prompt_text,
+                'prompt_order': img.prompt_order,
+                'variation_number': img.variation_number,
+                'status': img.status,
+                'image_url': img.image_url or '',
+            }
+            for img in job.images.all().order_by('prompt_order', 'variation_number')
+        ]
+
         return {
             'job_id': str(job.id),
             'status': job.status,
             'total_prompts': job.total_prompts,
             'total_images': job.total_images,
+            'images_per_prompt': job.images_per_prompt,
             'completed_count': status_counts.get('completed', 0),
             'generating_count': status_counts.get('generating', 0),
             'queued_count': status_counts.get('queued', 0),
@@ -238,6 +252,7 @@ class BulkGenerationService:
             'progress_percent': job.progress_percent,
             'estimated_cost': str(job.estimated_cost),
             'actual_cost': str(job.actual_cost),
+            'images': images_data,
         }
 
     def validate_reference_image(self, image_url: str) -> dict:

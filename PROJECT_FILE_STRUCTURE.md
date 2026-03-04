@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 2, 2026
+**Last Updated:** March 4, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phase 4/7 complete), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~914 passing (43% coverage, threshold 40%)
+**Current Phase:** Bulk AI Image Generator (Phase 5B/7 complete), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~945 passing (43% coverage, threshold 40%)
 
 ---
 
@@ -13,12 +13,12 @@
 |----------|-------|----------|
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 45 | templates/, prompts/templates/, about/templates/ |
-| **CSS Files** | 11 | static/css/ |
-| **JavaScript Files** | 10 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93) |
+| **CSS Files** | 12 | static/css/ |
+| **JavaScript Files** | 11 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
 | **Migrations** | 66 | prompts/migrations/ (64), about/migrations/ (2) |
-| **Test Files** | 21 | prompts/tests/ |
-| **Management Commands** | 28 | prompts/management/commands/ |
+| **Test Files** | 22 | prompts/tests/ |
+| **Management Commands** | 29 | prompts/management/commands/ |
 | **Services** | 15 | prompts/services/ |
 | **View Modules** | 13 | prompts/views/ |
 | **CI/CD Config Files** | 5 | .github/workflows/, .github/, root |
@@ -187,6 +187,7 @@ live-working-project/
 | `reorder_tags` | Reorder existing prompt tags per validation pipeline rules (demographic to end) | Manual |
 | `run_pass2_review` | Run Pass 2 SEO expert review on published prompts (tags + description only) | Manual |
 | `backfill_comment_anchors` | Idempotent backfill to add #comments anchor to existing comment notification links | Manual |
+| `create_test_gallery` | Create test data for bulk generator gallery (mixed aspect ratios, 4 prompts × 4 images) | Manual |
 
 ---
 
@@ -198,7 +199,7 @@ prompts/services/
 ├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT)
 ├── b2_rename.py             # B2 file renaming via copy-verify-delete (Phase N4h)
 ├── b2_upload_service.py     # B2 upload orchestration (Phase L)
-├── bulk_generation.py       # BulkGenerationService: job creation, scheduling, rate limiting (~150 lines)
+├── bulk_generation.py       # BulkGenerationService: job creation, scheduling, rate limiting, per-image status (~270 lines)
 ├── cloudinary_moderation.py # OpenAI Vision moderation for images and videos
 ├── content_generation.py    # GPT-4o content generation for uploads
 ├── image_processor.py       # Pillow image optimization (Phase L)
@@ -315,6 +316,7 @@ prompts/views/
 | `notifications.html` | Notifications page with card layout, avatars, quotes, per-card mark-as-read (Phase R1/R1-D - Sessions 86-87) |
 | `system_notifications.html` | Staff-only system notifications admin dashboard with Quill.js editor (Phase P2-A - Sessions 90-91) |
 | `bulk_generator.html` | Bulk AI image generator page — staff-only BYOK tool (Sessions 92-93, ~220 lines) |
+| `bulk_generator_job.html` | Job progress page — cost tracking, progress bar, gallery (Session 98, ~143 lines) |
 | `trash_bin.html` | User trash bin |
 
 **Deleted in Session 61:**
@@ -362,6 +364,7 @@ prompts/views/
 | `test_notifications.py` | ~300 | Notification system: model, signals, service, API, page views, bell dropdown, dedup edge cases, delete/pagination, reverse signals, system notifications admin (access control, compose, batch delete, click tracking, rate limit, auto-mark seen) (Sessions 86-91) |
 | `test_bulk_generator_views.py` | ~48 | Bulk generator API endpoints: access control, validation, BYOK, reference image domain allowlist, charDesc max 250 (Sessions 92-93) |
 | `test_source_credit.py` | 21 | Source/credit URL parsing, KNOWN_SITES domain mapping, adversarial inputs (Session 93) |
+| `test_bulk_generator_job.py` | 237 | Job progress page view: access control, context variables, IMAGE_COST_MAP, template rendering (Session 98) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -407,6 +410,7 @@ static/css/
 │   └── profile-tabs.css # ~200 lines - Shared tab component (Session 86)
 └── pages/
     ├── bulk-generator.css # ~1,100 lines - Bulk generator page styles (Sessions 92-93)
+    ├── bulk-generator-job.css # ~700 lines - Job progress page + gallery styles (Session 98)
     ├── notifications.css # ~580 lines - Notifications page styles, card layout, per-card mark-as-read, delete animation, dialog, banner, hover states (Sessions 86-88)
     ├── prompt-detail.css # 1,515 lines - Prompt detail page + related prompts section (Phase J.1, Session 74)
     ├── prompt-list.css
@@ -464,6 +468,7 @@ static/css/
 ```
 static/js/
 ├── bulk-generator.js     # ~900 lines - Bulk generator frontend (Sessions 92-93)
+├── bulk-generator-job.js # ~1030 lines - Job progress polling, gallery rendering, cancel (Session 98)
 ├── collections.js        # ~760 lines - Collections modal (Phase K)
 ├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
 ├── navbar.js             # ~650 lines - Extracted from base.html
@@ -482,6 +487,7 @@ static/js/
 | File | Lines | Purpose |
 |------|-------|---------|
 | **bulk-generator.js** | ~900 | Bulk generator frontend: upload, preview, auto-save, validation, modals (Sessions 92-93) |
+| **bulk-generator-job.js** | ~1030 | Job progress page: polling, progress updates, cancel, gallery rendering, per-prompt aspect ratio (Session 98) |
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
 | **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling (15s) + keyboard nav + bell sync dispatch + stale/count-updated listeners (Phase R1/R1-D) |
 | **notifications.js** | ~500 | Notifications page mark-as-read, category filtering, event delegation, bell sync, delete, pagination, real-time polling (15s), "Updates available" banner, two-phase animation (Phase R1/R1-D) |
@@ -521,7 +527,7 @@ static/js/
 | State Reset | ~60 | Reset modal state on close |
 | Error Handling | ~100 | Loading states, error messages |
 
-**Total JavaScript:** ~4,160 lines across 9 files (after Session 61 cleanup, 2 added in Session 86)
+**Total JavaScript:** ~5,190 lines across 11 files (after Session 61 cleanup, 2 added in Session 86, 1 in Session 93, 1 in Session 98)
 **Extraction Benefit:** base.html reduced from ~2000 lines to ~1400 lines
 
 ---
@@ -1604,11 +1610,20 @@ prompts/templates/prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.20
-**Audit Date:** March 2, 2026
+**Version:** 3.23
+**Audit Date:** March 4, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.23 (March 4, 2026 - Session 98 End-of-Session Docs Update):**
+- Added bulk_generator_job.html template, bulk-generator-job.css, bulk-generator-job.js
+- Added test_bulk_generator_job.py (237 tests) and create_test_gallery management command
+- Updated bulk_generation.py service description (~150 → ~270 lines, per-image status)
+- Updated total test count: ~914 → ~945
+- Updated current phase: Bulk AI Image Generator (Phase 4/7 → Phase 5B/7)
+- Updated CSS files count: 11→12, JS files count: 10→11, test files: 21→22, management commands: 28→29
+- Updated total JS line count: ~4,160 → ~5,190
 
 **v3.22 (March 2, 2026 - Session 93 End-of-Session Docs Update):**
 - Added Bulk AI Image Generator files: bulk_generator_views.py, bulk_generation.py, image_providers/ package, bulk_generator.html, bulk-generator.js, bulk-generator.css

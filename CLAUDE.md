@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** February 27, 2026
+**Last Updated:** March 4, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -51,7 +51,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 |-------|--------|-------------|-------------|
 | **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
-| **Bulk Gen** | 🔄 Phase 4 Complete | Bulk AI Image Generator | Phases 5-7: Generation flow, gallery, page creation |
+| **Bulk Gen** | 🔄 Phase 5B Complete | Bulk AI Image Generator | Phase 5B hotfix, Phase 5C-7: Generation state, page creation, integration |
 
 ### What's Paused (Don't Forget!)
 
@@ -65,6 +65,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Bulk Gen 5A+5B | Mar 4, 2026 | Job progress page (cost tracking, progress bar, cancel), gallery rendering (per-prompt aspect ratio, dynamic columns, visual polish), status API enhancements, 237 new tests |
 | Phase P2-A | Feb 26-27, 2026 | System Notifications Admin Dashboard (Quill.js editor, batch management, batch_id tracking, rate limiting, auto-mark seen, "Most Likely Seen" stats) |
 | Phase R1 + R1-D | Feb 17-18, 25-26, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page redesign with avatars/quotes/action buttons, per-card mark-as-read, bell sync, dedup fix, shared tab components, delete all/per-card delete, Load More pagination, two-phase delete animation, staggered fade-in, reverse signal handlers, real-time polling, "Updates available" banner, cross-component DOM event sync) |
 | Phase 2B (1-9) + Tag Pipeline + Hardening + Pass 2 SEO | Feb 9-16, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata, security hardening, backfill hardening, tag pipeline refinements, Pass 2 background SEO, admin UX |
@@ -79,13 +80,15 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
-### Bulk AI Image Generator (Phases 1-4 complete, 5-7 remaining)
+### Bulk AI Image Generator (Phases 1-5B complete, 5C-7 remaining)
 
 Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
 
 **Phases 1-4 (Sessions 92-93):** Models, Django-Q tasks, 7 API endpoints, complete input UI with reference image upload, character description, source/credit, auto-save, NSFW moderation.
 
-**Phases 5-7 (not started):** Generating state (progress polling), gallery state (image selection), creating state (prompt page creation), integration testing.
+**Phase 5A-5B (Session 98):** Job progress page with cost tracking, gallery rendering with per-prompt aspect ratio detection, 2 rounds of visual polish, 237 new tests, 36 files changed. Status API enhanced with per-image data.
+
+**Phases 5B hotfix + 5C-7 (remaining):** Hotfix for test image loading + overflow (spec exists at CC_SPEC_BULK_GEN_PHASE_5B_HOTFIX.md), interactive gallery features (lightbox, download, selection, trash), generation state UI, page creation workflow, integration testing.
 
 ---
 
@@ -1169,5 +1172,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.18 (Session 93 — Bulk AI Image Generator Phases 1-4, Source/Credit feature, charDesc limit 250)
-**Last Updated:** March 2, 2026
+**Version:** 4.19 (Session 98 — Bulk Gen Phase 5A+5B: Job Progress Page, Gallery Rendering, Visual Polish)
+**Last Updated:** March 4, 2026

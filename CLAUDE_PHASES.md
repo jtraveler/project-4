@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** February 27, 2026
+**Last Updated:** March 4, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **🔄 Phase 4/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **🔄 Phase 5B/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -523,13 +523,13 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
-## 🔄 Bulk AI Image Generator (Phase 4 of 7 Complete)
+## 🔄 Bulk AI Image Generator (Phase 5B of 7 Complete)
 
-**Status:** Phase 4 Complete — Input & Settings UI
+**Status:** Phase 5B Complete — Job Progress Page + Gallery Rendering
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
-**Tests:** ~69 tests (48 view tests + 21 source credit tests)
-**Total Test Count After:** 914 passing
+**Tests:** ~306 tests (48 view tests + 21 source credit tests + 237 job view tests)
+**Total Test Count After:** 945 passing
 
 ### What This Feature Does
 
@@ -543,7 +543,8 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 2 | Django-Q Tasks + Service | ✅ | 92 | BulkGenerationService, generate_single_image task, rate limiting, scheduling |
 | 3 | Views + API Endpoints | ✅ | 92 | 7 endpoints: validate, start, status, cancel, create pages, validate image, retry |
 | 4 | Input & Settings UI | ✅ | 93 | Full page UI, ref image upload, char desc preview, source/credit, auto-save, NSFW modal |
-| 5 | Generating State | 🔲 | — | Progress polling, image gallery, cancel button |
+| 5A | Job Progress Page | ✅ | 98 | Job progress view, IMAGE_COST_MAP, progress bar, cancel, polling JS, 237-line test suite |
+| 5B | Gallery Rendering | 🔄 ~85% | 98 | Per-prompt aspect ratio, column detection, gallery CSS, visual polish (2 rounds), hotfix pending |
 | 6 | Creating State | 🔲 | — | Image selection, page creation, summary view |
 | 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
 
@@ -576,15 +577,29 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 - `prompts/services/image_providers/openai_adapter.py`
 - `prompts/utils/source_credit.py`
 - `prompts/tests/test_source_credit.py`
+- `prompts/templates/prompts/bulk_generator_job.html` — Job progress page template
+- `static/css/pages/bulk-generator-job.css` — Job progress page styles
+- `static/js/bulk-generator-job.js` — Polling logic, progress updates, cancel, gallery rendering
+- `prompts/tests/test_bulk_generator_job.py` — 237-line test suite for job view
+- `prompts/management/commands/create_test_gallery.py` — Test data generator for gallery development
+- `static/images/sample-{1-by-1,2-by-3,3-by-2,16-by-9}-{a,b,c,d}.{png,jpg}` — 16 sample images for testing
+- `CC_SPEC_BULK_GEN_PHASE_5A.md` — Phase 5A specification
+- `CC_SPEC_BULK_GEN_PHASE_5B.md` — Phase 5B specification
+- `FUTURE_MULTI_IMAGE_REFERENCE.md` — Design notes for future multi-image feature
 
 **Modified:**
-- `prompts/models.py` — BulkGenerationJob, GeneratedImage, source_credit fields
+- `prompts/models.py` — BulkGenerationJob, GeneratedImage, source_credit fields, SIZE_CHOICES aspect ratio label fix (4:3 → 3:2)
 - `prompts/tasks.py` — generate_single_image task
 - `prompts/admin.py` — source_credit in Publishing fieldset
-- `prompts/urls.py` — Bulk generator URL routing
+- `prompts/urls.py` — Bulk generator URL routing, job progress page URL pattern
 - `prompts/templates/prompts/upload.html` — Source/credit field (staff-only)
 - `prompts/templates/prompts/prompt_detail.html` — Source display (staff-only)
 - `static/js/upload-form.js` — Source credit integration
+- `prompts/services/bulk_generation.py` — get_job_status() enhanced with per-image data + images_per_prompt
+- `prompts/views/bulk_generator_views.py` — bulk_generator_job_view, IMAGE_COST_MAP
+- `prompts/templates/prompts/bulk_generator.html` — Redirect to job page on generation start
+- `static/js/bulk-generator.js` — Redirect logic after successful start
+- `static/css/pages/bulk-generator.css` — Aspect ratio label selector fix
 
 ### Future Features (Deferred)
 
@@ -654,5 +669,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.5 (Session 93 — Bulk AI Image Generator Phases 1-4 complete, 5-7 remaining)
-**Last Updated:** March 2, 2026
+**Version:** 4.6 (Session 98 — Bulk Gen Phase 5A+5B: Job Progress Page, Gallery Rendering)
+**Last Updated:** March 4, 2026

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** February 27, 2026
+**Last Updated:** March 4, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,34 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 98 - March 4, 2026
+
+**Focus:** Bulk AI Image Generator — Phases 5A + 5B (Job Progress Page + Gallery Rendering)
+
+**Context:** Following Sessions 92-93 which completed Phases 1-4 (models, tasks, endpoints, input UI), this session built the job progress page users see after clicking "Generate" and the gallery rendering system for reviewing generated images.
+
+**Completed:**
+
+| Task | What It Does | Commit |
+|------|--------------|--------|
+| Phase 5A: Job Progress Page | `bulk_generator_job_view` at `/tools/bulk-ai-generator/job/<uuid>/`, IMAGE_COST_MAP for GPT-Image-1 pricing, progress bar with polling, cancel button | Combined commit |
+| Phase 5B: Gallery Rendering | Per-prompt aspect ratio detection (4 cols for 1:1/2:3/3:2, 2 for 16:9), CSS data-columns selectors, dynamic placeholders, hide empty slots at terminal state | Combined commit |
+| Status API Enhancements | `get_job_status()` returns per-image id, prompt_text, prompt_order, variation_number, status, image_url + images_per_prompt | Combined commit |
+| Aspect Ratio Fix | 1536×1024 corrected from "4:3" to "3:2" across model, HTML, CSS, JS | Combined commit |
+| Gallery Visual Polish (2 rounds) | Redesigned header (`<dl>` grid), loading spinners, selection instruction, smart quotes, gradient overlay, full-width prompt, 2-col responsive, checkmark SVG, a11y improvements | Combined commit |
+| Test Data | `create_test_gallery` management command, 16 sample images across 4 aspect ratios | Combined commit |
+
+**Known Issues (deferred):**
+- Test gallery placeholder images fail to load (external URLs unreliable — hotfix spec created)
+- Prompt text + overlay overflow at mid-width viewports (hotfix spec created)
+- Gallery buttons non-functional (download, lightbox, select, trash — Phase 5B remaining)
+
+**Tests:** 945 passing, 0 failures, 12 skipped (237 new job view tests)
+**Agent Ratings:** Code Review 8.5, UI Visual 8.2, Accessibility 8.5, Security 9.0
+**CC Specs:** 4 created (Phase 5A, 5B, 5B Polish, 5B Hotfix)
+
+---
 
 ### Session 93 - March 1-2, 2026
 

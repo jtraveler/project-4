@@ -2842,8 +2842,8 @@ class BulkGenerationJob(models.Model):
 
     SIZE_CHOICES = [
         ('1024x1024', 'Square (1:1)'),
-        ('1024x1536', 'Portrait (3:4)'),
-        ('1536x1024', 'Landscape (4:3)'),
+        ('1024x1536', 'Portrait (2:3)'),
+        ('1536x1024', 'Landscape (3:2)'),
         ('1792x1024', 'Wide (16:9)'),
     ]
 

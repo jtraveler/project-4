@@ -266,7 +266,7 @@
 .bg-dim-icon[data-ratio="1:1"] { width: 17px; height: 17px; }
 .bg-dim-icon[data-ratio="2:3"] { width: 13px; height: 18px; }
 .bg-dim-icon[data-ratio="16:9"] { width: 22px; height: 13px; }
-.bg-dim-icon[data-ratio="4:3"] { width: 19px; height: 15px; }
+.bg-dim-icon[data-ratio="3:2"] { width: 19px; height: 15px; }
 
 /* Visibility toggle (matches upload.css pattern) */
 .bg-visibility-card {

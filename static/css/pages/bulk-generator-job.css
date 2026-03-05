@@ -4,6 +4,7 @@
 
 /* ─── Page Container ─────────────────────────────────────── */
 #bulk-generator-job {
+    --error-hover: #b91c1c;
     width: 100%;
     margin: 0 auto;
     padding: 1.5rem 0;
@@ -217,16 +218,16 @@
     flex-shrink: 0;
 }
 
-/* Cancel button */
+/* Cancel button — base uses #dc2626 (WCAG AA 4.65:1 with white text) */
 .btn-cancel {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--error);
+    background: #dc2626;
     color: #fff;
     border: none;
     border-radius: var(--radius-lg);
-    padding: 0.5rem .85rem;
+    padding: 0.5rem 0.85rem;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -235,7 +236,7 @@
 }
 
 .btn-cancel:hover:not(:disabled) {
-    background: #b91c1c; /* slightly darker red */
+    background: var(--error-hover);
 }
 
 .btn-cancel:focus-visible {
@@ -479,7 +480,7 @@
 /* ─── Image Slot + Container ────────────────────────────────── */
 .prompt-image-slot {
     position: relative;
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     transition: opacity 0.3s ease;
 }
@@ -489,7 +490,7 @@
 .prompt-image-container {
     position: relative;
     width: 100%;
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     background: var(--gray-100);
 }
@@ -564,7 +565,7 @@
 .btn-download:hover,
 .btn-select:hover,
 .btn-trash:hover {
-    background: rgba(000, 000, 000, 0.15);
+    background: rgba(0, 0, 0, 0.15);
 }
 
 .btn-download:focus-visible,
@@ -798,6 +799,13 @@
         max-width: none;
         width: auto;
     }
+
+    /* Single column at very small viewports */
+    .prompt-group-images,
+    .prompt-group-images[data-columns="2"],
+    .prompt-group-images[data-columns="4"] {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 /* Reduced motion: disable animations for users who prefer it */
@@ -805,8 +813,10 @@
     .prompt-group { animation: none; opacity: 1; }
     .loading-spinner { animation: none; }
     .progress-bar-container.progress-pending .progress-bar-fill { animation: none; }
+    .progress-bar-fill { transition: none; }
     .prompt-image-container img { animation: none; }
     .lightbox-overlay { transition: none; }
+    .prompt-group-text-overlay { transition: none; }
     .prompt-image-slot.is-discarded .prompt-image-container img { transition: none; }
 }
 

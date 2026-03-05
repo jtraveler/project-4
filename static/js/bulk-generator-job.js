@@ -9,6 +9,7 @@
     // ─── Constants ────────────────────────────────────────────────
     var POLL_INTERVAL = 3000; // 3 seconds
     var TERMINAL_STATES = ['completed', 'cancelled', 'failed'];
+    var WIDE_RATIO_THRESHOLD = 1.6; // 16:9 or wider → 2 columns
 
     // Heading text by state
     var STATUS_HEADINGS = {
@@ -315,7 +316,14 @@
             },
             body: JSON.stringify({}),
         })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+            if (!r.ok) {
+                return r.json().then(function (err) {
+                    throw new Error(err.error || 'Cancel failed');
+                });
+            }
+            return r.json();
+        })
         .then(function (data) {
             var completed = data.preserved_count || 0;
             handleTerminalState('cancelled', { completed_count: completed });
@@ -330,27 +338,6 @@
             cancelBtn.disabled = false;
             cancelBtn.textContent = 'Cancel Generation';
         });
-    }
-
-    // ─── Gallery: Per-Group Column Detection (Phase 5B Round 7) ────
-    function setGroupColumns(groupRow, imageWidth, imageHeight) {
-        var ratio = imageWidth / imageHeight;
-        var grid = groupRow.querySelector('.prompt-group-images');
-        if (!grid) return;
-        if (ratio > 1.6) {
-            // 16:9 or wider -> 2 columns
-            grid.dataset.columns = '2';
-        } else {
-            // 1:1, 2:3, 3:2 -> 4 columns
-            grid.dataset.columns = '4';
-        }
-
-        // Update remaining placeholders to match actual aspect ratio
-        var imgAspect = imageWidth + ' / ' + imageHeight;
-        var remaining = groupRow.querySelectorAll('.placeholder-loading, .placeholder-empty, .placeholder-failed');
-        for (var i = 0; i < remaining.length; i++) {
-            remaining[i].style.aspectRatio = imgAspect;
-        }
     }
 
     // ─── Gallery: Render Images (Phase 5B) ────────────────────────
@@ -464,6 +451,16 @@
         var imagesGrid = document.createElement('div');
         imagesGrid.className = 'prompt-group-images';
 
+        // Set initial columns from job's configured size (before images load)
+        var aspectParts = galleryAspect.split('/');
+        if (aspectParts.length === 2) {
+            var aw = parseFloat(aspectParts[0]);
+            var ah = parseFloat(aspectParts[1]);
+            if (aw > 0 && ah > 0 && (aw / ah) > WIDE_RATIO_THRESHOLD) {
+                imagesGrid.dataset.columns = '2';
+            }
+        }
+
         // Always 4 slots: loading for active, dashed empty for unused
         for (var s = 0; s < 4; s++) {
             var isUnused = s >= imagesPerPrompt;
@@ -542,20 +539,10 @@
         img.alt = 'Generated image ' + (slotIndex + 1) + ' for prompt ' + (groupIndex + 1);
         img.loading = 'lazy';
         img.onload = function () {
+            // Once-per-group cleanup on first image load
             var groupRow = slot.closest('.prompt-group');
-            if (groupRow && !groupRow.dataset.columnsSet) {
-                // Set per-group columns based on first loaded image's aspect ratio
-                setGroupColumns(groupRow, img.naturalWidth, img.naturalHeight);
-                groupRow.dataset.columnsSet = 'true';
-
-                // Update placeholder aspect ratios in this group
-                var imgAspect = img.naturalWidth + ' / ' + img.naturalHeight;
-                var placeholders = groupRow.querySelectorAll(
-                    '.placeholder-loading, .placeholder-empty, .placeholder-failed'
-                );
-                for (var pi = 0; pi < placeholders.length; pi++) {
-                    placeholders[pi].style.aspectRatio = imgAspect;
-                }
+            if (groupRow && !groupRow.dataset.firstImageLoaded) {
+                groupRow.dataset.firstImageLoaded = 'true';
 
                 // Hide empty (unused) slots once images are loading in this group
                 var emptySlots = groupRow.querySelectorAll('.prompt-image-slot.is-empty');
@@ -674,7 +661,7 @@
         // Magnifying glass button (centered, hover-reveal)
         var zoomBtn = document.createElement('button');
         zoomBtn.className = 'btn-zoom';
-        zoomBtn.setAttribute('aria-label', 'View full size');
+        zoomBtn.setAttribute('aria-label', 'View full size image ' + (slotIndex + 1));
         zoomBtn.setAttribute('type', 'button');
         zoomBtn.dataset.imageUrl = image.image_url;
         zoomBtn.dataset.promptText = image.prompt_text || '';
@@ -822,11 +809,21 @@
             }
             slot.classList.add('is-discarded');
             btn.setAttribute('aria-label', 'Restore image ' + (parseInt(btn.getAttribute('data-slot'), 10) + 1));
+            // Move focus to trash button (only remaining visible button)
+            btn.focus();
             announce('Image discarded');
         }
     }
 
     // ─── Gallery: Download Logic (Phase 5B) ─────────────────────
+    function getExtensionFromUrl(url) {
+        if (url.indexOf('data:image/svg') === 0) return '.svg';
+        if (url.indexOf('data:image/png') === 0) return '.png';
+        if (url.indexOf('data:image/jpeg') === 0) return '.jpg';
+        var match = url.match(/\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i);
+        return match ? '.' + match[1].toLowerCase() : '.png';
+    }
+
     function handleDownload(e) {
         var btn = e.target.closest('.btn-download');
         if (!btn) return;
@@ -838,9 +835,10 @@
 
         var groupIdx = parseInt(btn.getAttribute('data-group'), 10);
         var slotIdx = parseInt(btn.getAttribute('data-slot'), 10);
+        var ext = getExtensionFromUrl(url);
         var a = document.createElement('a');
         a.href = url;
-        a.download = 'prompt-' + (groupIdx + 1) + '-image-' + (slotIdx + 1) + '.png';
+        a.download = 'prompt-' + (groupIdx + 1) + '-image-' + (slotIdx + 1) + ext;
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
@@ -888,6 +886,7 @@
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-label', 'Image preview');
+        overlay.setAttribute('aria-describedby', 'lightboxCaption');
 
         var inner = document.createElement('div');
         inner.className = 'lightbox-inner';

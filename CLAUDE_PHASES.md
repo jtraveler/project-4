@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** March 4, 2026
+**Last Updated:** March 5, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **🔄 Phase 5B/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **🔄 Phase 5B Complete/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -523,9 +523,9 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
-## 🔄 Bulk AI Image Generator (Phase 5B of 7 Complete)
+## 🔄 Bulk AI Image Generator (Phase 5B of 7 Complete + Polished)
 
-**Status:** Phase 5B Complete — Job Progress Page + Gallery Rendering
+**Status:** Phase 5B Complete + Polished — Job Progress Page + Gallery Rendering + Audit Fixes
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
 **Tests:** ~306 tests (48 view tests + 21 source credit tests + 237 job view tests)
@@ -544,7 +544,8 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 3 | Views + API Endpoints | ✅ | 92 | 7 endpoints: validate, start, status, cancel, create pages, validate image, retry |
 | 4 | Input & Settings UI | ✅ | 93 | Full page UI, ref image upload, char desc preview, source/credit, auto-save, NSFW modal |
 | 5A | Job Progress Page | ✅ | 98 | Job progress view, IMAGE_COST_MAP, progress bar, cancel, polling JS, 237-line test suite |
-| 5B | Gallery Rendering | 🔄 ~85% | 98 | Per-prompt aspect ratio, column detection, gallery CSS, visual polish (2 rounds), hotfix pending |
+| 5B | Gallery Rendering + Polish | ✅ | 98-99 | Per-prompt aspect ratio, column detection, gallery CSS, visual polish (2 rounds), 5-agent audit (10 fixes), column override bug fix, download extension, test gallery enhancements |
+| 5C | Wire Up Real Generation | 🔲 | — | BYOK key input, real OpenAI SDK calls, B2 upload, rate limiting, error handling |
 | 6 | Creating State | 🔲 | — | Image selection, page creation, summary view |
 | 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
 
@@ -600,6 +601,33 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 - `prompts/templates/prompts/bulk_generator.html` — Redirect to job page on generation start
 - `static/js/bulk-generator.js` — Redirect logic after successful start
 - `static/css/pages/bulk-generator.css` — Aspect ratio label selector fix
+
+### Phase 5B Audit + Polish (Session 99)
+
+Comprehensive 5-agent audit across 10 files, followed by 3 CC specs with targeted fixes:
+
+| Fix | Description |
+|-----|-------------|
+| Column override bug (CRITICAL) | Removed `setGroupColumns()` — per-image `naturalWidth/naturalHeight` was overriding correct job-level columns from `galleryAspect` |
+| `WIDE_RATIO_THRESHOLD` constant | Extracted magic number `1.6` for 16:9 column detection |
+| Initial column detection | `createGroupRow()` sets columns from `galleryAspect` before images load (prevents layout shift) |
+| Download extension detection | `getExtensionFromUrl()` detects `.png/.jpg/.webp/.gif/.svg` from URL (was hardcoded `.png`) |
+| Cancel hover CSS variable | Extracted `--error-hover: #b91c1c` on `#bulk-generator-job` |
+| Sub-480px single column | `grid-template-columns: 1fr !important` at 480px breakpoint |
+| `ALLOWED_REFERENCE_DOMAINS` | De-duplicated domain allowlist in `bulk_generator_views.py` to module-level constant |
+| Test gallery `--size`/`--all-sizes` | Filter by aspect ratio or create one job per size |
+| `SIZE_TO_IMAGES` mapping | Sample images match job's configured size, not per-prompt config size |
+| Status mismatch fix | `GeneratedImage` status `'pending'` → `'queued'` to match model `STATUS_CHOICES` |
+
+14 additional findings deferred to Phase 7 (lightbox, accessibility polish, error handling).
+
+### Phase 5C Planning Notes
+
+- **Status:** NOT STARTED
+- **Scope:** Wire up real OpenAI GPT-Image-1 API generation
+- **Requires:** BYOK key input UI, real OpenAI SDK calls, B2 image upload, rate limiting, error handling
+- **OpenAI API access:** Individual verification complete, API key created, $6 balance (Tier 1: 5 images/min)
+- **Per-prompt overrides:** Deferred to v1.1 (UI dropdowns exist but backend doesn't support mixed sizes per job)
 
 ### Future Features (Deferred)
 
@@ -669,5 +697,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.6 (Session 98 — Bulk Gen Phase 5A+5B: Job Progress Page, Gallery Rendering)
-**Last Updated:** March 4, 2026
+**Version:** 4.7 (Session 99 — Phase 5B Audit Fixes, Test Gallery Enhancements, OpenAI API Setup)
+**Last Updated:** March 5, 2026

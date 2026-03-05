@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 4, 2026
+**Last Updated:** March 5, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -51,7 +51,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 |-------|--------|-------------|-------------|
 | **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
-| **Bulk Gen** | 🔄 Phase 5B Complete | Bulk AI Image Generator | Phase 5B hotfix, Phase 5C-7: Generation state, page creation, integration |
+| **Bulk Gen** | 🔄 Phase 5B Complete + Polished | Bulk AI Image Generator | Phase 5C: Wire up real OpenAI API generation, Phase 6: Page creation, Phase 7: Integration + Polish |
 
 ### What's Paused (Don't Forget!)
 
@@ -65,7 +65,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Bulk Gen 5A+5B | Mar 4, 2026 | Job progress page (cost tracking, progress bar, cancel), gallery rendering (per-prompt aspect ratio, dynamic columns, visual polish), status API enhancements, 237 new tests |
+| Bulk Gen 5A+5B+Polish | Mar 4-5, 2026 | Job progress page, gallery rendering, 5-agent audit (10 fixes), column override bug fix, download extension detection, test gallery size filtering, 237 new tests |
 | Phase P2-A | Feb 26-27, 2026 | System Notifications Admin Dashboard (Quill.js editor, batch management, batch_id tracking, rate limiting, auto-mark seen, "Most Likely Seen" stats) |
 | Phase R1 + R1-D | Feb 17-18, 25-26, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page redesign with avatars/quotes/action buttons, per-card mark-as-read, bell sync, dedup fix, shared tab components, delete all/per-card delete, Load More pagination, two-phase delete animation, staggered fade-in, reverse signal handlers, real-time polling, "Updates available" banner, cross-component DOM event sync) |
 | Phase 2B (1-9) + Tag Pipeline + Hardening + Pass 2 SEO | Feb 9-16, 2026 | Category Taxonomy Revamp, tag validation pipeline, admin metadata, security hardening, backfill hardening, tag pipeline refinements, Pass 2 background SEO, admin UX |
@@ -1172,5 +1172,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.19 (Session 98 — Bulk Gen Phase 5A+5B: Job Progress Page, Gallery Rendering, Visual Polish)
-**Last Updated:** March 4, 2026
+**Version:** 4.20 (Session 99 — Phase 5B Audit Fixes, Test Gallery Enhancements, OpenAI API Setup)
+**Last Updated:** March 5, 2026

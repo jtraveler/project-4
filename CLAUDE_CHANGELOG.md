@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 4, 2026
+**Last Updated:** March 5, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,47 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 99 - March 4-5, 2026
+
+**Focus:** Bulk AI Image Generator — Phase 5B Audit, Fixes, and OpenAI API Setup
+
+**Context:** Following Session 98 which completed Phase 5A+5B (job progress page + gallery rendering), this session ran a comprehensive audit, fixed multiple issues, and set up OpenAI API access for Phase 5C.
+
+**Completed:**
+
+| Task | What It Does | Status |
+|------|--------------|--------|
+| Phase 5B Comprehensive Audit | 5-agent audit across 10 files, 10 fixes applied, 14 deferred to Phase 7 | ✅ Complete |
+| Placeholder Aspect Ratio Fix | `--size` and `--all-sizes` flags for `create_test_gallery`, `WIDE_RATIO_THRESHOLD` constant, initial column detection in `createGroupRow()` | ✅ Complete |
+| Quick Wins + Column Override Fix | Download extension detection, `--error-hover` CSS variable, 480px breakpoint, removed `setGroupColumns()` override bug | ✅ Complete |
+| Test Gallery Image Matching | `SIZE_TO_IMAGES` mapping, sample images match job size, status mismatch fix (`'pending'` → `'queued'`) | ✅ Complete |
+| ALLOWED_REFERENCE_DOMAINS | De-duplicated domain allowlist in `bulk_generator_views.py` to module-level constant | ✅ Complete |
+| v1.1 Per-Prompt Override Mockup | React artifact showing future mixed-ratio job page | ✅ Created |
+| OpenAI API Setup | Organization verification (Individual), API key created, $6 balance loaded | ✅ Complete |
+
+**Key Decisions:**
+- Per-prompt override wiring deferred to v1.1 (UI exists, backend not wired)
+- `setGroupColumns()` removed — job-level `galleryAspect` is sole authority for column count
+- Per-image `naturalWidth/naturalHeight` detection no longer overrides columns
+
+**Agent Scores (Session 99):**
+- Aspect Ratio Spec: UI 9.5/10, Code Review 8.4/10
+- Quick Wins Spec: UI 9.75/10, Code Review 9.5/10
+- Image Matching Spec: Code Review 9/10
+
+**Tests:** 945 passing, 0 failures, 12 skipped (31 targeted tests also passing)
+
+**CC Specs Created:** 5 (Phase 5B Audit, Aspect Ratio Fix, Quick Wins V2, Image Match, v1.1 Mockup)
+
+**Commits (Session 99):**
+- `f15e90f` refactor(bulk-gen): extract ALLOWED_REFERENCE_DOMAINS constant
+- `3c3dd24` fix(bulk-gen): gallery audit fixes — columns, downloads, CSS, a11y
+- `960823d` feat(bulk-gen): add size filtering and image matching to test gallery
+
+**Next:** Phase 5C — Wire up real OpenAI API generation
+
+---
 
 ### Session 98 - March 4, 2026
 
@@ -1854,5 +1895,5 @@ For quick reference, here are key milestones:
 
 ---
 
-**Version:** 4.18 (Session 93 — Bulk AI Image Generator Phases 1-4, Source/Credit feature, a11y + security hardening)
-**Last Updated:** March 2, 2026
+**Version:** 4.19 (Session 99 — Phase 5B Audit Fixes, Test Gallery Enhancements, OpenAI API Setup)
+**Last Updated:** March 5, 2026

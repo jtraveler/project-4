@@ -1,8 +1,8 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 4, 2026
+**Last Updated:** March 5, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phase 5B/7 complete), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Current Phase:** Bulk AI Image Generator (Phase 5B complete + polished), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
 **Total Tests:** ~945 passing (43% coverage, threshold 40%)
 
 ---
@@ -187,7 +187,7 @@ live-working-project/
 | `reorder_tags` | Reorder existing prompt tags per validation pipeline rules (demographic to end) | Manual |
 | `run_pass2_review` | Run Pass 2 SEO expert review on published prompts (tags + description only) | Manual |
 | `backfill_comment_anchors` | Idempotent backfill to add #comments anchor to existing comment notification links | Manual |
-| `create_test_gallery` | Create test data for bulk generator gallery (mixed aspect ratios, 4 prompts × 4 images) | Manual |
+| `create_test_gallery` | Create test data for bulk generator gallery. Supports `--size` (single aspect ratio), `--all-sizes` (one job per ratio), `SIZE_TO_IMAGES` mapping | Manual |
 
 ---
 
@@ -410,7 +410,7 @@ static/css/
 │   └── profile-tabs.css # ~200 lines - Shared tab component (Session 86)
 └── pages/
     ├── bulk-generator.css # ~1,100 lines - Bulk generator page styles (Sessions 92-93)
-    ├── bulk-generator-job.css # ~700 lines - Job progress page + gallery styles (Session 98)
+    ├── bulk-generator-job.css # ~820 lines - Job progress page + gallery styles (Sessions 98-99, audit fixes: --error-hover variable, 480px breakpoint, reduced-motion expansion)
     ├── notifications.css # ~580 lines - Notifications page styles, card layout, per-card mark-as-read, delete animation, dialog, banner, hover states (Sessions 86-88)
     ├── prompt-detail.css # 1,515 lines - Prompt detail page + related prompts section (Phase J.1, Session 74)
     ├── prompt-list.css
@@ -468,7 +468,7 @@ static/css/
 ```
 static/js/
 ├── bulk-generator.js     # ~900 lines - Bulk generator frontend (Sessions 92-93)
-├── bulk-generator-job.js # ~1030 lines - Job progress polling, gallery rendering, cancel (Session 98)
+├── bulk-generator-job.js # ~1080 lines - Job progress polling, gallery rendering, cancel (Sessions 98-99, audit: removed setGroupColumns(), added getExtensionFromUrl(), WIDE_RATIO_THRESHOLD)
 ├── collections.js        # ~760 lines - Collections modal (Phase K)
 ├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
 ├── navbar.js             # ~650 lines - Extracted from base.html
@@ -487,7 +487,7 @@ static/js/
 | File | Lines | Purpose |
 |------|-------|---------|
 | **bulk-generator.js** | ~900 | Bulk generator frontend: upload, preview, auto-save, validation, modals (Sessions 92-93) |
-| **bulk-generator-job.js** | ~1030 | Job progress page: polling, progress updates, cancel, gallery rendering, per-prompt aspect ratio (Session 98) |
+| **bulk-generator-job.js** | ~1080 | Job progress page: polling, progress updates, cancel, gallery rendering, per-prompt aspect ratio (Sessions 98-99) |
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
 | **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling (15s) + keyboard nav + bell sync dispatch + stale/count-updated listeners (Phase R1/R1-D) |
 | **notifications.js** | ~500 | Notifications page mark-as-read, category filtering, event delegation, bell sync, delete, pagination, real-time polling (15s), "Updates available" banner, two-phase animation (Phase R1/R1-D) |
@@ -1610,11 +1610,17 @@ prompts/templates/prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.23
-**Audit Date:** March 4, 2026
+**Version:** 3.24
+**Audit Date:** March 5, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.24 (March 5, 2026 - Session 99 End-of-Session Docs Update):**
+- Updated bulk-generator-job.css description (~700 → ~820 lines, audit fixes)
+- Updated bulk-generator-job.js description (~1030 → ~1080 lines, audit fixes)
+- Updated create_test_gallery management command description (--size, --all-sizes, SIZE_TO_IMAGES)
+- Updated current phase: Phase 5B/7 → Phase 5B complete + polished
 
 **v3.23 (March 4, 2026 - Session 98 End-of-Session Docs Update):**
 - Added bulk_generator_job.html template, bulk-generator-job.css, bulk-generator-job.js

@@ -12,8 +12,11 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from prompts.models import BulkGenerationJob, GeneratedImage, Prompt
-from prompts.services.bulk_generation import BulkGenerationService
+from prompts.services.bulk_generation import BulkGenerationService, encrypt_api_key
 from prompts.services.image_providers.base import GenerationResult
+
+# Fernet key for tests that encrypt/decrypt API keys
+TEST_FERNET_KEY = 'DVNiGhgfxQCMi3vIJDIqV7HsVNaGlMmo4RpeStaJwCw='
 
 
 @override_settings(OPENAI_API_KEY='test-key')
@@ -389,7 +392,7 @@ class ValidateReferenceImageTests(TestCase):
         self.assertIn('mock mode', result['message'])
 
 
-@override_settings(OPENAI_API_KEY='test-key')
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
 class ProcessBulkJobTests(TestCase):
     """Tests for process_bulk_generation_job task."""
 
@@ -398,6 +401,18 @@ class ProcessBulkJobTests(TestCase):
         self.user = User.objects.create_user(
             username='teststaff', password='testpass123'
         )
+
+    def _make_job(self, prompts, **kwargs):
+        """Create a job with an encrypted API key for BYOK tests."""
+        job = self.service.create_job(
+            user=self.user,
+            prompts=prompts,
+            **kwargs,
+        )
+        job.api_key_encrypted = encrypt_api_key('sk-test1234567890')
+        job.api_key_hint = '7890'
+        job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
+        return job
 
     @patch('prompts.tasks.time.sleep')
     @patch('prompts.tasks._upload_generated_image_to_b2')
@@ -420,10 +435,7 @@ class ProcessBulkJobTests(TestCase):
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/image.png'
 
-        job = self.service.create_job(
-            user=self.user,
-            prompts=['prompt 1', 'prompt 2'],
-        )
+        job = self._make_job(['prompt 1', 'prompt 2'])
         job.status = 'processing'
         job.save(update_fields=['status'])
 
@@ -460,10 +472,7 @@ class ProcessBulkJobTests(TestCase):
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 
-        job = self.service.create_job(
-            user=self.user,
-            prompts=['p1', 'p2', 'p3'],
-        )
+        job = self._make_job(['p1', 'p2', 'p3'])
         job.status = 'processing'
         job.save(update_fields=['status'])
 
@@ -501,10 +510,7 @@ class ProcessBulkJobTests(TestCase):
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 
-        job = self.service.create_job(
-            user=self.user,
-            prompts=['p1', 'p2', 'p3'],
-        )
+        job = self._make_job(['p1', 'p2', 'p3'])
         job.status = 'processing'
         job.save(update_fields=['status'])
 
@@ -533,10 +539,7 @@ class ProcessBulkJobTests(TestCase):
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 
         # Use 10+ images so the cancel check fires at idx=5
-        job = self.service.create_job(
-            user=self.user,
-            prompts=[f'p{i}' for i in range(10)],
-        )
+        job = self._make_job([f'p{i}' for i in range(10)])
         job.status = 'processing'
         job.save(update_fields=['status'])
 
@@ -589,17 +592,16 @@ class ProcessBulkJobTests(TestCase):
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 
-        job = self.service.create_job(
-            user=self.user,
-            prompts=['p1', 'p2'],
-        )
+        job = self._make_job(['p1', 'p2'])
         job.status = 'processing'
         job.save(update_fields=['status'])
 
         process_bulk_generation_job(str(job.id))
 
         job.refresh_from_db()
-        self.assertEqual(job.actual_cost, Decimal('0.1'))
+        # Cost comes from IMAGE_COST_MAP['medium']['1024x1024'] = 0.034
+        # 2 images × 0.034 = 0.068
+        self.assertEqual(job.actual_cost, Decimal('0.068'))
 
 
 @override_settings(OPENAI_API_KEY='test-key')
@@ -872,7 +874,7 @@ class UploadGeneratedImageTests(TestCase):
         self.assertIn('-', filename)
 
 
-@override_settings(OPENAI_API_KEY='test-key')
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
 class EdgeCaseTests(TestCase):
     """Additional edge case tests from code review findings."""
 
@@ -881,6 +883,18 @@ class EdgeCaseTests(TestCase):
         self.user = User.objects.create_user(
             username='teststaff', password='testpass123'
         )
+
+    def _make_job(self, prompts, **kwargs):
+        """Create a job with an encrypted API key for BYOK tests."""
+        job = self.service.create_job(
+            user=self.user,
+            prompts=prompts,
+            **kwargs,
+        )
+        job.api_key_encrypted = encrypt_api_key('sk-test1234567890')
+        job.api_key_hint = '7890'
+        job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
+        return job
 
     @patch(
         'prompts.services.profanity_filter.ProfanityFilterService'
@@ -926,10 +940,7 @@ class EdgeCaseTests(TestCase):
         )
         mock_get_provider.return_value = mock_provider
 
-        job = self.service.create_job(
-            user=self.user,
-            prompts=['test prompt'],
-        )
+        job = self._make_job(['test prompt'])
         job.status = 'processing'
         job.save(update_fields=['status'])
 
@@ -982,3 +993,336 @@ class EdgeCaseTests(TestCase):
             prompt.b2_image_url,
             'https://cdn.example.com/test.png',
         )
+
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class RetryLogicTests(TestCase):
+    """Tests for _run_generation_with_retry helper."""
+
+    def setUp(self):
+        self.service = BulkGenerationService()
+        self.user = User.objects.create_user(
+            username='retrytest', password='testpass123'
+        )
+
+    def _make_job(self, prompts, **kwargs):
+        job = self.service.create_job(
+            user=self.user,
+            prompts=prompts,
+            **kwargs,
+        )
+        job.api_key_encrypted = encrypt_api_key('sk-test1234567890')
+        job.api_key_hint = '7890'
+        job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
+        return job
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_auth_error_stops_job(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """Auth error marks image failed and sets job status to failed."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.return_value = GenerationResult(
+            success=False,
+            error_type='auth',
+            error_message='Invalid API key. Please check your OpenAI key.',
+        )
+        mock_get_provider.return_value = mock_provider
+
+        job = self._make_job(['p1', 'p2', 'p3'])
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        with patch(
+            'prompts.services.bulk_generation.BulkGenerationService.clear_api_key'
+        ) as mock_clear:
+            process_bulk_generation_job(str(job.id))
+            # clear_api_key called once by _run_generation_with_retry on auth failure
+            mock_clear.assert_called_once_with(job)
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, 'failed')
+        # Only 1 generate call — auth stops immediately
+        self.assertEqual(mock_provider.generate.call_count, 1)
+        # First image is failed
+        first_image = job.images.order_by('prompt_order').first()
+        self.assertEqual(first_image.status, 'failed')
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_rate_limit_exhausted_fails_image(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """Rate limit exhausted after max retries fails the image; job continues."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        rate_limit_result = GenerationResult(
+            success=False,
+            error_type='rate_limit',
+            error_message='Rate limit reached.',
+            retry_after=1,
+        )
+        mock_provider.generate.side_effect = [
+            # Image 1: 4 consecutive rate limit failures (initial + 3 retries)
+            rate_limit_result, rate_limit_result,
+            rate_limit_result, rate_limit_result,
+            # Image 2: success
+            GenerationResult(
+                success=True, image_data=b'data',
+                revised_prompt='', cost=0.03,
+            ),
+        ]
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job(['p1', 'p2'])
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, 'completed')
+        self.assertEqual(job.failed_count, 1)
+        self.assertEqual(job.completed_count, 1)
+        images = list(job.images.order_by('prompt_order'))
+        self.assertEqual(images[0].status, 'failed')
+        self.assertEqual(images[1].status, 'completed')
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_content_policy_fails_image_continues_job(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """Content policy error fails only that image; job continues."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.side_effect = [
+            GenerationResult(
+                success=False,
+                error_type='content_policy',
+                error_message='Image rejected by content policy.',
+            ),
+            GenerationResult(
+                success=True, image_data=b'data',
+                revised_prompt='', cost=0.03,
+            ),
+        ]
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job(['p1', 'p2'])
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, 'completed')
+        self.assertEqual(job.completed_count, 1)
+        self.assertEqual(job.failed_count, 1)
+
+        images = list(job.images.order_by('prompt_order'))
+        self.assertEqual(images[0].status, 'failed')
+        self.assertIn('content policy', images[0].error_message)
+        self.assertEqual(images[1].status, 'completed')
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_rate_limit_retries_then_succeeds(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """Rate limit error retries and succeeds on second attempt."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.side_effect = [
+            GenerationResult(
+                success=False,
+                error_type='rate_limit',
+                error_message='Rate limit reached.',
+                retry_after=30,
+            ),
+            GenerationResult(
+                success=True, image_data=b'data',
+                revised_prompt='', cost=0.03,
+            ),
+        ]
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job(['p1'])
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, 'completed')
+        self.assertEqual(job.completed_count, 1)
+        # Provider called twice: 1 rate limit + 1 success
+        self.assertEqual(mock_provider.generate.call_count, 2)
+        # Sleep called once for retry backoff (30s base, retry_count=0 → 30*1=30, capped 120)
+        retry_sleep_calls = [
+            c for c in mock_sleep.call_args_list
+            if c[0][0] >= 13  # ignore 13s rate-limit delays
+        ]
+        self.assertGreater(len(retry_sleep_calls), 0)
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_missing_api_key_fails_job(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """Job with no api_key_encrypted fails immediately."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_get_provider.return_value = mock_provider
+
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1'],
+        )
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+        # Deliberately do NOT set api_key_encrypted
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, 'failed')
+        # Provider never called
+        mock_provider.generate.assert_not_called()
+
+
+@override_settings(OPENAI_API_KEY='test-key')
+class OpenAIProviderGenerateTests(TestCase):
+    """Tests for OpenAIImageProvider.generate() structured error handling."""
+
+    def setUp(self):
+        from prompts.services.image_providers.openai_provider import (
+            OpenAIImageProvider,
+        )
+        self.provider = OpenAIImageProvider(api_key='sk-test-key')
+
+    def test_generate_success(self):
+        """Successful generation returns result with image_data."""
+        import base64
+        mock_b64 = base64.b64encode(b'fake-png-data').decode()
+
+        mock_image = MagicMock()
+        mock_image.b64_json = mock_b64
+        mock_image.revised_prompt = 'revised'
+
+        mock_response = MagicMock()
+        mock_response.data = [mock_image]
+
+        with patch('openai.OpenAI') as mock_openai_cls:
+            mock_client = mock_openai_cls.return_value
+            mock_client.images.generate.return_value = mock_response
+
+            result = self.provider.generate(
+                prompt='A sunset over mountains',
+                size='1024x1024',
+                quality='medium',
+            )
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.image_data, b'fake-png-data')
+        self.assertEqual(result.revised_prompt, 'revised')
+        self.assertEqual(result.error_type, '')
+
+    def test_generate_auth_error(self):
+        """AuthenticationError returns error_type='auth'."""
+        from openai import AuthenticationError
+
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.json.return_value = {'error': {'message': 'Invalid key'}}
+
+        with patch('openai.OpenAI') as mock_openai_cls:
+            mock_client = mock_openai_cls.return_value
+            mock_client.images.generate.side_effect = AuthenticationError(
+                message='Invalid API key',
+                response=mock_response,
+                body={'error': {'message': 'Invalid API key'}},
+            )
+
+            result = self.provider.generate(
+                prompt='test',
+                size='1024x1024',
+                quality='medium',
+            )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_type, 'auth')
+        self.assertIn('Invalid API key', result.error_message)
+
+    def test_generate_rate_limit_error(self):
+        """RateLimitError returns error_type='rate_limit' with retry_after."""
+        from openai import RateLimitError
+
+        mock_response = MagicMock()
+        mock_response.status_code = 429
+        mock_response.headers = {'retry-after': '45'}
+        mock_response.json.return_value = {'error': {'message': 'Rate limit'}}
+
+        with patch('openai.OpenAI') as mock_openai_cls:
+            mock_client = mock_openai_cls.return_value
+            mock_client.images.generate.side_effect = RateLimitError(
+                message='Rate limit exceeded',
+                response=mock_response,
+                body={'error': {'message': 'Rate limit'}},
+            )
+
+            result = self.provider.generate(
+                prompt='test',
+                size='1024x1024',
+                quality='medium',
+            )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_type, 'rate_limit')
+        self.assertEqual(result.retry_after, 45)
+
+    def test_generate_content_policy_error(self):
+        """BadRequestError with safety keywords returns error_type='content_policy'."""
+        from openai import BadRequestError
+
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.json.return_value = {
+            'error': {'message': 'content policy violated'}
+        }
+
+        with patch('openai.OpenAI') as mock_openai_cls:
+            mock_client = mock_openai_cls.return_value
+            mock_client.images.generate.side_effect = BadRequestError(
+                message='content policy violated',
+                response=mock_response,
+                body={'error': {'message': 'content policy violated'}},
+            )
+
+            result = self.provider.generate(
+                prompt='test',
+                size='1024x1024',
+                quality='medium',
+            )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_type, 'content_policy')

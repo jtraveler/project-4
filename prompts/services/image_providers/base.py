@@ -11,6 +11,9 @@ class GenerationResult:
     revised_prompt: str = ''
     error_message: str = ''
     cost: float = 0.0
+    # Structured error handling fields
+    error_type: str = ''   # 'auth' | 'rate_limit' | 'content_policy' | 'invalid_request' | 'server_error' | 'unknown'
+    retry_after: Optional[int] = None  # seconds to wait before retry (from 429 header)
 
 
 class ImageProvider(ABC):

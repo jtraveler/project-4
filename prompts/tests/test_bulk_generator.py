@@ -408,18 +408,14 @@ class TestOpenAIImageProvider(unittest.TestCase):
         )
 
     def test_openai_provider_generate_failure(self):
-        """API failure returns error result."""
+        """Generic exception returns error result with error_type='unknown'."""
         from unittest.mock import patch, MagicMock
         provider = OpenAIImageProvider(
             api_key='test-key', mock_mode=False
         )
-        mock_openai_mod = MagicMock()
-        mock_openai_mod.OpenAI.return_value.images.generate.side_effect = (
-            Exception('API timeout')
-        )
-        with patch.dict(
-            'sys.modules', {'openai': mock_openai_mod}
-        ):
+        with patch('openai.OpenAI') as mock_openai_cls:
+            mock_client = mock_openai_cls.return_value
+            mock_client.images.generate.side_effect = Exception('API timeout')
             result = provider.generate('Test prompt')
         self.assertFalse(result.success)
         self.assertIn('API timeout', result.error_message)

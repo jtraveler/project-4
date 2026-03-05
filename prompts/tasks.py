@@ -2322,6 +2322,175 @@ def queue_pass2_review(prompt_id: int) -> bool:
 # Bulk Image Generation Tasks
 # ============================================================
 
+def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3):
+    """
+    Generate one image with retry logic for rate limits and server errors.
+
+    Returns:
+        (result, stop_job) where result is GenerationResult on success or
+        None on any failure, and stop_job is True when an auth failure
+        should halt the entire job.
+    """
+    from prompts.services.bulk_generation import BulkGenerationService
+
+    retry_count = 0
+    while retry_count <= max_retries:
+        try:
+            result = provider.generate(
+                prompt=image.prompt_text,
+                size=job.size,
+                quality=job.quality,
+                reference_image_url=job.reference_image_url,
+                api_key=job_api_key,
+            )
+        except Exception as e:
+            logger.error(
+                "Image generation exception for %s: %s", image.id, e
+            )
+            image.status = 'failed'
+            image.error_message = str(e)[:500]
+            image.save(update_fields=['status', 'error_message'])
+            return None, False
+
+        if result.success:
+            return result, False
+
+        error_type = result.error_type
+
+        # Auth failure — invalid key, stop the entire job
+        if error_type == 'auth':
+            logger.error(
+                "Auth failure for job %s image %s, stopping job",
+                job.id, image.id,
+            )
+            image.status = 'failed'
+            image.error_message = result.error_message
+            image.save(update_fields=['status', 'error_message'])
+            job.status = 'failed'
+            job.save(update_fields=['status'])
+            BulkGenerationService.clear_api_key(job)
+            return None, True
+
+        # Content policy — fail this image only, continue job
+        if error_type == 'content_policy':
+            image.status = 'failed'
+            image.error_message = result.error_message
+            image.save(update_fields=['status', 'error_message'])
+            return None, False
+
+        # Rate limit or server error — retry with exponential backoff
+        if error_type in ('rate_limit', 'server_error') and retry_count < max_retries:
+            base_wait = result.retry_after or 30
+            wait_time = min(base_wait * (2 ** retry_count), 120)
+            logger.info(
+                "Retrying image %s (attempt %d) after %ds",
+                image.id, retry_count + 1, wait_time,
+            )
+            time.sleep(wait_time)
+            retry_count += 1
+            continue
+
+        # Exhausted retries or unknown error
+        image.status = 'failed'
+        image.error_message = (
+            result.error_message or 'Generation failed after retries.'
+        )[:500]
+        image.save(update_fields=['status', 'error_message'])
+        return None, False
+
+    return None, False  # Safety fallback (loop exited without break)
+
+
+def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
+    """
+    Upload a successful image to B2 and update its database record.
+
+    Returns (cost_delta, success_flag):
+    - cost_delta: amount to add to job's actual_cost (0.0 on failure)
+    - success_flag: True if completed, False if failed
+    """
+    try:
+        image_url = _upload_generated_image_to_b2(
+            image_data=result.image_data,
+            job=job,
+            image=image,
+        )
+        cost = IMAGE_COST_MAP.get(job.quality, {}).get(job.size, 0.034)
+        image.status = 'completed'
+        image.image_url = image_url
+        image.revised_prompt = result.revised_prompt
+        image.completed_at = tz.now()
+        image.save(update_fields=[
+            'status', 'image_url', 'revised_prompt', 'completed_at',
+        ])
+        return cost, True
+    except Exception as e:
+        logger.error("B2 upload failed for image %s: %s", image.id, e)
+        image.status = 'failed'
+        image.error_message = f'Generated but upload failed: {str(e)}'[:500]
+        image.save(update_fields=['status', 'error_message'])
+        return 0.0, False
+
+
+def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz):
+    """
+    Execute the image generation loop for a bulk job.
+
+    Processes images sequentially with rate limiting and cancel detection.
+    Returns (completed_count, failed_count, total_cost).
+    """
+    from decimal import Decimal
+    total_cost = Decimal('0')
+    completed_count = 0
+    failed_count = 0
+
+    for idx, image in enumerate(images):
+        # Cancel check before every image
+        job.refresh_from_db(fields=['status'])
+        if job.status == 'cancelled':
+            logger.info("Job %s cancelled during processing", job.id)
+            break
+
+        # Tier 1 rate limit: 5 images/min → 13s between calls
+        # Skip delay before the very first image
+        if idx > 0:
+            time.sleep(13)
+
+        image.status = 'generating'
+        image.save(update_fields=['status'])
+
+        result, stop_job = _run_generation_with_retry(
+            provider, image, job, job_api_key,
+        )
+
+        if stop_job:
+            failed_count += 1
+            break
+
+        if result is None:
+            failed_count += 1
+        elif result.success:
+            cost, success = _apply_generation_result(
+                job, image, result, IMAGE_COST_MAP, tz
+            )
+            if success:
+                total_cost += Decimal(str(cost))
+                completed_count += 1
+            else:
+                failed_count += 1
+
+        # Update job progress every 5 images for live UI feedback
+        if (idx + 1) % 5 == 0:
+            job.completed_count = completed_count
+            job.failed_count = failed_count
+            job.actual_cost = total_cost
+            job.save(update_fields=[
+                'completed_count', 'failed_count', 'actual_cost',
+            ])
+
+    return completed_count, failed_count, total_cost
+
+
 def process_bulk_generation_job(job_id: str) -> None:
     """
     Orchestrate image generation for a bulk job.
@@ -2332,7 +2501,6 @@ def process_bulk_generation_job(job_id: str) -> None:
 
     Called via Django-Q async_task from BulkGenerationService.start_job().
     """
-    from decimal import Decimal
     from django.utils import timezone as tz
     from prompts.models import BulkGenerationJob
     from prompts.services.image_providers import get_provider
@@ -2347,102 +2515,40 @@ def process_bulk_generation_job(job_id: str) -> None:
         logger.info("Job %s was cancelled, skipping", job_id)
         return
 
-    # Determine if mock mode (no real API key = mock)
-    api_key = getattr(settings, 'OPENAI_API_KEY', '')
-    use_mock = not api_key or api_key == 'test-key'
-
-    provider = get_provider(
-        job.provider,
-        mock_mode=use_mock,
-        api_key=api_key,
+    # BYOK: decrypt API key from job record
+    from prompts.services.bulk_generation import (
+        decrypt_api_key, BulkGenerationService,
     )
+    if not job.api_key_encrypted:
+        logger.error("No API key for job %s, cannot generate", job_id)
+        job.status = 'failed'
+        job.save(update_fields=['status'])
+        return
 
-    rate_limit = provider.get_rate_limit()
-    delay_between = 60.0 / rate_limit  # seconds between images
+    try:
+        job_api_key = decrypt_api_key(job.api_key_encrypted)
+    except Exception as e:
+        logger.error("Failed to decrypt API key for job %s: %s", job_id, e)
+        job.status = 'failed'
+        job.save(update_fields=['status'])
+        return
+
+    provider = get_provider(job.provider, mock_mode=False)
+
+    # IMAGE_COST_MAP for accurate per-image cost tracking
+    from prompts.views.bulk_generator_views import IMAGE_COST_MAP
 
     images = job.images.filter(
         status='queued'
     ).order_by('prompt_order', 'variation_number')
-    total_cost = Decimal('0')
-    completed_count = 0
-    failed_count = 0
 
-    for idx, image in enumerate(images):
-        # Check if job was cancelled mid-processing (every 5 images)
-        if idx % 5 == 0:
-            job.refresh_from_db(fields=['status'])
-            if job.status == 'cancelled':
-                logger.info(
-                    "Job %s cancelled during processing", job_id
-                )
-                break
+    completed_count, failed_count, total_cost = _run_generation_loop(
+        job, provider, job_api_key, images, IMAGE_COST_MAP, tz,
+    )
 
-        # Mark as generating
-        image.status = 'generating'
-        image.save(update_fields=['status'])
-
-        # Generate the image
-        try:
-            result = provider.generate(
-                prompt=image.prompt_text,
-                size=job.size,
-                quality=job.quality,
-                reference_image_url=job.reference_image_url,
-            )
-
-            if result.success and result.image_data:
-                # Upload to B2
-                image_url = _upload_generated_image_to_b2(
-                    image_data=result.image_data,
-                    job=job,
-                    image=image,
-                )
-
-                image.status = 'completed'
-                image.image_url = image_url
-                image.revised_prompt = result.revised_prompt
-                image.completed_at = tz.now()
-                image.save(update_fields=[
-                    'status', 'image_url', 'revised_prompt',
-                    'completed_at',
-                ])
-
-                total_cost += Decimal(str(result.cost))
-                completed_count += 1
-
-            else:
-                image.status = 'failed'
-                image.error_message = (
-                    result.error_message or 'Generation failed'
-                )
-                image.save(update_fields=['status', 'error_message'])
-                failed_count += 1
-
-        except Exception as e:
-            logger.error(
-                "Image generation failed for %s: %s", image.id, e
-            )
-            image.status = 'failed'
-            image.error_message = str(e)[:500]
-            image.save(update_fields=['status', 'error_message'])
-            failed_count += 1
-
-        # Update job progress periodically (every 5 images)
-        if (idx + 1) % 5 == 0 or (idx + 1) == images.count():
-            job.completed_count = completed_count
-            job.failed_count = failed_count
-            job.actual_cost = total_cost
-            job.save(update_fields=[
-                'completed_count', 'failed_count', 'actual_cost',
-            ])
-
-        # Rate limiting delay (skip after last image)
-        if delay_between > 0:
-            time.sleep(delay_between)
-
-    # Mark job complete (if not cancelled)
+    # Mark job complete (if not cancelled or stopped by auth failure)
     job.refresh_from_db(fields=['status'])
-    if job.status != 'cancelled':
+    if job.status not in ('cancelled', 'failed'):
         job.status = 'completed'
         job.completed_at = tz.now()
         job.completed_count = completed_count
@@ -2452,13 +2558,11 @@ def process_bulk_generation_job(job_id: str) -> None:
             'status', 'completed_at', 'completed_count',
             'failed_count', 'actual_cost',
         ])
-        # Clear the BYOK API key now that generation is done
-        from prompts.services.bulk_generation import BulkGenerationService
         BulkGenerationService.clear_api_key(job)
 
     logger.info(
         "Bulk job %s finished: %d completed, %d failed, cost $%s",
-        job_id, job.completed_count, job.failed_count, total_cost,
+        job_id, completed_count, failed_count, total_cost,
     )
 
 

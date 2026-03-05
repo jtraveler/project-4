@@ -69,26 +69,34 @@ class OpenAIImageProvider(ImageProvider):
         size: str = '1024x1024',
         quality: str = 'medium',
         reference_image_url: str = '',
+        api_key: str = '',
     ) -> GenerationResult:
         """Generate an image using OpenAI's GPT-Image-1 API."""
 
         if self.mock_mode:
             return self._generate_mock(prompt, size, quality)
 
+        effective_key = api_key or self.api_key
+
         try:
-            from openai import OpenAI
+            from openai import (
+                OpenAI,
+                AuthenticationError,
+                RateLimitError,
+                BadRequestError,
+                APIStatusError,
+            )
 
-            client = OpenAI(api_key=self.api_key)
+            client = OpenAI(api_key=effective_key)
 
-            params = {
-                'model': 'gpt-image-1',
-                'prompt': prompt,
-                'size': size,
-                'quality': quality,
-                'n': 1,
-            }
-
-            response = client.images.generate(**params)
+            response = client.images.generate(
+                model='gpt-image-1',
+                prompt=prompt,
+                size=size,
+                quality=quality,
+                n=1,
+                response_format='b64_json',
+            )
 
             image_data = None
             if (
@@ -98,16 +106,6 @@ class OpenAIImageProvider(ImageProvider):
                 image_data = base64.b64decode(
                     response.data[0].b64_json
                 )
-            elif (
-                hasattr(response.data[0], 'url')
-                and response.data[0].url
-            ):
-                import requests as http_requests
-                img_response = http_requests.get(
-                    response.data[0].url, timeout=30
-                )
-                img_response.raise_for_status()
-                image_data = img_response.content
 
             revised = getattr(
                 response.data[0], 'revised_prompt', ''
@@ -120,11 +118,66 @@ class OpenAIImageProvider(ImageProvider):
                 cost=self.get_cost_per_image(size, quality),
             )
 
-        except Exception as e:
-            logger.error(f"OpenAI image generation failed: {e}")
+        except AuthenticationError:
             return GenerationResult(
                 success=False,
-                error_message=str(e),
+                error_type='auth',
+                error_message=(
+                    'Invalid API key. Please check your OpenAI key and try again.'
+                ),
+            )
+        except RateLimitError as e:
+            retry_after = None
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    retry_after = int(
+                        e.response.headers.get('retry-after', 30)
+                    )
+                except (ValueError, TypeError):
+                    retry_after = 30
+            return GenerationResult(
+                success=False,
+                error_type='rate_limit',
+                error_message='Rate limit reached. Retrying shortly.',
+                retry_after=retry_after or 30,
+            )
+        except BadRequestError as e:
+            error_body = str(e).lower()
+            if any(
+                kw in error_body
+                for kw in ('safety', 'content_policy', 'violated', 'content policy')
+            ):
+                return GenerationResult(
+                    success=False,
+                    error_type='content_policy',
+                    error_message=(
+                        'Image rejected by content policy. Try modifying the prompt.'
+                    ),
+                )
+            return GenerationResult(
+                success=False,
+                error_type='invalid_request',
+                error_message=f'Invalid request: {str(e)}',
+            )
+        except APIStatusError as e:
+            if e.status_code >= 500:
+                return GenerationResult(
+                    success=False,
+                    error_type='server_error',
+                    error_message='OpenAI server error. Will retry once.',
+                    retry_after=30,
+                )
+            return GenerationResult(
+                success=False,
+                error_type='unknown',
+                error_message=f'API error ({e.status_code}): {str(e)}',
+            )
+        except Exception as e:
+            logger.error("OpenAI image generation failed: %s", e)
+            return GenerationResult(
+                success=False,
+                error_type='unknown',
+                error_message=f'Unexpected error: {str(e)}',
             )
 
     def _generate_mock(

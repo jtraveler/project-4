@@ -75,6 +75,15 @@ PROMPT_CONFIGS = [
 ]
 
 
+# Mirrors VALID_SIZES in bulk_generator_views.py
+VALID_SIZES = {'1024x1024', '1024x1536', '1536x1024', '1792x1024'}
+
+# Map each GPT-Image-1 size to sample images matching that aspect ratio
+SIZE_TO_IMAGES = {
+    c['size']: c['images'] for c in PROMPT_CONFIGS
+}
+
+
 class Command(BaseCommand):
     help = 'Create test data for bulk generator gallery (mixed aspect ratios)'
 
@@ -89,7 +98,15 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '--completed', type=int, default=None,
-            help='Number of completed images (default: all 16)',
+            help='Number of completed images (default: all)',
+        )
+        parser.add_argument(
+            '--size', type=str, default=None,
+            help='Create one job with this size only (e.g. 1792x1024)',
+        )
+        parser.add_argument(
+            '--all-sizes', action='store_true', default=False,
+            help='Create one job per aspect ratio (4 jobs total)',
         )
 
     def handle(self, *args, **options):
@@ -98,38 +115,85 @@ class Command(BaseCommand):
             self.stderr.write('No staff user found')
             return
 
-        status = options['status']
-        num_completed = options['completed']
+        size_filter = options['size']
+        all_sizes = options['all_sizes']
 
-        # Always 4 images per prompt, always 4 prompts
-        images_per_prompt = 4
-        total_images = len(PROMPT_CONFIGS) * images_per_prompt
-        if num_completed is None:
-            num_completed = total_images
+        if size_filter and all_sizes:
+            self.stderr.write(self.style.ERROR(
+                '--size and --all-sizes are mutually exclusive',
+            ))
+            return
+
+        if size_filter and size_filter not in VALID_SIZES:
+            self.stderr.write(self.style.ERROR(
+                f'Invalid size: {size_filter}. '
+                f'Valid: {", ".join(sorted(VALID_SIZES))}',
+            ))
+            return
 
         # Delete existing test jobs for this user
         BulkGenerationJob.objects.filter(created_by=user).delete()
 
-        # Use first prompt config's size as the job-level size
-        # (per-group aspect ratio is detected from actual images by JS)
+        if all_sizes:
+            self._create_per_size_jobs(user, options)
+        elif size_filter:
+            self._create_single_size_job(user, size_filter, options)
+        else:
+            self._create_mixed_job(user, options)
+
+    def _create_single_size_job(self, user, size, options):
+        """Create one job with only prompts matching the given size."""
+        configs = [c for c in PROMPT_CONFIGS if c['size'] == size]
+        if not configs:
+            self.stderr.write(self.style.ERROR(
+                f'No prompt configs for size {size}',
+            ))
+            return
+        self._create_job(user, configs, size, options)
+
+    def _create_per_size_jobs(self, user, options):
+        """Create one job per unique size in PROMPT_CONFIGS."""
+        sizes_seen = []
+        for config in PROMPT_CONFIGS:
+            if config['size'] not in sizes_seen:
+                sizes_seen.append(config['size'])
+
+        for size in sizes_seen:
+            configs = [c for c in PROMPT_CONFIGS if c['size'] == size]
+            self._create_job(user, configs, size, options)
+
+    def _create_mixed_job(self, user, options):
+        """Create one job with all prompts (original behaviour)."""
+        self._create_job(user, PROMPT_CONFIGS, '1024x1024', options)
+
+    def _create_job(self, user, configs, size, options):
+        """Create a BulkGenerationJob with the given configs and size."""
+        status = options['status']
+        images_per_prompt = 4
+        total_images = len(configs) * images_per_prompt
+        num_completed = options['completed']
+        if num_completed is None:
+            num_completed = total_images
+
         job = BulkGenerationJob.objects.create(
             created_by=user,
             status=status,
-            total_prompts=len(PROMPT_CONFIGS),
+            total_prompts=len(configs),
             images_per_prompt=images_per_prompt,
             quality='medium',
-            size='1024x1024',
+            size=size,
             model_name='gpt-image-1',
             completed_count=min(num_completed, total_images),
         )
 
+        job_images = SIZE_TO_IMAGES[size]
         created = 0
-        for p, config in enumerate(PROMPT_CONFIGS):
+        for p, config in enumerate(configs):
             for v in range(1, images_per_prompt + 1):
                 img_index = p * images_per_prompt + (v - 1)
                 is_completed = img_index < num_completed
-                img_url = config['images'][v - 1] if is_completed else ''
-                img_status = 'completed' if is_completed else 'pending'
+                img_url = job_images[v - 1] if is_completed else ''
+                img_status = 'completed' if is_completed else 'queued'
 
                 GeneratedImage.objects.create(
                     job=job,
@@ -142,8 +206,7 @@ class Command(BaseCommand):
                 created += 1
 
         self.stdout.write(self.style.SUCCESS(
-            f'Created job {job.id} with {len(PROMPT_CONFIGS)} prompts '
-            f'(mixed aspect ratios), {created} images '
-            f'({min(num_completed, total_images)} completed). '
+            f'Created job {job.id} ({size}) with {len(configs)} prompt(s), '
+            f'{created} images ({min(num_completed, total_images)} completed). '
             f'Visit: /tools/bulk-ai-generator/job/{job.id}/'
         ))

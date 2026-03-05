@@ -17,6 +17,13 @@
     var urlValidate = page.dataset.urlValidate;
     var urlStart = page.dataset.urlStart;
     var urlValidateRef = page.dataset.urlValidateRef;
+    var urlValidateKey = page.dataset.urlValidateKey;
+
+    // API key elements
+    var openaiApiKeyInput = document.getElementById('openaiApiKey');
+    var validateKeyBtn = document.getElementById('validateKeyBtn');
+    var apiKeyStatus = document.getElementById('apiKeyStatus');
+    var apiKeyToggle = document.getElementById('apiKeyToggle');
 
     // Master settings
     var settingModel = document.getElementById('settingModel');
@@ -703,6 +710,125 @@
 
     settingQuality.addEventListener('change', updateCostEstimate);
 
+    // ─── API Key Validation ───────────────────────────────────────
+    function showApiKeyStatus(message, type) {
+        if (!apiKeyStatus) return;
+        if (type === 'hidden') {
+            apiKeyStatus.style.display = 'none';
+            apiKeyStatus.className = 'bg-api-key-status';
+            return;
+        }
+        apiKeyStatus.style.display = 'flex';
+        apiKeyStatus.className = 'bg-api-key-status status-' + type;
+        if (type === 'valid') {
+            apiKeyStatus.innerHTML =
+                '<svg class="api-key-status__icon" width="16" height="16" aria-hidden="true">' +
+                '<use href="' + spriteBase + '#icon-circle-check"/></svg> ' + message;
+        } else {
+            apiKeyStatus.textContent = message;
+        }
+
+        if (openaiApiKeyInput) {
+            openaiApiKeyInput.classList.remove('is-valid', 'is-invalid');
+            if (type === 'valid') openaiApiKeyInput.classList.add('is-valid');
+            if (type === 'invalid') openaiApiKeyInput.classList.add('is-invalid');
+        }
+    }
+
+    function showGenerateErrorBanner(message) {
+        // Remove any existing banner first
+        var existing = document.getElementById('generateErrorBanner');
+        if (existing) existing.remove();
+
+        var banner = document.createElement('div');
+        banner.id = 'generateErrorBanner';
+        banner.className = 'generate-error-banner';
+        banner.setAttribute('role', 'alert');
+        banner.setAttribute('aria-live', 'assertive');
+        banner.innerHTML =
+            '<span class="generate-error-banner__message">' + message + '</span>' +
+            '<button type="button" class="generate-error-banner__close" aria-label="Dismiss error">\u00d7</button>';
+
+        // Insert before .bg-sticky-bar-inner so banner spans full width of fixed bar
+        var stickyInner = document.querySelector('.bg-sticky-bar-inner');
+        if (stickyInner) {
+            stickyInner.insertAdjacentElement('beforebegin', banner);
+        } else {
+            generateBtn.insertAdjacentElement('beforebegin', banner);
+        }
+
+        // Wire close button
+        banner.querySelector('.generate-error-banner__close')
+            .addEventListener('click', function () { banner.remove(); });
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(function () { if (banner.parentNode) banner.remove(); }, 5000);
+    }
+
+    function validateApiKey() {
+        var key = openaiApiKeyInput ? openaiApiKeyInput.value.trim() : '';
+
+        if (!key) {
+            showApiKeyStatus('Please enter your OpenAI API key.', 'invalid');
+            return Promise.resolve(false);
+        }
+
+        if (!key.startsWith('sk-')) {
+            showApiKeyStatus('API key must start with "sk-".', 'invalid');
+            return Promise.resolve(false);
+        }
+
+        showApiKeyStatus('Validating...', 'loading');
+        if (validateKeyBtn) validateKeyBtn.disabled = true;
+
+        return fetch(urlValidateKey, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ api_key: key }),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.valid) {
+                showApiKeyStatus('Key validated successfully', 'valid');
+                return true;
+            } else {
+                showApiKeyStatus(data.error || 'Invalid API key.', 'invalid');
+                return false;
+            }
+        })
+        .catch(function () {
+            showApiKeyStatus('Validation failed — check your connection.', 'invalid');
+            return false;
+        })
+        .finally(function () {
+            if (validateKeyBtn) validateKeyBtn.disabled = false;
+        });
+    }
+
+    if (validateKeyBtn) {
+        validateKeyBtn.addEventListener('click', function () {
+            validateApiKey();
+        });
+    }
+
+    if (openaiApiKeyInput) {
+        openaiApiKeyInput.addEventListener('input', function () {
+            showApiKeyStatus('', 'hidden');
+        });
+    }
+
+    if (apiKeyToggle && openaiApiKeyInput) {
+        apiKeyToggle.addEventListener('click', function () {
+            var isPassword = openaiApiKeyInput.type === 'password';
+            openaiApiKeyInput.type = isPassword ? 'text' : 'password';
+            var iconShow = apiKeyToggle.querySelector('.bg-api-key-icon-show');
+            var iconHide = apiKeyToggle.querySelector('.bg-api-key-icon-hide');
+            if (iconShow) iconShow.style.display = isPassword ? 'none' : '';
+            if (iconHide) iconHide.style.display = isPassword ? '' : 'none';
+            apiKeyToggle.setAttribute('aria-label', isPassword ? 'Hide API key' : 'Show API key');
+        });
+    }
+
     // ─── Generate Button State ────────────────────────────────────
     function updateGenerateBtn() {
         generateBtn.disabled = getPromptCount() === 0;
@@ -957,64 +1083,77 @@
         generateBtn.disabled = true;
         generateBtn.innerHTML =
             '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-sparkles"/></svg> Validating...';
-        generateStatus.textContent = 'Validating prompts...';
+        generateStatus.textContent = 'Validating API key...';
 
-        // Step 1: Validate
-        fetch(urlValidate, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-            body: JSON.stringify({ prompts: finalPrompts }),
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (!data.valid) {
-                showValidationErrors(data.errors || [{ message: 'Validation failed.' }]);
+        // Step 0: Validate API key
+        validateApiKey()
+        .then(function (keyValid) {
+            if (!keyValid) {
+                showGenerateErrorBanner('Please enter and validate your OpenAI API key before generating.');
                 resetGenerateBtn();
                 return;
             }
 
-            // Step 2: Start generation
-            generateBtn.innerHTML =
-                '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-sparkles"/></svg> Starting...';
-            generateStatus.textContent = 'Starting generation...';
+            generateStatus.textContent = 'Validating prompts...';
 
-            var payload = {
-                prompts: finalPrompts,
-                source_credits: sourceCredits,
-                provider: 'openai',
-                model: settingModel.value,
-                quality: getMasterQuality(),
-                size: getMasterDimensions(),
-                images_per_prompt: getMasterImagesPerPrompt(),
-                visibility: getVisibility(),
-                generator_category: MODEL_CATEGORY_MAP[settingModel.value] || 'ChatGPT',
-                reference_image_url: validatedRefUrl,
-                character_description: charDesc,
-            };
-
-            return fetch(urlStart, {
+            // Step 1: Validate prompts
+            return fetch(urlValidate, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                body: JSON.stringify(payload),
-            });
-        })
-        .then(function (r) {
-            if (!r) return; // Validation failed path
-            return r.json();
-        })
-        .then(function (data) {
-            if (!data) return;
-            if (data.error) {
-                showValidationErrors([{ message: data.error }]);
+                body: JSON.stringify({ prompts: finalPrompts }),
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.valid) {
+                    showValidationErrors(data.errors || [{ message: 'Validation failed.' }]);
+                    resetGenerateBtn();
+                    return;
+                }
+
+                // Step 2: Start generation
+                generateBtn.innerHTML =
+                    '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-sparkles"/></svg> Starting...';
+                generateStatus.textContent = 'Starting generation...';
+
+                var payload = {
+                    prompts: finalPrompts,
+                    source_credits: sourceCredits,
+                    provider: 'openai',
+                    model: settingModel.value,
+                    quality: getMasterQuality(),
+                    size: getMasterDimensions(),
+                    images_per_prompt: getMasterImagesPerPrompt(),
+                    visibility: getVisibility(),
+                    generator_category: MODEL_CATEGORY_MAP[settingModel.value] || 'ChatGPT',
+                    reference_image_url: validatedRefUrl,
+                    character_description: charDesc,
+                    api_key: openaiApiKeyInput ? openaiApiKeyInput.value.trim() : '',
+                };
+
+                return fetch(urlStart, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify(payload),
+                });
+            })
+            .then(function (r) {
+                if (!r) return;
+                return r.json();
+            })
+            .then(function (data) {
+                if (!data) return;
+                if (data.error) {
+                    showValidationErrors([{ message: data.error }]);
+                    resetGenerateBtn();
+                    return;
+                }
+                clearSavedPrompts();
+                window.location.href = '/tools/bulk-ai-generator/job/' + data.job_id + '/';
+            })
+            .catch(function (err) {
+                showValidationErrors([{ message: 'Network error: ' + err.message }]);
                 resetGenerateBtn();
-                return;
-            }
-            clearSavedPrompts();
-            window.location.href = '/tools/bulk-ai-generator/job/' + data.job_id + '/';
-        })
-        .catch(function (err) {
-            showValidationErrors([{ message: 'Network error: ' + err.message }]);
-            resetGenerateBtn();
+            });
         });
     });
 

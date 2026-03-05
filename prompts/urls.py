@@ -157,6 +157,7 @@ urlpatterns = [
     path('tools/bulk-ai-generator/api/cancel/<uuid:job_id>/', bulk_generator_views.api_cancel_job, name='api_bulk_cancel_job'),
     path('tools/bulk-ai-generator/api/create-pages/<uuid:job_id>/', bulk_generator_views.api_create_pages, name='api_bulk_create_pages'),
     path('tools/bulk-ai-generator/api/validate-reference/', bulk_generator_views.api_validate_reference_image, name='api_bulk_validate_image'),
+    path('tools/bulk-ai-generator/api/validate-key/', bulk_generator_views.api_validate_openai_key, name='bulk_generator_validate_key'),
 
     # Admin moderation dashboard
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),

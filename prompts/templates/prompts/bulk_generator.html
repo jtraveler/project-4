@@ -12,7 +12,8 @@
      data-csrf="{{ csrf_token }}"
      data-url-validate="{% url 'prompts:api_bulk_validate_prompts' %}"
      data-url-start="{% url 'prompts:api_bulk_start_generation' %}"
-     data-url-validate-ref="{% url 'prompts:api_bulk_validate_image' %}">
+     data-url-validate-ref="{% url 'prompts:api_bulk_validate_image' %}"
+     data-url-validate-key="{% url 'prompts:bulk_generator_validate_key' %}">
 
     {# ===== Page Header (centered, matches notifications) ===== #}
     <div class="bg-header">
@@ -170,6 +171,71 @@
 
         </div>{# /.bg-master-grid #}
     </div>{# /.bg-master-settings #}
+
+    {# ===== API Key Section ===== #}
+    <div class="bg-api-key-section" id="apiKeySection">
+        <div class="bg-api-key-header">
+            <h2 class="bg-api-key-title">OpenAI API Key</h2>
+            <span class="bg-api-key-subtitle">Your key — used for generation, not stored after job completes</span>
+        </div>
+
+        <div class="bg-api-key-input-row">
+            <div class="bg-api-key-field-wrapper">
+                <input
+                    type="password"
+                    id="openaiApiKey"
+                    class="bg-api-key-input"
+                    placeholder="sk-..."
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="OpenAI API Key"
+                    aria-describedby="apiKeyStatus"
+                />
+                <button
+                    type="button"
+                    class="bg-api-key-toggle"
+                    id="apiKeyToggle"
+                    aria-label="Show API key"
+                    title="Show/hide key"
+                >
+                    {# Eye icon (show) #}
+                    <svg class="bg-api-key-icon-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    {# Eye-off icon (hide) — hidden by default #}
+                    <svg class="bg-api-key-icon-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                </button>
+            </div>
+
+            <button
+                type="button"
+                class="bg-validate-key-btn"
+                id="validateKeyBtn"
+                aria-describedby="apiKeyStatus"
+            >
+                Validate Key
+            </button>
+        </div>
+
+        {# Status message (shown after validation) #}
+        <div
+            class="bg-api-key-status"
+            id="apiKeyStatus"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            style="display:none"
+        ></div>
+
+        <p class="bg-api-key-help">
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">Get your API key<span class="visually-hidden"> (opens in new tab)</span></a>
+            from OpenAI. Your key is encrypted in transit and at rest, and is automatically deleted after your job completes.
+        </p>
+    </div>{# /.bg-api-key-section #}
 
     {# ===== Prompt Entry Section ===== #}
     <div class="bg-prompt-section-header">

@@ -2892,6 +2892,10 @@ class BulkGenerationJob(models.Model):
         max_digits=8, decimal_places=4, default=0
     )
 
+    # API key storage (BYOK model — encrypted, cleared after terminal state)
+    api_key_encrypted = models.BinaryField(null=True, blank=True)
+    api_key_hint = models.CharField(max_length=10, blank=True, default='')
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)

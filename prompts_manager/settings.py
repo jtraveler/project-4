@@ -37,6 +37,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # DATABASE URL
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
+# Fernet encryption key for sensitive field encryption (API keys stored in BulkGenerationJob)
+# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Add to Heroku config vars before deploying the bulk generator.
+FERNET_KEY = os.environ.get('FERNET_KEY', '')
+
 
 ALLOWED_HOSTS = [
     '127.0.0.1',

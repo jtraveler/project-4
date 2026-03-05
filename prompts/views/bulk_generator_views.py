@@ -268,6 +268,14 @@ def api_start_generation(request):
             status=400,
         )
 
+    # --- API key (required) ---
+    api_key = str(data.get('api_key', '')).strip()
+    if not api_key or not api_key.startswith('sk-'):
+        return JsonResponse(
+            {'error': 'A valid OpenAI API key (starting with sk-) is required to start generation.'},
+            status=400,
+        )
+
     # Create and start the job
     # Pad source_credits to match prompts length
     while len(source_credits) < len(prompts):
@@ -286,6 +294,7 @@ def api_start_generation(request):
         reference_image_url=reference_image_url,
         character_description=character_description,
         source_credits=source_credits,
+        api_key=api_key,
     )
 
     service.start_job(job)
@@ -421,6 +430,42 @@ def api_create_pages(request, job_id):
         'status': 'queued',
         'pages_to_create': len(valid_ids),
     })
+
+
+@staff_member_required
+@require_POST
+def api_validate_openai_key(request):
+    """
+    POST /api/bulk-generator/validate-key/
+    Validates an OpenAI API key by calling client.models.list().
+    Returns {valid: true} or {valid: false, error: "message"}.
+    Never generates an image — zero cost, zero side effects.
+    """
+    from openai import OpenAI, AuthenticationError, APIConnectionError
+
+    try:
+        data = json.loads(request.body)
+        api_key = data.get('api_key', '').strip()
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'valid': False, 'error': 'Invalid request body'}, status=400)
+
+    if not api_key:
+        return JsonResponse({'valid': False, 'error': 'API key is required'}, status=400)
+
+    if not api_key.startswith('sk-'):
+        return JsonResponse({'valid': False, 'error': 'API key must start with sk-'})
+
+    try:
+        client = OpenAI(api_key=api_key)
+        client.models.list()
+        return JsonResponse({'valid': True})
+    except AuthenticationError:
+        return JsonResponse({'valid': False, 'error': 'Invalid API key. Please check and try again.'})
+    except APIConnectionError:
+        return JsonResponse({'valid': False, 'error': 'Could not connect to OpenAI. Check your network.'})
+    except Exception as e:
+        logger.warning("OpenAI key validation failed: %s", e)
+        return JsonResponse({'valid': False, 'error': f'Validation failed: {str(e)}'})
 
 
 @staff_member_required

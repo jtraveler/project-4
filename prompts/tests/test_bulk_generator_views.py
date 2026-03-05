@@ -14,6 +14,9 @@ from unittest.mock import patch, MagicMock
 
 from prompts.models import BulkGenerationJob, GeneratedImage
 
+# Fernet test key — used in @override_settings for encryption tests
+TEST_FERNET_KEY = 'DVNiGhgfxQCMi3vIJDIqV7HsVNaGlMmo4RpeStaJwCw='
+
 
 @override_settings(OPENAI_API_KEY='test-key')
 class BulkGeneratorPageTests(TestCase):
@@ -174,7 +177,7 @@ class ValidatePromptsAPITests(TestCase):
         self.assertIn('strings', response.json()['error'])
 
 
-@override_settings(OPENAI_API_KEY='test-key')
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
 class StartGenerationAPITests(TestCase):
     """Tests for the api_start_generation endpoint."""
 
@@ -196,6 +199,7 @@ class StartGenerationAPITests(TestCase):
             self.url,
             data=json.dumps({
                 'prompts': ['A sunset over ocean', 'Mountain landscape'],
+                'api_key': 'sk-test1234567890',
             }),
             content_type='application/json',
         )
@@ -670,3 +674,324 @@ class ValidateReferenceImageAPITests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 302)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 5C Spec 1: BYOK key input, encryption, validation endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class ValidateKeyEndpointTests(TestCase):
+    """Tests for POST /tools/bulk-ai-generator/api/validate-key/"""
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staffkey', password='testpass', is_staff=True,
+        )
+        self.client.login(username='staffkey', password='testpass')
+        self.url = reverse('prompts:bulk_generator_validate_key')
+
+    def test_requires_staff(self):
+        """Non-staff users cannot access validate-key."""
+        self.client.logout()
+        response = self.client.post(
+            self.url, '{}', content_type='application/json',
+        )
+        self.assertIn(response.status_code, [302, 403])
+
+    def test_missing_api_key_returns_400(self):
+        """Returns 400 if api_key field is absent."""
+        response = self.client.post(
+            self.url, '{}', content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_empty_api_key_returns_400(self):
+        """Returns 400 if api_key is empty string."""
+        response = self.client.post(
+            self.url,
+            json.dumps({'api_key': ''}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_key_not_starting_with_sk_returns_invalid(self):
+        """Returns valid=False if key doesn't start with sk-."""
+        response = self.client.post(
+            self.url,
+            json.dumps({'api_key': 'invalid-key'}),
+            content_type='application/json',
+        )
+        data = response.json()
+        self.assertFalse(data['valid'])
+        self.assertIn('sk-', data['error'])
+
+    def test_invalid_json_returns_400(self):
+        """Returns 400 on malformed JSON body."""
+        response = self.client.post(
+            self.url, 'not-json', content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    @patch('openai.OpenAI')
+    def test_valid_key_returns_valid_true(self, mock_openai):
+        """A key that passes models.list() returns {valid: true}."""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.models.list.return_value = []
+
+        response = self.client.post(
+            self.url,
+            json.dumps({'api_key': 'sk-validtestkey1234'}),
+            content_type='application/json',
+        )
+        data = response.json()
+        self.assertTrue(data['valid'])
+
+    @patch('openai.OpenAI')
+    def test_authentication_error_returns_invalid(self, mock_openai):
+        """AuthenticationError from OpenAI returns {valid: false}."""
+        from openai import AuthenticationError
+
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.headers = {}
+        mock_client.models.list.side_effect = AuthenticationError(
+            message='Invalid API key',
+            response=mock_response,
+            body={'error': {'message': 'Invalid API key'}},
+        )
+
+        response = self.client.post(
+            self.url,
+            json.dumps({'api_key': 'sk-badkey12345678'}),
+            content_type='application/json',
+        )
+        data = response.json()
+        self.assertFalse(data['valid'])
+        self.assertIn('error', data)
+
+    def test_get_method_not_allowed(self):
+        """GET requests return 405."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class BulkGenerationJobApiKeyTests(TestCase):
+    """Tests for api_key_encrypted and api_key_hint fields on BulkGenerationJob."""
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staffenc', password='testpass', is_staff=True,
+        )
+
+    def test_api_key_fields_exist(self):
+        """BulkGenerationJob has api_key_encrypted and api_key_hint fields."""
+        self.assertTrue(hasattr(BulkGenerationJob, 'api_key_encrypted'))
+        self.assertTrue(hasattr(BulkGenerationJob, 'api_key_hint'))
+
+    def test_new_job_has_null_api_key_fields(self):
+        """Newly created job has api_key_encrypted=None and api_key_hint=''."""
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+        )
+        self.assertIsNone(job.api_key_encrypted)
+        self.assertEqual(job.api_key_hint, '')
+
+    def test_encrypt_decrypt_roundtrip(self):
+        """Encrypt then decrypt returns original key string."""
+        from prompts.services.bulk_generation import encrypt_api_key, decrypt_api_key
+
+        original = 'sk-test1234567890abcdef'
+        encrypted = encrypt_api_key(original)
+        decrypted = decrypt_api_key(encrypted)
+        self.assertEqual(original, decrypted)
+
+    def test_encrypted_key_is_bytes(self):
+        """encrypt_api_key returns bytes, not a string."""
+        from prompts.services.bulk_generation import encrypt_api_key
+
+        result = encrypt_api_key('sk-test1234567890')
+        self.assertIsInstance(result, bytes)
+
+    def test_encrypted_key_differs_from_original(self):
+        """Encrypted value is not the same as the plaintext."""
+        from prompts.services.bulk_generation import encrypt_api_key
+
+        key = 'sk-test1234567890'
+        encrypted = encrypt_api_key(key)
+        self.assertNotEqual(encrypted, key.encode())
+
+    def test_clear_api_key_clears_fields(self):
+        """clear_api_key() sets api_key_encrypted=None and api_key_hint=''."""
+        from prompts.services.bulk_generation import BulkGenerationService, encrypt_api_key
+
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            api_key_encrypted=encrypt_api_key('sk-test1234567890'),
+            api_key_hint='7890',
+        )
+        BulkGenerationService.clear_api_key(job)
+        job.refresh_from_db()
+        self.assertIsNone(job.api_key_encrypted)
+        self.assertEqual(job.api_key_hint, '')
+
+    def test_clear_api_key_noop_when_no_key(self):
+        """clear_api_key() does nothing when key is already None."""
+        from prompts.services.bulk_generation import BulkGenerationService
+
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+        )
+        # Should not raise
+        BulkGenerationService.clear_api_key(job)
+        job.refresh_from_db()
+        self.assertIsNone(job.api_key_encrypted)
+
+    def test_cancel_job_clears_api_key(self):
+        """cancel_job() clears the api_key_encrypted field."""
+        from prompts.services.bulk_generation import BulkGenerationService, encrypt_api_key
+
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            status='processing',
+            api_key_encrypted=encrypt_api_key('sk-test1234567890'),
+            api_key_hint='7890',
+        )
+        svc = BulkGenerationService()
+        svc.cancel_job(job)
+        job.refresh_from_db()
+        self.assertIsNone(job.api_key_encrypted)
+        self.assertEqual(job.api_key_hint, '')
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_clear_api_key_called_on_completed(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """API key is cleared when job reaches completed state."""
+        from prompts.services.bulk_generation import BulkGenerationService, encrypt_api_key
+        from prompts.tasks import process_bulk_generation_job
+        from prompts.services.image_providers.base import GenerationResult
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.return_value = GenerationResult(
+            success=True,
+            image_data=b'fake-png-data',
+            revised_prompt='revised prompt',
+            cost=0.03,
+        )
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/image.png'
+
+        svc = BulkGenerationService()
+        job = svc.create_job(
+            user=self.staff_user,
+            prompts=['test prompt'],
+            api_key='sk-test1234567890',
+        )
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, 'completed')
+        self.assertIsNone(job.api_key_encrypted)
+        self.assertEqual(job.api_key_hint, '')
+
+    def test_clear_api_key_called_on_failed(self):
+        """API key is cleared when clear_api_key is called on a failed job."""
+        from prompts.services.bulk_generation import BulkGenerationService, encrypt_api_key
+
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            status='failed',
+            api_key_encrypted=encrypt_api_key('sk-test1234567890'),
+            api_key_hint='7890',
+        )
+        BulkGenerationService.clear_api_key(job)
+        job.refresh_from_db()
+        self.assertIsNone(job.api_key_encrypted)
+        self.assertEqual(job.api_key_hint, '')
+
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class StartGenerationApiKeyTests(TestCase):
+    """Tests that the start endpoint requires a valid api_key."""
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staffstart2', password='testpass', is_staff=True,
+        )
+        self.client.login(username='staffstart2', password='testpass')
+        self.url = reverse('prompts:api_bulk_start_generation')
+        self.base_payload = {
+            'prompts': ['a beautiful sunset'],
+            'provider': 'openai',
+            'model': 'gpt-image-1',
+            'quality': 'medium',
+            'size': '1024x1024',
+            'images_per_prompt': 1,
+            'visibility': 'public',
+            'generator_category': 'ChatGPT',
+            'reference_image_url': '',
+            'character_description': '',
+        }
+
+    def test_missing_api_key_returns_400(self):
+        """Start endpoint returns 400 when api_key is absent."""
+        response = self.client.post(
+            self.url,
+            json.dumps(self.base_payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('API key', response.json()['error'])
+
+    def test_empty_api_key_returns_400(self):
+        """Start endpoint returns 400 when api_key is empty."""
+        payload = {**self.base_payload, 'api_key': ''}
+        response = self.client.post(
+            self.url,
+            json.dumps(payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_api_key_format_returns_400(self):
+        """Start endpoint returns 400 when api_key doesn't start with sk-."""
+        payload = {**self.base_payload, 'api_key': 'invalid-key'}
+        response = self.client.post(
+            self.url,
+            json.dumps(payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    @patch('prompts.services.bulk_generation.async_task')
+    def test_valid_api_key_creates_job(self, mock_async_task):
+        """Start endpoint creates a job and stores encrypted api_key."""
+        payload = {**self.base_payload, 'api_key': 'sk-testvalidkey1234'}
+        response = self.client.post(
+            self.url,
+            json.dumps(payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('job_id', data)
+        job = BulkGenerationJob.objects.get(id=data['job_id'])
+        self.assertIsNotNone(job.api_key_encrypted)
+        self.assertEqual(job.api_key_hint, '1234')

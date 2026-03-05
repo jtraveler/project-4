@@ -1261,3 +1261,224 @@
         transition: none;
     }
 }
+
+/* ===== API Key Section ===== */
+.bg-api-key-section {
+    margin-bottom: 40px;
+    padding: 24px;
+    background: var(--gray-50, #fafafa);
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+}
+
+.bg-api-key-header {
+    margin-bottom: 16px;
+}
+
+.bg-api-key-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gray-900, #171717);
+    margin: 0 0 4px 0;
+}
+
+.bg-api-key-subtitle {
+    font-size: 0.8125rem;
+    color: var(--gray-500, #737373);
+}
+
+.bg-api-key-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.bg-api-key-field-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.bg-api-key-input {
+    width: 100%;
+    padding: 10px 44px 10px 14px;
+    font-family: var(--font-mono, monospace);
+    font-size: 14px;
+    border: 1px solid var(--gray-300, #d1d5db);
+    border-radius: var(--radius-sm, 6px);
+    background: #fff;
+    color: var(--gray-900, #171717);
+    transition: border-color 0.15s, outline 0.15s;
+    box-sizing: border-box;
+}
+
+.bg-api-key-input:focus {
+    outline: 2px solid var(--primary, #6366f1);
+    outline-offset: 2px;
+    border-color: var(--primary, #6366f1);
+}
+
+.bg-api-key-input.is-valid {
+    border-color: #22c55e;
+}
+
+.bg-api-key-input.is-invalid {
+    border-color: #ef4444;
+}
+
+.bg-api-key-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gray-500, #737373);
+    padding: 4px;
+    line-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bg-api-key-toggle:hover {
+    color: var(--gray-600, #525252);
+}
+
+.bg-api-key-toggle:focus-visible {
+    outline: 2px solid var(--primary, #6366f1);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.bg-validate-key-btn {
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: var(--radius-sm, 6px);
+    border: 1px solid var(--gray-300, #d1d5db);
+    background: var(--gray-50, #fafafa);
+    color: var(--gray-700, #404040);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.bg-validate-key-btn:hover {
+    background: var(--gray-100, #f3f4f6);
+    border-color: var(--gray-400, #9ca3af);
+}
+
+.bg-validate-key-btn:focus-visible {
+    outline: 2px solid var(--primary, #6366f1);
+    outline-offset: 2px;
+}
+
+.bg-validate-key-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.bg-api-key-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm, 6px);
+}
+
+.bg-api-key-status.status-valid {
+    color: #15803d;
+    background: #f0fdf4;
+}
+
+.bg-api-key-status.status-invalid {
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.bg-api-key-status.status-loading {
+    color: var(--gray-600, #525252);
+    background: var(--gray-100, #f3f4f6);
+}
+
+.bg-api-key-help {
+    font-size: 12px;
+    color: var(--gray-500, #737373);
+    margin: 8px 0 0 0;
+    line-height: 1.5;
+}
+
+.bg-api-key-help a {
+    color: var(--primary, #6366f1);
+    text-decoration: none;
+}
+
+.bg-api-key-help a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .bg-api-key-input-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bg-validate-key-btn {
+        width: 100%;
+    }
+}
+
+/* ── Generate Error Banner ──────────────────────────────── */
+.generate-error-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    background: var(--error-bg, #fef2f2);
+    border: 1px solid var(--error, #ef4444);
+    border-radius: var(--radius-sm, 6px);
+    color: var(--error-dark, #b91c1c);
+    font-size: 14px;
+    font-weight: 500;
+    box-sizing: border-box;
+}
+
+.generate-error-banner__message {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.generate-error-banner__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--error-dark, #b91c1c);
+    padding: 2px 4px;
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+
+.generate-error-banner__close:hover {
+    opacity: 1;
+}
+
+.generate-error-banner__close:focus-visible {
+    outline: 2px solid var(--error, #ef4444);
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+/* ── API Key Status Checkmark Icon ───────────────────────── */
+.api-key-status__icon {
+    flex-shrink: 0;
+    vertical-align: middle;
+}

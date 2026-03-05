@@ -8,6 +8,8 @@ import json
 import logging
 from decimal import Decimal
 
+from cryptography.fernet import Fernet
+from django.conf import settings
 from django.db.models import Count
 from django.utils import timezone
 from django_q.tasks import async_task
@@ -16,6 +18,28 @@ from prompts.models import BulkGenerationJob, GeneratedImage
 from prompts.services.image_providers import get_provider
 
 logger = logging.getLogger(__name__)
+
+
+def _get_fernet():
+    """Return a Fernet instance using FERNET_KEY from settings."""
+    key = getattr(settings, 'FERNET_KEY', '')
+    if not key:
+        raise ValueError("FERNET_KEY is not configured in settings")
+    if isinstance(key, str):
+        key = key.encode()
+    return Fernet(key)
+
+
+def encrypt_api_key(api_key: str) -> bytes:
+    """Encrypt an API key string to bytes."""
+    f = _get_fernet()
+    return f.encrypt(api_key.encode())
+
+
+def decrypt_api_key(encrypted: bytes) -> str:
+    """Decrypt an encrypted API key bytes to string."""
+    f = _get_fernet()
+    return f.decrypt(bytes(encrypted)).decode()
 
 
 class BulkGenerationService:
@@ -96,6 +120,7 @@ class BulkGenerationService:
         reference_image_url: str = '',
         character_description: str = '',
         source_credits: list[str] | None = None,
+        api_key: str = '',
     ) -> BulkGenerationJob:
         """
         Create a BulkGenerationJob and its GeneratedImage records.
@@ -129,6 +154,11 @@ class BulkGenerationService:
                 cost_per_image * len(prompts) * images_per_prompt
             )),
         )
+
+        if api_key:
+            job.api_key_encrypted = encrypt_api_key(api_key)
+            job.api_key_hint = api_key[-4:] if len(api_key) >= 4 else ''
+            job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
 
         # Build combined prompts (character description + individual prompt)
         images_to_create = []
@@ -178,6 +208,14 @@ class BulkGenerationService:
             task_name=f'bulk-gen-{job.id}',
         )
 
+    @staticmethod
+    def clear_api_key(job: BulkGenerationJob) -> None:
+        """Clear the encrypted API key from a job that has reached terminal state."""
+        if job.api_key_encrypted:
+            job.api_key_encrypted = None
+            job.api_key_hint = ''
+            job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
+
     def cancel_job(self, job: BulkGenerationJob) -> dict:
         """
         Cancel an in-progress job.
@@ -192,6 +230,7 @@ class BulkGenerationService:
         job.status = 'cancelled'
         job.completed_at = timezone.now()
         job.save(update_fields=['status', 'completed_at'])
+        BulkGenerationService.clear_api_key(job)
 
         # Cancel pending images
         cancelled = job.images.filter(

@@ -2452,6 +2452,9 @@ def process_bulk_generation_job(job_id: str) -> None:
             'status', 'completed_at', 'completed_count',
             'failed_count', 'actual_cost',
         ])
+        # Clear the BYOK API key now that generation is done
+        from prompts.services.bulk_generation import BulkGenerationService
+        BulkGenerationService.clear_api_key(job)
 
     logger.info(
         "Bulk job %s finished: %d completed, %d failed, cost $%s",

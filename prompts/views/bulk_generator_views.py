@@ -54,6 +54,13 @@ VALID_SIZES = {'1024x1024', '1024x1536', '1536x1024', '1792x1024'}
 VALID_PROVIDERS = {'openai'}
 VALID_VISIBILITIES = {'public', 'private'}
 
+# Allowed domains for reference image URLs
+ALLOWED_REFERENCE_DOMAINS = [
+    'f002.backblazeb2.com',
+    's3.us-west-002.backblazeb2.com',
+    'media.promptfinder.net',
+]
+
 
 @staff_member_required
 @require_GET
@@ -222,12 +229,7 @@ def api_start_generation(request):
     reference_image_url = data.get('reference_image_url', '').strip()
     if reference_image_url:
         parsed = urlparse(reference_image_url)
-        allowed_domains = [
-            'f002.backblazeb2.com',
-            's3.us-west-002.backblazeb2.com',
-            'media.promptfinder.net',
-        ]
-        if parsed.scheme not in ('http', 'https') or parsed.netloc not in allowed_domains:
+        if parsed.scheme not in ('http', 'https') or parsed.netloc not in ALLOWED_REFERENCE_DOMAINS:
             return JsonResponse(
                 {'error': 'reference_image_url must be from an allowed domain'},
                 status=400,
@@ -444,12 +446,7 @@ def api_validate_reference_image(request):
         )
 
     parsed = urlparse(image_url)
-    allowed_domains = [
-        'f002.backblazeb2.com',
-        's3.us-west-002.backblazeb2.com',
-        'media.promptfinder.net',
-    ]
-    if parsed.scheme not in ('http', 'https') or parsed.netloc not in allowed_domains:
+    if parsed.scheme not in ('http', 'https') or parsed.netloc not in ALLOWED_REFERENCE_DOMAINS:
         return JsonResponse(
             {'error': 'image_url must be from an allowed domain'},
             status=400,

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 6, 2026
+**Last Updated:** March 6, 2026 (Session 104)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,33 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 104 - March 6, 2026
+
+**Focus:** Phase 5C debugging + end-of-session documentation update
+
+**Completed:**
+
+- **Phase 5C investigation spec executed:** Added `[BULK-DEBUG]` diagnostic logging to three locations:
+  - `BulkGenerationService.start_job()` in `prompts/services/bulk_generation.py` — logs before/after `async_task()`, captures `task_id` return value
+  - `process_bulk_generation_job()` in `prompts/tasks.py` — logs at entry point to confirm task execution
+  - `_upload_generated_image_to_b2()` in `prompts/tasks.py` — logs at entry and on successful upload with final CDN URL
+
+- **Key finding — Django-Q2 sync behavior in local dev:** Tasks queued via ORM broker execute in the web process (runserver), not the qcluster process. `[BULK-DEBUG] process_bulk_generation_job CALLED` confirmed for job `0df5ec9f` in runserver output. Production behavior (separate Heroku worker dyno) is unaffected.
+
+- **End-of-session docs updated** (this session): CLAUDE.md, CLAUDE_PHASES.md, PROJECT_FILE_STRUCTURE.md
+
+**Key Findings:**
+- `prompts.tasks` imports cleanly — not the source of queue issues
+- Django-Q2 runs synchronously in local dev; tasks execute in web process (`runserver.log`), not `qcluster.log`
+- `[BULK-DEBUG] process_bulk_generation_job CALLED` confirmed for job `0df5ec9f`
+- Full E2E image generation (OpenAI call → B2 upload → DB record) not yet confirmed — carried over to Session 105
+
+**Tests:** 976 passing, 12 skipped
+
+**Status:** Phase 5C ✅ complete. E2E verification pending → Phase 6 next after E2E confirmed.
+
+---
 
 ### Session 101 - March 6, 2026
 

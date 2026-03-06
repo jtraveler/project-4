@@ -525,11 +525,10 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ## 🔄 Bulk AI Image Generator (Phase 5C of 7 Complete)
 
-**Status:** Phase 5C Complete — Real OpenAI Generation with BYOK, Rate Limiting, Retry Logic
+**Status:** Phase 5C Complete — E2E Verification in Progress (Phase 5D)
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
-**Tests:** ~315 tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests); 975 total project tests
-**Total Test Count After:** 945 passing
+**Tests:** ~315 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests); 976 total project tests passing, 12 skipped
 
 ### What This Feature Does
 
@@ -545,7 +544,8 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 4 | Input & Settings UI | ✅ | 93 | Full page UI, ref image upload, char desc preview, source/credit, auto-save, NSFW modal |
 | 5A | Job Progress Page | ✅ | 98 | Job progress view, IMAGE_COST_MAP, progress bar, cancel, polling JS, 237-line test suite |
 | 5B | Gallery Rendering + Polish | ✅ | 98-99 | Per-prompt aspect ratio, column detection, gallery CSS, visual polish (2 rounds), 5-agent audit (10 fixes), column override bug fix, download extension, test gallery enhancements |
-| 5C | Wire Up Real Generation | ✅ | 100 | BYOK decryption, real OpenAI SDK calls, B2 upload, rate limiting (13s/image), retry logic (3×), auth/content_policy/server_error handling |
+| 5C | Wire Up Real Generation | ✅ | 100-101 | BYOK decryption, real OpenAI SDK calls, B2 upload, rate limiting (13s/image), retry logic (3×), auth/content_policy/server_error handling, IMAGE_COST_MAP → constants.py, try/finally key clearing |
+| 5D | E2E Verification | 🔄 | 104 | Confirm full pipeline: API call → B2 upload → CDN URL → DB record → UI render; diagnostic logging added |
 | 6 | Creating State | 🔲 | — | Image selection, page creation, summary view |
 | 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
 
@@ -628,6 +628,14 @@ Comprehensive 5-agent audit across 10 files, followed by 3 CC specs with targete
 - **What was built:** BYOK decryption (Fernet), real OpenAI GPT-Image-1 calls, B2 upload, 13s rate limiting, exponential backoff retry (30s→60s→120s, max 3), structured error routing (auth/content_policy/rate_limit/server_error)
 - **OpenAI API access:** Individual verification complete, API key created, $6 balance (Tier 1: 5 images/min)
 - **Per-prompt overrides:** Deferred to v1.1 (UI dropdowns exist but backend doesn't support mixed sizes per job)
+- **Post-commit fixes (Session 101):** `IMAGE_COST_MAP` moved to `prompts/constants.py`, `try/finally` guarantees `clear_api_key()` on all exit paths, openai exception imports moved outside `try` block to prevent flaky `TypeError` in test suite.
+
+### Phase 5D — End-to-End Verification
+
+- **Status:** 🔄 In Progress
+- **Goal:** Confirm full pipeline works: API call → B2 upload → CDN URL → DB record → UI render
+- **Blocker:** Task executes in web process locally (Django-Q2 sync mode); need to confirm actual OpenAI call + B2 upload succeed end-to-end
+- **Session 104:** Added `[BULK-DEBUG]` diagnostic logging to `start_job()`, `process_bulk_generation_job()`, and `_upload_generated_image_to_b2()` in prep for E2E test run
 
 ### Future Features (Deferred)
 
@@ -697,5 +705,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.9 (Session 101 — Post-commit fixes: IMAGE_COST_MAP to constants, try/finally key clearing, openai_provider exception import fix)
+**Version:** 4.10 (Session 104 — Phase 5D entry added, E2E verification in progress, test count updated to 976)
 **Last Updated:** March 6, 2026

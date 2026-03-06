@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 5, 2026
+**Last Updated:** March 6, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -51,7 +51,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 |-------|--------|-------------|-------------|
 | **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
-| **Bulk Gen** | 🔄 Phase 5B Complete + Polished | Bulk AI Image Generator | Phase 5C: Wire up real OpenAI API generation, Phase 6: Page creation, Phase 7: Integration + Polish |
+| **Bulk Gen** | 🔄 Phase 5C Complete | Bulk AI Image Generator | E2E verification in progress → Phase 6: Image selection + page creation, Phase 7: Integration + Polish |
 
 ### What's Paused (Don't Forget!)
 
@@ -80,7 +80,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
-### Bulk AI Image Generator (Phases 1-5B complete, 5C-7 remaining)
+### Bulk AI Image Generator (Phases 1-5C complete — E2E verification in progress)
 
 Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
 
@@ -88,7 +88,17 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 
 **Phase 5A-5B (Session 98):** Job progress page with cost tracking, gallery rendering with per-prompt aspect ratio detection, 2 rounds of visual polish, 237 new tests, 36 files changed. Status API enhanced with per-image data.
 
-**Phases 5B hotfix + 5C-7 (remaining):** Hotfix for test image loading + overflow (spec exists at CC_SPEC_BULK_GEN_PHASE_5B_HOTFIX.md), interactive gallery features (lightbox, download, selection, trash), generation state UI, page creation workflow, integration testing.
+**Phase 5C (Sessions 100-101):** BYOK key input (Fernet encryption), real GPT-Image-1 generation, 13s rate-limit delay, exponential backoff retry (30s→60s→120s, max 3), structured error routing (auth/content_policy/rate_limit/server_error). `IMAGE_COST_MAP` moved to `prompts/constants.py`. All 3 terminal states clear encrypted API key via `try/finally`. 976 tests passing, 12 skipped.
+
+**Phase 5D — E2E Verification (in progress):** Confirm full pipeline works: API call → B2 upload → CDN URL → DB record → UI render. Diagnostic `[BULK-DEBUG]` logging added in Session 104.
+
+**Phase 6-7 (remaining):** Image selection + page creation workflow, integration testing, error recovery, edge cases.
+
+### Key Learnings & Principles
+
+- **BYOK is the only viable model for bulk generation at scale:** Platform-paid API model fails because all users share Mateo's rate limits, creating unacceptable wait times with concurrent users.
+- **Django-Q2 runs synchronously in local dev:** Tasks queued via ORM broker execute in the web process locally (either `sync=True` setting or Django-Q2 default). This means `[BULK-DEBUG] process_bulk_generation_job CALLED` appears in `runserver.log`, not `qcluster.log`. Production behavior (separate Heroku worker dyno) is unaffected.
+- **`tee` for persistent log capture:** Use `python manage.py runserver 2>&1 | tee runserver.log` and `python manage.py qcluster 2>&1 | tee qcluster.log` for reliable debug log capture. Then grep with: `grep "BULK-DEBUG\|ERROR\|Traceback" runserver.log`
 
 ---
 
@@ -166,7 +176,7 @@ Rebuilding upload flow to feel "instant" by:
 |-------|-------------|--------|
 | **N4h rename not triggering** | `rename_prompt_files_for_seo` task is coded but not generating SEO filenames in production | Files keep UUID names instead of SEO slugs |
 | **Indexes migration pending** | Composite indexes added to models.py but `makemigrations` not yet run | Indexes not active in database |
-| **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests at time of fix; now 914 tests, flake8 clean, bandit clean) | ✅ All 3 jobs green |
+| **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests at time of fix; now 976 passing, 12 skipped, flake8 clean, bandit clean) | ✅ All 3 jobs green |
 
 **N4h Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation.
 
@@ -1172,5 +1182,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.20 (Session 99 — Phase 5B Audit Fixes, Test Gallery Enhancements, OpenAI API Setup)
-**Last Updated:** March 5, 2026
+**Version:** 4.21 (Session 104 — Phase 5C complete, Django-Q2 sync finding, Key Learnings section added, test count 976)
+**Last Updated:** March 6, 2026

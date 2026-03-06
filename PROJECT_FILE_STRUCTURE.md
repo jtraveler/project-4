@@ -2,8 +2,8 @@
 
 **Last Updated:** March 5, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phase 5B complete + polished), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~945 passing (43% coverage, threshold 40%)
+**Current Phase:** Bulk AI Image Generator (Phase 5C complete — E2E verification in progress), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~976 passing, 12 skipped (43% coverage, threshold 40%)
 
 ---
 
@@ -16,7 +16,7 @@
 | **CSS Files** | 12 | static/css/ |
 | **JavaScript Files** | 11 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 66 | prompts/migrations/ (64), about/migrations/ (2) |
+| **Migrations** | 67 | prompts/migrations/ (65), about/migrations/ (2) |
 | **Test Files** | 22 | prompts/tests/ |
 | **Management Commands** | 29 | prompts/management/commands/ |
 | **Services** | 15 | prompts/services/ |
@@ -74,7 +74,7 @@ live-working-project/
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
-│   ├── migrations/               # 60 migrations + __init__.py
+│   ├── migrations/               # 65 migrations + __init__.py (latest: 0064_add_api_key_fields_to_bulk_generation_job)
 │   ├── services/                 # 12 service modules
 │   │   └── notifications.py      # Notification service (create, count, mark-read) (Session 86)
 │   ├── signals/                   # Signal handlers (Session 86)
@@ -199,14 +199,14 @@ prompts/services/
 ├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT)
 ├── b2_rename.py             # B2 file renaming via copy-verify-delete (Phase N4h)
 ├── b2_upload_service.py     # B2 upload orchestration (Phase L)
-├── bulk_generation.py       # BulkGenerationService: job creation, scheduling, rate limiting, per-image status (~270 lines)
+├── bulk_generation.py       # BulkGenerationService: job creation, scheduling, rate limiting, per-image status, encrypt/decrypt/clear_api_key helpers (~300 lines, Sessions 92-101)
 ├── cloudinary_moderation.py # OpenAI Vision moderation for images and videos
 ├── content_generation.py    # GPT-4o content generation for uploads
 ├── image_processor.py       # Pillow image optimization (Phase L)
 ├── image_providers/         # Provider abstraction package (Session 92)
 │   ├── __init__.py          # Package init
-│   ├── base.py              # Abstract ImageProvider base class
-│   └── openai_adapter.py    # OpenAI GPT-Image-1 adapter
+│   ├── base.py              # Abstract ImageProvider base class + GenerationResult dataclass (error_type, retry_after added Session 100)
+│   └── openai_adapter.py    # OpenAI GPT-Image-1 adapter — real generation, structured error handling (Session 100-101)
 ├── leaderboard.py           # Leaderboard calculations (Phase G)
 ├── notifications.py         # Notification service: create, count, mark-read, duplicate prevention (Phase R1)
 ├── openai_moderation.py     # OpenAI text moderation API
@@ -386,13 +386,13 @@ prompts/views/
 | File | Lines | Purpose |
 |------|-------|---------|
 | `views/` | ~3,929 | View package (11 modules) ✅ REFACTORED |
-| `models.py` | ~2,200 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, Notification, etc.) + `seo_pass2_at` field + `ordered_tags()` method |
+| `models.py` | ~2,200 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, Notification, BulkGenerationJob, GeneratedImage, etc.) + `seo_pass2_at` field + `ordered_tags()` method + `api_key_encrypted` (BinaryField, Fernet) + `api_key_hint` fields (Session 100) |
 | `admin.py` | ~2,300 | Django admin (PromptAdmin with two-button system, SEO Review + Rebuild actions, M2M ordering) |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
 | `signals.py` | ~100 | Django signals (auto-create profiles) |
 | `middleware.py` | ~67 | RatelimitMiddleware |
-| `constants.py` | ~241 | AI generator metadata, OPENAI_TIMEOUT |
+| `constants.py` | ~260 | AI generator metadata, OPENAI_TIMEOUT, IMAGE_COST_MAP (GPT-Image-1 pricing — moved from bulk_generator_views.py, Session 101) |
 | `email_utils.py` | ~100 | Email helper functions |
 
 ---

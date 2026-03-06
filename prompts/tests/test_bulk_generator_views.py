@@ -995,3 +995,158 @@ class StartGenerationApiKeyTests(TestCase):
         job = BulkGenerationJob.objects.get(id=data['job_id'])
         self.assertIsNotNone(job.api_key_encrypted)
         self.assertEqual(job.api_key_hint, '1234')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Flush All Endpoint Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@override_settings(
+    OPENAI_API_KEY='test-key',
+    B2_ENDPOINT_URL='https://s3.us-west-004.backblazeb2.com',
+    B2_BUCKET_NAME='test-bucket',
+    B2_ACCESS_KEY_ID='test-access-key',
+    B2_SECRET_ACCESS_KEY='test-secret-key',
+    B2_CUSTOM_DOMAIN='cdn.example.com',
+)
+class FlushAllEndpointTests(TestCase):
+    """Tests for POST /tools/bulk-ai-generator/api/flush-all/"""
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staffuser', password='testpass', is_staff=True,
+        )
+        self.regular_user = User.objects.create_user(
+            username='regular', password='testpass', is_staff=False,
+        )
+        self.url = reverse('prompts:bulk_generator_flush_all')
+
+    def _make_job(self):
+        return BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            provider='openai',
+            model_name='gpt-image-1',
+            quality='standard',
+            size='1024x1024',
+            images_per_prompt=1,
+            visibility='draft',
+        )
+
+    def test_anonymous_returns_redirect(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 302)
+
+    def test_non_staff_returns_403(self):
+        self.client.login(username='regular', password='testpass')
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('error', response.json())
+
+    def test_get_not_allowed(self):
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+
+    @patch('boto3.client')
+    def test_empty_db_returns_success_zeros(self, mock_boto):
+        """Flush with no data returns success with zeros."""
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['deleted_files'], 0)
+        self.assertEqual(data['deleted_images'], 0)
+        self.assertEqual(data['deleted_jobs'], 0)
+        # No B2 call when nothing to delete
+        mock_boto.assert_not_called()
+
+    @patch('boto3.client')
+    def test_unpublished_images_and_jobs_are_deleted(self, mock_boto):
+        """Unpublished images and jobs are removed from DB."""
+        job = self._make_job()
+        GeneratedImage.objects.create(
+            job=job,
+            prompt_order=0,
+            prompt_text='test prompt',
+            image_url=f'https://cdn.example.com/bulk-gen/{job.id}/img1.jpg',
+        )
+        self.client.login(username='staffuser', password='testpass')
+        mock_s3 = MagicMock()
+        mock_boto.return_value = mock_s3
+
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['deleted_images'], 1)
+        self.assertEqual(data['deleted_jobs'], 1)  # job has no published images
+        self.assertEqual(data['deleted_files'], 1)
+        self.assertFalse(GeneratedImage.objects.exists())
+        self.assertFalse(BulkGenerationJob.objects.exists())
+
+    @patch('boto3.client')
+    def test_published_images_and_job_are_preserved(self, mock_boto):
+        """Images with prompt_page_id set are NOT deleted."""
+        from prompts.models import Prompt
+        job = self._make_job()
+        # Create a minimal published prompt to act as the page reference
+        # status=1 means "Published" (IntegerField, 0=Draft, 1=Published)
+        prompt = Prompt.objects.create(
+            title='Test',
+            author=self.staff_user,
+            content='test',
+            status=1,
+        )
+        GeneratedImage.objects.create(
+            job=job,
+            prompt_order=0,
+            prompt_text='test prompt',
+            image_url=f'https://cdn.example.com/bulk-gen/{job.id}/img1.jpg',
+            prompt_page=prompt,
+        )
+        self.client.login(username='staffuser', password='testpass')
+        mock_boto.return_value = MagicMock()
+
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['deleted_images'], 0)
+        self.assertEqual(data['deleted_jobs'], 0)
+        self.assertEqual(data['deleted_files'], 0)
+        self.assertTrue(GeneratedImage.objects.exists())
+        self.assertTrue(BulkGenerationJob.objects.exists())
+
+    @patch('boto3.client')
+    def test_b2_delete_called_with_correct_key(self, mock_boto):
+        """B2 delete_objects is called with the correct object key."""
+        job = self._make_job()
+        b2_key = f'bulk-gen/{job.id}/img1.jpg'
+        GeneratedImage.objects.create(
+            job=job,
+            prompt_order=0,
+            prompt_text='test prompt',
+            image_url=f'https://cdn.example.com/{b2_key}',
+        )
+        self.client.login(username='staffuser', password='testpass')
+        mock_s3 = MagicMock()
+        mock_boto.return_value = mock_s3
+
+        self.client.post(self.url)
+
+        mock_s3.delete_objects.assert_called_once()
+        call_kwargs = mock_s3.delete_objects.call_args
+        objects = call_kwargs[1]['Delete']['Objects']
+        self.assertEqual(len(objects), 1)
+        self.assertEqual(objects[0]['Key'], b2_key)
+
+    @patch('boto3.client')
+    def test_response_includes_redirect_url(self, mock_boto):
+        """Success response includes a redirect_url."""
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(self.url)
+        data = response.json()
+        self.assertIn('redirect_url', data)
+        self.assertEqual(data['redirect_url'], '/tools/bulk-ai-generator/')

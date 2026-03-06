@@ -10,6 +10,7 @@ import logging
 from urllib.parse import urlparse
 
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -478,3 +479,95 @@ def api_validate_reference_image(request):
 
     result = service.validate_reference_image(image_url)
     return JsonResponse(result)
+
+
+@login_required
+@require_POST
+def bulk_generator_flush_all(request):
+    """
+    POST /tools/bulk-ai-generator/api/flush-all/
+    Staff-only endpoint. Deletes UNPUBLISHED GeneratedImage and
+    BulkGenerationJob records (prompt_page_id is NULL), and deletes
+    their corresponding B2 files.
+
+    ⛔ NEVER deletes images where prompt_page_id is NOT NULL (published).
+    """
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Staff only.'}, status=403)
+
+    import boto3
+    from django.conf import settings
+    from prompts.models import BulkGenerationJob, GeneratedImage
+
+    deleted_files = 0
+    deleted_images = 0
+    deleted_jobs = 0
+    errors = []
+
+    # --- Gather unpublished image URLs for B2 deletion ---
+    # Only images NOT linked to a published prompt page
+    unpublished_images = GeneratedImage.objects.filter(
+        prompt_page_id__isnull=True,
+        image_url__isnull=False,
+    ).exclude(image_url='')
+
+    # Extract B2 keys from CDN URLs
+    # CDN URL: https://{B2_CUSTOM_DOMAIN}/bulk-gen/{job-id}/{image-id}.jpg
+    # B2 key:  bulk-gen/{job-id}/{image-id}.jpg
+    cdn_base = f'https://{settings.B2_CUSTOM_DOMAIN}'
+    objects_to_delete = []
+    for img in unpublished_images:
+        if img.image_url and img.image_url.startswith(cdn_base + '/'):
+            key = img.image_url[len(cdn_base) + 1:]
+            objects_to_delete.append({'Key': key})
+
+    # --- Delete B2 files (in batches of 1000 — B2/S3 API limit) ---
+    if objects_to_delete:
+        try:
+            s3 = boto3.client(
+                's3',
+                endpoint_url=settings.B2_ENDPOINT_URL,
+                aws_access_key_id=settings.B2_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
+            )
+            for i in range(0, len(objects_to_delete), 1000):
+                batch = objects_to_delete[i:i + 1000]
+                s3.delete_objects(
+                    Bucket=settings.B2_BUCKET_NAME,
+                    Delete={'Objects': batch, 'Quiet': True},
+                )
+            deleted_files = len(objects_to_delete)
+        except Exception as e:
+            logger.error("Flush: B2 deletion error: %s", e)
+            errors.append(f"B2 error: {str(e)}")
+
+    # --- Delete unpublished DB records ---
+    try:
+        result = GeneratedImage.objects.filter(
+            prompt_page_id__isnull=True,
+        ).delete()
+        deleted_images = result[0]
+
+        # Only delete jobs that have NO published images remaining
+        published_job_ids = GeneratedImage.objects.filter(
+            prompt_page_id__isnull=False,
+        ).values_list('job_id', flat=True).distinct()
+        result = BulkGenerationJob.objects.exclude(
+            id__in=published_job_ids,
+        ).delete()
+        deleted_jobs = result[0]
+    except Exception as e:
+        logger.error("Flush: DB deletion error: %s", e)
+        errors.append(f"DB error: {str(e)}")
+
+    if errors:
+        return JsonResponse({'success': False, 'errors': errors}, status=500)
+
+    return JsonResponse({
+        'success': True,
+        'deleted_files': deleted_files,
+        'deleted_images': deleted_images,
+        'deleted_jobs': deleted_jobs,
+        'b2_folder': 'bulk-gen/',
+        'redirect_url': '/tools/bulk-ai-generator/',
+    })

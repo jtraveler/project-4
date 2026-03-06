@@ -830,6 +830,13 @@ class GenerateUniqueSlugTests(TestCase):
 
 
 @override_settings(OPENAI_API_KEY='test-key')
+@override_settings(
+    B2_ENDPOINT_URL='https://s3.us-east-005.backblazeb2.com',
+    B2_ACCESS_KEY_ID='test-key-id',
+    B2_SECRET_ACCESS_KEY='test-secret',
+    B2_BUCKET_NAME='test-bucket',
+    B2_CUSTOM_DOMAIN='media.promptfinder.net',
+)
 class UploadGeneratedImageTests(TestCase):
     """Tests for _upload_generated_image_to_b2."""
 
@@ -839,16 +846,13 @@ class UploadGeneratedImageTests(TestCase):
         )
         self.service = BulkGenerationService()
 
-    @patch('prompts.services.b2_upload_service.upload_to_b2')
-    @patch('prompts.services.b2_upload_service.get_upload_path')
-    def test_upload_generated_image_to_b2_filename(
-        self, mock_get_path, mock_upload
-    ):
-        """SEO filename generated correctly."""
+    @patch('boto3.client')
+    def test_upload_uses_bulk_gen_path(self, mock_boto):
+        """Uploads to bulk-gen/{job_id}/{image_id}.jpg, returns CDN URL."""
         from prompts.tasks import _upload_generated_image_to_b2
 
-        mock_get_path.return_value = 'media/images/2026/02/original/test.png'
-        mock_upload.return_value = 'https://cdn.example.com/test.png'
+        mock_s3 = MagicMock()
+        mock_boto.return_value = mock_s3
 
         job = self.service.create_job(
             user=self.user,
@@ -862,16 +866,44 @@ class UploadGeneratedImageTests(TestCase):
             image=image,
         )
 
-        self.assertEqual(url, 'https://cdn.example.com/test.png')
-        mock_upload.assert_called_once()
-        mock_get_path.assert_called_once()
+        # Verify correct boto3 path used
+        call_kwargs = mock_s3.put_object.call_args[1]
+        self.assertEqual(
+            call_kwargs['Key'],
+            f'bulk-gen/{job.id}/{image.id}.jpg',
+        )
+        self.assertEqual(call_kwargs['ContentType'], 'image/jpeg')
+        self.assertEqual(call_kwargs['Body'], b'fake-png-data')
+        self.assertEqual(call_kwargs['Bucket'], 'test-bucket')
 
-        # Verify the filename passed contains SEO elements
-        call_args = mock_get_path.call_args
-        filename = call_args[0][0]
-        self.assertTrue(filename.endswith('.png'))
-        # Should contain UUID suffix for uniqueness
-        self.assertIn('-', filename)
+        # Verify CDN URL
+        self.assertEqual(
+            url,
+            f'https://media.promptfinder.net/bulk-gen/{job.id}/{image.id}.jpg',
+        )
+
+    @patch('boto3.client')
+    def test_upload_uses_correct_b2_credentials(self, mock_boto):
+        """boto3 client created with B2 settings variables."""
+        from prompts.tasks import _upload_generated_image_to_b2
+
+        mock_s3 = MagicMock()
+        mock_boto.return_value = mock_s3
+
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['test prompt'],
+        )
+        image = job.images.first()
+
+        _upload_generated_image_to_b2(b'data', job, image)
+
+        mock_boto.assert_called_once_with(
+            's3',
+            endpoint_url='https://s3.us-east-005.backblazeb2.com',
+            aws_access_key_id='test-key-id',
+            aws_secret_access_key='test-secret',
+        )
 
 
 @override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)

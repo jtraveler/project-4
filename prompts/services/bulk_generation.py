@@ -201,12 +201,16 @@ class BulkGenerationService:
         job.started_at = timezone.now()
         job.save(update_fields=['status', 'started_at'])
 
+        logger.info("[BULK-DEBUG] About to queue task for job %s", job.id)
+
         # Queue the orchestrator task
-        async_task(
+        task_id = async_task(
             'prompts.tasks.process_bulk_generation_job',
             str(job.id),
             task_name=f'bulk-gen-{job.id}',
         )
+
+        logger.info("[BULK-DEBUG] Task queued. task_id=%s", task_id)
 
     @staticmethod
     def clear_api_key(job: BulkGenerationJob) -> None:

@@ -99,7 +99,6 @@ class OpenAIImageProvider(ImageProvider):
                 size=size,
                 quality=quality,
                 n=1,
-                response_format='b64_json',
             )
 
             image_data = None

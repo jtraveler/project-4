@@ -2501,6 +2501,8 @@ def process_bulk_generation_job(job_id: str) -> None:
 
     Called via Django-Q async_task from BulkGenerationService.start_job().
     """
+    logger.info("[BULK-DEBUG] process_bulk_generation_job CALLED with job_id=%s", job_id)
+
     from django.utils import timezone as tz
     from prompts.models import BulkGenerationJob
     from prompts.services.image_providers import get_provider
@@ -2570,57 +2572,57 @@ def process_bulk_generation_job(job_id: str) -> None:
 
 def _upload_generated_image_to_b2(image_data, job, image):
     """
-    Upload generated image bytes to B2 storage.
+    Upload generated image bytes directly to B2 via boto3.
 
-    Uses the existing B2 upload service patterns. Generates a SEO-friendly
-    filename based on the prompt text.
+    Uses a bulk-gen/ path prefix to keep generated images separate from
+    user uploads. Returns a Cloudflare CDN URL.
 
     Args:
-        image_data: Raw image bytes (PNG or JPEG).
+        image_data: Base64-encoded string or raw bytes from OpenAI response.
+            Automatically decoded if a base64 string is provided.
         job: BulkGenerationJob instance.
         image: GeneratedImage instance.
 
     Returns:
-        The B2/CDN URL of the uploaded image.
+        Full Cloudflare CDN URL string.
+
+    Raises:
+        Exception if upload fails.
     """
-    import uuid as uuid_lib
-    from django.core.files.base import ContentFile
-    from prompts.utils.seo import generate_seo_filename
-    from prompts.services.b2_upload_service import (
-        upload_to_b2, get_upload_path,
+    logger.info(
+        "[BULK-DEBUG] _upload_generated_image_to_b2 CALLED. job=%s image=%s type(image_data)=%s",
+        job.id, image.id, type(image_data).__name__,
     )
 
-    try:
-        # Generate SEO filename from prompt text
-        # Use first 60 chars of prompt for filename generation
-        prompt_snippet = image.prompt_text[:60]
-        seo_filename = generate_seo_filename(
-            title=prompt_snippet,
-            extension='png',
-        )
+    import boto3
+    import base64
+    from django.conf import settings
 
-        # Fallback if SEO generation fails
-        if not seo_filename:
-            seo_filename = 'ai-generated-prompt.png'
+    # Path: bulk-gen/{job_id}/{image_id}.jpg
+    # Keeps bulk-generated images separate from user uploads
+    b2_key = f'bulk-gen/{job.id}/{image.id}.jpg'
 
-        # Ensure unique filename with UUID suffix
-        unique_suffix = str(uuid_lib.uuid4())[:8]
-        if '.' in seo_filename:
-            name, ext = seo_filename.rsplit('.', 1)
-            filename = f"{name}-{unique_suffix}.{ext}"
-        else:
-            filename = f"{seo_filename}-{unique_suffix}.png"
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=settings.B2_ENDPOINT_URL,
+        aws_access_key_id=settings.B2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
+    )
 
-        # Upload to B2 using existing service
-        path = get_upload_path(filename, 'original')
-        content_file = ContentFile(image_data)
-        url = upload_to_b2(content_file, path)
+    # B2 ignores the ACL parameter entirely — bucket-level permissions
+    # control public access. Do NOT add ACL='public-read' here.
+    image_bytes = base64.b64decode(image_data) if isinstance(image_data, str) else image_data
+    s3_client.put_object(
+        Bucket=settings.B2_BUCKET_NAME,
+        Key=b2_key,
+        Body=image_bytes,
+        ContentType='image/jpeg',
+    )
 
-        return url
-
-    except Exception as e:
-        logger.error("B2 upload failed for image %s: %s", image.id, e)
-        raise
+    # CDN URL matches pattern used across the project (storage_backends.py)
+    final_url = f'https://{settings.B2_CUSTOM_DOMAIN}/{b2_key}'
+    logger.info("[BULK-DEBUG] Upload complete. url=%s", final_url)
+    return final_url
 
 
 def create_prompt_pages_from_job(job_id, selected_image_ids):

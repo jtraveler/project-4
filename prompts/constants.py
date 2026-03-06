@@ -396,3 +396,31 @@ OPENAI_TIMEOUT = 30
 # Used by: upload_views.py (upload_submit), content_generation.py
 # These indicate AI failure and trigger needs_seo_review flag
 DEFAULT_AI_TITLES = ('Untitled Prompt', 'Untitled Upload')
+
+
+# =============================================================================
+# BULK AI IMAGE GENERATOR — GPT-Image-1 Pricing
+# =============================================================================
+
+# Cost per image by quality and size (as of March 2026)
+# Used by: bulk_generator_views.py (cost estimation), tasks.py (actual cost tracking)
+IMAGE_COST_MAP = {
+    'low': {
+        '1024x1024': 0.011,
+        '1536x1024': 0.016,
+        '1024x1536': 0.016,
+        '1792x1024': 0.016,
+    },
+    'medium': {
+        '1024x1024': 0.034,
+        '1536x1024': 0.046,
+        '1024x1536': 0.046,
+        '1792x1024': 0.046,
+    },
+    'high': {
+        '1024x1024': 0.067,
+        '1536x1024': 0.092,
+        '1024x1536': 0.092,
+        '1792x1024': 0.092,
+    },
+}

@@ -9,8 +9,8 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from prompts.constants import IMAGE_COST_MAP
 from prompts.models import BulkGenerationJob
-from prompts.views.bulk_generator_views import IMAGE_COST_MAP
 
 
 @override_settings(OPENAI_API_KEY='test-key')

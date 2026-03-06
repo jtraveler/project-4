@@ -1042,8 +1042,9 @@ class RetryLogicTests(TestCase):
             'prompts.services.bulk_generation.BulkGenerationService.clear_api_key'
         ) as mock_clear:
             process_bulk_generation_job(str(job.id))
-            # clear_api_key called once by _run_generation_with_retry on auth failure
-            mock_clear.assert_called_once_with(job)
+            # clear_api_key called by _run_generation_with_retry on auth failure
+            # AND by the finally block (idempotent — safe to call twice)
+            mock_clear.assert_called_with(job)
 
         job.refresh_from_db()
         self.assertEqual(job.status, 'failed')

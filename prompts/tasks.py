@@ -2536,34 +2536,36 @@ def process_bulk_generation_job(job_id: str) -> None:
     provider = get_provider(job.provider, mock_mode=False)
 
     # IMAGE_COST_MAP for accurate per-image cost tracking
-    from prompts.views.bulk_generator_views import IMAGE_COST_MAP
+    from prompts.constants import IMAGE_COST_MAP
 
     images = job.images.filter(
         status='queued'
     ).order_by('prompt_order', 'variation_number')
 
-    completed_count, failed_count, total_cost = _run_generation_loop(
-        job, provider, job_api_key, images, IMAGE_COST_MAP, tz,
-    )
+    try:
+        completed_count, failed_count, total_cost = _run_generation_loop(
+            job, provider, job_api_key, images, IMAGE_COST_MAP, tz,
+        )
 
-    # Mark job complete (if not cancelled or stopped by auth failure)
-    job.refresh_from_db(fields=['status'])
-    if job.status not in ('cancelled', 'failed'):
-        job.status = 'completed'
-        job.completed_at = tz.now()
-        job.completed_count = completed_count
-        job.failed_count = failed_count
-        job.actual_cost = total_cost
-        job.save(update_fields=[
-            'status', 'completed_at', 'completed_count',
-            'failed_count', 'actual_cost',
-        ])
+        # Mark job complete (if not cancelled or stopped by auth failure)
+        job.refresh_from_db(fields=['status'])
+        if job.status not in ('cancelled', 'failed'):
+            job.status = 'completed'
+            job.completed_at = tz.now()
+            job.completed_count = completed_count
+            job.failed_count = failed_count
+            job.actual_cost = total_cost
+            job.save(update_fields=[
+                'status', 'completed_at', 'completed_count',
+                'failed_count', 'actual_cost',
+            ])
+        logger.info(
+            "Bulk job %s finished: %d completed, %d failed, cost $%s",
+            job_id, completed_count, failed_count, total_cost,
+        )
+    finally:
+        # Always clear the BYOK key — clear_api_key() is a no-op if already cleared
         BulkGenerationService.clear_api_key(job)
-
-    logger.info(
-        "Bulk job %s finished: %d completed, %d failed, cost $%s",
-        job_id, completed_count, failed_count, total_cost,
-    )
 
 
 def _upload_generated_image_to_b2(image_data, job, image):

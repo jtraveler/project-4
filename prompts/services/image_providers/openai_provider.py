@@ -78,14 +78,18 @@ class OpenAIImageProvider(ImageProvider):
 
         effective_key = api_key or self.api_key
 
+        # Import exception classes outside the try block so they are always
+        # bound to the real openai exception classes, regardless of test
+        # ordering or sys.modules state.
+        from openai import (
+            AuthenticationError,
+            RateLimitError,
+            BadRequestError,
+            APIStatusError,
+        )
+
         try:
-            from openai import (
-                OpenAI,
-                AuthenticationError,
-                RateLimitError,
-                BadRequestError,
-                APIStatusError,
-            )
+            from openai import OpenAI
 
             client = OpenAI(api_key=effective_key)
 

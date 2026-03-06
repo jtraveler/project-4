@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 5, 2026
+**Last Updated:** March 6, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,96 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 101 - March 6, 2026
+
+**Focus:** Post-commit fixes from Session 100 agent reviews — layer separation, key clearing, flaky test
+
+**Context:** Session 100 completed Phase 5C and committed. Agent reviews flagged two code quality issues (@django-pro 7.5/10, @security 7.0/10) plus a flaky test discovered in the full suite (`TypeError` at `except AuthenticationError:`).
+
+**Completed:**
+
+- **`IMAGE_COST_MAP` layer separation** (`prompts/constants.py` + affected files):
+  - Moved `IMAGE_COST_MAP` from `prompts/views/bulk_generator_views.py` to `prompts/constants.py`
+  - Fixes `tasks.py` → `bulk_generator_views.py` layer boundary violation flagged by @django-pro
+  - Updated imports in `tasks.py`, `bulk_generator_views.py`, and `test_bulk_generator_job.py`
+
+- **`try/finally` for BYOK key clearing** (`prompts/tasks.py`):
+  - Wrapped the generation loop + finalization in `try/finally`
+  - `BulkGenerationService.clear_api_key(job)` now guaranteed to run on any exit path
+  - Fixes @security finding: unhandled exceptions could leave encrypted API key in DB
+  - `clear_api_key()` is idempotent (`if job.api_key_encrypted:` guard), so double-calls are safe
+  - Updated `test_auth_error_stops_job`: `assert_called_once_with` → `assert_called_with` (double-call expected)
+
+- **`openai_provider.py` exception import fix** (`prompts/services/image_providers/openai_provider.py`):
+  - Moved `from openai import (AuthenticationError, RateLimitError, BadRequestError, APIStatusError)` OUTSIDE the `try` block
+  - Only `from openai import OpenAI` stays inside the `try` block
+  - Fixes flaky `TypeError: catching classes that do not inherit from BaseException` in full suite
+  - Root cause: if `sys.modules['openai']` gets contaminated by any test, exception classes bound inside the `try` would be MagicMocks, causing `TypeError` at the `except` clauses
+  - 4 `OpenAIProviderGenerateTests` confirmed passing after fix
+
+- **CLAUDE_PHASES.md** updated: Phase 5C marked complete, version bumped to 4.8
+
+**Tests:** 76 critical tests (test_bulk_generation_tasks + test_bulk_generator_job) all passing. Full suite running.
+
+**Agent Scores:** N/A (fixes-only session — no new spec)
+
+**Next up:** Phase 5D — Gallery interactive features (lightbox, download, selection, trash)
+
+---
+
+### Session 100 - March 6, 2026
+
+**Focus:** Bulk AI Image Generator — Phase 5C: Real OpenAI Generation, BYOK, Rate Limiting, Retry Logic
+
+**Context:** Following Session 99 which set up the OpenAI API and ran Phase 5B audit fixes, this session wired up real GPT-Image-1 generation to replace mock mode.
+
+**Completed:**
+
+- **Phase 5C Spec 2 — Real OpenAI Generation:**
+  - Replaced mock generation with real OpenAI API calls in `OpenAIImageProvider.generate()`
+  - Extended `GenerationResult` dataclass with `error_type` and `retry_after` fields
+  - Structured error handling: auth → stop job, rate_limit/server_error → exponential backoff (30s→60s→120s, max 3 retries), content_policy → fail image only, unknown → fail image only
+  - BYOK: `api_key_encrypted` decrypted from job record using Fernet; passed to provider's `generate()`
+  - 13-second delay between images (tier 1: 5 images/min); skipped for first image
+  - Cancel check via `job.refresh_from_db(fields=['status'])` before every image
+  - Cost from `IMAGE_COST_MAP` (not from `result.cost`) after successful generation
+  - Auth failure now correctly sets `job.status='failed'`; finalization skips both `'cancelled'` and `'failed'`
+  - `images.count()` cached before loop to avoid repeated DB queries
+  - `decrypt_api_key` wrapped in try/except to handle corrupted keys gracefully
+
+- **Refactoring (complexity reduction):**
+  - Extracted `_run_generation_with_retry()` — retry logic helper (reduces McCabe complexity)
+  - Extracted `_apply_generation_result()` — B2 upload + image DB update
+  - Extracted `_run_generation_loop()` — full for loop with rate limiting and cancel detection
+  - `process_bulk_generation_job()` McCabe complexity reduced from 21 → under 15
+
+- **Test updates (5 files, 975 total, all passing):**
+  - `ProcessBulkJobTests`: all 6 tests updated to use `_make_job()` helper (BYOK compatibility)
+  - `test_process_job_actual_cost`: fixed expected cost from `Decimal('0.1')` → `Decimal('0.068')` (uses IMAGE_COST_MAP)
+  - `EdgeCaseTests`: added `FERNET_KEY` to override_settings + `_make_job()` helper
+  - New `RetryLogicTests` class (5 tests): auth stops job + verifies `clear_api_key` called, content_policy continues job, rate_limit retries then succeeds, rate_limit exhaustion fails image, missing API key fails fast
+  - New `OpenAIProviderGenerateTests` class (4 tests): success, auth error, rate_limit, content_policy
+  - Fixed `test_bulk_generator.py` `test_openai_provider_generate_failure`: replaced `patch.dict(sys.modules)` with `patch('openai.OpenAI')` to avoid TypeError with structured exception handling
+
+- **Bug fix found during auth test:** `process_bulk_generation_job` was overwriting `job.status='failed'` (set by auth path) with `'completed'` because finalization only excluded `'cancelled'`. Fixed: `if job.status not in ('cancelled', 'failed'):`
+
+**Agent Scores (Session 100):**
+- @django-pro: 8.6/10 (re-review after fixes; was ~6.5)
+- @security: 7.0/10 (CRITICAL: pre-existing FERNET_KEY in git history; HIGH: no key clearing on unhandled exceptions — partially fixed via decrypt try/except)
+- @test-engineer: 8.2/10 (re-review after rate-limit exhaustion + clear_api_key assertion added)
+- @code-reviewer: 7.5/10 (initial; views→tasks import structural concern, hardcoded 13s sleep)
+
+**Commit:** `e6c9f3b` — `feat(bulk-gen): Phase 5C — real OpenAI generation with BYOK, rate limiting, retry logic`
+
+**Tests:** 975 total (up from 971), all passing, 12 skipped
+
+**Next up (Phase 5C remaining / Phase 5D):**
+- Phase 5D: Gallery interactive features (lightbox, download, selection, trash)
+- Phase 6: Page creation workflow from gallery
+- Phase 7: Integration + polish
+
+---
 
 ### Session 99 - March 4-5, 2026
 
@@ -1896,4 +1986,4 @@ For quick reference, here are key milestones:
 ---
 
 **Version:** 4.19 (Session 99 — Phase 5B Audit Fixes, Test Gallery Enhancements, OpenAI API Setup)
-**Last Updated:** March 5, 2026
+**Last Updated:** March 6, 2026

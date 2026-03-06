@@ -15,34 +15,13 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
+from prompts.constants import IMAGE_COST_MAP
 from prompts.models import BulkGenerationJob
 from prompts.services.bulk_generation import BulkGenerationService
 
 logger = logging.getLogger(__name__)
 
 service = BulkGenerationService()
-
-# GPT-Image-1 pricing per image (as of March 2026)
-IMAGE_COST_MAP = {
-    'low': {
-        '1024x1024': 0.011,
-        '1536x1024': 0.016,
-        '1024x1536': 0.016,
-        '1792x1024': 0.016,
-    },
-    'medium': {
-        '1024x1024': 0.034,
-        '1536x1024': 0.046,
-        '1024x1536': 0.046,
-        '1792x1024': 0.046,
-    },
-    'high': {
-        '1024x1024': 0.067,
-        '1536x1024': 0.092,
-        '1024x1536': 0.092,
-        '1792x1024': 0.092,
-    },
-}
 
 # Maximum prompts allowed per job
 MAX_PROMPTS_PER_JOB = 50

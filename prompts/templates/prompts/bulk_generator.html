@@ -255,21 +255,15 @@
         Add 4 More Boxes
     </button>
 
-    {# ===== Flush Test Results Bar (staff only) ===== #}
-    {% if request.user.is_staff %}
-    <div class="bg-flush-bar" id="bulk-flush-bar">
-        <div class="bg-flush-bar-inner">
+    {# ===== Sticky Bottom Bar ===== #}
+    <div class="bg-sticky-bar">
+        <div class="bg-sticky-bar-inner">
+            {% if request.user.is_staff %}
             <button type="button" class="bg-flush-btn" id="btn-flush-open"
                     aria-label="Trash all bulk generator test results">
                 🗑 Trash Test Results from Bulk Generator
             </button>
-        </div>
-    </div>
-    {% endif %}
-
-    {# ===== Sticky Bottom Bar ===== #}
-    <div class="bg-sticky-bar">
-        <div class="bg-sticky-bar-inner">
+            {% endif %}
             <div class="bg-cost-summary" role="status" aria-live="polite" aria-atomic="true">
                 <div class="bg-cost-item">
                     <svg class="icon" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-image"/></svg>
@@ -379,18 +373,7 @@
 
 {% if request.user.is_staff %}
 <style>
-/* ── Flush bar ── */
-.bg-flush-bar {
-    background: #fff;
-    border-top: 1px solid #fee2e2;
-    padding: 0.5rem 1rem;
-}
-.bg-flush-bar-inner {
-    display: flex;
-    justify-content: flex-end;
-    max-width: 1200px;
-    margin: 0 auto;
-}
+/* ── Flush button ── */
 .bg-flush-btn {
     background: transparent;
     border: 1px solid #ef4444;

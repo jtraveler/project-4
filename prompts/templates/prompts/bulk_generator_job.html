@@ -135,8 +135,274 @@
     <div class="job-gallery-container" id="jobGalleryContainer"></div>
 
 </div>{# /#bulk-generator-job #}
+
+{% if request.user.is_staff %}
+
+{# ===== Sticky Bar with Flush Button (staff only) ===== #}
+<div class="bg-sticky-bar">
+    <div class="bg-sticky-bar-inner">
+        <button type="button" class="bg-flush-btn" id="btn-flush-open"
+                aria-label="Trash all bulk generator test results">
+            🗑 Trash Test Results from Bulk Generator
+        </button>
+    </div>
+</div>
+
+{# ===== Flush: Confirm Modal ===== #}
+<div class="bg-modal-overlay" id="modal-flush-confirm">
+    <div class="bg-modal-dialog" role="dialog" aria-modal="true"
+         aria-labelledby="modal-flush-confirm-title" aria-describedby="modal-flush-confirm-body">
+        <h3 class="bg-modal-title" id="modal-flush-confirm-title">⚠️ Trash Unpublished Bulk Generator Data?</h3>
+        <p class="bg-modal-body" id="modal-flush-confirm-body">This will permanently delete all <strong>UNPUBLISHED</strong> images and jobs from the database and remove their files from Backblaze. Published images (already linked to prompt pages) will <strong>NOT</strong> be affected. This cannot be undone.</p>
+        <div class="bg-modal-actions">
+            <button type="button" class="bg-modal-cancel" id="btn-flush-cancel">Cancel</button>
+            <button type="button" class="bg-modal-confirm danger" id="btn-flush-confirm">Yes, Delete Unpublished</button>
+        </div>
+    </div>
+</div>
+
+{# ===== Flush: Error Modal ===== #}
+<div class="bg-modal-overlay" id="modal-flush-error">
+    <div class="bg-modal-dialog" role="dialog" aria-modal="true"
+         aria-labelledby="modal-flush-error-title">
+        <h3 class="bg-modal-title" id="modal-flush-error-title">❌ Purge Failed</h3>
+        <p class="bg-modal-body" id="flush-error-msg"></p>
+        <div class="bg-modal-actions">
+            <button type="button" class="bg-modal-cancel" id="btn-flush-error-close">Close</button>
+        </div>
+    </div>
+</div>
+
+{# ===== Flush: Success Banner (fixed, starts hidden) ===== #}
+<div id="flush-success-banner" class="d-none" role="status" aria-live="polite">
+    <div class="flush-banner-inner">
+        ✅ Purge complete —
+        <span class="flush-files">0</span> files removed from Backblaze (bulk-gen/),
+        <span class="flush-images">0</span> image records deleted,
+        <span class="flush-jobs">0</span> job records deleted. Redirecting…
+    </div>
+</div>
+
+{% endif %}
+
 {% endblock %}
 
 {% block extras %}
 <script src="{% static 'js/bulk-generator-job.js' %}" defer></script>
+
+{% if request.user.is_staff %}
+<style>
+/* ── Flush sticky bar (job page) ── */
+.bg-sticky-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    padding: 0.75rem 1rem;
+    z-index: 100;
+}
+.bg-sticky-bar-inner {
+    display: flex;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+/* ── Flush button ── */
+.bg-flush-btn {
+    background: transparent;
+    border: 1px solid #ef4444;
+    color: #dc2626;
+    padding: 0.4rem 1rem;
+    border-radius: var(--radius-lg, 8px);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.bg-flush-btn:hover,
+.bg-flush-btn:focus-visible {
+    background: #fef2f2;
+    outline: 2px solid #dc2626;
+    outline-offset: 2px;
+}
+/* ── Success banner ── */
+#flush-success-banner {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    min-width: 400px;
+    max-width: 90vw;
+}
+.flush-banner-inner {
+    background: #d1fae5;
+    border: 1px solid #6ee7b7;
+    color: #065f46;
+    border-radius: var(--radius-lg, 8px);
+    padding: 0.75rem 1.25rem;
+    text-align: center;
+    font-size: 0.9rem;
+}
+/* ── Modal overlay/dialog (mirrors bulk-generator.css) ── */
+.bg-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+.bg-modal-dialog {
+    background: #fff;
+    border-radius: var(--radius-lg, 8px);
+    padding: 1.5rem;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+.bg-modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+}
+.bg-modal-body {
+    color: var(--gray-600, #525252);
+    margin: 0 0 1.25rem;
+    line-height: 1.5;
+}
+.bg-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+.bg-modal-cancel {
+    background: transparent;
+    border: 1px solid #d1d5db;
+    color: var(--gray-700, #404040);
+    padding: 0.45rem 1rem;
+    border-radius: var(--radius-lg, 8px);
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+.bg-modal-confirm.danger {
+    background: #dc2626;
+    border: none;
+    color: #fff;
+    padding: 0.45rem 1rem;
+    border-radius: var(--radius-lg, 8px);
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+.bg-modal-confirm.danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+/* pad page so sticky bar doesn't overlap last content */
+#bulk-generator-job { padding-bottom: 4rem; }
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    var flushOpenBtn = document.getElementById('btn-flush-open');
+    if (!flushOpenBtn) return; // Not staff or not rendered
+
+    var flushConfirmModal = document.getElementById('modal-flush-confirm');
+    var flushConfirmBtn = document.getElementById('btn-flush-confirm');
+    var flushCancelBtn = document.getElementById('btn-flush-cancel');
+    var flushErrorModal = document.getElementById('modal-flush-error');
+    var flushErrorMsg = document.getElementById('flush-error-msg');
+    var flushErrorCloseBtn = document.getElementById('btn-flush-error-close');
+    var flushSuccessBanner = document.getElementById('flush-success-banner');
+
+    var pageEl = document.getElementById('bulk-generator-job');
+    var csrfToken = pageEl ? pageEl.dataset.csrf : '';
+
+    // ── Modal helpers ──────────────────────────────────────────────
+
+    function openModal(overlay) {
+        overlay.style.display = 'flex';
+        overlay.setAttribute('aria-hidden', 'false');
+        var firstBtn = overlay.querySelector('button');
+        if (firstBtn) firstBtn.focus();
+    }
+
+    function closeModal(overlay, returnFocus) {
+        overlay.style.display = '';
+        overlay.setAttribute('aria-hidden', 'true');
+        if (returnFocus && returnFocus.focus) returnFocus.focus();
+    }
+
+    // ── Open confirm modal ─────────────────────────────────────────
+
+    flushOpenBtn.addEventListener('click', function () {
+        openModal(flushConfirmModal);
+    });
+
+    // Cancel / backdrop close for confirm modal
+    flushCancelBtn.addEventListener('click', function () {
+        closeModal(flushConfirmModal, flushOpenBtn);
+    });
+    flushConfirmModal.addEventListener('click', function (e) {
+        if (e.target === flushConfirmModal) closeModal(flushConfirmModal, flushOpenBtn);
+    });
+
+    // Close error modal
+    flushErrorCloseBtn.addEventListener('click', function () {
+        closeModal(flushErrorModal, flushOpenBtn);
+    });
+    flushErrorModal.addEventListener('click', function (e) {
+        if (e.target === flushErrorModal) closeModal(flushErrorModal, flushOpenBtn);
+    });
+
+    // Escape closes whichever flush modal is open
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (flushConfirmModal.style.display === 'flex') closeModal(flushConfirmModal, flushOpenBtn);
+        if (flushErrorModal.style.display === 'flex') closeModal(flushErrorModal, flushOpenBtn);
+    });
+
+    // ── Confirm: call API ──────────────────────────────────────────
+
+    flushConfirmBtn.addEventListener('click', function () {
+        closeModal(flushConfirmModal, flushOpenBtn);
+        flushConfirmBtn.disabled = true;
+        flushConfirmBtn.textContent = 'Deleting\u2026';
+
+        fetch('{% url "prompts:bulk_generator_flush_all" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+        })
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+            if (data.success) {
+                flushSuccessBanner.querySelector('.flush-files').textContent = data.deleted_files;
+                flushSuccessBanner.querySelector('.flush-images').textContent = data.deleted_images;
+                flushSuccessBanner.querySelector('.flush-jobs').textContent = data.deleted_jobs;
+                flushSuccessBanner.classList.remove('d-none');
+                setTimeout(function () {
+                    window.location.href = data.redirect_url || '/tools/bulk-ai-generator/';
+                }, 1500);
+            } else {
+                flushErrorMsg.textContent = (data.errors && data.errors.join(' | ')) || 'Unknown error.';
+                openModal(flushErrorModal);
+                flushConfirmBtn.disabled = false;
+                flushConfirmBtn.textContent = 'Yes, Delete Unpublished';
+            }
+        })
+        .catch(function (e) {
+            flushErrorMsg.textContent = e.message || 'Network error.';
+            openModal(flushErrorModal);
+            flushConfirmBtn.disabled = false;
+            flushConfirmBtn.textContent = 'Yes, Delete Unpublished';
+        });
+    });
+
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 7, 2026 (Sessions 101–107)
+**Last Updated:** March 7, 2026 (Sessions 101–108)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,41 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 108 — March 7, 2026
+
+**Focus:** Bulk Generator Phase 5D — Bug fixes A/B/C (concurrent generation, count display, dimension select)
+
+**Commit:** 775f0dc
+
+**What was done:**
+
+- **Bug A — Concurrent image generation (ThreadPoolExecutor):**
+  - Replaced sequential `_run_generation_loop` with `ThreadPoolExecutor(max_workers=4)` batch processing
+  - `MAX_CONCURRENT_IMAGE_REQUESTS = 4` constant added
+  - Worker creates its own provider instance per thread (thread-safe)
+  - All ORM saves (`image.save()`, `job.save()`, `clear_api_key()`) moved OUT of worker threads into main thread after `future.result()` — prevents SQLite write contention in tests; improves safety on PostgreSQL
+  - Cancel detection fires between batches via `job.refresh_from_db()`
+
+- **Bug B — Fix count mismatch in job page (bulk-generator-job.js):**
+  - `handleTerminalState('completed')` was hardcoding `totalImages + ' of ' + totalImages`
+  - Now uses actual `completed` count from API response; shows partial-completion message when some images failed
+
+- **Bug C — Disable per-prompt Dimensions select (bulk-generator.js):**
+  - Added `disabled`, `title="Per-prompt dimensions coming in v1.1"`, `data-future-feature="per-prompt-dimensions"`
+  - Label updated with `(v1.1)` visible span
+
+- **Test updates:**
+  - 4 new `ConcurrentGenerationLoopTests` (constant value, multi-batch, worker exception, exact-4-batch)
+  - `test_auth_error_stops_job`: updated `assertEqual(call_count, 1)` → `assertLessEqual(call_count, 3)` (concurrent semantics)
+  - `test_process_job_cancelled_mid_processing`: rewrote using `patch.object(BulkGenerationJob, 'refresh_from_db')` to avoid SQLite cross-thread transaction isolation issue
+  - Root cause: `_run_generation_with_retry` was calling `image.save()` from worker threads; SQLite TestCase transaction wrapping made cross-thread DB writes return "table is locked"
+
+- **Test results:** 990 passing, 12 skipped, 0 failures
+
+- **Agent ratings:** django-pro 9/10, security-auditor 9/10, performance-optimizer 9/10, accessibility-specialist 8.5/10, code-reviewer 9/10
+
+---
 
 ### Sessions 101–107 — March 6–7, 2026
 

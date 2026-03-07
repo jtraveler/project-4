@@ -381,11 +381,9 @@ class TestOpenAIImageProvider(unittest.TestCase):
         self.assertFalse(provider.requires_nsfw_check)
 
     def test_openai_provider_supported_sizes(self):
-        """All 4 sizes listed."""
+        """Only the 3 sizes supported by gpt-image-1."""
         provider = OpenAIImageProvider(mock_mode=True)
-        expected = [
-            '1024x1024', '1024x1536', '1536x1024', '1792x1024'
-        ]
+        expected = ['1024x1024', '1024x1536', '1536x1024']
         self.assertEqual(provider.supported_sizes, expected)
 
     def test_openai_provider_supported_qualities(self):

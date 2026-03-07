@@ -530,8 +530,8 @@
             container.removeChild(placeholder);
         }
 
-        // Remove is-placeholder class
-        slot.classList.remove('is-placeholder');
+        // Remove placeholder classes (is-empty guards against hidden-slot race)
+        slot.classList.remove('is-placeholder', 'is-empty');
 
         // Create image
         var img = document.createElement('img');

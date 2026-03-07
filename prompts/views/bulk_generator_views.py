@@ -30,7 +30,7 @@ MAX_PROMPT_LENGTH = 4000
 
 # Valid choices (mirror model choices)
 VALID_QUALITIES = {'low', 'medium', 'high'}
-VALID_SIZES = {'1024x1024', '1024x1536', '1536x1024', '1792x1024'}
+VALID_SIZES = {'1024x1024', '1024x1536', '1536x1024'}
 VALID_PROVIDERS = {'openai'}
 VALID_VISIBILITIES = {'public', 'private'}
 

@@ -159,7 +159,7 @@
                                 '<option value="">Use master</option>' +
                                 '<option value="1024x1024">1:1</option>' +
                                 '<option value="1024x1536">2:3</option>' +
-                                '<option value="1792x1024">16:9</option>' +
+                                '<option value="1792x1024" hidden data-future="true">16:9</option>' +
                                 '<option value="1536x1024">3:2</option>' +
                             '</select>' +
                         '</div>' +
@@ -376,9 +376,13 @@
     addBoxesBtn.addEventListener('click', function () { addBoxes(4); });
 
     // ─── Button Groups (Dimensions, Images per Prompt) ────────────
-    function initButtonGroup(groupEl) {
+    function initButtonGroup(groupEl, onActivate) {
         if (!groupEl) return;
-        var buttons = groupEl.querySelectorAll('.bg-btn-group-option');
+        // Exclude hidden (future/unsupported) options from keyboard navigation
+        var buttons = Array.prototype.filter.call(
+            groupEl.querySelectorAll('.bg-btn-group-option'),
+            function (b) { return !b.classList.contains('d-none'); }
+        );
 
         // Set initial tabindex: only active button is tabbable
         buttons.forEach(function (b) {
@@ -396,6 +400,9 @@
             btn.setAttribute('tabindex', '0');
             btn.focus();
             updateCostEstimate();
+            if (typeof onActivate === 'function') {
+                onActivate(btn.dataset.value);
+            }
         }
 
         groupEl.addEventListener('click', function (e) {
@@ -429,7 +436,18 @@
         });
     }
 
-    initButtonGroup(document.getElementById('settingDimensions'));
+    var DIMENSION_LABELS = {
+        '1024x1024': '1:1 Square',
+        '1024x1536': '2:3 Portrait',
+        '1536x1024': '3:2 Landscape',
+    };
+    var dimensionLabel = document.getElementById('dimensionLabel');
+    function updateDimensionLabel(value) {
+        if (dimensionLabel) {
+            dimensionLabel.textContent = DIMENSION_LABELS[value] || value;
+        }
+    }
+    initButtonGroup(document.getElementById('settingDimensions'), updateDimensionLabel);
     initButtonGroup(document.getElementById('settingImagesPerPrompt'));
 
     // ─── Visibility Toggle ────────────────────────────────────────
@@ -961,6 +979,7 @@
             defaultDim.classList.add('active');
             defaultDim.setAttribute('aria-checked', 'true');
             defaultDim.setAttribute('tabindex', '0');
+            updateDimensionLabel('1024x1024');
         }
 
         // Reset images per prompt to 1

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 6, 2026 (Session 104)
+**Last Updated:** March 7, 2026 (Sessions 101–107)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,61 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Sessions 101–107 — March 6–7, 2026
+
+**Focus:** Bulk Generator Phase 5C + 5B + P1/P2 production hardening + Phase 5D spec
+
+**Commits:** b77edf7, ee98e5f, d841913, c7c6f57, 77019eb, 62568e6, 1e88b06
+
+**What was done:**
+
+- **Phase 5C — Real GPT-Image-1 generation confirmed end-to-end:**
+  - Upgraded openai SDK 1.54.0 → 2.26.0; old SDK silently injected `response_format='b64_json'` which GPT-Image-1 rejects
+  - Full pipeline confirmed: job creation → Django-Q2 task → `provider.generate()` → B2 upload → CDN URL → DB record → gallery render
+  - boto3 1.35.0 → 1.42.62, botocore 1.35.99 → 1.42.62, s3transfer 0.10.4 → 0.16.0 (resolved Heroku build v644 dependency conflict)
+
+- **Phase 5B bug fixes (Sessions 102–103):**
+  - Bug 1: `images_per_prompt` — task loop now correctly iterates all slots; gallery renders all variation records, not just slot 1
+  - Bug 2: Aspect ratio end-to-end — `job.size` passed through task → provider → `client.images.generate(size=)`; gallery CSS applies correct class
+  - Bug 3: Unsupported dropdown options — `1792x1024` and others hidden with `d-none` + `data-future="true"`; default reset to `1024x1024`
+
+- **P1/P2 hardening (Sessions 104–107):**
+  - DRY-1: `SUPPORTED_IMAGE_SIZES` + `ALL_IMAGE_SIZES` centralised in `prompts/constants.py`; all files import from constants — no more local `VALID_SIZES` definitions
+  - CRIT-1/2/3: test references constants; `1792x1024` annotated UNSUPPORTED in `SIZE_CHOICES`; removed from `create_test_gallery.py`
+  - SEC-1: Fixed `isinstance(bool, int)` bypass in `images_per_prompt` validation
+  - SEC-4: Verbatim comment added to `flush_all` `@login_required` decorator explaining why not `@staff_member_required`
+  - SEC-5: `api_validate_openai_key` no longer leaks raw exception strings
+  - UX-1: Unsupported dimension options use `disabled` attribute + "(coming soon)" text
+  - A11Y-1: `aria-atomic="true"` added to `#dimensionLabel`
+  - A11Y-4: `aria-describedby="dimensionLabel"` added to dimension radiogroup
+  - Migration 0065: choices-only `SIZE_CHOICES` label update (no DDL)
+
+- **Flush button — "Trash Test Results" (Sessions 104–105):**
+  - Staff-only `POST /tools/bulk-ai-generator/api/flush-all/` endpoint
+  - Deletes B2 files in batches of 1000 via `delete_objects`; deletes unpublished DB images then jobs; published records (`prompt_page_id IS NOT NULL`) never touched
+  - Uses `@login_required` + explicit staff check (not `@staff_member_required` — would redirect instead of returning 403 JSON)
+  - Frontend: confirm modal, error modal, success banner with counts + 1.5s redirect
+  - Located in sticky bar on both `bulk_generator.html` and `bulk_generator_job.html`
+  - 8 new `FlushAllEndpointTests`
+
+- **Phase 5D spec written:** Bug A (ThreadPoolExecutor), Bug B (count mismatch), Bug C (per-prompt override UI). Ready to run with CC.
+
+**Agent reviews:**
+- Phase 5B: 6 agents, avg 7.5/10 (4 below threshold — led directly to P1/P2 spec)
+- P1/P2: 6 agents, avg 8.37/10 (all above threshold — approved)
+
+**Tests:** 985 passing, 12 skipped (up from 976)
+
+**Key learnings:**
+- **Django 5.2 DOES generate migrations for `choices` label changes** — `CC_SPEC_TEMPLATE.md` boilerplate previously stated it did not; this was wrong and caused spec discrepancies twice this session. Template corrected.
+- **`ThreadPoolExecutor` (not `asyncio`) required in Django-Q2 task context** — `asyncio.run()` does not work inside Django-Q2 tasks; use `concurrent.futures.ThreadPoolExecutor` for concurrent GPT-Image-1 calls.
+- **`flush_all` intentionally uses `@login_required` + manual staff check** — `@staff_member_required` redirects non-staff to login (HTML response), breaking AJAX callers expecting JSON. Manual check returns `JsonResponse({'error': ...}, status=403)`. Documented with verbatim comment in view.
+- **GPT-Image-1 sequential loop causes 2-minute+ waits** — At Tier 1 (5 images/min), 8 images = ~90s minimum sequentially. `ThreadPoolExecutor` in Phase 5D will parallelize within rate limits.
+
+**Status at end of session:** Phase 5D spec written and ready to run with CC. Phase 6 (image selection + page creation) follows after Phase 5D completes.
+
+---
 
 ### Session 104 - March 6, 2026
 

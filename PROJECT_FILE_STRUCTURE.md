@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 5, 2026
+**Last Updated:** March 7, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phase 5C complete — E2E verification in progress), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~976 passing, 12 skipped (43% coverage, threshold 40%)
+**Current Phase:** Bulk AI Image Generator (Phase 5C+5B+P1/P2 complete — Phase 5D spec written, ready to run), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~985 passing, 12 skipped (43% coverage, threshold 40%)
 
 ---
 
@@ -61,20 +61,22 @@ live-working-project/
 ├── backups/                      # Email preferences backups
 ├── design-references/            # UI design assets
 │   └── UI_STYLE_GUIDE.md
-├── docs/                         # Active documentation (33+ files)
+├── docs/                         # Active documentation (35+ files)
 │   ├── bug_reports/
 │   ├── implementation_reports/
-│   ├── reports/                  # Phase/feature reports (21 files)
+│   ├── reports/                  # Phase/feature reports (23 files)
 │   ├── specifications/
 │   ├── CC_COMMUNICATION_PROTOCOL.md
 │   ├── DESIGN_RELATED_PROMPTS.md           # Related prompts system reference (Phase 2B-9 complete)
 │   ├── DESIGN_CATEGORY_TAXONOMY_REVAMP.md  # Phase 2B taxonomy revamp (Session 74)
 │   ├── PHASE_2B_AGENDA.md                  # Phase 2B execution roadmap (Session 74)
-│   └── PHASE_2B1-6_COMPLETION_REPORT.md    # 6 Phase 2B sub-phase completion reports (Phase 2B Session)
+│   ├── PHASE_2B1-6_COMPLETION_REPORT.md    # 6 Phase 2B sub-phase completion reports (Phase 2B Session)
+│   ├── REPORT_BULK_GEN_PHASE5B_AGENT_REVIEW.md   # Phase 5B 6-agent review report (Sessions 101–107)
+│   └── REPORT_BULK_GEN_P1_P2_FIXES_AGENT_REVIEW.md  # P1/P2 6-agent review report (Sessions 101–107)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
-│   ├── migrations/               # 65 migrations + __init__.py (latest: 0064_add_api_key_fields_to_bulk_generation_job)
+│   ├── migrations/               # 66 migrations + __init__.py (latest: 0065_alter_bulkgenerationjob_size_choices)
 │   ├── services/                 # 12 service modules
 │   │   └── notifications.py      # Notification service (create, count, mark-read) (Session 86)
 │   ├── signals/                   # Signal handlers (Session 86)
@@ -254,7 +256,7 @@ prompts/views/
 ├── __init__.py           # Package exports (all public views)
 ├── admin_views.py        # Admin dashboard, debug pages, bulk actions
 ├── api_views.py          # REST API endpoints (B2 upload - Phase L)
-├── bulk_generator_views.py # Bulk generator page view + 7 API endpoints (Session 92-93)
+├── bulk_generator_views.py # Bulk generator page view + 8 API endpoints (Sessions 92-107)
 ├── collection_views.py   # Collection API and page views (Phase K)
 ├── generator_views.py    # AI generator category pages
 ├── leaderboard_views.py  # Leaderboard rankings, filters
@@ -273,7 +275,7 @@ prompts/views/
 |--------|-----------|---------|
 | **admin_views** | ~17 | Admin dashboards, media issues, trash management, SEO review queue |
 | **api_views** | ~5 | REST API endpoints for B2 upload + presigned URLs (Phase L, L8-DIRECT) |
-| **bulk_generator_views** | ~8 | Bulk generator page view + 7 API endpoints (validate, start, status, cancel, create pages, validate image, retry) |
+| **bulk_generator_views** | ~9 | Bulk generator page view + 8 API endpoints (validate, start, status, cancel, create pages, validate image, retry, flush-all) |
 | **collection_views** | ~9 | Collection CRUD, API endpoints, profile tab, pagination |
 | **generator_views** | ~5 | AI generator category pages with filtering |
 | **leaderboard_views** | ~4 | Rankings, time filters, user stats |
@@ -392,7 +394,7 @@ prompts/views/
 | `urls.py` | ~200 | URL routing |
 | `signals.py` | ~100 | Django signals (auto-create profiles) |
 | `middleware.py` | ~67 | RatelimitMiddleware |
-| `constants.py` | ~260 | AI generator metadata, OPENAI_TIMEOUT, IMAGE_COST_MAP (GPT-Image-1 pricing — moved from bulk_generator_views.py, Session 101) |
+| `constants.py` | ~270 | AI generator metadata, OPENAI_TIMEOUT, IMAGE_COST_MAP (GPT-Image-1 pricing — moved from bulk_generator_views.py, Session 101), SUPPORTED_IMAGE_SIZES + ALL_IMAGE_SIZES (P1/P2 DRY-1, Sessions 101–107) |
 | `email_utils.py` | ~100 | Email helper functions |
 
 ---
@@ -1615,6 +1617,15 @@ prompts/templates/prompts/
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.25 (March 7, 2026 - Sessions 101–107 End-of-Session Docs Update):**
+- Updated current phase: Phase 5C complete/E2E verification → Phase 5C+5B+P1/P2 complete, Phase 5D spec ready
+- Updated total tests: ~976 → ~985 passing, 12 skipped
+- Updated migrations count: 65 → 66 (latest: 0065_alter_bulkgenerationjob_size_choices)
+- Updated constants.py description: added SUPPORTED_IMAGE_SIZES + ALL_IMAGE_SIZES (DRY-1)
+- Updated bulk_generator_views module: 8 → 9 endpoints (added flush-all)
+- Added REPORT_BULK_GEN_PHASE5B_AGENT_REVIEW.md and REPORT_BULK_GEN_P1_P2_FIXES_AGENT_REVIEW.md to docs/
+- Added migration 0065 to bulk generator migration list in CLAUDE_PHASES.md
 
 **v3.24 (March 5, 2026 - Session 99 End-of-Session Docs Update):**
 - Updated bulk-generator-job.css description (~700 → ~820 lines, audit fixes)

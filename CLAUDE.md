@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 6, 2026
+**Last Updated:** March 7, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -51,7 +51,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 |-------|--------|-------------|-------------|
 | **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
-| **Bulk Gen** | 🔄 Phase 5C Complete | Bulk AI Image Generator | E2E verification in progress → Phase 6: Image selection + page creation, Phase 7: Integration + Polish |
+| **Bulk Gen** | 🔄 Phase 5D Ready | Bulk AI Image Generator | Phase 5D spec written — run with CC, then Phase 6 |
 
 ### What's Paused (Don't Forget!)
 
@@ -65,6 +65,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Bulk Gen 5C+5B+P1/P2 | Mar 6-7, 2026 | Real GPT-Image-1 generation (openai SDK 2.26.0), flush button, images_per_prompt+aspect ratio bugs fixed, SUPPORTED_IMAGE_SIZES constants, SEC/UX/A11Y hardening, migration 0065, 985 tests |
 | Bulk Gen 5A+5B+Polish | Mar 4-5, 2026 | Job progress page, gallery rendering, 5-agent audit (10 fixes), column override bug fix, download extension detection, test gallery size filtering, 237 new tests |
 | Phase P2-A | Feb 26-27, 2026 | System Notifications Admin Dashboard (Quill.js editor, batch management, batch_id tracking, rate limiting, auto-mark seen, "Most Likely Seen" stats) |
 | Phase R1 + R1-D | Feb 17-18, 25-26, 2026 | User Notification System (model, signals, API, bell dropdown, notifications page redesign with avatars/quotes/action buttons, per-card mark-as-read, bell sync, dedup fix, shared tab components, delete all/per-card delete, Load More pagination, two-phase delete animation, staggered fade-in, reverse signal handlers, real-time polling, "Updates available" banner, cross-component DOM event sync) |
@@ -80,7 +81,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
-### Bulk AI Image Generator (Phases 1-5C complete — E2E verification in progress)
+### Bulk AI Image Generator (Phases 1-5C complete — Phase 5D spec written, ready to run)
 
 Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
 
@@ -90,7 +91,9 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 
 **Phase 5C (Sessions 100-101):** BYOK key input (Fernet encryption), real GPT-Image-1 generation, 13s rate-limit delay, exponential backoff retry (30s→60s→120s, max 3), structured error routing (auth/content_policy/rate_limit/server_error). `IMAGE_COST_MAP` moved to `prompts/constants.py`. All 3 terminal states clear encrypted API key via `try/finally`. 976 tests passing, 12 skipped.
 
-**Phase 5D — E2E Verification (in progress):** Confirm full pipeline works: API call → B2 upload → CDN URL → DB record → UI render. Diagnostic `[BULK-DEBUG]` logging added in Session 104.
+**Phase 5B bugs + P1/P2 hardening (Sessions 102-107):** Fixed images_per_prompt (all slots rendered), aspect ratio end-to-end (job.size through to gallery CSS), dropdown options (unsupported hidden). DRY-1: `SUPPORTED_IMAGE_SIZES` + `ALL_IMAGE_SIZES` centralised in `prompts/constants.py`. SEC-1: isinstance(bool, int) bypass fixed. UX-1: disabled + "(coming soon)" on unsupported sizes. A11Y-1/4: aria-atomic + aria-describedby on dimension controls. Flush button ("Trash Test Results"): staff-only endpoint deletes unpublished GeneratedImage/BulkGenerationJob records + B2 files in one click. Migration 0065: choices-only SIZE_CHOICES label update. 985 tests passing, 12 skipped.
+
+**Phase 5D — Spec written, ready to run:** Three bugs to address: Bug A — sequential generation → `ThreadPoolExecutor` for concurrent calls; Bug B — count mismatch (6 reported / 5 rendered); Bug C — per-prompt dimension override UI (visually disable until v1.1).
 
 **Phase 6-7 (remaining):** Image selection + page creation workflow, integration testing, error recovery, edge cases.
 
@@ -99,6 +102,9 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 - **BYOK is the only viable model for bulk generation at scale:** Platform-paid API model fails because all users share Mateo's rate limits, creating unacceptable wait times with concurrent users.
 - **Django-Q2 runs synchronously in local dev:** Tasks queued via ORM broker execute in the web process locally (either `sync=True` setting or Django-Q2 default). This means `[BULK-DEBUG] process_bulk_generation_job CALLED` appears in `runserver.log`, not `qcluster.log`. Production behavior (separate Heroku worker dyno) is unaffected.
 - **`tee` for persistent log capture:** Use `python manage.py runserver 2>&1 | tee runserver.log` and `python manage.py qcluster 2>&1 | tee qcluster.log` for reliable debug log capture. Then grep with: `grep "BULK-DEBUG\|ERROR\|Traceback" runserver.log`
+- **ThreadPoolExecutor (not asyncio) for concurrent generation in Django-Q2:** Django-Q2 task context is synchronous; `asyncio.run()` does not work inside it. Use `concurrent.futures.ThreadPoolExecutor` for parallel GPT-Image-1 calls in Phase 5D.
+- **`flush_all` uses `@login_required` + manual staff check (not `@staff_member_required`):** `@staff_member_required` redirects non-staff to login instead of returning 403 JSON, breaking the AJAX flow. Manual check returns `JsonResponse({'error': ...}, status=403)`. Documented with verbatim comment in codebase.
+- **OpenAI Tier 1 rate limit:** 5 images/minute, 15–45s per image. Sequential generation causes unacceptable wait times at scale — Phase 5D replaces it with `ThreadPoolExecutor`.
 
 ---
 
@@ -1182,5 +1188,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.21 (Session 104 — Phase 5C complete, Django-Q2 sync finding, Key Learnings section added, test count 976)
-**Last Updated:** March 6, 2026
+**Version:** 4.22 (Sessions 101–107 — Phase 5C+5B+P1/P2 hardening complete, Phase 5D spec ready, flush button, Key Learnings expanded, test count 985)
+**Last Updated:** March 7, 2026

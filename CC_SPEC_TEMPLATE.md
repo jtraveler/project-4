@@ -196,6 +196,17 @@ RIGHT: .column-3 as a sibling of .column-2
 
 **IMPORTANT:** The management command or migration must be run AFTER the code changes are deployed. Include the run command in the completion report.
 
+### ⚠️ Django Migration Note — choices Changes (Django 3.1+, including 5.2)
+
+**Django 3.1+ (including Django 5.2) DOES generate migrations for `choices` label changes.** If you change the display labels on a `choices` field (e.g., `SIZE_CHOICES`), Django will generate a migration file even though no DDL is executed.
+
+- Run `python manage.py makemigrations --check` to verify whether a migration is needed.
+- These are **choices-only migrations** — they update the choices display values in the migration file but **do not alter the database schema**.
+- Do NOT skip these migrations. They keep the migration history accurate and prevent future state detection confusion.
+- Spec language to use: _"Migration required: choices-only (no DDL)"_ — do NOT write _"No migration needed"_ when labels changed.
+
+> **Origin:** This incorrect assumption ("Django does not generate migrations for choices changes") caused spec discrepancies in Sessions 101–107. Corrected here to prevent recurrence.
+
 ---
 
 ## ✅ PRE-AGENT SELF-CHECK (Required Before Running Any Agent)

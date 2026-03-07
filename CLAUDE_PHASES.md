@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** March 5, 2026
+**Last Updated:** March 7, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **🔄 Phase 5C Complete/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **🔄 Phase 5D Ready (5C Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -523,12 +523,12 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
-## 🔄 Bulk AI Image Generator (Phase 5C of 7 Complete)
+## 🔄 Bulk AI Image Generator (Phase 5D Ready — 5C Complete)
 
-**Status:** Phase 5C Complete — E2E Verification in Progress (Phase 5D)
+**Status:** Phase 5C + 5B + P1/P2 Complete — Phase 5D Spec Written, Ready to Run
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
-**Tests:** ~315 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests); 976 total project tests passing, 12 skipped
+**Tests:** ~324 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests); 985 total project tests passing, 12 skipped
 
 ### What This Feature Does
 
@@ -545,7 +545,8 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 5A | Job Progress Page | ✅ | 98 | Job progress view, IMAGE_COST_MAP, progress bar, cancel, polling JS, 237-line test suite |
 | 5B | Gallery Rendering + Polish | ✅ | 98-99 | Per-prompt aspect ratio, column detection, gallery CSS, visual polish (2 rounds), 5-agent audit (10 fixes), column override bug fix, download extension, test gallery enhancements |
 | 5C | Wire Up Real Generation | ✅ | 100-101 | BYOK decryption, real OpenAI SDK calls, B2 upload, rate limiting (13s/image), retry logic (3×), auth/content_policy/server_error handling, IMAGE_COST_MAP → constants.py, try/finally key clearing |
-| 5D | E2E Verification | 🔄 | 104 | Confirm full pipeline: API call → B2 upload → CDN URL → DB record → UI render; diagnostic logging added |
+| 5B+P1/P2 | Bug fixes + hardening | ✅ | 102-107 | images_per_prompt all slots, aspect ratio end-to-end, dropdown options hidden, SUPPORTED_IMAGE_SIZES constants, SEC-1/4/5, UX-1, A11Y-1/4, flush button, migration 0065 |
+| 5D | Concurrent Generation + Fixes | 🔲 | — | Spec written — Bug A: ThreadPoolExecutor, Bug B: count mismatch, Bug C: per-prompt override UI |
 | 6 | Creating State | 🔲 | — | Image selection, page creation, summary view |
 | 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
 
@@ -564,6 +565,8 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 - `0061` - Create GeneratedImage model
 - `0062` - Fix image URL max length
 - `0063` - Add source_credit fields to Prompt model
+- `0064` - Add api_key_encrypted + api_key_iv fields to BulkGenerationJob (Phase 5C)
+- `0065` - choices-only SIZE_CHOICES label update (no DDL; Django 5.2 generates these)
 
 ### Files Created/Modified
 
@@ -630,12 +633,30 @@ Comprehensive 5-agent audit across 10 files, followed by 3 CC specs with targete
 - **Per-prompt overrides:** Deferred to v1.1 (UI dropdowns exist but backend doesn't support mixed sizes per job)
 - **Post-commit fixes (Session 101):** `IMAGE_COST_MAP` moved to `prompts/constants.py`, `try/finally` guarantees `clear_api_key()` on all exit paths, openai exception imports moved outside `try` block to prevent flaky `TypeError` in test suite.
 
-### Phase 5D — End-to-End Verification
+### Phase 5D — Concurrent Generation + Fixes (Spec Written — NOT YET RUN)
 
-- **Status:** 🔄 In Progress
-- **Goal:** Confirm full pipeline works: API call → B2 upload → CDN URL → DB record → UI render
-- **Blocker:** Task executes in web process locally (Django-Q2 sync mode); need to confirm actual OpenAI call + B2 upload succeed end-to-end
-- **Session 104:** Added `[BULK-DEBUG]` diagnostic logging to `start_job()`, `process_bulk_generation_job()`, and `_upload_generated_image_to_b2()` in prep for E2E test run
+- **Status:** 🔲 Spec ready — run with CC
+- **Spec location:** End-of-session spec written in Sessions 101–107 context
+- **Bug A — Sequential generation:** Replace for loop with `ThreadPoolExecutor` — OpenAI Tier 1 is 5 images/minute; sequential 13s delays cause unacceptable wait times. Use `concurrent.futures.ThreadPoolExecutor` (NOT asyncio — Django-Q2 task context is synchronous).
+- **Bug B — Count mismatch:** Gallery reports N images but renders N-1 — root cause in slot rendering logic, needs investigation
+- **Bug C — Per-prompt dimension override UI:** Dropdowns exist but backend ignores them (all images use job-level `size`). Visually disable or hide the per-prompt overrides until v1.1 backend support is added.
+- **Session 104:** Added `[BULK-DEBUG]` diagnostic logging to `start_job()`, `process_bulk_generation_job()`, and `_upload_generated_image_to_b2()` — still present in codebase, can be used or removed when Phase 5D runs.
+
+### Deferred Items (P3 Backlog — After Phase 5D)
+
+| Item | Priority | Description |
+|------|----------|-------------|
+| SEC-2 | P3 | API key length check — validate key is at least 40 chars before encrypting |
+| SEC-3 | P3 | `model_name` and `generator_category` allowlist validation in start_job endpoint |
+| FE-1 | P3 | `initButtonGroup` couples to Bootstrap `d-none` class — refactor to data attribute |
+| DRY-2 | P3 | `DIMENSION_LABELS` defined in JS not cross-referenced with Python constants |
+| A11Y-2 | Phase 6 | `aria-describedby` on prompt text inputs pointing to char counter |
+| A11Y-3 | Phase 6 | Live region for generation progress status updates |
+| A11Y-5 | Phase 6 | Focus management when gallery loads new image rows |
+| N+1 query | Phase 6 | `select_related` missing on jobs query in `bulk_generator_job_view` |
+| Placeholder disappear | Phase 6 | Placeholder boxes disappear when image renders — should stay until all slots filled |
+| Total generation time | Phase 6 | Display wall-clock time from job start to completion in gallery header |
+| Per-prompt size override | v1.1 | Wire per-prompt dimension dropdown to backend — currently job-level size only |
 
 ### Future Features (Deferred)
 
@@ -705,5 +726,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.10 (Session 104 — Phase 5D entry added, E2E verification in progress, test count updated to 976)
-**Last Updated:** March 6, 2026
+**Version:** 4.11 (Sessions 101–107 — Phase 5C+5B+P1/P2 complete, Phase 5D spec written, deferred items added, migrations updated, test count 985)
+**Last Updated:** March 7, 2026

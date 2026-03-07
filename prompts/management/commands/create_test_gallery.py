@@ -2,6 +2,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 
+from prompts.constants import SUPPORTED_IMAGE_SIZES
 from prompts.models import BulkGenerationJob, GeneratedImage
 
 
@@ -56,27 +57,10 @@ PROMPT_CONFIGS = [
             '/static/images/sample-3-by-2-d.jpg',
         ],
     },
-    {
-        'prompt': (
-            "Abandoned Art Deco cinema in Detroit, overgrown with vines and wildflowers "
-            "bursting through cracked marble floors. Shafts of dusty golden light pour "
-            "through broken stained glass windows. A single red velvet seat remains intact "
-            "in the center. Photorealistic, medium format film look, Kodak Portra 400 "
-            "color science. Melancholic beauty, urban decay meets nature."
-        ),
-        'size': '1792x1024',
-        'images': [
-            '/static/images/sample-16-by-9-a.jpg',
-            '/static/images/sample-16-by-9-b.jpg',
-            '/static/images/sample-16-by-9-c.jpg',
-            '/static/images/sample-16-by-9-d.jpg',
-        ],
-    },
 ]
 
 
-# Mirrors VALID_SIZES in bulk_generator_views.py
-VALID_SIZES = {'1024x1024', '1024x1536', '1536x1024', '1792x1024'}
+VALID_SIZES = set(SUPPORTED_IMAGE_SIZES)
 
 # Map each GPT-Image-1 size to sample images matching that aspect ratio
 SIZE_TO_IMAGES = {
@@ -102,11 +86,11 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '--size', type=str, default=None,
-            help='Create one job with this size only (e.g. 1792x1024)',
+            help='Create one job with this size only (e.g. 1536x1024)',
         )
         parser.add_argument(
             '--all-sizes', action='store_true', default=False,
-            help='Create one job per aspect ratio (4 jobs total)',
+            help='Create one job per aspect ratio (3 jobs total)',
         )
 
     def handle(self, *args, **options):

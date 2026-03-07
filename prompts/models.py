@@ -14,7 +14,7 @@ import hashlib
 import secrets
 import uuid
 
-from .constants import BOT_USER_AGENT_PATTERNS, DEFAULT_VIEW_RATE_LIMIT
+from .constants import BOT_USER_AGENT_PATTERNS, DEFAULT_VIEW_RATE_LIMIT, ALL_IMAGE_SIZES
 
 logger = logging.getLogger(__name__)
 
@@ -2822,6 +2822,17 @@ class Notification(models.Model):
             self.save(update_fields=['is_read'])
 
 
+# Module-level display map for BulkGenerationJob sizes.
+# List comprehensions in class bodies cannot reference class-level names,
+# so this must live at module scope.
+_BULK_SIZE_DISPLAY = {
+    '1024x1024': 'Square (1:1)',
+    '1024x1536': 'Portrait (2:3)',
+    '1536x1024': 'Landscape (3:2)',
+    '1792x1024': 'Wide (16:9) — UNSUPPORTED (future use)',
+}
+
+
 class BulkGenerationJob(models.Model):
     """Tracks a batch of AI image generation requests."""
 
@@ -2840,12 +2851,7 @@ class BulkGenerationJob(models.Model):
         ('high', 'High'),
     ]
 
-    SIZE_CHOICES = [
-        ('1024x1024', 'Square (1:1)'),
-        ('1024x1536', 'Portrait (2:3)'),
-        ('1536x1024', 'Landscape (3:2)'),
-        ('1792x1024', 'Wide (16:9)'),
-    ]
+    SIZE_CHOICES = [(s, _BULK_SIZE_DISPLAY[s]) for s in ALL_IMAGE_SIZES]
 
     VISIBILITY_CHOICES = [
         ('public', 'Public'),

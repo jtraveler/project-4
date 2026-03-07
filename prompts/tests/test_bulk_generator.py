@@ -16,6 +16,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
 
+from prompts.constants import SUPPORTED_IMAGE_SIZES
 from prompts.models import BulkGenerationJob, GeneratedImage, Prompt
 from prompts.services.image_providers import (
     GenerationResult,
@@ -103,9 +104,10 @@ class TestBulkGenerationJobModel(TestCase):
             self.assertEqual(job.quality, quality)
 
     def test_job_size_choices(self):
-        """Test all 4 size values are valid."""
-        sizes = ['1024x1024', '1024x1536', '1536x1024', '1792x1024']
-        for size in sizes:
+        """All sizes in SUPPORTED_IMAGE_SIZES are valid model choices."""
+        valid_choices = {choice[0] for choice in BulkGenerationJob.SIZE_CHOICES}
+        for size in SUPPORTED_IMAGE_SIZES:
+            self.assertIn(size, valid_choices)
             job = make_job(self.user, size=size)
             self.assertEqual(job.size, size)
 

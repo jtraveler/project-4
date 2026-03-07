@@ -3,6 +3,7 @@ import logging
 
 from django.conf import settings
 
+from prompts.constants import SUPPORTED_IMAGE_SIZES
 from .base import ImageProvider, GenerationResult
 
 logger = logging.getLogger(__name__)
@@ -18,11 +19,7 @@ class OpenAIImageProvider(ImageProvider):
 
     requires_nsfw_check = False
 
-    supported_sizes = [
-        '1024x1024',
-        '1024x1536',
-        '1536x1024',
-    ]
+    supported_sizes = SUPPORTED_IMAGE_SIZES
 
     supported_qualities = ['low', 'medium', 'high']
 

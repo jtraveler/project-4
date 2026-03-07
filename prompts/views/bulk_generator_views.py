@@ -16,7 +16,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
-from prompts.constants import IMAGE_COST_MAP
+from prompts.constants import IMAGE_COST_MAP, SUPPORTED_IMAGE_SIZES
 from prompts.models import BulkGenerationJob
 from prompts.services.bulk_generation import BulkGenerationService
 
@@ -30,7 +30,6 @@ MAX_PROMPT_LENGTH = 4000
 
 # Valid choices (mirror model choices)
 VALID_QUALITIES = {'low', 'medium', 'high'}
-VALID_SIZES = {'1024x1024', '1024x1536', '1536x1024'}
 VALID_PROVIDERS = {'openai'}
 VALID_VISIBILITIES = {'public', 'private'}
 
@@ -223,21 +222,29 @@ def api_start_generation(request):
         )
 
     size = data.get('size', '1024x1024')
-    if size not in VALID_SIZES:
+    if size not in SUPPORTED_IMAGE_SIZES:
         return JsonResponse(
-            {'error': f'Invalid size. Must be one of: {sorted(VALID_SIZES)}'},
+            {'error': f'Invalid size. Must be one of: {sorted(SUPPORTED_IMAGE_SIZES)}'},
             status=400,
         )
 
     images_per_prompt = data.get('images_per_prompt', 1)
-    if not isinstance(images_per_prompt, int) or images_per_prompt < 1:
+    # bool check MUST precede int() — isinstance(True, int) is True in Python
+    if isinstance(images_per_prompt, bool):
         return JsonResponse(
             {'error': 'images_per_prompt must be a positive integer'},
             status=400,
         )
-    if images_per_prompt > 4:
+    try:
+        images_per_prompt = int(images_per_prompt)
+    except (TypeError, ValueError):
         return JsonResponse(
-            {'error': 'images_per_prompt cannot exceed 4'},
+            {'error': 'images_per_prompt must be a positive integer'},
+            status=400,
+        )
+    if images_per_prompt < 1 or images_per_prompt > 4:
+        return JsonResponse(
+            {'error': 'images_per_prompt must be between 1 and 4'},
             status=400,
         )
 
@@ -444,8 +451,11 @@ def api_validate_openai_key(request):
     except APIConnectionError:
         return JsonResponse({'valid': False, 'error': 'Could not connect to OpenAI. Check your network.'})
     except Exception as e:
-        logger.warning("OpenAI key validation failed: %s", e)
-        return JsonResponse({'valid': False, 'error': f'Validation failed: {str(e)}'})
+        logger.error('OpenAI key validation error: %s', e)
+        return JsonResponse(
+            {'valid': False, 'error': 'Key validation failed. Please check your key and try again.'},
+            status=400,
+        )
 
 
 @staff_member_required
@@ -481,6 +491,14 @@ def api_validate_reference_image(request):
     return JsonResponse(result)
 
 
+# NOTE: This view intentionally uses @login_required + explicit staff
+# check rather than @staff_member_required. Django's
+# @staff_member_required returns an HTML redirect response (302) on
+# failure, which breaks JSON API endpoints — the client receives HTML
+# instead of a JSON 403. The explicit check below returns a proper
+# JsonResponse({'error': 'Staff only.'}, status=403).
+# Do not replace this pattern without also updating the client-side
+# error handler in bulk_generator.html that expects a JSON response.
 @login_required
 @require_POST
 def bulk_generator_flush_all(request):

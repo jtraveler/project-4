@@ -107,7 +107,7 @@
             <div class="bg-master-col">
                 <div class="bg-setting-group">
                     <span class="bg-setting-label">Dimensions</span>
-                    <div class="bg-btn-group" id="settingDimensions" role="radiogroup" aria-label="Image dimensions">
+                    <div class="bg-btn-group" id="settingDimensions" role="radiogroup" aria-label="Image dimensions" aria-describedby="dimensionLabel">
                         <button type="button" class="bg-btn-group-option active" data-value="1024x1024" role="radio" aria-checked="true">
                             1:1
                             <span class="bg-dim-icon" data-ratio="1:1" aria-hidden="true"></span>
@@ -125,7 +125,7 @@
                             <span class="bg-dim-icon" data-ratio="3:2" aria-hidden="true"></span>
                         </button>
                     </div>
-                    <span class="bg-setting-hint" id="dimensionLabel" aria-live="polite">1:1 Square</span>
+                    <span class="bg-setting-hint" id="dimensionLabel" aria-live="polite" aria-atomic="true">1:1 Square</span>
                 </div>
                 <div class="bg-setting-group">
                     <span class="bg-setting-label">Images per Prompt</span>

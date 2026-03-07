@@ -399,28 +399,53 @@ DEFAULT_AI_TITLES = ('Untitled Prompt', 'Untitled Upload')
 
 
 # =============================================================================
+# BULK AI IMAGE GENERATOR — Supported Sizes
+# =============================================================================
+
+# Sizes accepted by the gpt-image-1 API. Import this constant everywhere
+# size validation or size iteration is needed. Do NOT define size lists
+# locally in other files — update this constant instead when adding new
+# model support.
+SUPPORTED_IMAGE_SIZES = [
+    '1024x1024',  # 1:1  Square
+    '1024x1536',  # 2:3  Portrait
+    '1536x1024',  # 3:2  Landscape
+]
+
+# All sizes ever used across all generators (including future/historical).
+# Used only for BulkGenerationJob.SIZE_CHOICES — NOT for API validation.
+# Sizes not in SUPPORTED_IMAGE_SIZES must NOT be sent to gpt-image-1.
+# They are preserved here for future generator support (Flux, SDXL, etc.)
+ALL_IMAGE_SIZES = SUPPORTED_IMAGE_SIZES + [
+    '1792x1024',  # 16:9 Wide — UNSUPPORTED by gpt-image-1 (future use)
+]
+
+
+# =============================================================================
 # BULK AI IMAGE GENERATOR — GPT-Image-1 Pricing
 # =============================================================================
 
 # Cost per image by quality and size (as of March 2026)
 # Used by: bulk_generator_views.py (cost estimation), tasks.py (actual cost tracking)
+# Note: 1792x1024 is not currently supported (hidden in UI, rejected by VALID_SIZES).
+# Retained here for historical cost lookups on any pre-existing jobs stored with that size.
 IMAGE_COST_MAP = {
     'low': {
         '1024x1024': 0.011,
         '1536x1024': 0.016,
         '1024x1536': 0.016,
-        '1792x1024': 0.016,
+        '1792x1024': 0.016,  # unsupported — retained for historical lookups
     },
     'medium': {
         '1024x1024': 0.034,
         '1536x1024': 0.046,
         '1024x1536': 0.046,
-        '1792x1024': 0.046,
+        '1792x1024': 0.046,  # unsupported — retained for historical lookups
     },
     'high': {
         '1024x1024': 0.067,
         '1536x1024': 0.092,
         '1024x1536': 0.092,
-        '1792x1024': 0.092,
+        '1792x1024': 0.092,  # unsupported — retained for historical lookups
     },
 }

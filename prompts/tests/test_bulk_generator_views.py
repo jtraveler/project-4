@@ -249,6 +249,20 @@ class StartGenerationAPITests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('size', response.json()['error'].lower())
 
+    def test_unsupported_size_1792x1024_returns_400(self):
+        """1792x1024 exists in SIZE_CHOICES but is not in VALID_SIZES — must be rejected."""
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': ['test'],
+                'size': '1792x1024',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('size', response.json()['error'].lower())
+
     def test_images_per_prompt_exceeds_max_returns_400(self):
         self.client.login(username='staffuser', password='testpass')
         response = self.client.post(

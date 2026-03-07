@@ -159,7 +159,7 @@
                                 '<option value="">Use master</option>' +
                                 '<option value="1024x1024">1:1</option>' +
                                 '<option value="1024x1536">2:3</option>' +
-                                '<option value="1792x1024" hidden data-future="true">16:9</option>' +
+                                '<option value="1792x1024" disabled data-future="true">16:9 (coming soon)</option>' +
                                 '<option value="1536x1024">3:2</option>' +
                             '</select>' +
                         '</div>' +

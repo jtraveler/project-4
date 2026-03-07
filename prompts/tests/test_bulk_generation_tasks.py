@@ -1218,16 +1218,18 @@ class RetryLogicTests(TestCase):
             error_message='Rate limit reached.',
             retry_after=1,
         )
-        mock_provider.generate.side_effect = [
-            # Image 1: 4 consecutive rate limit failures (initial + 3 retries)
-            rate_limit_result, rate_limit_result,
-            rate_limit_result, rate_limit_result,
-            # Image 2: success
-            GenerationResult(
+        # Use a function-keyed side_effect so both images can run concurrently
+        # without interleaving their generate() calls on a shared list.
+        # p1 always returns rate_limit → exhausts max_retries (3) → fails.
+        # p2 always returns success.
+        def rate_limit_side_effect(**kwargs):
+            if kwargs.get('prompt') == 'p1':
+                return rate_limit_result
+            return GenerationResult(
                 success=True, image_data=b'data',
                 revised_prompt='', cost=0.03,
-            ),
-        ]
+            )
+        mock_provider.generate.side_effect = rate_limit_side_effect
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 
@@ -1256,17 +1258,22 @@ class RetryLogicTests(TestCase):
 
         mock_provider = MagicMock()
         mock_provider.get_rate_limit.return_value = 5
-        mock_provider.generate.side_effect = [
-            GenerationResult(
-                success=False,
-                error_type='content_policy',
-                error_message='Image rejected by content policy.',
-            ),
-            GenerationResult(
+        # Use a function-keyed side_effect so both images can run concurrently
+        # without interleaving their generate() calls on a shared list.
+        # p1 always returns content_policy → fails immediately (no retry).
+        # p2 always returns success.
+        def content_policy_side_effect(**kwargs):
+            if kwargs.get('prompt') == 'p1':
+                return GenerationResult(
+                    success=False,
+                    error_type='content_policy',
+                    error_message='Image rejected by content policy.',
+                )
+            return GenerationResult(
                 success=True, image_data=b'data',
                 revised_prompt='', cost=0.03,
-            ),
-        ]
+            )
+        mock_provider.generate.side_effect = content_policy_side_effect
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 

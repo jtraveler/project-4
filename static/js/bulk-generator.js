@@ -153,9 +153,9 @@
                         '</div>' +
                     '</div>' +
                     '<div>' +
-                        '<label class="bg-box-override-label" for="' + sId + '">Dimensions</label>' +
+                        '<label class="bg-box-override-label" for="' + sId + '">Dimensions <span class="bg-future-label">(v1.1)</span></label>' +
                         '<div class="bg-box-override-wrapper">' +
-                            '<select class="bg-box-override-select bg-override-size" id="' + sId + '">' +
+                            '<select class="bg-box-override-select bg-override-size" id="' + sId + '" disabled title="Per-prompt dimensions coming in v1.1" data-future-feature="per-prompt-dimensions">' +
                                 '<option value="">Use master</option>' +
                                 '<option value="1024x1024">1:1</option>' +
                                 '<option value="1024x1536">2:3</option>' +

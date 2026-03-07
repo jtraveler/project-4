@@ -188,21 +188,27 @@
             if (progressBar) {
                 progressBar.classList.add('progress-complete');
             }
-            // Force bar to 100%
+            // Force bar to 100% — job is done (all images processed, some may have failed)
             if (progressBarFill) {
                 progressBarFill.style.width = '100%';
             }
             if (progressBar) {
                 progressBar.setAttribute('aria-valuenow', '100');
             }
+            // Use actual completed count, not totalImages (some may have failed)
             if (progressCount) {
-                progressCount.textContent = totalImages + ' of ' + totalImages + ' complete';
+                progressCount.textContent = completed + ' of ' + totalImages + ' complete';
             }
             if (progressPercent) {
                 progressPercent.textContent = '(100%)';
             }
             if (statusText) {
-                statusText.textContent = 'All ' + totalImages + ' image' + (totalImages !== 1 ? 's' : '') + ' generated!';
+                var imgLabel = totalImages !== 1 ? 's' : '';
+                if (completed === totalImages) {
+                    statusText.textContent = 'All ' + totalImages + ' image' + imgLabel + ' generated!';
+                } else {
+                    statusText.textContent = completed + ' of ' + totalImages + ' image' + imgLabel + ' generated.';
+                }
             }
         } else if (status === 'cancelled') {
             // Set bar to the correct percentage for the amount completed

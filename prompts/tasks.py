@@ -12,6 +12,7 @@ Usage:
     async_task('prompts.tasks.generate_ai_content_cached', job_id, image_url)
 """
 
+import concurrent.futures
 import json
 import logging
 import re
@@ -34,6 +35,9 @@ NSFW_CACHE_TTL = 3600
 
 # Maximum image size for base64 encoding (5MB)
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
+
+# Maximum concurrent image generation requests (ThreadPoolExecutor workers)
+MAX_CONCURRENT_IMAGE_REQUESTS = 4
 
 
 def run_nsfw_moderation(upload_id: str, image_url: str) -> dict:
@@ -2331,8 +2335,6 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
         None on any failure, and stop_job is True when an auth failure
         should halt the entire job.
     """
-    from prompts.services.bulk_generation import BulkGenerationService
-
     retry_count = 0
     while retry_count <= max_retries:
         try:
@@ -2349,7 +2351,6 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
             )
             image.status = 'failed'
             image.error_message = str(e)[:500]
-            image.save(update_fields=['status', 'error_message'])
             return None, False
 
         if result.success:
@@ -2357,7 +2358,9 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
 
         error_type = result.error_type
 
-        # Auth failure — invalid key, stop the entire job
+        # Auth failure — invalid key, stop the entire job.
+        # DB saves (image, job) and key clearing happen in the main thread
+        # after future.result() to avoid concurrent SQLite write contention.
         if error_type == 'auth':
             logger.error(
                 "Auth failure for job %s image %s, stopping job",
@@ -2365,17 +2368,13 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
             )
             image.status = 'failed'
             image.error_message = result.error_message
-            image.save(update_fields=['status', 'error_message'])
             job.status = 'failed'
-            job.save(update_fields=['status'])
-            BulkGenerationService.clear_api_key(job)
             return None, True
 
         # Content policy — fail this image only, continue job
         if error_type == 'content_policy':
             image.status = 'failed'
             image.error_message = result.error_message
-            image.save(update_fields=['status', 'error_message'])
             return None, False
 
         # Rate limit or server error — retry with exponential backoff
@@ -2395,7 +2394,6 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
         image.error_message = (
             result.error_message or 'Generation failed after retries.'
         )[:500]
-        image.save(update_fields=['status', 'error_message'])
         return None, False
 
     return None, False  # Safety fallback (loop exited without break)
@@ -2436,57 +2434,100 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
     """
     Execute the image generation loop for a bulk job.
 
-    Processes images sequentially with rate limiting and cancel detection.
+    Processes images in concurrent batches of MAX_CONCURRENT_IMAGE_REQUESTS
+    using ThreadPoolExecutor. Cancel detection fires between batches.
     Returns (completed_count, failed_count, total_cost).
     """
     from decimal import Decimal
+    from prompts.services.bulk_generation import BulkGenerationService
+    from prompts.services.image_providers import get_provider as _get_provider
+
     total_cost = Decimal('0')
     completed_count = 0
     failed_count = 0
+    stop_job = False
 
-    for idx, image in enumerate(images):
-        # Cancel check before every image
+    provider_name = job.provider  # Used to create thread-safe provider instances
+    images_list = list(images)
+
+    def generate_one(image):
+        """Thread-safe worker. Creates its own provider instance per thread.
+
+        DB writes (status updates) are performed by the caller in the main
+        thread before/after this function to avoid concurrent write contention.
+        This function only performs the API call + retry logic.
+        """
+        thread_provider = _get_provider(provider_name, mock_mode=False)
+        return _run_generation_with_retry(thread_provider, image, job, job_api_key)
+
+    for batch_start in range(0, len(images_list), MAX_CONCURRENT_IMAGE_REQUESTS):
+        # Cancel check before each batch
         job.refresh_from_db(fields=['status'])
-        if job.status == 'cancelled':
-            logger.info("Job %s cancelled during processing", job.id)
+        if job.status == 'cancelled' or stop_job:
+            logger.info("Job %s stopped before batch at index %d", job.id, batch_start)
             break
 
-        # Tier 1 rate limit: 5 images/min → 13s between calls
-        # Skip delay before the very first image
-        if idx > 0:
-            time.sleep(13)
+        batch = images_list[batch_start:batch_start + MAX_CONCURRENT_IMAGE_REQUESTS]
 
-        image.status = 'generating'
-        image.save(update_fields=['status'])
+        # Mark batch images as 'generating' sequentially before concurrent submission
+        for img in batch:
+            img.status = 'generating'
+            img.save(update_fields=['status'])
 
-        result, stop_job = _run_generation_with_retry(
-            provider, image, job, job_api_key,
-        )
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=len(batch)
+        ) as executor:
+            future_to_image = {
+                executor.submit(generate_one, img): img for img in batch
+            }
 
-        if stop_job:
-            failed_count += 1
-            break
+            for future in concurrent.futures.as_completed(future_to_image):
+                img = future_to_image[future]
+                try:
+                    result, this_stop = future.result()
+                except Exception as exc:
+                    # Worker raised unexpectedly (e.g. DB lock in test env).
+                    # Ensure image is marked failed and saved in main thread.
+                    logger.error(
+                        "Unexpected worker exception for image %s: %s",
+                        img.id, exc,
+                    )
+                    img.status = 'failed'
+                    img.error_message = str(exc)[:500]
+                    img.save(update_fields=['status', 'error_message'])
+                    failed_count += 1
+                    continue
 
-        if result is None:
-            failed_count += 1
-        elif result.success:
-            cost, success = _apply_generation_result(
-                job, image, result, IMAGE_COST_MAP, tz
-            )
-            if success:
-                total_cost += Decimal(str(cost))
-                completed_count += 1
-            else:
-                failed_count += 1
+                if this_stop:
+                    stop_job = True
+                    failed_count += 1
+                    # Worker set img.status='failed' and job.status='failed'
+                    # in memory; persist in main thread, then clear the key.
+                    img.save(update_fields=['status', 'error_message'])
+                    job.save(update_fields=['status'])
+                    BulkGenerationService.clear_api_key(job)
+                    continue
 
-        # Update job progress every 5 images for live UI feedback
-        if (idx + 1) % 5 == 0:
-            job.completed_count = completed_count
-            job.failed_count = failed_count
-            job.actual_cost = total_cost
-            job.save(update_fields=[
-                'completed_count', 'failed_count', 'actual_cost',
-            ])
+                if result is None:
+                    failed_count += 1
+                    # Worker set img.status='failed' in memory; save here.
+                    if img.status == 'failed':
+                        img.save(update_fields=['status', 'error_message'])
+                elif result.success:
+                    cost, success = _apply_generation_result(
+                        job, img, result, IMAGE_COST_MAP, tz
+                    )
+                    if success:
+                        total_cost += Decimal(str(cost))
+                        completed_count += 1
+                    else:
+                        failed_count += 1
+
+        # Update job progress after each batch for live UI feedback
+        job.completed_count = completed_count
+        job.failed_count = failed_count
+        job.actual_cost = total_cost
+        job.save(update_fields=['completed_count', 'failed_count', 'actual_cost'])
 
     return completed_count, failed_count, total_cost
 

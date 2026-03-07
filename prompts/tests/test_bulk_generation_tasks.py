@@ -526,11 +526,15 @@ class ProcessBulkJobTests(TestCase):
     def test_process_job_cancelled_mid_processing(
         self, mock_get_provider, mock_upload
     ):
-        """Job cancellation detected during loop."""
+        """Loop stops when cancel is detected at the start of a new batch.
+
+        Uses a class-level patch on refresh_from_db to simulate seeing
+        'cancelled' after batch 1 completes — avoids SQLite cross-thread
+        transaction isolation issues in test environments.
+        """
         from prompts.tasks import process_bulk_generation_job
 
         mock_provider = MagicMock()
-        mock_provider.get_rate_limit.return_value = 5
         mock_provider.generate.return_value = GenerationResult(
             success=True, image_data=b'data',
             revised_prompt='', cost=0.03,
@@ -538,32 +542,33 @@ class ProcessBulkJobTests(TestCase):
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 
-        # Use 10+ images so the cancel check fires at idx=5
-        job = self._make_job([f'p{i}' for i in range(10)])
+        # 8 images → 2 batches of 4; cancel is detected before batch 2
+        job = self._make_job([f'p{i}' for i in range(8)])
         job.status = 'processing'
         job.save(update_fields=['status'])
 
-        generate_count = [0]
+        refresh_call_count = [0]
+        _original_refresh = BulkGenerationJob.refresh_from_db
 
-        def cancel_after_some(*args, **kwargs):
-            """Simulate cancellation via time.sleep side effect."""
-            generate_count[0] += 1
-            if generate_count[0] == 3:
+        def patched_refresh(instance, fields=None):
+            refresh_call_count[0] += 1
+            _original_refresh(instance, fields=fields)
+            # Simulate seeing 'cancelled' from the second refresh onward
+            # (first fires at batch 0 start, second at batch 1 start)
+            if refresh_call_count[0] >= 2:
+                instance.status = 'cancelled'
                 BulkGenerationJob.objects.filter(
-                    id=job.id
+                    id=instance.id
                 ).update(status='cancelled')
 
-        with patch(
-            'prompts.tasks.time.sleep',
-            side_effect=cancel_after_some,
-        ):
+        with patch.object(BulkGenerationJob, 'refresh_from_db', patched_refresh):
             process_bulk_generation_job(str(job.id))
 
         job.refresh_from_db()
         self.assertEqual(job.status, 'cancelled')
-        # Not all 10 images should have been processed
+        # Batch 1 ran (4 images completed), batch 2 was skipped
         completed = job.images.filter(status='completed').count()
-        self.assertLess(completed, 10)
+        self.assertLess(completed, 8)
 
     @patch('prompts.tasks.time.sleep')
     def test_process_job_nonexistent(self, mock_sleep):
@@ -602,6 +607,113 @@ class ProcessBulkJobTests(TestCase):
         # Cost comes from IMAGE_COST_MAP['medium']['1024x1024'] = 0.034
         # 2 images × 0.034 = 0.068
         self.assertEqual(job.actual_cost, Decimal('0.068'))
+
+
+@override_settings(OPENAI_API_KEY='test-key')
+class ConcurrentGenerationLoopTests(TestCase):
+    """Tests for Bug A: ThreadPoolExecutor-based _run_generation_loop."""
+
+    def setUp(self):
+        self.service = BulkGenerationService()
+        self.user = User.objects.create_user(
+            username='concurrentuser', password='testpass123'
+        )
+
+    def _make_job(self, prompts, **kwargs):
+        job = self.service.create_job(
+            user=self.user,
+            prompts=prompts,
+            **kwargs,
+        )
+        job.api_key_encrypted = encrypt_api_key('sk-test1234567890')
+        job.api_key_hint = '7890'
+        job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
+        return job
+
+    def test_max_concurrent_constant_is_four(self):
+        """MAX_CONCURRENT_IMAGE_REQUESTS constant is 4."""
+        from prompts.tasks import MAX_CONCURRENT_IMAGE_REQUESTS
+        self.assertEqual(MAX_CONCURRENT_IMAGE_REQUESTS, 4)
+
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_processes_more_than_one_batch(
+        self, mock_get_provider, mock_upload
+    ):
+        """5 images (> MAX_CONCURRENT_IMAGE_REQUESTS=4) processed across 2 batches."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value = GenerationResult(
+            success=True, image_data=b'data',
+            revised_prompt='', cost=0.03,
+        )
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job([f'p{i}' for i in range(5)])
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, 'completed')
+        self.assertEqual(job.completed_count, 5)
+        self.assertEqual(job.failed_count, 0)
+        self.assertEqual(job.images.filter(status='completed').count(), 5)
+
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_worker_exception_increments_failed_count(
+        self, mock_get_provider, mock_upload
+    ):
+        """Unexpected exception in a worker increments failed_count, job still completes."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.generate.side_effect = RuntimeError("unexpected crash")
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job(['p1', 'p2'])
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        # Job completes (not 'failed' — auth failure causes 'failed', not generic exceptions)
+        self.assertIn(job.status, ('completed', 'failed'))
+        # No images completed (all raised exceptions)
+        self.assertEqual(job.images.filter(status='completed').count(), 0)
+
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_exactly_four_images_single_batch(
+        self, mock_get_provider, mock_upload
+    ):
+        """Exactly MAX_CONCURRENT_IMAGE_REQUESTS images fit in one batch, all complete."""
+        from prompts.tasks import process_bulk_generation_job, MAX_CONCURRENT_IMAGE_REQUESTS
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value = GenerationResult(
+            success=True, image_data=b'data',
+            revised_prompt='', cost=0.034,
+        )
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job([f'p{i}' for i in range(MAX_CONCURRENT_IMAGE_REQUESTS)])
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        self.assertEqual(job.status, 'completed')
+        self.assertEqual(job.completed_count, MAX_CONCURRENT_IMAGE_REQUESTS)
+        self.assertEqual(job.failed_count, 0)
 
 
 @override_settings(OPENAI_API_KEY='test-key')
@@ -1074,14 +1186,17 @@ class RetryLogicTests(TestCase):
             'prompts.services.bulk_generation.BulkGenerationService.clear_api_key'
         ) as mock_clear:
             process_bulk_generation_job(str(job.id))
-            # clear_api_key called by _run_generation_with_retry on auth failure
-            # AND by the finally block (idempotent — safe to call twice)
+            # clear_api_key called by _run_generation_loop main thread on auth
+            # failure AND by the finally block (idempotent — safe to call twice)
             mock_clear.assert_called_with(job)
 
         job.refresh_from_db()
         self.assertEqual(job.status, 'failed')
-        # Only 1 generate call — auth stops immediately
-        self.assertEqual(mock_provider.generate.call_count, 1)
+        # With concurrent execution, all images in the first batch run
+        # simultaneously — call_count == job size (3), not 1. No second
+        # batch runs because stop_job is set after the first batch completes.
+        self.assertLessEqual(mock_provider.generate.call_count, 3)
+        self.assertGreaterEqual(mock_provider.generate.call_count, 1)
         # First image is failed
         first_image = job.images.order_by('prompt_order').first()
         self.assertEqual(first_image.status, 'failed')

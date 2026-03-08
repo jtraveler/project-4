@@ -3,7 +3,7 @@
 **Last Updated:** February 18, 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
-**Changelog:** v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
+**Changelog:** v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
 
 ---
 
@@ -226,6 +226,32 @@ RIGHT: .column-3 as a sibling of .column-2
 
 ---
 
+## 🔁 SELF-IDENTIFIED ISSUES POLICY
+
+⛔ **This policy is MANDATORY and applies to every spec that uses this template.**
+
+During implementation, CC will sometimes identify issues, rough edges,
+or improvements that were not in the original spec. These must be
+handled as follows:
+
+**If the fix is ≤15 minutes AND only touches files already in scope
+for this spec:**
+→ Apply it before marking the spec complete. Do not defer it.
+→ Report it in the completion report under "Self-Identified Fixes Applied."
+
+**If the fix requires a new file, a migration, an architectural decision,
+or touches files outside this spec's scope:**
+→ Do NOT apply it in this session.
+→ Report it in the completion report under "Deferred — Out of Scope"
+  with enough detail for the next spec to pick it up.
+
+**Why this rule exists:** A recurring anti-pattern in this project is CC
+diagnosing a problem, providing the exact fix with effort estimated at
+2–5 minutes, and then not applying it — leaving it to accumulate across
+sessions. If you can see the fix and it fits in scope, close it now.
+
+---
+
 ## 🤖 AGENT REQUIREMENTS
 
 **MANDATORY: Use wshobson/agents during implementation**
@@ -371,6 +397,16 @@ After implementation, the developer MUST:
 ## 🔄 DATA MIGRATION STATUS
 
 [If applicable: command run, output, records updated]
+
+## 🔁 SELF-IDENTIFIED FIXES APPLIED
+
+[List any issues identified and closed during this session per the
+Self-Identified Issues Policy. If none: "None identified."]
+
+## 🔁 DEFERRED — OUT OF SCOPE
+
+[List any issues identified but not fixable within this spec's scope.
+Include enough detail for the next spec. If none: "None identified."]
 
 ## 📝 NOTES
 

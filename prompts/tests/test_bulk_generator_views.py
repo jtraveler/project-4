@@ -13,6 +13,7 @@ from django.urls import reverse
 from unittest.mock import patch, MagicMock
 
 from prompts.models import BulkGenerationJob, GeneratedImage
+from prompts.services.bulk_generation import _sanitise_error_message
 
 # Fernet test key — used in @override_settings for encryption tests
 TEST_FERNET_KEY = 'DVNiGhgfxQCMi3vIJDIqV7HsVNaGlMmo4RpeStaJwCw='
@@ -1164,3 +1165,185 @@ class FlushAllEndpointTests(TestCase):
         data = response.json()
         self.assertIn('redirect_url', data)
         self.assertEqual(data['redirect_url'], '/tools/bulk-ai-generator/')
+
+
+class SanitiseErrorMessageTests(TestCase):
+    """Unit tests for _sanitise_error_message() in bulk_generation.py.
+
+    This function is the security boundary that prevents raw exception
+    strings, stack traces, and API key fragments from reaching the frontend.
+    All code paths must return a fixed, hardcoded string — never raw input.
+    """
+
+    def setUp(self):
+        self.sanitise = _sanitise_error_message
+
+    def test_empty_string_returns_empty(self):
+        self.assertEqual(self.sanitise(''), '')
+
+    def test_none_returns_empty(self):
+        self.assertEqual(self.sanitise(None), '')
+
+    def test_auth_keyword(self):
+        self.assertEqual(self.sanitise('Auth failed'), 'Authentication error')
+
+    def test_api_key_keyword(self):
+        self.assertEqual(self.sanitise('Invalid api key provided'), 'Authentication error')
+
+    def test_invalid_key_keyword(self):
+        self.assertEqual(self.sanitise('invalid key format'), 'Authentication error')
+
+    def test_invalid_api_keyword(self):
+        self.assertEqual(self.sanitise('invalid api credentials'), 'Authentication error')
+
+    def test_content_policy_keyword(self):
+        self.assertEqual(self.sanitise('content_policy violation'), 'Content policy violation')
+
+    def test_safety_keyword(self):
+        self.assertEqual(self.sanitise('safety system triggered'), 'Content policy violation')
+
+    def test_upload_failed_keyword(self):
+        self.assertEqual(self.sanitise('Generated but upload failed: timeout'), 'Upload failed')
+
+    def test_b2_keyword(self):
+        self.assertEqual(self.sanitise('b2 bucket error'), 'Upload failed')
+
+    def test_s3_keyword(self):
+        self.assertEqual(self.sanitise('s3 upload error'), 'Upload failed')
+
+    def test_rate_limit_keyword(self):
+        self.assertEqual(self.sanitise('rate limit exceeded'), 'Rate limit reached')
+
+    def test_retries_keyword(self):
+        self.assertEqual(self.sanitise('Generation failed after retries.'), 'Rate limit reached')
+
+    def test_quota_keyword(self):
+        self.assertEqual(
+            self.sanitise('You exceeded your current quota, please check your billing'),
+            'Rate limit reached',
+        )
+
+    def test_generate_does_not_trigger_rate_limit(self):
+        """'generate' contains 'rate' — must not be misclassified as rate limit."""
+        self.assertEqual(
+            self.sanitise('Failed to generate image'),
+            'Generation failed',
+        )
+
+    def test_content_policy_not_masked_by_invalid(self):
+        """content_policy check fires before the broad 'invalid' catch-all."""
+        self.assertEqual(
+            self.sanitise('Invalid prompt: content policy violation'),
+            'Content policy violation',
+        )
+
+    def test_invalid_dimensions_returns_invalid_request(self):
+        """'invalid' alone (not 'invalid key'/'invalid api') maps to Invalid request."""
+        self.assertEqual(self.sanitise('invalid image dimensions'), 'Invalid request')
+
+    def test_unknown_string_returns_generic(self):
+        self.assertEqual(
+            self.sanitise('Some unexpected internal error at /home/app/tasks.py line 42'),
+            'Generation failed',
+        )
+
+    def test_raw_exception_with_path_returns_generic(self):
+        """Raw exception strings with internal paths must never pass through."""
+        self.assertEqual(
+            self.sanitise('FileNotFoundError: /etc/secrets/openai.key not found'),
+            'Generation failed',
+        )
+
+
+@override_settings(OPENAI_API_KEY='test-key')
+class JobStatusErrorReasonTests(TestCase):
+    """Tests that error_reason is correctly derived in the job status API."""
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staffuser', password='testpass', is_staff=True,
+        )
+
+    def test_error_reason_auth_failure_when_image_has_auth_error(self):
+        """error_reason='auth_failure' when a failed image has Authentication error."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            status='failed',
+        )
+        GeneratedImage.objects.create(
+            job=job,
+            status='failed',
+            error_message='Authentication error',
+            prompt_text='test prompt',
+            prompt_order=0,
+        )
+        url = reverse('prompts:api_bulk_job_status', args=[str(job.id)])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['error_reason'], 'auth_failure')
+
+    def test_error_reason_empty_when_no_auth_failure(self):
+        """error_reason='' when the job has no auth-related failures."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            status='failed',
+        )
+        GeneratedImage.objects.create(
+            job=job,
+            status='failed',
+            error_message='Content policy violation',
+            prompt_text='test prompt',
+            prompt_order=0,
+        )
+        url = reverse('prompts:api_bulk_job_status', args=[str(job.id)])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['error_reason'], '')
+
+    def test_error_reason_empty_for_processing_job(self):
+        """error_reason='' for a job that is still processing."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            status='processing',
+        )
+        url = reverse('prompts:api_bulk_job_status', args=[str(job.id)])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['error_reason'], '')
+
+    def test_error_reason_empty_for_cancelled_job(self):
+        """error_reason='' for a cancelled terminal job (not failed)."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            status='cancelled',
+        )
+        url = reverse('prompts:api_bulk_job_status', args=[str(job.id)])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['error_reason'], '')
+
+    def test_error_reason_empty_for_completed_job(self):
+        """error_reason='' for a successfully completed job."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            status='completed',
+        )
+        url = reverse('prompts:api_bulk_job_status', args=[str(job.id)])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['error_reason'], '')

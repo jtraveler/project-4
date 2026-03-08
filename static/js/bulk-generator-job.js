@@ -82,25 +82,18 @@
     // ─── Error Reason Formatter ───────────────────────────────────
     function _getReadableErrorReason(errorMessage) {
         if (!errorMessage) return '';
-        var msg = errorMessage.toLowerCase();
-        if (msg.indexOf('auth') !== -1 || msg.indexOf('invalid') !== -1 ||
-                msg.indexOf('api key') !== -1) {
-            return 'Invalid API key \u2014 check your key and try again.';
-        }
-        if (msg.indexOf('content_policy') !== -1 ||
-                msg.indexOf('content policy') !== -1 ||
-                msg.indexOf('safety') !== -1) {
-            return 'Content policy violation \u2014 revise this prompt.';
-        }
-        if (msg.indexOf('upload failed') !== -1 ||
-                msg.indexOf('b2') !== -1) {
-            return 'Generation succeeded but file upload failed \u2014 try regenerating.';
-        }
-        if (msg.indexOf('retries') !== -1 ||
-                msg.indexOf('rate') !== -1) {
-            return 'Rate limit reached \u2014 try again in a few minutes.';
-        }
-        return 'Generation failed \u2014 try again or contact support if this repeats.';
+        // Receives only the 6 fixed sanitised strings from the backend —
+        // use exact-match map so JS and backend can never silently drift.
+        var reasonMap = {
+            'Authentication error':     'Invalid API key \u2014 check your key and try again.',
+            'Invalid request':          'Invalid request \u2014 check your prompt or settings.',
+            'Content policy violation': 'Content policy violation \u2014 revise this prompt.',
+            'Upload failed':            'Generation succeeded but file upload failed \u2014 try regenerating.',
+            'Rate limit reached':       'Rate limit reached \u2014 try again in a few minutes.',
+            'Generation failed':        'Generation failed \u2014 try again or contact support if this repeats.',
+        };
+        return reasonMap[errorMessage] ||
+            'Generation failed \u2014 try again or contact support if this repeats.';
     }
 
     // ─── Formatters ───────────────────────────────────────────────

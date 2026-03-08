@@ -20,7 +20,7 @@ from prompts.services.image_providers import get_provider
 logger = logging.getLogger(__name__)
 
 
-def _sanitise_error_message(raw: str) -> str:
+def _sanitise_error_message(raw: str | None) -> str:
     """Return a safe, user-facing error message from a raw error string.
 
     Prevents internal paths, stack traces, and API key fragments from
@@ -29,14 +29,19 @@ def _sanitise_error_message(raw: str) -> str:
     if not raw:
         return ''
     msg = raw.lower()
-    if 'auth' in msg or 'api key' in msg or 'invalid' in msg:
+    # Most-specific checks first to prevent broader patterns from masking them.
+    if 'auth' in msg or 'api key' in msg or 'invalid key' in msg or 'invalid api' in msg:
         return 'Authentication error'
     if 'content_policy' in msg or 'content policy' in msg or 'safety' in msg:
         return 'Content policy violation'
     if 'upload failed' in msg or 'b2' in msg or 's3' in msg:
         return 'Upload failed'
-    if 'retries' in msg or 'rate' in msg:
+    # 'quota' / 'insufficient_quota' covers OpenAI's billing-limit error message.
+    if 'retries' in msg or 'rate limit' in msg or 'quota' in msg:
         return 'Rate limit reached'
+    # 'invalid' catch-all comes after specific categories to avoid masking them.
+    if 'invalid' in msg:
+        return 'Invalid request'
     # Generic fallback — never expose raw internal messages
     return 'Generation failed'
 
@@ -305,7 +310,8 @@ class BulkGenerationService:
         ]
 
         # Derive job-level error reason from images_data already in memory —
-        # avoids extra DB queries and stays consistent with _sanitise_error_message.
+        # avoids a third DB query (two already issued above) and stays
+        # consistent with _sanitise_error_message.
         job_error_reason = ''
         if job.status == 'failed':
             for img_dict in images_data:

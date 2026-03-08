@@ -503,6 +503,10 @@ All text must meet WCAG 2.1 AA minimum contrast ratios:
 - `var(--gray-700, #404040)` — 9.7:1 ✅
 - `var(--gray-800, #262626)` — 14.5:1 ✅
 
+> ⚠️ **Off-white backgrounds:** `--gray-500` (#737373) achieves 4.74:1 on pure white only.
+> On `--gray-100` (#f5f5f5) backgrounds it drops to **3.88:1 (AA fail)**.
+> Use `--gray-600` (#525252) as the minimum on any off-white or tinted background (6.86:1+).
+
 **UNSAFE text colors on white backgrounds (DO NOT USE for body text):**
 - `var(--gray-400, #A3A3A3)` — 2.7:1 ❌ FAILS AA
 - `var(--gray-300, #D4D4D4)` — 1.5:1 ❌ FAILS AA

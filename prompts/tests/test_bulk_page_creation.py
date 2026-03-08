@@ -253,8 +253,8 @@ class ThumbnailURLTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertEqual(page.b2_thumb_url, 'https://cdn.example.com/full.png')
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.b2_thumb_url, 'https://cdn.example.com/full.png')
 
     @patch('prompts.services.content_generation.ContentGenerationService')
     def test_b2_medium_url_set_to_image_url(self, MockService):
@@ -264,8 +264,8 @@ class ThumbnailURLTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertEqual(page.b2_medium_url, 'https://cdn.example.com/full.png')
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.b2_medium_url, 'https://cdn.example.com/full.png')
 
     @patch('prompts.services.content_generation.ContentGenerationService')
     def test_b2_image_url_set_on_creation(self, MockService):
@@ -275,8 +275,8 @@ class ThumbnailURLTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertEqual(page.b2_image_url, 'https://cdn.example.com/full.png')
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.b2_image_url, 'https://cdn.example.com/full.png')
 
     @patch('prompts.services.content_generation.ContentGenerationService')
     def test_display_thumb_url_resolves_after_creation(self, MockService):
@@ -287,8 +287,8 @@ class ThumbnailURLTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertIsNotNone(page.display_thumb_url)
+        img.refresh_from_db()
+        self.assertIsNotNone(img.prompt_page.display_thumb_url)
 
 
 # =============================================================================
@@ -312,8 +312,8 @@ class VisibilityMappingTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertEqual(page.status, 1)
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.status, 1)
 
     @patch('prompts.services.content_generation.ContentGenerationService')
     def test_private_job_creates_draft_pages(self, MockService):
@@ -323,8 +323,8 @@ class VisibilityMappingTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertEqual(page.status, 0)
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.status, 0)
 
     @patch('prompts.services.content_generation.ContentGenerationService')
     def test_public_pages_are_not_draft(self, MockService):
@@ -335,8 +335,8 @@ class VisibilityMappingTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertNotEqual(page.status, 0)
+        img.refresh_from_db()
+        self.assertNotEqual(img.prompt_page.status, 0)
 
 
 # =============================================================================
@@ -465,8 +465,8 @@ class ModerationStatusTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertEqual(page.moderation_status, 'approved')
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.moderation_status, 'approved')
 
     @patch('prompts.services.content_generation.ContentGenerationService')
     def test_not_pending_on_bulk_creation(self, MockService):
@@ -477,8 +477,8 @@ class ModerationStatusTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertNotEqual(page.moderation_status, 'pending')
+        img.refresh_from_db()
+        self.assertNotEqual(img.prompt_page.moderation_status, 'pending')
 
 
 # =============================================================================
@@ -624,8 +624,8 @@ class EdgeCaseTests(TestCase):
 
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
-        page = Prompt.objects.get(content='A cyberpunk cityscape at dusk')
-        self.assertEqual(page.status, 0)
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.status, 0)
 
     def test_job_not_found_return_dict_has_skipped_count(self):
         """Error-path return dict from a missing job must include skipped_count."""
@@ -645,3 +645,37 @@ class EdgeCaseTests(TestCase):
         self.assertIn('skipped_count', result)
         self.assertEqual(result['skipped_count'], 0)
         self.assertEqual(result['created_count'], 0)
+
+    @patch('prompts.services.content_generation.ContentGenerationService')
+    def test_tags_applied_to_created_page(self, MockService):
+        """suggested_tags from AI content are applied to the created Prompt page."""
+        ai_content = dict(MOCK_AI_CONTENT, suggested_tags=['cyberpunk', 'fantasy', 'art'])
+        MockService.return_value.generate_content.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        tag_names = list(img.prompt_page.tags.values_list('name', flat=True))
+        self.assertIn('cyberpunk', tag_names)
+        self.assertIn('fantasy', tag_names)
+        self.assertIn('art', tag_names)
+
+    @patch('prompts.services.content_generation.ContentGenerationService')
+    def test_source_credit_applied_when_present(self, MockService):
+        """source_credit on GeneratedImage is parsed and written to the Prompt page."""
+        from prompts.models import GeneratedImage as GI
+        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+        img.source_credit = 'Artstation|https://artstation.com/artwork/abc'
+        img.save(update_fields=['source_credit'])
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        page = img.prompt_page
+        self.assertIsNotNone(page)
+        # source_credit or source_credit_url should be populated
+        self.assertTrue(page.source_credit or page.source_credit_url)

@@ -2744,8 +2744,10 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
             'errors': [f'Content service init failed: {e}'],
         }
 
-    # Process selected images
-    selected_images = job.images.filter(
+    # Process selected images — select_for_update() closes the TOCTOU gap:
+    # without it, two concurrent tasks could both read prompt_page=None for
+    # the same image and both create Prompt pages, orphaning the first one.
+    selected_images = job.images.select_for_update().filter(
         id__in=selected_image_ids,
         status='completed',
     ).order_by('prompt_order', 'variation_number')

@@ -403,19 +403,35 @@ def api_create_pages(request, job_id):
             status=400,
         )
 
+    # Idempotency guard — exclude images that already have a prompt page.
+    # If the user double-submits, this prevents duplicate Prompt records.
+    creatable_ids = set(
+        job.images.filter(
+            id__in=valid_ids,
+            prompt_page__isnull=True,
+        ).values_list('id', flat=True)
+    )
+
+    if not creatable_ids:
+        return JsonResponse({
+            'status': 'ok',
+            'pages_to_create': 0,
+            'message': 'All selected images already have pages.',
+        })
+
     # Queue page creation task
     from django_q.tasks import async_task
 
     async_task(
         'prompts.tasks.create_prompt_pages_from_job',
         str(job.id),
-        [str(vid) for vid in valid_ids],
+        [str(cid) for cid in creatable_ids],
         task_name=f'bulk-pages-{job.id}',
     )
 
     return JsonResponse({
         'status': 'queued',
-        'pages_to_create': len(valid_ids),
+        'pages_to_create': len(creatable_ids),
     })
 
 

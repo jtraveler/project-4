@@ -877,7 +877,7 @@ class CreatePromptPagesTests(TestCase):
         'prompts.services.content_generation.ContentGenerationService'
     )
     def test_create_prompt_pages_draft_status(self, mock_cgs_cls):
-        """All pages created with status=0 (Draft)."""
+        """Private-visibility jobs create pages with status=0 (Draft)."""
         from prompts.tasks import create_prompt_pages_from_job
 
         mock_service = mock_cgs_cls.return_value
@@ -888,6 +888,8 @@ class CreatePromptPagesTests(TestCase):
         }
 
         job = self._create_completed_job(1)
+        job.visibility = 'private'
+        job.save(update_fields=['visibility'])
         image_ids = [str(img.id) for img in job.images.all()]
 
         create_prompt_pages_from_job(str(job.id), image_ids)

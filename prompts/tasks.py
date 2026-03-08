@@ -25,7 +25,7 @@ import requests
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.utils.text import slugify
 
@@ -2703,7 +2703,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
         selected_image_ids: List of GeneratedImage UUID strings.
 
     Returns:
-        dict with 'created_count', 'discarded_count', 'errors'
+        dict with 'created_count', 'skipped_count', 'discarded_count', 'errors'
     """
     from prompts.models import BulkGenerationJob, Prompt
     from prompts.services.content_generation import (
@@ -2717,11 +2717,13 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
         logger.error("Job %s not found for page creation", job_id)
         return {
             'created_count': 0,
+            'skipped_count': 0,
             'discarded_count': 0,
             'errors': ['Job not found'],
         }
 
     created = 0
+    skipped = 0
     errors = []
 
     # Mark unselected images
@@ -2737,6 +2739,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
         logger.error("Failed to init ContentGenerationService: %s", e)
         return {
             'created_count': 0,
+            'skipped_count': 0,
             'discarded_count': discarded,
             'errors': [f'Content service init failed: {e}'],
         }
@@ -2749,6 +2752,11 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
 
     for gen_image in selected_images:
         try:
+            # Skip if page already created (task-level idempotency guard)
+            if gen_image.prompt_page is not None:
+                skipped += 1
+                continue
+
             # Generate AI content (title, description, tags)
             ai_content = content_service.generate_content(
                 image_url=gen_image.image_url,
@@ -2774,7 +2782,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
             title = _ensure_unique_title(title)
             slug_val = _generate_unique_slug(title)
 
-            # Create the Prompt page as draft
+            # Create the Prompt page — visibility maps from job setting
             prompt_page = Prompt(
                 title=title,
                 slug=slug_val,
@@ -2782,7 +2790,8 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
                 content=gen_image.prompt_text,
                 excerpt=ai_content.get('description', ''),
                 ai_generator=job.generator_category,
-                status=0,  # Draft
+                status=1 if job.visibility == 'public' else 0,
+                moderation_status='approved',  # staff-created; GPT-Image-1 already applied content policy
             )
 
             # Apply source credit if present on the generated image
@@ -2793,11 +2802,21 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
                 prompt_page.source_credit = sc_name
                 prompt_page.source_credit_url = sc_url
 
-            # Set B2 image URL
-            if hasattr(prompt_page, 'b2_image_url'):
-                prompt_page.b2_image_url = gen_image.image_url
+            # Set B2 image URLs (thumb/medium are fallbacks until Phase 7 generates real thumbnails)
+            prompt_page.b2_image_url = gen_image.image_url
+            prompt_page.b2_thumb_url = gen_image.image_url   # fallback — real thumbnails in Phase 7
+            prompt_page.b2_medium_url = gen_image.image_url  # fallback — real thumbnails in Phase 7
 
-            prompt_page.save()
+            try:
+                with transaction.atomic():
+                    prompt_page.save()
+            except IntegrityError:
+                # Slug/title collision under concurrent execution — append UUID suffix and retry
+                suffix = uuid.uuid4().hex[:8]
+                prompt_page.title = f"{prompt_page.title[:189]} \u2014 {suffix}"
+                prompt_page.slug = f"{prompt_page.slug[:180]}-{suffix}"
+                with transaction.atomic():
+                    prompt_page.save()
 
             # Apply tags if available
             tags = ai_content.get('suggested_tags', [])
@@ -2819,13 +2838,14 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
             errors.append(str(e)[:200])
 
     logger.info(
-        "Page creation for job %s: %d created, %d discarded, "
+        "Page creation for job %s: %d created, %d skipped, %d discarded, "
         "%d errors",
-        job_id, created, discarded, len(errors),
+        job_id, created, skipped, discarded, len(errors),
     )
 
     return {
         'created_count': created,
+        'skipped_count': skipped,
         'discarded_count': discarded,
         'errors': errors,
     }

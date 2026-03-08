@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 7, 2026
+**Last Updated:** March 8, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phase 5C+5B+P1/P2 complete — Phase 5D spec written, ready to run), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~985 passing, 12 skipped (43% coverage, threshold 40%)
+**Current Phase:** Bulk AI Image Generator (Phase 5D complete — Phase 6 in progress, 6A next), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~1008 passing, 12 skipped (43% coverage, threshold 40%)
 
 ---
 
@@ -71,8 +71,13 @@ live-working-project/
 │   ├── DESIGN_CATEGORY_TAXONOMY_REVAMP.md  # Phase 2B taxonomy revamp (Session 74)
 │   ├── PHASE_2B_AGENDA.md                  # Phase 2B execution roadmap (Session 74)
 │   ├── PHASE_2B1-6_COMPLETION_REPORT.md    # 6 Phase 2B sub-phase completion reports (Phase 2B Session)
-│   ├── REPORT_BULK_GEN_PHASE5B_AGENT_REVIEW.md   # Phase 5B 6-agent review report (Sessions 101–107)
-│   └── REPORT_BULK_GEN_P1_P2_FIXES_AGENT_REVIEW.md  # P1/P2 6-agent review report (Sessions 101–107)
+│   ├── REPORT_BULK_GEN_PHASE5B_AGENT_REVIEW.md          # Phase 5B 6-agent review report (Sessions 101–107)
+│   ├── REPORT_BULK_GEN_P1_P2_FIXES_AGENT_REVIEW.md     # P1/P2 6-agent review report (Sessions 101–107)
+│   ├── REPORT_BULK_GEN_PHASE5D_SESSIONS108_109.md      # Sessions 108/109: concurrent gen, count fix, dim select (Session 108–109)
+│   ├── REPORT_BULK_GEN_PHASE5D_P2_SESSIONS110.md       # Session 110: per-image progress, configurable concurrency, test hardening
+│   ├── REPORT_BULK_GEN_PHASE5D_CLEANUP_FAILURE_UX.md   # Session 111: Phase 5D cleanup + Failure UX improvements
+│   ├── REPORT_BULK_GEN_MICRO_SPEC_SESSION111.md        # Session 111: Failure UX micro-spec — 4 items, 8 fixes, agent ratings
+│   └── REPORT_PHASE6_ARCHITECT_REVIEW.md               # Session 112–113: Phase 6 architect review — 7 bugs, 4 sub-phases, UX design (1239 lines)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
@@ -1605,6 +1610,10 @@ prompts/templates/prompts/
 | PHASE_2B_AGENDA.md | docs/ | Phase 2B execution roadmap (Session 74) |
 | PHASE_2B1-6_COMPLETION_REPORT.md | docs/ | Phase 2B sub-phase completion reports (Phase 2B Session) |
 | SESSION_REPORT_TAGS_AND_SEO_PROMPT_FIXES.md | docs/ | Session 81 tag pipeline completion report (Session 81) |
+| PHASE6_DESIGN_REVIEW.md | Root | Phase 6 architect review — 7 bugs, 4 sub-phases, UX design spec (Session 112, design only) |
+| REPORT_PHASE6_ARCHITECT_REVIEW.md | docs/ | Phase 6 architect review session report — 1239 lines (Sessions 112–113) |
+| CC_SPEC_BULK_GEN_PHASE5D_CLEANUP_FAILURE_UX.md | Root | Phase 5D cleanup + Failure UX spec (Session 111) |
+| CC_SPEC_TEMPLATE_AMENDMENT_SELF_IDENTIFIED_ISSUES.md | Root | CC_SPEC_TEMPLATE v2.3 amendment spec — Self-Identified Issues Policy |
 
 ---
 
@@ -1612,11 +1621,21 @@ prompts/templates/prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.24
-**Audit Date:** March 5, 2026
+**Version:** 3.26
+**Audit Date:** March 8, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.26 (March 8, 2026 - Sessions 108–113 End-of-Session Docs Update):**
+- Updated current phase: Phase 5D spec ready → Phase 5D complete, Phase 6 in progress
+- Updated total tests: ~985 → ~1008 passing, 12 skipped
+- Added 5 new docs/ report files (REPORT_BULK_GEN_PHASE5D_SESSIONS108_109, REPORT_BULK_GEN_PHASE5D_P2_SESSIONS110, REPORT_BULK_GEN_PHASE5D_CLEANUP_FAILURE_UX, REPORT_BULK_GEN_MICRO_SPEC_SESSION111, REPORT_PHASE6_ARCHITECT_REVIEW)
+- Added PHASE6_DESIGN_REVIEW.md to project root listing
+- Added CC_SPEC_BULK_GEN_PHASE5D_CLEANUP_FAILURE_UX.md and CC_SPEC_TEMPLATE_AMENDMENT_SELF_IDENTIFIED_ISSUES.md to project root listing
+- Updated bulk_generation.py service description: _sanitise_error_message() security boundary
+- Updated bulk-generator-job.js description: exact-match error map, failure slots
+- Updated bulk-generator-job.css description: .failed-reason, .failed-prompt styles (Sessions 108–111)
 
 **v3.25 (March 7, 2026 - Sessions 101–107 End-of-Session Docs Update):**
 - Updated current phase: Phase 5C complete/E2E verification → Phase 5C+5B+P1/P2 complete, Phase 5D spec ready

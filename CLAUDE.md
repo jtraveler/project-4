@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 7, 2026
+**Last Updated:** March 8, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -51,7 +51,8 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 |-------|--------|-------------|-------------|
 | **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
-| **Bulk Gen** | 🔄 Phase 5D Ready | Bulk AI Image Generator | Phase 5D spec written — run with CC, then Phase 6 |
+| **Bulk Gen Phase 5D** | ✅ COMPLETE | Bulk AI Image Generator — Concurrent Gen + Failure UX | Done — Sessions 108–111 |
+| **Bulk Gen Phase 6** | 🔄 In Progress — 6A next | Image Selection & Page Creation | Phase 6A bug fixes first (see PHASE6_DESIGN_REVIEW.md) |
 
 ### What's Paused (Don't Forget!)
 
@@ -65,6 +66,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Bulk Gen Phase 5D | Mar 7-8, 2026 | ThreadPoolExecutor concurrency, count display fix, dimension select disabled, Failure UX hardening (_sanitise_error_message, gallery failure slots, JS exact-match map), CC_SPEC_TEMPLATE v2.3, 1008 tests |
 | Bulk Gen 5C+5B+P1/P2 | Mar 6-7, 2026 | Real GPT-Image-1 generation (openai SDK 2.26.0), flush button, images_per_prompt+aspect ratio bugs fixed, SUPPORTED_IMAGE_SIZES constants, SEC/UX/A11Y hardening, migration 0065, 985 tests |
 | Bulk Gen 5A+5B+Polish | Mar 4-5, 2026 | Job progress page, gallery rendering, 5-agent audit (10 fixes), column override bug fix, download extension detection, test gallery size filtering, 237 new tests |
 | Phase P2-A | Feb 26-27, 2026 | System Notifications Admin Dashboard (Quill.js editor, batch management, batch_id tracking, rate limiting, auto-mark seen, "Most Likely Seen" stats) |
@@ -81,7 +83,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
-### Bulk AI Image Generator (Phases 1-5C complete — Phase 5D spec written, ready to run)
+### Bulk AI Image Generator (Phases 1-5D complete — Phase 6 in progress)
 
 Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
 
@@ -93,9 +95,23 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 
 **Phase 5B bugs + P1/P2 hardening (Sessions 102-107):** Fixed images_per_prompt (all slots rendered), aspect ratio end-to-end (job.size through to gallery CSS), dropdown options (unsupported hidden). DRY-1: `SUPPORTED_IMAGE_SIZES` + `ALL_IMAGE_SIZES` centralised in `prompts/constants.py`. SEC-1: isinstance(bool, int) bypass fixed. UX-1: disabled + "(coming soon)" on unsupported sizes. A11Y-1/4: aria-atomic + aria-describedby on dimension controls. Flush button ("Trash Test Results"): staff-only endpoint deletes unpublished GeneratedImage/BulkGenerationJob records + B2 files in one click. Migration 0065: choices-only SIZE_CHOICES label update. 985 tests passing, 12 skipped.
 
-**Phase 5D — Spec written, ready to run:** Three bugs to address: Bug A — sequential generation → `ThreadPoolExecutor` for concurrent calls; Bug B — count mismatch (6 reported / 5 rendered); Bug C — per-prompt dimension override UI (visually disable until v1.1).
+**Phase 5D (Sessions 108–111):** ✅ COMPLETE. ThreadPoolExecutor concurrency (max_workers=4, configurable via `BULK_GEN_MAX_CONCURRENT` env var), count mismatch fix, dimension dropdowns disabled with v1.1 tooltip. Failure UX hardening: `_sanitise_error_message()` security boundary, gallery failure slots (reason + 60-char truncated prompt), JS refactored to exact-match map. F() atomic per-image progress updates. CC_SPEC_TEMPLATE upgraded to v2.3 (Self-Identified Issues Policy). 1008 tests passing, 12 skipped.
 
-**Phase 6-7 (remaining):** Image selection + page creation workflow, integration testing, error recovery, edge cases.
+**Phase 6 (in progress — 6A next):** Image selection + page creation workflow. See `PHASE6_DESIGN_REVIEW.md` for the full architect review. 7 bugs found in Phase 4 scaffolding code — all documented with exact fixes. Four sub-phases: 6A (bug fixes), 6B (Create Pages button + wiring), 6C (gallery visual states + polling badges), 6D (error recovery). Phase 6A is the mandatory first step.
+
+**Phase 7 (remaining):** Integration testing, error recovery, edge cases.
+
+**Phase 6 Architecture — Two-Page Staging:**
+- Temp staging page (`/tools/bulk-ai-generator/job/<uuid>/`): shows results of the most recent job. Phase 6 adds the publish flow here.
+- Archive staging page (`/profile/<username>/ai-generations/` — FUTURE PHASE): master archive of all AI-generated images. Private to the user. Tier-based retention windows (2–10 days). Auto-delete after window expires.
+- Actions on temp staging page mirror to archive staging page.
+
+**Phase 6 Publish Flow:**
+- One image (variation) per prompt can be published.
+- Non-selected variations are archived (not deleted immediately).
+- Visibility mapping: `job.visibility='public'` → Prompt `status=1` (Published); `'private'` → `status=0` (Draft).
+- All bulk-created pages: `moderation_status='approved'` (GPT-Image-1 content policy applied at generation time).
+- Private/public toggle is a paid-user feature; not in Phase 6 scope for general users.
 
 ### Key Learnings & Principles
 
@@ -1192,5 +1208,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.22 (Sessions 101–107 — Phase 5C+5B+P1/P2 hardening complete, Phase 5D spec ready, flush button, Key Learnings expanded, test count 985)
+**Version:** 4.23 (Sessions 108–113 — Phase 5D complete, Phase 6 in progress, two-page architecture documented, test count 1008)
 **Last Updated:** March 7, 2026

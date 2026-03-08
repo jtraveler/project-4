@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 7, 2026 (Sessions 101–108)
+**Last Updated:** March 8, 2026 (Sessions 101–113)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,84 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Sessions 108–113 — March 7–8, 2026
+
+**Focus:** Phase 5D complete (concurrent generation + Failure UX hardening) + Phase 6 architect review + Phase 6 architecture decisions
+
+---
+
+#### Sessions 108–111 — Phase 5D: Concurrent Generation + Failure UX
+
+**Commits:** 775f0dc, 4ceb89b, 40b0c32, a737ad6, 50c5051, 59ff672, a7e0205, 94347ff, 0222c38, 05de661
+
+**Phase 5D bug fixes:**
+- **Bug A — Concurrent generation (ThreadPoolExecutor):** Replaced sequential `_run_generation_loop` with `ThreadPoolExecutor(max_workers=4)`. `BULK_GEN_MAX_CONCURRENT` env var added to `settings.py` (default 4). Worker creates own provider per thread; all ORM saves on main thread after `future.result()`. Cancel detection between batches.
+- **Bug B — Count mismatch:** `handleTerminalState()` now uses actual `completed_count` from API response instead of hardcoded `totalImages`. Partial-completion message shown when some images failed.
+- **Bug C — Dimension override UI:** Per-prompt `<select>` disabled with `title="Per-prompt dimensions coming in v1.1"` tooltip, `(v1.1)` label, and `data-future-feature` marker.
+- **P2 — Per-image F() progress:** `completed_count` and `failed_count` updated via atomic `F()` expressions after each individual image (instead of once per batch). Progress bar updates every 15–45s per image.
+- **P2 — Configurable concurrency:** `BULK_GEN_MAX_CONCURRENT` in `settings.py` enables Heroku config var change without code deploy.
+
+**Failure UX hardening:**
+- `_sanitise_error_message()` security boundary in `bulk_generation.py` — whitelist-style mapper to 6 fixed output categories. Keyword-ordered (specific before broad) to prevent masking. 'quota' keyword added for OpenAI billing errors. 'rate' → 'rate limit' to prevent false positive on 'generate'.
+- `get_job_status()` returns `error_message` (sanitised) per image and `error_reason` at job level.
+- Gallery failure slots: reason text + 60-char truncated prompt + aria-label for screen readers.
+- JS `_getReadableErrorReason()` refactored from substring matching to exact-match map against 6 fixed backend strings.
+- `role=alert` on terminal error regions (was `role=status` — wrong for terminal errors).
+- CSS: `.failed-reason` (#b91c1c, 5.78:1 on gray-100), `.failed-prompt` (--gray-600, 7.07:1).
+
+**Test fixes:**
+- List-based `side_effect` mocks replaced with prompt-keyed functions (deterministic under `ThreadPoolExecutor`).
+- Added `ConcurrentGenerationLoopTests` (4 tests), `SanitiseErrorMessageTests` (17 tests), `JobStatusErrorReasonTests` (5 tests).
+- `FERNET_KEY` added to `ConcurrentGenerationLoopTests`.
+- Renamed `test_max_concurrent_constant_is_four` → `test_max_concurrent_reads_from_settings` (env-aware).
+
+**Process upgrade:**
+- CC_SPEC_TEMPLATE upgraded to v2.3 — mandatory SELF-IDENTIFIED ISSUES POLICY section added.
+- CLAUDE.md: off-white contrast note added — `--gray-500` fails AA on `--gray-100` (3.88:1); `--gray-600` required as minimum on tinted backgrounds.
+
+**Agent scores:** @django-pro 9/10, @security-auditor 9/10, @performance-optimizer 9/10, @accessibility-specialist 8.5/10, @code-reviewer 9/10 (Session 108); @django-pro 9/10, @code-reviewer 9/10, @performance-engineer 8/10 (Session 110); @django-pro 9.2/10, @code-reviewer 9.0/10 (Session 111 post-fix)
+
+**Tests:** 990 → 1008 passing, 12 skipped
+
+---
+
+#### Session 112 — Phase 6 Architect Review (design only, no commits)
+
+**Deliverable:** `PHASE6_DESIGN_REVIEW.md` (project root)
+
+Codebase review of Phase 4 scaffolding code before building Phase 6 UI. Three specialist agents consulted.
+
+**7 bugs found in existing scaffolding:**
+1. Duplicate page creation — `api_create_pages` missing `prompt_page__isnull=True` (Critical)
+2. Visibility not mapped — `create_prompt_pages_from_job` hardcodes `status=0` regardless of `job.visibility` (High)
+3. `hasattr(prompt_page, 'b2_image_url')` always True — model field always present (Medium)
+4. TOCTOU race in `_ensure_unique_title` / `_generate_unique_slug` — check-then-act pattern (Medium)
+5. Missing `b2_thumb_url` — full-size URL assigned but thumb URL never set (Medium)
+6. Wrong `moderation_status` — defaults to `'pending'` for staff-created pages (Low)
+7. Missing categories/descriptors — ai_content response contains them but M2M never populated (Low)
+
+**8 architectural decisions documented** in `PHASE6_DESIGN_REVIEW.md`: sub-phase breakdown (6A→6D), b2_thumb_url fallback strategy, visibility mapping, TOCTOU protection, idempotency guard, categories/descriptors assignment, frontend wiring, post-creation feedback (Option D: toast + View badge).
+
+**Agent scores:** @architect-review 8.0/10, @django-pro 6.5/10 (reflecting existing code quality), @ui-ux-designer 8.5/10
+**Average:** 7.67/10 — below 8.0 threshold, but @django-pro score reflects real bugs in existing code (not spec quality). Review documents this explicitly.
+
+---
+
+#### Session 113 — Phase 6 Architecture Decisions (design only, no commits)
+
+**Deliverable:** `PHASE6_DESIGN_REVIEW.md` updated; `docs/REPORT_PHASE6_ARCHITECT_REVIEW.md` created (1239 lines)
+
+Architecture decisions confirmed for Phase 6 implementation:
+- **Two-page architecture:** Temp staging page (Phase 6) + archive staging page (future phase — Phase L or M)
+- **One image per prompt published:** Prevents near-duplicate content in search/feed
+- **Non-selected variations:** Archived (not deleted immediately); retained for tier window
+- **Retention window:** 2–10 days by tier (storage-cost-realistic at this stage)
+- **Visibility mapping confirmed:** `'private'` = Draft (`status=0`); `'public'` = Published (`status=1`)
+- **Phase 6D confirmed in scope:** Per-image error recovery and retry
+- **Archive staging page:** Future phase (Phase L or M) — not Phase 6
+
+---
 
 ### Session 108 — March 7, 2026
 

@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** March 7, 2026
+**Last Updated:** March 8, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **🔄 Phase 5D Ready (5C Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **🔄 Phase 6 In Progress (5D Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -523,12 +523,12 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
-## 🔄 Bulk AI Image Generator (Phase 5D Ready — 5C Complete)
+## 🔄 Bulk AI Image Generator (Phase 6 In Progress — 5D Complete)
 
-**Status:** Phase 5C + 5B + P1/P2 Complete — Phase 5D Spec Written, Ready to Run
+**Status:** Phase 5D Complete — Phase 6 In Progress (6A bug fixes next)
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
-**Tests:** ~324 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests); 985 total project tests passing, 12 skipped
+**Tests:** ~358 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests); 1008 total project tests passing, 12 skipped
 
 ### What This Feature Does
 
@@ -546,8 +546,11 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 5B | Gallery Rendering + Polish | ✅ | 98-99 | Per-prompt aspect ratio, column detection, gallery CSS, visual polish (2 rounds), 5-agent audit (10 fixes), column override bug fix, download extension, test gallery enhancements |
 | 5C | Wire Up Real Generation | ✅ | 100-101 | BYOK decryption, real OpenAI SDK calls, B2 upload, rate limiting (13s/image), retry logic (3×), auth/content_policy/server_error handling, IMAGE_COST_MAP → constants.py, try/finally key clearing |
 | 5B+P1/P2 | Bug fixes + hardening | ✅ | 102-107 | images_per_prompt all slots, aspect ratio end-to-end, dropdown options hidden, SUPPORTED_IMAGE_SIZES constants, SEC-1/4/5, UX-1, A11Y-1/4, flush button, migration 0065 |
-| 5D | Concurrent Generation + Fixes | 🔲 | — | Spec written — Bug A: ThreadPoolExecutor, Bug B: count mismatch, Bug C: per-prompt override UI |
-| 6 | Creating State | 🔲 | — | Image selection, page creation, summary view |
+| 5D | Concurrent Generation + Fixes + Failure UX | ✅ | 108–111 | ThreadPoolExecutor, count fix, dim disable, _sanitise_error_message, gallery failure slots, F() progress, CC_SPEC_TEMPLATE v2.3 |
+| 6A | Bug Fixes (scaffolding) | 🔲 | — | 7 bugs in Phase 4 scaffolding — see PHASE6_DESIGN_REVIEW.md |
+| 6B | Create Pages Button + JS Wiring | 🔲 | — | Sticky bar, handleCreatePages(), toast feedback |
+| 6C | Gallery Visual States + Polling Badges | 🔲 | — | Selected/trashed/published CSS states, prompt_page_id in status API |
+| 6D | Per-Image Error Recovery + Retry | 🔲 | — | Error display, retry button, partial failure handling |
 | 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
 
 ### Key Technical Decisions
@@ -633,14 +636,63 @@ Comprehensive 5-agent audit across 10 files, followed by 3 CC specs with targete
 - **Per-prompt overrides:** Deferred to v1.1 (UI dropdowns exist but backend doesn't support mixed sizes per job)
 - **Post-commit fixes (Session 101):** `IMAGE_COST_MAP` moved to `prompts/constants.py`, `try/finally` guarantees `clear_api_key()` on all exit paths, openai exception imports moved outside `try` block to prevent flaky `TypeError` in test suite.
 
-### Phase 5D — Concurrent Generation + Fixes (Spec Written — NOT YET RUN)
+### Phase 5D — Concurrent Generation + Fixes + Failure UX (COMPLETE)
 
-- **Status:** 🔲 Spec ready — run with CC
-- **Spec location:** End-of-session spec written in Sessions 101–107 context
-- **Bug A — Sequential generation:** Replace for loop with `ThreadPoolExecutor` — OpenAI Tier 1 is 5 images/minute; sequential 13s delays cause unacceptable wait times. Use `concurrent.futures.ThreadPoolExecutor` (NOT asyncio — Django-Q2 task context is synchronous).
-- **Bug B — Count mismatch:** Gallery reports N images but renders N-1 — root cause in slot rendering logic, needs investigation
-- **Bug C — Per-prompt dimension override UI:** Dropdowns exist but backend ignores them (all images use job-level `size`). Visually disable or hide the per-prompt overrides until v1.1 backend support is added.
-- **Session 104:** Added `[BULK-DEBUG]` diagnostic logging to `start_job()`, `process_bulk_generation_job()`, and `_upload_generated_image_to_b2()` — still present in codebase, can be used or removed when Phase 5D runs.
+**Phase 5D: COMPLETE** (Sessions 108–111, commits 775f0dc through 0222c38)
+All bugs fixed and Failure UX hardened. Tests: 1008 passing, 12 skipped.
+
+- **Bug A — ThreadPoolExecutor concurrency:** Replaced sequential `_run_generation_loop` with `ThreadPoolExecutor(max_workers=MAX_CONCURRENT_IMAGE_REQUESTS)`. `MAX_CONCURRENT_IMAGE_REQUESTS` reads from `settings.BULK_GEN_MAX_CONCURRENT` (env var, default 4). All ORM saves on main thread after `future.result()`. Cancel detection between batches.
+- **Bug B — Count mismatch:** `handleTerminalState()` now uses actual `completed_count` from API instead of hardcoded `totalImages`.
+- **Bug C — Dimension override UI:** Per-prompt `<select>` disabled with `title="Per-prompt dimensions coming in v1.1"` tooltip and `(v1.1)` visible label.
+- **P2 — Per-image F() progress:** `completed_count` and `failed_count` updated via atomic `F()` after each image instead of once per batch. Progress bar updates every 15–45s per image.
+- **Failure UX hardening:** `_sanitise_error_message()` security boundary (6 output categories, keyword-ordered to prevent masking). Gallery failure slots show reason text + 60-char truncated prompt with aria-label. JS `_getReadableErrorReason()` refactored from substring matching to exact-match map. `role=alert` on terminal error regions.
+- **Test fixes:** List-based `side_effect` mocks replaced with prompt-keyed functions (deterministic under `ThreadPoolExecutor`). `ConcurrentGenerationLoopTests` added (4 tests). `SanitiseErrorMessageTests` (17 tests). `JobStatusErrorReasonTests` (5 tests).
+- **Process:** CC_SPEC_TEMPLATE upgraded to v2.3 — Self-Identified Issues Policy added.
+
+### Phase 6 — Image Selection & Page Creation
+
+#### Phase 6A — Bug Fixes (READY TO SPEC)
+**Status:** 🔲 Next
+**Prerequisite:** Read `content_generation.py` to confirm `'categories'` and `'descriptors'` keys are returned in the bulk context. Verify `ai_generator` field mapping.
+
+7 bugs in Phase 4 scaffolding code (Session 93), found during Phase 6 Architect Review (Session 112). All bugs documented with exact fix code in `PHASE6_DESIGN_REVIEW.md`.
+
+| Bug | File | Severity | Fix |
+|-----|------|----------|-----|
+| 1 — Duplicate page creation | `bulk_generator_views.py:382` | Critical | Add `prompt_page__isnull=True` to filter |
+| 2 — Visibility not mapped | `tasks.py:2785` | High | `status=1 if job.visibility == 'public' else 0` |
+| 3 — hasattr always True | `tasks.py:2797` | Medium | Remove hasattr guard, assign directly |
+| 4 — TOCTOU race in dedup | `tasks.py:2800` | Medium | `transaction.atomic()` + IntegrityError catch |
+| 5 — Missing b2_thumb_url | `tasks.py:2797` | Medium | `b2_thumb_url = gen_image.image_url` (fallback) |
+| 6 — Wrong moderation_status | `tasks.py:2778` | Low | Set `moderation_status='approved'` explicitly |
+| 7 — Missing categories/descriptors | `tasks.py:2803` | Low | Apply M2M from ai_content response after save |
+
+**New test file:** `prompts/tests/test_bulk_page_creation.py` (~30 test cases)
+**Agent requirements:** @django-pro 8.0+/10 post-fix, @code-reviewer 8.0+/10
+
+#### Phase 6B — Create Pages Button + JS Wiring
+**Status:** 🔲 Planned (after 6A)
+
+Add "Create Pages" sticky bottom bar, `handleCreatePages()` JS function, POST to `api_create_pages`, button disable after submit + spinner, success toast feedback. Add `prompt_page_id` to status API per-image response (enables polling-based badge updates).
+
+**Files:** `bulk_generator_job.html`, `bulk-generator-job.js`, `bulk-generator-job.css`
+**Agent requirements:** @accessibility 8.0+/10, @ui-visual-validator 8.0+/10
+
+#### Phase 6C — Gallery Visual States + Polling Badges
+**Status:** 🔲 Planned (after 6B)
+
+CSS states (selected: 3px border + checkmark badge, trashed: 55% opacity, discarded: grayscale+blur, published: green "View page →" badge). Polling-based badge updates from `prompt_page_id` in status API. Also closes Phase 5 deferred items: A11Y-2, A11Y-3, A11Y-5, N+1 `select_related` fix, placeholder boxes fix, total generation time display.
+
+**Files:** `bulk-generator-job.css`, `bulk-generator-job.js`, `bulk_generator_views.py`, `bulk_generator_job.html`
+**Agent requirements:** @accessibility 8.0+/10, @ui-visual-validator 8.0+/10, @performance 8.0+/10
+
+#### Phase 6D — Per-Image Error Recovery + Retry
+**Status:** 🔲 Planned (after 6C) — IN SCOPE
+
+Per-image error display on gallery cards, "Retry Failed" button, partial failure handling ("2 of 3 pages created — 1 failed").
+
+**Files:** `bulk-generator-job.js`, `bulk_generator_job.html`, `bulk_generator_views.py`
+**Agent requirements:** @django-pro 8.0+/10, @code-reviewer 8.0+/10
 
 ### Deferred Items (P3 Backlog — After Phase 5D)
 
@@ -663,6 +715,7 @@ Comprehensive 5-agent audit across 10 files, followed by 3 CC specs with targete
 - **Multi-image reference upload** (up to 4 images) — See FUTURE_MULTI_IMAGE_REFERENCE.md
 - **Saved Image Library** — Persistent reference images in B2
 - **Content Intelligence Agent** — Automated content generation pipeline
+- **Archive Staging Page (Phase L or M):** URL `/profile/<username>/ai-generations/` (or similar under profile). Private per-user archive of all AI-generated images (bulk + future single). Infinite scroll, Midjourney-style layout. Tier-based retention: 2 days (free), ~5 days (base paid), ~10 days (premium). Auto-delete after tier window — no forced user decision, no pop-up warnings. Background deletion tasks + Backblaze B2 storage cleanup required. Actions from temp staging page mirror here.
 
 ---
 
@@ -726,5 +779,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.11 (Sessions 101–107 — Phase 5C+5B+P1/P2 complete, Phase 5D spec written, deferred items added, migrations updated, test count 985)
-**Last Updated:** March 7, 2026
+**Version:** 4.12 (Sessions 108–113 — Phase 5D complete, Phase 6 sub-phases added, archive staging planned, test count 1008)
+**Last Updated:** March 8, 2026

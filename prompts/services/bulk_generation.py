@@ -20,6 +20,27 @@ from prompts.services.image_providers import get_provider
 logger = logging.getLogger(__name__)
 
 
+def _sanitise_error_message(raw: str) -> str:
+    """Return a safe, user-facing error message from a raw error string.
+
+    Prevents internal paths, stack traces, and API key fragments from
+    reaching the frontend. Always returns a generic category string.
+    """
+    if not raw:
+        return ''
+    msg = raw.lower()
+    if 'auth' in msg or 'api key' in msg or 'invalid' in msg:
+        return 'Authentication error'
+    if 'content_policy' in msg or 'content policy' in msg or 'safety' in msg:
+        return 'Content policy violation'
+    if 'upload failed' in msg or 'b2' in msg or 's3' in msg:
+        return 'Upload failed'
+    if 'retries' in msg or 'rate' in msg:
+        return 'Rate limit reached'
+    # Generic fallback — never expose raw internal messages
+    return 'Generation failed'
+
+
 def _get_fernet():
     """Return a Fernet instance using FERNET_KEY from settings."""
     key = getattr(settings, 'FERNET_KEY', '')
@@ -278,9 +299,19 @@ class BulkGenerationService:
                 'variation_number': img.variation_number,
                 'status': img.status,
                 'image_url': img.image_url or '',
+                'error_message': _sanitise_error_message(img.error_message or ''),
             }
             for img in job.images.all().order_by('prompt_order', 'variation_number')
         ]
+
+        # Derive job-level error reason from images_data already in memory —
+        # avoids extra DB queries and stays consistent with _sanitise_error_message.
+        job_error_reason = ''
+        if job.status == 'failed':
+            for img_dict in images_data:
+                if img_dict['error_message'] == 'Authentication error':
+                    job_error_reason = 'auth_failure'
+                    break
 
         return {
             'job_id': str(job.id),
@@ -296,6 +327,7 @@ class BulkGenerationService:
             'estimated_cost': str(job.estimated_cost),
             'actual_cost': str(job.actual_cost),
             'images': images_data,
+            'error_reason': job_error_reason,
         }
 
     def validate_reference_image(self, image_url: str) -> dict:

@@ -79,6 +79,30 @@
         return cookieValue;
     }
 
+    // ─── Error Reason Formatter ───────────────────────────────────
+    function _getReadableErrorReason(errorMessage) {
+        if (!errorMessage) return '';
+        var msg = errorMessage.toLowerCase();
+        if (msg.indexOf('auth') !== -1 || msg.indexOf('invalid') !== -1 ||
+                msg.indexOf('api key') !== -1) {
+            return 'Invalid API key \u2014 check your key and try again.';
+        }
+        if (msg.indexOf('content_policy') !== -1 ||
+                msg.indexOf('content policy') !== -1 ||
+                msg.indexOf('safety') !== -1) {
+            return 'Content policy violation \u2014 revise this prompt.';
+        }
+        if (msg.indexOf('upload failed') !== -1 ||
+                msg.indexOf('b2') !== -1) {
+            return 'Generation succeeded but file upload failed \u2014 try regenerating.';
+        }
+        if (msg.indexOf('retries') !== -1 ||
+                msg.indexOf('rate') !== -1) {
+            return 'Rate limit reached \u2014 try again in a few minutes.';
+        }
+        return 'Generation failed \u2014 try again or contact support if this repeats.';
+    }
+
     // ─── Formatters ───────────────────────────────────────────────
     function formatCost(amount) {
         return '$' + amount.toFixed(2);
@@ -226,9 +250,15 @@
             if (progressBar) {
                 progressBar.classList.add('progress-failed');
             }
-            var errorMsg = (data && data.error) ? data.error : '';
+            var failedMessage = 'Generation failed.';
+            if (data && data.error_reason === 'auth_failure') {
+                failedMessage = 'Generation stopped \u2014 invalid API key. '
+                    + 'Please re-enter your OpenAI API key and try again.';
+            } else if (data && data.error) {
+                failedMessage = 'Generation failed. ' + data.error;
+            }
             if (statusText) {
-                statusText.textContent = 'Generation failed.' + (errorMsg ? ' ' + errorMsg : '');
+                statusText.textContent = failedMessage;
             }
         }
 
@@ -385,7 +415,9 @@
                 if (image.status === 'completed' && image.image_url) {
                     fillImageSlot(groupIndex, slotIndex, image);
                 } else if (image.status === 'failed') {
-                    fillFailedSlot(groupIndex, slotIndex);
+                    fillFailedSlot(groupIndex, slotIndex,
+                        image.error_message || '',
+                        image.prompt_text || '');
                 }
             }
         }
@@ -701,7 +733,7 @@
         groupData.slots[slotIndex] = image.id;
     }
 
-    function fillFailedSlot(groupIndex, slotIndex) {
+    function fillFailedSlot(groupIndex, slotIndex, errorMessage, promptText) {
         var groupData = renderedGroups[groupIndex];
         if (!groupData) return;
 
@@ -721,14 +753,38 @@
         var failed = document.createElement('div');
         failed.className = 'placeholder-failed';
         failed.style.aspectRatio = galleryAspect;
-        failed.setAttribute('role', 'status');
-        failed.setAttribute('aria-label', 'Image generation failed');
+        failed.setAttribute('role', 'alert');
+        var ariaLabel = 'Image generation failed';
+        if (errorMessage) {
+            ariaLabel += ': ' + _getReadableErrorReason(errorMessage);
+        }
+        failed.setAttribute('aria-label', ariaLabel);
 
         var failedText = document.createElement('span');
         failedText.className = 'failed-text';
         failedText.textContent = 'Failed';
-
         failed.appendChild(failedText);
+
+        // Error reason line
+        if (errorMessage) {
+            var reasonText = document.createElement('span');
+            reasonText.className = 'failed-reason';
+            reasonText.textContent = _getReadableErrorReason(errorMessage);
+            failed.appendChild(reasonText);
+        }
+
+        // Prompt identifier (truncated)
+        if (promptText) {
+            var promptLabel = document.createElement('span');
+            promptLabel.className = 'failed-prompt';
+            promptLabel.textContent = promptText.length > 60
+                ? promptText.substring(0, 57) + '\u2026'
+                : promptText;
+            promptLabel.title = promptText; // Full text on hover
+            promptLabel.setAttribute('aria-label', 'Failed prompt: ' + promptText);
+            failed.appendChild(promptLabel);
+        }
+
         container.appendChild(failed);
 
         // Mark slot as filled so we don't re-process

@@ -630,10 +630,12 @@ class ConcurrentGenerationLoopTests(TestCase):
         job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
         return job
 
-    def test_max_concurrent_constant_is_four(self):
-        """MAX_CONCURRENT_IMAGE_REQUESTS constant is 4."""
+    def test_max_concurrent_reads_from_settings(self):
+        """MAX_CONCURRENT_IMAGE_REQUESTS reads from BULK_GEN_MAX_CONCURRENT setting."""
+        from django.conf import settings as django_settings
         from prompts.tasks import MAX_CONCURRENT_IMAGE_REQUESTS
-        self.assertEqual(MAX_CONCURRENT_IMAGE_REQUESTS, 4)
+        expected = getattr(django_settings, 'BULK_GEN_MAX_CONCURRENT', 4)
+        self.assertEqual(MAX_CONCURRENT_IMAGE_REQUESTS, expected)
 
     @patch('prompts.tasks._upload_generated_image_to_b2')
     @patch('prompts.services.image_providers.get_provider')

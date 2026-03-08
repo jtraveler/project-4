@@ -39,6 +39,9 @@ MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
 # Maximum concurrent image generation requests (ThreadPoolExecutor workers)
 # Tune via BULK_GEN_MAX_CONCURRENT env var (Heroku config) without a code deploy.
+# Evaluated at import time — @override_settings(BULK_GEN_MAX_CONCURRENT=N) in tests
+# will NOT change this value. To override in tests, mock
+# prompts.tasks.MAX_CONCURRENT_IMAGE_REQUESTS directly.
 MAX_CONCURRENT_IMAGE_REQUESTS = getattr(settings, 'BULK_GEN_MAX_CONCURRENT', 4)
 
 

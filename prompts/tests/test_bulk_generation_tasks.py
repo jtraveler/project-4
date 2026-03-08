@@ -609,7 +609,7 @@ class ProcessBulkJobTests(TestCase):
         self.assertEqual(job.actual_cost, Decimal('0.068'))
 
 
-@override_settings(OPENAI_API_KEY='test-key')
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
 class ConcurrentGenerationLoopTests(TestCase):
     """Tests for Bug A: ThreadPoolExecutor-based _run_generation_loop."""
 

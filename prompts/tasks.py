@@ -26,6 +26,7 @@ import requests
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
+from django.db.models import F
 from django.utils.text import slugify
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,8 @@ NSFW_CACHE_TTL = 3600
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
 # Maximum concurrent image generation requests (ThreadPoolExecutor workers)
-MAX_CONCURRENT_IMAGE_REQUESTS = 4
+# Tune via BULK_GEN_MAX_CONCURRENT env var (Heroku config) without a code deploy.
+MAX_CONCURRENT_IMAGE_REQUESTS = getattr(settings, 'BULK_GEN_MAX_CONCURRENT', 4)
 
 
 def run_nsfw_moderation(upload_id: str, image_url: str) -> dict:
@@ -2439,6 +2441,7 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
     Returns (completed_count, failed_count, total_cost).
     """
     from decimal import Decimal
+    from prompts.models import BulkGenerationJob
     from prompts.services.bulk_generation import BulkGenerationService
     from prompts.services.image_providers import get_provider as _get_provider
 
@@ -2496,6 +2499,9 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
                     img.error_message = str(exc)[:500]
                     img.save(update_fields=['status', 'error_message'])
                     failed_count += 1
+                    BulkGenerationJob.objects.filter(pk=job.pk).update(
+                        failed_count=F('failed_count') + 1
+                    )
                     continue
 
                 if this_stop:
@@ -2506,6 +2512,9 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
                     img.save(update_fields=['status', 'error_message'])
                     job.save(update_fields=['status'])
                     BulkGenerationService.clear_api_key(job)
+                    BulkGenerationJob.objects.filter(pk=job.pk).update(
+                        failed_count=F('failed_count') + 1
+                    )
                     continue
 
                 if result is None:
@@ -2513,6 +2522,9 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
                     # Worker set img.status='failed' in memory; save here.
                     if img.status == 'failed':
                         img.save(update_fields=['status', 'error_message'])
+                    BulkGenerationJob.objects.filter(pk=job.pk).update(
+                        failed_count=F('failed_count') + 1
+                    )
                 elif result.success:
                     cost, success = _apply_generation_result(
                         job, img, result, IMAGE_COST_MAP, tz
@@ -2520,14 +2532,19 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
                     if success:
                         total_cost += Decimal(str(cost))
                         completed_count += 1
+                        BulkGenerationJob.objects.filter(pk=job.pk).update(
+                            completed_count=F('completed_count') + 1
+                        )
                     else:
                         failed_count += 1
+                        BulkGenerationJob.objects.filter(pk=job.pk).update(
+                            failed_count=F('failed_count') + 1
+                        )
 
-        # Update job progress after each batch for live UI feedback
-        job.completed_count = completed_count
-        job.failed_count = failed_count
+        # Update job cost after each batch for live UI feedback.
+        # completed_count and failed_count are updated per-image via F() expressions above.
         job.actual_cost = total_cost
-        job.save(update_fields=['completed_count', 'failed_count', 'actual_cost'])
+        job.save(update_fields=['actual_cost'])
 
     return completed_count, failed_count, total_cost
 

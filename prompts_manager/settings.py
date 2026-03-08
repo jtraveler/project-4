@@ -42,6 +42,9 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 # Add to Heroku config vars before deploying the bulk generator.
 FERNET_KEY = os.environ.get('FERNET_KEY', '')
 
+# Bulk image generation concurrency (tune via Heroku config var when upgrading API tier)
+BULK_GEN_MAX_CONCURRENT = int(os.environ.get('BULK_GEN_MAX_CONCURRENT', 4))
+
 
 ALLOWED_HOSTS = [
     '127.0.0.1',

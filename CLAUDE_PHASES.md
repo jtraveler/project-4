@@ -662,12 +662,13 @@ All bugs fixed and Failure UX hardened. Tests: 1008 passing, 12 skipped.
 Fixed 6 of 7 Phase 4 scaffolding bugs. Bug 7 (categories/descriptors M2M) was handled in Phase 6B's publish task instead. Key fixes: `prompt_page` FK added to `GeneratedImage` (migration 0066), `published_count` field on `BulkGenerationJob` (migration 0067), `create_pages` view validation + task wiring, status API per-image `prompt_page_id`/`prompt_page_url` fields.
 
 #### Phase 6A.5 — Data Correctness (COMPLETE)
-**Status:** ✅ COMPLETE (Session 114)
+**Status:** ✅ COMPLETE (Session 114) — Commit `92ea2cd`
 
 Aligned `gpt-image-1` model name to match OpenAI SDK identifier. Ensured `size`, `quality`, and `model` fields on `BulkGenerationJob` are populated correctly at job start rather than being left as defaults.
+**Full report:** `docs/REPORT_BULK_GEN_PHASE6A5.md`
 
 #### Phase 6B — Publish Flow UI + Concurrent Pipeline (COMPLETE)
-**Status:** ✅ COMPLETE (Session 115)
+**Status:** ✅ COMPLETE (Session 115) — Commit `16d8f92`
 
 Concurrent publish pipeline with per-image DB-level idempotency lock. `publish_prompt_pages_from_job` task in `prompts/tasks.py`. ThreadPoolExecutor dispatches Prompt creation; all ORM writes on main thread. `select_for_update()` inside `transaction.atomic()` for race safety. `IntegrityError` slug-collision retry with UUID suffix + M2M re-apply. `published_count` via `F()` atomic counter. Static `#bulk-toast-announcer` for screen-reader announcements. 9 `PublishFlowTests` added.
 
@@ -675,14 +676,16 @@ Concurrent publish pipeline with per-image DB-level idempotency lock. `publish_p
 **Key pattern:** Full M2M block (tags, categories, descriptors) duplicated in `IntegrityError` retry path.
 **Files:** `prompts/tasks.py`, `bulk_generator_job.html`, `bulk-generator-job.js`, `bulk-generator-job.css`, `test_bulk_generator_views.py`
 **Agent scores:** @django-pro 8.5/10 (re-run), @accessibility 8.2/10 (re-run), @performance 8.0/10, @security 9.0/10
+**Full report:** `docs/REPORT_BULK_GEN_PHASE6B.md`
 
 #### Phase 6C — Gallery Visual States + Polling Badges
-**Status:** 🔲 Planned (after 6B)
+**Status:** 🔲 Planned (after 6B.5 — ready to start)
 
 CSS states (selected: 3px border + checkmark badge, trashed: 55% opacity, discarded: grayscale+blur, published: green "View page →" badge). Polling-based badge updates from `prompt_page_id` in status API. Also closes Phase 5 deferred items: A11Y-2, A11Y-3, A11Y-5, N+1 `select_related` fix, placeholder boxes fix, total generation time display.
 
 **Files:** `bulk-generator-job.css`, `bulk-generator-job.js`, `bulk_generator_views.py`, `bulk_generator_job.html`
 **Agent requirements:** @accessibility 8.0+/10, @ui-visual-validator 8.0+/10, @performance 8.0+/10
+**Note for spec:** @test-automator required for task-level test coverage of `publish_prompt_pages_from_job` (concurrent race, IntegrityError retry with M2M, partial failure scenarios). @frontend-developer required for `masonry-grid.css !important` specificity conflicts in gallery CSS states.
 
 #### Phase 6D — Per-Image Error Recovery + Retry
 **Status:** 🔲 Planned (after 6C) — IN SCOPE
@@ -692,21 +695,33 @@ Per-image error display on gallery cards, "Retry Failed" button, partial failure
 **Files:** `bulk-generator-job.js`, `bulk_generator_job.html`, `bulk_generator_views.py`
 **Agent requirements:** @django-pro 8.0+/10, @code-reviewer 8.0+/10
 
-### Deferred Items (P3 Backlog — After Phase 5D)
+### Deferred Items (Backlog)
 
-| Item | Priority | Description |
-|------|----------|-------------|
-| SEC-2 | P3 | API key length check — validate key is at least 40 chars before encrypting |
-| SEC-3 | P3 | `model_name` and `generator_category` allowlist validation in start_job endpoint |
-| FE-1 | P3 | `initButtonGroup` couples to Bootstrap `d-none` class — refactor to data attribute |
-| DRY-2 | P3 | `DIMENSION_LABELS` defined in JS not cross-referenced with Python constants |
-| A11Y-2 | ✅ Phase 6B | Static `#bulk-toast-announcer` aria-live region added (clear-then-set pattern) |
-| A11Y-3 | Phase 6C | Live region for generation progress status updates |
-| A11Y-5 | Phase 6C | Focus management when gallery loads new image rows |
-| N+1 query | ✅ Phase 6B | `select_related('created_by', 'images')` added to bulk_generator_job_view |
-| Placeholder disappear | Phase 6 | Placeholder boxes disappear when image renders — should stay until all slots filled |
-| Total generation time | Phase 6 | Display wall-clock time from job start to completion in gallery header |
-| Per-prompt size override | v1.1 | Wire per-prompt dimension dropdown to backend — currently job-level size only |
+| Item | Priority | Status | Description |
+|------|----------|--------|-------------|
+| `transaction.atomic()` in create task | P1 | ✅ Phase 6B.5 | All ORM writes inside atomic block with select_for_update() re-check |
+| `_sanitise_error_message()` in tasks | P1 | ✅ Phase 6B.5 | Applied in both task exception handlers + worker closure |
+| `available_tags=[]` in both tasks | P1 | ✅ Phase 6B.5 | Pre-fetched via Tag.objects.order_by('id').values_list[:200] |
+| `generator_category` default | P1 | ✅ Phase 6B.5 | Changed 'ChatGPT' → 'gpt-image-1'; migration 0068 backfilled 35 rows |
+| `skipped_count` comment | P1 | ✅ Phase 6B.5 | Clarifying comment added in publish task return dict |
+| `F('published_count')` inside atomic | P1 | ✅ Phase 6B.5 | Moved inside transaction.atomic() on both primary and retry paths |
+| Duplicate M2M blocks (4 locations) | P2 | Phase 6C or cleanup | Extract `_apply_m2m_to_prompt()` helper; reduces maintenance risk |
+| No task-level tests for publish task | P2 | Phase 6C | @test-automator: concurrent race, IntegrityError retry + M2M, partial failure |
+| `available_tags` cap frequency-weighted | P2 | Phase 7 | Switch from order_by('id') to -usage count annotation when corpus > 500 |
+| SEC-2 | P3 | Backlog | API key length check — validate key is at least 40 chars before encrypting |
+| SEC-3 | P3 | Backlog | `model_name` and `generator_category` allowlist validation in start_job endpoint |
+| FE-1 | P3 | Backlog | `initButtonGroup` couples to Bootstrap `d-none` class — refactor to data attribute |
+| DRY-2 | P3 | Backlog | `DIMENSION_LABELS` defined in JS not cross-referenced with Python constants |
+| No rate limiting on api_create_pages | P3 | Phase 7 | Rate limit concurrent publish requests per user |
+| No task failure signal to frontend | P3 | Phase 7 | Notify UI when publish task fails entirely (not just per-image) |
+| SEO auto-flag missing from bulk path | P3 | Phase 7 | `needs_seo_review` flag not set for bulk-created Prompt pages |
+| A11Y-2 | ✅ Phase 6B | Done | Static `#bulk-toast-announcer` aria-live region added (clear-then-set pattern) |
+| A11Y-3 | Phase 6C | Planned | Live region for generation progress status updates |
+| A11Y-5 | Phase 6C | Planned | Focus management when gallery loads new image rows |
+| N+1 query | ✅ Phase 6B | Done | `select_related('created_by', 'images')` added to bulk_generator_job_view |
+| Placeholder disappear | Phase 6 | Planned | Placeholder boxes disappear when image renders — should stay until all slots filled |
+| Total generation time | Phase 6 | Planned | Display wall-clock time from job start to completion in gallery header |
+| Per-prompt size override | v1.1 | Future | Wire per-prompt dimension dropdown to backend — currently job-level size only |
 
 ### Future Features (Deferred)
 

@@ -2,8 +2,8 @@
 
 **Last Updated:** March 9, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phase 6A/6A.5/6B complete — Phase 6C next), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~1076 passing, 12 skipped (43% coverage, threshold 40%)
+**Current Phase:** Bulk AI Image Generator (Phase 6A/6A.5/6B/6B.5 complete — Phase 6C next), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~1084 passing, 12 skipped (43% coverage, threshold 40%)
 
 ---
 
@@ -80,11 +80,13 @@ live-working-project/
 │   ├── REPORT_PHASE6_ARCHITECT_REVIEW.md               # Session 112–113: Phase 6 architect review — 7 bugs, 4 sub-phases, UX design (1239 lines)
 │   ├── REPORT_BULK_GEN_PHASE6A.md                      # Session 114: Phase 6A bug fixes completion report
 │   ├── REPORT_BULK_GEN_PHASE6A5.md                     # Session 114: Phase 6A.5 data correctness completion report
-│   └── REPORT_BULK_GEN_PHASE6B.md                      # Session 115: Phase 6B publish flow completion report (14 sections)
+│   ├── REPORT_BULK_GEN_PHASE6B.md                      # Session 115: Phase 6B publish flow completion report (14 sections)
+│   ├── REPORT_BULK_GEN_PHASE6B5.md                     # Session 116: Phase 6B.5 transaction hardening completion report (13 sections)
+│   └── REPORT_CC_SPEC_TEMPLATE_V2_4.md                 # Session 116: CC_SPEC_TEMPLATE v2.4 update report (ORM transaction rules)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
-│   ├── migrations/               # 68 migrations + __init__.py (latest: 0067_add_published_count_to_bulkgenerationjob)
+│   ├── migrations/               # 68 migrations + __init__.py (latest: 0068_fix_generator_category_default)
 │   ├── services/                 # 12 service modules
 │   │   └── notifications.py      # Notification service (create, count, mark-read) (Session 86)
 │   ├── signals/                   # Signal handlers (Session 86)

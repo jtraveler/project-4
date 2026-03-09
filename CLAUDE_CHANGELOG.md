@@ -23,9 +23,9 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–March 2026 Sessions
 
-### Sessions 114–115 — March 9, 2026
+### Sessions 114–116 — March 9, 2026
 
-**Focus:** Phase 6A bug fixes + Phase 6A.5 data correctness + Phase 6B publish flow (concurrent pipeline)
+**Focus:** Phase 6A bug fixes + Phase 6A.5 data correctness + Phase 6B publish flow (concurrent pipeline) + Phase 6B.5 hardening
 
 ---
 
@@ -89,6 +89,41 @@ This is a running log of development sessions. Each session entry includes:
 - `continue` is illegal inside `with transaction.atomic()` — use flag pattern
 - M2M must be duplicated in `IntegrityError` retry block — Django rolls back full atomic block
 - Static `aria-live` regions must exist at page load — dynamic injection is unreliable for screen readers
+
+#### Session 116 — Phase 6B.5: Transaction Hardening & Quick Wins
+
+**Commit:** 99e62fa
+
+**Agent scores:** @django-pro 8.5/10 (PASS), @code-reviewer 8.5/10 (PASS), @security-reviewer 9.0/10 (PASS)
+
+**What was done:**
+
+- **`create_prompt_pages_from_job`** (`prompts/tasks.py`):
+  - All ORM writes now inside `transaction.atomic()` with per-image `select_for_update()` re-check — previously a no-op in autocommit mode
+  - `_already_published` flag pattern — `continue` illegal inside `with transaction.atomic()`
+  - `IntegrityError` retry now re-applies full M2M block inside its own `transaction.atomic()` — previously only called `save()`, losing all M2M relationships
+  - `errors.append(str(e)[:200])` → `errors.append(_sanitise_error_message(str(e)))` — routes through security boundary
+  - `available_tags` pre-fetched before loop via `Tag.objects.order_by('id').values_list('name', flat=True)[:200]`
+  - `logger.warning(...)` added on AI content failure path
+  - Stale docstring updated: "content_generation service" → "_call_openai_vision()"
+
+- **`publish_prompt_pages_from_job`** (`prompts/tasks.py`):
+  - `F('published_count') + 1` update moved inside `transaction.atomic()` block (both primary and IntegrityError retry paths) — previously outside, risking phantom counts on crash
+  - `available_tags` pre-fetched before worker closure with `order_by('id')`
+  - `skipped_count` clarifying comment added to return dict
+
+- **`_call_vision_for_image` worker closure** (`prompts/tasks.py`):
+  - `str(exc)[:200]` → `_sanitise_error_message(str(exc))` — fixes security boundary bypass
+
+- **`hasattr(prompt_page, 'tags')` guards removed** — dead code from early scaffolding; always true at runtime. All 4 occurrences replaced with bare `if raw_tags:`
+
+- **`BulkGenerationJob.generator_category` default** (`prompts/models.py`): `'ChatGPT'` → `'gpt-image-1'`
+
+- **Migration 0068** (`prompts/migrations/0068_fix_generator_category_default.py`): `AlterField` + `RunPython` backfill — updated 35 rows from `'ChatGPT'` to `'gpt-image-1'`
+
+- **Tests** (`test_bulk_page_creation.py`): `TransactionHardeningTests` (8 tests) — atomic rollback on M2M failure, concurrent idempotency, already-published skip, error sanitisation, available_tags plumbing, F() increment, migration data backfill
+
+**Tests:** 1076 → 1084 passing, 12 skipped
 
 ---
 

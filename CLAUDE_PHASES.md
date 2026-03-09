@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **🔄 Phase 6C Next (6A/6A.5/6B Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **🔄 Phase 6C Next (6A/6A.5/6B/6B.5 Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -523,12 +523,12 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
-## 🔄 Bulk AI Image Generator (Phase 6C Next — 6A/6A.5/6B Complete)
+## 🔄 Bulk AI Image Generator (Phase 6C Next — 6A/6A.5/6B/6B.5 Complete)
 
-**Status:** Phase 6B Complete — Phase 6C (gallery visual states) next
+**Status:** Phase 6B.5 Complete — Phase 6C (gallery visual states) next
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
-**Tests:** ~367 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests + 9 PublishFlowTests); 1076 total project tests passing, 12 skipped
+**Tests:** ~375 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests + 9 PublishFlowTests + 8 TransactionHardeningTests); 1084 total project tests passing, 12 skipped
 
 ### What This Feature Does
 
@@ -550,6 +550,7 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 6A | Bug Fixes (scaffolding) | ✅ | 114 | prompt_page FK, published_count field, migrations 0066+0067, create-pages view, status API fields |
 | 6A.5 | Data Correctness | ✅ | 114 | gpt-image-1 model name fix, size/quality/model fields populated at job start |
 | 6B | Publish Flow UI + Concurrent Pipeline | ✅ | 115 | Sticky bar, handleCreatePages(), ThreadPoolExecutor + DB lock, published_count F(), static aria-live, 9 tests |
+| 6B.5 | Transaction Hardening & Quick Wins | ✅ | 116 | F() inside atomic, _sanitise_error_message in worker closure, available_tags pre-fetch + order_by, generator_category default fix, migration 0068, 8 tests |
 | 6C | Gallery Visual States + Polling Badges | 🔲 | — | Selected/trashed/published CSS states, prompt_page_url links per card |
 | 6D | Per-Image Error Recovery + Retry | 🔲 | — | Error display, retry button, partial failure handling |
 | 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
@@ -573,6 +574,7 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 - `0065` - choices-only SIZE_CHOICES label update (no DDL; Django 5.2 generates these)
 - `0066` - Add `prompt_page` FK to GeneratedImage (Phase 6A)
 - `0067` - Add `published_count` IntegerField to BulkGenerationJob (Phase 6A)
+- `0068` - Fix `generator_category` default + backfill 35 rows (Phase 6B.5)
 
 ### Files Created/Modified
 
@@ -775,5 +777,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.13 (Sessions 114–115 — Phase 6A/6A.5/6B complete, publish pipeline, migrations 0066+0067, test count 1076)
+**Version:** 4.14 (Session 116 — Phase 6B.5 complete, transaction hardening, migration 0068, test count 1084)
 **Last Updated:** March 9, 2026

@@ -54,6 +54,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | **Bulk Gen Phase 6A** | ✅ COMPLETE | Bug Fixes (scaffolding) | Done — 6 of 7 bugs, Session 114 |
 | **Bulk Gen Phase 6A.5** | ✅ COMPLETE | Data Correctness (gpt-image-1 choice + pipeline alignment) | Done — Session 114 |
 | **Bulk Gen Phase 6B** | ✅ COMPLETE | Publish Flow UI + Concurrent Pipeline | Done — Session 115, 1076 tests |
+| **Bulk Gen Phase 6B.5** | ✅ COMPLETE | Transaction Hardening & Quick Wins | Done — Session 116, 1084 tests |
 | **Bulk Gen Phase 6C** | 🔲 Next | Gallery Visual States + Published Badges | Selected/published CSS states, prompt_page_url links per card |
 
 ### What's Paused (Don't Forget!)
@@ -68,6 +69,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Bulk Gen Phase 6B.5 | Mar 9, 2026 | Transaction hardening — atomic F() counter, _sanitise_error_message in worker closure, available_tags pre-fetch + order_by, hasattr dead code removed, generator_category default fix + migration 0068, 8 TransactionHardeningTests, 1084 tests |
 | Bulk Gen Phase 6B | Mar 9, 2026 | Publish flow — concurrent pipeline (ThreadPoolExecutor), per-image DB lock (select_for_update + atomic), IntegrityError slug-collision retry, published_count F() atomic counter, static aria-live toast announcer, 9 PublishFlowTests, 1076 tests |
 | Bulk Gen Phase 6A.5 | Mar 9, 2026 | Data correctness — gpt-image-1 model name fix, pipeline alignment for size/quality/model fields on BulkGenerationJob |
 | Bulk Gen Phase 6A | Mar 9, 2026 | Bug fixes — 6 of 7 Phase 4 scaffolding bugs fixed (prompt_page FK, published_count field, migrations 0066+0067, create-pages view, status API fields) |
@@ -1231,5 +1233,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.24 (Sessions 114–115 — Phase 6A/6A.5/6B complete, publish pipeline architecture, static aria-live pattern, test count 1076)
+**Version:** 4.25 (Session 116 — Phase 6B.5 complete, transaction hardening, F() inside atomic, available_tags pre-fetch, migration 0068, test count 1084)
 **Last Updated:** March 9, 2026

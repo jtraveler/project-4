@@ -73,7 +73,7 @@ class TestBulkGenerationJobModel(TestCase):
         self.assertEqual(job.size, '1024x1024')
         self.assertEqual(job.images_per_prompt, 2)
         self.assertEqual(job.visibility, 'public')
-        self.assertEqual(job.generator_category, 'ChatGPT')
+        self.assertEqual(job.generator_category, 'gpt-image-1')  # default changed in migration 0068
         self.assertEqual(job.completed_count, 0)
         self.assertEqual(job.failed_count, 0)
         self.assertEqual(job.reference_image_url, '')

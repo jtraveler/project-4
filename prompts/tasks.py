@@ -2686,6 +2686,45 @@ def _upload_generated_image_to_b2(image_data, job, image):
     return final_url
 
 
+def _apply_m2m_to_prompt(prompt_page, ai_content, cat_lookup, desc_lookup):
+    """Apply tags, categories, and descriptors M2M to a prompt page.
+
+    Preconditions:
+    - ``prompt_page`` must already be saved (``prompt_page.pk`` must be non-null).
+      Call ``prompt_page.save()`` inside the transaction before invoking this.
+    - Must be called inside an active ``transaction.atomic()`` block so that any
+      failure rolls back the M2M writes along with the parent ``save()``.
+
+    On an IntegrityError retry the caller must invoke this again because the
+    rolled-back transaction erased all M2M rows written in the first attempt.
+    """
+    raw_tags = ai_content.get('tags', [])
+    if raw_tags:
+        validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
+        if validated_tags:
+            prompt_page.tags.add(*validated_tags)
+
+    ai_categories = ai_content.get('categories', [])
+    if ai_categories:
+        matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
+        if matched_cats:
+            prompt_page.categories.add(*matched_cats)
+
+    ai_descriptors = ai_content.get('descriptors', {})
+    if ai_descriptors and isinstance(ai_descriptors, dict):
+        all_desc_names = [
+            str(v).strip()
+            for dtype_values in ai_descriptors.values()
+            if isinstance(dtype_values, list)
+            for v in dtype_values
+            if v
+        ]
+        if all_desc_names:
+            matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
+            if matched_descs:
+                prompt_page.descriptors.add(*matched_descs)
+
+
 def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — page creation requires branching for M2M, error handling, and TOCTOU retry
     """
     Create Prompt pages from selected generated images.
@@ -2831,34 +2870,8 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                     else:
                         prompt_page.save()
 
-                        # Apply tags — validate via the same pipeline as single-upload
-                        raw_tags = ai_content.get('tags', [])
-                        if raw_tags:
-                            validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
-                            if validated_tags:
-                                prompt_page.tags.add(*validated_tags)
-
-                        # Apply categories (SubjectCategory M2M) — in-memory lookup, no query
-                        ai_categories = ai_content.get('categories', [])
-                        if ai_categories:
-                            matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
-                            if matched_cats:
-                                prompt_page.categories.add(*matched_cats)
-
-                        # Apply descriptors (SubjectDescriptor M2M) — flatten typed dict
-                        ai_descriptors = ai_content.get('descriptors', {})
-                        if ai_descriptors and isinstance(ai_descriptors, dict):
-                            all_desc_names = [
-                                str(v).strip()
-                                for dtype_values in ai_descriptors.values()
-                                if isinstance(dtype_values, list)
-                                for v in dtype_values
-                                if v
-                            ]
-                            if all_desc_names:
-                                matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
-                                if matched_descs:
-                                    prompt_page.descriptors.add(*matched_descs)
+                        # Apply tags, categories, and descriptors
+                        _apply_m2m_to_prompt(prompt_page, ai_content, cat_lookup, desc_lookup)
 
                         # Link generated image to prompt page
                         gen_image.prompt_page = prompt_page
@@ -2874,29 +2887,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                 with transaction.atomic():
                     prompt_page.save()
                     # Re-apply all M2M after slug-collision retry
-                    raw_tags = ai_content.get('tags', [])
-                    if raw_tags:
-                        validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
-                        if validated_tags:
-                            prompt_page.tags.add(*validated_tags)
-                    ai_categories = ai_content.get('categories', [])
-                    if ai_categories:
-                        matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
-                        if matched_cats:
-                            prompt_page.categories.add(*matched_cats)
-                    ai_descriptors = ai_content.get('descriptors', {})
-                    if ai_descriptors and isinstance(ai_descriptors, dict):
-                        all_desc_names = [
-                            str(v).strip()
-                            for dtype_values in ai_descriptors.values()
-                            if isinstance(dtype_values, list)
-                            for v in dtype_values
-                            if v
-                        ]
-                        if all_desc_names:
-                            matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
-                            if matched_descs:
-                                prompt_page.descriptors.add(*matched_descs)
+                    _apply_m2m_to_prompt(prompt_page, ai_content, cat_lookup, desc_lookup)
                     gen_image.prompt_page = prompt_page
                     gen_image.save(update_fields=['prompt_page'])
 
@@ -3125,32 +3116,8 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                         _already_published = True
                     else:
                         prompt_page.save()
-                        # M2M and gen_image link inside same atomic block
-                        raw_tags = ai_content.get('tags', [])
-                        if raw_tags:
-                            validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
-                            if validated_tags:
-                                prompt_page.tags.add(*validated_tags)
-
-                        ai_categories = ai_content.get('categories', [])
-                        if ai_categories:
-                            matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
-                            if matched_cats:
-                                prompt_page.categories.add(*matched_cats)
-
-                        ai_descriptors = ai_content.get('descriptors', {})
-                        if ai_descriptors and isinstance(ai_descriptors, dict):
-                            all_desc_names = [
-                                str(v).strip()
-                                for dtype_values in ai_descriptors.values()
-                                if isinstance(dtype_values, list)
-                                for v in dtype_values
-                                if v
-                            ]
-                            if all_desc_names:
-                                matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
-                                if matched_descs:
-                                    prompt_page.descriptors.add(*matched_descs)
+                        # Apply tags, categories, and descriptors
+                        _apply_m2m_to_prompt(prompt_page, ai_content, cat_lookup, desc_lookup)
 
                         gen_image.prompt_page = prompt_page
                         gen_image.save(update_fields=['prompt_page'])
@@ -3167,29 +3134,7 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                 with transaction.atomic():
                     prompt_page.save()
                     # Re-apply all M2M after slug-collision retry
-                    raw_tags = ai_content.get('tags', [])
-                    if raw_tags:
-                        validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
-                        if validated_tags:
-                            prompt_page.tags.add(*validated_tags)
-                    ai_categories = ai_content.get('categories', [])
-                    if ai_categories:
-                        matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
-                        if matched_cats:
-                            prompt_page.categories.add(*matched_cats)
-                    ai_descriptors = ai_content.get('descriptors', {})
-                    if ai_descriptors and isinstance(ai_descriptors, dict):
-                        all_desc_names = [
-                            str(v).strip()
-                            for dtype_values in ai_descriptors.values()
-                            if isinstance(dtype_values, list)
-                            for v in dtype_values
-                            if v
-                        ]
-                        if all_desc_names:
-                            matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
-                            if matched_descs:
-                                prompt_page.descriptors.add(*matched_descs)
+                    _apply_m2m_to_prompt(prompt_page, ai_content, cat_lookup, desc_lookup)
                     gen_image.prompt_page = prompt_page
                     gen_image.save(update_fields=['prompt_page'])
                     BulkGenerationJob.objects.filter(id=job_id).update(

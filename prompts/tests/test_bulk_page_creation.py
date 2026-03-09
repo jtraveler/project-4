@@ -20,7 +20,7 @@ from django.urls import reverse
 from unittest.mock import patch, MagicMock, call
 
 from prompts.models import BulkGenerationJob, GeneratedImage, Prompt
-from prompts.tasks import create_prompt_pages_from_job
+from prompts.tasks import create_prompt_pages_from_job, publish_prompt_pages_from_job
 
 # Fernet test key — required so BulkGenerationJob encryption helpers don't error
 TEST_FERNET_KEY = 'DVNiGhgfxQCMi3vIJDIqV7HsVNaGlMmo4RpeStaJwCw='
@@ -763,8 +763,12 @@ class ContentGenerationAlignmentTests(TestCase):
         self.assertEqual(ai_gen, 'gpt-image-1')
 
     @patch('prompts.tasks._call_openai_vision')
-    def test_vision_called_with_empty_available_tags(self, mock_vision):
-        """_call_openai_vision must be called with available_tags=[]."""
+    def test_vision_called_with_available_tags_list(self, mock_vision):
+        """
+        _call_openai_vision must be called with available_tags as a list.
+        Phase 6B.5 changed from an empty hardcoded [] to a pre-fetched list of
+        up to 200 existing tag names — asserting it's a list (not missing).
+        """
         mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
@@ -772,7 +776,8 @@ class ContentGenerationAlignmentTests(TestCase):
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
         call_kwargs = mock_vision.call_args
-        self.assertEqual(call_kwargs.kwargs.get('available_tags', 'UNSET'), [])
+        available_tags = call_kwargs.kwargs.get('available_tags', 'UNSET')
+        self.assertIsInstance(available_tags, list)
 
     @patch('prompts.tasks._call_openai_vision')
     def test_vision_called_with_image_url(self, mock_vision):
@@ -1167,3 +1172,272 @@ class TransactionHardeningTests(TestCase):
         self.assertGreater(updated, 0)
         job.refresh_from_db()
         self.assertEqual(job.generator_category, 'gpt-image-1')
+
+
+# =============================================================================
+# Phase 6C-A — PublishTaskTests
+# =============================================================================
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class PublishTaskTests(TestCase):
+    """
+    Comprehensive tests for publish_prompt_pages_from_job (Phase 6C-A).
+
+    Covers:
+    - Happy path: prompt created, linked, published_count incremented
+    - Image-to-prompt link: GeneratedImage.prompt_page FK is set
+    - Concurrent race: already-published images skipped, count not incremented
+    - IntegrityError retry: slug suffix applied, Prompt still created
+    - IntegrityError retry M2M: tags/categories/descriptors re-applied in retry
+    - Partial failure: errors[] populated, remaining images still processed
+    - Error sanitisation: raw exceptions routed through _sanitise_error_message()
+    - available_tags: _call_openai_vision receives pre-fetched list kwarg
+    - published_count increments: job counter updated atomically per image
+    - published_count skip: counter not incremented on race-skip
+    - Visibility mapping: public→status=1, private→status=0
+    - moderation_status='approved' on bulk-created pages
+    - _apply_m2m_to_prompt called: refactored helper invoked per publish
+    """
+
+    def setUp(self):
+        from taggit.models import Tag
+        self.publish = publish_prompt_pages_from_job
+        self.user = User.objects.create_user(
+            username='staff6ca', password='pass', is_staff=True,
+        )
+        self.job = _make_job(self.user)
+        self.img = _make_image(self.job)
+        # Seed a tag so available_tags is non-empty in test_publish_available_tags_*
+        # (makes the test self-contained; does not rely on migration-seeded data)
+        Tag.objects.get_or_create(name='fixture-tag')
+
+    # ── 1. Happy path ────────────────────────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_happy_path_creates_prompt(self, _mock_vision):
+        """publish_prompt_pages_from_job creates exactly one Prompt for a valid image."""
+        result = self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.assertEqual(result['published_count'], 1)
+        self.assertEqual(result['skipped_count'], 0)
+        self.assertEqual(result['errors'], [])
+        self.assertEqual(Prompt.objects.count(), 1)
+
+    # ── 2. Image-to-prompt link ──────────────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_links_image_to_prompt(self, _mock_vision):
+        """GeneratedImage.prompt_page FK is set to the newly created Prompt."""
+        self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.img.refresh_from_db()
+        self.assertIsNotNone(self.img.prompt_page)
+        self.assertIsInstance(self.img.prompt_page, Prompt)
+
+    # ── 3. Concurrent race ───────────────────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_skips_already_published_image(self, _mock_vision):
+        """
+        publish_prompt_pages_from_job pre-filters with prompt_page__isnull=True.
+        An image with a pre-existing prompt_page is excluded from images_list
+        entirely, so the function returns published_count=0 with no duplicate Prompt.
+        (The TOCTOU race inside the atomic block is a separate path tested via
+        the select_for_update() guard — this test covers the pre-filter path.)
+        """
+        existing = Prompt.objects.create(
+            title='Already Published', slug='already-published',
+            author=self.user, content='x', status=1,
+        )
+        self.img.prompt_page = existing
+        self.img.save(update_fields=['prompt_page'])
+
+        result = self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.assertEqual(result['published_count'], 0)
+        self.assertEqual(result['errors'], [])
+        self.assertEqual(Prompt.objects.count(), 1)  # no duplicate created
+
+    # ── 4. IntegrityError retry — Prompt created ─────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_integrity_error_retry_succeeds(self, _mock_vision):
+        """
+        When the first Prompt.save() raises IntegrityError (slug collision), the
+        task appends a UUID suffix and retries, ultimately creating the Prompt.
+        """
+        save_count = {'n': 0}
+        original_save = Prompt.save
+
+        def raise_once(self_prompt, *args, **kwargs):
+            save_count['n'] += 1
+            if save_count['n'] == 1:
+                raise IntegrityError("duplicate key violates unique constraint")
+            return original_save(self_prompt, *args, **kwargs)
+
+        with patch.object(Prompt, 'save', raise_once):
+            result = self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.assertEqual(result['published_count'], 1)
+        self.assertEqual(result['errors'], [])
+        self.assertEqual(Prompt.objects.count(), 1)
+
+    # ── 5. IntegrityError retry — M2M re-applied ────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_integrity_error_reapplies_m2m(self, _mock_vision):
+        """
+        After an IntegrityError retry, tags from MOCK_AI_CONTENT are applied
+        to the saved Prompt — proving M2M is re-applied inside the retry block.
+        """
+        save_count = {'n': 0}
+        original_save = Prompt.save
+
+        def raise_once(self_prompt, *args, **kwargs):
+            save_count['n'] += 1
+            if save_count['n'] == 1:
+                raise IntegrityError("duplicate key violates unique constraint")
+            return original_save(self_prompt, *args, **kwargs)
+
+        with patch.object(Prompt, 'save', raise_once):
+            self.publish(str(self.job.id), [str(self.img.id)])
+
+        prompt = Prompt.objects.get()
+        tag_names = list(prompt.tags.values_list('name', flat=True))
+        # 'ai-art' is stripped by _validate_and_fix_tags (AI tag policy);
+        # assert the two non-AI tags that always pass the validator.
+        self.assertIn('fantasy', tag_names)
+        self.assertIn('digital', tag_names)
+
+    # ── 6. Partial failure ───────────────────────────────────────────────────
+
+    def test_publish_partial_failure_continues_processing(self):
+        """
+        If vision fails for the first image, the task continues to process the
+        second image and reports exactly one error and one published page.
+        """
+        img2 = _make_image(self.job, order=1, variation=1,
+                           image_url='https://cdn.example.com/img2.png')
+        call_count = {'n': 0}
+
+        def vision_side_effect(*args, **kwargs):
+            call_count['n'] += 1
+            if call_count['n'] == 1:
+                raise Exception("simulated vision API failure")
+            return MOCK_AI_CONTENT
+
+        with patch('prompts.tasks._call_openai_vision', side_effect=vision_side_effect):
+            result = self.publish(str(self.job.id), [str(self.img.id), str(img2.id)])
+
+        self.assertEqual(len(result['errors']), 1)
+        self.assertEqual(result['published_count'], 1)
+
+    # ── 7. Error sanitisation ────────────────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_errors_pass_through_sanitise(self, _mock_vision):
+        """
+        Exceptions must be routed through _sanitise_error_message() — internal
+        details (passwords, host names) must not appear in errors[].
+        """
+        from prompts.services.bulk_generation import _sanitise_error_message
+
+        sensitive = "connection refused: host=internal-db password=secret99"
+        with patch('prompts.tasks._apply_m2m_to_prompt', side_effect=Exception(sensitive)):
+            result = self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.assertEqual(len(result['errors']), 1)
+        self.assertNotIn('secret99', result['errors'][0])
+        self.assertEqual(result['errors'][0], _sanitise_error_message(sensitive))
+
+    # ── 8. available_tags ────────────────────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_available_tags_passed_to_vision(self, mock_vision):
+        """_call_openai_vision is invoked with available_tags as a non-empty list."""
+        self.publish(str(self.job.id), [str(self.img.id)])
+
+        mock_vision.assert_called_once()
+        call_kwargs = mock_vision.call_args.kwargs
+        self.assertIn('available_tags', call_kwargs)
+        self.assertIsInstance(call_kwargs['available_tags'], list)
+        self.assertGreater(len(call_kwargs['available_tags']), 0)
+
+    # ── 9. published_count increments ───────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_increments_published_count(self, _mock_vision):
+        """BulkGenerationJob.published_count increments by 1 per successfully published image."""
+        self.job.published_count = 0
+        self.job.save(update_fields=['published_count'])
+
+        self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.published_count, 1)
+
+    # ── 10. published_count not incremented on skip ──────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_count_not_incremented_on_skip(self, _mock_vision):
+        """published_count must NOT increment when the image is race-skipped."""
+        existing = Prompt.objects.create(
+            title='Existing Skip', slug='existing-skip',
+            author=self.user, content='x', status=1,
+        )
+        self.img.prompt_page = existing
+        self.img.save(update_fields=['prompt_page'])
+
+        self.job.published_count = 0
+        self.job.save(update_fields=['published_count'])
+
+        self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.published_count, 0)
+
+    # ── 11. Visibility mapping ───────────────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_public_job_creates_published_prompt(self, _mock_vision):
+        """job.visibility='public' → created Prompt.status=1 (Published)."""
+        public_job = _make_job(self.user, visibility='public')
+        img = _make_image(public_job)
+
+        self.publish(str(public_job.id), [str(img.id)])
+
+        created = Prompt.objects.order_by('-id').first()
+        self.assertEqual(created.status, 1)
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_private_job_creates_draft_prompt(self, _mock_vision):
+        """job.visibility='private' → created Prompt.status=0 (Draft)."""
+        private_job = _make_job(self.user, visibility='private')
+        img = _make_image(private_job)
+
+        self.publish(str(private_job.id), [str(img.id)])
+
+        created = Prompt.objects.order_by('-id').first()
+        self.assertEqual(created.status, 0)
+
+    # ── 12. moderation_status ────────────────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_sets_moderation_approved(self, _mock_vision):
+        """Bulk-published pages must have moderation_status='approved'."""
+        self.publish(str(self.job.id), [str(self.img.id)])
+
+        prompt = Prompt.objects.get()
+        self.assertEqual(prompt.moderation_status, 'approved')
+
+    # ── 13. _apply_m2m_to_prompt called ─────────────────────────────────────
+
+    @patch('prompts.tasks._apply_m2m_to_prompt')
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_calls_apply_m2m_helper(self, _mock_vision, mock_apply_m2m):
+        """
+        _apply_m2m_to_prompt is called during a successful publish, validating
+        that the Phase 6C-A refactoring is wired up correctly.
+        """
+        self.publish(str(self.job.id), [str(self.img.id)])
+        mock_apply_m2m.assert_called_once()

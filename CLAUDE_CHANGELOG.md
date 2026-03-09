@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 8, 2026 (Sessions 101–113)
+**Last Updated:** March 9, 2026 (Sessions 101–115)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,75 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Sessions 114–115 — March 9, 2026
+
+**Focus:** Phase 6A bug fixes + Phase 6A.5 data correctness + Phase 6B publish flow (concurrent pipeline)
+
+---
+
+#### Session 114 — Phase 6A Bug Fixes + Phase 6A.5 Data Correctness
+
+**Commits:** (end-of-session docs commit)
+
+**What was done:**
+
+- **Phase 6A — 6 of 7 Phase 4 scaffolding bugs fixed:**
+  - Bug 1 (Critical): `prompt_page__isnull=True` filter added to prevent duplicate page creation in `api_create_pages`
+  - Bug 2 (High): Visibility mapping — `status=1 if job.visibility == 'public' else 0` in `publish_prompt_pages_from_job`
+  - Bug 3 (Medium): Removed `hasattr(prompt_page, 'b2_image_url')` guard (field always present on model)
+  - Bug 5 (Medium): `b2_thumb_url = gen_image.image_url` fallback for thumbnail
+  - Bug 6 (Low): `moderation_status='approved'` set explicitly for staff-created pages
+  - Bug 4/7 handled in 6B's publish task (TOCTOU → DB lock; categories/descriptors → M2M in publish task)
+  - Migration 0066: `prompt_page` FK on `GeneratedImage`
+  - Migration 0067: `published_count` IntegerField on `BulkGenerationJob`
+  - Status API updated with per-image `prompt_page_id` + `prompt_page_url` fields and job-level `published_count`
+
+- **Phase 6A.5 — Data correctness:**
+  - `gpt-image-1` model name aligned to OpenAI SDK identifier (was incorrect string)
+  - `size`, `quality`, `model` fields on `BulkGenerationJob` populated correctly at job start
+
+---
+
+#### Session 115 — Phase 6B: Publish Flow UI + Concurrent Pipeline
+
+**Agent scores (initial):** @django-pro 7.2/10, @accessibility 7.5/10, @performance 8.0/10, @security 9.0/10
+**Agent scores (post-fix re-run):** @django-pro 8.5/10, @accessibility 8.2/10, @performance 8.0/10, @security 9.0/10
+
+**What was done:**
+
+- **`publish_prompt_pages_from_job` task** (`prompts/tasks.py`):
+  - `ThreadPoolExecutor` dispatches Prompt creation across worker threads; all ORM writes on main thread after `futures.result()`
+  - Per-image DB-level idempotency lock: `select_for_update()` inside `with transaction.atomic()` — must be inside transaction or lock releases immediately (autocommit mode)
+  - `_already_published` flag pattern — `continue` is illegal inside `with transaction.atomic()` body
+  - `IntegrityError` on slug collision: UUID suffix appended to title/slug; full M2M block re-applied in second `transaction.atomic()` (Django rolls back original block on `IntegrityError` — M2M must be duplicated in retry path)
+  - `published_count` incremented via `F('published_count') + 1` for race-safe counting
+  - `_sanitise_error_message` imported locally inside function to avoid circular import
+
+- **Template** (`bulk_generator_job.html`):
+  - Sticky publish bar with "Create Pages" button + publish progress bar
+  - Static `<div id="bulk-toast-announcer" role="status" aria-live="polite" class="sr-only" aria-atomic="true">` added at page load (not dynamically injected — required for reliable screen reader announcement)
+
+- **JS** (`bulk-generator-job.js`):
+  - `handleCreatePages()` — POST to `api_create_pages`, disable button after submit, poll for `published_count`, show toast feedback
+  - `showToast()` updated: clear-then-set pattern on static announcer (50ms timeout between clear and populate)
+  - Removed `role="status"` and `aria-live="polite"` from dynamic toast element (decoupled visual from AT announcement)
+
+- **Tests** (`test_bulk_generator_views.py`):
+  - Fixed existing `test_non_completed_images_rejected` assertion: `'not found or not completed'` → `assertIn('not complete', ...)`
+  - Added `PublishFlowTests` class (9 tests): view rejects in-progress job, view rejects oversized list, status API includes `prompt_page_id`/`prompt_page_url`/`published_count`, publish task uses concurrent workers, all ORM writes on main thread, progress counter increments per page, second POST returns zero (idempotency)
+
+- **Report created:** `docs/REPORT_BULK_GEN_PHASE6B.md` (14-section technical report)
+
+**Tests:** 1067 → 1076 passing, 12 skipped
+
+**Key patterns established (apply to all future work):**
+- `select_for_update()` must be inside `with transaction.atomic()` — locks release immediately in autocommit mode
+- `continue` is illegal inside `with transaction.atomic()` — use flag pattern
+- M2M must be duplicated in `IntegrityError` retry block — Django rolls back full atomic block
+- Static `aria-live` regions must exist at page load — dynamic injection is unreliable for screen readers
+
+---
 
 ### Sessions 108–113 — March 7–8, 2026
 

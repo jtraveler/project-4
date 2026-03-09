@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 8, 2026
+**Last Updated:** March 9, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -51,8 +51,10 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 |-------|--------|-------------|-------------|
 | **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
-| **Bulk Gen Phase 5D** | ✅ COMPLETE | Bulk AI Image Generator — Concurrent Gen + Failure UX | Done — Sessions 108–111 |
-| **Bulk Gen Phase 6** | 🔄 In Progress — 6A next | Image Selection & Page Creation | Phase 6A bug fixes first (see PHASE6_DESIGN_REVIEW.md) |
+| **Bulk Gen Phase 6A** | ✅ COMPLETE | Bug Fixes (scaffolding) | Done — 6 of 7 bugs, Session 114 |
+| **Bulk Gen Phase 6A.5** | ✅ COMPLETE | Data Correctness (gpt-image-1 choice + pipeline alignment) | Done — Session 114 |
+| **Bulk Gen Phase 6B** | ✅ COMPLETE | Publish Flow UI + Concurrent Pipeline | Done — Session 115, 1076 tests |
+| **Bulk Gen Phase 6C** | 🔲 Next | Gallery Visual States + Published Badges | Selected/published CSS states, prompt_page_url links per card |
 
 ### What's Paused (Don't Forget!)
 
@@ -66,6 +68,9 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Bulk Gen Phase 6B | Mar 9, 2026 | Publish flow — concurrent pipeline (ThreadPoolExecutor), per-image DB lock (select_for_update + atomic), IntegrityError slug-collision retry, published_count F() atomic counter, static aria-live toast announcer, 9 PublishFlowTests, 1076 tests |
+| Bulk Gen Phase 6A.5 | Mar 9, 2026 | Data correctness — gpt-image-1 model name fix, pipeline alignment for size/quality/model fields on BulkGenerationJob |
+| Bulk Gen Phase 6A | Mar 9, 2026 | Bug fixes — 6 of 7 Phase 4 scaffolding bugs fixed (prompt_page FK, published_count field, migrations 0066+0067, create-pages view, status API fields) |
 | Bulk Gen Phase 5D | Mar 7-8, 2026 | ThreadPoolExecutor concurrency, count display fix, dimension select disabled, Failure UX hardening (_sanitise_error_message, gallery failure slots, JS exact-match map), CC_SPEC_TEMPLATE v2.3, 1008 tests |
 | Bulk Gen 5C+5B+P1/P2 | Mar 6-7, 2026 | Real GPT-Image-1 generation (openai SDK 2.26.0), flush button, images_per_prompt+aspect ratio bugs fixed, SUPPORTED_IMAGE_SIZES constants, SEC/UX/A11Y hardening, migration 0065, 985 tests |
 | Bulk Gen 5A+5B+Polish | Mar 4-5, 2026 | Job progress page, gallery rendering, 5-agent audit (10 fixes), column override bug fix, download extension detection, test gallery size filtering, 237 new tests |
@@ -83,7 +88,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
-### Bulk AI Image Generator (Phases 1-5D complete — Phase 6 in progress)
+### Bulk AI Image Generator (Phases 1–6B complete — Phase 6C next)
 
 Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
 
@@ -97,7 +102,13 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 
 **Phase 5D (Sessions 108–111):** ✅ COMPLETE. ThreadPoolExecutor concurrency (max_workers=4, configurable via `BULK_GEN_MAX_CONCURRENT` env var), count mismatch fix, dimension dropdowns disabled with v1.1 tooltip. Failure UX hardening: `_sanitise_error_message()` security boundary, gallery failure slots (reason + 60-char truncated prompt), JS refactored to exact-match map. F() atomic per-image progress updates. CC_SPEC_TEMPLATE upgraded to v2.3 (Self-Identified Issues Policy). 1008 tests passing, 12 skipped.
 
-**Phase 6 (in progress — 6A next):** Image selection + page creation workflow. See `PHASE6_DESIGN_REVIEW.md` for the full architect review. 7 bugs found in Phase 4 scaffolding code — all documented with exact fixes. Four sub-phases: 6A (bug fixes), 6B (Create Pages button + wiring), 6C (gallery visual states + polling badges), 6D (error recovery). Phase 6A is the mandatory first step.
+**Phase 6A (Session 114):** ✅ COMPLETE. Fixed 6 of 7 Phase 4 scaffolding bugs: `prompt_page` FK on `GeneratedImage`, `published_count` field on `BulkGenerationJob`, migrations 0066+0067, `create_pages` view (validation, task wiring), status API (`prompt_page_id`/`prompt_page_url` per image, `published_count` on job).
+
+**Phase 6A.5 (Session 114):** ✅ COMPLETE. Data correctness — `gpt-image-1` model name aligned to OpenAI SDK, `size`/`quality`/`model` fields on `BulkGenerationJob` populated correctly at job start.
+
+**Phase 6B (Session 115):** ✅ COMPLETE. Concurrent publish pipeline: `ThreadPoolExecutor` dispatches Prompt creation across worker threads; all ORM writes happen on main thread after futures complete. Per-image DB-level idempotency lock (`select_for_update()` inside `transaction.atomic()`). `IntegrityError` slug-collision retry with UUID suffix. `published_count` incremented via `F()` atomic counter. Sticky publish bar + progress bar in template. Static `#bulk-toast-announcer` for screen-reader toast announcements. 9 `PublishFlowTests` added. 1076 tests passing, 12 skipped.
+
+**Phase 6C (next):** Gallery visual states + published badges. Selected/published CSS states per image card, `prompt_page_url` links added to published cards.
 
 **Phase 7 (remaining):** Integration testing, error recovery, edge cases.
 
@@ -113,6 +124,14 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 - All bulk-created pages: `moderation_status='approved'` (GPT-Image-1 content policy applied at generation time).
 - Private/public toggle is a paid-user feature; not in Phase 6 scope for general users.
 
+**Bulk Publish Pipeline Architecture (Phase 6B — Session 115):**
+- `publish_prompt_pages_from_job` task in `prompts/tasks.py` owns all publish logic.
+- Per-image idempotency: `select_for_update()` inside `with transaction.atomic()` acquires DB row lock before checking `prompt_page__isnull=True`. Uses `_already_published` flag (cannot `continue` inside atomic block).
+- `IntegrityError` on slug collision: caught at outer level, UUID suffix appended, full M2M block re-applied inside second `transaction.atomic()` (Django rolls back original block on error — M2M must be duplicated in retry path).
+- `published_count` incremented via `F('published_count') + 1` inside `BulkGenerationJob.objects.filter().update()` for race-safe counting.
+- `ThreadPoolExecutor` dispatches Prompt creation across worker threads; all ORM writes (Prompt.save, M2M, gen_image.save) happen on main thread after `futures.result()` — avoids Django ORM thread-safety issues.
+- `_sanitise_error_message` imported locally inside function to avoid circular import (`prompts.services.bulk_generation` ↔ `prompts.tasks`).
+
 ### Key Learnings & Principles
 
 - **BYOK is the only viable model for bulk generation at scale:** Platform-paid API model fails because all users share Mateo's rate limits, creating unacceptable wait times with concurrent users.
@@ -121,6 +140,10 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 - **ThreadPoolExecutor (not asyncio) for concurrent generation in Django-Q2:** Django-Q2 task context is synchronous; `asyncio.run()` does not work inside it. Use `concurrent.futures.ThreadPoolExecutor` for parallel GPT-Image-1 calls in Phase 5D.
 - **`flush_all` uses `@login_required` + manual staff check (not `@staff_member_required`):** `@staff_member_required` redirects non-staff to login instead of returning 403 JSON, breaking the AJAX flow. Manual check returns `JsonResponse({'error': ...}, status=403)`. Documented with verbatim comment in codebase.
 - **OpenAI Tier 1 rate limit:** 5 images/minute, 15–45s per image. Sequential generation causes unacceptable wait times at scale — Phase 5D replaces it with `ThreadPoolExecutor`.
+- **`select_for_update()` must be inside `transaction.atomic()`:** In Django autocommit mode, row locks acquired outside an explicit transaction are released immediately after the SELECT. Always wrap `select_for_update()` calls in `with transaction.atomic()`.
+- **`continue` is illegal inside `with transaction.atomic()`:** Use a flag variable (`_already_published = False`, set inside block, tested after) instead of `continue` inside an atomic context manager.
+- **M2M assignment must be duplicated in `IntegrityError` retry block:** Django rolls back the entire `transaction.atomic()` block on `IntegrityError`, including any M2M `.add()` calls. The retry block must re-apply all M2M (tags, categories, descriptors) from scratch.
+- **Static `aria-live` announcer over dynamic injection:** Dynamically injected `aria-live` regions are not reliably announced by screen readers. Declare the region in the HTML at page load and populate its text content from JS (clear + 50ms timeout before setting).
 
 ---
 
@@ -1208,5 +1231,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.23 (Sessions 108–113 — Phase 5D complete, Phase 6 in progress, two-page architecture documented, test count 1008)
-**Last Updated:** March 7, 2026
+**Version:** 4.24 (Sessions 114–115 — Phase 6A/6A.5/6B complete, publish pipeline architecture, static aria-live pattern, test count 1076)
+**Last Updated:** March 9, 2026

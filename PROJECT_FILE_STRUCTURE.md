@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 8, 2026
+**Last Updated:** March 9, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phase 5D complete — Phase 6 in progress, 6A next), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~1008 passing, 12 skipped (43% coverage, threshold 40%)
+**Current Phase:** Bulk AI Image Generator (Phase 6A/6A.5/6B complete — Phase 6C next), Phase R1 + R1-D (~95%), Phase 2B (complete), Phase N4 (~99%), Phase K (~96%)
+**Total Tests:** ~1076 passing, 12 skipped (43% coverage, threshold 40%)
 
 ---
 
@@ -16,7 +16,7 @@
 | **CSS Files** | 12 | static/css/ |
 | **JavaScript Files** | 11 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 67 | prompts/migrations/ (65), about/migrations/ (2) |
+| **Migrations** | 70 | prompts/migrations/ (68), about/migrations/ (2) |
 | **Test Files** | 22 | prompts/tests/ |
 | **Management Commands** | 29 | prompts/management/commands/ |
 | **Services** | 15 | prompts/services/ |
@@ -77,11 +77,14 @@ live-working-project/
 │   ├── REPORT_BULK_GEN_PHASE5D_P2_SESSIONS110.md       # Session 110: per-image progress, configurable concurrency, test hardening
 │   ├── REPORT_BULK_GEN_PHASE5D_CLEANUP_FAILURE_UX.md   # Session 111: Phase 5D cleanup + Failure UX improvements
 │   ├── REPORT_BULK_GEN_MICRO_SPEC_SESSION111.md        # Session 111: Failure UX micro-spec — 4 items, 8 fixes, agent ratings
-│   └── REPORT_PHASE6_ARCHITECT_REVIEW.md               # Session 112–113: Phase 6 architect review — 7 bugs, 4 sub-phases, UX design (1239 lines)
+│   ├── REPORT_PHASE6_ARCHITECT_REVIEW.md               # Session 112–113: Phase 6 architect review — 7 bugs, 4 sub-phases, UX design (1239 lines)
+│   ├── REPORT_BULK_GEN_PHASE6A.md                      # Session 114: Phase 6A bug fixes completion report
+│   ├── REPORT_BULK_GEN_PHASE6A5.md                     # Session 114: Phase 6A.5 data correctness completion report
+│   └── REPORT_BULK_GEN_PHASE6B.md                      # Session 115: Phase 6B publish flow completion report (14 sections)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
-│   ├── migrations/               # 66 migrations + __init__.py (latest: 0065_alter_bulkgenerationjob_size_choices)
+│   ├── migrations/               # 68 migrations + __init__.py (latest: 0067_add_published_count_to_bulkgenerationjob)
 │   ├── services/                 # 12 service modules
 │   │   └── notifications.py      # Notification service (create, count, mark-read) (Session 86)
 │   ├── signals/                   # Signal handlers (Session 86)
@@ -1613,6 +1616,8 @@ prompts/templates/prompts/
 | PHASE6_DESIGN_REVIEW.md | Root | Phase 6 architect review — 7 bugs, 4 sub-phases, UX design spec (Session 112, design only) |
 | REPORT_PHASE6_ARCHITECT_REVIEW.md | docs/ | Phase 6 architect review session report — 1239 lines (Sessions 112–113) |
 | CC_SPEC_BULK_GEN_PHASE5D_CLEANUP_FAILURE_UX.md | Root | Phase 5D cleanup + Failure UX spec (Session 111) |
+| CC_SPEC_BULK_GEN_PHASE_6A5.md | Root | Phase 6A.5 data correctness spec (Session 114) |
+| CC_SPEC_BULK_GEN_PHASE_6B.md | Root | Phase 6B publish flow + concurrent pipeline spec (Session 115) |
 | CC_SPEC_TEMPLATE_AMENDMENT_SELF_IDENTIFIED_ISSUES.md | Root | CC_SPEC_TEMPLATE v2.3 amendment spec — Self-Identified Issues Policy |
 
 ---
@@ -1621,11 +1626,18 @@ prompts/templates/prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.26
-**Audit Date:** March 8, 2026
+**Version:** 3.27
+**Audit Date:** March 9, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.27 (March 9, 2026 - Sessions 114–115 End-of-Session Docs Update):**
+- Updated current phase: Phase 6 in progress → Phase 6A/6A.5/6B complete, Phase 6C next
+- Updated total tests: ~1008 → ~1076 passing, 12 skipped
+- Updated migrations count: 66 → 68 (latest: 0067_add_published_count_to_bulkgenerationjob)
+- Added 3 new docs/ report files (REPORT_BULK_GEN_PHASE6A, REPORT_BULK_GEN_PHASE6A5, REPORT_BULK_GEN_PHASE6B)
+- Added CC_SPEC_BULK_GEN_PHASE_6A5.md and CC_SPEC_BULK_GEN_PHASE_6B.md to project root listing
 
 **v3.26 (March 8, 2026 - Sessions 108–113 End-of-Session Docs Update):**
 - Updated current phase: Phase 5D spec ready → Phase 5D complete, Phase 6 in progress

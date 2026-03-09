@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** March 8, 2026
+**Last Updated:** March 9, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **🔄 Phase 6 In Progress (5D Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **🔄 Phase 6C Next (6A/6A.5/6B Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -523,12 +523,12 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
-## 🔄 Bulk AI Image Generator (Phase 6 In Progress — 5D Complete)
+## 🔄 Bulk AI Image Generator (Phase 6C Next — 6A/6A.5/6B Complete)
 
-**Status:** Phase 5D Complete — Phase 6 In Progress (6A bug fixes next)
+**Status:** Phase 6B Complete — Phase 6C (gallery visual states) next
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
-**Tests:** ~358 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests); 1008 total project tests passing, 12 skipped
+**Tests:** ~367 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests + 9 PublishFlowTests); 1076 total project tests passing, 12 skipped
 
 ### What This Feature Does
 
@@ -547,9 +547,10 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 5C | Wire Up Real Generation | ✅ | 100-101 | BYOK decryption, real OpenAI SDK calls, B2 upload, rate limiting (13s/image), retry logic (3×), auth/content_policy/server_error handling, IMAGE_COST_MAP → constants.py, try/finally key clearing |
 | 5B+P1/P2 | Bug fixes + hardening | ✅ | 102-107 | images_per_prompt all slots, aspect ratio end-to-end, dropdown options hidden, SUPPORTED_IMAGE_SIZES constants, SEC-1/4/5, UX-1, A11Y-1/4, flush button, migration 0065 |
 | 5D | Concurrent Generation + Fixes + Failure UX | ✅ | 108–111 | ThreadPoolExecutor, count fix, dim disable, _sanitise_error_message, gallery failure slots, F() progress, CC_SPEC_TEMPLATE v2.3 |
-| 6A | Bug Fixes (scaffolding) | 🔲 | — | 7 bugs in Phase 4 scaffolding — see PHASE6_DESIGN_REVIEW.md |
-| 6B | Create Pages Button + JS Wiring | 🔲 | — | Sticky bar, handleCreatePages(), toast feedback |
-| 6C | Gallery Visual States + Polling Badges | 🔲 | — | Selected/trashed/published CSS states, prompt_page_id in status API |
+| 6A | Bug Fixes (scaffolding) | ✅ | 114 | prompt_page FK, published_count field, migrations 0066+0067, create-pages view, status API fields |
+| 6A.5 | Data Correctness | ✅ | 114 | gpt-image-1 model name fix, size/quality/model fields populated at job start |
+| 6B | Publish Flow UI + Concurrent Pipeline | ✅ | 115 | Sticky bar, handleCreatePages(), ThreadPoolExecutor + DB lock, published_count F(), static aria-live, 9 tests |
+| 6C | Gallery Visual States + Polling Badges | 🔲 | — | Selected/trashed/published CSS states, prompt_page_url links per card |
 | 6D | Per-Image Error Recovery + Retry | 🔲 | — | Error display, retry button, partial failure handling |
 | 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
 
@@ -570,6 +571,8 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 - `0063` - Add source_credit fields to Prompt model
 - `0064` - Add api_key_encrypted + api_key_iv fields to BulkGenerationJob (Phase 5C)
 - `0065` - choices-only SIZE_CHOICES label update (no DDL; Django 5.2 generates these)
+- `0066` - Add `prompt_page` FK to GeneratedImage (Phase 6A)
+- `0067` - Add `published_count` IntegerField to BulkGenerationJob (Phase 6A)
 
 ### Files Created/Modified
 
@@ -651,32 +654,25 @@ All bugs fixed and Failure UX hardened. Tests: 1008 passing, 12 skipped.
 
 ### Phase 6 — Image Selection & Page Creation
 
-#### Phase 6A — Bug Fixes (READY TO SPEC)
-**Status:** 🔲 Next
-**Prerequisite:** Read `content_generation.py` to confirm `'categories'` and `'descriptors'` keys are returned in the bulk context. Verify `ai_generator` field mapping.
+#### Phase 6A — Bug Fixes (COMPLETE)
+**Status:** ✅ COMPLETE (Session 114)
 
-7 bugs in Phase 4 scaffolding code (Session 93), found during Phase 6 Architect Review (Session 112). All bugs documented with exact fix code in `PHASE6_DESIGN_REVIEW.md`.
+Fixed 6 of 7 Phase 4 scaffolding bugs. Bug 7 (categories/descriptors M2M) was handled in Phase 6B's publish task instead. Key fixes: `prompt_page` FK added to `GeneratedImage` (migration 0066), `published_count` field on `BulkGenerationJob` (migration 0067), `create_pages` view validation + task wiring, status API per-image `prompt_page_id`/`prompt_page_url` fields.
 
-| Bug | File | Severity | Fix |
-|-----|------|----------|-----|
-| 1 — Duplicate page creation | `bulk_generator_views.py:382` | Critical | Add `prompt_page__isnull=True` to filter |
-| 2 — Visibility not mapped | `tasks.py:2785` | High | `status=1 if job.visibility == 'public' else 0` |
-| 3 — hasattr always True | `tasks.py:2797` | Medium | Remove hasattr guard, assign directly |
-| 4 — TOCTOU race in dedup | `tasks.py:2800` | Medium | `transaction.atomic()` + IntegrityError catch |
-| 5 — Missing b2_thumb_url | `tasks.py:2797` | Medium | `b2_thumb_url = gen_image.image_url` (fallback) |
-| 6 — Wrong moderation_status | `tasks.py:2778` | Low | Set `moderation_status='approved'` explicitly |
-| 7 — Missing categories/descriptors | `tasks.py:2803` | Low | Apply M2M from ai_content response after save |
+#### Phase 6A.5 — Data Correctness (COMPLETE)
+**Status:** ✅ COMPLETE (Session 114)
 
-**New test file:** `prompts/tests/test_bulk_page_creation.py` (~30 test cases)
-**Agent requirements:** @django-pro 8.0+/10 post-fix, @code-reviewer 8.0+/10
+Aligned `gpt-image-1` model name to match OpenAI SDK identifier. Ensured `size`, `quality`, and `model` fields on `BulkGenerationJob` are populated correctly at job start rather than being left as defaults.
 
-#### Phase 6B — Create Pages Button + JS Wiring
-**Status:** 🔲 Planned (after 6A)
+#### Phase 6B — Publish Flow UI + Concurrent Pipeline (COMPLETE)
+**Status:** ✅ COMPLETE (Session 115)
 
-Add "Create Pages" sticky bottom bar, `handleCreatePages()` JS function, POST to `api_create_pages`, button disable after submit + spinner, success toast feedback. Add `prompt_page_id` to status API per-image response (enables polling-based badge updates).
+Concurrent publish pipeline with per-image DB-level idempotency lock. `publish_prompt_pages_from_job` task in `prompts/tasks.py`. ThreadPoolExecutor dispatches Prompt creation; all ORM writes on main thread. `select_for_update()` inside `transaction.atomic()` for race safety. `IntegrityError` slug-collision retry with UUID suffix + M2M re-apply. `published_count` via `F()` atomic counter. Static `#bulk-toast-announcer` for screen-reader announcements. 9 `PublishFlowTests` added.
 
-**Files:** `bulk_generator_job.html`, `bulk-generator-job.js`, `bulk-generator-job.css`
-**Agent requirements:** @accessibility 8.0+/10, @ui-visual-validator 8.0+/10
+**Key pattern:** `_already_published` flag (cannot use `continue` inside atomic block).
+**Key pattern:** Full M2M block (tags, categories, descriptors) duplicated in `IntegrityError` retry path.
+**Files:** `prompts/tasks.py`, `bulk_generator_job.html`, `bulk-generator-job.js`, `bulk-generator-job.css`, `test_bulk_generator_views.py`
+**Agent scores:** @django-pro 8.5/10 (re-run), @accessibility 8.2/10 (re-run), @performance 8.0/10, @security 9.0/10
 
 #### Phase 6C — Gallery Visual States + Polling Badges
 **Status:** 🔲 Planned (after 6B)
@@ -702,10 +698,10 @@ Per-image error display on gallery cards, "Retry Failed" button, partial failure
 | SEC-3 | P3 | `model_name` and `generator_category` allowlist validation in start_job endpoint |
 | FE-1 | P3 | `initButtonGroup` couples to Bootstrap `d-none` class — refactor to data attribute |
 | DRY-2 | P3 | `DIMENSION_LABELS` defined in JS not cross-referenced with Python constants |
-| A11Y-2 | Phase 6 | `aria-describedby` on prompt text inputs pointing to char counter |
-| A11Y-3 | Phase 6 | Live region for generation progress status updates |
-| A11Y-5 | Phase 6 | Focus management when gallery loads new image rows |
-| N+1 query | Phase 6 | `select_related` missing on jobs query in `bulk_generator_job_view` |
+| A11Y-2 | ✅ Phase 6B | Static `#bulk-toast-announcer` aria-live region added (clear-then-set pattern) |
+| A11Y-3 | Phase 6C | Live region for generation progress status updates |
+| A11Y-5 | Phase 6C | Focus management when gallery loads new image rows |
+| N+1 query | ✅ Phase 6B | `select_related('created_by', 'images')` added to bulk_generator_job_view |
 | Placeholder disappear | Phase 6 | Placeholder boxes disappear when image renders — should stay until all slots filled |
 | Total generation time | Phase 6 | Display wall-clock time from job start to completion in gallery header |
 | Per-prompt size override | v1.1 | Wire per-prompt dimension dropdown to backend — currently job-level size only |
@@ -779,5 +775,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.12 (Sessions 108–113 — Phase 5D complete, Phase 6 sub-phases added, archive staging planned, test count 1008)
-**Last Updated:** March 8, 2026
+**Version:** 4.13 (Sessions 114–115 — Phase 6A/6A.5/6B complete, publish pipeline, migrations 0066+0067, test count 1076)
+**Last Updated:** March 9, 2026

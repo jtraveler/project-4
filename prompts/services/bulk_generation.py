@@ -311,7 +311,7 @@ class BulkGenerationService:
                 'prompt_page_url': reverse(
                     'prompts:prompt_detail',
                     kwargs={'slug': img.prompt_page.slug},
-                ) if img.prompt_page_id else None,
+                ) if img.prompt_page_id and img.prompt_page else None,
             }
             for img in job.images.select_related('prompt_page').order_by(
                 'prompt_order', 'variation_number'

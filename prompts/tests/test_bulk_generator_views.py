@@ -704,7 +704,7 @@ class PublishFlowTests(TestCase):
             content='test',
             status=1,
         )
-        img = GeneratedImage.objects.create(
+        GeneratedImage.objects.create(
             job=job, prompt_text='Test', prompt_order=0,
             status='completed', image_url='https://example.com/1.png',
             prompt_page=prompt,
@@ -715,8 +715,9 @@ class PublishFlowTests(TestCase):
         self.assertEqual(img_data['prompt_page_id'], str(prompt.id))
 
     def test_status_api_prompt_page_url_non_null_when_published(self):
-        """Status API returns non-null prompt_page_url when image has a linked page."""
+        """Status API returns prompt_page_url containing the prompt's slug."""
         from prompts.models import Prompt
+        from django.urls import reverse as dj_reverse
         self.client.login(username='pub_staff', password='testpass')
         job = BulkGenerationJob.objects.create(
             created_by=self.staff_user, total_prompts=1, status='completed',
@@ -727,7 +728,7 @@ class PublishFlowTests(TestCase):
             content='test',
             status=1,
         )
-        img = GeneratedImage.objects.create(
+        GeneratedImage.objects.create(
             job=job, prompt_text='Test', prompt_order=0,
             status='completed', image_url='https://example.com/1.png',
             prompt_page=prompt,
@@ -735,8 +736,8 @@ class PublishFlowTests(TestCase):
         response = self.client.get(self._status_url(job.id))
         self.assertEqual(response.status_code, 200)
         img_data = response.json()['images'][0]
-        self.assertIsNotNone(img_data['prompt_page_url'])
-        self.assertIn('/', img_data['prompt_page_url'])
+        expected_url = dj_reverse('prompts:prompt_detail', kwargs={'slug': prompt.slug})
+        self.assertEqual(img_data['prompt_page_url'], expected_url)
 
     def test_status_api_includes_published_count(self):
         """Status API top-level response includes published_count."""

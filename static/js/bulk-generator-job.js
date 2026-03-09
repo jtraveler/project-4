@@ -401,9 +401,9 @@
     // ─── A11Y-5: Focus first gallery card ────────────────────────
     function focusFirstGalleryCard() {
         if (!galleryContainer) return;
-        // Exclude is-published (btn-select hidden) so focus lands on a real button
+        // Exclude is-published and is-discarded (both have btn-select hidden/display:none)
         var firstBtn = galleryContainer.querySelector(
-            '.prompt-image-slot:not(.is-placeholder):not(.is-published) .btn-select'
+            '.prompt-image-slot:not(.is-placeholder):not(.is-published):not(.is-discarded) .btn-select'
         );
         if (firstBtn) {
             firstBtn.focus();
@@ -448,8 +448,8 @@
         var slot = selectBtn.closest('.prompt-image-slot');
         if (!slot || slot.classList.contains('is-published')) return;
 
-        // Apply published state — remove selection states
-        slot.classList.remove('is-selected', 'is-deselected');
+        // Apply published state — remove all transient states including discarded
+        slot.classList.remove('is-selected', 'is-deselected', 'is-discarded');
         slot.classList.add('is-published');
         selectBtn.setAttribute('aria-pressed', 'false');
 
@@ -936,6 +936,7 @@
             slot.classList.remove('is-discarded');
             btn.setAttribute('aria-label', 'Discard image ' + (parseInt(btn.getAttribute('data-slot'), 10) + 1));
             announce('Image restored');
+            updatePublishBar();
         } else {
             // Discard — fade to 5% opacity
             // If this image was selected, deselect it first

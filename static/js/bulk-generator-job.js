@@ -61,6 +61,8 @@
     var sizeDisplay = '';
     var galleryAspect = '1 / 1'; // aspect ratio for placeholder sizing
     var announcer = null;      // aria-live region for selection announcements
+    var progressAnnouncer = null; // #generation-progress-announcer live region (A11Y-3)
+    var lastAnnouncedCompleted = -1; // track last announced count to avoid repeats
 
     // ─── CSRF Helper ──────────────────────────────────────────────
     function getCookie(name) {
@@ -285,6 +287,22 @@
             renderImages(data.images);
         }
 
+        // A11Y-3: Announce generation progress for AT users
+        if (progressAnnouncer && completed !== lastAnnouncedCompleted) {
+            lastAnnouncedCompleted = completed;
+            if (TERMINAL_STATES.indexOf(newStatus) === -1 && completed > 0) {
+                progressAnnouncer.textContent = completed + ' of ' + total + ' images generated.';
+            } else if (newStatus === 'completed') {
+                progressAnnouncer.textContent = 'Generation complete. ' + completed + ' of ' + total + ' images ready.';
+            }
+        }
+
+        // A11Y-5: Move focus to first gallery card when status first becomes terminal
+        if (TERMINAL_STATES.indexOf(newStatus) !== -1 &&
+                TERMINAL_STATES.indexOf(currentStatus) === -1) {
+            setTimeout(focusFirstGalleryCard, 200);
+        }
+
         currentStatus = newStatus;
     }
 
@@ -368,6 +386,75 @@
             cancelBtn.disabled = false;
             cancelBtn.textContent = 'Cancel Generation';
         });
+    }
+
+    // ─── A11Y-5: Focus first gallery card ────────────────────────
+    function focusFirstGalleryCard() {
+        if (!galleryContainer) return;
+        var firstBtn = galleryContainer.querySelector(
+            '.prompt-image-slot:not(.is-placeholder) .btn-select'
+        );
+        if (firstBtn) {
+            firstBtn.focus();
+        }
+    }
+
+    // ─── Feature 6: Cleanup empty/loading placeholders ───────────
+    // Called after each slot is filled (image or failed).
+    // Hides unused is-empty slots once all active slots are filled.
+    function cleanupGroupEmptySlots(groupIndex) {
+        var groupData = renderedGroups[groupIndex];
+        if (!groupData) return;
+        // Only clean up once all active slots are filled
+        if (Object.keys(groupData.slots).length < imagesPerPrompt) return;
+        var groupRow = groupData.element;
+        // Hide unused (is-empty) slots
+        var emptySlots = groupRow.querySelectorAll('.prompt-image-slot.is-empty');
+        for (var i = 0; i < emptySlots.length; i++) {
+            emptySlots[i].style.display = 'none';
+        }
+        // For terminal jobs also hide any remaining loading placeholders
+        if (TERMINAL_STATES.indexOf(currentStatus) !== -1) {
+            var loadingEls = groupRow.querySelectorAll('.placeholder-loading');
+            for (var li = 0; li < loadingEls.length; li++) {
+                var loadingSlot = loadingEls[li].closest('.prompt-image-slot');
+                if (loadingSlot) loadingSlot.style.display = 'none';
+            }
+        }
+    }
+
+    // ─── Feature 2: Mark a gallery card as published ─────────────
+    // Called from startPublishProgressPolling when prompt_page_id appears.
+    function markCardPublished(imageId) {
+        if (!galleryContainer) return;
+        var selectBtn = galleryContainer.querySelector(
+            '.btn-select[data-image-id="' + imageId + '"]'
+        );
+        if (!selectBtn) return;
+        var slot = selectBtn.closest('.prompt-image-slot');
+        if (!slot || slot.classList.contains('is-published')) return;
+
+        // Apply published state — remove selection states
+        slot.classList.remove('is-selected', 'is-deselected');
+        slot.classList.add('is-published');
+        selectBtn.setAttribute('aria-pressed', 'false');
+
+        // Create published badge inside the image container
+        var container = slot.querySelector('.prompt-image-container');
+        if (container && !slot.querySelector('.published-badge')) {
+            var badge = document.createElement('div');
+            badge.className = 'published-badge';
+            badge.setAttribute('aria-hidden', 'true');
+            badge.textContent = 'Published';
+            container.appendChild(badge);
+        }
+
+        // Remove from selections if this image was selected
+        var groupIndex = parseInt(selectBtn.getAttribute('data-group'), 10);
+        if (!isNaN(groupIndex) && selections[groupIndex] === imageId) {
+            delete selections[groupIndex];
+            updatePublishBar();
+        }
     }
 
     // ─── Gallery: Render Images (Phase 5B) ────────────────────────
@@ -571,26 +658,8 @@
         img.alt = 'Generated image ' + (slotIndex + 1) + ' for prompt ' + (groupIndex + 1);
         img.loading = 'lazy';
         img.onload = function () {
-            // Once-per-group cleanup on first image load
-            var groupRow = slot.closest('.prompt-group');
-            if (groupRow && !groupRow.dataset.firstImageLoaded) {
-                groupRow.dataset.firstImageLoaded = 'true';
-
-                // Hide empty (unused) slots once images are loading in this group
-                var emptySlots = groupRow.querySelectorAll('.prompt-image-slot.is-empty');
-                for (var ei = 0; ei < emptySlots.length; ei++) {
-                    emptySlots[ei].style.display = 'none';
-                }
-
-                // For terminal jobs, hide generating placeholders that never got images
-                if (currentStatus === 'completed' || currentStatus === 'cancelled' || currentStatus === 'failed') {
-                    var loadingEls = groupRow.querySelectorAll('.placeholder-loading');
-                    for (var li = 0; li < loadingEls.length; li++) {
-                        var loadingSlot = loadingEls[li].closest('.prompt-image-slot');
-                        if (loadingSlot) loadingSlot.style.display = 'none';
-                    }
-                }
-            }
+            // Feature 6: clean up placeholder/empty slots for this group
+            cleanupGroupEmptySlots(groupIndex);
         };
         img.onerror = function () {
             console.error('Image failed to load:', img.src.substring(0, 100));
@@ -783,6 +852,9 @@
 
         // Mark slot as filled so we don't re-process
         groupData.slots[slotIndex] = 'failed';
+
+        // Feature 6: clean up placeholders now that this slot is filled
+        cleanupGroupEmptySlots(groupIndex);
     }
 
     // ─── Gallery: Selection Logic (Phase 5B) ────────────────────
@@ -796,8 +868,9 @@
         var groupData = renderedGroups[groupIndex];
         if (!groupData) return;
 
-        // Prevent selecting discarded images
+        // Prevent selecting discarded or already-published images
         if (slot.classList.contains('is-discarded')) return;
+        if (slot.classList.contains('is-published')) return;
 
         var allSlots = groupData.element.querySelectorAll('.prompt-image-slot:not(.is-placeholder)');
         var alreadySelected = slot.classList.contains('is-selected');
@@ -1188,6 +1261,10 @@
                     var img = images[i];
                     if (img.prompt_page_id && !linkedPageIds[img.prompt_page_id]) {
                         linkedPageIds[img.prompt_page_id] = true;
+                        // Feature 2: Mark the gallery card as published
+                        if (img.id) {
+                            markCardPublished(String(img.id));
+                        }
                         if (linksEl) {
                             var li = document.createElement('li');
                             var a = document.createElement('a');
@@ -1271,6 +1348,9 @@
         announcer.setAttribute('role', 'status');
         root.appendChild(announcer);
 
+        // A11Y-3: Wire static generation-progress announcer (must exist at page load)
+        progressAnnouncer = document.getElementById('generation-progress-announcer');
+
         // Delegate click events on gallery container for selection, download & zoom
         if (galleryContainer) {
             galleryContainer.addEventListener('click', function (e) {
@@ -1327,6 +1407,8 @@
             .then(function (data) {
                 if (data && data.images && data.images.length > 0) {
                     renderImages(data.images);
+                    // A11Y-5: Move focus to first card after gallery is populated
+                    setTimeout(focusFirstGalleryCard, 200);
                 }
             })
             .catch(function (err) {

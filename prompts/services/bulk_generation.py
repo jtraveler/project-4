@@ -11,6 +11,7 @@ from decimal import Decimal
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db.models import Count
+from django.urls import reverse
 from django.utils import timezone
 from django_q.tasks import async_task
 
@@ -307,7 +308,10 @@ class BulkGenerationService:
                 'image_url': img.image_url or '',
                 'error_message': _sanitise_error_message(img.error_message or ''),
                 'prompt_page_id': str(img.prompt_page_id) if img.prompt_page_id else None,
-                'prompt_page_url': img.prompt_page.get_absolute_url() if img.prompt_page_id else None,
+                'prompt_page_url': reverse(
+                    'prompts:prompt_detail',
+                    kwargs={'slug': img.prompt_page.slug},
+                ) if img.prompt_page_id else None,
             }
             for img in job.images.select_related('prompt_page').order_by(
                 'prompt_order', 'variation_number'

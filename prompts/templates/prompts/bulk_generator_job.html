@@ -441,4 +441,6 @@
 {% endif %}
 {# Static aria-live region for toast announcements — must exist at page load for reliable AT support #}
 <div id="bulk-toast-announcer" role="status" aria-live="polite" class="sr-only" aria-atomic="true"></div>
+{# A11Y-3: Generation progress announcer for AT users — announces image count updates #}
+<div id="generation-progress-announcer" role="status" aria-live="polite" class="sr-only" aria-atomic="true"></div>
 {% endblock %}

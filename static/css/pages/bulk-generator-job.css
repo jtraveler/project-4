@@ -622,7 +622,7 @@
 
 /* ─── Discarded (Soft Delete) State ────────────────────────── */
 .prompt-image-slot.is-discarded .prompt-image-container img {
-    opacity: 0.20;
+    opacity: 0.55;
     transition: opacity 0.3s ease;
 }
 
@@ -634,6 +634,43 @@
 
 .prompt-image-slot.is-discarded .btn-trash:hover {
     background: rgba(239, 68, 68, 0.15);
+}
+
+/* ─── Published State ───────────────────────────────────────── */
+.published-badge {
+    display: none;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(22, 163, 74, 0.92);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+    pointer-events: none;
+    line-height: 1.4;
+}
+
+.prompt-image-slot.is-published {
+    cursor: default;
+}
+
+.prompt-image-slot.is-published .prompt-image-container img {
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.prompt-image-slot.is-published .btn-select,
+.prompt-image-slot.is-published .btn-trash {
+    display: none;
+}
+
+.prompt-image-slot.is-published .published-badge {
+    display: flex;
 }
 
 /* ─── Aria Live Region ──────────────────────────────────────── */
@@ -844,6 +881,7 @@
     .lightbox-overlay { transition: none; }
     .prompt-group-text-overlay { transition: none; }
     .prompt-image-slot.is-discarded .prompt-image-container img { transition: none; }
+    .prompt-image-slot.is-published .prompt-image-container img { transition: none; }
 }
 
 /* Focus indicator on prompt text for keyboard navigation */

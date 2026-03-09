@@ -691,6 +691,53 @@ class PublishFlowTests(TestCase):
         self.assertIn('prompt_page_url', img_data)
         self.assertIsNone(img_data['prompt_page_url'])
 
+    def test_status_api_prompt_page_id_non_null_when_published(self):
+        """Status API returns non-null prompt_page_id when image has a linked page."""
+        from prompts.models import Prompt
+        self.client.login(username='pub_staff', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        prompt = Prompt.objects.create(
+            title='Published Page',
+            author=self.staff_user,
+            content='test',
+            status=1,
+        )
+        img = GeneratedImage.objects.create(
+            job=job, prompt_text='Test', prompt_order=0,
+            status='completed', image_url='https://example.com/1.png',
+            prompt_page=prompt,
+        )
+        response = self.client.get(self._status_url(job.id))
+        self.assertEqual(response.status_code, 200)
+        img_data = response.json()['images'][0]
+        self.assertEqual(img_data['prompt_page_id'], str(prompt.id))
+
+    def test_status_api_prompt_page_url_non_null_when_published(self):
+        """Status API returns non-null prompt_page_url when image has a linked page."""
+        from prompts.models import Prompt
+        self.client.login(username='pub_staff', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        prompt = Prompt.objects.create(
+            title='Published Page',
+            author=self.staff_user,
+            content='test',
+            status=1,
+        )
+        img = GeneratedImage.objects.create(
+            job=job, prompt_text='Test', prompt_order=0,
+            status='completed', image_url='https://example.com/1.png',
+            prompt_page=prompt,
+        )
+        response = self.client.get(self._status_url(job.id))
+        self.assertEqual(response.status_code, 200)
+        img_data = response.json()['images'][0]
+        self.assertIsNotNone(img_data['prompt_page_url'])
+        self.assertIn('/', img_data['prompt_page_url'])
+
     def test_status_api_includes_published_count(self):
         """Status API top-level response includes published_count."""
         self.client.login(username='pub_staff', password='testpass')

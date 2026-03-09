@@ -2691,7 +2691,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
     Create Prompt pages from selected generated images.
 
     For each selected image:
-    1. Generate AI title, description, and tags (content_generation service)
+    1. Generate AI title, description, and tags via _call_openai_vision()
     2. Create a Prompt model instance as draft
     3. Link the GeneratedImage to the created Prompt
 
@@ -2706,6 +2706,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
         dict with 'created_count', 'skipped_count', 'discarded_count', 'errors'
     """
     from prompts.models import BulkGenerationJob, Prompt
+    from prompts.services.bulk_generation import _sanitise_error_message
     from prompts.utils.source_credit import parse_source_credit
 
     try:
@@ -2731,16 +2732,21 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
     cat_lookup = {cat.name: cat for cat in SubjectCategory.objects.all()}
     desc_lookup = {desc.name: desc for desc in SubjectDescriptor.objects.all()}
 
+    # Pre-fetch existing tags so AI reuses established vocabulary
+    # (same pattern as backfill_ai_content.py — reduces tag fragmentation)
+    from taggit.models import Tag
+    available_tags = list(Tag.objects.order_by('id').values_list('name', flat=True)[:200])
+
     # Mark unselected images
     unselected = job.images.exclude(id__in=selected_image_ids)
     discarded = unselected.filter(
         status='completed'
     ).update(is_selected=False)
 
-    # Process selected images — select_for_update() closes the TOCTOU gap:
-    # without it, two concurrent tasks could both read prompt_page=None for
-    # the same image and both create Prompt pages, orphaning the first one.
-    selected_images = job.images.select_for_update().filter(
+    # Process selected images — per-image DB lock inside transaction.atomic()
+    # (below) closes the TOCTOU gap. select_for_update() on the outer queryset
+    # would be a no-op in autocommit mode; the lock must be inside a transaction.
+    selected_images = job.images.filter(
         id__in=selected_image_ids,
         status='completed',
     ).order_by('prompt_order', 'variation_number')
@@ -2758,10 +2764,18 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                 image_url=gen_image.image_url,
                 prompt_text=gen_image.prompt_text,
                 ai_generator='gpt-image-1',
-                available_tags=[],
+                available_tags=available_tags,
             )
 
             if not ai_content or 'error' in ai_content or 'title' not in ai_content:
+                error_detail = ai_content.get('error', 'unknown') if ai_content else 'no content returned'
+                logger.warning(
+                    "AI content generation failed for image %s (order %s, variation %s): %s",
+                    gen_image.id,
+                    getattr(gen_image, 'prompt_order', 'unknown'),
+                    getattr(gen_image, 'variation_number', 'unknown'),
+                    error_detail,
+                )
                 errors.append(
                     f"AI content generation failed for image "
                     f"{gen_image.prompt_order}."
@@ -2804,49 +2818,91 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
             prompt_page.b2_thumb_url = gen_image.image_url   # fallback — real thumbnails in Phase 7
             prompt_page.b2_medium_url = gen_image.image_url  # fallback — real thumbnails in Phase 7
 
+            # Per-image DB lock: select_for_update() must be inside
+            # transaction.atomic() — autocommit mode releases locks immediately.
+            # _already_published flag: cannot use 'continue' inside a 'with' block.
+            _already_published = False
             try:
                 with transaction.atomic():
-                    prompt_page.save()
+                    if not job.images.select_for_update().filter(
+                        id=gen_image.id, prompt_page__isnull=True
+                    ).exists():
+                        _already_published = True
+                    else:
+                        prompt_page.save()
+
+                        # Apply tags — validate via the same pipeline as single-upload
+                        raw_tags = ai_content.get('tags', [])
+                        if raw_tags:
+                            validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
+                            if validated_tags:
+                                prompt_page.tags.add(*validated_tags)
+
+                        # Apply categories (SubjectCategory M2M) — in-memory lookup, no query
+                        ai_categories = ai_content.get('categories', [])
+                        if ai_categories:
+                            matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
+                            if matched_cats:
+                                prompt_page.categories.add(*matched_cats)
+
+                        # Apply descriptors (SubjectDescriptor M2M) — flatten typed dict
+                        ai_descriptors = ai_content.get('descriptors', {})
+                        if ai_descriptors and isinstance(ai_descriptors, dict):
+                            all_desc_names = [
+                                str(v).strip()
+                                for dtype_values in ai_descriptors.values()
+                                if isinstance(dtype_values, list)
+                                for v in dtype_values
+                                if v
+                            ]
+                            if all_desc_names:
+                                matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
+                                if matched_descs:
+                                    prompt_page.descriptors.add(*matched_descs)
+
+                        # Link generated image to prompt page
+                        gen_image.prompt_page = prompt_page
+                        gen_image.save(update_fields=['prompt_page'])
+
             except IntegrityError:
-                # Slug/title collision under concurrent execution — append UUID suffix and retry
+                # Slug/title collision — append UUID suffix and retry.
+                # IntegrityError rolls back the entire atomic block including all
+                # M2M writes; re-apply everything inside the retry transaction.
                 suffix = uuid.uuid4().hex[:8]
                 prompt_page.title = f"{prompt_page.title[:189]} \u2014 {suffix}"
                 prompt_page.slug = f"{prompt_page.slug[:180]}-{suffix}"
                 with transaction.atomic():
                     prompt_page.save()
+                    # Re-apply all M2M after slug-collision retry
+                    raw_tags = ai_content.get('tags', [])
+                    if raw_tags:
+                        validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
+                        if validated_tags:
+                            prompt_page.tags.add(*validated_tags)
+                    ai_categories = ai_content.get('categories', [])
+                    if ai_categories:
+                        matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
+                        if matched_cats:
+                            prompt_page.categories.add(*matched_cats)
+                    ai_descriptors = ai_content.get('descriptors', {})
+                    if ai_descriptors and isinstance(ai_descriptors, dict):
+                        all_desc_names = [
+                            str(v).strip()
+                            for dtype_values in ai_descriptors.values()
+                            if isinstance(dtype_values, list)
+                            for v in dtype_values
+                            if v
+                        ]
+                        if all_desc_names:
+                            matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
+                            if matched_descs:
+                                prompt_page.descriptors.add(*matched_descs)
+                    gen_image.prompt_page = prompt_page
+                    gen_image.save(update_fields=['prompt_page'])
 
-            # Apply tags — validate via the same pipeline as single-upload
-            raw_tags = ai_content.get('tags', [])
-            if raw_tags and hasattr(prompt_page, 'tags'):
-                validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
-                if validated_tags:
-                    prompt_page.tags.add(*validated_tags)
-
-            # Apply categories (SubjectCategory M2M) — in-memory lookup, no query
-            ai_categories = ai_content.get('categories', [])
-            if ai_categories:
-                matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
-                if matched_cats:
-                    prompt_page.categories.add(*matched_cats)
-
-            # Apply descriptors (SubjectDescriptor M2M) — flatten typed dict, in-memory lookup
-            ai_descriptors = ai_content.get('descriptors', {})
-            if ai_descriptors and isinstance(ai_descriptors, dict):
-                all_desc_names = [
-                    str(v).strip()
-                    for dtype_values in ai_descriptors.values()
-                    if isinstance(dtype_values, list)
-                    for v in dtype_values
-                    if v
-                ]
-                if all_desc_names:
-                    matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
-                    if matched_descs:
-                        prompt_page.descriptors.add(*matched_descs)
-
-            # Link generated image to prompt page
-            gen_image.prompt_page = prompt_page
-            gen_image.save(update_fields=['prompt_page'])
+            if _already_published:
+                skipped += 1
+                continue
 
             created += 1
 
@@ -2856,7 +2912,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                 gen_image.prompt_order,
                 gen_image.variation_number, e,
             )
-            errors.append(str(e)[:200])
+            errors.append(_sanitise_error_message(str(e)))
 
     logger.info(
         "Page creation for job %s: %d created, %d skipped, %d discarded, "
@@ -2968,6 +3024,11 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
     cat_lookup = {cat.name: cat for cat in SubjectCategory.objects.all()}
     desc_lookup = {desc.name: desc for desc in SubjectDescriptor.objects.all()}
 
+    # Pre-fetch existing tags so AI reuses established vocabulary
+    # (same pattern as create_prompt_pages_from_job and backfill_ai_content.py)
+    from taggit.models import Tag
+    available_tags = list(Tag.objects.order_by('id').values_list('name', flat=True)[:200])
+
     # ── Worker function (I/O only — NO ORM writes) ────────────────────────────
     def _call_vision_for_image(gen_image):
         """
@@ -2980,11 +3041,11 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                 image_url=gen_image.image_url,
                 prompt_text=gen_image.prompt_text,
                 ai_generator='gpt-image-1',
-                available_tags=[],
+                available_tags=available_tags,
             )
             return gen_image, ai_content, None
         except Exception as exc:
-            return gen_image, None, str(exc)[:200]
+            return gen_image, None, _sanitise_error_message(str(exc))
 
     # ── Concurrent execution ──────────────────────────────────────────────────
     max_workers = getattr(settings, 'BULK_GEN_MAX_CONCURRENT', 4)
@@ -3066,7 +3127,7 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                         prompt_page.save()
                         # M2M and gen_image link inside same atomic block
                         raw_tags = ai_content.get('tags', [])
-                        if raw_tags and hasattr(prompt_page, 'tags'):
+                        if raw_tags:
                             validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
                             if validated_tags:
                                 prompt_page.tags.add(*validated_tags)
@@ -3093,6 +3154,11 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
 
                         gen_image.prompt_page = prompt_page
                         gen_image.save(update_fields=['prompt_page'])
+                        # Atomic counter increment inside the transaction — commits only
+                        # if the page save commits, preventing phantom count increments.
+                        BulkGenerationJob.objects.filter(id=job_id).update(
+                            published_count=F('published_count') + 1
+                        )
 
             except IntegrityError:
                 suffix = uuid.uuid4().hex[:8]
@@ -3102,7 +3168,7 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                     prompt_page.save()
                     # Re-apply all M2M after slug-collision retry
                     raw_tags = ai_content.get('tags', [])
-                    if raw_tags and hasattr(prompt_page, 'tags'):
+                    if raw_tags:
                         validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
                         if validated_tags:
                             prompt_page.tags.add(*validated_tags)
@@ -3126,15 +3192,14 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                                 prompt_page.descriptors.add(*matched_descs)
                     gen_image.prompt_page = prompt_page
                     gen_image.save(update_fields=['prompt_page'])
+                    BulkGenerationJob.objects.filter(id=job_id).update(
+                        published_count=F('published_count') + 1
+                    )
 
             if _already_published:
                 skipped_count += 1
                 continue
 
-            # Atomic counter increment — safe for concurrent task re-runs
-            BulkGenerationJob.objects.filter(id=job_id).update(
-                published_count=F('published_count') + 1
-            )
             published_count += 1
 
         except Exception as exc:
@@ -3149,9 +3214,14 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
         job_id, published_count, skipped_count, len(errors),
     )
 
+    # skipped_count: non-zero only in the rare case where a concurrent task
+    # published the same image between the pre-filter queryset and the
+    # select_for_update() re-check inside transaction.atomic(). In practice
+    # the view-layer idempotency guard prevents a second POST from ever
+    # reaching this task with already-published images, so this is always 0.
     return {
         'status': 'completed',
         'published_count': published_count,
-        'skipped_count': skipped_count,
+        'skipped_count': skipped_count,  # see note above
         'errors': errors,
     }

@@ -988,3 +988,182 @@ class ContentGenerationAlignmentTests(TestCase):
         from prompts.models import AI_GENERATOR_CHOICES
         choices_dict = dict(AI_GENERATOR_CHOICES)
         self.assertEqual(choices_dict.get('gpt-image-1'), 'GPT-Image-1')
+
+
+# =============================================================================
+# Phase 6B.5 — Transaction Hardening Tests
+# =============================================================================
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class TransactionHardeningTests(TestCase):
+    """
+    Tests for Phase 6B.5 hardening:
+    - transaction.atomic() correctness in create_prompt_pages_from_job
+    - _sanitise_error_message() applied in both task functions
+    - available_tags pre-fetched and passed to _call_openai_vision()
+    - generator_category default is 'gpt-image-1'
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='staff6b5', password='pass', is_staff=True,
+        )
+        self.job = _make_job(self.user)
+        self.img = _make_image(self.job)
+
+    # ── Fix 1: transaction.atomic() wraps all ORM writes ────────────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_create_pages_atomic_rollback_on_m2m_failure(self, _mock_vision):
+        """
+        If tags.add() raises mid-transaction, the whole Prompt save should roll
+        back — no orphaned Prompt left in the database.
+        """
+        with patch('prompts.tasks._validate_and_fix_tags', side_effect=Exception("m2m-explode")):
+            result = create_prompt_pages_from_job(
+                str(self.job.id), [str(self.img.id)]
+            )
+
+        # The exception is caught by the outer try/except, not silently discarded
+        self.assertEqual(result['created_count'], 0)
+        self.assertEqual(Prompt.objects.count(), 0)
+        self.assertEqual(len(result['errors']), 1)
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_create_pages_concurrent_skip_already_published(self, _mock_vision):
+        """
+        If the image's prompt_page is already set (simulating a concurrent task
+        that won the race), create_prompt_pages_from_job must skip without
+        creating a duplicate Prompt and must NOT raise an exception.
+        """
+        # Pre-link the image (simulates concurrent task having already published it)
+        existing_prompt = Prompt.objects.create(
+            title='Already Published',
+            slug='already-published',
+            author=self.user,
+            content='x',
+            status=1,
+        )
+        self.img.prompt_page = existing_prompt
+        self.img.save(update_fields=['prompt_page'])
+
+        result = create_prompt_pages_from_job(
+            str(self.job.id), [str(self.img.id)]
+        )
+
+        self.assertEqual(result['created_count'], 0)
+        # skipped because prompt_page was already set (fast pre-check)
+        self.assertEqual(result['skipped_count'], 1)
+        # Only the pre-existing Prompt should exist
+        self.assertEqual(Prompt.objects.count(), 1)
+
+    # ── Fix 2: _sanitise_error_message() in both task functions ─────────────
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_create_pages_errors_are_sanitised(self, _mock_vision):
+        """
+        Exceptions in create_prompt_pages_from_job must pass through
+        _sanitise_error_message() — raw stack traces / internal strings must
+        not appear in the errors[] list returned to callers.
+        """
+        sensitive_msg = "Internal server error: db_password=secret123"
+        with patch('prompts.tasks._validate_and_fix_tags', side_effect=Exception(sensitive_msg)):
+            result = create_prompt_pages_from_job(
+                str(self.job.id), [str(self.img.id)]
+            )
+
+        self.assertEqual(len(result['errors']), 1)
+        # Must not contain the raw sensitive string
+        self.assertNotIn('secret123', result['errors'][0])
+        # Must contain a sanitised category string from _sanitise_error_message
+        from prompts.services.bulk_generation import _sanitise_error_message
+        expected = _sanitise_error_message(sensitive_msg)
+        self.assertEqual(result['errors'][0], expected)
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_pages_errors_are_sanitised(self, _mock_vision):
+        """
+        Exceptions in publish_prompt_pages_from_job must pass through
+        _sanitise_error_message().
+        """
+        from prompts.tasks import publish_prompt_pages_from_job
+
+        sensitive_msg = "connection refused: host=internal-db port=5432"
+        with patch('prompts.tasks._validate_and_fix_tags', side_effect=Exception(sensitive_msg)):
+            result = publish_prompt_pages_from_job(
+                str(self.job.id), [str(self.img.id)]
+            )
+
+        self.assertEqual(len(result['errors']), 1)
+        self.assertNotIn('internal-db', result['errors'][0])
+        from prompts.services.bulk_generation import _sanitise_error_message
+        expected = _sanitise_error_message(sensitive_msg)
+        self.assertEqual(result['errors'][0], expected)
+
+    # ── Fix 5: available_tags pre-fetched and passed to _call_openai_vision ──
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_create_pages_available_tags_passed_to_vision(self, mock_vision):
+        """
+        _call_openai_vision() must be called with available_tags as a list
+        (not the old hardcoded []). The test DB always has tags seeded by
+        migrations, so the list will be non-empty — proving the pre-fetch ran.
+        """
+        create_prompt_pages_from_job(str(self.job.id), [str(self.img.id)])
+
+        mock_vision.assert_called_once()
+        call_kwargs = mock_vision.call_args.kwargs
+        self.assertIn('available_tags', call_kwargs)
+        # Must be a non-empty list (not the old hardcoded [])
+        self.assertIsInstance(call_kwargs['available_tags'], list)
+        self.assertGreater(len(call_kwargs['available_tags']), 0)
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_pages_available_tags_passed_to_vision(self, mock_vision):
+        """
+        _call_openai_vision() must be called with available_tags as a list
+        in publish_prompt_pages_from_job (not the old hardcoded []).
+        """
+        from prompts.tasks import publish_prompt_pages_from_job
+
+        publish_prompt_pages_from_job(str(self.job.id), [str(self.img.id)])
+
+        mock_vision.assert_called_once()
+        call_kwargs = mock_vision.call_args.kwargs
+        self.assertIn('available_tags', call_kwargs)
+        self.assertIsInstance(call_kwargs['available_tags'], list)
+        self.assertGreater(len(call_kwargs['available_tags']), 0)
+
+    # ── Fix 7: generator_category default ───────────────────────────────────
+
+    def test_generator_category_default_is_gpt_image_1(self):
+        """BulkGenerationJob created without explicit generator_category uses 'gpt-image-1'."""
+        job = BulkGenerationJob.objects.create(
+            created_by=self.user,
+            total_prompts=1,
+        )
+        self.assertEqual(job.generator_category, 'gpt-image-1')
+
+    def test_existing_chatgpt_jobs_migrated(self):
+        """
+        BulkGenerationJob rows with generator_category='ChatGPT' (the old default)
+        must have been migrated by migration 0068 to 'gpt-image-1'.
+        After the migration runs, no rows should have generator_category='ChatGPT'.
+        """
+        # Create a job and forcibly set the old value directly in the DB
+        job = BulkGenerationJob.objects.create(
+            created_by=self.user,
+            total_prompts=1,
+        )
+        BulkGenerationJob.objects.filter(id=job.id).update(generator_category='ChatGPT')
+
+        # Simulate the data migration function
+        from django.apps import apps
+        BulkGenerationJobModel = apps.get_model('prompts', 'BulkGenerationJob')
+        updated = BulkGenerationJobModel.objects.filter(
+            generator_category='ChatGPT'
+        ).update(generator_category='gpt-image-1')
+
+        self.assertGreater(updated, 0)
+        job.refresh_from_db()
+        self.assertEqual(job.generator_category, 'gpt-image-1')

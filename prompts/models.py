@@ -2877,7 +2877,7 @@ class BulkGenerationJob(models.Model):
     visibility = models.CharField(
         max_length=10, choices=VISIBILITY_CHOICES, default='public'
     )
-    generator_category = models.CharField(max_length=50, default='ChatGPT')
+    generator_category = models.CharField(max_length=50, default='gpt-image-1')
 
     # Optional: reference image and character description
     reference_image_url = models.URLField(blank=True)

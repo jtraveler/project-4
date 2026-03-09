@@ -740,18 +740,17 @@ class CreatePromptPagesTests(TestCase):
             img.save(update_fields=['status', 'image_url'])
         return job
 
-    @patch(
-        'prompts.services.content_generation.ContentGenerationService'
-    )
-    def test_create_prompt_pages_basic(self, mock_cgs_cls):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_create_prompt_pages_basic(self, mock_vision):
         """Creates Prompt pages for selected images."""
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'Test AI Art',
             'description': 'A beautiful scene',
-            'suggested_tags': ['art', 'digital'],
+            'tags': ['art', 'digital'],
+            'categories': [],
+            'descriptors': {},
         }
 
         job = self._create_completed_job(2)
@@ -763,18 +762,17 @@ class CreatePromptPagesTests(TestCase):
         self.assertEqual(len(result['errors']), 0)
         self.assertEqual(Prompt.objects.count(), 2)
 
-    @patch(
-        'prompts.services.content_generation.ContentGenerationService'
-    )
-    def test_create_prompt_pages_links_to_image(self, mock_cgs_cls):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_create_prompt_pages_links_to_image(self, mock_vision):
         """GeneratedImage.prompt_page set correctly."""
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'Linked Image Test',
             'description': 'desc',
-            'suggested_tags': [],
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
         }
 
         job = self._create_completed_job(1)
@@ -790,20 +788,17 @@ class CreatePromptPagesTests(TestCase):
             gen_image.prompt_page.title, 'Linked Image Test'
         )
 
-    @patch(
-        'prompts.services.content_generation.ContentGenerationService'
-    )
-    def test_create_prompt_pages_discards_unselected(
-        self, mock_cgs_cls
-    ):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_create_prompt_pages_discards_unselected(self, mock_vision):
         """Unselected images marked is_selected=False."""
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'Selected Image',
             'description': 'desc',
-            'suggested_tags': [],
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
         }
 
         job = self._create_completed_job(3)
@@ -823,18 +818,17 @@ class CreatePromptPagesTests(TestCase):
         self.assertFalse(images[1].is_selected)
         self.assertFalse(images[2].is_selected)
 
-    @patch(
-        'prompts.services.content_generation.ContentGenerationService'
-    )
-    def test_create_prompt_pages_unique_slug(self, mock_cgs_cls):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_create_prompt_pages_unique_slug(self, mock_vision):
         """Duplicate titles get unique slugs."""
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'Same Title',
             'description': 'desc',
-            'suggested_tags': [],
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
         }
 
         job = self._create_completed_job(2)
@@ -849,20 +843,17 @@ class CreatePromptPagesTests(TestCase):
         # Slugs should be different
         self.assertEqual(len(set(slugs)), 2)
 
-    @patch(
-        'prompts.services.content_generation.ContentGenerationService'
-    )
-    def test_create_prompt_pages_with_tags(self, mock_cgs_cls):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_create_prompt_pages_with_tags(self, mock_vision):
         """Tags applied to created prompts."""
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'Tagged Prompt',
             'description': 'desc',
-            'suggested_tags': [
-                'art', 'digital', 'ai', 'creative', 'modern'
-            ],
+            'tags': ['art', 'digital', 'ai', 'creative', 'modern'],
+            'categories': [],
+            'descriptors': {},
         }
 
         job = self._create_completed_job(1)
@@ -873,18 +864,17 @@ class CreatePromptPagesTests(TestCase):
         prompt = Prompt.objects.first()
         self.assertEqual(prompt.tags.count(), 5)
 
-    @patch(
-        'prompts.services.content_generation.ContentGenerationService'
-    )
-    def test_create_prompt_pages_draft_status(self, mock_cgs_cls):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_create_prompt_pages_draft_status(self, mock_vision):
         """Private-visibility jobs create pages with status=0 (Draft)."""
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'Draft Test',
             'description': 'desc',
-            'suggested_tags': [],
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
         }
 
         job = self._create_completed_job(1)
@@ -1104,20 +1094,17 @@ class EdgeCaseTests(TestCase):
         self.assertEqual(image.status, 'failed')
         self.assertIn('Connection timeout', image.error_message)
 
-    @patch(
-        'prompts.services.content_generation.ContentGenerationService'
-    )
-    def test_create_prompt_pages_verifies_prompt_fields(
-        self, mock_cgs_cls
-    ):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_create_prompt_pages_verifies_prompt_fields(self, mock_vision):
         """Created Prompt has correct author, content, and b2_image_url."""
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'Verify Fields',
             'description': 'Test description',
-            'suggested_tags': [],
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
         }
 
         job = self.service.create_job(

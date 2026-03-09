@@ -1,14 +1,14 @@
 """
-Tests for Phase 6A — create_prompt_pages_from_job task and api_create_pages view.
+Tests for Phase 6A + 6A.5 — create_prompt_pages_from_job task and api_create_pages view.
 
-Covers all 6 bug fixes:
+Covers all bug fixes:
   Bug 1 — Idempotency guard (double-submit protection)
   Bug 2 — b2_thumb_url / b2_medium_url fallback set on created pages
   Bug 3 — job.visibility maps to Prompt.status (public=1, private=0)
   Bug 4 — TOCTOU race: IntegrityError triggers UUID suffix retry
   Bug 5 — hasattr guard removed (direct assignment — tested via Bug 2)
   Bug 6 — moderation_status='approved' on bulk-created pages
-  Bug 7 — DEFERRED (ContentGenerationService does not return categories/descriptors)
+  Bug 7 — (Phase 6A.5) ai_generator='gpt-image-1', categories, descriptors aligned
 """
 import json
 import uuid
@@ -25,16 +25,18 @@ from prompts.tasks import create_prompt_pages_from_job
 # Fernet test key — required so BulkGenerationJob encryption helpers don't error
 TEST_FERNET_KEY = 'DVNiGhgfxQCMi3vIJDIqV7HsVNaGlMmo4RpeStaJwCw='
 
-# Minimal ai_content response matching ContentGenerationService.generate_content() structure
+# Minimal ai_content response matching _call_openai_vision() return structure.
+# Updated in Phase 6A.5: uses 'tags' (not 'suggested_tags'), includes
+# 'categories' and 'descriptors' aligned with the single-upload pipeline.
 MOCK_AI_CONTENT = {
     'title': 'Test Bulk Image Title',
     'description': 'A test AI-generated image description for SEO.',
-    'suggested_tags': ['ai-art', 'fantasy', 'digital'],
-    'relevance_score': 0.9,
-    'relevance_explanation': 'Strong match.',
-    'seo_filename': 'test-bulk-image-title-prompt.jpg',
-    'alt_tag': 'Test Bulk Image Title prompt',
-    'violations': [],
+    'tags': ['ai-art', 'fantasy', 'digital'],
+    'categories': ['Portrait', 'Photorealistic'],
+    'descriptors': {
+        'gender': ['Female'],
+        'mood': ['Cinematic'],
+    },
 }
 
 
@@ -184,8 +186,8 @@ class IdempotencyTaskTests(TestCase):
             username='staff', password='pass', is_staff=True,
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_task_skips_image_with_existing_prompt_page(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_task_skips_image_with_existing_prompt_page(self, mock_vision):
         """Task skips images that already have a prompt_page FK set."""
         job = _make_job(self.staff_user)
         existing = Prompt.objects.create(
@@ -198,12 +200,12 @@ class IdempotencyTaskTests(TestCase):
 
         self.assertEqual(result['created_count'], 0)
         self.assertEqual(result['skipped_count'], 1)
-        MockService.return_value.generate_content.assert_not_called()
+        mock_vision.assert_not_called()
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_task_creates_page_for_new_image(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_task_creates_page_for_new_image(self, mock_vision):
         """Task creates a page for an image without a prompt_page."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -212,10 +214,10 @@ class IdempotencyTaskTests(TestCase):
         self.assertEqual(result['created_count'], 1)
         self.assertEqual(result['skipped_count'], 0)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_task_skipped_count_tracked_separately_from_created(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_task_skipped_count_tracked_separately_from_created(self, mock_vision):
         """Skipped and created counts are independent counters."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user, total_prompts=2)
         existing = Prompt.objects.create(
             title='Done Already', slug='done-already',
@@ -245,9 +247,9 @@ class ThumbnailURLTests(TestCase):
             username='staff', password='pass', is_staff=True,
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_b2_thumb_url_set_to_image_url(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_b2_thumb_url_set_to_image_url(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job, image_url='https://cdn.example.com/full.png')
 
@@ -256,9 +258,9 @@ class ThumbnailURLTests(TestCase):
         img.refresh_from_db()
         self.assertEqual(img.prompt_page.b2_thumb_url, 'https://cdn.example.com/full.png')
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_b2_medium_url_set_to_image_url(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_b2_medium_url_set_to_image_url(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job, image_url='https://cdn.example.com/full.png')
 
@@ -267,9 +269,9 @@ class ThumbnailURLTests(TestCase):
         img.refresh_from_db()
         self.assertEqual(img.prompt_page.b2_medium_url, 'https://cdn.example.com/full.png')
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_b2_image_url_set_on_creation(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_b2_image_url_set_on_creation(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job, image_url='https://cdn.example.com/full.png')
 
@@ -278,10 +280,10 @@ class ThumbnailURLTests(TestCase):
         img.refresh_from_db()
         self.assertEqual(img.prompt_page.b2_image_url, 'https://cdn.example.com/full.png')
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_display_thumb_url_resolves_after_creation(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_display_thumb_url_resolves_after_creation(self, mock_vision):
         """display_thumb_url property should return a URL, not None."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job, image_url='https://cdn.example.com/full.png')
 
@@ -304,9 +306,9 @@ class VisibilityMappingTests(TestCase):
             username='staff', password='pass', is_staff=True,
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_public_job_creates_published_pages(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_public_job_creates_published_pages(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user, visibility='public')
         img = _make_image(job)
 
@@ -315,9 +317,9 @@ class VisibilityMappingTests(TestCase):
         img.refresh_from_db()
         self.assertEqual(img.prompt_page.status, 1)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_private_job_creates_draft_pages(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_private_job_creates_draft_pages(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user, visibility='private')
         img = _make_image(job)
 
@@ -326,10 +328,10 @@ class VisibilityMappingTests(TestCase):
         img.refresh_from_db()
         self.assertEqual(img.prompt_page.status, 0)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_public_pages_are_not_draft(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_public_pages_are_not_draft(self, mock_vision):
         """Public jobs must NOT create drafts."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user, visibility='public')
         img = _make_image(job)
 
@@ -352,10 +354,10 @@ class SlugRaceConditionTests(TestCase):
             username='staff', password='pass', is_staff=True,
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_integrity_error_triggers_uuid_suffix_retry(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_integrity_error_triggers_uuid_suffix_retry(self, mock_vision):
         """When save() raises IntegrityError, a UUID suffix is appended and save retried."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -374,10 +376,10 @@ class SlugRaceConditionTests(TestCase):
         self.assertEqual(result['created_count'], 1)
         self.assertEqual(result['errors'], [])
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_slug_after_retry_is_unique(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_slug_after_retry_is_unique(self, mock_vision):
         """After IntegrityError retry, slug contains a UUID suffix."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -400,12 +402,12 @@ class SlugRaceConditionTests(TestCase):
         # Slug should contain the 8-char UUID hex suffix after a dash
         self.assertRegex(page.slug, r'-[a-f0-9]{8}$')
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_title_truncated_before_suffix_added(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_title_truncated_before_suffix_added(self, mock_vision):
         """Title is truncated to 189 chars before the suffix to stay within max_length=200."""
         long_title = 'A' * 195
         ai_content = dict(MOCK_AI_CONTENT, title=long_title)
-        MockService.return_value.generate_content.return_value = ai_content
+        mock_vision.return_value = ai_content
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -427,10 +429,10 @@ class SlugRaceConditionTests(TestCase):
         self.assertIsNotNone(page)
         self.assertLessEqual(len(page.title), 200)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_double_integrity_error_recorded_as_error(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_double_integrity_error_recorded_as_error(self, mock_vision):
         """If both the initial save and the retry save raise IntegrityError, the error is recorded."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -457,9 +459,9 @@ class ModerationStatusTests(TestCase):
             username='staff', password='pass', is_staff=True,
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_created_page_has_approved_moderation_status(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_created_page_has_approved_moderation_status(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -468,10 +470,10 @@ class ModerationStatusTests(TestCase):
         img.refresh_from_db()
         self.assertEqual(img.prompt_page.moderation_status, 'approved')
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_not_pending_on_bulk_creation(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_not_pending_on_bulk_creation(self, mock_vision):
         """Bulk-created pages must NOT default to 'pending' moderation."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -494,9 +496,9 @@ class PageCreationIntegrationTests(TestCase):
             username='staff', password='pass', is_staff=True,
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_full_job_creation_produces_correct_page_count(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_full_job_creation_produces_correct_page_count(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user, total_prompts=3)
         img1 = _make_image(job, order=0, image_url='https://cdn.example.com/1.png')
         img2 = _make_image(job, order=1, image_url='https://cdn.example.com/2.png')
@@ -509,9 +511,9 @@ class PageCreationIntegrationTests(TestCase):
         self.assertEqual(result['created_count'], 3)
         self.assertEqual(result['errors'], [])
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_failed_images_not_included_in_page_creation(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_failed_images_not_included_in_page_creation(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user, total_prompts=2)
         img_ok = _make_image(job, order=0, status='completed')
         img_failed = _make_image(job, order=1, status='failed')
@@ -523,16 +525,16 @@ class PageCreationIntegrationTests(TestCase):
         # failed image is not status='completed' so filter excludes it
         self.assertEqual(result['created_count'], 1)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_job_not_found_returns_error(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_job_not_found_returns_error(self, mock_vision):
         fake_id = str(uuid.uuid4())
         result = create_prompt_pages_from_job(fake_id, [])
         self.assertEqual(result['created_count'], 0)
         self.assertIn('Job not found', result['errors'])
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_prompt_page_fk_set_on_generated_image_after_creation(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_prompt_page_fk_set_on_generated_image_after_creation(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -541,9 +543,9 @@ class PageCreationIntegrationTests(TestCase):
         img.refresh_from_db()
         self.assertIsNotNone(img.prompt_page)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_page_linked_to_correct_generated_image(self, MockService):
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+    @patch('prompts.tasks._call_openai_vision')
+    def test_page_linked_to_correct_generated_image(self, mock_vision):
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -554,10 +556,10 @@ class PageCreationIntegrationTests(TestCase):
         self.assertIsNotNone(page)
         self.assertEqual(page.content, 'A cyberpunk cityscape at dusk')
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_ai_content_failure_records_error_continues(self, MockService):
-        """If AI content generation fails, error is recorded and loop continues."""
-        MockService.return_value.generate_content.return_value = {}  # no 'title' key
+    @patch('prompts.tasks._call_openai_vision')
+    def test_ai_content_error_key_records_error_continues(self, mock_vision):
+        """If _call_openai_vision returns {'error': ...}, error is recorded and loop continues."""
+        mock_vision.return_value = {'error': 'Image download failed'}
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -566,10 +568,22 @@ class PageCreationIntegrationTests(TestCase):
         self.assertEqual(result['created_count'], 0)
         self.assertEqual(len(result['errors']), 1)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_task_returns_skipped_count_key(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_ai_content_missing_title_records_error(self, mock_vision):
+        """If _call_openai_vision returns a dict without 'title', error is recorded."""
+        mock_vision.return_value = {}
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        result = create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        self.assertEqual(result['created_count'], 0)
+        self.assertEqual(len(result['errors']), 1)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_task_returns_skipped_count_key(self, mock_vision):
         """Return dict always contains skipped_count key."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -577,8 +591,8 @@ class PageCreationIntegrationTests(TestCase):
 
         self.assertIn('skipped_count', result)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_zero_valid_images_produces_zero_pages(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_zero_valid_images_produces_zero_pages(self, mock_vision):
         """Task with IDs that don't exist or are failed produces 0 pages."""
         job = _make_job(self.staff_user)
         fake_id = str(uuid.uuid4())
@@ -586,12 +600,12 @@ class PageCreationIntegrationTests(TestCase):
         result = create_prompt_pages_from_job(str(job.id), [fake_id])
 
         self.assertEqual(result['created_count'], 0)
-        MockService.return_value.generate_content.assert_not_called()
+        mock_vision.assert_not_called()
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_unselected_images_marked_not_selected(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_unselected_images_marked_not_selected(self, mock_vision):
         """Images not in selected_image_ids that are completed get is_selected=False."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user, total_prompts=2)
         img_selected = _make_image(job, order=0)
         img_unselected = _make_image(job, order=1)
@@ -615,10 +629,10 @@ class EdgeCaseTests(TestCase):
             username='staff', password='pass', is_staff=True,
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_unknown_visibility_defaults_to_draft(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_unknown_visibility_defaults_to_draft(self, mock_vision):
         """Any visibility value other than 'public' must produce status=0 (safe default)."""
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user, visibility='unlisted')
         img = _make_image(job)
 
@@ -633,24 +647,11 @@ class EdgeCaseTests(TestCase):
         self.assertIn('skipped_count', result)
         self.assertEqual(result['skipped_count'], 0)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_service_init_failure_return_dict_has_skipped_count(self, MockService):
-        """Error-path return dict from service init failure must include skipped_count."""
-        MockService.side_effect = Exception("API key missing")
-        job = _make_job(self.staff_user)
-        img = _make_image(job)
-
-        result = create_prompt_pages_from_job(str(job.id), [str(img.id)])
-
-        self.assertIn('skipped_count', result)
-        self.assertEqual(result['skipped_count'], 0)
-        self.assertEqual(result['created_count'], 0)
-
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_tags_applied_to_created_page(self, MockService):
-        """suggested_tags from AI content are applied to the created Prompt page."""
-        ai_content = dict(MOCK_AI_CONTENT, suggested_tags=['cyberpunk', 'fantasy', 'art'])
-        MockService.return_value.generate_content.return_value = ai_content
+    @patch('prompts.tasks._call_openai_vision')
+    def test_tags_applied_to_created_page(self, mock_vision):
+        """'tags' from _call_openai_vision result are applied to the created Prompt page."""
+        ai_content = dict(MOCK_AI_CONTENT, tags=['cyberpunk', 'fantasy', 'art'])
+        mock_vision.return_value = ai_content
         job = _make_job(self.staff_user)
         img = _make_image(job)
 
@@ -662,11 +663,11 @@ class EdgeCaseTests(TestCase):
         self.assertIn('fantasy', tag_names)
         self.assertIn('art', tag_names)
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_source_credit_applied_when_present(self, MockService):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_source_credit_applied_when_present(self, mock_vision):
         """source_credit on GeneratedImage is parsed and written to the Prompt page."""
         from prompts.models import GeneratedImage as GI
-        MockService.return_value.generate_content.return_value = MOCK_AI_CONTENT
+        mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
         img.source_credit = 'Artstation|https://artstation.com/artwork/abc'
@@ -679,3 +680,311 @@ class EdgeCaseTests(TestCase):
         self.assertIsNotNone(page)
         # source_credit or source_credit_url should be populated
         self.assertTrue(page.source_credit or page.source_credit_url)
+
+
+# =============================================================================
+# Phase 6A.5 — Content Generation Alignment
+# =============================================================================
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class ContentGenerationAlignmentTests(TestCase):
+    """
+    Phase 6A.5: Verify that bulk page creation aligns with the single-upload
+    content generation pipeline.
+
+    Covers Bug 7 fixes:
+      - ai_generator field is always 'gpt-image-1' (valid AI_GENERATOR_CHOICES value)
+      - _call_openai_vision() is called with ai_generator='gpt-image-1', available_tags=[]
+      - Categories (SubjectCategory M2M) applied from AI result
+      - Descriptors (SubjectDescriptor M2M) applied from AI result (typed dict flattened)
+      - Tags use 'tags' key (not 'suggested_tags')
+      - Tags pass through _validate_and_fix_tags() before being added
+      - Error result ({'error': ...}) from _call_openai_vision triggers error path
+    """
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staff', password='pass', is_staff=True,
+        )
+
+    # --- ai_generator field ---
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_created_prompt_has_gpt_image_1_generator(self, mock_vision):
+        """Created Prompt pages must have ai_generator='gpt-image-1'."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.ai_generator, 'gpt-image-1')
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_ai_generator_not_chatgpt(self, mock_vision):
+        """ai_generator must NEVER be 'ChatGPT' (invalid choice)."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        self.assertNotEqual(img.prompt_page.ai_generator, 'ChatGPT')
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_ai_generator_is_valid_choice(self, mock_vision):
+        """ai_generator value must be in AI_GENERATOR_CHOICES."""
+        from prompts.models import AI_GENERATOR_CHOICES
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        valid_values = [choice[0] for choice in AI_GENERATOR_CHOICES]
+        self.assertIn(img.prompt_page.ai_generator, valid_values)
+
+    # --- _call_openai_vision call args ---
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_vision_called_with_gpt_image_1(self, mock_vision):
+        """_call_openai_vision must be called with ai_generator='gpt-image-1'."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        call_kwargs = mock_vision.call_args
+        ai_gen = call_kwargs.kwargs.get('ai_generator')
+        self.assertEqual(ai_gen, 'gpt-image-1')
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_vision_called_with_empty_available_tags(self, mock_vision):
+        """_call_openai_vision must be called with available_tags=[]."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        call_kwargs = mock_vision.call_args
+        self.assertEqual(call_kwargs.kwargs.get('available_tags', 'UNSET'), [])
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_vision_called_with_image_url(self, mock_vision):
+        """_call_openai_vision is called with the generated image's URL."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.staff_user)
+        img = _make_image(job, image_url='https://cdn.example.com/target.png')
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        call_kwargs = mock_vision.call_args
+        self.assertEqual(
+            call_kwargs.kwargs.get('image_url') or call_kwargs.args[0],
+            'https://cdn.example.com/target.png',
+        )
+
+    # --- Categories ---
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_categories_applied_to_created_page(self, mock_vision):
+        """Categories from AI result are applied to the Prompt via M2M."""
+        from prompts.models import SubjectCategory
+        cat, _ = SubjectCategory.objects.get_or_create(name='Portrait', defaults={'slug': 'portrait'})
+        ai_content = dict(MOCK_AI_CONTENT, categories=['Portrait'])
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        cat_names = list(img.prompt_page.categories.values_list('name', flat=True))
+        self.assertIn('Portrait', cat_names)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_nonexistent_categories_silently_skipped(self, mock_vision):
+        """Categories not in the DB are silently skipped — no crash."""
+        ai_content = dict(MOCK_AI_CONTENT, categories=['Imaginary Category XYZ'])
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        result = create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        # Should still create the page, just with no categories
+        self.assertEqual(result['created_count'], 1)
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.categories.count(), 0)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_empty_categories_list_leaves_no_categories(self, mock_vision):
+        """Empty categories list produces a page with no categories applied."""
+        ai_content = dict(MOCK_AI_CONTENT, categories=[])
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.categories.count(), 0)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_multiple_categories_all_applied(self, mock_vision):
+        """Multiple categories in AI result are all applied via M2M."""
+        from prompts.models import SubjectCategory
+        SubjectCategory.objects.get_or_create(name='Portrait', defaults={'slug': 'portrait'})
+        SubjectCategory.objects.get_or_create(name='Photorealistic', defaults={'slug': 'photorealistic'})
+        ai_content = dict(MOCK_AI_CONTENT, categories=['Portrait', 'Photorealistic'])
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        cat_names = set(img.prompt_page.categories.values_list('name', flat=True))
+        self.assertIn('Portrait', cat_names)
+        self.assertIn('Photorealistic', cat_names)
+
+    # --- Descriptors ---
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_descriptors_applied_to_created_page(self, mock_vision):
+        """Descriptors from AI result (typed dict) are flattened and applied via M2M."""
+        from prompts.models import SubjectDescriptor
+        SubjectDescriptor.objects.get_or_create(name='Female', defaults={'slug': 'female', 'descriptor_type': 'gender'})
+        ai_content = dict(MOCK_AI_CONTENT, descriptors={'gender': ['Female']})
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        desc_names = list(img.prompt_page.descriptors.values_list('name', flat=True))
+        self.assertIn('Female', desc_names)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_nonexistent_descriptors_silently_skipped(self, mock_vision):
+        """Descriptors not in the DB are silently skipped — no crash."""
+        ai_content = dict(MOCK_AI_CONTENT, descriptors={'gender': ['Imaginary Descriptor']})
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        result = create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        self.assertEqual(result['created_count'], 1)
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.descriptors.count(), 0)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_empty_descriptors_dict_leaves_no_descriptors(self, mock_vision):
+        """Empty descriptors dict produces a page with no descriptors applied."""
+        ai_content = dict(MOCK_AI_CONTENT, descriptors={})
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.descriptors.count(), 0)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_descriptors_flattened_from_multiple_types(self, mock_vision):
+        """Descriptors from multiple typed keys are all applied."""
+        from prompts.models import SubjectDescriptor
+        SubjectDescriptor.objects.get_or_create(name='Female', defaults={'slug': 'female', 'descriptor_type': 'gender'})
+        SubjectDescriptor.objects.get_or_create(name='Cinematic', defaults={'slug': 'cinematic', 'descriptor_type': 'mood'})
+        ai_content = dict(
+            MOCK_AI_CONTENT,
+            descriptors={'gender': ['Female'], 'mood': ['Cinematic']},
+        )
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        desc_names = set(img.prompt_page.descriptors.values_list('name', flat=True))
+        self.assertIn('Female', desc_names)
+        self.assertIn('Cinematic', desc_names)
+
+    # --- Tags (key change from 'suggested_tags' → 'tags') ---
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_tags_from_tags_key_not_suggested_tags(self, mock_vision):
+        """Tags must be read from 'tags' key, not 'suggested_tags'."""
+        # If code still used 'suggested_tags', this would produce no tags
+        ai_content = {
+            'title': 'Test Title',
+            'description': 'Test desc.',
+            'tags': ['portrait', 'cinematic'],
+            'suggested_tags': ['WRONG'],  # must NOT be used
+            'categories': [],
+            'descriptors': {},
+        }
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        tag_names = list(img.prompt_page.tags.values_list('name', flat=True))
+        self.assertIn('portrait', tag_names)
+        self.assertNotIn('WRONG', tag_names)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_tags_validated_before_being_applied(self, mock_vision):
+        """Tags pass through _validate_and_fix_tags() — banned tags are removed."""
+        # 'african-american' is a banned ethnicity tag and should be stripped
+        ai_content = dict(MOCK_AI_CONTENT, tags=['portrait', 'african-american', 'art'])
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        tag_names = list(img.prompt_page.tags.values_list('name', flat=True))
+        self.assertIn('portrait', tag_names)
+        self.assertNotIn('african-american', tag_names)
+
+    # --- description from correct key ---
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_description_from_description_key(self, mock_vision):
+        """excerpt on the Prompt must come from 'description' key of AI result."""
+        ai_content = dict(MOCK_AI_CONTENT, description='SEO description text here.')
+        mock_vision.return_value = ai_content
+        job = _make_job(self.staff_user)
+        img = _make_image(job)
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        self.assertEqual(img.prompt_page.excerpt, 'SEO description text here.')
+
+    # --- gpt-image-1 in AI_GENERATOR_CHOICES ---
+
+    def test_gpt_image_1_is_valid_ai_generator_choice(self):
+        """'gpt-image-1' must be present in AI_GENERATOR_CHOICES."""
+        from prompts.models import AI_GENERATOR_CHOICES
+        valid_values = [choice[0] for choice in AI_GENERATOR_CHOICES]
+        self.assertIn('gpt-image-1', valid_values)
+
+    def test_gpt_image_1_display_name_is_gpt_image_1(self):
+        """'gpt-image-1' choice must have display label 'GPT-Image-1'."""
+        from prompts.models import AI_GENERATOR_CHOICES
+        choices_dict = dict(AI_GENERATOR_CHOICES)
+        self.assertEqual(choices_dict.get('gpt-image-1'), 'GPT-Image-1')

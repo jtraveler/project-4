@@ -688,6 +688,7 @@ AI_GENERATOR_CHOICES = [
     ('leonardo-ai', 'Leonardo AI'),
     ('ideogram', 'Ideogram'),
     ('runwayml', 'RunwayML'),
+    ('gpt-image-1', 'GPT-Image-1'),
     ('other', 'Other'),
 ]
 

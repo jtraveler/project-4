@@ -172,17 +172,18 @@ class BulkGeneratorSourceCreditTests(TestCase):
             username='staffuser', password='pass123', is_staff=True
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_source_credit_flows_to_prompt(self, mock_cgs_cls):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_source_credit_flows_to_prompt(self, mock_vision):
         """Source credit on GeneratedImage copies to created Prompt."""
         from prompts.services.bulk_generation import BulkGenerationService
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'Credit Flow Test',
             'description': 'desc',
-            'suggested_tags': [],
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
         }
 
         service = BulkGenerationService()
@@ -222,17 +223,18 @@ class BulkGeneratorSourceCreditTests(TestCase):
             'https://prompthero.com/prompt/abc'
         )
 
-    @patch('prompts.services.content_generation.ContentGenerationService')
-    def test_empty_source_credit_leaves_prompt_blank(self, mock_cgs_cls):
+    @patch('prompts.tasks._call_openai_vision')
+    def test_empty_source_credit_leaves_prompt_blank(self, mock_vision):
         """Empty source credit on GeneratedImage leaves Prompt fields blank."""
         from prompts.services.bulk_generation import BulkGenerationService
         from prompts.tasks import create_prompt_pages_from_job
 
-        mock_service = mock_cgs_cls.return_value
-        mock_service.generate_content.return_value = {
+        mock_vision.return_value = {
             'title': 'No Credit Test',
             'description': 'desc',
-            'suggested_tags': [],
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
         }
 
         service = BulkGenerationService()

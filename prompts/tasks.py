@@ -2686,7 +2686,7 @@ def _upload_generated_image_to_b2(image_data, job, image):
     return final_url
 
 
-def create_prompt_pages_from_job(job_id, selected_image_ids):
+def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — page creation requires branching for M2M, error handling, and TOCTOU retry
     """
     Create Prompt pages from selected generated images.
 
@@ -2706,9 +2706,6 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
         dict with 'created_count', 'skipped_count', 'discarded_count', 'errors'
     """
     from prompts.models import BulkGenerationJob, Prompt
-    from prompts.services.content_generation import (
-        ContentGenerationService,
-    )
     from prompts.utils.source_credit import parse_source_credit
 
     try:
@@ -2726,23 +2723,19 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
     skipped = 0
     errors = []
 
+    # Pre-fetch static lookup data once before the loop.
+    # SubjectCategory and SubjectDescriptor data is essentially static at
+    # runtime; fetching per-image would cause O(N) queries for data that
+    # never changes between iterations.
+    from prompts.models import SubjectCategory, SubjectDescriptor
+    cat_lookup = {cat.name: cat for cat in SubjectCategory.objects.all()}
+    desc_lookup = {desc.name: desc for desc in SubjectDescriptor.objects.all()}
+
     # Mark unselected images
     unselected = job.images.exclude(id__in=selected_image_ids)
     discarded = unselected.filter(
         status='completed'
     ).update(is_selected=False)
-
-    # Initialize content generation service
-    try:
-        content_service = ContentGenerationService()
-    except Exception as e:
-        logger.error("Failed to init ContentGenerationService: %s", e)
-        return {
-            'created_count': 0,
-            'skipped_count': 0,
-            'discarded_count': discarded,
-            'errors': [f'Content service init failed: {e}'],
-        }
 
     # Process selected images — select_for_update() closes the TOCTOU gap:
     # without it, two concurrent tasks could both read prompt_page=None for
@@ -2759,14 +2752,16 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
                 skipped += 1
                 continue
 
-            # Generate AI content (title, description, tags)
-            ai_content = content_service.generate_content(
+            # Generate AI content using the same pipeline as single-upload
+            # (title, description, tags, categories, descriptors)
+            ai_content = _call_openai_vision(
                 image_url=gen_image.image_url,
                 prompt_text=gen_image.prompt_text,
-                ai_generator=job.generator_category,
+                ai_generator='gpt-image-1',
+                available_tags=[],
             )
 
-            if not ai_content or 'title' not in ai_content:
+            if not ai_content or 'error' in ai_content or 'title' not in ai_content:
                 errors.append(
                     f"AI content generation failed for image "
                     f"{gen_image.prompt_order}."
@@ -2791,7 +2786,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
                 author=job.created_by,
                 content=gen_image.prompt_text,
                 excerpt=ai_content.get('description', ''),
-                ai_generator=job.generator_category,
+                ai_generator='gpt-image-1',
                 status=1 if job.visibility == 'public' else 0,
                 moderation_status='approved',  # staff-created; GPT-Image-1 already applied content policy
             )
@@ -2820,10 +2815,34 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):
                 with transaction.atomic():
                     prompt_page.save()
 
-            # Apply tags if available
-            tags = ai_content.get('suggested_tags', [])
-            if tags and hasattr(prompt_page, 'tags'):
-                prompt_page.tags.add(*tags[:10])
+            # Apply tags — validate via the same pipeline as single-upload
+            raw_tags = ai_content.get('tags', [])
+            if raw_tags and hasattr(prompt_page, 'tags'):
+                validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
+                if validated_tags:
+                    prompt_page.tags.add(*validated_tags)
+
+            # Apply categories (SubjectCategory M2M) — in-memory lookup, no query
+            ai_categories = ai_content.get('categories', [])
+            if ai_categories:
+                matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
+                if matched_cats:
+                    prompt_page.categories.add(*matched_cats)
+
+            # Apply descriptors (SubjectDescriptor M2M) — flatten typed dict, in-memory lookup
+            ai_descriptors = ai_content.get('descriptors', {})
+            if ai_descriptors and isinstance(ai_descriptors, dict):
+                all_desc_names = [
+                    str(v).strip()
+                    for dtype_values in ai_descriptors.values()
+                    if isinstance(dtype_values, list)
+                    for v in dtype_values
+                    if v
+                ]
+                if all_desc_names:
+                    matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
+                    if matched_descs:
+                        prompt_page.descriptors.add(*matched_descs)
 
             # Link generated image to prompt page
             gen_image.prompt_page = prompt_page

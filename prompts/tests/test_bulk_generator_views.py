@@ -588,7 +588,7 @@ class CreatePagesAPITests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('not found or not completed', response.json()['error'])
+        self.assertIn('not complete', response.json()['error'])
 
     def test_invalid_json_returns_400(self):
         self.client.login(username='staffuser', password='testpass')
@@ -600,6 +600,220 @@ class CreatePagesAPITests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
+
+
+@override_settings(OPENAI_API_KEY='test-key')
+class PublishFlowTests(TestCase):
+    """Tests for Phase 6B publish flow: P3 hardening, status API fields, publish task."""
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='pub_staff', password='testpass', is_staff=True,
+        )
+
+    def _create_url(self, job_id):
+        return reverse('prompts:api_bulk_create_pages', args=[str(job_id)])
+
+    def _status_url(self, job_id):
+        return reverse('prompts:api_bulk_job_status', args=[str(job_id)])
+
+    # ── P3 Hardening ──────────────────────────────────────────────────────────
+
+    def test_create_pages_view_rejects_in_progress_job(self):
+        """P3: job must have status='completed' or request returns 400."""
+        self.client.login(username='pub_staff', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            status='processing',
+        )
+        img = GeneratedImage.objects.create(
+            job=job, prompt_text='Sunset', prompt_order=0,
+            status='completed', image_url='https://example.com/1.png',
+        )
+        response = self.client.post(
+            self._create_url(job.id),
+            data=json.dumps({'selected_image_ids': [str(img.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('not complete', response.json()['error'])
+
+    @patch('django_q.tasks.async_task')
+    def test_create_pages_view_rejects_oversized_list(self, mock_async):
+        """P3: lists > 500 IDs return 400 before any DB query."""
+        self.client.login(username='pub_staff', password='testpass')
+        oversized = [str(uuid.uuid4()) for _ in range(501)]
+        # No job needed — cap fires before DB lookup.
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        response = self.client.post(
+            self._create_url(job.id),
+            data=json.dumps({'selected_image_ids': oversized}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('500', response.json()['error'])
+        mock_async.assert_not_called()
+
+    # ── Status API fields ─────────────────────────────────────────────────────
+
+    def test_status_api_includes_prompt_page_id(self):
+        """Status API returns prompt_page_id per image (None when not published)."""
+        self.client.login(username='pub_staff', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        GeneratedImage.objects.create(
+            job=job, prompt_text='Test', prompt_order=0,
+            status='completed', image_url='https://example.com/1.png',
+        )
+        response = self.client.get(self._status_url(job.id))
+        self.assertEqual(response.status_code, 200)
+        img_data = response.json()['images'][0]
+        self.assertIn('prompt_page_id', img_data)
+        self.assertIsNone(img_data['prompt_page_id'])
+
+    def test_status_api_includes_prompt_page_url(self):
+        """Status API returns prompt_page_url per image (None when not published)."""
+        self.client.login(username='pub_staff', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        GeneratedImage.objects.create(
+            job=job, prompt_text='Test', prompt_order=0,
+            status='completed', image_url='https://example.com/1.png',
+        )
+        response = self.client.get(self._status_url(job.id))
+        self.assertEqual(response.status_code, 200)
+        img_data = response.json()['images'][0]
+        self.assertIn('prompt_page_url', img_data)
+        self.assertIsNone(img_data['prompt_page_url'])
+
+    def test_status_api_includes_published_count(self):
+        """Status API top-level response includes published_count."""
+        self.client.login(username='pub_staff', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1,
+            status='completed', published_count=3,
+        )
+        response = self.client.get(self._status_url(job.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['published_count'], 3)
+
+    # ── Publish task ──────────────────────────────────────────────────────────
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_publish_task_uses_concurrent_workers(self, mock_vision):
+        """publish_prompt_pages_from_job calls _call_openai_vision for each image."""
+        from prompts.tasks import publish_prompt_pages_from_job
+        mock_vision.return_value = {
+            'title': 'Test Title',
+            'description': 'Test description',
+            'tags': ['nature', 'sunset'],
+            'categories': [],
+            'descriptors': {},
+        }
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=2,
+            status='completed', visibility='public',
+        )
+        img1 = GeneratedImage.objects.create(
+            job=job, prompt_text='Prompt 1', prompt_order=0,
+            status='completed', image_url='https://example.com/1.png',
+        )
+        img2 = GeneratedImage.objects.create(
+            job=job, prompt_text='Prompt 2', prompt_order=1,
+            status='completed', image_url='https://example.com/2.png',
+        )
+        result = publish_prompt_pages_from_job(
+            str(job.id), [str(img1.id), str(img2.id)]
+        )
+        self.assertEqual(result['published_count'], 2)
+        self.assertEqual(mock_vision.call_count, 2)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_publish_task_all_orm_writes_on_main_thread(self, mock_vision):
+        """ORM writes (Prompt save, gen_image link) happen after futures complete."""
+        from prompts.tasks import publish_prompt_pages_from_job
+        from prompts.models import Prompt
+        mock_vision.return_value = {
+            'title': 'Single Image Title',
+            'description': 'A description',
+            'tags': ['test'],
+            'categories': [],
+            'descriptors': {},
+        }
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1,
+            status='completed', visibility='private',
+        )
+        img = GeneratedImage.objects.create(
+            job=job, prompt_text='Test prompt', prompt_order=0,
+            status='completed', image_url='https://example.com/img.png',
+        )
+        result = publish_prompt_pages_from_job(str(job.id), [str(img.id)])
+        self.assertEqual(result['published_count'], 1)
+        img.refresh_from_db()
+        self.assertIsNotNone(img.prompt_page_id)
+        prompt = Prompt.objects.get(id=img.prompt_page_id)
+        self.assertEqual(prompt.status, 0)  # private → draft
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_publish_progress_counter_increments_per_page(self, mock_vision):
+        """published_count on BulkGenerationJob increments for each published page."""
+        from prompts.tasks import publish_prompt_pages_from_job
+        mock_vision.return_value = {
+            'title': 'Counter Test',
+            'description': 'desc',
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
+        }
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=3,
+            status='completed', visibility='public',
+        )
+        images = [
+            GeneratedImage.objects.create(
+                job=job, prompt_text=f'Prompt {i}', prompt_order=i,
+                status='completed', image_url=f'https://example.com/{i}.png',
+            )
+            for i in range(3)
+        ]
+        result = publish_prompt_pages_from_job(
+            str(job.id), [str(img.id) for img in images]
+        )
+        self.assertEqual(result['published_count'], 3)
+        job.refresh_from_db()
+        self.assertEqual(job.published_count, 3)
+
+    @patch('prompts.tasks._call_openai_vision')
+    def test_second_create_pages_post_returns_zero(self, mock_vision):
+        """Idempotency: second call with same image IDs publishes 0 new pages."""
+        from prompts.tasks import publish_prompt_pages_from_job
+        mock_vision.return_value = {
+            'title': 'Idempotent Test',
+            'description': 'desc',
+            'tags': [],
+            'categories': [],
+            'descriptors': {},
+        }
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1,
+            status='completed', visibility='public',
+        )
+        img = GeneratedImage.objects.create(
+            job=job, prompt_text='Test prompt', prompt_order=0,
+            status='completed', image_url='https://example.com/img.png',
+        )
+        # First call — publishes the page
+        result1 = publish_prompt_pages_from_job(str(job.id), [str(img.id)])
+        self.assertEqual(result1['published_count'], 1)
+        # Second call with same IDs — image already has prompt_page; nothing created
+        result2 = publish_prompt_pages_from_job(str(job.id), [str(img.id)])
+        self.assertEqual(result2['published_count'], 0)
 
 
 @override_settings(OPENAI_API_KEY='test-key')

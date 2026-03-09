@@ -369,6 +369,13 @@ def api_create_pages(request, job_id):
             status=400,
         )
 
+    # P3 hardening: cap list size to prevent oversized IN queries
+    if len(selected_image_ids) > 500:
+        return JsonResponse(
+            {'error': 'Maximum 500 images per publish request.'},
+            status=400,
+        )
+
     # Verify job ownership
     try:
         job = BulkGenerationJob.objects.get(
@@ -377,6 +384,13 @@ def api_create_pages(request, job_id):
     except (BulkGenerationJob.DoesNotExist, ValueError, DjangoValidationError):
         return JsonResponse(
             {'error': 'Job not found'}, status=404,
+        )
+
+    # P3 hardening: job must be completed before pages can be created
+    if job.status != 'completed':
+        return JsonResponse(
+            {'error': 'Job is not complete. Wait for generation to finish.'},
+            status=400,
         )
 
     # Verify all selected images belong to this job and are completed
@@ -419,14 +433,14 @@ def api_create_pages(request, job_id):
             'message': 'All selected images already have pages.',
         })
 
-    # Queue page creation task
+    # Queue concurrent publish task (Phase 6B: 4-worker ThreadPoolExecutor)
     from django_q.tasks import async_task
 
     async_task(
-        'prompts.tasks.create_prompt_pages_from_job',
+        'prompts.tasks.publish_prompt_pages_from_job',
         str(job.id),
         [str(cid) for cid in creatable_ids],
-        task_name=f'bulk-pages-{job.id}',
+        task_name=f'bulk-publish-{job.id}',
     )
 
     return JsonResponse({

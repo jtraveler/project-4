@@ -2890,6 +2890,7 @@ class BulkGenerationJob(models.Model):
     total_prompts = models.PositiveIntegerField(default=0)
     completed_count = models.PositiveIntegerField(default=0)
     failed_count = models.PositiveIntegerField(default=0)
+    published_count = models.PositiveIntegerField(default=0)  # Phase 6B: pages published from this job
 
     # Cost tracking
     estimated_cost = models.DecimalField(

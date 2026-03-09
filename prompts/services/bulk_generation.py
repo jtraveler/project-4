@@ -295,7 +295,8 @@ class BulkGenerationService:
             s['status']: s['count'] for s in image_statuses
         }
 
-        # Fetch individual image details for gallery rendering
+        # Fetch individual image details for gallery rendering.
+        # select_related('prompt_page') avoids N+1 for prompt_page_url (Phase 6B).
         images_data = [
             {
                 'id': str(img.id),
@@ -305,8 +306,12 @@ class BulkGenerationService:
                 'status': img.status,
                 'image_url': img.image_url or '',
                 'error_message': _sanitise_error_message(img.error_message or ''),
+                'prompt_page_id': str(img.prompt_page_id) if img.prompt_page_id else None,
+                'prompt_page_url': img.prompt_page.get_absolute_url() if img.prompt_page_id else None,
             }
-            for img in job.images.all().order_by('prompt_order', 'variation_number')
+            for img in job.images.select_related('prompt_page').order_by(
+                'prompt_order', 'variation_number'
+            )
         ]
 
         # Derive job-level error reason from images_data already in memory —
@@ -329,6 +334,7 @@ class BulkGenerationService:
             'generating_count': status_counts.get('generating', 0),
             'queued_count': status_counts.get('queued', 0),
             'failed_count': status_counts.get('failed', 0),
+            'published_count': job.published_count,  # Phase 6B: pages published from this job
             'progress_percent': job.progress_percent,
             'estimated_cost': str(job.estimated_cost),
             'actual_cost': str(job.actual_cost),

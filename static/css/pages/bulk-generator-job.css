@@ -852,3 +852,128 @@
     outline-offset: 2px;
     border-radius: 2px;
 }
+
+/* ── Phase 6B: Publish Bar (inside .bg-sticky-bar-inner) ──────────────── */
+.bg-sticky-bar-inner {
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.publish-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.publish-bar--hidden {
+    display: none;
+}
+
+.publish-bar__count {
+    color: var(--gray-600, #525252); /* 7.07:1 on white — AAA */
+    font-size: 0.875rem;
+}
+
+.publish-bar__btn {
+    /* Inherits .btn .btn-primary styles from Bootstrap */
+    white-space: nowrap;
+}
+
+.publish-bar__btn:focus-visible {
+    outline: 2px solid var(--accent-color-primary, #7c3aed);
+    outline-offset: 2px;
+}
+
+/* ── Phase 6B: Publish Progress Bar (content flow, above gallery) ─────── */
+.publish-progress {
+    background: var(--gray-50, #fafafa);
+    border: 1px solid var(--gray-200, #e5e5e5);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.publish-progress--hidden {
+    display: none;
+}
+
+.publish-progress__text {
+    font-size: 0.875rem;
+    color: var(--gray-700, #404040);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.publish-progress__bar-wrap {
+    background: var(--gray-200, #e5e5e5);
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.publish-progress__fill {
+    height: 100%;
+    background: var(--accent-color-primary, #7c3aed);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.publish-progress__links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.publish-progress__links a {
+    font-size: 0.8125rem;
+    color: var(--accent-color-primary, #7c3aed);
+    text-decoration: none;
+}
+
+.publish-progress__links a:hover {
+    text-decoration: underline;
+}
+
+.publish-progress__links a:focus-visible {
+    outline: 2px solid var(--accent-color-primary, #7c3aed);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* ── Phase 6B: Toast Notifications ───────────────────────────────────── */
+.bulk-toast {
+    position: fixed;
+    bottom: 72px; /* above sticky bar */
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: var(--gray-800, #262626);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.bulk-toast--visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.bulk-toast--success { background: #166534; }   /* green-800 */
+.bulk-toast--error   { background: #991b1b; }   /* red-800   */
+.bulk-toast--info    { background: var(--gray-700, #404040); }
+
+@media (prefers-reduced-motion: reduce) {
+    .bulk-toast { transition: none; }
+    .publish-progress__fill { transition: none; }
+}

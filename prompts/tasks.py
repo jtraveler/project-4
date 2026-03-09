@@ -2916,3 +2916,242 @@ def _generate_unique_slug(title, max_retries=3):
 
     # Final fallback
     return f"{base_slug}-{uuid_lib.uuid4().hex[:8]}"
+
+
+def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
+    """
+    Publish Prompt pages from selected GeneratedImage objects.
+
+    Phase 6B: Concurrent version of create_prompt_pages_from_job using
+    ThreadPoolExecutor (same pattern as _run_generation_loop in Phase 5D).
+
+    Architecture:
+    - Worker threads (up to BULK_GEN_MAX_CONCURRENT): call _call_openai_vision()
+      for each image — network-bound, safe to parallelise.
+    - Main thread: all ORM writes (Prompt save, M2M, gen_image link, counter).
+
+    Returns dict with 'published_count', 'skipped_count', 'errors'.
+    """
+    import concurrent.futures
+    from prompts.models import BulkGenerationJob, Prompt, SubjectCategory, SubjectDescriptor
+    from prompts.services.bulk_generation import _sanitise_error_message
+    from prompts.utils.source_credit import parse_source_credit
+
+    try:
+        job = BulkGenerationJob.objects.select_related('created_by').get(id=job_id)
+    except BulkGenerationJob.DoesNotExist:
+        logger.error("Job %s not found for page creation", job_id)
+        return {
+            'status': 'error',
+            'message': 'Job not found',
+            'published_count': 0,
+            'skipped_count': 0,
+            'errors': [],
+        }
+
+    selected_images = job.images.filter(
+        id__in=selected_image_ids,
+        status='completed',
+        prompt_page__isnull=True,
+    ).order_by('prompt_order', 'variation_number')
+
+    images_list = list(selected_images)
+    if not images_list:
+        return {
+            'status': 'ok',
+            'published_count': 0,
+            'skipped_count': 0,
+            'errors': [],
+        }
+
+    # Pre-fetch static lookup data once — same pattern as create_prompt_pages_from_job
+    cat_lookup = {cat.name: cat for cat in SubjectCategory.objects.all()}
+    desc_lookup = {desc.name: desc for desc in SubjectDescriptor.objects.all()}
+
+    # ── Worker function (I/O only — NO ORM writes) ────────────────────────────
+    def _call_vision_for_image(gen_image):
+        """
+        Call _call_openai_vision() in a worker thread.
+        Returns (gen_image, ai_content, error_str).
+        ORM writes MUST happen on the main thread.
+        """
+        try:
+            ai_content = _call_openai_vision(
+                image_url=gen_image.image_url,
+                prompt_text=gen_image.prompt_text,
+                ai_generator='gpt-image-1',
+                available_tags=[],
+            )
+            return gen_image, ai_content, None
+        except Exception as exc:
+            return gen_image, None, str(exc)[:200]
+
+    # ── Concurrent execution ──────────────────────────────────────────────────
+    max_workers = getattr(settings, 'BULK_GEN_MAX_CONCURRENT', 4)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_call_vision_for_image, img): img for img in images_list}
+        results = []
+        for future in concurrent.futures.as_completed(futures):
+            results.append(future.result())
+
+    # ── ORM writes on main thread ─────────────────────────────────────────────
+    published_count = 0
+    skipped_count = 0
+    errors = []
+
+    for gen_image, ai_content, worker_error in results:
+        try:
+            if worker_error:
+                logger.warning(
+                    "Vision worker error for image %d.%d: %s",
+                    gen_image.prompt_order, gen_image.variation_number, worker_error,
+                )
+                errors.append(
+                    f"AI content failed for image "
+                    f"{gen_image.prompt_order}.{gen_image.variation_number}"
+                )
+                continue
+
+            if not ai_content or 'error' in ai_content or 'title' not in ai_content:
+                error_detail = ai_content.get('error', 'unknown') if ai_content else 'no content'
+                logger.warning(
+                    "AI content generation failed for image %d.%d: %s",
+                    gen_image.prompt_order, gen_image.variation_number, error_detail,
+                )
+                errors.append(
+                    f"AI content failed for image "
+                    f"{gen_image.prompt_order}.{gen_image.variation_number}"
+                )
+                continue
+
+            title = ai_content.get('title') or f'AI Generated Image {gen_image.prompt_order}'
+            title = _ensure_unique_title(title)
+            slug_val = _generate_unique_slug(title)
+
+            # Build Prompt — constructor matches create_prompt_pages_from_job exactly
+            prompt_page = Prompt(
+                title=title,
+                slug=slug_val,
+                author=job.created_by,
+                content=gen_image.prompt_text,
+                excerpt=ai_content.get('description', ''),
+                ai_generator='gpt-image-1',
+                status=1 if job.visibility == 'public' else 0,
+                moderation_status='approved',  # staff-created; GPT-Image-1 content policy applied at gen time
+            )
+
+            if gen_image.source_credit:
+                sc_name, sc_url = parse_source_credit(gen_image.source_credit)
+                prompt_page.source_credit = sc_name
+                prompt_page.source_credit_url = sc_url
+
+            prompt_page.b2_image_url = gen_image.image_url
+            prompt_page.b2_thumb_url = gen_image.image_url
+            prompt_page.b2_medium_url = gen_image.image_url
+
+            # Idempotency flag — set inside atomic if image already published by
+            # a concurrent task that raced past the pre-filter above.
+            _already_published = False
+
+            try:
+                with transaction.atomic():
+                    # Per-image DB lock: hold through save so concurrent tasks
+                    # cannot both publish the same GeneratedImage.
+                    if not job.images.select_for_update().filter(
+                        id=gen_image.id, prompt_page__isnull=True
+                    ).exists():
+                        _already_published = True
+                    else:
+                        prompt_page.save()
+                        # M2M and gen_image link inside same atomic block
+                        raw_tags = ai_content.get('tags', [])
+                        if raw_tags and hasattr(prompt_page, 'tags'):
+                            validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
+                            if validated_tags:
+                                prompt_page.tags.add(*validated_tags)
+
+                        ai_categories = ai_content.get('categories', [])
+                        if ai_categories:
+                            matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
+                            if matched_cats:
+                                prompt_page.categories.add(*matched_cats)
+
+                        ai_descriptors = ai_content.get('descriptors', {})
+                        if ai_descriptors and isinstance(ai_descriptors, dict):
+                            all_desc_names = [
+                                str(v).strip()
+                                for dtype_values in ai_descriptors.values()
+                                if isinstance(dtype_values, list)
+                                for v in dtype_values
+                                if v
+                            ]
+                            if all_desc_names:
+                                matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
+                                if matched_descs:
+                                    prompt_page.descriptors.add(*matched_descs)
+
+                        gen_image.prompt_page = prompt_page
+                        gen_image.save(update_fields=['prompt_page'])
+
+            except IntegrityError:
+                suffix = uuid.uuid4().hex[:8]
+                prompt_page.title = f"{prompt_page.title[:189]} \u2014 {suffix}"
+                prompt_page.slug = f"{prompt_page.slug[:180]}-{suffix}"
+                with transaction.atomic():
+                    prompt_page.save()
+                    # Re-apply all M2M after slug-collision retry
+                    raw_tags = ai_content.get('tags', [])
+                    if raw_tags and hasattr(prompt_page, 'tags'):
+                        validated_tags = _validate_and_fix_tags(raw_tags, prompt_id=prompt_page.pk)
+                        if validated_tags:
+                            prompt_page.tags.add(*validated_tags)
+                    ai_categories = ai_content.get('categories', [])
+                    if ai_categories:
+                        matched_cats = [cat_lookup[n] for n in ai_categories if n in cat_lookup]
+                        if matched_cats:
+                            prompt_page.categories.add(*matched_cats)
+                    ai_descriptors = ai_content.get('descriptors', {})
+                    if ai_descriptors and isinstance(ai_descriptors, dict):
+                        all_desc_names = [
+                            str(v).strip()
+                            for dtype_values in ai_descriptors.values()
+                            if isinstance(dtype_values, list)
+                            for v in dtype_values
+                            if v
+                        ]
+                        if all_desc_names:
+                            matched_descs = [desc_lookup[n] for n in all_desc_names if n in desc_lookup]
+                            if matched_descs:
+                                prompt_page.descriptors.add(*matched_descs)
+                    gen_image.prompt_page = prompt_page
+                    gen_image.save(update_fields=['prompt_page'])
+
+            if _already_published:
+                skipped_count += 1
+                continue
+
+            # Atomic counter increment — safe for concurrent task re-runs
+            BulkGenerationJob.objects.filter(id=job_id).update(
+                published_count=F('published_count') + 1
+            )
+            published_count += 1
+
+        except Exception as exc:
+            logger.error(
+                "Page publish failed for image %d.%d: %s",
+                gen_image.prompt_order, gen_image.variation_number, exc,
+            )
+            errors.append(_sanitise_error_message(str(exc)))
+
+    logger.info(
+        "Publish complete for job %s: %d published, %d skipped, %d errors",
+        job_id, published_count, skipped_count, len(errors),
+    )
+
+    return {
+        'status': 'completed',
+        'published_count': published_count,
+        'skipped_count': skipped_count,
+        'errors': errors,
+    }

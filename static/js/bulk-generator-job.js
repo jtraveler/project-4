@@ -47,6 +47,7 @@
 
     // ─── State ────────────────────────────────────────────────────
     var pollTimer = null;
+    var publishPollTimer = null;
     var generationStartTime = null; // Set on first poll where completed > 0
 
     // ─── Gallery State (Phase 5B) ───────────────────────────────
@@ -810,6 +811,7 @@
             }
             delete selections[groupIndex];
             announce('Image deselected for prompt ' + (groupIndex + 1));
+            updatePublishBar();
         } else {
             // Select this one, deselect others in group
             for (var j = 0; j < allSlots.length; j++) {
@@ -828,6 +830,7 @@
             selections[groupIndex] = imageId;
             var slotNum = parseInt(btn.getAttribute('data-slot'), 10) + 1;
             announce('Image ' + slotNum + ' selected for prompt ' + (groupIndex + 1));
+            updatePublishBar();
         }
     }
 
@@ -867,6 +870,7 @@
             // Move focus to trash button (only remaining visible button)
             btn.focus();
             announce('Image discarded');
+            updatePublishBar();
         }
     }
 
@@ -1020,6 +1024,204 @@
         }
     }
 
+    // ─── Toast Notifications (Phase 6B) ──────────────────────────
+    function showToast(message, type) {
+        var existing = document.getElementById('bulk-toast');
+        if (existing) existing.parentNode.removeChild(existing);
+
+        // Populate static announcer (registered at page load) for reliable AT support
+        var staticAnnouncer = document.getElementById('bulk-toast-announcer');
+        if (staticAnnouncer) {
+            staticAnnouncer.textContent = '';
+            // Brief timeout so screen readers detect the content change
+            setTimeout(function () { staticAnnouncer.textContent = message; }, 50);
+        }
+
+        var toast = document.createElement('div');
+        toast.id = 'bulk-toast';
+        toast.className = 'bulk-toast bulk-toast--' + (type || 'info');
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        // Fade in
+        requestAnimationFrame(function () {
+            toast.classList.add('bulk-toast--visible');
+        });
+
+        // Auto-dismiss after 4 seconds
+        setTimeout(function () {
+            toast.classList.remove('bulk-toast--visible');
+            setTimeout(function () {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 300);
+        }, 4000);
+    }
+
+    // ─── Publish Bar (Phase 6B) ───────────────────────────────────
+    function updatePublishBar() {
+        var count = Object.keys(selections).length;
+        var publishBar = document.getElementById('publish-bar');
+        var btn = document.getElementById('create-pages-btn');
+        var countEl = document.getElementById('publish-bar-count');
+
+        if (!publishBar || !btn) return;
+
+        if (count === 0) {
+            publishBar.classList.add('publish-bar--hidden');
+            btn.disabled = true;
+            btn.setAttribute('aria-disabled', 'true');
+        } else {
+            publishBar.classList.remove('publish-bar--hidden');
+            btn.disabled = false;
+            btn.setAttribute('aria-disabled', 'false');
+            if (countEl) {
+                countEl.textContent = count + ' image' + (count === 1 ? '' : 's') + ' selected';
+            }
+            btn.textContent = 'Create Pages (' + count + ')';
+        }
+    }
+
+    // ─── Create Pages (Phase 6B) ──────────────────────────────────
+    function handleCreatePages() {
+        var btn = document.getElementById('create-pages-btn');
+        if (!btn) return;
+
+        var url = root ? root.dataset.createPagesUrl : null;
+        if (!url) return;
+
+        var selectedIds = Object.keys(selections);
+        if (selectedIds.length === 0) return;
+
+        // Disable button immediately — prevents double-submit
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+        btn.textContent = 'Publishing\u2026';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ selected_image_ids: selectedIds }),
+        })
+        .then(function (r) {
+            return r.json().then(function (data) {
+                return { ok: r.ok, data: data };
+            });
+        })
+        .then(function (result) {
+            var data = result.data;
+            if (!result.ok) {
+                showToast(data.error || 'Something went wrong. Please try again.', 'error');
+                btn.disabled = false;
+                btn.setAttribute('aria-disabled', 'false');
+                updatePublishBar();
+                return;
+            }
+
+            if (!data.pages_to_create || data.pages_to_create === 0) {
+                showToast('All selected images already have pages.', 'info');
+                return;
+            }
+
+            showToast(
+                data.pages_to_create + ' page' + (data.pages_to_create === 1 ? '' : 's') +
+                ' queued \u2014 publishing now.',
+                'success'
+            );
+
+            startPublishProgressPolling(data.pages_to_create);
+        })
+        .catch(function (err) {
+            console.error('[bulk-gen-job] Create pages error:', err.message);
+            showToast('Network error. Please check your connection and try again.', 'error');
+            btn.disabled = false;
+            btn.setAttribute('aria-disabled', 'false');
+            updatePublishBar();
+        });
+    }
+
+    // ─── Publish Progress Polling (Phase 6B) ─────────────────────
+    function startPublishProgressPolling(total) {
+        var progressEl = document.getElementById('publish-progress');
+        var countEl = document.getElementById('publish-progress-count');
+        var totalEl = document.getElementById('publish-progress-total');
+        var fillEl = document.getElementById('publish-progress-fill');
+        var linksEl = document.getElementById('publish-progress-links');
+
+        if (!progressEl) return;
+
+        if (totalEl) totalEl.textContent = total;
+        progressEl.classList.remove('publish-progress--hidden');
+
+        // Stop any existing publish poll before starting a new one
+        if (publishPollTimer) {
+            clearInterval(publishPollTimer);
+            publishPollTimer = null;
+        }
+
+        var linkedPageIds = {};  // Track which page IDs already have links
+
+        publishPollTimer = setInterval(function () {
+            if (!statusUrl) return;
+
+            fetch(statusUrl, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (!data) return;
+
+                var published = data.published_count || 0;
+                var pct = total > 0 ? Math.min(Math.round((published / total) * 100), 100) : 0;
+
+                if (countEl) countEl.textContent = published;
+                if (fillEl) fillEl.style.width = pct + '%';
+
+                // Append links for newly published pages
+                var images = data.images || [];
+                for (var i = 0; i < images.length; i++) {
+                    var img = images[i];
+                    if (img.prompt_page_id && !linkedPageIds[img.prompt_page_id]) {
+                        linkedPageIds[img.prompt_page_id] = true;
+                        if (linksEl) {
+                            var li = document.createElement('li');
+                            var a = document.createElement('a');
+                            // Validate URL is relative (starts with /) before using
+                            var href = (img.prompt_page_url && img.prompt_page_url.indexOf('/') === 0)
+                                ? img.prompt_page_url
+                                : '#';
+                            a.href = href;
+                            a.target = '_blank';
+                            a.rel = 'noopener noreferrer';
+                            var labelText = img.prompt_text
+                                ? img.prompt_text.substring(0, 40) + '\u2026'
+                                : 'Prompt page';
+                            a.textContent = 'View: ' + labelText;
+                            li.appendChild(a);
+                            linksEl.appendChild(li);
+                        }
+                    }
+                }
+
+                // Stop polling when all published
+                if (published >= total) {
+                    clearInterval(publishPollTimer);
+                    publishPollTimer = null;
+                    showToast('All ' + total + ' page' + (total === 1 ? '' : 's') + ' published!', 'success');
+                }
+            })
+            .catch(function (err) {
+                // Silent — polling retries next interval
+                console.warn('[bulk-gen-job] Publish poll error:', err.message);
+            });
+        }, 3000);
+    }
+
     // ─── Init ─────────────────────────────────────────────────────
     function initPage() {
         root = document.getElementById('bulk-generator-job');
@@ -1093,6 +1295,12 @@
         // Cancel button wiring
         if (cancelBtn) {
             cancelBtn.addEventListener('click', handleCancel);
+        }
+
+        // Create Pages button wiring (Phase 6B)
+        var createPagesBtn = document.getElementById('create-pages-btn');
+        if (createPagesBtn) {
+            createPagesBtn.addEventListener('click', handleCreatePages);
         }
 
         // Set estimated cost display immediately from context values

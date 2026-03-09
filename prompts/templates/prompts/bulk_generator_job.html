@@ -21,7 +21,8 @@
      data-quality-display="{{ job.get_quality_display }}"
      data-size-display="{{ display_size }}"
      data-sprite-url="{% static 'icons/sprite.svg' %}"
-     data-gallery-aspect="{{ gallery_aspect }}">
+     data-gallery-aspect="{{ gallery_aspect }}"
+     data-create-pages-url="{% url 'prompts:api_bulk_create_pages' job.id %}">
 
     {# ===== Job Summary Header ===== #}
     <div class="job-summary-header">
@@ -128,6 +129,22 @@
 
     </div>{# /.job-progress-section #}
 
+    {# ===== Publish Progress Bar (Phase 6B) ===== #}
+    <div id="publish-progress"
+         class="publish-progress publish-progress--hidden"
+         role="status"
+         aria-live="polite"
+         aria-label="Publish progress">
+        <div class="publish-progress__text">
+            <span id="publish-progress-count">0</span> of
+            <span id="publish-progress-total">0</span> published
+        </div>
+        <div class="publish-progress__bar-wrap">
+            <div id="publish-progress-fill" class="publish-progress__fill" style="width: 0%"></div>
+        </div>
+        <ul id="publish-progress-links" class="publish-progress__links" aria-label="Published pages"></ul>
+    </div>
+
     {# ===== Gallery Section ===== #}
     <p class="gallery-selection-instruction" id="galleryInstruction">
         Click an image to select your favourite for each prompt group.
@@ -138,9 +155,26 @@
 
 {% if request.user.is_staff %}
 
-{# ===== Sticky Bar with Flush Button (staff only) ===== #}
+{# ===== Sticky Bar: Publish Controls + Flush Button (staff only) ===== #}
 <div class="bg-sticky-bar">
     <div class="bg-sticky-bar-inner">
+
+        {# Publish controls — hidden until images selected (Phase 6B) #}
+        <div id="publish-bar"
+             class="publish-bar publish-bar--hidden"
+             role="region"
+             aria-label="Publish selected images"
+             aria-live="polite">
+            <span id="publish-bar-count" class="publish-bar__count"></span>
+            <button id="create-pages-btn"
+                    class="btn btn-primary publish-bar__btn"
+                    type="button"
+                    disabled
+                    aria-disabled="true">
+                Create Pages
+            </button>
+        </div>
+
         <button type="button" class="bg-flush-btn" id="btn-flush-open"
                 aria-label="Trash all bulk generator test results">
             🗑 Trash Test Results from Bulk Generator
@@ -405,4 +439,6 @@
 })();
 </script>
 {% endif %}
+{# Static aria-live region for toast announcements — must exist at page load for reliable AT support #}
+<div id="bulk-toast-announcer" role="status" aria-live="polite" class="sr-only" aria-atomic="true"></div>
 {% endblock %}

@@ -288,12 +288,22 @@
         }
 
         // A11Y-3: Announce generation progress for AT users
-        if (progressAnnouncer && completed !== lastAnnouncedCompleted) {
-            lastAnnouncedCompleted = completed;
-            if (TERMINAL_STATES.indexOf(newStatus) === -1 && completed > 0) {
+        if (progressAnnouncer) {
+            var isTransitionToTerminal = TERMINAL_STATES.indexOf(newStatus) !== -1 &&
+                TERMINAL_STATES.indexOf(currentStatus) === -1;
+            if (isTransitionToTerminal) {
+                // Force-announce terminal state — bypass dedup guard
+                if (newStatus === 'completed') {
+                    progressAnnouncer.textContent = 'Generation complete. ' + completed + ' of ' + total + ' images ready.';
+                } else if (newStatus === 'cancelled') {
+                    progressAnnouncer.textContent = 'Generation cancelled. ' + completed + ' of ' + total + ' images were generated.';
+                } else if (newStatus === 'failed') {
+                    progressAnnouncer.textContent = 'Generation failed. ' + completed + ' of ' + total + ' images were generated.';
+                }
+            } else if (TERMINAL_STATES.indexOf(newStatus) === -1 &&
+                    completed > 0 && completed !== lastAnnouncedCompleted) {
+                lastAnnouncedCompleted = completed;
                 progressAnnouncer.textContent = completed + ' of ' + total + ' images generated.';
-            } else if (newStatus === 'completed') {
-                progressAnnouncer.textContent = 'Generation complete. ' + completed + ' of ' + total + ' images ready.';
             }
         }
 
@@ -391,11 +401,15 @@
     // ─── A11Y-5: Focus first gallery card ────────────────────────
     function focusFirstGalleryCard() {
         if (!galleryContainer) return;
+        // Exclude is-published (btn-select hidden) so focus lands on a real button
         var firstBtn = galleryContainer.querySelector(
-            '.prompt-image-slot:not(.is-placeholder) .btn-select'
+            '.prompt-image-slot:not(.is-placeholder):not(.is-published) .btn-select'
         );
         if (firstBtn) {
             firstBtn.focus();
+        } else if (statusMessage) {
+            // Fallback: all cards failed or published — focus the status message
+            statusMessage.focus();
         }
     }
 
@@ -872,7 +886,7 @@
         if (slot.classList.contains('is-discarded')) return;
         if (slot.classList.contains('is-published')) return;
 
-        var allSlots = groupData.element.querySelectorAll('.prompt-image-slot:not(.is-placeholder)');
+        var allSlots = groupData.element.querySelectorAll('.prompt-image-slot:not(.is-placeholder):not(.is-discarded):not(.is-published)');
         var alreadySelected = slot.classList.contains('is-selected');
 
         if (alreadySelected) {

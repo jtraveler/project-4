@@ -22,7 +22,7 @@
 | **Services** | 15 | prompts/services/ |
 | **View Modules** | 13 | prompts/views/ |
 | **CI/CD Config Files** | 5 | .github/workflows/, .github/, root |
-| **Documentation (MD)** | 138 | Root (30), docs/ (33), archive/ (75) |
+| **Documentation (MD)** | 96 | Root (30), docs/ (60), archive/ (6) |
 
 ---
 
@@ -82,7 +82,9 @@ live-working-project/
 │   ├── REPORT_BULK_GEN_PHASE6A5.md                     # Session 114: Phase 6A.5 data correctness completion report
 │   ├── REPORT_BULK_GEN_PHASE6B.md                      # Session 115: Phase 6B publish flow completion report (14 sections)
 │   ├── REPORT_BULK_GEN_PHASE6B5.md                     # Session 116: Phase 6B.5 transaction hardening completion report (13 sections)
-│   └── REPORT_CC_SPEC_TEMPLATE_V2_4.md                 # Session 116: CC_SPEC_TEMPLATE v2.4 update report (ORM transaction rules)
+│   ├── REPORT_CC_SPEC_TEMPLATE_V2_4.md                 # Session 116: CC_SPEC_TEMPLATE v2.4 update report (ORM transaction rules)
+│   ├── REPORT_BULK_GEN_PHASE6CA.md                     # Session 116: Phase 6C-A M2M helper extraction + PublishTaskTests completion report
+│   └── REPORT_BULK_GEN_PHASE6CB.md                     # Session 117: Phase 6C-B gallery states + published badge completion report (414 lines)
 ├── prompts/                      # Main Django app (100+ files)
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
@@ -1633,6 +1635,13 @@ prompts/templates/prompts/
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.28 (March 9, 2026 - Sessions 116–117 End-of-Session Docs Update):**
+- Updated current phase: Phase 6C next → Phase 6C-A + 6C-B both complete, Phase 6D next
+- Fixed Documentation (MD) count: 138 → 96 (Root 30, docs/ 60, archive/ 6)
+- Added REPORT_BULK_GEN_PHASE6CA.md to docs/ listing (Session 116)
+- Added REPORT_BULK_GEN_PHASE6CB.md to docs/ listing (Session 117)
+- Updated CLAUDE.md, CLAUDE_PHASES.md, CLAUDE_CHANGELOG.md for Phase 6C-A + 6C-B completion
 
 **v3.27 (March 9, 2026 - Sessions 114–115 End-of-Session Docs Update):**
 - Updated current phase: Phase 6 in progress → Phase 6A/6A.5/6B complete, Phase 6C next

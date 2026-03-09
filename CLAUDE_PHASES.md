@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **🔄 Phase 6C Next (6A/6A.5/6B/6B.5 Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **🔄 Phase 6D Next (6A/6A.5/6B/6B.5/6C-A/6C-B Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -528,7 +528,7 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 **Status:** Phase 6B.5 Complete — Phase 6C (gallery visual states) next
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
-**Tests:** ~375 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests + 9 PublishFlowTests + 8 TransactionHardeningTests); 1084 total project tests passing, 12 skipped
+**Tests:** ~375 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests + 9 PublishFlowTests + 8 TransactionHardeningTests); ~1100 total project tests passing, 12 skipped
 
 ### What This Feature Does
 
@@ -678,14 +678,23 @@ Concurrent publish pipeline with per-image DB-level idempotency lock. `publish_p
 **Agent scores:** @django-pro 8.5/10 (re-run), @accessibility 8.2/10 (re-run), @performance 8.0/10, @security 9.0/10
 **Full report:** `docs/REPORT_BULK_GEN_PHASE6B.md`
 
-#### Phase 6C — Gallery Visual States + Polling Badges
-**Status:** 🔲 Planned (after 6B.5 — ready to start)
+#### Phase 6C-B — Gallery Visual States + Published Badge
+**Status:** ✅ COMPLETE (Session 117)
 
-CSS states (selected: 3px border + checkmark badge, trashed: 55% opacity, discarded: grayscale+blur, published: green "View page →" badge). Polling-based badge updates from `prompt_page_id` in status API. Also closes Phase 5 deferred items: A11Y-2, A11Y-3, A11Y-5, N+1 `select_related` fix, placeholder boxes fix, total generation time display.
+CSS card states (`.is-selected`: 3px box-shadow ring; `.is-deselected`: 20% opacity; `.is-discarded`: 55% opacity; `.is-published`: green "View page →" badge). Published badge uses `prompt_page_url` from status API for per-card links. Closes deferred items: A11Y-3 (live region for progress), A11Y-5 (focus management on gallery load). Double-ring focus pattern for overlay buttons on any image background. `sr-only` defined locally (Bootstrap 5 removed it). Opacity-compounding bug fixed: `handleSelection` excludes `.is-discarded`/`.is-published` from `allSlots`. `handleTrash` undo path calls `updatePublishBar()`. `markCardPublished` removes `.is-discarded`. `focusFirstGalleryCard` excludes `.is-discarded`.
 
-**Files:** `bulk-generator-job.css`, `bulk-generator-job.js`, `bulk_generator_views.py`, `bulk_generator_job.html`
-**Agent requirements:** @accessibility 8.0+/10, @ui-visual-validator 8.0+/10, @performance 8.0+/10
-**Note for spec:** @test-automator required for task-level test coverage of `publish_prompt_pages_from_job` (concurrent race, IntegrityError retry with M2M, partial failure scenarios). @frontend-developer required for `masonry-grid.css !important` specificity conflicts in gallery CSS states.
+**Files:** `bulk-generator-job.css`, `bulk-generator-job.js`, `bulk_generator_job.html`, `bulk_generation.py`, `test_bulk_generator_views.py`
+**Agent scores (round 2):** @code-reviewer 8.5/10, @accessibility 8.2/10, @ui-visual-validator 8.3/10, @django-pro 8.4/10
+**Full report:** `docs/REPORT_BULK_GEN_PHASE6CB.md`
+
+#### Phase 6C-A — M2M Helper Extraction + Publish Task Tests
+**Status:** ✅ COMPLETE (Session 116)
+
+Extracted `_apply_m2m_to_prompt()` module-level helper, eliminating 4 duplicate M2M blocks (tags, categories, descriptors + explicit `source_credit`/`generator_category` copy). Added 14 `PublishTaskTests`: concurrent race condition, `IntegrityError` slug-collision retry with M2M re-application, partial failure handling, `_sanitise_error_message` boundary, `available_tags` passed to vision, stale test corrections (`available_tags` assertion, `generator_category` default).
+
+**Files:** `prompts/tasks.py`, `prompts/tests/test_bulk_generator_views.py`
+**Test count:** 1098 passing, 12 skipped
+**Full report:** `docs/REPORT_BULK_GEN_PHASE6CA.md`
 
 #### Phase 6D — Per-Image Error Recovery + Retry
 **Status:** 🔲 Planned (after 6C) — IN SCOPE
@@ -705,8 +714,8 @@ Per-image error display on gallery cards, "Retry Failed" button, partial failure
 | `generator_category` default | P1 | ✅ Phase 6B.5 | Changed 'ChatGPT' → 'gpt-image-1'; migration 0068 backfilled 35 rows |
 | `skipped_count` comment | P1 | ✅ Phase 6B.5 | Clarifying comment added in publish task return dict |
 | `F('published_count')` inside atomic | P1 | ✅ Phase 6B.5 | Moved inside transaction.atomic() on both primary and retry paths |
-| Duplicate M2M blocks (4 locations) | P2 | Phase 6C or cleanup | Extract `_apply_m2m_to_prompt()` helper; reduces maintenance risk |
-| No task-level tests for publish task | P2 | Phase 6C | @test-automator: concurrent race, IntegrityError retry + M2M, partial failure |
+| Duplicate M2M blocks (4 locations) | P2 | ✅ Phase 6C-A | `_apply_m2m_to_prompt()` helper extracted; 4 duplicate blocks replaced |
+| No task-level tests for publish task | P2 | ✅ Phase 6C-A | 14 PublishTaskTests: concurrent race, IntegrityError retry + M2M, partial failure |
 | `available_tags` cap frequency-weighted | P2 | Phase 7 | Switch from order_by('id') to -usage count annotation when corpus > 500 |
 | SEC-2 | P3 | Backlog | API key length check — validate key is at least 40 chars before encrypting |
 | SEC-3 | P3 | Backlog | `model_name` and `generator_category` allowlist validation in start_job endpoint |
@@ -716,8 +725,8 @@ Per-image error display on gallery cards, "Retry Failed" button, partial failure
 | No task failure signal to frontend | P3 | Phase 7 | Notify UI when publish task fails entirely (not just per-image) |
 | SEO auto-flag missing from bulk path | P3 | Phase 7 | `needs_seo_review` flag not set for bulk-created Prompt pages |
 | A11Y-2 | ✅ Phase 6B | Done | Static `#bulk-toast-announcer` aria-live region added (clear-then-set pattern) |
-| A11Y-3 | Phase 6C | Planned | Live region for generation progress status updates |
-| A11Y-5 | Phase 6C | Planned | Focus management when gallery loads new image rows |
+| A11Y-3 | ✅ Phase 6C-B | Done | Live region for generation progress status updates |
+| A11Y-5 | ✅ Phase 6C-B | Done | Focus management when gallery loads new image rows |
 | N+1 query | ✅ Phase 6B | Done | `select_related('created_by', 'images')` added to bulk_generator_job_view |
 | Placeholder disappear | Phase 6 | Planned | Placeholder boxes disappear when image renders — should stay until all slots filled |
 | Total generation time | Phase 6 | Planned | Display wall-clock time from job start to completion in gallery header |
@@ -792,5 +801,5 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.14 (Session 116 — Phase 6B.5 complete, transaction hardening, migration 0068, test count 1084)
+**Version:** 4.15 (Sessions 116–117 — Phase 6C-A complete [1098 tests], Phase 6C-B complete [~1100 tests], gallery card states, A11Y-3/5, opacity-compounding fix, Phase 6D next)
 **Last Updated:** March 9, 2026

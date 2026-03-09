@@ -55,7 +55,9 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | **Bulk Gen Phase 6A.5** | ✅ COMPLETE | Data Correctness (gpt-image-1 choice + pipeline alignment) | Done — Session 114 |
 | **Bulk Gen Phase 6B** | ✅ COMPLETE | Publish Flow UI + Concurrent Pipeline | Done — Session 115, 1076 tests |
 | **Bulk Gen Phase 6B.5** | ✅ COMPLETE | Transaction Hardening & Quick Wins | Done — Session 116, 1084 tests |
-| **Bulk Gen Phase 6C** | 🔲 Next | Gallery Visual States + Published Badges | Selected/published CSS states, prompt_page_url links per card |
+| **Bulk Gen Phase 6C-B** | ✅ COMPLETE | Gallery card states + published badge + A11Y-3/5 | Done — Session 117, ~1100 tests |
+| **Bulk Gen Phase 6C-A** | ✅ COMPLETE | M2M helper extraction + publish task tests | Done — Session 116, 1098 tests |
+| **Bulk Gen Phase 6D** | 🔲 Next | Per-image error recovery + retry | Spec needed |
 
 ### What's Paused (Don't Forget!)
 
@@ -69,6 +71,8 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Bulk Gen Phase 6C-B | Mar 9, 2026 | Gallery card states (selected/deselected/discarded/published CSS states), published badge with prompt_page_url links, A11Y-3 live region + A11Y-5 focus management, double-ring focus pattern, opacity-compounding bug fix, 2-round agent review, ~1100 tests |
+| Bulk Gen Phase 6C-A | Mar 9, 2026 | Extract `_apply_m2m_to_prompt()` helper (4 duplicated M2M blocks), 14 PublishTaskTests (concurrent race, IntegrityError retry, partial failure, sanitise, available_tags), stale test corrections, 1098 tests |
 | Bulk Gen Phase 6B.5 | Mar 9, 2026 | Transaction hardening — atomic F() counter, _sanitise_error_message in worker closure, available_tags pre-fetch + order_by, hasattr dead code removed, generator_category default fix + migration 0068, 8 TransactionHardeningTests, 1084 tests |
 | Bulk Gen Phase 6B | Mar 9, 2026 | Publish flow — concurrent pipeline (ThreadPoolExecutor), per-image DB lock (select_for_update + atomic), IntegrityError slug-collision retry, published_count F() atomic counter, static aria-live toast announcer, 9 PublishFlowTests, 1076 tests |
 | Bulk Gen Phase 6A.5 | Mar 9, 2026 | Data correctness — gpt-image-1 model name fix, pipeline alignment for size/quality/model fields on BulkGenerationJob |
@@ -90,7 +94,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
-### Bulk AI Image Generator (Phases 1–6B complete — Phase 6C next)
+### Bulk AI Image Generator (Phases 1–6B + 6C-A + 6C-B complete — Phase 6D next)
 
 Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
 
@@ -110,7 +114,9 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 
 **Phase 6B (Session 115):** ✅ COMPLETE. Concurrent publish pipeline: `ThreadPoolExecutor` dispatches Prompt creation across worker threads; all ORM writes happen on main thread after futures complete. Per-image DB-level idempotency lock (`select_for_update()` inside `transaction.atomic()`). `IntegrityError` slug-collision retry with UUID suffix. `published_count` incremented via `F()` atomic counter. Sticky publish bar + progress bar in template. Static `#bulk-toast-announcer` for screen-reader toast announcements. 9 `PublishFlowTests` added. 1076 tests passing, 12 skipped.
 
-**Phase 6C (next):** Gallery visual states + published badges. Selected/published CSS states per image card, `prompt_page_url` links added to published cards.
+**Phase 6C-B (Session 117):** ✅ COMPLETE. Gallery card CSS states: `.is-selected` (3px box-shadow ring), `.is-deselected` (20% opacity), `.is-discarded` (55% opacity on image), `.is-published` (green "View page →" badge with `prompt_page_url` link). A11Y-3: `#generation-progress-announcer` live region with `aria-atomic="true"`. A11Y-5: `focusFirstGalleryCard()` on gallery render. Double-ring focus pattern for overlay buttons. Opacity-compounding bug fixed. ~1100 tests passing, 12 skipped.
+
+**Phase 6C-A (Session 116):** ✅ COMPLETE. Extracted `_apply_m2m_to_prompt()` helper — reduced 4 duplicate M2M block copies (tags, categories, descriptors) to a single function. Added 14 `PublishTaskTests`: concurrent race, IntegrityError retry with M2M re-application, partial failure, `_sanitise_error_message` boundary, `available_tags` passed to vision. Stale test corrections (`available_tags` assertion, `generator_category` default). 1098 tests passing, 12 skipped.
 
 **Phase 7 (remaining):** Integration testing, error recovery, edge cases.
 
@@ -1233,5 +1239,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.25 (Session 116 — Phase 6B.5 complete, transaction hardening, F() inside atomic, available_tags pre-fetch, migration 0068, test count 1084)
+**Version:** 4.26 (Sessions 116–117 — Phase 6C-A complete [1098 tests], Phase 6C-B complete [~1100 tests], gallery card states, A11Y-3/5, opacity-compounding fix, Phase 6D next)
 **Last Updated:** March 9, 2026

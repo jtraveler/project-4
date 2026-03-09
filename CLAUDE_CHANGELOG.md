@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 9, 2026 (Sessions 101–115)
+**Last Updated:** March 9, 2026 (Sessions 101–117)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -23,9 +23,75 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–March 2026 Sessions
 
+### Session 117 — March 9, 2026
+
+**Focus:** Phase 6C-B — Gallery Card Visual States + Published Badge + A11Y-3/5
+
+---
+
+#### Session 117 — Phase 6C-B: Gallery Visual States + Published Badge
+
+**Commits:** `cc38e95` (round-1 agent fixes), `bc60a4f` (round-2 agent fixes), `9e38a21` (Phase 6C-B completion report)
+
+**What was done:**
+
+- **Phase 6C-B — Gallery card states (4 CSS states):**
+  - `.is-selected`: 3px `box-shadow` ring in `--accent-color-primary` (box-shadow avoids layout shift; border clips with overflow:hidden)
+  - `.is-deselected`: 20% opacity on whole slot; siblings set to deselected when another is selected
+  - `.is-discarded`: 55% opacity on image only (`.prompt-image-slot.is-discarded img`)
+  - `.is-published`: green "✓ View page →" badge linking to `prompt_page_url` per card
+
+- **A11Y-3 — Live region for progress:**
+  - `#generation-progress-announcer` with `aria-live="polite"` and `aria-atomic="true"` (full text replacement requires true)
+  - `sr-only` CSS class defined locally (Bootstrap 5 renamed it to `.visually-hidden`)
+
+- **A11Y-5 — Focus management:**
+  - `focusFirstGalleryCard()` called when gallery renders new rows
+  - Selector excludes `.is-placeholder`, `.is-published`, and `.is-discarded` (btn-select display:none in those states)
+
+- **Opacity-compounding bug fix:**
+  - `handleSelection` allSlots query now excludes `.is-discarded` and `.is-published`
+  - Prevents `0.55 × 0.20 = 0.11` effective opacity on discarded cards
+
+- **Additional JS fixes:**
+  - `handleTrash` undo path calls `updatePublishBar()` (was missing — stale publish bar count)
+  - `markCardPublished` removes `.is-discarded` class (cross-session publish race defense)
+
+- **Published badge defensive guard:**
+  - `bulk_generation.py` status API: `if img.prompt_page_id and img.prompt_page` (SET_NULL race defense)
+
+- **Test hardening:**
+  - URL assertion strengthened: `assertIn('/')` → `assertEqual` against `reverse()`
+  - Dead `img` variable assignments removed
+
+- **Focus ring:**
+  - Double-ring pattern: `0 0 0 2px rgba(0,0,0,0.65), 0 0 0 4px rgba(255,255,255,0.9)` — works on any image background
+  - Applies to `.btn-download`, `.btn-select`, `.btn-trash` on `:focus-visible`
+
+- **Badge contrast:**
+  - `rgba(22,163,74,0.92)` (3.07:1 FAIL) → `#166534` (~7.1:1 PASS)
+
+- **`back-to-generator` link contrast:**
+  - `--gray-500` (3.88:1 on off-white FAIL) → `--gray-600` (6.86:1 PASS)
+
+- **2-round agent review:** All blocking/high issues fixed; medium/low addressed where feasible; remaining deferred to 6C-A/6D
+
+**Agent scores (round 2):** @code-reviewer 8.5/10, @accessibility 8.2/10, @ui-visual-validator 8.3/10, @django-pro 8.4/10
+
+**Files changed:**
+- `static/js/bulk-generator-job.js` — handleSelection, handleTrash, markCardPublished, focusFirstGalleryCard fixes
+- `static/css/pages/bulk-generator-job.css` — 4 CSS states, sr-only, double-ring focus, badge contrast, back-to-generator contrast
+- `prompts/templates/prompts/bulk_generator_job.html` — aria-atomic="true", aria-hidden on modals
+- `prompts/services/bulk_generation.py` — dual-guard for prompt_page_url
+- `prompts/tests/test_bulk_generator_views.py` — URL assertion strengthened, dead code removed
+
+**Test count:** ~1100 passing
+
+---
+
 ### Sessions 114–116 — March 9, 2026
 
-**Focus:** Phase 6A bug fixes + Phase 6A.5 data correctness + Phase 6B publish flow (concurrent pipeline) + Phase 6B.5 hardening
+**Focus:** Phase 6A bug fixes + Phase 6A.5 data correctness + Phase 6B publish flow (concurrent pipeline) + Phase 6B.5 hardening + Phase 6C-A M2M refactor
 
 ---
 
@@ -124,6 +190,28 @@ This is a running log of development sessions. Each session entry includes:
 - **Tests** (`test_bulk_page_creation.py`): `TransactionHardeningTests` (8 tests) — atomic rollback on M2M failure, concurrent idempotency, already-published skip, error sanitisation, available_tags plumbing, F() increment, migration data backfill
 
 **Tests:** 1076 → 1084 passing, 12 skipped
+
+#### Session 116 (continued) — Phase 6C-A: M2M Helper Extraction + Publish Task Tests
+
+**Commit:** `1c630db`
+
+**What was done:**
+
+- **Extract `_apply_m2m_to_prompt()` helper** (`prompts/tasks.py`):
+  - Eliminated 4 duplicate M2M blocks (tags, categories, descriptors) across primary path + IntegrityError retry in both `create_prompt_pages_from_job` and `publish_prompt_pages_from_job`
+  - Helper applies tags, categories, descriptors, `source_credit`, `generator_category` + optional `b2_image_url`
+  - Reduces maintenance risk — M2M logic now in one place
+
+- **14 PublishTaskTests** (`prompts/tests/test_bulk_generator_views.py`):
+  - Concurrent race: two threads don't double-publish same image
+  - IntegrityError retry: full M2M re-applied in retry path
+  - Partial failure: some succeed, some fail, `errors[]` populated correctly
+  - `_sanitise_error_message` boundary: raw exception strings not in errors
+  - `available_tags` passed to `_call_openai_vision`
+  - Stale test corrections: `available_tags` assertion updated, `generator_category` default corrected
+
+**Tests:** 1084 → 1098 passing, 12 skipped
+**Report:** `docs/REPORT_BULK_GEN_PHASE6CA.md`
 
 ---
 

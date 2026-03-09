@@ -1,9 +1,9 @@
 # Claude Code Specification Template
 
-**Last Updated:** February 18, 2026
+**Last Updated:** March 9, 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
-**Changelog:** v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
+**Changelog:** v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
 
 ---
 
@@ -220,6 +220,29 @@ RIGHT: .column-3 as a sibling of .column-2
 - [ ] **Existing data migration addressed** (if backend change) — Did you create the management command/migration, or confirm no backfill needed?
 - [ ] **All tests pass** — Run `python manage.py test prompts` before calling agents
 
+**— ORM / Transaction Rules (check if this spec touches tasks.py or any async task) —**
+
+- [ ] **select_for_update() is inside transaction.atomic()** — If you wrote
+  `queryset.select_for_update()`, verify the evaluation of that queryset
+  AND all subsequent ORM writes happen inside a `with transaction.atomic():` block.
+  Under Django's autocommit mode, the lock is released the moment the queryset
+  is evaluated outside a transaction — making it a silent no-op.
+  ⛔ This pattern has appeared in agent reviews 3 phases in a row (6A, 6A.5, 6B).
+  Do NOT commit code with select_for_update() outside transaction.atomic().
+
+- [ ] **M2M writes are inside the same transaction.atomic() as the save()** —
+  If you create a model instance and then assign M2M relations (.add(), .set()),
+  both the initial save() and all M2M writes must be inside a single
+  `with transaction.atomic():` block. A crash between them leaves an orphaned
+  record with no M2M data and no recoverable link.
+
+- [ ] **IntegrityError retry path re-applies all M2M** — If you have an
+  IntegrityError catch that retries a save() with a modified slug/title,
+  the retry block must also re-apply all M2M assignments (tags, categories,
+  descriptors, etc.). Django rolls back the ENTIRE atomic block on
+  IntegrityError — including any M2M writes that preceded the error.
+  The retry save() alone produces a record with zero M2M data.
+
 **Why this matters:** Agents consistently rate 6-7 on first pass when these items are missed, then require a fix-and-rerun cycle. Catching them before the agent run saves an entire iteration.
 
 **If any check fails, fix the issue FIRST, then run agents.**
@@ -286,6 +309,9 @@ Agents MUST score below 6 if ANY of these are true:
 - **Accessibility Agent:** Missing aria-labels on interactive elements
 - **Code Reviewer:** Exact-copy content was substituted with alternatives
 - **Django Expert:** Backend change has no data migration when existing data is affected
+- **Django Expert / @django-pro:** `select_for_update()` used without wrapping the queryset evaluation AND all subsequent ORM writes in `transaction.atomic()` — this is a silent no-op and a data integrity risk
+- **Django Expert / @django-pro:** M2M writes (`.add()`, `.set()`) on a newly-created object happen OUTSIDE the `transaction.atomic()` block that contains the initial `save()`
+- **Django Expert / @django-pro:** IntegrityError retry path calls `save()` without re-applying all M2M assignments that were rolled back by the error
 
 **These are non-negotiable. Do not rate above 7 if any of the above are present.**
 
@@ -452,7 +478,13 @@ Include enough detail for the next spec. If none: "None identified."]
    - Siblings must be siblings, not children
    - Agents must reject work where nesting is wrong
 
-7. **Documentation**
+7. **Transaction Atomicity for ORM Writes (tasks.py and async tasks)**
+   - `select_for_update()` is ONLY valid inside `transaction.atomic()`
+   - The initial `save()` AND all M2M writes must be in the same atomic block
+   - IntegrityError retry paths must re-apply all M2M — the rollback erased them from the first attempt
+   - This pattern has caused agent-flagged issues in 3 consecutive phases. If you are writing any bulk processing loop with ORM writes, re-read this item before running agents.
+
+8. **Documentation**
    - Clear commit messages
    - Comprehensive reports
    - Easy to understand

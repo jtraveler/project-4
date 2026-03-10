@@ -1815,8 +1815,6 @@
             .then(function (data) {
                 if (data && data.images && data.images.length > 0) {
                     renderImages(data.images);
-                    // A11Y-5: Move focus to first card after gallery is populated
-                    setTimeout(focusFirstGalleryCard, 200);
                 }
             })
             .catch(function (err) {

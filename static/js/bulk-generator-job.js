@@ -59,6 +59,9 @@
     var submittedPublishIds = new Set();  // Image IDs submitted to create-pages endpoint
     var stalePublishCount = 0;            // Consecutive polls with no published_count increase
     var lastPublishedCount = -1;          // Last known published_count (for stale detection)
+
+    // ─── Publish Cumulative Tracking (Phase 7) ──────────────────
+    var totalPublishTarget = 0;  // Cumulative pages target (original submit only — retries re-use the same slots)
     var imagesPerPrompt = 1;
     var galleryContainer = null;
     var galleryInstruction = null;
@@ -1293,11 +1296,20 @@
             body: JSON.stringify({ selected_image_ids: selectedIds }),
         })
         .then(function (r) {
+            // Phase 7: handle rate limit before parsing JSON body
+            if (r.status === 429) {
+                showToast('Too many requests \u2014 please wait a moment before retrying.', 'warning');
+                btn.disabled = false;
+                btn.setAttribute('aria-disabled', 'false');
+                updatePublishBar();
+                return { handled: true };
+            }
             return r.json().then(function (data) {
                 return { ok: r.ok, data: data };
             });
         })
         .then(function (result) {
+            if (!result || result.handled) return;
             var data = result.data;
             if (!result.ok) {
                 showToast(data.error || 'Something went wrong. Please try again.', 'error');
@@ -1321,6 +1333,8 @@
                 'success'
             );
 
+            // Phase 7: accumulate cumulative target (retries do not add — same slots)
+            totalPublishTarget += data.pages_to_create;
             startPublishProgressPolling(data.pages_to_create);
         })
         .catch(function (err) {
@@ -1410,11 +1424,19 @@
             body: JSON.stringify({ image_ids: retryIds }),
         })
         .then(function (r) {
+            // Phase 7: handle rate limit — restore failed state, preserve failedImageIds
+            if (r.status === 429) {
+                showToast('Too many requests \u2014 please wait a moment before retrying.', 'warning');
+                _restoreRetryCardsToFailed(retryIds);
+                updatePublishBar();
+                return { handled: true };
+            }
             return r.json().then(function (data) {
                 return { ok: r.ok, data: data };
             });
         })
         .then(function (result) {
+            if (!result || result.handled) return;
             var data = result.data;
             if (!result.ok) {
                 showToast(data.error || 'Retry failed. Please try again.', 'error');
@@ -1433,6 +1455,7 @@
                 ' queued for retry.',
                 'success'
             );
+            // Phase 7: retries do not add to totalPublishTarget — same image slots
             startPublishProgressPolling(data.pages_to_create);
         })
         .catch(function (err) {
@@ -1443,17 +1466,30 @@
         });
     }
 
-    // ─── Publish Progress Polling (Phase 6B) ─────────────────────
+    // ─── Publish Progress Polling (Phase 6B / Phase 7) ───────────
+    // Phase 7: uses module-level totalPublishTarget for cumulative display.
+    // The `total` param reflects the current batch size (used only for context;
+    // all percentage + stop-condition logic uses totalPublishTarget).
     function startPublishProgressPolling(total) {
         var progressEl = document.getElementById('publish-progress');
-        var countEl = document.getElementById('publish-progress-count');
-        var totalEl = document.getElementById('publish-progress-total');
         var fillEl = document.getElementById('publish-progress-fill');
         var linksEl = document.getElementById('publish-progress-links');
+        var statusTextEl = document.getElementById('publish-status-text');
 
         if (!progressEl) return;
 
-        if (totalEl) totalEl.textContent = total;
+        // Phase 7: Restore the live count/total spans on every new polling cycle
+        // (a previous cycle's final-state text may have replaced them).
+        if (statusTextEl) {
+            statusTextEl.innerHTML =
+                '<span id="publish-progress-count">0</span> of ' +
+                '<span id="publish-progress-total">0</span> published';
+        }
+        var countEl = document.getElementById('publish-progress-count');
+        var totalEl = document.getElementById('publish-progress-total');
+
+        // Show cumulative target in the total slot
+        if (totalEl) totalEl.textContent = totalPublishTarget;
         progressEl.classList.remove('publish-progress--hidden');
 
         // Stop any existing publish poll before starting a new one
@@ -1480,7 +1516,8 @@
                 if (!data) return;
 
                 var published = data.published_count || 0;
-                var pct = total > 0 ? Math.min(Math.round((published / total) * 100), 100) : 0;
+                // Phase 7: percentage uses cumulative totalPublishTarget
+                var pct = totalPublishTarget > 0 ? Math.min(Math.round((published / totalPublishTarget) * 100), 100) : 0;
 
                 if (countEl) countEl.textContent = published;
                 if (fillEl) fillEl.style.width = pct + '%';
@@ -1546,9 +1583,24 @@
                         }
                     });
 
+                    // Phase 7: persist final state in #publish-status-text
+                    var finalFailed = failedImageIds.size;
+                    if (statusTextEl) {
+                        if (finalFailed > 0) {
+                            statusTextEl.textContent =
+                                published + ' of ' + totalPublishTarget +
+                                ' page' + (totalPublishTarget === 1 ? '' : 's') +
+                                ' created \u2014 ' + finalFailed + ' failed';
+                        } else if (published > 0) {
+                            statusTextEl.textContent =
+                                published + ' of ' + totalPublishTarget +
+                                ' page' + (totalPublishTarget === 1 ? '' : 's') + ' created';
+                        }
+                    }
+
                     if (failedAny) {
                         showToast(
-                            published + ' of ' + total + ' page' + (total === 1 ? '' : 's') +
+                            published + ' of ' + totalPublishTarget + ' page' + (totalPublishTarget === 1 ? '' : 's') +
                             ' published. Some images failed \u2014 use Retry Failed.',
                             'error'
                         );
@@ -1559,11 +1611,17 @@
                     return;
                 }
 
-                // Stop polling when all published
-                if (published >= total) {
+                // Phase 7: stop polling when all cumulative targets published
+                if (published >= totalPublishTarget) {
                     clearInterval(publishPollTimer);
                     publishPollTimer = null;
-                    showToast('All ' + total + ' page' + (total === 1 ? '' : 's') + ' published!', 'success');
+                    // Phase 7: persist final state
+                    if (statusTextEl) {
+                        statusTextEl.textContent =
+                            published + ' of ' + totalPublishTarget +
+                            ' page' + (totalPublishTarget === 1 ? '' : 's') + ' created';
+                    }
+                    showToast('All ' + totalPublishTarget + ' page' + (totalPublishTarget === 1 ? '' : 's') + ' published!', 'success');
                 }
             })
             .catch(function (err) {

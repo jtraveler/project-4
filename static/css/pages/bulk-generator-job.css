@@ -822,8 +822,11 @@ a.published-badge:focus-visible {
 
 .prompt-image-slot .btn-zoom:focus-visible {
     opacity: 1 !important;
-    outline: 2px solid var(--accent-color-primary, #6d28d9);
-    outline-offset: 2px;
+    outline: none;
+    /* Double-ring: matches .btn-select/.btn-trash/.btn-download focus pattern */
+    box-shadow:
+        0 0 0 2px rgba(0, 0, 0, 0.65),
+        0 0 0 4px rgba(255, 255, 255, 0.9);
 }
 
 /* Touch devices: always show zoom */

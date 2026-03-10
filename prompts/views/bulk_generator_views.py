@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -344,6 +345,35 @@ def api_cancel_job(request, job_id):
     })
 
 
+def _check_create_pages_rate_limit(user_id, limit=10, window=60):
+    """
+    Cache-based rate limit: max `limit` calls per `window` seconds per user.
+    Returns True if the request is within limit, False if rate limit exceeded.
+
+    Uses cache.add() + cache.incr() for atomic-per-operation enforcement.
+    cache.add() initialises the key to 1 only if it does not already exist
+    (first request in the window). Subsequent requests use cache.incr() which
+    is atomic on Redis, Memcached, and Django's LocMemCache backends.
+
+    ⚠️  Staff-only endpoint: concurrent publish requests from the same staff
+    member in the same millisecond are extremely unlikely in practice.
+    """
+    key = 'bulk_create_pages_rate:{}'.format(user_id)
+    # Attempt to create the key for the first request in this window.
+    # cache.add() is a no-op (returns False) if the key already exists.
+    added = cache.add(key, 1, timeout=window)
+    if added:
+        # Key was freshly created — this is the first request in the window.
+        return True
+    try:
+        count = cache.incr(key)
+    except ValueError:
+        # Key expired between add() and incr() — treat as first request.
+        cache.set(key, 1, timeout=window)
+        count = 1
+    return count <= limit
+
+
 @staff_member_required
 @require_POST
 def api_create_pages(request, job_id):
@@ -360,6 +390,13 @@ def api_create_pages(request, job_id):
     The image_ids path bypasses the per-image status='completed' filter only.
     The job-level status='completed' guard still applies to both paths.
     """
+    # Phase 7: rate limiting — 10 requests per 60s per user
+    if not _check_create_pages_rate_limit(request.user.id):
+        return JsonResponse(
+            {'error': 'Too many requests. Please wait before retrying.'},
+            status=429,
+        )
+
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):

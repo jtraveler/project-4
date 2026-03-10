@@ -1446,3 +1446,176 @@ class PublishTaskTests(TestCase):
         """
         self.publish(str(self.job.id), [str(self.img.id)])
         mock_apply_m2m.assert_called_once()
+
+
+# =============================================================================
+# Phase 7 — End-to-End Integration Tests
+# =============================================================================
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class EndToEndPublishFlowTests(TestCase):
+    """
+    Integration tests: full flow from job creation to confirmed publish.
+    Tasks are mocked — we test the view/service layer chain, not the
+    async worker.
+
+    Covers:
+    - Happy path: Create Pages → publish task → status API confirms published
+    - Partial failure then retry: partial publish, retry succeeds, both confirmed
+    - Rate limiting: 11th POST returns 429 with meaningful error message
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.user = User.objects.create_user(
+            username='e2e_staff', password='pass', is_staff=True,
+        )
+        self.client.login(username='e2e_staff', password='pass')
+
+    def _create_url(self, job_id):
+        return reverse('prompts:api_bulk_create_pages', args=[str(job_id)])
+
+    def _status_url(self, job_id):
+        return reverse('prompts:api_bulk_job_status', args=[str(job_id)])
+
+    @patch('django_q.tasks.async_task')
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_full_publish_flow_happy_path(self, mock_vision, mock_async):
+        """
+        Create job → generate images → select → api_create_pages →
+        task runs (mocked directly) → status API confirms published.
+        """
+        # 1. Create a completed job with 2 generated images
+        job = _make_job(self.user, total_prompts=2)
+        img1 = _make_image(job, order=0, image_url='https://cdn.example.com/img1.png')
+        img2 = _make_image(job, order=1, image_url='https://cdn.example.com/img2.png')
+
+        # 2. POST to api_create_pages — task is async_task-mocked, not actually run
+        response = self.client.post(
+            self._create_url(job.id),
+            data=json.dumps({'selected_image_ids': [str(img1.id), str(img2.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        # Positive: task was queued for 2 new images
+        self.assertEqual(data['status'], 'queued')
+        self.assertEqual(data['pages_to_create'], 2)
+
+        # 3. Simulate task completion — call publish task directly (bypasses Django-Q)
+        publish_prompt_pages_from_job(str(job.id), [str(img1.id), str(img2.id)])
+
+        # 4. GET status API — both images must have prompt_page_id set
+        status_response = self.client.get(self._status_url(job.id))
+        self.assertEqual(status_response.status_code, 200)
+        status_data = status_response.json()
+
+        images = status_data.get('images', [])
+        self.assertEqual(len(images), 2)
+        for img_data in images:
+            # Positive: every image has a prompt_page_id after successful publish
+            self.assertIsNotNone(
+                img_data.get('prompt_page_id'),
+                msg='prompt_page_id must be non-null for all published images',
+            )
+
+        # 5. published_count on job reflects both pages created
+        self.assertEqual(status_data['published_count'], 2)
+
+    @patch('django_q.tasks.async_task')
+    def test_partial_failure_then_retry_succeeds(self, mock_async):
+        """
+        Partial failure: 1 of 2 images publishes on first run.
+        Retry the failed image. After retry, both are published.
+        """
+        # 1. Create job with 2 images
+        job = _make_job(self.user, total_prompts=2)
+        img1 = _make_image(job, order=0, image_url='https://cdn.example.com/img1.png')
+        img2 = _make_image(job, order=1, image_url='https://cdn.example.com/img2.png')
+
+        # 2. Submit Create Pages for both (task not run yet — mocked)
+        response = self.client.post(
+            self._create_url(job.id),
+            data=json.dumps({'selected_image_ids': [str(img1.id), str(img2.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # 3. Publish only img1 — vision fails for img2 on first attempt
+        call_count = {'n': 0}
+
+        def vision_partial(*args, **kwargs):
+            call_count['n'] += 1
+            if call_count['n'] == 1:
+                return MOCK_AI_CONTENT   # img1 succeeds
+            raise Exception('Simulated API failure for img2')
+
+        with patch('prompts.tasks._call_openai_vision', side_effect=vision_partial):
+            result = publish_prompt_pages_from_job(
+                str(job.id), [str(img1.id), str(img2.id)],
+            )
+
+        self.assertEqual(result['published_count'], 1)
+        self.assertEqual(len(result['errors']), 1)
+
+        # 4. img1 published, img2 not yet
+        img1.refresh_from_db()
+        img2.refresh_from_db()
+        # Positive: img1 has a prompt_page
+        self.assertIsNotNone(img1.prompt_page)
+        # Negative: img2 does not share img1's page — it is truly unpublished
+        self.assertIsNone(img2.prompt_page)
+
+        # 5. Retry — POST with only img2's ID
+        retry_response = self.client.post(
+            self._create_url(job.id),
+            data=json.dumps({'image_ids': [str(img2.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(retry_response.status_code, 200)
+
+        # 6. Run publish task for img2 (vision now succeeds)
+        with patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT):
+            retry_result = publish_prompt_pages_from_job(str(job.id), [str(img2.id)])
+
+        self.assertEqual(retry_result['published_count'], 1)
+        self.assertEqual(retry_result['errors'], [])
+
+        # 7. Both images now published; total published_count == 2
+        img2.refresh_from_db()
+        # Positive: img2 now has a prompt_page
+        self.assertIsNotNone(img2.prompt_page)
+        # Negative: img2 did not reuse img1's page (separate Prompts)
+        self.assertNotEqual(img2.prompt_page_id, img1.prompt_page_id)
+
+        job.refresh_from_db()
+        self.assertEqual(job.published_count, 2)
+
+    @patch('django_q.tasks.async_task')
+    def test_rate_limit_blocks_excessive_requests(self, mock_async):
+        """
+        11th POST to api_create_pages within the rate window returns 429.
+        """
+        from django.core.cache import cache
+
+        job = _make_job(self.user, total_prompts=1)
+        img = _make_image(job)
+
+        # Pre-seed cache to 10 (simulates 10 prior requests already sent)
+        cache_key = 'bulk_create_pages_rate:{}'.format(self.user.id)
+        cache.set(cache_key, 10, timeout=60)
+
+        # 11th request — must be blocked
+        response = self.client.post(
+            self._create_url(job.id),
+            data=json.dumps({'selected_image_ids': [str(img.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 429)
+
+        data = response.json()
+        # Positive: error message is user-facing and meaningful
+        self.assertEqual(data['error'], 'Too many requests. Please wait before retrying.')
+        # Negative: must not leak implementation details (cache keys, internals)
+        self.assertNotIn('cache', data['error'])

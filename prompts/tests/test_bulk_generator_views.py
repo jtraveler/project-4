@@ -488,6 +488,8 @@ class CreatePagesAPITests(TestCase):
     """Tests for the api_create_pages endpoint."""
 
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.staff_user = User.objects.create_user(
             username='staffuser', password='testpass', is_staff=True,
         )
@@ -744,6 +746,108 @@ class CreatePagesAPITests(TestCase):
         data = response.json()
         # Only img_pending is creatable (img_done already has prompt_page)
         self.assertEqual(data['pages_to_create'], 1)
+
+    # ─── Phase 7 hardening tests ───────────────────────────────
+
+    @patch('django_q.tasks.async_task')
+    def test_cross_job_isolation(self, mock_async):
+        """
+        image_ids belonging to a different job cannot be published via another
+        job's api_create_pages endpoint. The queryset scopes image ownership
+        to the target job, so foreign image IDs return a 400 with 'not found'.
+        """
+        self.client.login(username='staffuser', password='testpass')
+        job1 = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        job2 = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        # Image belongs to job2
+        img_job2 = GeneratedImage.objects.create(
+            job=job2, prompt_text='Job 2 image', prompt_order=0,
+            status='completed', image_url='https://example.com/j2.png',
+        )
+        # POST to job1's endpoint with job2's image ID
+        response = self.client.post(
+            self._url(job1.id),
+            data=json.dumps({'image_ids': [str(img_job2.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertIn('not found', data['error'])
+        # Confirm no task was queued — cross-job isolation enforced at queryset level
+        mock_async.assert_not_called()
+
+    @patch('django_q.tasks.async_task')
+    def test_image_ids_takes_precedence_over_selected_image_ids(self, mock_async):
+        """
+        When both image_ids and selected_image_ids are present in the request body,
+        image_ids wins (retry mode detected by presence of 'image_ids' key).
+        Only the images in image_ids are processed; selected_image_ids is ignored.
+        Documents the dual-key precedence explicitly so future changes don't
+        accidentally reverse the logic.
+        """
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=2, status='completed',
+        )
+        img1 = GeneratedImage.objects.create(
+            job=job, prompt_text='Image 1', prompt_order=0,
+            status='completed', image_url='https://example.com/1.png',
+        )
+        img2 = GeneratedImage.objects.create(
+            job=job, prompt_text='Image 2', prompt_order=1,
+            status='completed', image_url='https://example.com/2.png',
+        )
+        # Send both keys — image_ids should win, processing only img1
+        response = self.client.post(
+            self._url(job.id),
+            data=json.dumps({
+                'image_ids': [str(img1.id)],
+                'selected_image_ids': [str(img1.id), str(img2.id)],
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        # image_ids contains only img1, so pages_to_create must be 1 (not 2)
+        self.assertEqual(data['pages_to_create'], 1)
+        self.assertEqual(data['status'], 'queued')
+        mock_async.assert_called_once()
+
+    def test_rate_limit_returns_429_after_limit_exceeded(self):
+        """
+        11th POST to api_create_pages within the rate window returns HTTP 429.
+        Uses cache override to bypass the 60-second window in tests.
+        """
+        from django.core.cache import cache
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        img = GeneratedImage.objects.create(
+            job=job, prompt_text='Rate test image', prompt_order=0,
+            status='completed', image_url='https://example.com/r.png',
+        )
+        # Simulate 10 previous requests already consumed by pre-seeding the cache
+        rate_key = 'bulk_create_pages_rate:{}'.format(self.staff_user.id)
+        cache.set(rate_key, 10, timeout=60)
+
+        response = self.client.post(
+            self._url(job.id),
+            data=json.dumps({'selected_image_ids': [str(img.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 429)
+        data = response.json()
+        # Positive assertion: exact error message
+        self.assertEqual(data['error'], 'Too many requests. Please wait before retrying.')
+        # Negative assertion: no technical details leaked
+        self.assertNotIn('cache', data['error'].lower())
+        # Cleanup
+        cache.delete(rate_key)
 
 
 @override_settings(OPENAI_API_KEY='test-key')

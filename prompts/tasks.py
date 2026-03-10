@@ -2842,6 +2842,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                 ai_generator='gpt-image-1',
                 status=1 if job.visibility == 'public' else 0,
                 moderation_status='approved',  # staff-created; GPT-Image-1 already applied content policy
+                processing_complete=True,      # bulk-gen prompts are fully processed at creation time
             )
 
             # Apply source credit if present on the generated image
@@ -3091,6 +3092,7 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                 ai_generator='gpt-image-1',
                 status=1 if job.visibility == 'public' else 0,
                 moderation_status='approved',  # staff-created; GPT-Image-1 content policy applied at gen time
+                processing_complete=True,      # bulk-gen prompts are fully processed at creation time
             )
 
             if gen_image.source_credit:

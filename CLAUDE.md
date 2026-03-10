@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 9, 2026
+**Last Updated:** March 10, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -58,7 +58,8 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | **Bulk Gen Phase 6C-B** | ✅ COMPLETE | Gallery card states + published badge + A11Y-3/5 | Done — Session 117, ~1100 tests |
 | **Bulk Gen Phase 6C-B.1** | ✅ COMPLETE | CSS fixes + test fix + round 4 agent close | Done — Session 118, 1100 tests |
 | **Bulk Gen Phase 6C-A** | ✅ COMPLETE | M2M helper extraction + publish task tests | Done — Session 116, 1098 tests |
-| **Bulk Gen Phase 6D** | 🔲 Next | Per-image error recovery + retry | Spec needed |
+| **Bulk Gen Phase 6D** | ✅ COMPLETE | Per-image error recovery + retry | Done — Session 119, 1106 tests |
+| **Bulk Gen Phase 6E** | 🔲 Next | Integration testing / edge cases | Spec needed |
 
 ### What's Paused (Don't Forget!)
 
@@ -72,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Bulk Gen Phase 6D | Mar 10, 2026 | Per-image publish failure states (.is-failed CSS, red badge strip, stale detection 10-poll/30s, markCardFailed(), Retry Failed button, handleRetryFailed() with optimistic re-select + rollback, api_create_pages image_ids retry path, 6 new tests, 2-round agent review avg 8.9/10, 1106 tests |
 | Bulk Gen Phase 6C-B.1 | Mar 10, 2026 | btn-zoom keyboard trap (WCAG 2.4.11), opacity hierarchy fix (0.20→0.65 deselected), available_tags assertGreater, lightbox alt text, loading-text contrast, published-badge clickable link, prefers-reduced-motion hardening, 4-round agent review, 1100 tests |
 | Bulk Gen Phase 6C-B | Mar 9, 2026 | Gallery card states (selected/deselected/discarded/published CSS states), published badge with prompt_page_url links, A11Y-3 live region + A11Y-5 focus management, double-ring focus pattern, opacity-compounding bug fix, 2-round agent review, ~1100 tests |
 | Bulk Gen Phase 6C-A | Mar 9, 2026 | Extract `_apply_m2m_to_prompt()` helper (4 duplicated M2M blocks), 14 PublishTaskTests (concurrent race, IntegrityError retry, partial failure, sanitise, available_tags), stale test corrections, 1098 tests |
@@ -96,7 +98,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
-### Bulk AI Image Generator (Phases 1–6B + 6C-A + 6C-B + 6C-B.1 complete — Phase 6D next)
+### Bulk AI Image Generator (Phases 1–6D complete — Phase 6E next)
 
 Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
 
@@ -122,7 +124,9 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 
 **Phase 6C-A (Session 116):** ✅ COMPLETE. Extracted `_apply_m2m_to_prompt()` helper — reduced 4 duplicate M2M block copies (tags, categories, descriptors) to a single function. Added 14 `PublishTaskTests`: concurrent race, IntegrityError retry with M2M re-application, partial failure, `_sanitise_error_message` boundary, `available_tags` passed to vision. Stale test corrections (`available_tags` assertion, `generator_category` default). 1098 tests passing, 12 skipped.
 
-**Phase 7 (remaining):** Integration testing, error recovery, edge cases.
+**Phase 6D (Session 119):** ✅ COMPLETE. Per-image publish error recovery: `.is-failed` CSS state (0.40 img opacity, red badge strip, select+trash hidden, download preserved), stale detection (10-poll/30s threshold, only counts after first publish), `markCardFailed()`, `_restoreRetryCardsToFailed()` helper, `handleRetryFailed()` (optimistic re-select + rollback on error), "Retry Failed (N)" publish bar button. Backend: `api_create_pages` `image_ids` retry path bypasses per-image `status='completed'` filter (job-level guard still enforced). 6 new Phase 6D tests, 2-round agent review avg 8.9/10. 1106 tests passing, 12 skipped.
+
+**Phase 6E (next):** Integration testing, edge cases.
 
 **Phase 6 Architecture — Two-Page Staging:**
 - Temp staging page (`/tools/bulk-ai-generator/job/<uuid>/`): shows results of the most recent job. Phase 6 adds the publish flow here.
@@ -1243,5 +1247,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.27 (Sessions 116–118 — Phase 6C-A/6C-B/6C-B.1 complete, 1100 tests, btn-zoom keyboard trap, opacity hierarchy, round 4 agent close avg 8.425, Phase 6D next)
+**Version:** 4.28 (Sessions 116–119 — Phase 6C-A/6C-B/6C-B.1/6D complete, 1106 tests, per-image publish failure states, stale detection, retry flow, round 2 agent avg 8.9, Phase 6E next)
 **Last Updated:** March 10, 2026

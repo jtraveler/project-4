@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 10, 2026 (Sessions 101–118)
+**Last Updated:** March 10, 2026 (Sessions 101–119)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,42 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 119 — March 10, 2026
+
+**Focus:** Phase 6D — Per-image publish error recovery + retry
+
+**Completed:**
+- `.is-failed` CSS state: 0.40 img opacity (distinct from `.is-discarded` 0.55), red badge strip (`#fef2f2`/`#b91c1c` = 5.9:1 WCAG AA), select+trash hidden, download preserved
+- `failed-badge` HTML created in `fillImageSlot()` — hidden by default, shown when `.is-failed`
+- Module-level state: `failedImageIds`, `submittedPublishIds`, `stalePublishCount`, `lastPublishedCount`
+- `markCardFailed(imageId, reason)` — removes transient states, adds `.is-failed`, updates `selections`
+- Stale detection in `startPublishProgressPolling()`: threshold 10 polls (~30s), only counts after first publish
+- `_restoreRetryCardsToFailed(retryIds)` helper — reverses optimistic CSS on error
+- `handleRetryFailed()` — optimistic re-select, POST `{image_ids: retryIds}`, restore on error
+- `handleCreatePages()` — tracks `submittedPublishIds`, clears before new batch, resets stale counters
+- `updatePublishBar()` — shows retry button when `failedImageIds.size > 0`, handles `count=0/failedCount>0`
+- `focusFirstGalleryCard()` — excludes `.is-failed` cards
+- Retry Failed button in template publish bar
+- `api_create_pages` backend: `image_ids` retry param bypasses per-image `status='completed'` (not job-level guard)
+- 6 new Phase 6D tests in `CreatePagesAPITests`
+- Fixed `test_non_completed_images_rejected` false positive (job needs `status='completed'`)
+- Fixed error_message test assertions to use `assertEqual('Rate limit reached')`
+
+**Agent Reviews:**
+- Round 1: 7.175/10 avg (frontend 7.5, UI 6.5, code 7.5, django 7.2) — BELOW 8.0
+- Round 2: 8.9/10 avg (frontend 9.0, UI 9.0, code 9.0, django 8.6) — Phase 6D CLOSED ✅
+
+**Tests:** 1106 passing, 12 skipped, 0 failures
+
+**Commit:** `b7643fb`
+
+**Deferred to future phase:**
+- Retry progress bar shows retry batch count not original total
+- Persistent failure count in `#publish-status-text`
+- Cross-job isolation test
+
+---
 
 ### Session 118 — March 10, 2026
 

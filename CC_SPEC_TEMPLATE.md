@@ -1,9 +1,9 @@
 # Claude Code Specification Template
 
-**Last Updated:** March 9, 2026
+**Last Updated:** March 10, 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
-**Changelog:** v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
+**Changelog:** v2.5 — Added Critical Reminder #9 (paired test assertions). Recurring pattern: negative-only assertions (assertNotIn) passing vacuously in Phases 6C-A and 6D. v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
 
 ---
 
@@ -488,6 +488,21 @@ Include enough detail for the next spec. If none: "None identified."]
    - Clear commit messages
    - Comprehensive reports
    - Easy to understand
+
+9. **Pair Every Negative Assertion with a Positive Counterpart**
+   - `assertNotIn` / `assertNotEqual` alone is insufficient — it passes
+     even when the field is absent or None
+   - Every negative assertion about sanitisation, exclusion, or absence
+     MUST be paired with a positive assertion about the expected value
+   - Example (WRONG): `self.assertNotIn('sk-proj-', response_data['error'])`
+   - Example (CORRECT):
+     ```python
+     self.assertEqual(response_data['error'], 'Rate limit reached')  # positive
+     self.assertNotIn('sk-proj-', response_data['error'])            # negative
+     ```
+   - This pattern has caused false-confidence test passes in Phases 6C-A
+     and 6D. Agents must reject any sanitisation test that lacks a
+     positive assertion.
 
 ---
 

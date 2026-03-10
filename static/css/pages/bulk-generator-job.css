@@ -681,6 +681,8 @@
 }
 
 a.published-badge {
+    /* pointer-events: auto overrides the base .published-badge { pointer-events: none }.
+       This is what makes the badge Tab-focusable. Do not remove this rule. */
     pointer-events: auto;
     cursor: pointer;
     text-decoration: none;
@@ -689,6 +691,7 @@ a.published-badge {
 a.published-badge:focus-visible {
     outline: 2px solid #fff;
     outline-offset: 2px;
+    box-shadow: 0 0 0 4px #166534; /* dark green outer ring for contrast */
 }
 
 /* ─── Failed State (Phase 6D) ──────────────────────────────── */

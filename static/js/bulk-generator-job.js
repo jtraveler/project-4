@@ -474,7 +474,11 @@
                 badge = document.createElement('div');
             }
             badge.className = 'published-badge';
-            badge.setAttribute('aria-hidden', 'true');
+            if (safeUrl) {
+                badge.setAttribute('aria-label', 'Published \u2014 view prompt page (opens in new tab)');
+            } else {
+                badge.setAttribute('aria-hidden', 'true');
+            }
             badge.textContent = '\u2713 View page \u2192';
             container.appendChild(badge);
         }

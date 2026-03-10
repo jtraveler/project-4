@@ -439,7 +439,7 @@
 
     // ─── Feature 2: Mark a gallery card as published ─────────────
     // Called from startPublishProgressPolling when prompt_page_id appears.
-    function markCardPublished(imageId) {
+    function markCardPublished(imageId, promptPageUrl) {
         if (!galleryContainer) return;
         var selectBtn = galleryContainer.querySelector(
             '.btn-select[data-image-id="' + imageId + '"]'
@@ -453,13 +453,23 @@
         slot.classList.add('is-published');
         selectBtn.setAttribute('aria-pressed', 'false');
 
-        // Create published badge inside the image container
+        // Create published badge inside the image container (link if URL available)
         var container = slot.querySelector('.prompt-image-container');
         if (container && !slot.querySelector('.published-badge')) {
-            var badge = document.createElement('div');
+            var safeUrl = (promptPageUrl && promptPageUrl.indexOf('/') === 0)
+                ? promptPageUrl : null;
+            var badge;
+            if (safeUrl) {
+                badge = document.createElement('a');
+                badge.href = safeUrl;
+                badge.target = '_blank';
+                badge.rel = 'noopener noreferrer';
+            } else {
+                badge = document.createElement('div');
+            }
             badge.className = 'published-badge';
             badge.setAttribute('aria-hidden', 'true');
-            badge.textContent = 'Published';
+            badge.textContent = '\u2713 View page \u2192';
             container.appendChild(badge);
         }
 
@@ -1090,7 +1100,9 @@
         var caption = document.getElementById('lightboxCaption');
 
         img.src = imageUrl;
-        img.alt = 'Full size preview';
+        img.alt = promptText
+            ? 'Full size preview: ' + promptText.substring(0, 100)
+            : 'Full size preview';
         caption.textContent = promptText ? '\u201C' + promptText + '\u201D' : '';
 
         lightboxEl.classList.add('is-open');
@@ -1278,7 +1290,7 @@
                         linkedPageIds[img.prompt_page_id] = true;
                         // Feature 2: Mark the gallery card as published
                         if (img.id) {
-                            markCardPublished(String(img.id));
+                            markCardPublished(String(img.id), img.prompt_page_url || null);
                         }
                         if (linksEl) {
                             var li = document.createElement('li');

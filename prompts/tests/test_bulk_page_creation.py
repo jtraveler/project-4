@@ -17,6 +17,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from taggit.models import Tag
 from unittest.mock import patch, MagicMock, call
 
 from prompts.models import BulkGenerationJob, GeneratedImage, Prompt
@@ -694,7 +695,7 @@ class ContentGenerationAlignmentTests(TestCase):
 
     Covers Bug 7 fixes:
       - ai_generator field is always 'gpt-image-1' (valid AI_GENERATOR_CHOICES value)
-      - _call_openai_vision() is called with ai_generator='gpt-image-1', available_tags=[]
+      - _call_openai_vision() is called with ai_generator='gpt-image-1', available_tags=<pre-fetched list>
       - Categories (SubjectCategory M2M) applied from AI result
       - Descriptors (SubjectDescriptor M2M) applied from AI result (typed dict flattened)
       - Tags use 'tags' key (not 'suggested_tags')
@@ -706,6 +707,8 @@ class ContentGenerationAlignmentTests(TestCase):
         self.staff_user = User.objects.create_user(
             username='staff', password='pass', is_staff=True,
         )
+        # Seed a tag so available_tags pre-fetch returns a non-empty list
+        Tag.objects.get_or_create(name='fixture-tag')
 
     # --- ai_generator field ---
 
@@ -778,6 +781,8 @@ class ContentGenerationAlignmentTests(TestCase):
         call_kwargs = mock_vision.call_args
         available_tags = call_kwargs.kwargs.get('available_tags', 'UNSET')
         self.assertIsInstance(available_tags, list)
+        self.assertGreater(len(available_tags), 0,
+            "available_tags must be non-empty; Phase 6B.5 pre-fetches up to 200 tags")
 
     @patch('prompts.tasks._call_openai_vision')
     def test_vision_called_with_image_url(self, mock_vision):

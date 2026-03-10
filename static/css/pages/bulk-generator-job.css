@@ -441,7 +441,7 @@
 
 .loading-text {
     font-size: var(--text-xs);
-    color: var(--gray-500);
+    color: var(--gray-600); /* --gray-500 fails on --gray-100 bg (3.88:1); --gray-600 = 6.86:1 AA pass */
     font-style: italic;
 }
 
@@ -619,12 +619,12 @@
 }
 
 .prompt-image-slot.is-deselected {
-    opacity: 0.20;
+    opacity: 0.65; /* lighter than discarded img at 0.55 — deselected (not chosen) > discarded (trashed) */
     transition: opacity 0.3s ease;
 }
 
 .prompt-image-slot.is-deselected:hover {
-    opacity: 0.6;
+    opacity: 0.85;
 }
 
 /* ─── Discarded (Soft Delete) State ────────────────────────── */
@@ -678,6 +678,17 @@
 
 .prompt-image-slot.is-published .published-badge {
     display: flex;
+}
+
+a.published-badge {
+    pointer-events: auto;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+a.published-badge:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
 }
 
 /* ─── Screen-reader-only utility (Bootstrap 5 removed .sr-only) ── */
@@ -736,10 +747,10 @@
     border-color: white;
 }
 
-.btn-zoom:focus-visible {
-    opacity: 1;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 0 0 4px white;
+.prompt-image-slot .btn-zoom:focus-visible {
+    opacity: 1 !important;
+    outline: 2px solid var(--accent-color-primary, #6d28d9);
+    outline-offset: 2px;
 }
 
 /* Touch devices: always show zoom */
@@ -902,6 +913,7 @@
     .prompt-group-text-overlay { transition: none; }
     .prompt-image-slot.is-discarded .prompt-image-container img { transition: none; }
     .prompt-image-slot.is-published .prompt-image-container img { transition: none; }
+    .prompt-image-slot { transition: none; } /* covers box-shadow ring on selection */
     .prompt-image-slot.is-deselected { transition: none; }
     .btn-zoom { transition: none; }
 }

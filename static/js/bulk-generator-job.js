@@ -121,6 +121,32 @@
         return '~' + mins + ' min remaining';
     }
 
+    function formatDuration(seconds) {
+        // Round to integer once to avoid all boundary edge cases
+        var total = Math.round(seconds);
+        if (total < 60) {
+            return 'Done in ' + total + 's';
+        }
+        var m = Math.floor(total / 60);
+        var s = total % 60;
+        return 'Done in ' + m + 'm ' + s + 's';
+    }
+
+    function gcd(a, b) {
+        return b === 0 ? a : gcd(b, a % b);
+    }
+
+    function getAspectLabel(aspectString) {
+        // aspectString is like "1024 / 1536" (from data-gallery-aspect)
+        var parts = aspectString.split('/');
+        if (parts.length !== 2) return '';
+        var w = parseInt(parts[0].trim(), 10);
+        var h = parseInt(parts[1].trim(), 10);
+        if (!w || !h) return '';
+        var g = gcd(w, h);
+        return (w / g) + ':' + (h / g);
+    }
+
     // ─── Heading Update ───────────────────────────────────────────
     function updateHeading(status) {
         if (!jobTitle) return;
@@ -191,17 +217,57 @@
     }
 
     // ─── Terminal State UI ────────────────────────────────────────
+    // ─── Clear unfilled loading slots on terminal state ───────────
+    // Called from handleTerminalState. Finds any slot still showing
+    // a loading spinner and replaces it with a terminal message.
+    function clearUnfilledLoadingSlots(terminalStatus) {
+        var groupKeys = Object.keys(renderedGroups);
+        for (var gi = 0; gi < groupKeys.length; gi++) {
+            var groupData = renderedGroups[groupKeys[gi]];
+            if (!groupData) continue;
+            var loadingSlots = groupData.element.querySelectorAll(
+                '.prompt-image-slot:not(.is-placeholder) .placeholder-loading'
+            );
+            for (var li = 0; li < loadingSlots.length; li++) {
+                var loadingEl = loadingSlots[li];
+                var slot = loadingEl.closest('.prompt-image-slot');
+                if (!slot) continue;
+                // Replace spinner content with terminal message
+                loadingEl.innerHTML = '';
+                var msg = document.createElement('p');
+                msg.className = 'placeholder-terminal-msg';
+                if (terminalStatus === 'cancelled') {
+                    msg.textContent = 'Cancelled';
+                } else {
+                    msg.textContent = 'Not generated';
+                }
+                loadingEl.appendChild(msg);
+                loadingEl.classList.add('placeholder-terminal');
+                // Remove the role/aria-label that implied active generation
+                loadingEl.removeAttribute('role');
+                loadingEl.removeAttribute('aria-label');
+            }
+        }
+    }
+
     function handleTerminalState(status, data) {
         stopPolling();
+        // Clear any slots still showing loading spinners
+        clearUnfilledLoadingSlots(status);
 
         // Hide cancel button
         if (cancelBtn) {
             cancelBtn.style.display = 'none';
         }
 
-        // Remove time display
+        // Show total elapsed time (or dash if start time not known)
         if (progressTime) {
-            progressTime.textContent = '\u2014';
+            if (generationStartTime) {
+                var elapsedSecs = (Date.now() - generationStartTime) / 1000;
+                progressTime.textContent = formatDuration(elapsedSecs);
+            } else {
+                progressTime.textContent = '\u2014';
+            }
         }
 
         // Resolve completed count: use data if available, else fall back to
@@ -424,21 +490,19 @@
 
     // ─── Feature 6: Cleanup empty/loading placeholders ───────────
     // Called after each slot is filled (image or failed).
-    // Hides unused is-empty slots once all active slots are filled.
+    // Cleanup loading spinners once all active slots are filled.
+    // Empty dashed placeholder boxes (.is-empty) are intentionally kept visible.
     function cleanupGroupEmptySlots(groupIndex) {
         var groupData = renderedGroups[groupIndex];
         if (!groupData) return;
         // Only clean up once all active slots are filled
         if (Object.keys(groupData.slots).length < imagesPerPrompt) return;
         var groupRow = groupData.element;
-        // Hide unused (is-empty) slots
-        var emptySlots = groupRow.querySelectorAll('.prompt-image-slot.is-empty');
-        for (var i = 0; i < emptySlots.length; i++) {
-            emptySlots[i].style.display = 'none';
-        }
         // For terminal jobs also hide any remaining loading placeholders
+        // :not(.placeholder-terminal) excludes slots already converted by
+        // clearUnfilledLoadingSlots (Fix B) so their messages are preserved
         if (TERMINAL_STATES.indexOf(currentStatus) !== -1) {
-            var loadingEls = groupRow.querySelectorAll('.placeholder-loading');
+            var loadingEls = groupRow.querySelectorAll('.placeholder-loading:not(.placeholder-terminal)');
             for (var li = 0; li < loadingEls.length; li++) {
                 var loadingSlot = loadingEls[li].closest('.prompt-image-slot');
                 if (loadingSlot) loadingSlot.style.display = 'none';
@@ -624,9 +688,15 @@
 
         var sizeSpan = document.createElement('span');
         sizeSpan.textContent = sizeDisplay;
+        var aspectLabel = getAspectLabel(galleryAspect);
         var qualSpan = document.createElement('span');
         qualSpan.textContent = qualityDisplay;
         meta.appendChild(sizeSpan);
+        if (aspectLabel) {
+            var aspectSpan = document.createElement('span');
+            aspectSpan.textContent = aspectLabel;
+            meta.appendChild(aspectSpan);
+        }
         meta.appendChild(qualSpan);
 
         header.appendChild(number);
@@ -1270,7 +1340,7 @@
         var url = root ? root.dataset.createPagesUrl : null;
         if (!url) return;
 
-        var selectedIds = Object.keys(selections);
+        var selectedIds = Object.values(selections);
         if (selectedIds.length === 0) return;
 
         // Track which IDs were submitted for stale detection (clear old entries first)

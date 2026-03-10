@@ -541,6 +541,24 @@
     border-radius: var(--radius-lg);
 }
 
+/* Terminal state message for slots that never generated */
+.placeholder-loading.placeholder-terminal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    border: 1px dashed #d1d5db;
+    border-radius: inherit;
+}
+.placeholder-terminal-msg {
+    font-style: italic;
+    font-size: 0.875rem;
+    color: var(--gray-600, #525252); /* --gray-500 fails 4.5:1 AA on #f9fafb bg */
+    text-align: center;
+    margin: 0;
+    padding: 0 1rem;
+}
+
 /* ─── Image Overlay (transparent bg, drop-shadow buttons) ──── */
 .prompt-image-overlay {
     position: absolute;

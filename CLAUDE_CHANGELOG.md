@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 9, 2026 (Sessions 101–117)
+**Last Updated:** March 10, 2026 (Sessions 101–118)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,51 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 118 — March 10, 2026
+
+**Focus:** Phase 6C-B.1 — CSS fixes + test fix + round 3/4 agent confirmation
+
+---
+
+#### Session 118 — Phase 6C-B.1: Keyboard Trap, Opacity Hierarchy, A11Y Fixes + Round 4 Close
+
+**Commits:** `78ab145` (Phase 6C-B.1 all fixes)
+
+**What was done:**
+
+- **Fix 1 — `.btn-zoom:focus-visible` (keyboard trap WCAG 2.4.11):**
+  - Added `opacity: 1 !important; outline: 2px solid var(--accent-color-primary)` on `:focus-visible`
+  - Zoom button now visible to keyboard users without changing hover-only behaviour
+
+- **Fix 2 — `.is-deselected` opacity hierarchy:**
+  - Raised from 0.20 → 0.65 (initial 0.42 in round 3 was still inverted; raised to 0.65 in round 4)
+  - Hover restore: 0.60 → 0.85
+  - Correct hierarchy: selected (1.0) > deselected (0.65 slot) > discarded (0.55 img-only) > published (0.70 img)
+
+- **Fix 3 — `available_tags` test assertion:**
+  - Added `assertGreater(len(available_tags), 0)` after `assertIsInstance(available_tags, list)`
+  - Seeded `Tag.objects.get_or_create(name='fixture-tag')` in setUp for CI reliability
+
+- **Fix 4 — `#generation-progress-announcer`:**
+  - Confirmed already pre-rendered in HTML template (no change needed)
+
+- **Fix 5 — Lightbox alt text:**
+  - `img.alt = 'Full size preview: ' + promptText.substring(0, 100)` (falls back to generic if no prompt text)
+
+- **Additional round 4 fixes (from agent feedback):**
+  - `.loading-text`: `--gray-500` → `--gray-600` (3.88:1 fail → 6.86:1 AA pass on `--gray-100` bg)
+  - `.published-badge` published link: `<a>` element with `✓ View page →` text and `pointer-events: auto`
+  - `prefers-reduced-motion` block: extended to cover `.prompt-image-slot`, `.is-deselected`, `.btn-zoom` transitions
+
+- **Round 3 scores (avg 7.875 — BELOW 8.0):** @accessibility 8.4, @frontend-developer 7.8, @ui-visual-validator 7.3, @code-reviewer 8.0 → triggered round 4
+- **Round 4 scores (avg 8.425 — ABOVE 8.0 ✅):** @accessibility 8.4, @frontend-developer 8.6, @ui-visual-validator 8.2, @code-reviewer 8.5
+
+**Phase 6C-B formally closed. Phase 6D (per-image error recovery + retry) is next.**
+
+**Tests:** 1100 passing, 12 skipped, 0 failures
+
+---
 
 ### Session 117 — March 9, 2026
 

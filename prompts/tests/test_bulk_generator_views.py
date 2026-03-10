@@ -572,9 +572,11 @@ class CreatePagesAPITests(TestCase):
 
     @patch('django_q.tasks.async_task')
     def test_non_completed_images_rejected(self, mock_async):
+        """Normal path rejects images not in status='completed'."""
         self.client.login(username='staffuser', password='testpass')
+        # Job must be 'completed' so we reach the per-image status check
         job = BulkGenerationJob.objects.create(
-            created_by=self.staff_user, total_prompts=1,
+            created_by=self.staff_user, total_prompts=1, status='completed',
         )
         img = GeneratedImage.objects.create(
             job=job, prompt_text='Test', prompt_order=0,
@@ -588,7 +590,7 @@ class CreatePagesAPITests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('not complete', response.json()['error'])
+        self.assertIn('not found or not completed', response.json()['error'])
 
     def test_invalid_json_returns_400(self):
         self.client.login(username='staffuser', password='testpass')
@@ -600,6 +602,148 @@ class CreatePagesAPITests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
+
+    # ─── Phase 6D: Retry path tests ────────────────────────────────
+
+    @patch('django_q.tasks.async_task')
+    def test_api_create_pages_accepts_image_ids_param(self, mock_async):
+        """image_ids retry param queues task without requiring status='completed'."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        # Image with status='failed' would be rejected by normal path but
+        # accepted by retry path (only ownership check applies)
+        img = GeneratedImage.objects.create(
+            job=job, prompt_text='Retry me', prompt_order=0,
+            status='failed',
+        )
+        response = self.client.post(
+            self._url(job.id),
+            data=json.dumps({'image_ids': [str(img.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'queued')
+        self.assertEqual(data['pages_to_create'], 1)
+        mock_async.assert_called_once()
+
+    @patch('django_q.tasks.async_task')
+    def test_api_create_pages_image_ids_skips_already_published(self, mock_async):
+        """image_ids retry skips images that already have a prompt_page."""
+        self.client.login(username='staffuser', password='testpass')
+        from prompts.models import Prompt
+        author = User.objects.create_user(username='author6d', password='x')
+        prompt = Prompt.objects.create(
+            author=author, title='Existing page', content='text',
+            status=1,
+        )
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        img = GeneratedImage.objects.create(
+            job=job, prompt_text='Already done', prompt_order=0,
+            status='completed', prompt_page=prompt,
+        )
+        response = self.client.post(
+            self._url(job.id),
+            data=json.dumps({'image_ids': [str(img.id)]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['pages_to_create'], 0)
+        mock_async.assert_not_called()
+
+    def test_api_create_pages_image_ids_empty_list_returns_400(self):
+        """image_ids with empty list returns 400."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        response = self.client.post(
+            self._url(job.id),
+            data=json.dumps({'image_ids': []}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_status_api_returns_error_message_for_failed_image(self):
+        """Status API includes sanitised error_message for failed images."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        GeneratedImage.objects.create(
+            job=job, prompt_text='Failed img', prompt_order=0,
+            status='failed', error_message='Rate limit exceeded',
+        )
+        url = reverse('prompts:api_bulk_job_status', args=[str(job.id)])
+        response = self.client.get(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        images = data.get('images', [])
+        self.assertTrue(len(images) > 0)
+        failed = [img for img in images if img.get('status') == 'failed']
+        self.assertEqual(len(failed), 1)
+        self.assertIn('error_message', failed[0])
+        # _sanitise_error_message maps 'rate limit exceeded' → 'Rate limit reached'
+        self.assertEqual(failed[0]['error_message'], 'Rate limit reached')
+
+    def test_status_api_error_message_is_sanitised(self):
+        """Status API sanitises error_message — API key fragments never reach frontend."""
+        self.client.login(username='staffuser', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=1, status='completed',
+        )
+        raw_error = 'sk-proj-abcdef1234567890 rate limit exceeded'
+        GeneratedImage.objects.create(
+            job=job, prompt_text='Sensitive error', prompt_order=0,
+            status='failed', error_message=raw_error,
+        )
+        url = reverse('prompts:api_bulk_job_status', args=[str(job.id)])
+        response = self.client.get(url, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        images = data.get('images', [])
+        failed = [img for img in images if img.get('status') == 'failed']
+        self.assertEqual(len(failed), 1)
+        # API key prefix must never appear in sanitised output
+        self.assertNotIn('sk-proj-', failed[0].get('error_message', ''))
+        # 'rate limit' in message → 'Rate limit reached' (positive assertion)
+        self.assertEqual(failed[0]['error_message'], 'Rate limit reached')
+
+    def test_retry_clears_failed_count_accurately(self):
+        """Mixed retry: already-published image excluded, one unpublished image queued → pages_to_create=1."""
+        self.client.login(username='staffuser', password='testpass')
+        from prompts.models import Prompt
+        author = User.objects.create_user(username='author6d2', password='x')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=2, status='completed',
+        )
+        # One image already published, one not
+        prompt = Prompt.objects.create(
+            author=author, title='Published', content='text', status=1,
+        )
+        img_done = GeneratedImage.objects.create(
+            job=job, prompt_text='Done', prompt_order=0,
+            status='completed', prompt_page=prompt,
+        )
+        img_pending = GeneratedImage.objects.create(
+            job=job, prompt_text='Pending', prompt_order=1,
+            status='failed',
+        )
+        with patch('django_q.tasks.async_task'):
+            response = self.client.post(
+                self._url(job.id),
+                data=json.dumps({'image_ids': [str(img_done.id), str(img_pending.id)]}),
+                content_type='application/json',
+            )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        # Only img_pending is creatable (img_done already has prompt_page)
+        self.assertEqual(data['pages_to_create'], 1)
 
 
 @override_settings(OPENAI_API_KEY='test-key')

@@ -136,8 +136,10 @@
          aria-live="polite"
          aria-label="Publish progress">
         <div class="publish-progress__text">
-            <span id="publish-progress-count">0</span> of
-            <span id="publish-progress-total">0</span> published
+            <span id="publish-status-text">
+                <span id="publish-progress-count">0</span> of
+                <span id="publish-progress-total">0</span> published
+            </span>
         </div>
         <div class="publish-progress__bar-wrap">
             <div id="publish-progress-fill" class="publish-progress__fill" style="width: 0%"></div>
@@ -172,6 +174,15 @@
                     disabled
                     aria-disabled="true">
                 Create Pages
+            </button>
+            {# Retry Failed button — Phase 6D: hidden until ≥1 publish failure #}
+            <button id="btn-retry-failed"
+                    class="btn publish-bar__retry-btn"
+                    type="button"
+                    style="display: none;"
+                    aria-label="Retry failed page creations"
+                    aria-disabled="false">
+                Retry Failed
             </button>
         </div>
 

@@ -691,6 +691,76 @@ a.published-badge:focus-visible {
     outline-offset: 2px;
 }
 
+/* ─── Failed State (Phase 6D) ──────────────────────────────── */
+/* 0.40 opacity (vs 0.55 for is-discarded) — system failure vs user-initiated differ */
+.prompt-image-slot.is-failed .prompt-image-container img {
+    opacity: 0.40;
+    transition: opacity 0.3s ease;
+}
+
+/* Keep btn-download accessible — image exists in storage, only publish step failed */
+.prompt-image-slot.is-failed .btn-select,
+.prompt-image-slot.is-failed .btn-trash {
+    display: none;
+}
+
+.prompt-image-slot.is-failed .failed-badge {
+    display: flex;
+}
+
+.failed-badge {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fef2f2;       /* red-50 */
+    color: #b91c1c;             /* red-700 — 5.9:1 on #fef2f2 (WCAG AA ✓) */
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 0 0 4px 4px;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+    line-height: 1.4;
+    border-top: 1px solid #fecaca; /* red-200 */
+    word-break: break-word;
+}
+
+.failed-badge-icon {
+    flex-shrink: 0;
+}
+
+/* ─── Retry Failed button (Phase 6D) ──────────────────────── */
+.publish-bar__retry-btn {
+    background: transparent;
+    color: #b91c1c;             /* red-700 — 5.9:1 on white (WCAG AA ✓) */
+    border: 1.5px solid #b91c1c;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.publish-bar__retry-btn:hover {
+    background: #fef2f2;
+}
+
+.publish-bar__retry-btn:focus-visible {
+    outline: 2px solid #b91c1c;
+    outline-offset: 2px;
+}
+
+.publish-bar__retry-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* ─── Screen-reader-only utility (Bootstrap 5 removed .sr-only) ── */
 .sr-only {
     position: absolute;
@@ -1048,4 +1118,6 @@ a.published-badge:focus-visible {
 @media (prefers-reduced-motion: reduce) {
     .bulk-toast { transition: none; }
     .publish-progress__fill { transition: none; }
+    .prompt-image-slot.is-failed .prompt-image-container img { transition: none; }
+    .publish-bar__retry-btn { transition: none; }
 }

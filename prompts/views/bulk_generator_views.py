@@ -351,9 +351,14 @@ def api_create_pages(request, job_id):
     POST /tools/bulk-ai-generator/api/create-pages/<uuid:job_id>/
     Creates prompt pages from selected generated images.
 
-    Body JSON: {
-        "selected_image_ids": ["uuid1", "uuid2", ...]
-    }
+    Normal publish body JSON:
+        { "selected_image_ids": ["uuid1", "uuid2", ...] }
+
+    Retry body JSON (Phase 6D):
+        { "image_ids": ["uuid1", "uuid2", ...] }
+
+    The image_ids path bypasses the per-image status='completed' filter only.
+    The job-level status='completed' guard still applies to both paths.
     """
     try:
         data = json.loads(request.body)
@@ -362,12 +367,22 @@ def api_create_pages(request, job_id):
             {'error': 'Invalid JSON'}, status=400,
         )
 
-    selected_image_ids = data.get('selected_image_ids')
-    if not isinstance(selected_image_ids, list) or len(selected_image_ids) == 0:
-        return JsonResponse(
-            {'error': 'selected_image_ids must be a non-empty list'},
-            status=400,
-        )
+    # Phase 6D: detect retry mode (image_ids param bypasses status='completed' check)
+    is_retry = 'image_ids' in data
+    if is_retry:
+        selected_image_ids = data.get('image_ids')
+        if not isinstance(selected_image_ids, list) or len(selected_image_ids) == 0:
+            return JsonResponse(
+                {'error': 'image_ids must be a non-empty list'},
+                status=400,
+            )
+    else:
+        selected_image_ids = data.get('selected_image_ids')
+        if not isinstance(selected_image_ids, list) or len(selected_image_ids) == 0:
+            return JsonResponse(
+                {'error': 'selected_image_ids must be a non-empty list'},
+                status=400,
+            )
 
     # P3 hardening: cap list size to prevent oversized IN queries
     if len(selected_image_ids) > 500:
@@ -393,14 +408,22 @@ def api_create_pages(request, job_id):
             status=400,
         )
 
-    # Verify all selected images belong to this job and are completed
+    # Verify all selected images belong to this job.
+    # Retry mode skips status='completed' filter — only ownership matters.
     try:
-        valid_ids = set(
-            job.images.filter(
-                id__in=selected_image_ids,
-                status='completed',
-            ).values_list('id', flat=True)
-        )
+        if is_retry:
+            valid_ids = set(
+                job.images.filter(
+                    id__in=selected_image_ids,
+                ).values_list('id', flat=True)
+            )
+        else:
+            valid_ids = set(
+                job.images.filter(
+                    id__in=selected_image_ids,
+                    status='completed',
+                ).values_list('id', flat=True)
+            )
     except (ValueError, TypeError, DjangoValidationError):
         return JsonResponse(
             {'error': 'Invalid image ID format'}, status=400,
@@ -412,10 +435,12 @@ def api_create_pages(request, job_id):
         if sid not in valid_id_strs
     ]
     if invalid_ids:
-        return JsonResponse(
-            {'error': f'{len(invalid_ids)} image(s) not found or not completed'},
-            status=400,
+        error_msg = (
+            f'{len(invalid_ids)} image(s) not found'
+            if is_retry
+            else f'{len(invalid_ids)} image(s) not found or not completed'
         )
+        return JsonResponse({'error': error_msg}, status=400)
 
     # Idempotency guard — exclude images that already have a prompt page.
     # If the user double-submits, this prevents duplicate Prompt records.

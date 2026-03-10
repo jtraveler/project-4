@@ -53,6 +53,12 @@
     // ─── Gallery State (Phase 5B) ───────────────────────────────
     var renderedGroups = {};   // { groupIndex: { slots: {0: imageId, ...}, element: domNode } }
     var selections = {};       // { groupIndex: imageId }
+
+    // ─── Publish Failure State (Phase 6D) ───────────────────────
+    var failedImageIds = new Set();       // Image IDs that failed to become pages
+    var submittedPublishIds = new Set();  // Image IDs submitted to create-pages endpoint
+    var stalePublishCount = 0;            // Consecutive polls with no published_count increase
+    var lastPublishedCount = -1;          // Last known published_count (for stale detection)
     var imagesPerPrompt = 1;
     var galleryContainer = null;
     var galleryInstruction = null;
@@ -401,9 +407,9 @@
     // ─── A11Y-5: Focus first gallery card ────────────────────────
     function focusFirstGalleryCard() {
         if (!galleryContainer) return;
-        // Exclude is-published and is-discarded (both have btn-select hidden/display:none)
+        // Exclude is-published, is-discarded, is-failed (all have btn-select hidden)
         var firstBtn = galleryContainer.querySelector(
-            '.prompt-image-slot:not(.is-placeholder):not(.is-published):not(.is-discarded) .btn-select'
+            '.prompt-image-slot:not(.is-placeholder):not(.is-published):not(.is-discarded):not(.is-failed) .btn-select'
         );
         if (firstBtn) {
             firstBtn.focus();
@@ -472,6 +478,36 @@
             badge.textContent = '\u2713 View page \u2192';
             container.appendChild(badge);
         }
+
+        // Remove from selections if this image was selected
+        var groupIndex = parseInt(selectBtn.getAttribute('data-group'), 10);
+        if (!isNaN(groupIndex) && selections[groupIndex] === imageId) {
+            delete selections[groupIndex];
+            updatePublishBar();
+        }
+    }
+
+    // ─── Mark Card as Publish-Failed (Phase 6D) ─────────────────
+    function markCardFailed(imageId, reason) {
+        if (!galleryContainer) return;
+        // Find the slot by its btn-select data-image-id attribute
+        var selectBtn = galleryContainer.querySelector(
+            '.btn-select[data-image-id="' + imageId + '"]',
+        );
+        if (!selectBtn) return;
+        var slot = selectBtn.closest('.prompt-image-slot');
+        if (!slot || slot.classList.contains('is-failed')) return;
+
+        slot.classList.remove('is-selected', 'is-deselected', 'is-discarded');
+        slot.classList.add('is-failed');
+
+        var reasonEl = slot.querySelector('.failed-badge-reason');
+        if (reasonEl) {
+            reasonEl.textContent = reason || 'Page creation failed';
+        }
+
+        // Track failed IDs for retry
+        failedImageIds.add(String(imageId));
 
         // Remove from selections if this image was selected
         var groupIndex = parseInt(selectBtn.getAttribute('data-group'), 10);
@@ -816,6 +852,20 @@
         zoomBtn.appendChild(zoomSvg);
         container.appendChild(zoomBtn);
 
+        // Failed badge (Phase 6D) — hidden by default, shown via .is-failed
+        // Note: no aria-live here — failures are announced via static #bulk-toast-announcer
+        var failedBadge = document.createElement('div');
+        failedBadge.className = 'failed-badge';
+        var failedIcon = document.createElement('span');
+        failedIcon.className = 'failed-badge-icon';
+        failedIcon.setAttribute('aria-hidden', 'true');
+        failedIcon.textContent = '\u2715';
+        var failedReason = document.createElement('span');
+        failedReason.className = 'failed-badge-reason';
+        failedBadge.appendChild(failedIcon);
+        failedBadge.appendChild(failedReason);
+        container.appendChild(failedBadge);
+
         // Record that this slot is filled
         groupData.slots[slotIndex] = image.id;
     }
@@ -892,11 +942,12 @@
         var groupData = renderedGroups[groupIndex];
         if (!groupData) return;
 
-        // Prevent selecting discarded or already-published images
+        // Prevent selecting discarded, published, or failed images
         if (slot.classList.contains('is-discarded')) return;
         if (slot.classList.contains('is-published')) return;
+        if (slot.classList.contains('is-failed')) return;
 
-        var allSlots = groupData.element.querySelectorAll('.prompt-image-slot:not(.is-placeholder):not(.is-discarded):not(.is-published)');
+        var allSlots = groupData.element.querySelectorAll('.prompt-image-slot:not(.is-placeholder):not(.is-discarded):not(.is-published):not(.is-failed)');
         var alreadySelected = slot.classList.contains('is-selected');
 
         if (alreadySelected) {
@@ -1161,24 +1212,46 @@
     // ─── Publish Bar (Phase 6B) ───────────────────────────────────
     function updatePublishBar() {
         var count = Object.keys(selections).length;
+        var failedCount = failedImageIds.size;
         var publishBar = document.getElementById('publish-bar');
         var btn = document.getElementById('create-pages-btn');
         var countEl = document.getElementById('publish-bar-count');
+        var retryBtn = document.getElementById('btn-retry-failed');
 
         if (!publishBar || !btn) return;
 
-        if (count === 0) {
+        if (count === 0 && failedCount === 0) {
             publishBar.classList.add('publish-bar--hidden');
             btn.disabled = true;
             btn.setAttribute('aria-disabled', 'true');
         } else {
             publishBar.classList.remove('publish-bar--hidden');
-            btn.disabled = false;
-            btn.setAttribute('aria-disabled', 'false');
-            if (countEl) {
-                countEl.textContent = count + ' image' + (count === 1 ? '' : 's') + ' selected';
+            if (count > 0) {
+                btn.disabled = false;
+                btn.setAttribute('aria-disabled', 'false');
+                if (countEl) {
+                    countEl.textContent = count + ' image' + (count === 1 ? '' : 's') + ' selected';
+                }
+                btn.textContent = 'Create Pages (' + count + ')';
+            } else {
+                // No selections, only failed — disable Create Pages button
+                btn.disabled = true;
+                btn.setAttribute('aria-disabled', 'true');
+                btn.textContent = 'Create Pages';
+                if (countEl) countEl.textContent = '';
             }
-            btn.textContent = 'Create Pages (' + count + ')';
+        }
+
+        // Show retry button when there are failed images
+        if (retryBtn) {
+            if (failedCount > 0) {
+                retryBtn.style.display = '';
+                retryBtn.setAttribute('aria-disabled', 'false');
+                retryBtn.disabled = false;
+                retryBtn.textContent = 'Retry Failed (' + failedCount + ')';
+            } else {
+                retryBtn.style.display = 'none';
+            }
         }
     }
 
@@ -1192,6 +1265,14 @@
 
         var selectedIds = Object.keys(selections);
         if (selectedIds.length === 0) return;
+
+        // Track which IDs were submitted for stale detection (clear old entries first)
+        submittedPublishIds.clear();
+        selectedIds.forEach(function (id) { submittedPublishIds.add(String(id)); });
+
+        // Reset stale counters for fresh publish run
+        stalePublishCount = 0;
+        lastPublishedCount = -1;
 
         // Disable button immediately — prevents double-submit
         btn.disabled = true;
@@ -1224,6 +1305,9 @@
 
             if (!data.pages_to_create || data.pages_to_create === 0) {
                 showToast('All selected images already have pages.', 'info');
+                btn.disabled = false;
+                btn.setAttribute('aria-disabled', 'false');
+                updatePublishBar();
                 return;
             }
 
@@ -1240,6 +1324,117 @@
             showToast('Network error. Please check your connection and try again.', 'error');
             btn.disabled = false;
             btn.setAttribute('aria-disabled', 'false');
+            updatePublishBar();
+        });
+    }
+
+    // ─── Retry Error Recovery Helper (Phase 6D) ──────────────────
+    // Restores .is-failed on cards that failed during a retry fetch error.
+    // Clears .is-selected, removes from selections, re-populates failedImageIds.
+    function _restoreRetryCardsToFailed(retryIds) {
+        retryIds.forEach(function (imageId) {
+            var selectBtn = galleryContainer && galleryContainer.querySelector(
+                '.btn-select[data-image-id="' + imageId + '"]'
+            );
+            if (selectBtn) {
+                var slot = selectBtn.closest('.prompt-image-slot');
+                if (slot) {
+                    slot.classList.remove('is-selected');
+                    slot.classList.add('is-failed');
+                    selectBtn.setAttribute('aria-pressed', 'false');
+                    var groupIdx = parseInt(selectBtn.getAttribute('data-group'), 10);
+                    if (!isNaN(groupIdx) && selections[groupIdx] === imageId) {
+                        delete selections[groupIdx];
+                    }
+                }
+            }
+            failedImageIds.add(imageId);
+        });
+    }
+
+    // ─── Retry Failed (Phase 6D) ──────────────────────────────────
+    function handleRetryFailed() {
+        var retryBtn = document.getElementById('btn-retry-failed');
+        if (!retryBtn || failedImageIds.size === 0) return;
+
+        var url = root ? root.dataset.createPagesUrl : null;
+        if (!url) return;
+
+        var retryIds = Array.from(failedImageIds);
+
+        // Optimistically clear failed state and re-select cards
+        retryIds.forEach(function (imageId) {
+            var selectBtn = galleryContainer && galleryContainer.querySelector(
+                '.btn-select[data-image-id="' + imageId + '"]'
+            );
+            if (selectBtn) {
+                var slot = selectBtn.closest('.prompt-image-slot');
+                if (slot) {
+                    slot.classList.remove('is-failed');
+                    slot.classList.add('is-selected');
+                    selectBtn.setAttribute('aria-pressed', 'true');
+                    // Write back to selections so Create Pages button enables
+                    var groupIdx = parseInt(selectBtn.getAttribute('data-group'), 10);
+                    if (!isNaN(groupIdx)) { selections[groupIdx] = imageId; }
+                }
+            }
+        });
+
+        // Clear failed set; track submitted IDs for stale detection (clear old entries)
+        failedImageIds.clear();
+        submittedPublishIds.clear();
+        retryIds.forEach(function (id) { submittedPublishIds.add(String(id)); });
+
+        // Reset stale counters
+        stalePublishCount = 0;
+        lastPublishedCount = -1;
+
+        // Disable retry button during request
+        retryBtn.disabled = true;
+        retryBtn.setAttribute('aria-disabled', 'true');
+        retryBtn.textContent = 'Retrying\u2026';
+
+        updatePublishBar();
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ image_ids: retryIds }),
+        })
+        .then(function (r) {
+            return r.json().then(function (data) {
+                return { ok: r.ok, data: data };
+            });
+        })
+        .then(function (result) {
+            var data = result.data;
+            if (!result.ok) {
+                showToast(data.error || 'Retry failed. Please try again.', 'error');
+                // Restore .is-failed on all cards and re-populate failedImageIds
+                _restoreRetryCardsToFailed(retryIds);
+                updatePublishBar();
+                return;
+            }
+            if (!data.pages_to_create || data.pages_to_create === 0) {
+                showToast('All retried images already have pages.', 'info');
+                updatePublishBar();
+                return;
+            }
+            showToast(
+                data.pages_to_create + ' page' + (data.pages_to_create === 1 ? '' : 's') +
+                ' queued for retry.',
+                'success'
+            );
+            startPublishProgressPolling(data.pages_to_create);
+        })
+        .catch(function (err) {
+            console.error('[bulk-gen-job] Retry failed error:', err.message);
+            showToast('Network error. Please check your connection and try again.', 'error');
+            _restoreRetryCardsToFailed(retryIds);
             updatePublishBar();
         });
     }
@@ -1265,6 +1460,10 @@
 
         var linkedPageIds = {};  // Track which page IDs already have links
 
+        // 10 polls (~30s) allows Django-Q worker warmup; stale counter only increments
+        // after first publish (faster response) or at zero throughout (~30s total)
+        var STALE_THRESHOLD = 10;
+
         publishPollTimer = setInterval(function () {
             if (!statusUrl) return;
 
@@ -1282,34 +1481,78 @@
                 if (countEl) countEl.textContent = published;
                 if (fillEl) fillEl.style.width = pct + '%';
 
-                // Append links for newly published pages
+                // Stale detection: only start counting after first publish,
+                // allowing 10 warmup polls (~30s) before treating zero progress as stale.
+                if (published > lastPublishedCount || lastPublishedCount === -1) {
+                    // Progress made (or first poll) — reset stale counter
+                    stalePublishCount = 0;
+                    lastPublishedCount = published;
+                } else if (published > 0) {
+                    // At least one page published, but count stopped increasing
+                    stalePublishCount++;
+                } else {
+                    // Still at zero — count warmup polls against a higher threshold (10)
+                    stalePublishCount++;
+                }
+
+                // Append links for newly published pages and track published image IDs
+                var publishedImageIds = new Set();
                 var images = data.images || [];
                 for (var i = 0; i < images.length; i++) {
                     var img = images[i];
-                    if (img.prompt_page_id && !linkedPageIds[img.prompt_page_id]) {
-                        linkedPageIds[img.prompt_page_id] = true;
-                        // Feature 2: Mark the gallery card as published
-                        if (img.id) {
-                            markCardPublished(String(img.id), img.prompt_page_url || null);
-                        }
-                        if (linksEl) {
-                            var li = document.createElement('li');
-                            var a = document.createElement('a');
-                            // Validate URL is relative (starts with /) before using
-                            var href = (img.prompt_page_url && img.prompt_page_url.indexOf('/') === 0)
-                                ? img.prompt_page_url
-                                : '#';
-                            a.href = href;
-                            a.target = '_blank';
-                            a.rel = 'noopener noreferrer';
-                            var labelText = img.prompt_text
-                                ? img.prompt_text.substring(0, 40) + '\u2026'
-                                : 'Prompt page';
-                            a.textContent = 'View: ' + labelText;
-                            li.appendChild(a);
-                            linksEl.appendChild(li);
+                    if (img.prompt_page_id) {
+                        publishedImageIds.add(String(img.id));
+                        if (!linkedPageIds[img.prompt_page_id]) {
+                            linkedPageIds[img.prompt_page_id] = true;
+                            // Mark the gallery card as published
+                            if (img.id) {
+                                markCardPublished(String(img.id), img.prompt_page_url || null);
+                            }
+                            if (linksEl) {
+                                var li = document.createElement('li');
+                                var a = document.createElement('a');
+                                // Validate URL is relative (starts with /) before using
+                                var href = (img.prompt_page_url && img.prompt_page_url.indexOf('/') === 0)
+                                    ? img.prompt_page_url
+                                    : '#';
+                                a.href = href;
+                                a.target = '_blank';
+                                a.rel = 'noopener noreferrer';
+                                var labelText = img.prompt_text
+                                    ? img.prompt_text.substring(0, 40) + '\u2026'
+                                    : 'Prompt page';
+                                a.textContent = 'View: ' + labelText;
+                                li.appendChild(a);
+                                linksEl.appendChild(li);
+                            }
                         }
                     }
+                }
+
+                // Stale: mark submitted-but-unpublished images as failed
+                if (stalePublishCount >= STALE_THRESHOLD) {
+                    clearInterval(publishPollTimer);
+                    publishPollTimer = null;
+
+                    var failedAny = false;
+                    submittedPublishIds.forEach(function (imageId) {
+                        if (!publishedImageIds.has(imageId) && !failedImageIds.has(imageId)) {
+                            markCardFailed(imageId, 'Page creation timed out');
+                            failedAny = true;
+                        }
+                    });
+
+                    if (failedAny) {
+                        showToast(
+                            published + ' of ' + total + ' page' + (total === 1 ? '' : 's') +
+                            ' published. Some images failed \u2014 use Retry Failed.',
+                            'error'
+                        );
+                    } else if (published > 0) {
+                        showToast(published + ' page' + (published === 1 ? '' : 's') + ' published.', 'success');
+                    }
+                    updatePublishBar();
+                    return;
                 }
 
                 // Stop polling when all published
@@ -1408,6 +1651,12 @@
         var createPagesBtn = document.getElementById('create-pages-btn');
         if (createPagesBtn) {
             createPagesBtn.addEventListener('click', handleCreatePages);
+        }
+
+        // Retry Failed button wiring (Phase 6D)
+        var retryBtn = document.getElementById('btn-retry-failed');
+        if (retryBtn) {
+            retryBtn.addEventListener('click', handleRetryFailed);
         }
 
         // Set estimated cost display immediately from context values

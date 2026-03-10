@@ -59,7 +59,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | **Bulk Gen Phase 6C-B.1** | ✅ COMPLETE | CSS fixes + test fix + round 4 agent close | Done — Session 118, 1100 tests |
 | **Bulk Gen Phase 6C-A** | ✅ COMPLETE | M2M helper extraction + publish task tests | Done — Session 116, 1098 tests |
 | **Bulk Gen Phase 6D** | ✅ COMPLETE | Per-image error recovery + retry | Done — Session 119, 1106 tests |
-| **Bulk Gen Phase 6E** | 🔲 Next | Integration testing / edge cases | Spec needed |
+| **Bulk Gen Phases 1–7** | ✅ COMPLETE | Staff bulk AI image generator — full publish flow, error recovery, retry, hardening | Production smoke test before V2 |
 
 ### What's Paused (Don't Forget!)
 
@@ -73,6 +73,8 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Bulk Gen Phase 7 | Mar 10, 2026 | Integration polish + hardening: .btn-zoom double-ring focus, persistent #publish-status-text ("X created, Y failed"), cumulative retry progress bar, atomic rate limiter (cache.add+incr TOCTOU-safe, 10 req/min), 429 frontend handling, clearInterval guard, 6 new tests (EndToEndPublishFlowTests + CreatePagesAPITests + cache.clear setUp). Avg 8.625/10. 1112 tests |
+| Bulk Gen Phase 6D Hotfix | Mar 10, 2026 | Published badge keyboard access: aria-hidden removed from <a> badge, aria-label added, double-ring a.published-badge:focus-visible, pointer-events comment added. CC_SPEC_TEMPLATE v2.5: Critical Reminder #9 (pair every negative assertion with positive counterpart). Avg 8.7/10. 1106 tests (unchanged) |
 | Bulk Gen Phase 6D | Mar 10, 2026 | Per-image publish failure states (.is-failed CSS, red badge strip, stale detection 10-poll/30s, markCardFailed(), Retry Failed button, handleRetryFailed() with optimistic re-select + rollback, api_create_pages image_ids retry path, 6 new tests, 2-round agent review avg 8.9/10, 1106 tests |
 | Bulk Gen Phase 6C-B.1 | Mar 10, 2026 | btn-zoom keyboard trap (WCAG 2.4.11), opacity hierarchy fix (0.20→0.65 deselected), available_tags assertGreater, lightbox alt text, loading-text contrast, published-badge clickable link, prefers-reduced-motion hardening, 4-round agent review, 1100 tests |
 | Bulk Gen Phase 6C-B | Mar 9, 2026 | Gallery card states (selected/deselected/discarded/published CSS states), published badge with prompt_page_url links, A11Y-3 live region + A11Y-5 focus management, double-ring focus pattern, opacity-compounding bug fix, 2-round agent review, ~1100 tests |
@@ -98,7 +100,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
-### Bulk AI Image Generator (Phases 1–6D complete — Phase 6E next)
+### Bulk AI Image Generator (Phases 1–7 complete — Pre-launch QA)
 
 Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images using OpenAI GPT-Image-1 with BYOK (Bring Your Own Key) model.
 
@@ -126,7 +128,29 @@ Staff-only tool at `/tools/bulk-ai-generator/` for generating multiple AI images
 
 **Phase 6D (Session 119):** ✅ COMPLETE. Per-image publish error recovery: `.is-failed` CSS state (0.40 img opacity, red badge strip, select+trash hidden, download preserved), stale detection (10-poll/30s threshold, only counts after first publish), `markCardFailed()`, `_restoreRetryCardsToFailed()` helper, `handleRetryFailed()` (optimistic re-select + rollback on error), "Retry Failed (N)" publish bar button. Backend: `api_create_pages` `image_ids` retry path bypasses per-image `status='completed'` filter (job-level guard still enforced). 6 new Phase 6D tests, 2-round agent review avg 8.9/10. 1106 tests passing, 12 skipped.
 
-**Phase 6E (next):** Integration testing, edge cases.
+**Phase 6D Hotfix (Session 119):** ✅ COMPLETE. Published badge keyboard access:
+`aria-hidden="true"` removed from `<a>` badge elements; `aria-label` added
+("Published — view prompt page (opens in new tab)"). `<div>` fallback badges
+retain `aria-hidden` (decorative, non-interactive). Double-ring `:focus-visible`
+on `a.published-badge` (2px white inner + 4px `#166534` outer). `pointer-events:
+auto` CSS comment added. CC_SPEC_TEMPLATE upgraded to v2.5 — Critical Reminder #9:
+every `assertNotIn` must be paired with a positive `assertEqual` counterpart. Avg
+8.7/10. 1106 tests, 12 skipped.
+
+**Phase 7 (Session 119):** ✅ COMPLETE. Integration polish + hardening.
+`.btn-zoom:focus-visible` double-ring now matches all other overlay buttons.
+Persistent `#publish-status-text` shows "X created, Y failed" on terminal state
+(pre-existing `aria-live="polite"` region — no dynamic injection). Cumulative
+`totalPublishTarget`: retries do not reset denominator (already counted in original
+batch). Atomic rate limiter on `api_create_pages` using `cache.add()` + `cache.incr()`
+(TOCTOU-safe; fixes naive get+set race). 429 frontend handling: warning toast,
+`failedImageIds` preserved. `clearInterval` guard prevents duplicate polling loops.
+6 new tests: `EndToEndPublishFlowTests` (3) + `CreatePagesAPITests` (3). `cache.clear()`
+in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
+
+**Status:** Feature-complete for staff use. Next: production smoke test (see Phase 6D
+report testing guide). V2 scope: BYOK for premium users, Replicate models (Flux, SDXL),
+archive staging page at `/profile/<username>/ai-generations/`.
 
 **Phase 6 Architecture — Two-Page Staging:**
 - Temp staging page (`/tools/bulk-ai-generator/job/<uuid>/`): shows results of the most recent job. Phase 6 adds the publish flow here.
@@ -1247,5 +1271,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.28 (Sessions 116–119 — Phase 6C-A/6C-B/6C-B.1/6D complete, 1106 tests, per-image publish failure states, stale detection, retry flow, round 2 agent avg 8.9, Phase 6E next)
+**Version:** 4.29 (Sessions 116–119 — Phase 6D Hotfix + Phase 7 complete, 1112 tests, bulk generator feature-complete for staff use, pre-launch QA next)
 **Last Updated:** March 10, 2026

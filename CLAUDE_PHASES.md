@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **🔄 Phase 6D Next (6A/6A.5/6B/6B.5/6C-A/6C-B Complete)/7** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **✅ Phases 1–7 Complete — Pre-launch QA** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
 
 ---
 
@@ -523,9 +523,9 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
-## 🔄 Bulk AI Image Generator (Phase 6C Next — 6A/6A.5/6B/6B.5 Complete)
+## ✅ Bulk AI Image Generator (Phases 1–7 Complete — Pre-launch QA)
 
-**Status:** Phase 6B.5 Complete — Phase 6C (gallery visual states) next
+**Status:** Feature-complete for staff use. Production smoke test pending before V2.
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
 **Tests:** ~375 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests + 9 PublishFlowTests + 8 TransactionHardeningTests); ~1100 total project tests passing, 12 skipped
@@ -551,9 +551,12 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 6A.5 | Data Correctness | ✅ | 114 | gpt-image-1 model name fix, size/quality/model fields populated at job start |
 | 6B | Publish Flow UI + Concurrent Pipeline | ✅ | 115 | Sticky bar, handleCreatePages(), ThreadPoolExecutor + DB lock, published_count F(), static aria-live, 9 tests |
 | 6B.5 | Transaction Hardening & Quick Wins | ✅ | 116 | F() inside atomic, _sanitise_error_message in worker closure, available_tags pre-fetch + order_by, generator_category default fix, migration 0068, 8 tests |
-| 6C | Gallery Visual States + Polling Badges | 🔲 | — | Selected/trashed/published CSS states, prompt_page_url links per card |
-| 6D | Per-Image Error Recovery + Retry | 🔲 | — | Error display, retry button, partial failure handling |
-| 7 | Integration + Polish | 🔲 | — | End-to-end testing, error recovery, edge cases |
+| 6C-A | M2M Helper Extraction + PublishTaskTests | ✅ | 116 | _apply_m2m_to_prompt() helper, 14 PublishTaskTests, 1098 tests |
+| 6C-B | Gallery Visual States + Published Badge + A11Y | ✅ | 117–118 | 5 CSS states, badge polling, A11Y-3/5, opacity hierarchy fix, 1100 tests |
+| 6D | Per-Image Error Recovery + Retry | ✅ | 119 | .is-failed state, stale detection, Retry Failed button, retry backend path, 1106 tests |
+| 6D Hotfix | Badge Keyboard Access + Template v2.5 | ✅ | 119 | aria-hidden fix, aria-label, double-ring focus, CC_SPEC_TEMPLATE v2.5, 1106 tests |
+| 7 | Integration Polish + Hardening | ✅ | 119 | .btn-zoom focus, status text, cumulative progress, rate limiter, 6 tests, 1112 tests |
+| V2 | BYOK Premium + Replicate Models | 🔲 | — | Premium user access, Flux/SDXL via Replicate, archive staging page |
 
 ### Key Technical Decisions
 

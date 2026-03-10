@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 10, 2026 (Sessions 101–119)
+**Last Updated:** March 10, 2026 (Sessions 101–119, Phase 7)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -52,10 +52,84 @@ This is a running log of development sessions. Each session entry includes:
 
 **Commit:** `b7643fb`
 
-**Deferred to future phase:**
-- Retry progress bar shows retry batch count not original total
-- Persistent failure count in `#publish-status-text`
-- Cross-job isolation test
+**Deferred items resolved in 6D Hotfix + Phase 7 (same session — see below).**
+
+---
+
+### Session 119 (continued) — Phase 6D Hotfix
+
+**Focus:** Accessibility gap from Phase 6C-B.1 + CC_SPEC_TEMPLATE v2.5 upgrade
+
+**Completed:**
+- `markCardPublished()`: `aria-hidden="true"` removed from `<a>` badge elements
+  (WCAG SC 4.1.2 violation — interactive element hidden from accessibility tree)
+- `aria-label="Published — view prompt page (opens in new tab)"` added to `<a>` badges
+- `<div>` fallback badges (no URL available) retain `aria-hidden="true"` — correct,
+  they are decorative and non-interactive
+- `a.published-badge:focus-visible`: added `box-shadow: 0 0 0 4px #166534` outer ring —
+  now matches double-ring pattern on all other gallery overlay buttons
+- `a.published-badge` CSS rule: `pointer-events: auto` documentation comment added to
+  prevent future silent removal (override of base `.published-badge { pointer-events: none }`)
+- CC_SPEC_TEMPLATE v2.4 → v2.5: Critical Reminder #9 added — every `assertNotIn` /
+  `assertNotEqual` must be paired with a positive assertion (`assertEqual`). Pattern
+  caused false-confidence passes in Phases 6C-A and 6D.
+
+**Agent Reviews:** @accessibility 8.6, @code-reviewer 8.8. Avg 8.7/10 ✅
+
+**Tests:** 1106 passing, 12 skipped, 0 failures (unchanged — CSS/JS/docs only)
+
+**Commit:** `6decba2`
+
+---
+
+### Session 119 (continued) — Phase 7: Integration Polish + Hardening
+
+**Focus:** Deferred items from Phase 6 series + rate limiting + integration tests
+
+**Completed:**
+
+- **Fix 1 — `.btn-zoom:focus-visible` double-ring:** Replaced single purple `outline`
+  with `box-shadow: 0 0 0 2px rgba(0,0,0,0.65), 0 0 0 4px rgba(255,255,255,0.9)`.
+  Now matches `.btn-select`/`.btn-trash`/`.btn-download`. Closes last focus-ring
+  inconsistency across all four gallery overlay buttons.
+
+- **Fix 2 — Persistent `#publish-status-text`:** Terminal state writes "X created,
+  Y failed". Pre-existing `aria-live="polite"` region (declared in template at page
+  load — not dynamically injected) announces completion to screen readers.
+  `clearInterval` guard added to `startPublishProgressPolling()` to prevent duplicate
+  polling intervals if called twice in rapid succession.
+
+- **Fix 3 — Cumulative retry progress bar:** `totalPublishTarget` increments on
+  original submit; retry calls do NOT add to target (images already counted).
+  `stalePublishCount` and `lastPublishedCount` reset before each poll cycle. Progress
+  bar denominator no longer resets to retry-batch size on retry.
+
+- **Fix 4 — Rate limiter on `api_create_pages`:** `_check_create_pages_rate_limit()`
+  helper: `cache.add()` (atomic no-op if key exists) + `cache.incr()` (atomic
+  increment). Limit: 10 requests/minute per user. Returns 429 with JSON error on
+  breach. Frontend: warning toast ("Wait 60 seconds..."), `failedImageIds` Set
+  preserved so retry button stays available. `cache.clear()` added to
+  `CreatePagesAPITests.setUp()` for test isolation (prevents stale rate-limit key
+  from prior test bleeding into next).
+
+- **6 new tests:** `EndToEndPublishFlowTests` (happy path, partial failure + retry,
+  rate limit) in `test_bulk_page_creation.py`; `CreatePagesAPITests` additions in
+  `test_bulk_generator_views.py`.
+
+- **Note:** Phase 7 completion report erroneously listed Phase 6D as "next feature
+  work" — Phase 6D was already complete at commit `b7643fb`. Corrected in this
+  docs update.
+
+**Agent Reviews (Round 2 final):**
+@django-pro 9.0, @accessibility 8.5, @frontend-developer 8.5, @code-reviewer 8.5.
+Avg 8.625/10 ✅
+
+**Tests:** 1112 passing, 12 skipped, 0 failures (+6 new tests vs Phase 6D)
+
+**Commit:** `ff7d362`
+
+**Bulk Generator status:** Feature-complete for staff use.
+Next: production smoke test. Then V2 planning (BYOK premium, Replicate models).
 
 ---
 

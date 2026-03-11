@@ -537,7 +537,6 @@
     width: 100%;
     /* aspect-ratio set dynamically by JS based on job size */
     background: var(--gray-100);
-    border: 2px dashed var(--gray-200);
     border-radius: var(--radius-lg);
 }
 

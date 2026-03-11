@@ -1747,6 +1747,31 @@ def rename_prompt_files_for_seo(prompt_id: int) -> dict:  # noqa: C901 — SEO r
     results = {}
     updated_fields = []
 
+    # Detect bulk-gen prompts — these images must be relocated to the standard
+    # media/images/{year}/{month}/{size}/ path structure, not just renamed in-place.
+    is_bulk_gen = bool(prompt.b2_image_url and 'bulk-gen/' in prompt.b2_image_url)
+    bulk_gen_prefix = None
+    bulk_gen_subdir_map: dict = {}  # populated below when is_bulk_gen is True
+    year = month = ''
+    if is_bulk_gen:
+        year = prompt.created_on.strftime('%Y')
+        month = prompt.created_on.strftime('%m')
+        # Subdirectory target for each URL field
+        bulk_gen_subdir_map = {
+            'b2_image_url': f'media/images/{year}/{month}/large',
+            'b2_thumb_url': f'media/images/{year}/{month}/thumb',
+            'b2_medium_url': f'media/images/{year}/{month}/medium',
+            'b2_large_url': f'media/images/{year}/{month}/large',
+        }
+        # Extract the bulk-gen/{job_id}/ prefix for post-rename cleanup.
+        # Require parts[1] to be non-empty (guards against malformed URLs with
+        # double-slash like bulk-gen//file.jpg that would produce prefix 'bulk-gen//').
+        original_key = service._url_to_key(prompt.b2_image_url)
+        if original_key:
+            parts = original_key.split('/')
+            if len(parts) >= 2 and parts[0] == 'bulk-gen' and parts[1]:
+                bulk_gen_prefix = f"{parts[0]}/{parts[1]}/"
+
     def _get_extension(url):
         """Extract file extension from URL, stripping query strings."""
         if not url:
@@ -1758,14 +1783,20 @@ def rename_prompt_files_for_seo(prompt_id: int) -> dict:  # noqa: C901 — SEO r
             return path.rsplit('.', 1)[1].lower()
         return 'jpg'
 
-    def _rename_field(field_name, new_filename):
-        """Rename a single B2 file and save the new URL immediately."""
+    def _rename_or_move_field(field_name, new_filename):
+        """Rename (in-place) or move (to target directory) a single B2 file."""
         old_url = getattr(prompt, field_name, None)
         if not old_url or not new_filename:
             return
 
         try:
-            result = service.rename_file(old_url, new_filename)
+            if is_bulk_gen:
+                target_dir = bulk_gen_subdir_map.get(
+                    field_name, f'media/images/{year}/{month}/large'
+                )
+                result = service.move_file(old_url, target_dir, new_filename)
+            else:
+                result = service.rename_file(old_url, new_filename)
             results[field_name] = result
 
             if result['success'] and result['new_url'] != old_url:
@@ -1780,10 +1811,10 @@ def rename_prompt_files_for_seo(prompt_id: int) -> dict:  # noqa: C901 — SEO r
             )
             results[field_name] = {'success': False, 'error': str(e)}
 
-    # Rename image variants (original, thumb, medium, large, webp).
+    # Rename/move image variants (original, thumb, medium, large, webp).
     # Group fields by current URL — bulk-gen prompts use the same physical file
-    # for all four fields as fallbacks. Rename each unique file once, then mirror
-    # the new URL to every field that shared it (avoids copying a deleted source).
+    # for all four fields as fallbacks. Process each unique file once, then handle
+    # mirror fields appropriately per path type.
     image_fields = ['b2_image_url', 'b2_thumb_url', 'b2_medium_url', 'b2_large_url']
     url_to_fields: dict = {}
     for field_name in image_fields:
@@ -1794,28 +1825,62 @@ def rename_prompt_files_for_seo(prompt_id: int) -> dict:  # noqa: C901 — SEO r
     for old_url, sharing_fields in url_to_fields.items():
         primary_field = sharing_fields[0]
         ext = _get_extension(old_url)
-        _rename_field(primary_field, generate_seo_filename(prompt.title, ext))
-        # Mirror the new URL to any other fields that pointed to the same file
+        _rename_or_move_field(primary_field, generate_seo_filename(prompt.title, ext))
         new_url = getattr(prompt, primary_field)
         if new_url != old_url:
+            # All sharing fields used the same physical file — mirror the new URL to
+            # each without an additional B2 operation.  For bulk-gen, the primary field
+            # (b2_image_url) was moved to large/; mirror fields (b2_thumb_url,
+            # b2_medium_url, b2_large_url) point to the same file so they also get the
+            # large/ URL.  Separate variant files are out of scope for this phase.
             for mirror_field in sharing_fields[1:]:
                 setattr(prompt, mirror_field, new_url)
                 prompt.save(update_fields=[mirror_field])
                 updated_fields.append(mirror_field)
-                results[mirror_field] = {'success': True, 'new_url': new_url, 'mirrored': True}
+                results[mirror_field] = {
+                    'success': True, 'new_url': new_url, 'mirrored': True
+                }
+
+    # For bulk-gen prompts: check if the job prefix is now empty.
+    # move_file already deleted the source file for this prompt.  Other files in
+    # bulk-gen/{job_id}/ belong to sibling prompts from the same job that have not
+    # yet been renamed — do NOT delete them here.  Only clean up if the prefix is
+    # genuinely empty (i.e., this was the last prompt in the job to be renamed).
+    if is_bulk_gen and bulk_gen_prefix:
+        try:
+            check = service.client.list_objects_v2(
+                Bucket=service.bucket, Prefix=bulk_gen_prefix, MaxKeys=1
+            )
+            if check.get('KeyCount', 0) == 0:
+                logger.info(
+                    "[SEO Rename] Bulk-gen prefix '%s' is now empty",
+                    bulk_gen_prefix,
+                )
+            else:
+                logger.info(
+                    "[SEO Rename] Bulk-gen prefix '%s' still has %d file(s); "
+                    "other prompts in this job may not be renamed yet — skipping cleanup",
+                    bulk_gen_prefix, check.get('KeyCount', 0),
+                )
+        except Exception as e:
+            # Non-blocking — cleanup check failure must not affect task outcome
+            logger.warning(
+                "[SEO Rename] Bulk-gen prefix check failed for '%s': %s",
+                bulk_gen_prefix, e,
+            )
 
     # WebP variant always uses .webp extension
     if prompt.b2_webp_url:
-        _rename_field('b2_webp_url', generate_seo_filename(prompt.title, 'webp'))
+        _rename_or_move_field('b2_webp_url', generate_seo_filename(prompt.title, 'webp'))
 
     # Rename video file
     if prompt.b2_video_url:
         ext = _get_extension(prompt.b2_video_url)
-        _rename_field('b2_video_url', generate_seo_filename(prompt.title, ext))
+        _rename_or_move_field('b2_video_url', generate_seo_filename(prompt.title, ext))
 
     # Rename video thumbnail
     if prompt.b2_video_thumb_url:
-        _rename_field(
+        _rename_or_move_field(
             'b2_video_thumb_url',
             generate_video_thumbnail_filename(prompt.title)
         )

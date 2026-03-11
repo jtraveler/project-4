@@ -134,6 +134,123 @@ class B2RenameService:
                 'error': str(e),
             }
 
+    def move_file(self, old_url: str, target_directory: str, new_filename: str) -> dict:
+        """
+        Move a file in B2 to a different directory with a new filename.
+
+        Unlike rename_file (which preserves the original directory),
+        move_file relocates the file to target_directory/new_filename.
+
+        Args:
+            old_url: Current CDN URL of the file
+            target_directory: Target directory key (e.g., 'media/images/2026/03/large')
+            new_filename: New filename (e.g., 'my-prompt-ai-prompt.jpg')
+
+        Returns:
+            dict: {
+                'success': True/False,
+                'new_url': 'https://cdn.../new-path',
+                'old_url': 'https://cdn.../old-path',
+                'error': None or error message
+            }
+        """
+        try:
+            old_key = self._url_to_key(old_url)
+            if not old_key:
+                return {
+                    'success': False,
+                    'new_url': None,
+                    'old_url': old_url,
+                    'error': f'Could not extract key from URL: {old_url}',
+                }
+
+            new_key = f"{target_directory}/{new_filename}"
+
+            # Skip if old and new are the same
+            if old_key == new_key:
+                logger.info(f"[B2 Move] Skipping - already at target: {old_key}")
+                return {
+                    'success': True,
+                    'new_url': old_url,
+                    'old_url': old_url,
+                    'error': None,
+                }
+
+            # Copy to new location
+            self.client.copy_object(
+                Bucket=self.bucket,
+                CopySource={'Bucket': self.bucket, 'Key': old_key},
+                Key=new_key,
+                MetadataDirective='COPY',
+            )
+
+            # Verify copy before deleting original
+            self.client.head_object(Bucket=self.bucket, Key=new_key)
+
+            # Delete original
+            self.client.delete_object(Bucket=self.bucket, Key=old_key)
+
+            new_url = self._key_to_url(new_key)
+            logger.info(f"[B2 Move] Moved: {old_key} -> {new_key}")
+
+            return {
+                'success': True,
+                'new_url': new_url,
+                'old_url': old_url,
+                'error': None,
+            }
+
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            logger.error(f"[B2 Move] B2 error ({error_code}): {e}")
+            return {
+                'success': False,
+                'new_url': None,
+                'old_url': old_url,
+                'error': f'B2 error: {error_code}',
+            }
+        except Exception as e:
+            logger.exception(f"[B2 Move] Unexpected error: {e}")
+            return {
+                'success': False,
+                'new_url': None,
+                'old_url': old_url,
+                'error': str(e),
+            }
+
+    def cleanup_empty_prefix(self, prefix: str) -> dict:
+        """
+        Delete any remaining B2 keys under a given prefix.
+
+        Used after bulk-gen image relocation to clean up stale bulk-gen/{job_id}/
+        directories. Best-effort — logs results but does not raise exceptions.
+
+        Args:
+            prefix: B2 key prefix to clean up (e.g., 'bulk-gen/abc-123/')
+
+        Returns:
+            dict: {'deleted': int, 'errors': int}
+        """
+        deleted = 0
+        errors = 0
+        try:
+            paginator = self.client.get_paginator('list_objects_v2')
+            for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+                for obj in page.get('Contents', []):
+                    try:
+                        self.client.delete_object(Bucket=self.bucket, Key=obj['Key'])
+                        logger.info(f"[B2 Cleanup] Deleted orphaned key: {obj['Key']}")
+                        deleted += 1
+                    except Exception as e:
+                        logger.warning(f"[B2 Cleanup] Failed to delete {obj['Key']}: {e}")
+                        errors += 1
+        except Exception as e:
+            logger.warning(f"[B2 Cleanup] Failed to list prefix {prefix}: {e}")
+            errors += 1
+
+        logger.info(f"[B2 Cleanup] Prefix '{prefix}': deleted={deleted}, errors={errors}")
+        return {'deleted': deleted, 'errors': errors}
+
     def _url_to_key(self, url: str) -> str:
         """
         Extract S3 key from a CDN URL.

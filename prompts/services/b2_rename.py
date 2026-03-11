@@ -223,7 +223,13 @@ class B2RenameService:
         Delete any remaining B2 keys under a given prefix.
 
         Used after bulk-gen image relocation to clean up stale bulk-gen/{job_id}/
-        directories. Best-effort — logs results but does not raise exceptions.
+        directories. Best-effort — logs B2 API errors but does not raise on them.
+
+        Raises ValueError immediately (before any B2 calls) if the prefix does not
+        start with 'bulk-gen/' or is exactly 'bulk-gen/' (which would enumerate
+        and delete every object across all jobs). B2 treats keys as opaque strings
+        so path traversal via '..' is not a risk, but the bare-prefix check closes
+        the blast-radius gap for any future caller that passes a misconfigured prefix.
 
         Args:
             prefix: B2 key prefix to clean up (e.g., 'bulk-gen/abc-123/')
@@ -231,6 +237,8 @@ class B2RenameService:
         Returns:
             dict: {'deleted': int, 'errors': int}
         """
+        if not prefix.startswith('bulk-gen/') or prefix == 'bulk-gen/':
+            raise ValueError(f"Refusing to clean unsafe prefix: {prefix!r}")
         deleted = 0
         errors = 0
         try:

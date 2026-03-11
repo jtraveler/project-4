@@ -233,7 +233,10 @@
 {% endblock %}
 
 {% block extras %}
-<script src="{% static 'js/bulk-generator-job.js' %}" defer></script>
+<script src="{% static 'js/bulk-generator-config.js' %}" defer></script>
+<script src="{% static 'js/bulk-generator-ui.js' %}" defer></script>
+<script src="{% static 'js/bulk-generator-polling.js' %}" defer></script>
+<script src="{% static 'js/bulk-generator-selection.js' %}" defer></script>
 
 {% if request.user.is_staff %}
 <style>

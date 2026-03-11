@@ -1780,14 +1780,29 @@ def rename_prompt_files_for_seo(prompt_id: int) -> dict:  # noqa: C901 — SEO r
             )
             results[field_name] = {'success': False, 'error': str(e)}
 
-    # Rename image variants (original, thumb, medium, large, webp)
-    # Each variant lives in a different directory so identical filenames are safe
+    # Rename image variants (original, thumb, medium, large, webp).
+    # Group fields by current URL — bulk-gen prompts use the same physical file
+    # for all four fields as fallbacks. Rename each unique file once, then mirror
+    # the new URL to every field that shared it (avoids copying a deleted source).
     image_fields = ['b2_image_url', 'b2_thumb_url', 'b2_medium_url', 'b2_large_url']
+    url_to_fields: dict = {}
     for field_name in image_fields:
         old_url = getattr(prompt, field_name, None)
         if old_url:
-            ext = _get_extension(old_url)
-            _rename_field(field_name, generate_seo_filename(prompt.title, ext))
+            url_to_fields.setdefault(old_url, []).append(field_name)
+
+    for old_url, sharing_fields in url_to_fields.items():
+        primary_field = sharing_fields[0]
+        ext = _get_extension(old_url)
+        _rename_field(primary_field, generate_seo_filename(prompt.title, ext))
+        # Mirror the new URL to any other fields that pointed to the same file
+        new_url = getattr(prompt, primary_field)
+        if new_url != old_url:
+            for mirror_field in sharing_fields[1:]:
+                setattr(prompt, mirror_field, new_url)
+                prompt.save(update_fields=[mirror_field])
+                updated_fields.append(mirror_field)
+                results[mirror_field] = {'success': True, 'new_url': new_url, 'mirrored': True}
 
     # WebP variant always uses .webp extension
     if prompt.b2_webp_url:
@@ -2897,6 +2912,21 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                 skipped += 1
                 continue
 
+            # Queue SEO rename task outside atomic block (non-blocking)
+            try:
+                from django_q.tasks import async_task
+                async_task(
+                    'prompts.tasks.rename_prompt_files_for_seo',
+                    prompt_page.pk,
+                    task_name=f'seo-rename-{prompt_page.pk}',
+                )
+                logger.info("[Bulk Gen] Queued SEO rename for prompt %s", prompt_page.pk)
+            except Exception as e:
+                logger.warning(
+                    "[Bulk Gen] Failed to queue SEO rename for prompt %s: %s",
+                    prompt_page.pk, e,
+                )
+
             created += 1
 
         except Exception as e:
@@ -3148,6 +3178,21 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
             if _already_published:
                 skipped_count += 1
                 continue
+
+            # Queue SEO rename task outside atomic block (non-blocking)
+            try:
+                from django_q.tasks import async_task
+                async_task(
+                    'prompts.tasks.rename_prompt_files_for_seo',
+                    prompt_page.pk,
+                    task_name=f'seo-rename-{prompt_page.pk}',
+                )
+                logger.info("[Bulk Gen] Queued SEO rename for prompt %s", prompt_page.pk)
+            except Exception as exc:
+                logger.warning(
+                    "[Bulk Gen] Failed to queue SEO rename for prompt %s: %s",
+                    prompt_page.pk, exc,
+                )
 
             published_count += 1
 

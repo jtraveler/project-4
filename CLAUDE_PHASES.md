@@ -594,7 +594,10 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 - `prompts/tests/test_source_credit.py`
 - `prompts/templates/prompts/bulk_generator_job.html` — Job progress page template
 - `static/css/pages/bulk-generator-job.css` — Job progress page styles
-- `static/js/bulk-generator-job.js` — Polling logic, progress updates, cancel, gallery rendering
+- `static/js/bulk-generator-config.js` — Constants, state, utility functions (Session 121 JS-SPLIT-1)
+- `static/js/bulk-generator-ui.js` — Gallery rendering, card states, lightbox (Session 121 JS-SPLIT-1)
+- `static/js/bulk-generator-polling.js` — Polling loop, terminal state, initPage (Session 121 JS-SPLIT-1)
+- `static/js/bulk-generator-selection.js` — Selection, publish flow, retry (Session 121 JS-SPLIT-1)
 - `prompts/tests/test_bulk_generator_job.py` — 237-line test suite for job view
 - `prompts/management/commands/create_test_gallery.py` — Test data generator for gallery development
 - `static/images/sample-{1-by-1,2-by-3,3-by-2,16-by-9}-{a,b,c,d}.{png,jpg}` — 16 sample images for testing
@@ -677,7 +680,7 @@ Concurrent publish pipeline with per-image DB-level idempotency lock. `publish_p
 
 **Key pattern:** `_already_published` flag (cannot use `continue` inside atomic block).
 **Key pattern:** Full M2M block (tags, categories, descriptors) duplicated in `IntegrityError` retry path.
-**Files:** `prompts/tasks.py`, `bulk_generator_job.html`, `bulk-generator-job.js`, `bulk-generator-job.css`, `test_bulk_generator_views.py`
+**Files:** `prompts/tasks.py`, `bulk_generator_job.html`, `bulk-generator-config.js`, `bulk-generator-ui.js`, `bulk-generator-polling.js`, `bulk-generator-selection.js`, `bulk-generator-job.css`, `test_bulk_generator_views.py`
 **Agent scores:** @django-pro 8.5/10 (re-run), @accessibility 8.2/10 (re-run), @performance 8.0/10, @security 9.0/10
 **Full report:** `docs/REPORT_BULK_GEN_PHASE6B.md`
 
@@ -686,7 +689,7 @@ Concurrent publish pipeline with per-image DB-level idempotency lock. `publish_p
 
 CSS card states (`.is-selected`: 3px box-shadow ring; `.is-deselected`: 20% opacity; `.is-discarded`: 55% opacity; `.is-published`: green "View page →" badge). Published badge uses `prompt_page_url` from status API for per-card links. Closes deferred items: A11Y-3 (live region for progress), A11Y-5 (focus management on gallery load). Double-ring focus pattern for overlay buttons on any image background. `sr-only` defined locally (Bootstrap 5 removed it). Opacity-compounding bug fixed: `handleSelection` excludes `.is-discarded`/`.is-published` from `allSlots`. `handleTrash` undo path calls `updatePublishBar()`. `markCardPublished` removes `.is-discarded`. `focusFirstGalleryCard` excludes `.is-discarded`.
 
-**Files:** `bulk-generator-job.css`, `bulk-generator-job.js`, `bulk_generator_job.html`, `bulk_generation.py`, `test_bulk_generator_views.py`
+**Files:** `bulk-generator-job.css`, `bulk-generator-config.js`, `bulk-generator-ui.js`, `bulk-generator-polling.js`, `bulk-generator-selection.js`, `bulk_generator_job.html`, `bulk_generation.py`, `test_bulk_generator_views.py`
 **Agent scores (round 2):** @code-reviewer 8.5/10, @accessibility 8.2/10, @ui-visual-validator 8.3/10, @django-pro 8.4/10
 **Full report:** `docs/REPORT_BULK_GEN_PHASE6CB.md`
 
@@ -704,7 +707,7 @@ Extracted `_apply_m2m_to_prompt()` module-level helper, eliminating 4 duplicate 
 
 Per-image error display on gallery cards, "Retry Failed" button, partial failure handling ("2 of 3 pages created — 1 failed").
 
-**Files:** `bulk-generator-job.js`, `bulk_generator_job.html`, `bulk_generator_views.py`
+**Files:** `bulk-generator-config.js`, `bulk-generator-ui.js`, `bulk-generator-polling.js`, `bulk-generator-selection.js`, `bulk_generator_job.html`, `bulk_generator_views.py`
 **Agent requirements:** @django-pro 8.0+/10, @code-reviewer 8.0+/10
 
 ### Deferred Items (Backlog)

@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 10, 2026
+**Last Updated:** March 11, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -73,6 +73,10 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| SMOKE2 Series (Fixes A–E) | Mar 11, 2026 | Production smoke test + 5 bug fixes: Fix-A (`processing_complete=True` in publish pipeline), Fix-B (focus ring on page load), Fix-C (`b2_large_url` never set — Media Missing root cause), Fix-D (SEO rename task never queued for bulk-gen), Fix-E (images relocated from `bulk-gen/` path to standard `media/images/{year}/{month}/large/`). All 6 production prompts backfilled. Heroku v649→v653. |
+| HARDENING-1 | Mar 11, 2026 | 5 unit tests for sibling-check cleanup path in `rename_prompt_files_for_seo` (including non-blocking exception contract). Batch mirror field saves: N individual DB writes → 1. `prompts/tests/test_bulk_gen_rename.py` (283 lines, new). 1117 tests. Agents: @django-pro 9.5, @test-automator 8.5. |
+| JS-SPLIT-1 | Mar 11, 2026 | Split `bulk-generator-job.js` (1830 lines, above 800-line CC safety threshold) into 4 modules: `bulk-generator-config.js` (156), `bulk-generator-ui.js` (722), `bulk-generator-polling.js` (408), `bulk-generator-selection.js` (581). Shared state via `window.BulkGen` namespace. Original file deleted. Template `<script>` tags updated in dependency order. 1117 tests. Agents: @frontend-developer 8.5, @code-reviewer 9.0, @accessibility 8.6. |
+| HARDENING-2 | Mar 11, 2026 | Added internal prefix allowlist guard to `cleanup_empty_prefix` in `b2_rename.py`. Raises `ValueError` if prefix does not start with `bulk-gen/` or is exactly `bulk-gen/`. Defense-in-depth — flagged in SMOKE2-FIX-E and HARDENING-1 reports. 1117 tests. Agent: @security-auditor. |
 | Bulk Gen Phase 7 | Mar 10, 2026 | Integration polish + hardening: .btn-zoom double-ring focus, persistent #publish-status-text ("X created, Y failed"), cumulative retry progress bar, atomic rate limiter (cache.add+incr TOCTOU-safe, 10 req/min), 429 frontend handling, clearInterval guard, 6 new tests (EndToEndPublishFlowTests + CreatePagesAPITests + cache.clear setUp). Avg 8.625/10. 1112 tests |
 | Bulk Gen Phase 6D Hotfix | Mar 10, 2026 | Published badge keyboard access: aria-hidden removed from <a> badge, aria-label added, double-ring a.published-badge:focus-visible, pointer-events comment added. CC_SPEC_TEMPLATE v2.5: Critical Reminder #9 (pair every negative assertion with positive counterpart). Avg 8.7/10. 1106 tests (unchanged) |
 | Bulk Gen Phase 6D | Mar 10, 2026 | Per-image publish failure states (.is-failed CSS, red badge strip, stale detection 10-poll/30s, markCardFailed(), Retry Failed button, handleRetryFailed() with optimistic re-select + rollback, api_create_pages image_ids retry path, 6 new tests, 2-round agent review avg 8.9/10, 1106 tests |
@@ -259,11 +263,9 @@ Rebuilding upload flow to feel "instant" by:
 
 | Issue | Description | Impact |
 |-------|-------------|--------|
-| **N4h rename not triggering** | `rename_prompt_files_for_seo` task is coded but not generating SEO filenames in production | Files keep UUID names instead of SEO slugs |
-| **Indexes migration pending** | Composite indexes added to models.py but `makemigrations` not yet run | Indexes not active in database |
+| **N4h rename (upload-flow)** | `rename_prompt_files_for_seo` still not triggering for upload-flow prompts. Bulk-gen path fixed in SMOKE2-FIX-D (Session 121) — upload-flow is a separate remaining investigation. | Upload-flow files keep UUID names instead of SEO slugs |
 | **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests at time of fix; now 976 passing, 12 skipped, flake8 clean, bandit clean) | ✅ All 3 jobs green |
 
-**N4h Root Cause (Suspected):** The rename task queues after AI content generation completes, but may not be triggering due to Django-Q worker configuration or the task not being picked up. Needs investigation.
 
 **Resolved in Session 69:** SEO score regression (92→100) fixed via robots.txt + preconnect cleanup + font optimization.
 
@@ -1271,5 +1273,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.29 (Sessions 116–119 — Phase 6D Hotfix + Phase 7 complete, 1112 tests, bulk generator feature-complete for staff use, pre-launch QA next)
-**Last Updated:** March 10, 2026
+**Version:** 4.30 (Session 121 — SMOKE2 series A–E, HARDENING-1, JS-SPLIT-1, HARDENING-2; 1117 tests; bulk-gen smoke test complete; all SMOKE2 production prompts backfilled)
+**Last Updated:** March 11, 2026

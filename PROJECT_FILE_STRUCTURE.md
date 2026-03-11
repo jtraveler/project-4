@@ -3,7 +3,7 @@
 **Last Updated:** March 10, 2026
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Bulk AI Image Generator (Phases 1–7 complete — pre-launch QA), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~1112 passing, 12 skipped (43% coverage, threshold 40%)
+**Total Tests:** ~1117 passing, 12 skipped (43% coverage, threshold 40%)
 
 ---
 
@@ -14,10 +14,10 @@
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 45 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 12 | static/css/ |
-| **JavaScript Files** | 11 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98) |
+| **JavaScript Files** | 14 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
 | **Migrations** | 70 | prompts/migrations/ (68), about/migrations/ (2) |
-| **Test Files** | 22 | prompts/tests/ |
+| **Test Files** | 23 | prompts/tests/ |
 | **Management Commands** | 29 | prompts/management/commands/ |
 | **Services** | 15 | prompts/services/ |
 | **View Modules** | 13 | prompts/views/ |
@@ -486,7 +486,10 @@ static/css/
 ```
 static/js/
 ├── bulk-generator.js     # ~900 lines - Bulk generator frontend (Sessions 92-93)
-├── bulk-generator-job.js # ~1080 lines - Job progress polling, gallery rendering, cancel (Sessions 98-99, audit: removed setGroupColumns(), added getExtensionFromUrl(), WIDE_RATIO_THRESHOLD)
+├── bulk-generator-config.js  # 156 lines  - Namespace init, constants (POLL_INTERVAL, TERMINAL_STATES, STATUS_HEADINGS), state variable declarations, utility functions (getCookie, formatCost, formatTime, gcd, getAspectLabel) (Session 121 JS-SPLIT-1)
+├── bulk-generator-ui.js      # 722 lines  - Progress UI, gallery cleanup, card state management (markCardPublished, markCardFailed), gallery rendering, lightbox (Session 121 JS-SPLIT-1)
+├── bulk-generator-polling.js # 408 lines  - Terminal state UI, polling loop, cancel handler, focusFirstGalleryCard, initPage, DOMContentLoaded (Session 121 JS-SPLIT-1)
+├── bulk-generator-selection.js # 581 lines - Selection, trash, download, toast, publish bar, publish flow, retry (handleRetryFailed, startPublishProgressPolling) (Session 121 JS-SPLIT-1)
 ├── collections.js        # ~760 lines - Collections modal (Phase K)
 ├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
 ├── navbar.js             # ~650 lines - Extracted from base.html
@@ -505,7 +508,10 @@ static/js/
 | File | Lines | Purpose |
 |------|-------|---------|
 | **bulk-generator.js** | ~900 | Bulk generator frontend: upload, preview, auto-save, validation, modals (Sessions 92-93) |
-| **bulk-generator-job.js** | ~1080 | Job progress page: polling, progress updates, cancel, gallery rendering, per-prompt aspect ratio (Sessions 98-99) |
+| **bulk-generator-config.js** | 156 | Bulk generator constants, state declarations, utility functions — shared namespace init (Session 121 JS-SPLIT-1) |
+| **bulk-generator-ui.js** | 722 | Bulk generator gallery rendering, card states, lightbox, progress UI (Session 121 JS-SPLIT-1) |
+| **bulk-generator-polling.js** | 408 | Bulk generator polling loop, terminal state, focus management, initPage (Session 121 JS-SPLIT-1) |
+| **bulk-generator-selection.js** | 581 | Bulk generator selection, publish flow, retry, download, toast (Session 121 JS-SPLIT-1) |
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
 | **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling (15s) + keyboard nav + bell sync dispatch + stale/count-updated listeners (Phase R1/R1-D) |
 | **notifications.js** | ~500 | Notifications page mark-as-read, category filtering, event delegation, bell sync, delete, pagination, real-time polling (15s), "Updates available" banner, two-phase animation (Phase R1/R1-D) |
@@ -1639,6 +1645,26 @@ prompts/templates/prompts/
 **Maintained By:** Mateo Johnson - Prompt Finder
 
 ### Changelog
+
+**v3.29 (March 11, 2026 - Session 121 End-of-Session Docs Update):**
+
+**New files:**
+- `static/js/bulk-generator-config.js` (156 lines) — Session 121 JS-SPLIT-1
+- `static/js/bulk-generator-ui.js` (722 lines) — Session 121 JS-SPLIT-1
+- `static/js/bulk-generator-polling.js` (408 lines) — Session 121 JS-SPLIT-1
+- `static/js/bulk-generator-selection.js` (581 lines) — Session 121 JS-SPLIT-1
+- `prompts/tests/test_bulk_gen_rename.py` (283 lines) — Session 121 HARDENING-1
+- `prompts/management/commands/backfill_bulk_gen_seo_rename.py` — Session 121 SMOKE2-FIX-E
+
+**Modified files:**
+- `prompts/tasks.py` — `processing_complete=True`, `b2_large_url` set, SEO rename queued, group-by-URL dedup, bulk-gen path detection + `move_file` routing, batch mirror field saves
+- `prompts/services/b2_rename.py` — added `move_file()`, `cleanup_empty_prefix()`, internal prefix allowlist guard
+- `templates/prompts/bulk_generator_job.html` — 4 `<script>` tags replacing 1
+
+**Deleted files:**
+- `static/js/bulk-generator-job.js` (1830 lines) — replaced by 4 modules above
+
+**Updated statistics:** 14 JS files, 23 test files, 1117 tests passing
 
 **v3.28 (March 9, 2026 - Sessions 116–117 End-of-Session Docs Update):**
 - Updated current phase: Phase 6C next → Phase 6C-A + 6C-B both complete, Phase 6D next

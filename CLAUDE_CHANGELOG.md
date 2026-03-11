@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 10, 2026 (Sessions 101–119, Phase 7)
+**Last Updated:** March 11, 2026 (Sessions 101–121, SMOKE2 + HARDENING-1 + JS-SPLIT-1 + HARDENING-2)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,134 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 121 — March 11, 2026
+
+**Focus:** SMOKE2 Production Smoke Test Series + HARDENING-1 + JS-SPLIT-1 + HARDENING-2
+
+---
+
+#### SMOKE2 Series — Production Smoke Test (Fixes A–E)
+
+**Context:** First full production smoke test of the bulk generator publish flow. Six bulk-gen published prompt pages showed "Media Missing" on detail pages. Root cause traced to three compounding bugs in the publish pipeline.
+
+**Fix A — `processing_complete=False` on bulk-gen prompts**
+- `Prompt` constructor in both `publish_prompt_pages_from_job` and `create_prompt_pages_from_job` defaulted `processing_complete` to `False`
+- Template gates ALL media display on this field
+- Fix: added `processing_complete=True` to both constructors in `prompts/tasks.py`
+- Commit: `615741e` | Backfill: 4 prompts updated, Remaining: 0
+
+**Fix B — Focus ring on page load**
+- `initPage()` called `focusFirstGalleryCard()` unconditionally on terminal-at-load jobs
+- Fix: removed unconditional `setTimeout(focusFirstGalleryCard, 200)` from terminal fetch callback in `static/js/bulk-generator-job.js`
+- Commit: `779c106`
+
+**Fix C — `b2_large_url` never set (Media Missing root cause)**
+- `display_large_url` property checks `b2_large_url` with NO fallback to `b2_image_url`
+- Publish pipeline never set `b2_large_url` → `display_large_url` returned `None` → template rendered Media Missing
+- Fix: added `prompt_page.b2_large_url = gen_image.image_url` to both publish functions
+- Commit: `523586d` | Backfill: 6 prompts updated, Remaining: 0
+
+**Fix D — SEO rename task never queued for bulk-gen prompts**
+- `rename_prompt_files_for_seo` was never queued from the bulk-gen publish path
+- Additionally: all 4 URL fields pointed to same physical B2 file — original loop deleted source on first rename, causing `NoSuchKey` for remaining 3 fields. Fixed with group-by-URL deduplication logic
+- Fix: queue `async_task('prompts.tasks.rename_prompt_files_for_seo', prompt_page.pk)` outside `transaction.atomic()`, guarded by `not _already_published`
+- Commits: `0b1618a` + `f0f965d` | Backfill: 6 renamed, Remaining: 0
+
+**Fix E — Images stored at wrong `bulk-gen/` path**
+- Bulk-gen images landed at `bulk-gen/{job_id}/{seo-name}.jpg` instead of `media/images/{year}/{month}/large/{seo-name}.jpg`
+- Added `move_file(old_url, target_directory, new_filename)` and `cleanup_empty_prefix(prefix)` to `B2RenameService`
+- `rename_prompt_files_for_seo` now detects `'bulk-gen/' in prompt.b2_image_url` and routes to `move_file`
+- Commit: `64c3ab1` | Backfill: 6 relocated, 7 orphan B2 files deleted, Remaining: 0
+
+**Heroku releases:** v649 → v653. All backfills clean.
+
+---
+
+#### HARDENING-1 — Sibling-Check Unit Tests + Batch Mirror Field Saves
+
+**Commit:** `3149a9a`
+
+**Part A — 5 unit tests in `prompts/tests/test_bulk_gen_rename.py` (new, 283 lines):**
+- `test_sibling_files_present_skips_cleanup` — `KeyCount=1` → no cleanup delete
+- `test_empty_prefix_logs_not_deletes` — `KeyCount=0` → log emitted, no cleanup delete
+- `test_non_bulk_gen_prompt_no_sibling_check` — standard path → `list_objects_v2` never called
+- `test_sibling_check_exception_is_nonfatal` — `ClientError` on sibling check → task returns `status='success'` (non-blocking contract confirmed)
+- `test_mirror_fields_batched_into_single_save` — 3 mirror fields saved in exactly 1 `prompt.save(update_fields=[...])` call
+
+**Part B — Batch mirror field saves:**
+- Mirror field update loop in `rename_prompt_files_for_seo` previously issued one `prompt.save()` per mirror field
+- Refactored to collect all mirror fields and issue single `save(update_fields=mirror_fields_to_save)`
+- For bulk-gen prompts with 4 sharing URL fields: mirror-field DB writes reduced from 3 → 1
+
+**Agent Reviews:**
+- @django-pro Round 1: 9.5/10 ✅
+- @test-automator Round 1: 7.5/10 ❌ — missing exception-swallowing test, no positive assertions in non-bulk-gen test
+- @test-automator Round 2: 8.5/10 ✅ (after adding `test_sibling_check_exception_is_nonfatal` + positive assertions)
+- **Final average: 9.0/10 ✅**
+
+**Tests:** 1117 passing, 12 skipped (+5 vs Session 119)
+
+---
+
+#### JS-SPLIT-1 — Bulk Generator JS File Split
+
+**Commit:** `e723650`
+
+`bulk-generator-job.js` had grown to 1830 lines (above the 800-line CC safety threshold). Split into 4 logical modules with no behaviour change:
+
+| File | Lines | Contents |
+|------|-------|----------|
+| `bulk-generator-config.js` | 156 | Namespace init, constants, state variable declarations, utility functions |
+| `bulk-generator-ui.js` | 722 | Progress UI, gallery cleanup, card state management, gallery rendering, lightbox |
+| `bulk-generator-polling.js` | 408 | Terminal state UI, polling loop, cancel handler, focus management, `initPage`, `DOMContentLoaded` |
+| `bulk-generator-selection.js` | 581 | Selection, trash, download, toast, publish bar, publish flow, retry |
+
+- Original `bulk-generator-job.js` deleted
+- Shared state via `window.BulkGen = window.BulkGen || {}` (aliased as `var G = window.BulkGen` in each IIFE)
+- Template `<script>` tags updated: config → ui → polling → selection, all `defer`
+- `collectstatic` confirmed: 253 files copied
+- SMOKE2-FIX-B regression confirmed clean by @accessibility
+
+**Agent Reviews:**
+- @frontend-developer: 8.5/10 ✅
+- @code-reviewer: 9.0/10 ✅ (exhaustive 39-function verification)
+- @accessibility: 8.6/10 ✅
+- **Average: 8.7/10 ✅**
+
+**Tests:** 1117 passing, 12 skipped (unchanged — refactor only)
+
+---
+
+#### HARDENING-2 — `cleanup_empty_prefix` Internal Prefix Guard
+
+**Commit:** *(latest)*
+
+Added `ValueError` guard to `cleanup_empty_prefix` in `prompts/services/b2_rename.py`:
+
+```python
+if not prefix.startswith('bulk-gen/') or prefix == 'bulk-gen/':
+    raise ValueError(f"Refusing to clean unsafe prefix: {prefix!r}")
+```
+
+CC added the `or prefix == 'bulk-gen/'` check beyond the spec requirement — closes additional edge case where bare prefix would enumerate all job objects. Guard placed immediately after docstring, before any B2 calls. Agent: @security-auditor.
+
+**Tests:** 1117 passing, 12 skipped (unchanged)
+
+---
+
+**Session 121 Stale Items Closed:**
+- "N4h rename not triggering" blocker — bulk-gen path resolved by SMOKE2-FIX-D. Upload-flow path renamed to separate open item.
+- "Indexes migration pending" — confirmed applied (migration 0045, Session 120). Removed from blockers.
+
+**Session 121 Remaining Issues (deferred to Phase 6E):**
+- `ui.js` at 722 lines — monitor as Phase 6E adds UI code
+- Static selection announcer (dynamic `aria-live` region)
+- `b2_image_url=None` early-exit test
+- Per-prompt task leaves empty `bulk-gen/{job_id}/` prefixes in B2 indefinitely (cosmetic)
+- Documentation refresh: `PROJECT_FILE_STRUCTURE.md`, `CLAUDE_PHASES.md` references to `bulk-generator-job.js` updated in this docs pass
+
+---
 
 ### Session 119 — March 10, 2026
 

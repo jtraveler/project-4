@@ -1833,13 +1833,16 @@ def rename_prompt_files_for_seo(prompt_id: int) -> dict:  # noqa: C901 — SEO r
             # (b2_image_url) was moved to large/; mirror fields (b2_thumb_url,
             # b2_medium_url, b2_large_url) point to the same file so they also get the
             # large/ URL.  Separate variant files are out of scope for this phase.
+            mirror_fields_to_save = []
             for mirror_field in sharing_fields[1:]:
                 setattr(prompt, mirror_field, new_url)
-                prompt.save(update_fields=[mirror_field])
+                mirror_fields_to_save.append(mirror_field)
                 updated_fields.append(mirror_field)
                 results[mirror_field] = {
                     'success': True, 'new_url': new_url, 'mirrored': True
                 }
+            if mirror_fields_to_save:
+                prompt.save(update_fields=mirror_fields_to_save)
 
     # For bulk-gen prompts: check if the job prefix is now empty.
     # move_file already deleted the source file for this prompt.  Other files in

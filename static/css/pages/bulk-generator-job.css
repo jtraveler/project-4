@@ -1095,8 +1095,7 @@ a.published-badge:focus-visible {
 
 .publish-progress__links a {
     font-size: 0.8125rem;
-    color: var(--accent-color-primary, #7c3aed);
-    text-decoration: none;
+    text-decoration: underline;
 }
 
 .publish-progress__links a:hover {

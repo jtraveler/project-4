@@ -91,10 +91,11 @@
         if (Object.keys(groupData.slots).length < G.imagesPerPrompt) return;
         var groupRow = groupData.element;
         // For terminal jobs also hide any remaining loading placeholders
-        // :not(.placeholder-terminal) excludes slots already converted by
-        // clearUnfilledLoadingSlots (Fix B) so their messages are preserved
         if (G.TERMINAL_STATES.indexOf(G.currentStatus) !== -1) {
-            var loadingEls = groupRow.querySelectorAll('.placeholder-loading:not(.placeholder-terminal)');
+            // Positive selector — targets only unfilled loading placeholders.
+            // Future slot states (e.g. per-prompt override) will not be affected
+            // unless they explicitly carry this class.
+            var loadingEls = groupRow.querySelectorAll('.placeholder-loading');
             for (var li = 0; li < loadingEls.length; li++) {
                 var loadingSlot = loadingEls[li].closest('.prompt-image-slot');
                 if (loadingSlot) loadingSlot.style.display = 'none';

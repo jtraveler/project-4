@@ -155,7 +155,7 @@
                     '<div>' +
                         '<label class="bg-box-override-label" for="' + sId + '">Dimensions</label>' +
                         '<div class="bg-box-override-wrapper">' +
-                            '<select class="bg-box-override-select bg-override-size" id="' + sId + '" aria-label="Image size for prompt ' + boxIdCounter + '">' +
+                            '<select class="bg-box-override-select bg-override-size" id="' + sId + '" aria-label="Dimensions for prompt ' + boxIdCounter + '">' +
                                 '<option value="">Use master</option>' +
                                 '<option value="1024x1024">1:1</option>' +
                                 '<option value="1024x1536">2:3</option>' +
@@ -300,7 +300,7 @@
             var reset = box.querySelector('.bg-box-reset');
             if (reset) reset.setAttribute('aria-label', 'Reset prompt ' + num + ' to master settings');
             var sizeSelect = box.querySelector('.bg-override-size');
-            if (sizeSelect) sizeSelect.setAttribute('aria-label', 'Image size for prompt ' + num);
+            if (sizeSelect) sizeSelect.setAttribute('aria-label', 'Dimensions for prompt ' + num);
             var qualitySelect = box.querySelector('.bg-override-quality');
             if (qualitySelect) qualitySelect.setAttribute('aria-label', 'Image quality for prompt ' + num);
             var imagesSelect = box.querySelector('.bg-override-images');

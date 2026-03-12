@@ -183,9 +183,11 @@ def api_start_generation(request):
     # Extract text and per-prompt size/quality from each entry.
     VALID_SIZES = {choice[0] for choice in BulkGenerationJob.SIZE_CHOICES}
     VALID_QUALITIES = {choice[0] for choice in BulkGenerationJob.QUALITY_CHOICES}
+    VALID_COUNTS = {1, 2, 3, 4}
     prompts = []
     per_prompt_sizes = []
     per_prompt_qualities = []
+    per_prompt_counts = []
     for entry in raw_prompts:
         if isinstance(entry, dict):
             prompt_text = str(entry.get('text', '')).strip()
@@ -193,10 +195,17 @@ def api_start_generation(request):
             per_prompt_size = raw_size if raw_size in VALID_SIZES else ''
             raw_quality = str(entry.get('quality', '')).strip()
             per_prompt_quality = raw_quality if raw_quality in VALID_QUALITIES else ''
+            raw_count = entry.get('image_count')
+            # str() bypass protection: only accept int values within VALID_COUNTS
+            per_prompt_count = (
+                raw_count if isinstance(raw_count, int) and raw_count in VALID_COUNTS
+                else None
+            )
         elif isinstance(entry, str):
             prompt_text = entry.strip()
             per_prompt_size = ''
             per_prompt_quality = ''
+            per_prompt_count = None
         else:
             return JsonResponse(
                 {'error': 'Each prompt must be a string or an object with a text key'},
@@ -205,6 +214,7 @@ def api_start_generation(request):
         prompts.append(prompt_text)
         per_prompt_sizes.append(per_prompt_size)
         per_prompt_qualities.append(per_prompt_quality)
+        per_prompt_counts.append(per_prompt_count)
 
     for i, p in enumerate(prompts):
         if not p:
@@ -310,6 +320,7 @@ def api_start_generation(request):
         source_credits=source_credits,
         per_prompt_sizes=per_prompt_sizes,
         per_prompt_qualities=per_prompt_qualities,
+        per_prompt_counts=per_prompt_counts,
         api_key=api_key,
     )
 

@@ -517,6 +517,141 @@ class StartGenerationAPITests(TestCase):
         # Invalid quality must never reach the DB
         self.assertEqual(img.quality, '')
 
+    # ── 6E-C: Per-prompt image count override ──────────────────────────────────
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_count_creates_correct_image_count(
+        self, mock_get_provider, mock_async
+    ):
+        """Per-prompt image_count=2 creates exactly 2 GeneratedImage records."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A sunset', 'image_count': 2}],
+                'images_per_prompt': 3,
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        images = list(GeneratedImage.objects.filter(
+            job_id=job_id, prompt_order=0
+        ).order_by('variation_number'))
+        # Per-prompt override of 2 beats job default of 3
+        self.assertEqual(len(images), 2)
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_count_all_records_share_target_count(
+        self, mock_get_provider, mock_async
+    ):
+        """All GeneratedImage records for a prompt share the same target_count."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A mountain', 'image_count': 2}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        images = list(GeneratedImage.objects.filter(job_id=job_id, prompt_order=0))
+        self.assertEqual(len(images), 2)
+        for img in images:
+            self.assertEqual(img.target_count, 2)
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_count_falls_back_to_job_default(
+        self, mock_get_provider, mock_async
+    ):
+        """When no image_count key, job images_per_prompt is used."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A city'}],
+                'images_per_prompt': 3,
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        images = list(GeneratedImage.objects.filter(job_id=job_id, prompt_order=0))
+        self.assertEqual(len(images), 3)
+        for img in images:
+            self.assertEqual(img.target_count, 3)
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_count_invalid_int_falls_back_to_job_default(
+        self, mock_get_provider, mock_async
+    ):
+        """Out-of-range image_count (99) falls back to job images_per_prompt."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A forest', 'image_count': 99}],
+                'images_per_prompt': 2,
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        images = list(GeneratedImage.objects.filter(job_id=job_id, prompt_order=0))
+        # 99 is not in VALID_COUNTS — falls back to job default of 2
+        self.assertEqual(len(images), 2)
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_count_invalid_type_falls_back_to_job_default(
+        self, mock_get_provider, mock_async
+    ):
+        """Non-integer image_count ('two') falls back to job images_per_prompt."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A desert', 'image_count': 'two'}],
+                'images_per_prompt': 2,
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        images = list(GeneratedImage.objects.filter(job_id=job_id, prompt_order=0))
+        # String type rejected — falls back to job default of 2
+        self.assertEqual(len(images), 2)
+
 
 @override_settings(OPENAI_API_KEY='test-key')
 class JobStatusAPITests(TestCase):

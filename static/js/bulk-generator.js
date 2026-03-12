@@ -168,7 +168,7 @@
                     '<div>' +
                         '<label class="bg-box-override-label" for="' + iId + '">Images</label>' +
                         '<div class="bg-box-override-wrapper">' +
-                            '<select class="bg-box-override-select bg-override-images" id="' + iId + '">' +
+                            '<select class="bg-box-override-select bg-override-images" id="' + iId + '" aria-label="Number of images for prompt ' + boxIdCounter + '">' +
                                 '<option value="">Use master</option>' +
                                 '<option value="1">1</option>' +
                                 '<option value="2">2</option>' +
@@ -303,6 +303,8 @@
             if (sizeSelect) sizeSelect.setAttribute('aria-label', 'Image size for prompt ' + num);
             var qualitySelect = box.querySelector('.bg-override-quality');
             if (qualitySelect) qualitySelect.setAttribute('aria-label', 'Image quality for prompt ' + num);
+            var imagesSelect = box.querySelector('.bg-override-images');
+            if (imagesSelect) imagesSelect.setAttribute('aria-label', 'Number of images for prompt ' + num);
         });
     }
 
@@ -1023,20 +1025,23 @@
         var sourceCredits = [];
         var promptSizes = [];
         var promptQualities = [];
+        var promptCounts = [];
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
             var sz = box.querySelector('.bg-override-size');
             var ql = box.querySelector('.bg-override-quality');
+            var ic = box.querySelector('.bg-override-images');
             var text = ta ? ta.value.trim() : '';
             if (text) {
                 prompts.push(text);
                 sourceCredits.push(sc ? sc.value.trim() : '');
                 promptSizes.push(sz ? sz.value.trim() : '');
                 promptQualities.push(ql ? ql.value.trim() : '');
+                promptCounts.push(ic ? ic.value.trim() : '');
             }
         });
-        return { prompts: prompts, sourceCredits: sourceCredits, promptSizes: promptSizes, promptQualities: promptQualities };
+        return { prompts: prompts, sourceCredits: sourceCredits, promptSizes: promptSizes, promptQualities: promptQualities, promptCounts: promptCounts };
     }
 
     function clearValidationErrors() {
@@ -1099,6 +1104,7 @@
         var sourceCredits = collected.sourceCredits;
         var promptSizes = collected.promptSizes;
         var promptQualities = collected.promptQualities;
+        var promptCounts = collected.promptCounts;
         if (prompts.length === 0) {
             showValidationErrors([{ message: 'At least 1 prompt is required.' }]);
             return;
@@ -1110,7 +1116,7 @@
             return charDesc ? charDesc + '. ' + p : p;
         });
 
-        // Build per-prompt objects for start_job (text + optional size/quality overrides)
+        // Build per-prompt objects for start_job (text + optional size/quality/count overrides)
         var finalPromptObjects = finalPrompts.map(function (text, i) {
             var obj = { text: text };
             var promptSize = promptSizes && promptSizes[i] ? promptSizes[i] : '';
@@ -1120,6 +1126,13 @@
             var promptQuality = promptQualities && promptQualities[i] ? promptQualities[i] : '';
             if (promptQuality) {
                 obj.quality = promptQuality;
+            }
+            var promptCountRaw = promptCounts && promptCounts[i] ? promptCounts[i] : '';
+            if (promptCountRaw) {
+                var parsedCount = parseInt(promptCountRaw, 10);
+                if (!isNaN(parsedCount) && parsedCount > 0) {
+                    obj.image_count = parsedCount;
+                }
             }
             return obj;
         });

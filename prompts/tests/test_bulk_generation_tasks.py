@@ -421,6 +421,40 @@ class GetJobStatusTests(TestCase):
         img_data = status['images'][0]
         self.assertEqual(img_data['quality'], 'high')
 
+    def test_status_api_resolves_target_count_from_image(self):
+        """get_job_status() returns image.target_count when set."""
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1'],
+            images_per_prompt=1,
+            per_prompt_counts=[2],
+        )
+        img = job.images.first()
+        self.assertEqual(img.target_count, 2)
+
+        status = self.service.get_job_status(job)
+        img_data = status['images'][0]
+        self.assertEqual(img_data['target_count'], 2)
+
+    def test_status_api_resolves_target_count_from_job_when_zero(self):
+        """get_job_status() falls back to job.images_per_prompt when target_count=0."""
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1'],
+            images_per_prompt=3,
+        )
+        img = job.images.first()
+        # Default target_count=0 — simulates pre-6E-C image
+        self.assertEqual(img.target_count, 3)  # Actually set to 3 by resolved_counts
+        # Force to 0 to test the fallback
+        img.target_count = 0
+        img.save(update_fields=['target_count'])
+
+        status = self.service.get_job_status(job)
+        img_data = status['images'][0]
+        # Fallback to job.images_per_prompt
+        self.assertEqual(img_data['target_count'], 3)
+
 
 @override_settings(OPENAI_API_KEY='test-key')
 class ValidateReferenceImageTests(TestCase):

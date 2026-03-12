@@ -149,6 +149,7 @@ class BulkGenerationService:
         source_credits: list[str] | None = None,
         per_prompt_sizes: list[str] | None = None,
         per_prompt_qualities: list[str] | None = None,
+        per_prompt_counts: list[int | None] | None = None,
         api_key: str = '',
     ) -> BulkGenerationJob:
         """
@@ -167,6 +168,19 @@ class BulkGenerationService:
         provider = get_provider(provider_name, mock_mode=True)
         cost_per_image = provider.get_cost_per_image(size, quality)
 
+        # Resolve per-prompt counts ahead of job creation so estimated_cost is accurate.
+        # None means "use job default" (images_per_prompt).
+        resolved_counts = []
+        for i in range(len(prompts)):
+            override = (
+                per_prompt_counts[i]
+                if per_prompt_counts and i < len(per_prompt_counts)
+                else None
+            )
+            resolved_counts.append(override if override is not None else images_per_prompt)
+
+        total_images_estimate = sum(resolved_counts)
+
         job = BulkGenerationJob.objects.create(
             created_by=user,
             provider=provider_name,
@@ -180,7 +194,7 @@ class BulkGenerationService:
             character_description=character_description,
             total_prompts=len(prompts),
             estimated_cost=Decimal(str(
-                cost_per_image * len(prompts) * images_per_prompt
+                cost_per_image * total_images_estimate
             )),
         )
 
@@ -213,7 +227,10 @@ class BulkGenerationService:
             if per_prompt_qualities and order < len(per_prompt_qualities):
                 per_quality = per_prompt_qualities[order]
 
-            for variation in range(1, images_per_prompt + 1):
+            # Per-prompt count override (6E-C): resolved_counts already validated
+            prompt_count = resolved_counts[order]
+
+            for variation in range(1, prompt_count + 1):
                 images_to_create.append(GeneratedImage(
                     job=job,
                     prompt_text=combined,
@@ -222,6 +239,7 @@ class BulkGenerationService:
                     source_credit=credit,
                     size=per_size,
                     quality=per_quality,
+                    target_count=prompt_count,
                 ))
 
         GeneratedImage.objects.bulk_create(images_to_create)
@@ -323,6 +341,7 @@ class BulkGenerationService:
                 'error_message': _sanitise_error_message(img.error_message or ''),
                 'size': img.size or job.size,
                 'quality': img.quality or getattr(job, 'quality', None) or 'medium',
+                'target_count': img.target_count or job.images_per_prompt,
                 'prompt_page_id': str(img.prompt_page_id) if img.prompt_page_id else None,
                 'prompt_page_url': reverse(
                     'prompts:prompt_detail',

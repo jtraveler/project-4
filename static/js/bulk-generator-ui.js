@@ -209,7 +209,10 @@
             // Create group row if it doesn't exist yet
             if (!G.renderedGroups[groupIndex]) {
                 var groupSize = groupImages[0] ? (groupImages[0].size || '') : '';
-                G.createGroupRow(groupIndex, promptText, groupSize);
+                var groupTargetCount = groupImages[0]
+                    ? (groupImages[0].target_count || G.imagesPerPrompt)
+                    : G.imagesPerPrompt;
+                G.createGroupRow(groupIndex, promptText, groupSize, groupTargetCount);
             }
 
             // Fill image slots based on status
@@ -229,7 +232,8 @@
         }
     };
 
-    G.createGroupRow = function (groupIndex, promptText, groupSize) {
+    G.createGroupRow = function (groupIndex, promptText, groupSize, targetCount) {
+        targetCount = targetCount || G.imagesPerPrompt;
         var group = document.createElement('div');
         group.className = 'prompt-group';
         group.setAttribute('data-group-index', groupIndex);
@@ -319,7 +323,7 @@
 
         // Always 4 slots: loading for active, dashed empty for unused
         for (var s = 0; s < 4; s++) {
-            var isUnused = s >= G.imagesPerPrompt;
+            var isUnused = s >= targetCount;
             var slot = document.createElement('div');
             slot.className = 'prompt-image-slot' + (isUnused ? ' is-placeholder is-empty' : '');
             slot.setAttribute('data-slot', s);
@@ -367,7 +371,7 @@
             G.galleryInstruction.style.display = 'block';
         }
 
-        G.renderedGroups[groupIndex] = { slots: {}, element: group, targetCount: G.imagesPerPrompt };
+        G.renderedGroups[groupIndex] = { slots: {}, element: group, targetCount: targetCount };
     };
 
     G.fillImageSlot = function (groupIndex, slotIndex, image) {

@@ -2980,6 +2980,11 @@ class GeneratedImage(models.Model):
         default='',
         help_text="Per-prompt quality override. Empty means job default was used."
     )
+    target_count = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Number of images requested for this prompt group. "
+                  "All images in the same group share this value."
+    )
 
     # Output
     image_url = models.URLField(blank=True, max_length=2000)

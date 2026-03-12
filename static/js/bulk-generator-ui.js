@@ -106,11 +106,9 @@
 
             // Create group row if it doesn't exist yet
             if (!G.renderedGroups[groupIndex]) {
-                var groupSize = groupImages[0] ? (groupImages[0].size || '') : '';
-                var groupQuality = groupImages[0] ? (groupImages[0].quality || '') : '';
-                var groupTargetCount = groupImages[0]
-                    ? (groupImages[0].target_count || G.imagesPerPrompt)
-                    : G.imagesPerPrompt;
+                var groupSize = groupImages[0].size || '';
+                var groupQuality = groupImages[0].quality || '';
+                var groupTargetCount = groupImages[0].target_count || G.imagesPerPrompt;
                 G.createGroupRow(groupIndex, promptText, groupSize, groupQuality, groupTargetCount);
             }
 
@@ -131,8 +129,24 @@
         }
     };
 
+    /**
+     * Parses a size string like "1024x1536" into width and height integers.
+     * Returns { w: 1024, h: 1536 } or { w: 0, h: 0 } if unparseable.
+     */
+    function parseGroupSize(groupSize) {
+        if (!groupSize) { return { w: 0, h: 0 }; }
+        var parts = groupSize.split('x');
+        if (parts.length !== 2) { return { w: 0, h: 0 }; }
+        var w = parseFloat(parts[0]);
+        var h = parseFloat(parts[1]);
+        if (!w || !h || w <= 0 || h <= 0) { return { w: 0, h: 0 }; }
+        return { w: w, h: h };
+    }
+    G.parseGroupSize = parseGroupSize;
+
     G.createGroupRow = function (groupIndex, promptText, groupSize, groupQuality, targetCount) {
         targetCount = targetCount || G.imagesPerPrompt;
+        var parsedSize = parseGroupSize(groupSize);
         var group = document.createElement('div');
         group.className = 'prompt-group';
         group.setAttribute('data-group-index', groupIndex);
@@ -185,14 +199,9 @@
 
         // Resolve per-group size, aspect, and quality — fall back to job-level for pre-6E jobs
         var resolvedSizeDisplay, resolvedAspectArg, resolvedQualDisplay;
-        if (groupSize) {
-            var sizeParts2 = groupSize.split('x');
-            resolvedSizeDisplay = sizeParts2.length === 2
-                ? sizeParts2[0] + '\u00d7' + sizeParts2[1]
-                : G.sizeDisplay;
-            resolvedAspectArg = sizeParts2.length === 2
-                ? sizeParts2[0] + ' / ' + sizeParts2[1]
-                : G.galleryAspect;
+        if (groupSize && parsedSize.w > 0) {
+            resolvedSizeDisplay = parsedSize.w + '\u00d7' + parsedSize.h;
+            resolvedAspectArg = parsedSize.w + ' / ' + parsedSize.h;
         } else {
             resolvedSizeDisplay = G.sizeDisplay;
             resolvedAspectArg = G.galleryAspect;
@@ -225,10 +234,9 @@
         // Set initial columns from per-prompt size (groupSize) or fall back to job aspect.
         // groupSize is like '1536x1024'; G.galleryAspect is like '1024 / 1536'.
         var colW, colH;
-        if (groupSize) {
-            var sizeParts = groupSize.split('x');
-            colW = parseFloat(sizeParts[0]);
-            colH = parseFloat(sizeParts[1]);
+        if (groupSize && parsedSize.w > 0) {
+            colW = parsedSize.w;
+            colH = parsedSize.h;
         } else {
             var aspectParts = G.galleryAspect.split('/');
             colW = aspectParts.length === 2 ? parseFloat(aspectParts[0]) : 0;
@@ -240,15 +248,8 @@
 
         // Derive per-group aspect ratio for placeholder slots; fall back to job-level
         var slotAspect = G.galleryAspect;
-        if (groupSize) {
-            var slotParts = groupSize.split('x');
-            if (slotParts.length === 2) {
-                var slotW = parseFloat(slotParts[0]);
-                var slotH = parseFloat(slotParts[1]);
-                if (slotW > 0 && slotH > 0) {
-                    slotAspect = slotW + ' / ' + slotH;
-                }
-            }
+        if (groupSize && parsedSize.w > 0) {
+            slotAspect = parsedSize.w + ' / ' + parsedSize.h;
         }
 
         // Always 4 slots: loading for active, dashed empty for unused

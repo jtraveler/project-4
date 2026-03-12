@@ -12,6 +12,7 @@
      data-job-id="{{ job.id }}"
      data-cost-per-image="{{ cost_per_image }}"
      data-total-images="{{ total_images }}"
+     data-actual-total-images="{{ job.actual_total_images|default:job.total_images }}"
      data-completed-count="{{ job.completed_count }}"
      data-job-status="{{ job.status }}"
      data-status-url="{% url 'prompts:api_bulk_job_status' job.id %}"

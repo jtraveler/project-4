@@ -169,7 +169,11 @@
             } else if (G.TERMINAL_STATES.indexOf(newStatus) === -1 &&
                     completed > 0 && completed !== G.lastAnnouncedCompleted) {
                 G.lastAnnouncedCompleted = completed;
-                G.progressAnnouncer.textContent = completed + ' of ' + total + ' images generated.';
+                // Clear first — forces AT to detect the change on re-set
+                G.progressAnnouncer.textContent = '';
+                setTimeout(function () {
+                    G.progressAnnouncer.textContent = completed + ' of ' + total + ' images generated.';
+                }, 50);
             }
         }
 
@@ -288,6 +292,10 @@
         G.jobId = G.root.dataset.jobId;
         G.costPerImage = parseFloat(G.root.dataset.costPerImage) || 0;
         G.totalImages = parseInt(G.root.dataset.totalImages, 10) || 0;
+        // Override with actual_total_images if available (set at job creation, post-HARDENING-1)
+        // Falls back to total_images for pre-HARDENING-1 jobs where actual_total_images is 0
+        var actualTotal = parseInt(G.root.dataset.actualTotalImages, 10);
+        G.totalImages = (actualTotal && actualTotal > 0) ? actualTotal : G.totalImages;
         G.initialCompleted = parseInt(G.root.dataset.completedCount, 10) || 0;
         G.currentStatus = G.root.dataset.jobStatus;
         G.statusUrl = G.root.dataset.statusUrl;

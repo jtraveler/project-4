@@ -75,7 +75,7 @@
     G.progressAnnouncer = null; // #generation-progress-announcer live region (A11Y-3)
     G.lastAnnouncedCompleted = -1; // track last announced count to avoid repeats
 
-    // ─── Lightbox State (managed by bulk-generator-ui.js) ────────
+    // ─── Lightbox State (managed by bulk-generator-gallery.js) ───────
     G.lightboxEl = null;
     G.lightboxTrigger = null; // Element that opened lightbox (for focus restore)
 

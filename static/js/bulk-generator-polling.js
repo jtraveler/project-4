@@ -130,7 +130,8 @@
     // ─── Update Progress (called on each poll) ────────────────────
     G.updateProgress = function (data) {
         var completed = data.completed_count || 0;
-        var total = data.total_images || G.totalImages;
+        var total = data.actual_total_images || data.total_images || G.totalImages;
+        G.totalImages = total;
         var newStatus = data.status || G.currentStatus;
 
         G.updateProgressBar(completed, total);
@@ -390,8 +391,15 @@
             })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
-                if (data && data.images && data.images.length > 0) {
-                    G.renderImages(data.images);
+                if (data) {
+                    // Correct G.totalImages before re-applying terminal text
+                    var correctedTotal = data.actual_total_images || data.total_images;
+                    if (correctedTotal) { G.totalImages = correctedTotal; }
+                    if (data.images && data.images.length > 0) {
+                        G.renderImages(data.images);
+                    }
+                    // Re-apply terminal state with corrected total (clears loading slots too)
+                    G.handleTerminalState(G.currentStatus, data);
                 }
             })
             .catch(function (err) {

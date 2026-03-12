@@ -209,10 +209,11 @@
             // Create group row if it doesn't exist yet
             if (!G.renderedGroups[groupIndex]) {
                 var groupSize = groupImages[0] ? (groupImages[0].size || '') : '';
+                var groupQuality = groupImages[0] ? (groupImages[0].quality || '') : '';
                 var groupTargetCount = groupImages[0]
                     ? (groupImages[0].target_count || G.imagesPerPrompt)
                     : G.imagesPerPrompt;
-                G.createGroupRow(groupIndex, promptText, groupSize, groupTargetCount);
+                G.createGroupRow(groupIndex, promptText, groupSize, groupQuality, groupTargetCount);
             }
 
             // Fill image slots based on status
@@ -232,7 +233,7 @@
         }
     };
 
-    G.createGroupRow = function (groupIndex, promptText, groupSize, targetCount) {
+    G.createGroupRow = function (groupIndex, promptText, groupSize, groupQuality, targetCount) {
         targetCount = targetCount || G.imagesPerPrompt;
         var group = document.createElement('div');
         group.className = 'prompt-group';
@@ -284,11 +285,29 @@
         var meta = document.createElement('div');
         meta.className = 'prompt-group-meta';
 
+        // Resolve per-group size, aspect, and quality — fall back to job-level for pre-6E jobs
+        var resolvedSizeDisplay, resolvedAspectArg, resolvedQualDisplay;
+        if (groupSize) {
+            var sizeParts2 = groupSize.split('x');
+            resolvedSizeDisplay = sizeParts2.length === 2
+                ? sizeParts2[0] + '\u00d7' + sizeParts2[1]
+                : G.sizeDisplay;
+            resolvedAspectArg = sizeParts2.length === 2
+                ? sizeParts2[0] + ' / ' + sizeParts2[1]
+                : G.galleryAspect;
+        } else {
+            resolvedSizeDisplay = G.sizeDisplay;
+            resolvedAspectArg = G.galleryAspect;
+        }
+        resolvedQualDisplay = groupQuality
+            ? (groupQuality.charAt(0).toUpperCase() + groupQuality.slice(1))
+            : G.qualityDisplay;
+
         var sizeSpan = document.createElement('span');
-        sizeSpan.textContent = G.sizeDisplay;
-        var aspectLabel = G.getAspectLabel(G.galleryAspect);
+        sizeSpan.textContent = resolvedSizeDisplay;
+        var aspectLabel = G.getAspectLabel(resolvedAspectArg);
         var qualSpan = document.createElement('span');
-        qualSpan.textContent = G.qualityDisplay;
+        qualSpan.textContent = resolvedQualDisplay;
         meta.appendChild(sizeSpan);
         if (aspectLabel) {
             var aspectSpan = document.createElement('span');
@@ -321,6 +340,19 @@
             imagesGrid.dataset.columns = '2';
         }
 
+        // Derive per-group aspect ratio for placeholder slots; fall back to job-level
+        var slotAspect = G.galleryAspect;
+        if (groupSize) {
+            var slotParts = groupSize.split('x');
+            if (slotParts.length === 2) {
+                var slotW = parseFloat(slotParts[0]);
+                var slotH = parseFloat(slotParts[1]);
+                if (slotW > 0 && slotH > 0) {
+                    slotAspect = slotW + ' / ' + slotH;
+                }
+            }
+        }
+
         // Always 4 slots: loading for active, dashed empty for unused
         for (var s = 0; s < 4; s++) {
             var isUnused = s >= targetCount;
@@ -336,13 +368,13 @@
                 // Empty dashed placeholder for unused slots
                 var emptyPlaceholder = document.createElement('div');
                 emptyPlaceholder.className = 'placeholder-empty';
-                emptyPlaceholder.style.aspectRatio = G.galleryAspect;
+                emptyPlaceholder.style.aspectRatio = slotAspect;
                 container.appendChild(emptyPlaceholder);
             } else {
                 // Loading spinner for active slots
                 var loading = document.createElement('div');
                 loading.className = 'placeholder-loading';
-                loading.style.aspectRatio = G.galleryAspect;
+                loading.style.aspectRatio = slotAspect;
                 loading.setAttribute('role', 'status');
                 loading.setAttribute('aria-label', 'Image generating');
 

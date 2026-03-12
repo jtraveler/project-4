@@ -561,6 +561,51 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 - **CSS:** Styles in `static/css/style.css` under "Trash video styling" section (~line 2555-2590)
 - **Specificity Note:** `.trash-prompt-wrapper .trash-video-play` uses specificity 0,2,0 to beat `masonry-grid.css` `.video-play-icon` (0,1,0) which loads later
 
+### Orphan Detection — B2 Migration Gap
+
+> ⚠️ `detect_orphaned_files` is currently non-functional. Read before assuming it works.
+
+#### What Was Built (Phase D.5, October 2025)
+
+`prompts/management/commands/detect_orphaned_files.py` (524 lines) — scans storage for
+files with no matching DB record. Generates CSV reports, monitors API rate limits,
+emails admins. Was scheduled on Heroku Scheduler daily at 04:00 UTC and weekly Sunday
+at 05:00 UTC.
+
+#### The Gap
+
+The command was written for **Cloudinary**. It uses the Cloudinary API to list bucket
+contents and cross-references against the DB. After the B2 + Cloudflare migration,
+the command still exists in the codebase but points at a storage provider that is
+no longer used for new uploads.
+
+**Current status:** Non-functional for B2 files. Running it will scan Cloudinary
+(legacy files only) and miss all B2 content entirely.
+
+#### What Needs to Be Built
+
+A `detect_b2_orphans` management command (or rewrite of `detect_orphaned_files`) that:
+- Uses the B2 SDK (not Cloudinary) to list bucket contents under `media/` and `bulk-gen/`
+- Cross-references against `Prompt.b2_image_url`, `Prompt.b2_large_url`,
+  `Prompt.b2_thumb_url`, and `GeneratedImage` B2 URL fields
+- Understands the shared-file window (see Bulk Job Deletion section) — does not
+  flag shared files as orphans
+- Excludes admin/static asset paths explicitly (configurable prefix exclusion list)
+- Maintains the same CSV report, email notification, and rate-limit protection
+  patterns as the original command
+- Replaces the Heroku Scheduler entries when ready
+
+**Priority:** Must be built before job deletion goes live. A deletion system without
+working orphan detection has no safety net.
+
+#### Existing Infrastructure That Still Works
+
+- `cleanup_deleted_prompts` command — **functional**, B2-aware, correctly calls
+  `hard_delete()` which handles B2 file removal
+- Heroku Scheduler — **configured and running**, just needs the B2 orphan command
+  added once built
+- Admin email notifications — **functional** (ADMINS setting configured)
+
 ### Known Risk Pattern: Inline Code Extraction (CRITICAL)
 
 When extracting inline `<script>` or `<style>` blocks to external files:
@@ -1033,6 +1078,77 @@ UTILITIES:
 prompts/utils/source_credit.py               # parse_source_credit() + KNOWN_SITES
 ```
 
+### Bulk Job Deletion — Pre-Build Reference (DO NOT BUILD WITHOUT READING THIS)
+
+> ⚠️ Read this entire section before writing any deletion spec for BulkGenerationJob.
+> Skipping any of these safeguards risks deleting images that paying customers have published.
+
+#### The Shared-File Risk
+
+When a `GeneratedImage` is published as a `Prompt`, the two records initially share
+the same physical file in B2. The file is not duplicated — both records point at
+the same B2 path.
+
+After `rename_prompt_files_for_seo` runs, the `Prompt` gets its own independent file
+at a new SEO-friendly path. At that point the records are genuinely separate.
+
+**The danger window:** Between publish and rename completion, deleting the job's B2 file
+also destroys the Prompt's image. The N4h upload-flow rename bug (see Current Blockers)
+means this window may be indefinitely long for upload-flow prompts.
+
+#### Mandatory Pre-Deletion Checklist
+
+No B2 file belonging to a BulkGenerationJob may be deleted until ALL of the following
+pass for that specific file:
+
+1. `GeneratedImage.prompt_page` is NULL — image has not been published as a Prompt
+2. No `Prompt.b2_image_url` or `Prompt.b2_large_url` matches this B2 path
+3. No pending rename task exists for this image in the Django-Q queue
+
+If any check fails → skip that file. Log the skip with the reason. Never silently ignore.
+
+#### Soft Delete Architecture (Follow Phase D.5 Pattern Exactly)
+
+Do NOT build a separate deletion system for jobs. Extend the existing soft-delete
+pattern that Phase D.5 established for Prompts:
+
+- Add `deleted_at`, `deleted_by`, `deletion_reason` fields to `BulkGenerationJob`
+- Follow the same `soft_delete()`, `restore()`, `hard_delete()` method pattern
+- 72-hour pending window before permanent B2 deletion (vs 5-30 days for Prompts —
+  jobs are staff/tool artifacts, not user-created content requiring long retention)
+- Hard deletion is a Django-Q task that runs the pre-deletion checklist before
+  touching any B2 file
+
+#### New Records Required
+
+**JobReceipt** — A separate immutable model created at job completion. Records:
+prompts submitted, images successfully generated, sizes, quality settings, actual cost,
+timestamp. This record must survive job deletion permanently — it is the billing audit
+trail. Do not cascade-delete it when a job is deleted.
+
+**DeletionAuditLog** — Every B2 file actually deleted gets a log entry:
+job ID, GeneratedImage ID, B2 file path, timestamp, which checklist check
+authorised deletion. Stored in DB indefinitely. Non-deletable by users.
+
+#### Existing Infrastructure to Reuse
+
+- `cleanup_deleted_prompts` management command — extend or mirror for job cleanup
+- Heroku Scheduler already configured — add a job cleanup task to existing schedule
+- Trash UI pattern from Phase D.5 — reuse for job deletion UI if needed
+- `soft_delete()` / `restore()` model methods — copy the pattern from `Prompt` model
+
+#### What to Build (Ordered)
+
+1. Soft-delete fields on `BulkGenerationJob` (migration)
+2. `JobReceipt` model (migration)
+3. `DeletionAuditLog` model (migration)
+4. Pre-deletion checklist task in Django-Q
+5. `cleanup_deleted_jobs` management command (mirrors `cleanup_deleted_prompts`)
+6. Heroku Scheduler entry for job cleanup
+7. Frontend delete UI (mirrors Prompt trash UX)
+
+Do not build item 7 before items 1–6 are complete and tested.
+
 ### Views Package Structure
 
 Views were split into a modular package for maintainability:
@@ -1173,6 +1289,78 @@ Videos get 3 frames extracted at 25%, 50%, 75% of duration using FFmpeg. Each fr
 - Hate symbols
 - Satanic/occult imagery
 - Medical/graphic content
+
+---
+
+## 🔔 Admin Operational Notifications — Planned Architecture
+
+> 📌 This is a planned future system. Nothing here is built yet.
+> Capture date: Session 122 (March 12, 2026).
+
+### The Problem
+
+Scheduled tasks and management commands (cleanup, orphan detection, rename tasks,
+job deletion) currently output only to Heroku logs. Non-technical admins have no
+visibility into what's happening. A 500 error, a failed cleanup run, or a batch of
+orphaned files discovered overnight is invisible to anyone not actively tailing logs.
+
+### The Vision
+
+Tie all automated operations into the existing notification infrastructure so that:
+- The frontend notification bell shows admins a summary of scheduled task outcomes
+- The admin-only sub-tab in the notifications UI shows a health feed of all operations
+- Issues (errors, orphans found, failed images) surface as actionable notification cards
+- Non-technical admins can understand platform health without touching Heroku logs
+
+### What Already Exists to Build On
+
+| Infrastructure | Status | Notes |
+|---------------|--------|-------|
+| Notification model (6 types, 5 categories) | ✅ Built — Session 86 | Has `system` type for admin-originated notifications |
+| Frontend bell dropdown + polling (15s) | ✅ Built — Sessions 86–91 | Already shows unread count |
+| System notifications page + admin send UI | ✅ Built — Sessions 90–91 | Quill editor, batch send, preview |
+| Admin-only notification sub-tab | ✅ Built | Already segregates admin-visible content |
+| `create_notification()` service | ✅ Built — `prompts/services/notifications.py` | Can be called from management commands |
+| Django-Q task infrastructure | ✅ Built | Background tasks already run; can emit notifications |
+
+### Events to Surface (Priority Order)
+
+**P1 — Surface immediately when they occur:**
+- 500 errors (Django signal or middleware → notification)
+- Bulk generation job failures (entire job failed, not just single images)
+- B2 file deletion failures (items stuck in pending deletion queue)
+- Orphan detection: critical finds (B2 files with no DB record AND no pending task)
+
+**P2 — Daily digest (batch into one notification):**
+- Cleanup run summary: N jobs deleted, N files removed, N skipped (shared-file window)
+- Orphan detection run summary: N files scanned, N orphans found, N already resolved
+- SEO rename task outcomes: N renamed, N failed, N pending
+
+**P3 — Weekly digest:**
+- DB + B2 consistency check results
+- Cost tracking summary: actual spend vs estimated for the week
+- Deletion audit log summary: files deleted, skipped, errors
+
+### Implementation Notes (For Future Spec)
+
+- Management commands should call `create_notification()` at completion with a
+  structured summary. Use `notification_type='system'`, target admin users only.
+- Notification title should be machine-readable enough to be filterable
+  (e.g. "Cleanup Run: 3 jobs deleted, 2 skipped") — not just "Cleanup complete".
+- The admin notification sub-tab should have a "Health" filter category in addition
+  to existing categories — shows only automated-system notifications.
+- Batch digest notifications should use the existing `batch_id` field to group
+  related events so admins can dismiss an entire run's notifications at once.
+- Error notifications (P1) should persist until explicitly dismissed — do not
+  auto-expire them.
+- The 500 error capture should use Django's existing exception middleware, not a
+  third-party service — keep it in-house and route through the notification system.
+
+### What This Is NOT
+
+This is not a replacement for Heroku logs. It is a human-readable operational
+summary layer for non-technical admins. Technical staff should still use logs for
+debugging. This system surfaces outcomes, not stack traces.
 
 ---
 

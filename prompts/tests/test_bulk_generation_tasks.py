@@ -456,6 +456,199 @@ class GetJobStatusTests(TestCase):
         self.assertEqual(img_data['target_count'], 3)
 
 
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class CostTrackingAndActualTotalImagesTests(TestCase):
+    """
+    HARDENING-1 TP5 Tests 1–6.
+    Tests for:
+    - actual_cost using per-image quality/size (6E-B/6E-A improvements)
+    - estimated_cost accuracy for mixed-count jobs (6E-C improvement)
+    - actual_total_images populated at job creation and returned by status API
+    """
+
+    def setUp(self):
+        self.service = BulkGenerationService()
+        self.user = User.objects.create_user(
+            username='costtrackuser', password='testpass123'
+        )
+
+    # ── Test 1: actual_cost uses per-image quality ────────────────────────────
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_actual_cost_uses_per_image_quality(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """actual_cost reflects per-image quality override, not job-level quality."""
+        from prompts.tasks import process_bulk_generation_job
+        from prompts.constants import IMAGE_COST_MAP
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.return_value = GenerationResult(
+            success=True, image_data=b'data',
+            revised_prompt='', cost=0.05,
+        )
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        # Job quality=low, but per-prompt quality override=high
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['A sunset'],
+            quality='low',
+            per_prompt_qualities=['high'],
+        )
+        job.api_key_encrypted = encrypt_api_key('sk-test1234567890')
+        job.api_key_hint = '7890'
+        job.status = 'processing'
+        job.save(update_fields=['api_key_encrypted', 'api_key_hint', 'status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        # actual_cost must use image.quality='high' (override), not job.quality='low'
+        expected_cost = Decimal(str(
+            IMAGE_COST_MAP['high']['1024x1024']
+        ))
+        self.assertEqual(job.actual_cost, expected_cost)
+
+    # ── Test 2: actual_cost uses per-image size ───────────────────────────────
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_actual_cost_uses_per_image_size(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """actual_cost reflects per-image size override, not job-level size."""
+        from prompts.tasks import process_bulk_generation_job
+        from prompts.constants import IMAGE_COST_MAP
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.return_value = GenerationResult(
+            success=True, image_data=b'data',
+            revised_prompt='', cost=0.05,
+        )
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        # Job size=1024x1024, but per-prompt size override=1024x1536
+        # quality='medium' explicitly specified to avoid implicit assumption
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['A portrait'],
+            size='1024x1024',
+            quality='medium',
+            per_prompt_sizes=['1024x1536'],
+        )
+        job.api_key_encrypted = encrypt_api_key('sk-test1234567890')
+        job.api_key_hint = '7890'
+        job.status = 'processing'
+        job.save(update_fields=['api_key_encrypted', 'api_key_hint', 'status'])
+
+        process_bulk_generation_job(str(job.id))
+
+        job.refresh_from_db()
+        # actual_cost must use image.size='1024x1536' (override), not job.size='1024x1024'
+        expected_cost = Decimal(str(
+            IMAGE_COST_MAP['medium']['1024x1536']
+        ))
+        self.assertEqual(job.actual_cost, expected_cost)
+
+    # ── Test 3: estimated_cost correct for mixed-count job ────────────────────
+
+    def test_estimated_cost_correct_for_mixed_count_job(self):
+        """estimated_cost sums resolved per-prompt counts (6E-C improvement).
+
+        The provider's COST_MAP returns 0.03 for medium quality (independent
+        of size). Two prompts with per_prompt_counts=[3, None] and
+        images_per_prompt=1 give resolved [3, 1] = 4 images total.
+        The incorrect pre-6E-C formula would compute 2*1=2 images.
+        """
+        # Prompt 0 overrides to 3 images; prompt 1 uses job default of 1
+        # Resolved: [3, 1] → total 4 images
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['Prompt A', 'Prompt B'],
+            images_per_prompt=1,
+            quality='medium',
+            size='1024x1024',
+            per_prompt_counts=[3, None],
+        )
+        # provider.get_cost_per_image('medium') = 0.03 (from OpenAIImageProvider.COST_MAP)
+        cost_per_image = Decimal('0.03')
+        # Correct (6E-C): sum([3, 1]) = 4 images
+        expected_correct = cost_per_image * 4  # Decimal('0.12')
+        # Incorrect (pre-6E-C): total_prompts * images_per_prompt = 2 * 1 = 2 images
+        expected_wrong = cost_per_image * 2  # Decimal('0.06')
+        self.assertEqual(job.estimated_cost, expected_correct)
+        self.assertNotEqual(job.estimated_cost, expected_wrong)
+
+    # ── Test 4: actual_total_images populated at job creation ─────────────────
+
+    def test_actual_total_images_populated_at_job_creation(self):
+        """actual_total_images is set from sum of resolved per-prompt counts."""
+        # Prompt 0 overrides to 3 images, prompt 1 uses job default of 2
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['Prompt A', 'Prompt B'],
+            images_per_prompt=2,
+            per_prompt_counts=[3, None],
+        )
+        # 3 + 2 = 5
+        self.assertEqual(job.actual_total_images, 5)
+        # Confirm it is also reflected in the DB
+        job.refresh_from_db()
+        self.assertEqual(job.actual_total_images, 5)
+
+    # ── Test 5: actual_total_images in status API response ────────────────────
+
+    def test_actual_total_images_in_status_api_response(self):
+        """get_job_status() returns actual_total_images for jobs with overrides.
+
+        Uses images_per_prompt=1 and per_prompt_counts=[3, 1] so that
+        actual_total_images=4 differs from total_images=2*1=2, ensuring the
+        test discriminates between the two values.
+        """
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['Prompt A', 'Prompt B'],
+            images_per_prompt=1,
+            per_prompt_counts=[3, 1],
+        )
+        # actual_total_images should be 4 (3+1); total_images property = 2*1 = 2
+        self.assertEqual(job.actual_total_images, 4)
+        self.assertEqual(job.total_images, 2)  # confirm they differ
+
+        status = self.service.get_job_status(job)
+        self.assertIn('actual_total_images', status)
+        # Must return 4 from actual_total_images, not 2 from total_images property
+        self.assertEqual(status['actual_total_images'], 4)
+
+    # ── Test 6: actual_total_images fallback for pre-migration jobs ───────────
+
+    def test_actual_total_images_fallback_for_pre_migration_job(self):
+        """get_job_status() falls back to total_images when actual_total_images=0."""
+        # Simulate a pre-migration job by creating normally then zeroing the field
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1', 'p2'],
+            images_per_prompt=2,
+        )
+        # Zero out actual_total_images to simulate a pre-migration record
+        job.actual_total_images = 0
+        job.save(update_fields=['actual_total_images'])
+
+        status = self.service.get_job_status(job)
+        # total_images = 2 prompts * 2 images = 4 (from property)
+        self.assertEqual(job.total_images, 4)
+        # Must fall back to total_images (4), not return 0
+        self.assertEqual(status['actual_total_images'], 4)
+
+
 @override_settings(OPENAI_API_KEY='test-key')
 class ValidateReferenceImageTests(TestCase):
     """Tests for BulkGenerationService.validate_reference_image()."""

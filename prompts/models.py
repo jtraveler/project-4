@@ -2891,6 +2891,12 @@ class BulkGenerationJob(models.Model):
     completed_count = models.PositiveIntegerField(default=0)
     failed_count = models.PositiveIntegerField(default=0)
     published_count = models.PositiveIntegerField(default=0)  # Phase 6B: pages published from this job
+    actual_total_images = models.PositiveIntegerField(
+        default=0,
+        help_text="True total images for this job, accounting for per-prompt count "
+                  "overrides. Populated at job creation. Replaces total_images property "
+                  "for display and progress tracking."
+    )
 
     # Cost tracking
     estimated_cost = models.DecimalField(

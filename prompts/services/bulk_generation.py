@@ -196,6 +196,7 @@ class BulkGenerationService:
             estimated_cost=Decimal(str(
                 cost_per_image * total_images_estimate
             )),
+            actual_total_images=total_images_estimate,
         )
 
         if api_key:
@@ -368,6 +369,7 @@ class BulkGenerationService:
             'status': job.status,
             'total_prompts': job.total_prompts,
             'total_images': job.total_images,
+            'actual_total_images': job.actual_total_images or job.total_images,
             'images_per_prompt': job.images_per_prompt,
             'completed_count': status_counts.get('completed', 0),
             'generating_count': status_counts.get('generating', 0),

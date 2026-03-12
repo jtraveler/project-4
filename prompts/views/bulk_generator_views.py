@@ -29,8 +29,10 @@ service = BulkGenerationService()
 MAX_PROMPTS_PER_JOB = 50
 MAX_PROMPT_LENGTH = 4000
 
-# Valid choices (mirror model choices)
+# Valid choices for per-prompt and job-level validation
+VALID_SIZES = set(SUPPORTED_IMAGE_SIZES)  # excludes unsupported sizes (e.g. 1792x1024)
 VALID_QUALITIES = {'low', 'medium', 'high'}
+VALID_COUNTS = {1, 2, 3, 4}
 VALID_PROVIDERS = {'openai'}
 VALID_VISIBILITIES = {'public', 'private'}
 
@@ -181,9 +183,6 @@ def api_start_generation(request):
 
     # Prompts may be plain strings (legacy) or objects with a 'text' key (6E-A+).
     # Extract text and per-prompt size/quality from each entry.
-    VALID_SIZES = {choice[0] for choice in BulkGenerationJob.SIZE_CHOICES}
-    VALID_QUALITIES = {choice[0] for choice in BulkGenerationJob.QUALITY_CHOICES}
-    VALID_COUNTS = {1, 2, 3, 4}
     prompts = []
     per_prompt_sizes = []
     per_prompt_qualities = []

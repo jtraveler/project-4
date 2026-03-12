@@ -371,7 +371,7 @@ class StartGenerationAPITests(TestCase):
         response = self.client.post(
             self.url,
             data=json.dumps({
-                'prompts': [{'text': 'A sunset', 'size': '1792x1024'}],
+                'prompts': [{'text': 'A sunset', 'size': '1536x1024'}],
                 'api_key': 'sk-test1234567890',
             }),
             content_type='application/json',
@@ -382,7 +382,7 @@ class StartGenerationAPITests(TestCase):
             job_id=job_id, prompt_order=0
         ).first()
         self.assertIsNotNone(img)
-        self.assertEqual(img.size, '1792x1024')
+        self.assertEqual(img.size, '1536x1024')
 
     @patch('prompts.services.bulk_generation.async_task')
     @patch('prompts.services.image_providers.get_provider')
@@ -651,6 +651,62 @@ class StartGenerationAPITests(TestCase):
         images = list(GeneratedImage.objects.filter(job_id=job_id, prompt_order=0))
         # String type rejected — falls back to job default of 2
         self.assertEqual(len(images), 2)
+
+    # ── HARDENING-1 TP5 Test 7: VALID_SIZES excludes 1792x1024 ───────────────
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_unsupported_size_1792x1024_cleared(
+        self, mock_get_provider, mock_async
+    ):
+        """Per-prompt size 1792x1024 is rejected by VALID_SIZES and cleared to empty."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A wide shot', 'size': '1792x1024'}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        img = GeneratedImage.objects.filter(job_id=job_id, prompt_order=0).first()
+        self.assertIsNotNone(img)
+        # 1792x1024 is not in SUPPORTED_IMAGE_SIZES — must be cleared to empty string
+        self.assertEqual(img.size, '')
+
+    # ── HARDENING-1 TP5 Test 8: VALID_SIZES accepts supported sizes ──────────
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_supported_size_1024x1024_accepted(
+        self, mock_get_provider, mock_async
+    ):
+        """Per-prompt size 1024x1024 is in VALID_SIZES and stored correctly."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.034
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A square portrait', 'size': '1024x1024'}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        img = GeneratedImage.objects.filter(job_id=job_id, prompt_order=0).first()
+        self.assertIsNotNone(img)
+        # 1024x1024 is in SUPPORTED_IMAGE_SIZES — must be stored
+        self.assertEqual(img.size, '1024x1024')
 
 
 @override_settings(OPENAI_API_KEY='test-key')

@@ -17,6 +17,7 @@ from prompts.forms import PromptForm
 from prompts.services import ModerationOrchestrator
 from prompts.constants import DEFAULT_AI_TITLES
 from prompts.utils.source_credit import parse_source_credit
+from django_q.tasks import async_task
 import json
 import logging
 
@@ -522,11 +523,12 @@ def upload_submit(request):
         prompt.save(update_fields=['processing_complete'])
         logger.info(f"Prompt {prompt.pk}: AI complete from cache, processing_complete=True")
 
-    # N4h: Queue SEO file renaming for B2 uploads
-    # Renames UUID filenames to SEO-friendly slugs (e.g., "title-slug-ai-prompt.jpg")
-    if is_b2_upload and prompt.pk:
+    # N4h: Queue SEO file renaming for B2 image uploads (N4H-UPLOAD-RENAME-FIX).
+    # Renames UUID-based filenames to SEO-friendly slugs (e.g., "title-slug-ai-prompt.jpg").
+    # Guard: only queue if b2_image_url is set — avoids a no-op task for video/Cloudinary uploads.
+    # Follows same pattern as SMOKE2-FIX-D for bulk-gen path (Session 121).
+    if prompt.b2_image_url:
         try:
-            from django_q.tasks import async_task
             async_task(
                 'prompts.tasks.rename_prompt_files_for_seo',
                 prompt.pk,

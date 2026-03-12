@@ -30,9 +30,9 @@ MAX_PROMPTS_PER_JOB = 50
 MAX_PROMPT_LENGTH = 4000
 
 # Valid choices for per-prompt and job-level validation
-VALID_SIZES = set(SUPPORTED_IMAGE_SIZES)  # excludes unsupported sizes (e.g. 1792x1024)
-VALID_QUALITIES = {'low', 'medium', 'high'}
-VALID_COUNTS = {1, 2, 3, 4}
+VALID_SIZES = frozenset(SUPPORTED_IMAGE_SIZES)  # excludes unsupported sizes (e.g. 1792x1024)
+VALID_QUALITIES = frozenset({'low', 'medium', 'high'})
+VALID_COUNTS = frozenset({1, 2, 3, 4})
 VALID_PROVIDERS = {'openai'}
 VALID_VISIBILITIES = {'public', 'private'}
 

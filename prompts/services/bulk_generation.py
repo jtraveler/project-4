@@ -179,7 +179,7 @@ class BulkGenerationService:
             )
             resolved_counts.append(override if override is not None else images_per_prompt)
 
-        total_images_estimate = sum(resolved_counts)
+        resolved_total_images = sum(resolved_counts)
 
         job = BulkGenerationJob.objects.create(
             created_by=user,
@@ -194,9 +194,9 @@ class BulkGenerationService:
             character_description=character_description,
             total_prompts=len(prompts),
             estimated_cost=Decimal(str(
-                cost_per_image * total_images_estimate
+                cost_per_image * resolved_total_images
             )),
-            actual_total_images=total_images_estimate,
+            actual_total_images=resolved_total_images,
         )
 
         if api_key:
@@ -369,7 +369,7 @@ class BulkGenerationService:
             'status': job.status,
             'total_prompts': job.total_prompts,
             'total_images': job.total_images,
-            'actual_total_images': job.actual_total_images or job.total_images,
+            'actual_total_images': job.actual_total_images if job.actual_total_images > 0 else job.total_images,
             'images_per_prompt': job.images_per_prompt,
             'completed_count': status_counts.get('completed', 0),
             'generating_count': status_counts.get('generating', 0),

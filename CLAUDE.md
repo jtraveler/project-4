@@ -588,7 +588,7 @@ A `detect_b2_orphans` management command (or rewrite of `detect_orphaned_files`)
 - Uses the B2 SDK (not Cloudinary) to list bucket contents under `media/` and `bulk-gen/`
 - Cross-references against `Prompt.b2_image_url`, `Prompt.b2_large_url`,
   `Prompt.b2_thumb_url`, and `GeneratedImage` B2 URL fields
-- Understands the shared-file window (see Bulk Job Deletion section) — does not
+- Understands the shared-file window (see 'Bulk Job Deletion — Pre-Build Reference' below) — does not
   flag shared files as orphans
 - Excludes admin/static asset paths explicitly (configurable prefix exclusion list)
 - Maintains the same CSV report, email notification, and rate-limit protection

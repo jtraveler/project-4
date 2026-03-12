@@ -167,24 +167,44 @@ def api_start_generation(request):
     ]
 
     # --- Required field ---
-    prompts = data.get('prompts')
-    if not isinstance(prompts, list) or len(prompts) == 0:
+    raw_prompts = data.get('prompts')
+    if not isinstance(raw_prompts, list) or len(raw_prompts) == 0:
         return JsonResponse(
             {'error': 'prompts must be a non-empty list'}, status=400,
         )
 
-    if len(prompts) > MAX_PROMPTS_PER_JOB:
+    if len(raw_prompts) > MAX_PROMPTS_PER_JOB:
         return JsonResponse(
             {'error': f'Maximum {MAX_PROMPTS_PER_JOB} prompts per job'},
             status=400,
         )
 
-    if not all(isinstance(p, str) for p in prompts):
-        return JsonResponse(
-            {'error': 'All prompts must be strings'}, status=400,
-        )
+    # Prompts may be plain strings (legacy) or objects with a 'text' key (6E-A+).
+    # Extract text and per-prompt size from each entry.
+    VALID_SIZES = {choice[0] for choice in BulkGenerationJob.SIZE_CHOICES}
+    prompts = []
+    per_prompt_sizes = []
+    for entry in raw_prompts:
+        if isinstance(entry, dict):
+            prompt_text = str(entry.get('text', '')).strip()
+            raw_size = str(entry.get('size', '')).strip()
+            per_prompt_size = raw_size if raw_size in VALID_SIZES else ''
+        elif isinstance(entry, str):
+            prompt_text = entry.strip()
+            per_prompt_size = ''
+        else:
+            return JsonResponse(
+                {'error': 'Each prompt must be a string or an object with a text key'},
+                status=400,
+            )
+        prompts.append(prompt_text)
+        per_prompt_sizes.append(per_prompt_size)
 
     for i, p in enumerate(prompts):
+        if not p:
+            return JsonResponse(
+                {'error': f'Prompt {i + 1} is empty'}, status=400,
+            )
         if len(p) > MAX_PROMPT_LENGTH:
             return JsonResponse(
                 {'error': f'Prompt {i + 1} exceeds {MAX_PROMPT_LENGTH} character limit'},
@@ -282,6 +302,7 @@ def api_start_generation(request):
         reference_image_url=reference_image_url,
         character_description=character_description,
         source_credits=source_credits,
+        per_prompt_sizes=per_prompt_sizes,
         api_key=api_key,
     )
 

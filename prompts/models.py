@@ -2965,6 +2965,15 @@ class GeneratedImage(models.Model):
         help_text='Source credit text entered in bulk generator'
     )
 
+    # Per-prompt overrides (6E series)
+    size = models.CharField(
+        max_length=20,
+        choices=BulkGenerationJob.SIZE_CHOICES,
+        blank=True,
+        default='',
+        help_text="Per-prompt size override. Empty means job default was used."
+    )
+
     # Output
     image_url = models.URLField(blank=True, max_length=2000)
     revised_prompt = models.TextField(blank=True)

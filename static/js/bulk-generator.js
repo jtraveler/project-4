@@ -153,13 +153,12 @@
                         '</div>' +
                     '</div>' +
                     '<div>' +
-                        '<label class="bg-box-override-label" for="' + sId + '">Dimensions <span class="bg-future-label">(v1.1)</span></label>' +
+                        '<label class="bg-box-override-label" for="' + sId + '">Dimensions</label>' +
                         '<div class="bg-box-override-wrapper">' +
-                            '<select class="bg-box-override-select bg-override-size" id="' + sId + '" disabled title="Per-prompt dimensions coming in v1.1" data-future-feature="per-prompt-dimensions">' +
+                            '<select class="bg-box-override-select bg-override-size" id="' + sId + '" aria-label="Image size for prompt ' + boxIdCounter + '">' +
                                 '<option value="">Use master</option>' +
                                 '<option value="1024x1024">1:1</option>' +
                                 '<option value="1024x1536">2:3</option>' +
-                                '<option value="1792x1024" disabled data-future="true">16:9 (coming soon)</option>' +
                                 '<option value="1536x1024">3:2</option>' +
                             '</select>' +
                         '</div>' +
@@ -300,6 +299,8 @@
             if (del) del.setAttribute('aria-label', 'Delete prompt ' + num);
             var reset = box.querySelector('.bg-box-reset');
             if (reset) reset.setAttribute('aria-label', 'Reset prompt ' + num + ' to master settings');
+            var sizeSelect = box.querySelector('.bg-override-size');
+            if (sizeSelect) sizeSelect.setAttribute('aria-label', 'Image size for prompt ' + num);
         });
     }
 
@@ -1018,16 +1019,19 @@
     function collectPrompts() {
         var prompts = [];
         var sourceCredits = [];
+        var promptSizes = [];
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
+            var sz = box.querySelector('.bg-override-size');
             var text = ta ? ta.value.trim() : '';
             if (text) {
                 prompts.push(text);
                 sourceCredits.push(sc ? sc.value.trim() : '');
+                promptSizes.push(sz ? sz.value.trim() : '');
             }
         });
-        return { prompts: prompts, sourceCredits: sourceCredits };
+        return { prompts: prompts, sourceCredits: sourceCredits, promptSizes: promptSizes };
     }
 
     function clearValidationErrors() {
@@ -1088,6 +1092,7 @@
         var collected = collectPrompts();
         var prompts = collected.prompts;
         var sourceCredits = collected.sourceCredits;
+        var promptSizes = collected.promptSizes;
         if (prompts.length === 0) {
             showValidationErrors([{ message: 'At least 1 prompt is required.' }]);
             return;
@@ -1097,6 +1102,16 @@
         var charDesc = settingCharDesc.value.trim();
         var finalPrompts = prompts.map(function (p) {
             return charDesc ? charDesc + '. ' + p : p;
+        });
+
+        // Build per-prompt objects for start_job (text + optional size override)
+        var finalPromptObjects = finalPrompts.map(function (text, i) {
+            var obj = { text: text };
+            var promptSize = promptSizes && promptSizes[i] ? promptSizes[i] : '';
+            if (promptSize) {
+                obj.size = promptSize;
+            }
+            return obj;
         });
 
         generateBtn.disabled = true;
@@ -1135,7 +1150,7 @@
                 generateStatus.textContent = 'Starting generation...';
 
                 var payload = {
-                    prompts: finalPrompts,
+                    prompts: finalPromptObjects,
                     source_credits: sourceCredits,
                     provider: 'openai',
                     model: settingModel.value,

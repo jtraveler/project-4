@@ -2428,7 +2428,7 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
         try:
             result = provider.generate(
                 prompt=image.prompt_text,
-                size=job.size,
+                size=image.size or job.size,
                 quality=job.quality,
                 reference_image_url=job.reference_image_url,
                 api_key=job_api_key,

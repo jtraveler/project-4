@@ -88,7 +88,7 @@
         var groupData = G.renderedGroups[groupIndex];
         if (!groupData) return;
         // Only clean up once all active slots are filled
-        if (Object.keys(groupData.slots).length < G.imagesPerPrompt) return;
+        if (Object.keys(groupData.slots).length < groupData.targetCount) return;
         var groupRow = groupData.element;
         // For terminal jobs also hide any remaining loading placeholders
         if (G.TERMINAL_STATES.indexOf(G.currentStatus) !== -1) {
@@ -208,7 +208,8 @@
 
             // Create group row if it doesn't exist yet
             if (!G.renderedGroups[groupIndex]) {
-                G.createGroupRow(groupIndex, promptText);
+                var groupSize = groupImages[0] ? (groupImages[0].size || '') : '';
+                G.createGroupRow(groupIndex, promptText, groupSize);
             }
 
             // Fill image slots based on status
@@ -228,7 +229,7 @@
         }
     };
 
-    G.createGroupRow = function (groupIndex, promptText) {
+    G.createGroupRow = function (groupIndex, promptText, groupSize) {
         var group = document.createElement('div');
         group.className = 'prompt-group';
         group.setAttribute('data-group-index', groupIndex);
@@ -300,14 +301,20 @@
         var imagesGrid = document.createElement('div');
         imagesGrid.className = 'prompt-group-images';
 
-        // Set initial columns from job's configured size (before images load)
-        var aspectParts = G.galleryAspect.split('/');
-        if (aspectParts.length === 2) {
-            var aw = parseFloat(aspectParts[0]);
-            var ah = parseFloat(aspectParts[1]);
-            if (aw > 0 && ah > 0 && (aw / ah) > G.WIDE_RATIO_THRESHOLD) {
-                imagesGrid.dataset.columns = '2';
-            }
+        // Set initial columns from per-prompt size (groupSize) or fall back to job aspect.
+        // groupSize is like '1536x1024'; G.galleryAspect is like '1024 / 1536'.
+        var colW, colH;
+        if (groupSize) {
+            var sizeParts = groupSize.split('x');
+            colW = parseFloat(sizeParts[0]);
+            colH = parseFloat(sizeParts[1]);
+        } else {
+            var aspectParts = G.galleryAspect.split('/');
+            colW = aspectParts.length === 2 ? parseFloat(aspectParts[0]) : 0;
+            colH = aspectParts.length === 2 ? parseFloat(aspectParts[1]) : 0;
+        }
+        if (colW > 0 && colH > 0 && (colW / colH) > G.WIDE_RATIO_THRESHOLD) {
+            imagesGrid.dataset.columns = '2';
         }
 
         // Always 4 slots: loading for active, dashed empty for unused
@@ -360,7 +367,7 @@
             G.galleryInstruction.style.display = 'block';
         }
 
-        G.renderedGroups[groupIndex] = { slots: {}, element: group };
+        G.renderedGroups[groupIndex] = { slots: {}, element: group, targetCount: G.imagesPerPrompt };
     };
 
     G.fillImageSlot = function (groupIndex, slotIndex, image) {

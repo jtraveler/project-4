@@ -147,6 +147,7 @@ class BulkGenerationService:
         reference_image_url: str = '',
         character_description: str = '',
         source_credits: list[str] | None = None,
+        per_prompt_sizes: list[str] | None = None,
         api_key: str = '',
     ) -> BulkGenerationJob:
         """
@@ -201,6 +202,11 @@ class BulkGenerationService:
             if source_credits and order < len(source_credits):
                 credit = source_credits[order]
 
+            # Per-prompt size override (6E-A): empty string means use job default
+            per_size = ''
+            if per_prompt_sizes and order < len(per_prompt_sizes):
+                per_size = per_prompt_sizes[order]
+
             for variation in range(1, images_per_prompt + 1):
                 images_to_create.append(GeneratedImage(
                     job=job,
@@ -208,6 +214,7 @@ class BulkGenerationService:
                     prompt_order=order,
                     variation_number=variation,
                     source_credit=credit,
+                    size=per_size,
                 ))
 
         GeneratedImage.objects.bulk_create(images_to_create)
@@ -307,6 +314,7 @@ class BulkGenerationService:
                 'status': img.status,
                 'image_url': img.image_url or '',
                 'error_message': _sanitise_error_message(img.error_message or ''),
+                'size': img.size or job.size,
                 'prompt_page_id': str(img.prompt_page_id) if img.prompt_page_id else None,
                 'prompt_page_url': reverse(
                     'prompts:prompt_detail',

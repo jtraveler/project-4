@@ -53,6 +53,40 @@ def _make_mock_client(list_objects_return):
     B2_BUCKET_NAME=BUCKET,
     B2_ENDPOINT_URL='https://s3.example.com',
 )
+class EarlyExitTests(TestCase):
+    """Tests for early-exit guards in rename_prompt_files_for_seo."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='earlyexituser', password='testpass'
+        )
+
+    @patch('prompts.services.b2_rename.B2RenameService')
+    def test_b2_image_url_none_makes_no_b2_operations(self, mock_b2_cls):
+        """Prompt with b2_image_url=None completes without any B2 file operations."""
+        from prompts.tasks import rename_prompt_files_for_seo
+
+        prompt = Prompt.objects.create(
+            title='No Image Prompt',
+            slug='no-image-prompt',
+            author=self.user,
+            ai_generator='gpt-image-1',
+            b2_image_url=None,
+        )
+
+        rename_prompt_files_for_seo(prompt.id)
+
+        # Service may be instantiated but must never attempt a file operation
+        mock_instance = mock_b2_cls.return_value
+        mock_instance.move_file.assert_not_called()
+        mock_instance.rename_file.assert_not_called()
+
+
+@override_settings(
+    B2_CUSTOM_DOMAIN=CDN,
+    B2_BUCKET_NAME=BUCKET,
+    B2_ENDPOINT_URL='https://s3.example.com',
+)
 class SiblingCheckTests(TestCase):
     """
     Per-prompt sibling-check cleanup path in rename_prompt_files_for_seo.

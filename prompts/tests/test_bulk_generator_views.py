@@ -304,7 +304,7 @@ class StartGenerationAPITests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('strings', response.json()['error'])
+        self.assertIn('prompt must be a string or an object', response.json()['error'])
 
     def test_prompt_exceeds_length_limit_returns_400(self):
         self.client.login(username='staffuser', password='testpass')
@@ -356,6 +356,86 @@ class StartGenerationAPITests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn('allowed domain', response.json()['error'])
+
+    # ── 6E-A: Per-prompt size override ────────────────────────────────────────
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_size_stored(self, mock_get_provider, mock_async):
+        """Per-prompt size stored on GeneratedImage when valid size sent."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A sunset', 'size': '1792x1024'}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        img = GeneratedImage.objects.filter(
+            job_id=job_id, prompt_order=0
+        ).first()
+        self.assertIsNotNone(img)
+        self.assertEqual(img.size, '1792x1024')
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_size_empty_when_omitted(self, mock_get_provider, mock_async):
+        """GeneratedImage.size is empty string when no size key in prompt payload."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A mountain'}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        img = GeneratedImage.objects.filter(
+            job_id=job_id, prompt_order=0
+        ).first()
+        self.assertIsNotNone(img)
+        self.assertEqual(img.size, '')
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_invalid_size_silently_cleared(
+        self, mock_get_provider, mock_async
+    ):
+        """Invalid per-prompt size is silently sanitised to '' (not rejected)."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A city', 'size': 'INVALID'}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        img = GeneratedImage.objects.filter(
+            job_id=job_id, prompt_order=0
+        ).first()
+        self.assertIsNotNone(img)
+        # Invalid size must never reach the DB
+        self.assertEqual(img.size, '')
 
 
 @override_settings(OPENAI_API_KEY='test-key')

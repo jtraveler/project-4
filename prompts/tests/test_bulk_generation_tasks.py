@@ -374,6 +374,22 @@ class GetJobStatusTests(TestCase):
         self.assertIn('estimated_cost', status)
         self.assertIn('actual_cost', status)
 
+    def test_status_api_resolves_size_from_job_when_image_size_empty(self):
+        """get_job_status() returns job.size when GeneratedImage.size is empty."""
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1'],
+            size='1024x1024',
+        )
+        img = job.images.first()
+        # Confirm size field is empty (no per-prompt override)
+        self.assertEqual(img.size, '')
+
+        status = self.service.get_job_status(job)
+        img_data = status['images'][0]
+        # Status API must resolve to job.size — never return empty
+        self.assertEqual(img_data['size'], '1024x1024')
+
 
 @override_settings(OPENAI_API_KEY='test-key')
 class ValidateReferenceImageTests(TestCase):
@@ -1354,6 +1370,51 @@ class RetryLogicTests(TestCase):
         self.assertEqual(job.status, 'failed')
         # Provider never called
         mock_provider.generate.assert_not_called()
+
+    # ── 6E-A: Per-prompt size passed to provider ──────────────────────────────
+
+    def test_task_uses_per_image_size_when_set(self):
+        """Provider called with GeneratedImage.size when it is non-empty."""
+        from prompts.tasks import _run_generation_with_retry
+
+        mock_provider = MagicMock()
+        # MagicMock().success is truthy — treated as success, exits loop
+        mock_provider.generate.return_value.success = True
+
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['sunset'],
+            size='1024x1024',
+        )
+        img = job.images.first()
+        img.size = '1792x1024'
+        img.save(update_fields=['size'])
+
+        _run_generation_with_retry(mock_provider, img, job, 'sk-test1234567890')
+
+        call_kwargs = mock_provider.generate.call_args[1]
+        self.assertEqual(call_kwargs['size'], '1792x1024')
+
+    def test_task_falls_back_to_job_size_when_image_size_empty(self):
+        """Provider called with job.size when GeneratedImage.size is empty."""
+        from prompts.tasks import _run_generation_with_retry
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value.success = True
+
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['mountain'],
+            size='1024x1024',
+        )
+        img = job.images.first()
+        # Confirm size is empty (default)
+        self.assertEqual(img.size, '')
+
+        _run_generation_with_retry(mock_provider, img, job, 'sk-test1234567890')
+
+        call_kwargs = mock_provider.generate.call_args[1]
+        self.assertEqual(call_kwargs['size'], '1024x1024')
 
 
 @override_settings(OPENAI_API_KEY='test-key')

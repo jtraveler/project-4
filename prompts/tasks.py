@@ -2429,7 +2429,7 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
             result = provider.generate(
                 prompt=image.prompt_text,
                 size=image.size or job.size,
-                quality=job.quality,
+                quality=image.quality or job.quality or 'medium',
                 reference_image_url=job.reference_image_url,
                 api_key=job_api_key,
             )
@@ -2501,7 +2501,9 @@ def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
             job=job,
             image=image,
         )
-        cost = IMAGE_COST_MAP.get(job.quality, {}).get(job.size, 0.034)
+        cost = IMAGE_COST_MAP.get(
+            image.quality or job.quality or 'medium', {}
+        ).get(image.size or job.size, 0.034)
         image.status = 'completed'
         image.image_url = image_url
         image.revised_prompt = result.revised_prompt

@@ -2973,6 +2973,13 @@ class GeneratedImage(models.Model):
         default='',
         help_text="Per-prompt size override. Empty means job default was used."
     )
+    quality = models.CharField(
+        max_length=20,
+        choices=BulkGenerationJob.QUALITY_CHOICES,
+        blank=True,
+        default='',
+        help_text="Per-prompt quality override. Empty means job default was used."
+    )
 
     # Output
     image_url = models.URLField(blank=True, max_length=2000)

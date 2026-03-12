@@ -390,6 +390,37 @@ class GetJobStatusTests(TestCase):
         # Status API must resolve to job.size — never return empty
         self.assertEqual(img_data['size'], '1024x1024')
 
+    def test_status_api_resolves_quality_from_job_when_image_quality_empty(self):
+        """get_job_status() returns job.quality when GeneratedImage.quality is empty."""
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1'],
+            quality='high',
+        )
+        img = job.images.first()
+        # Confirm quality field is empty (no per-prompt override)
+        self.assertEqual(img.quality, '')
+
+        status = self.service.get_job_status(job)
+        img_data = status['images'][0]
+        # Status API must resolve to job.quality — never return empty
+        self.assertEqual(img_data['quality'], 'high')
+
+    def test_status_api_returns_per_image_quality_when_set(self):
+        """get_job_status() returns image.quality when per-prompt override is set."""
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1'],
+            quality='low',
+            per_prompt_qualities=['high'],
+        )
+        img = job.images.first()
+        self.assertEqual(img.quality, 'high')
+
+        status = self.service.get_job_status(job)
+        img_data = status['images'][0]
+        self.assertEqual(img_data['quality'], 'high')
+
 
 @override_settings(OPENAI_API_KEY='test-key')
 class ValidateReferenceImageTests(TestCase):
@@ -1415,6 +1446,74 @@ class RetryLogicTests(TestCase):
 
         call_kwargs = mock_provider.generate.call_args[1]
         self.assertEqual(call_kwargs['size'], '1024x1024')
+
+    # ── 6E-B: Per-prompt quality passed to provider ────────────────────────────
+
+    def test_task_uses_per_image_quality_when_set(self):
+        """Provider called with GeneratedImage.quality when it is non-empty."""
+        from prompts.tasks import _run_generation_with_retry
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value.success = True
+
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['sunset'],
+            quality='low',
+        )
+        img = job.images.first()
+        img.quality = 'high'
+        img.save(update_fields=['quality'])
+
+        _run_generation_with_retry(mock_provider, img, job, 'sk-test1234567890')
+
+        call_kwargs = mock_provider.generate.call_args[1]
+        self.assertEqual(call_kwargs['quality'], 'high')
+
+    def test_task_falls_back_to_job_quality_when_image_quality_empty(self):
+        """Provider called with job.quality when GeneratedImage.quality is empty."""
+        from prompts.tasks import _run_generation_with_retry
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value.success = True
+
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['mountain'],
+            quality='low',
+        )
+        img = job.images.first()
+        # Confirm quality is empty (default — no per-prompt override)
+        self.assertEqual(img.quality, '')
+
+        _run_generation_with_retry(mock_provider, img, job, 'sk-test1234567890')
+
+        call_kwargs = mock_provider.generate.call_args[1]
+        self.assertEqual(call_kwargs['quality'], 'low')
+
+    def test_task_falls_back_to_medium_when_both_quality_fields_empty(self):
+        """Provider called with 'medium' when both image.quality and job.quality are empty."""
+        from prompts.tasks import _run_generation_with_retry
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value.success = True
+
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['scene'],
+            quality='medium',
+        )
+        img = job.images.first()
+        # Force both to empty to test the final 'medium' fallback
+        img.quality = ''
+        img.save(update_fields=['quality'])
+        BulkGenerationJob.objects.filter(pk=job.pk).update(quality='')
+        job.refresh_from_db()
+
+        _run_generation_with_retry(mock_provider, img, job, 'sk-test1234567890')
+
+        call_kwargs = mock_provider.generate.call_args[1]
+        self.assertEqual(call_kwargs['quality'], 'medium')
 
 
 @override_settings(OPENAI_API_KEY='test-key')

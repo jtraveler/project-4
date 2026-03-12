@@ -437,6 +437,86 @@ class StartGenerationAPITests(TestCase):
         # Invalid size must never reach the DB
         self.assertEqual(img.size, '')
 
+    # ── 6E-B: Per-prompt quality override ──────────────────────────────────────
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_quality_stored(self, mock_get_provider, mock_async):
+        """Per-prompt quality stored on GeneratedImage when valid quality sent."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A sunset', 'quality': 'high'}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        img = GeneratedImage.objects.filter(
+            job_id=job_id, prompt_order=0
+        ).first()
+        self.assertIsNotNone(img)
+        self.assertEqual(img.quality, 'high')
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_quality_empty_when_omitted(self, mock_get_provider, mock_async):
+        """GeneratedImage.quality is empty string when no quality key in prompt payload."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A mountain'}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        img = GeneratedImage.objects.filter(
+            job_id=job_id, prompt_order=0
+        ).first()
+        self.assertIsNotNone(img)
+        self.assertEqual(img.quality, '')
+
+    @patch('prompts.services.bulk_generation.async_task')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_per_prompt_invalid_quality_silently_cleared(
+        self, mock_get_provider, mock_async
+    ):
+        """Invalid per-prompt quality is silently sanitised to '' (not rejected)."""
+        mock_provider = MagicMock()
+        mock_provider.get_cost_per_image.return_value = 0.03
+        mock_get_provider.return_value = mock_provider
+
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': [{'text': 'A city', 'quality': 'INVALID'}],
+                'api_key': 'sk-test1234567890',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        job_id = response.json()['job_id']
+        img = GeneratedImage.objects.filter(
+            job_id=job_id, prompt_order=0
+        ).first()
+        self.assertIsNotNone(img)
+        # Invalid quality must never reach the DB
+        self.assertEqual(img.quality, '')
+
 
 @override_settings(OPENAI_API_KEY='test-key')
 class JobStatusAPITests(TestCase):

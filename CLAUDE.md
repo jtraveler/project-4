@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 11, 2026
+**Last Updated:** March 13, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -73,6 +73,8 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| DETECT-B2-ORPHANS | Mar 13, 2026 | New `detect_b2_orphans` management command (404 lines) in `prompts/management/commands/`. Read-only B2 bucket audit via boto3 paginator. Cross-references `Prompt.all_objects` (7 B2 fields) + `GeneratedImage.image_url` + `BulkGenerationJob.reference_image_url`. `SCAN_PREFIXES` limits scan to `media/` and `bulk-gen/`. `_safe_error_message()` uses structured `ClientError.response['Error']` fields — credential-safe. `iterator(chunk_size=500)` on all DB queries. Flags: `--days`, `--all`, `--dry-run`, `--output`, `--verbose`. CSV output to `docs/orphans_b2.csv`. Commit: 61edad1. Agents: @security-auditor 9.0, @django-pro 9.0, @code-reviewer 8.5. Avg 8.83/10. 1149 tests. |
+| MICRO-CLEANUP-1 | Mar 13, 2026 | Seven cleanup items in one commit: (1) group footer separator `·`→`\|` with `margin: 0 0.4rem` and `color: var(--gray-500)`; (2) ID rename `header-quality-col-th/td` → `header-quality-item/value` in HTML + JS; (3) `style.removeProperty('display')` → `.is-quality-visible` class toggle; (4) `VALID_PROVIDERS` + `VALID_VISIBILITIES` → `frozenset` in `bulk_generator_views.py`; (5) `VALID_SIZES` → `frozenset` in `create_test_gallery.py`; (6) `@csp_exempt` blank line removed in `upload_views.py` (bonus: same fix on `extend_upload_time`); (7) `replace('x','×')` → anchored regex `/(\d+)x(\d+)/i`. Commit: a222d15. Agents: @frontend-developer 8.8, @code-reviewer 9.0, @django-pro 8.5. Avg 8.77/10. 1149 tests. |
 | N4H-UPLOAD-RENAME-FIX | Mar 12, 2026 | Fixed `rename_prompt_files_for_seo` guard in `upload_views.py`. Guard changed from `is_b2_upload and prompt.pk` (session flag) to `prompt.b2_image_url` (model field check). `async_task` import moved to module level. Discovery: the core `async_task` call was already present from Session 67 — this fix tightened the guard and added tests. New file: `prompts/tests/test_upload_views.py` (2 tests). Commit: a9acbc4. Agents: @django-pro 8.5, @test-automator 8.2. Avg 8.35/10. 1149 tests. |
 | 6E-CLEANUP-3 | Mar 12, 2026 | JS bug + quality: cancel-path `G.totalImages` staleness fixed (`data-actual-total-images` template attr + `initPage()` reads it), `parseGroupSize()` helper replaces 3× inline parse in `createGroupRow()`, ARIA `progressAnnouncer` clear-then-50ms-set pattern, dead ternary guards removed from `renderImages()`. Commit: 90ac2cb. Agents: @frontend-developer 8.5, @accessibility 8.5, @code-reviewer 9.0. Avg 8.67/10. 1147 tests. |
 | 6E-CLEANUP-2 | Mar 12, 2026 | Extracted `bulk-generator-gallery.js` from `bulk-generator-ui.js` (766→338 lines). New file: `static/js/bulk-generator-gallery.js` (452 lines). Contains: `cleanupGroupEmptySlots`, `markCardPublished`, `markCardFailed`, `fillImageSlot`, `fillFailedSlot`, `createLightbox`, `openLightbox`, `closeLightbox`. Load order: config→ui→gallery→polling→selection. Commit: 5f1ced3. Agents: @frontend-developer 9.0, @code-reviewer 9.0. Avg 9.0/10. 1147 tests. |
@@ -170,13 +172,22 @@ in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
 | Item | Notes |
 |------|-------|
-| **VALID_PROVIDERS / VALID_VISIBILITIES** | Still mutable `set` in `bulk_generator_views.py` lines 36–37. Same file as the now-frozenset constants. Two-line fix. |
-| **create_test_gallery.py VALID_SIZES** | Has its own `VALID_SIZES = set(...)` independent of the module-level frozenset. Low priority management command. |
 | **Terminal-state ARIA branches** | Three branches in `updateProgress()` (completed/cancelled/failed) use direct `textContent` assignment without clear-then-set. Non-actionable — mutually exclusive branches, fires once. Document only. |
 | **Admin path rename task** | `admin.py` Prompt creation path not verified for `rename_prompt_files_for_seo`. Flagged by N4H report. Investigate before V2 launch. |
 | **Video B2 rename** | `rename_prompt_files_for_seo` only processes image fields — `b2_video_url` never renamed. Feature gap for V2. |
-| **@csp_exempt blank line** | `upload_views.py` lines 235–237 have blank line between `@csp_exempt` and `def upload_submit`. In Python, this means `@csp_exempt` is NOT applied. Pre-existing bug. One-line fix. |
 | **Debug print() statements** | `upload_views.py` contains `print(f"[DEBUG upload_submit]...")` statements emitting to Heroku logs. Remove before V2 launch. |
+
+### Recommended Build Sequence — Remaining Safety Infrastructure
+
+| Step | Item | Status |
+|------|------|--------|
+| 1 | `detect_b2_orphans` command (Section B prerequisite) | ✅ Complete (Session 123, commit 61edad1) |
+| 2 | Bulk job deletion backend — Section A items 1–6 (soft-delete fields → JobReceipt → DeletionAuditLog → pre-deletion task → cleanup command → Scheduler entry) | 🔲 Planned |
+| 3 | Bulk job deletion frontend UI — Section A item 7 | 🔲 Planned — do NOT start before Step 2 complete |
+| 4 | Admin operational notifications — Section C (wraps Steps 1–3) | 🔲 Planned |
+
+> ⚠️ Step 3 (frontend UI) must not be specced or built until Step 2 is fully committed and tested.
+> The Section A build order in "Bulk Job Deletion — Pre-Build Reference" is mandatory — no skipping ahead.
 
 **Phase 6 Architecture — Two-Page Staging:**
 - Temp staging page (`/tools/bulk-ai-generator/job/<uuid>/`): shows results of the most recent job. Phase 6 adds the publish flow here.
@@ -587,7 +598,7 @@ The trash prompts grid uses a **self-contained card approach** with CSS columns 
 
 ### Orphan Detection — B2 Migration Gap
 
-> ⚠️ `detect_orphaned_files` is currently non-functional. Read before assuming it works.
+> ✅ `detect_b2_orphans` is complete and ready to use (Session 123, commit 61edad1). The legacy `detect_orphaned_files` command (Cloudinary-only) should be reviewed for disabling in the Cloudinary audit — see planned Cloudinary Audit item in the build sequence above.
 
 #### What Was Built (Phase D.5, October 2025)
 
@@ -1124,8 +1135,7 @@ After `rename_prompt_files_for_seo` runs, the `Prompt` gets its own independent 
 at a new SEO-friendly path. At that point the records are genuinely separate.
 
 **The danger window:** Between publish and rename completion, deleting the job's B2 file
-also destroys the Prompt's image. The N4h upload-flow rename bug (see Current Blockers)
-means this window may be indefinitely long for upload-flow prompts.
+also destroys the Prompt's image. The N4h upload-flow rename bug was resolved in Session 122 (commit a9acbc4) — the danger window is now bounded for both bulk-gen and upload-flow prompts.
 
 #### Mandatory Pre-Deletion Checklist
 
@@ -1493,4 +1503,4 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 ---
 
 **Version:** 4.30 (Session 121 — SMOKE2 series A–E, HARDENING-1, JS-SPLIT-1, HARDENING-2; 1117 tests; bulk-gen smoke test complete; all SMOKE2 production prompts backfilled)
-**Last Updated:** March 11, 2026
+**Last Updated:** March 13, 2026

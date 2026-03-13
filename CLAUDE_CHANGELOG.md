@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 12, 2026 (Sessions 101–122, 6E series complete, N4h resolved, gallery.js extracted)
+**Last Updated:** March 13, 2026 (Sessions 101–123, MICRO-CLEANUP-1, detect_b2_orphans command)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,36 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 123 — March 13, 2026
+
+**Final state:** 1149 tests, 12 skipped, 0 failures. Migrations unchanged (0072). 5 JS modules.
+
+#### MICRO-CLEANUP-1 — Seven cleanup items (commit a222d15)
+- Group footer separator changed from `·` (U+00B7) to `|` with symmetric `margin: 0 0.4rem`, `font-weight: 400`, `color: var(--gray-500)`
+- ID rename: `header-quality-col-th` → `header-quality-item`, `header-quality-col-td` → `header-quality-value` in `bulk_generator_job.html` + `bulk-generator-ui.js`
+- Quality column reveal: `style.removeProperty('display')` replaced with `.is-quality-visible` CSS class toggle. CSS owns `display: none` default; JS adds class only
+- `VALID_PROVIDERS`, `VALID_VISIBILITIES` → `frozenset` in `bulk_generator_views.py` (all 5 `VALID_*` constants now frozenset)
+- `VALID_SIZES` → `frozenset` in `create_test_gallery.py`
+- `@csp_exempt` blank line removed in `upload_views.py` — decorator was silently not applied. Bonus: same fix on `extend_upload_time` (`@require_POST` blank lines removed)
+- `replace('x', '×')` → anchored regex `/(\d+)x(\d+)/i` in `bulk-generator-ui.js` — prevents false match on future prefixed size strings
+- Agents: @frontend-developer 8.8, @code-reviewer 9.0, @django-pro 8.5. Avg 8.77/10
+
+#### DETECT-B2-ORPHANS — New management command (commit 61edad1)
+- New file: `prompts/management/commands/detect_b2_orphans.py` (404 lines)
+- Read-only B2 bucket audit — lists orphaned files (no deletes, ever)
+- `SCAN_PREFIXES = ['media/', 'bulk-gen/']` — prefix allowlist prevents static/admin paths from being flagged
+- DB coverage: `Prompt.all_objects` (7 B2 fields: b2_image_url, b2_thumb_url, b2_medium_url, b2_large_url, b2_webp_url, b2_video_url, b2_video_thumb_url) + `GeneratedImage.image_url` + `BulkGenerationJob.reference_image_url`
+- Credential safety: `_safe_error_message()` uses structured `ClientError.response['Error']` fields; `raise CommandError(...) from None` suppresses boto3 traceback; bucket name only (not endpoint) in all output
+- `.iterator(chunk_size=500)` on all DB queries — memory-safe for large datasets
+- `Config(retries={'max_attempts': 3, 'mode': 'adaptive'})` — handles B2 429/503 transients
+- Flags: `--days N` (default 30), `--all`, `--dry-run`, `--output PATH`, `--verbose`/`--no-verbose`
+- CSV output: `docs/orphans_b2.csv` by default
+- All error paths use `CommandError` (not `sys.exit`)
+- Agents: @security-auditor 9.0, @django-pro 9.0, @code-reviewer 8.5. Avg 8.83/10
+- Prerequisite for bulk job deletion now complete
+
+---
 
 ### Session 122 — March 12, 2026
 

@@ -1,6 +1,6 @@
 # CLAUDE_PHASES.md - Phase Specifications (2 of 3)
 
-**Last Updated:** March 9, 2026
+**Last Updated:** March 13, 2026
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **✅ Phases 1–7 + 6E Complete — Pre-launch QA** | **Staff tool. 6E series: per-prompt size/quality/count overrides. 1149 tests. 5 JS modules.** |
+| **BG** | **Bulk AI Image Generator** | **✅ Phases 1–7 + 6E Complete — Pre-launch QA** | **Staff tool. 6E series: per-prompt size/quality/count overrides. UI-IMPROVEMENTS-1 (live header stats, failed slot dimensions, footer weights). MICRO-CLEANUP-1 (separator, frozenset, class toggle, csp fix). detect_b2_orphans command complete. 1149 tests. 5 JS modules.** |
 
 ---
 
@@ -836,4 +836,4 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 ---
 
 **Version:** 4.15 (Sessions 116–117 — Phase 6C-A complete [1098 tests], Phase 6C-B complete [~1100 tests], gallery card states, A11Y-3/5, opacity-compounding fix, Phase 6D next)
-**Last Updated:** March 9, 2026
+**Last Updated:** March 13, 2026

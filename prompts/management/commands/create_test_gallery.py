@@ -60,7 +60,7 @@ PROMPT_CONFIGS = [
 ]
 
 
-VALID_SIZES = set(SUPPORTED_IMAGE_SIZES)
+VALID_SIZES = frozenset(SUPPORTED_IMAGE_SIZES)
 
 # Map each GPT-Image-1 size to sample images matching that aspect ratio
 SIZE_TO_IMAGES = {

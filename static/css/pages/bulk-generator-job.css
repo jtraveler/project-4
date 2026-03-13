@@ -124,6 +124,14 @@
     font-weight: 600;
 }
 
+/* Quality column — hidden by default, revealed via JS class toggle (MICRO-CLEANUP-1) */
+#header-quality-item {
+    display: none;
+}
+#header-quality-item.is-quality-visible {
+    display: block;
+}
+
 /* ─── Progress Section ───────────────────────────────────── */
 .job-progress-section {
     background: var(--white);
@@ -388,14 +396,15 @@
 
 .prompt-group-meta span {
     font-size: 15px;
-    color: var(--gray-500);
+    color: var(--gray-800);
     font-weight: 600; /* Group footer text weight (UI-IMPROVEMENTS-1) */
 }
 
 .prompt-group-meta span + span::before {
-    content: "\00b7";
-    margin-right: 0.5rem;
-    font-weight: 700; /* Dot separator slightly heavier than label text; 900 outweighed content (UI-IMPROVEMENTS-1) */
+    content: "|";
+    margin: 0 0.4rem;
+    font-weight: 400;
+    color: var(--gray-500);
 }
 
 /* ─── Prompt Text Hover Overlay ─────────────────────────────── */

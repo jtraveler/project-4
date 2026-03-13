@@ -51,10 +51,10 @@
                 <dt class="setting-label">Size</dt>
                 <dd class="setting-value" id="header-size">{{ display_size }}</dd>
             </div>
-            {# Quality hidden by default; JS reveals it if any prompt overrides the job default #}
-            <div class="setting-item" id="header-quality-col-th" style="display:none">
+            {# Quality hidden by CSS; JS adds .is-quality-visible if any prompt overrides the job default #}
+            <div class="setting-item" id="header-quality-item">
                 <dt class="setting-label">Quality</dt>
-                <dd class="setting-value" id="header-quality-col-td"></dd>
+                <dd class="setting-value" id="header-quality-value"></dd>
             </div>
             <div class="setting-item">
                 <dt class="setting-label">Total Prompts</dt>

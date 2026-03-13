@@ -344,7 +344,7 @@
         if (sizeEl) {
             var sizeKeys = Object.keys(uniqueSizes);
             if (sizeKeys.length === 1) {
-                sizeEl.textContent = sizeKeys[0].replace('x', '\u00d7');
+                sizeEl.textContent = sizeKeys[0].replace(/(\d+)x(\d+)/i, '$1\u00d7$2');
             } else if (sizeKeys.length > 1) {
                 sizeEl.textContent = sizeKeys.length + ' sizes';
             }
@@ -355,10 +355,10 @@
         var hasOverride = qualKeys.length > 1 ||
             (qualKeys.length === 1 && qualKeys[0] !== jobQuality);
         if (hasOverride) {
-            var qualTh = document.getElementById('header-quality-col-th');
-            var qualTd = document.getElementById('header-quality-col-td');
-            if (qualTh) { qualTh.style.removeProperty('display'); }
-            if (qualTd) { qualTd.textContent = 'Mixed'; qualTd.style.removeProperty('display'); }
+            var qualTh = document.getElementById('header-quality-item');
+            var qualTd = document.getElementById('header-quality-value');
+            if (qualTh) { qualTh.classList.add('is-quality-visible'); }
+            if (qualTd) { qualTd.textContent = 'Mixed'; }
         }
 
         // Succeeded count — bold weight when non-zero (matches Failed treatment)

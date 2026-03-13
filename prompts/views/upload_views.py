@@ -233,8 +233,6 @@ def upload_step2(request):
 
 @login_required
 @csp_exempt
-
-
 def upload_submit(request):
     """Handle form submission - saves AI title/description automatically.
 
@@ -770,8 +768,6 @@ def cancel_upload(request):
 
 @login_required
 @require_POST
-
-
 def extend_upload_time(request):
     """
     Extend the upload session timer by 30 minutes.

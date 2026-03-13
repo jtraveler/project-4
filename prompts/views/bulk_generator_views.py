@@ -33,8 +33,8 @@ MAX_PROMPT_LENGTH = 4000
 VALID_SIZES = frozenset(SUPPORTED_IMAGE_SIZES)  # excludes unsupported sizes (e.g. 1792x1024)
 VALID_QUALITIES = frozenset({'low', 'medium', 'high'})
 VALID_COUNTS = frozenset({1, 2, 3, 4})
-VALID_PROVIDERS = {'openai'}
-VALID_VISIBILITIES = {'public', 'private'}
+VALID_PROVIDERS = frozenset({'openai'})
+VALID_VISIBILITIES = frozenset({'public', 'private'})
 
 # Allowed domains for reference image URLs
 ALLOWED_REFERENCE_DOMAINS = [

@@ -385,6 +385,17 @@
                 failedItem.classList.toggle('header-stat--failed', failedCount > 0);
             }
         }
+
+        // Total Duration — populated at terminal state via G.durationSeconds (set in polling)
+        // Intentionally NOT calling G.formatDuration — that function adds "Done in" prefix
+        // which is appropriate for the progress timer but not for a bare stat cell value.
+        var durationEl = document.getElementById('header-duration-value');
+        if (durationEl && G.durationSeconds !== null && G.durationSeconds !== undefined) {
+            var ds = G.durationSeconds;
+            durationEl.textContent = ds < 60
+                ? ds + 's'
+                : Math.floor(ds / 60) + 'm ' + (ds % 60) + 's';
+        }
     };
 
     // ─── Gallery: Overlay Positioning (Phase 5B Round 3) ──────────

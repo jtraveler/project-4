@@ -364,6 +364,15 @@ class BulkGenerationService:
                     job_error_reason = 'auth_failure'
                     break
 
+        # Duration — only meaningful at terminal state; None otherwise
+        duration_seconds = None
+        terminal_states = ('completed', 'cancelled', 'failed')
+        if job.status in terminal_states and job.started_at and job.completed_at:
+            duration_seconds = max(
+                0,
+                int((job.completed_at - job.started_at).total_seconds()),
+            )
+
         return {
             'job_id': str(job.id),
             'status': job.status,
@@ -381,6 +390,7 @@ class BulkGenerationService:
             'actual_cost': str(job.actual_cost),
             'images': images_data,
             'error_reason': job_error_reason,
+            'duration_seconds': duration_seconds,
         }
 
     def validate_reference_image(self, image_url: str) -> dict:

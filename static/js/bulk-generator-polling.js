@@ -148,6 +148,11 @@
             G.handleTerminalState(newStatus, data);
         }
 
+        // Store duration from API response so updateHeaderStats can access it
+        G.durationSeconds = data.duration_seconds !== undefined
+            ? data.duration_seconds
+            : null;
+
         // Phase 5B: Render gallery images from polling data
         if (data.images && data.images.length > 0) {
             G.renderImages(data.images);
@@ -404,6 +409,10 @@
                     // Correct G.totalImages before re-applying terminal text
                     var correctedTotal = data.actual_total_images || data.total_images;
                     if (correctedTotal) { G.totalImages = correctedTotal; }
+                    // Store duration so updateHeaderStats can populate the header stat
+                    G.durationSeconds = data.duration_seconds !== undefined
+                        ? data.duration_seconds
+                        : null;
                     if (data.images && data.images.length > 0) {
                         G.renderImages(data.images);
                     }

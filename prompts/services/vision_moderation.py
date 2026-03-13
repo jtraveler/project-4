@@ -714,14 +714,14 @@ Respond with JSON:
     def moderate_video_frames(self, frame_paths: List[str], user_prompt: str = "") -> Dict:
         """
         Moderate video using multiple extracted frames.
-        
+
         Implements "strictest frame wins" policy - if ANY frame has critical
         severity, the entire video is rejected.
-        
+
         Args:
             frame_paths: List of paths to extracted frame images (from extract_moderation_frames)
             user_prompt: Optional user-provided prompt text for context
-            
+
         Returns:
             Dict with:
                 - is_safe: bool
@@ -744,7 +744,7 @@ Respond with JSON:
                 'explanation': 'Could not extract frames from video for moderation.',
                 'best_thumbnail_frame': 1,
             }
-        
+
         try:
             # Build content array with text prompt and all frame images
             content = [
@@ -753,13 +753,13 @@ Respond with JSON:
                     "text": self.VIDEO_MODERATION_PROMPT + (f"\n\nUser's prompt context: {user_prompt}" if user_prompt else "")
                 }
             ]
-            
+
             # Add each frame as base64-encoded image
             for i, frame_path in enumerate(frame_paths):
                 try:
                     with open(frame_path, 'rb') as f:
                         frame_data = base64.b64encode(f.read()).decode('utf-8')
-                    
+
                     content.append({
                         "type": "image_url",
                         "image_url": {
@@ -771,7 +771,7 @@ Respond with JSON:
                 except Exception as e:
                     logger.error(f"Failed to read frame {i + 1}: {e}")
                     # Continue with remaining frames
-            
+
             if len(content) < 2:  # Only has text, no images
                 logger.error("No frames could be loaded for moderation")
                 return {
@@ -782,9 +782,9 @@ Respond with JSON:
                     'explanation': 'Could not load video frames for moderation.',
                     'best_thumbnail_frame': 1,
                 }
-            
+
             logger.info(f"Sending {len(content) - 1} frames to Vision API for moderation")
-            
+
             # Call OpenAI Vision API with all frames
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -792,11 +792,11 @@ Respond with JSON:
                 max_tokens=800,
                 temperature=0.0,
             )
-            
+
             # Parse response
             response_content = response.choices[0].message.content
             logger.info(f"Video moderation response: {response_content[:500]}...")
-            
+
             # Check for AI refusal
             if _is_ai_refusal(response_content):
                 logger.warning("AI refused to analyze video frames - treating as critical")
@@ -808,11 +808,11 @@ Respond with JSON:
                     'explanation': 'Video content too explicit for AI analysis - automatically rejected.',
                     'best_thumbnail_frame': 1,
                 }
-            
+
             # Parse JSON response
             import json
             import re
-            
+
             # Extract JSON from response (may have markdown code blocks)
             json_match = re.search(r'\{[\s\S]*\}', response_content)
             if not json_match:
@@ -825,20 +825,20 @@ Respond with JSON:
                     'explanation': 'Could not parse moderation response.',
                     'best_thumbnail_frame': 2,
                 }
-            
+
             result = json.loads(json_match.group())
-            
+
             # Extract fields with defaults
             severity = result.get('severity', 'medium')
             flagged = result.get('flagged', False)
             categories = result.get('categories', [])
             explanation = result.get('explanation', '')
             best_frame = result.get('best_thumbnail_frame', 2)
-            
+
             # Ensure best_frame is valid (1, 2, or 3)
             if not isinstance(best_frame, int) or best_frame < 1 or best_frame > 3:
                 best_frame = 2
-            
+
             # Determine status based on severity (strictest frame wins)
             if severity == 'critical':
                 status = 'rejected'
@@ -849,7 +849,7 @@ Respond with JSON:
             else:
                 status = 'approved'
                 is_safe = True
-            
+
             # Build response
             moderation_result = {
                 'is_safe': is_safe,
@@ -860,16 +860,16 @@ Respond with JSON:
                 'best_thumbnail_frame': best_frame,
                 'frame_severities': result.get('frame_severities', []),
             }
-            
+
             # Include content generation if safe
             if is_safe:
                 moderation_result['title'] = result.get('title')
                 moderation_result['description'] = result.get('description')
                 moderation_result['tags'] = result.get('tags', [])
-            
+
             logger.info(f"Video moderation complete: status={status}, severity={severity}")
             return moderation_result
-            
+
         except (APITimeoutError, APIConnectionError) as e:
             # Fail-closed on timeout
             logger.warning(f"Video moderation timeout: {e}")
@@ -881,7 +881,7 @@ Respond with JSON:
                 'explanation': 'Video moderation timed out - content blocked for safety.',
                 'best_thumbnail_frame': 1,
             }
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"JSON parse error in video moderation: {e}")
             return {
@@ -892,7 +892,7 @@ Respond with JSON:
                 'explanation': 'Could not parse moderation response.',
                 'best_thumbnail_frame': 2,
             }
-            
+
         except Exception as e:
             logger.error(f"Video moderation error: {e}", exc_info=True)
             return {

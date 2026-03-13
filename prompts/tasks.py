@@ -76,7 +76,7 @@ def run_nsfw_moderation(upload_id: str, image_url: str) -> dict:
         logger.info(f"[NSFW Moderation] Starting moderation for upload {upload_id}")
 
         # Import here to avoid circular imports
-        from prompts.services.cloudinary_moderation import VisionModerationService
+        from prompts.services.vision_moderation import VisionModerationService
 
         # Run moderation via OpenAI Vision API
         service = VisionModerationService()

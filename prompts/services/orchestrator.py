@@ -16,7 +16,7 @@ from django.db import transaction
 
 from ..models import Prompt, ModerationLog, ContentFlag
 from .openai_moderation import OpenAIModerationService
-from .cloudinary_moderation import VisionModerationService
+from .vision_moderation import VisionModerationService
 from .profanity_filter import ProfanityFilterService
 
 logger = logging.getLogger(__name__)

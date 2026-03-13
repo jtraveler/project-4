@@ -9,7 +9,7 @@ This package contains:
 """
 
 from .openai_moderation import OpenAIModerationService
-from .cloudinary_moderation import VisionModerationService
+from .vision_moderation import VisionModerationService
 from .profanity_filter import ProfanityFilterService
 from .orchestrator import ModerationOrchestrator
 from .leaderboard import LeaderboardService

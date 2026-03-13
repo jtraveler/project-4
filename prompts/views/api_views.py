@@ -28,7 +28,7 @@ from prompts.services.b2_presign_service import (
     ALLOWED_VIDEO_TYPES,
 )
 from prompts.services.image_processor import process_upload
-from prompts.services.cloudinary_moderation import VisionModerationService
+from prompts.services.vision_moderation import VisionModerationService
 from prompts.services.content_generation import ContentGenerationService
 from io import BytesIO
 import requests
@@ -62,7 +62,7 @@ import uuid
 #    - Content generation and moderation use OpenAI API
 #    - No explicit limits in code - relies on OpenAI's own rate limits
 #    - See: prompts/services/content_generation.py
-#    - See: prompts/services/cloudinary_moderation.py
+#    - See: prompts/services/vision_moderation.py
 #
 # USER-FACING ERROR MESSAGES:
 # ---------------------------
@@ -500,28 +500,28 @@ def b2_upload_status(request):
 def nsfw_queue_task(request):
     """
     Phase N2: Queue background NSFW moderation task.
-    
+
     Called immediately when Step 2 loads to start NSFW check.
-    
+
     Request body (JSON):
         image_url: URL of image to moderate
-        
+
     Returns:
         JSON with upload_id for status polling
     """
     try:
         data = json.loads(request.body)
         image_url = data.get('image_url')
-        
+
         if not image_url:
             return JsonResponse({
                 'success': False,
                 'error': 'image_url is required',
             }, status=400)
-        
+
         # Generate unique upload_id for this moderation request
         upload_id = str(uuid.uuid4())
-        
+
         # Queue Django-Q task
         task_id = async_task(
             'prompts.tasks.run_nsfw_moderation',
@@ -529,19 +529,19 @@ def nsfw_queue_task(request):
             image_url,
             task_name=f'nsfw_moderation_{upload_id[:8]}'
         )
-        
+
         logger.info(f"[N2] Queued NSFW task {task_id} for upload {upload_id}")
-        
+
         # Store upload_id in session for later reference
         request.session['nsfw_upload_id'] = upload_id
         request.session.modified = True
-        
+
         return JsonResponse({
             'success': True,
             'upload_id': upload_id,
             'task_id': str(task_id) if task_id else None,
         })
-        
+
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
@@ -560,12 +560,12 @@ def nsfw_queue_task(request):
 def nsfw_check_status(request):
     """
     Phase N2: Check NSFW moderation status.
-    
+
     Polled by frontend every 2 seconds until status != 'processing'.
-    
+
     Query params:
         upload_id: The upload_id returned from nsfw_queue_task
-        
+
     Returns:
         JSON with moderation status:
         - status: 'processing' | 'approved' | 'flagged' | 'rejected'
@@ -574,17 +574,17 @@ def nsfw_check_status(request):
         - explanation: reason for flagging (if flagged/rejected)
     """
     upload_id = request.GET.get('upload_id')
-    
+
     if not upload_id:
         return JsonResponse({
             'success': False,
             'error': 'upload_id is required',
         }, status=400)
-    
+
     # Check cache for result
     cache_key = f"nsfw_moderation:{upload_id}"
     result = cache.get(cache_key)
-    
+
     if not result:
         # Task hasn't started or cache expired
         return JsonResponse({
@@ -592,7 +592,7 @@ def nsfw_check_status(request):
             'status': 'processing',
             'upload_id': upload_id,
         })
-    
+
     return JsonResponse({
         'success': True,
         **result,
@@ -865,14 +865,14 @@ def b2_upload_complete(request):
                     logger.info(f"Extracted {len(frame_paths)} frames for moderation")
 
                     if frame_paths:
-                        from prompts.services.cloudinary_moderation import VisionModerationService
+                        from prompts.services.vision_moderation import VisionModerationService
                         video_moderation_result = VisionModerationService().moderate_video_frames(frame_paths)
                         logger.info(f"Video moderation result: {video_moderation_result}")
 
                         # Handle unsafe content based on severity
                         if not video_moderation_result.get('is_safe', False):
                             severity = video_moderation_result.get('severity', 'critical')
-                            
+
                             # Only hard-block 'critical' severity (hardcore NSFW)
                             if severity == 'critical':
                                 # Clean up temp files before returning
@@ -924,7 +924,7 @@ def b2_upload_complete(request):
                         thumb_size = f'{int(600 * video_width / video_height)}x600'
                 else:
                     thumb_size = '600x600'  # Fallback to square if dimensions unknown
-                
+
                 # Use AI-selected best frame if available, otherwise default to first frame
                 # best_thumbnail_frame is 1-indexed (1, 2, or 3), convert to 0-indexed
                 best_frame_index = 0  # Default to first analyzed frame (index 0)
@@ -1046,7 +1046,7 @@ def b2_upload_complete(request):
         'video_width': video_width if is_video else None,
         'video_height': video_height if is_video else None,
     }
-    
+
     # Include video moderation status and AI job ID in response
     if is_video and video_moderation_result:
         if not video_moderation_result.get('is_safe', True):

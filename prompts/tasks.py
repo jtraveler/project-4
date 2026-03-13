@@ -27,6 +27,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.db.models import F
+from django.urls import reverse
 from django.utils.text import slugify
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def _fire_bulk_gen_job_notification(job, succeeded, failed=False):
             notif_type = 'bulk_gen_job_completed'
             title = f'Generation job ready \u2014 {succeeded} image{"s" if succeeded != 1 else ""} generated'
             message = 'Review your results and publish your favourites.'
-        job_url = f'/tools/bulk-ai-generator/job/{job.id}/'
+        job_url = reverse('prompts:bulk_generator_job', args=[str(job.id)])
         create_notification(
             recipient=job.created_by,
             notification_type=notif_type,
@@ -81,7 +82,7 @@ def _fire_bulk_gen_publish_notification(job):
             return  # Nothing published — no notification
         # Count how many images failed (status='failed' on the GeneratedImage)
         failed = job.images.filter(status='failed').count()
-        profile_url = f'/profile/{job.created_by.username}/'
+        profile_url = reverse('prompts:user_profile', args=[job.created_by.username])
         if failed == 0:
             notif_type = 'bulk_gen_published'
             title = f'{published} prompt{"s" if published != 1 else ""} published successfully'

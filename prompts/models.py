@@ -2729,6 +2729,10 @@ NOTIFICATION_TYPE_CATEGORY_MAP = {
     'new_follower': 'follows',
     'prompt_saved': 'collections',
     'system': 'system',
+    'bulk_gen_job_completed': 'system',
+    'bulk_gen_job_failed': 'system',
+    'bulk_gen_published': 'system',
+    'bulk_gen_partial': 'system',
 }
 
 
@@ -2742,6 +2746,10 @@ class Notification(models.Model):
         NEW_FOLLOWER = 'new_follower', 'Started following you'
         PROMPT_SAVED = 'prompt_saved', 'Saved your prompt to a collection'
         SYSTEM = 'system', 'System notification'
+        BULK_GEN_JOB_COMPLETED = 'bulk_gen_job_completed', 'Generation job ready'
+        BULK_GEN_JOB_FAILED = 'bulk_gen_job_failed', 'Generation job failed'
+        BULK_GEN_PUBLISHED = 'bulk_gen_published', 'Prompts published'
+        BULK_GEN_PARTIAL = 'bulk_gen_partial', 'Prompts partially published'
 
     class Category(models.TextChoices):
         COMMENTS = 'comments', 'Comments'

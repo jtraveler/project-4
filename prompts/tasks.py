@@ -45,6 +45,62 @@ MAX_IMAGE_SIZE = 5 * 1024 * 1024
 MAX_CONCURRENT_IMAGE_REQUESTS = getattr(settings, 'BULK_GEN_MAX_CONCURRENT', 4)
 
 
+def _fire_bulk_gen_job_notification(job, succeeded, failed=False):
+    """Fire a notification to the job owner at terminal state."""
+    from prompts.services.notifications import create_notification
+    try:
+        if failed or succeeded == 0:
+            notif_type = 'bulk_gen_job_failed'
+            title = 'Generation job failed'
+            message = 'Your generation job failed. Please contact support.'
+        else:
+            notif_type = 'bulk_gen_job_completed'
+            title = f'Generation job ready \u2014 {succeeded} image{"s" if succeeded != 1 else ""} generated'
+            message = 'Review your results and publish your favourites.'
+        job_url = f'/tools/bulk-ai-generator/job/{job.id}/'
+        create_notification(
+            recipient=job.created_by,
+            notification_type=notif_type,
+            title=title,
+            message=message,
+            link=job_url,
+        )
+    except Exception:
+        # Notifications are non-critical — never let a failure here crash the task
+        logger.exception('Failed to fire bulk gen job notification for job %s', job.id)
+
+
+def _fire_bulk_gen_publish_notification(job):
+    """Fire a notification to the job owner after publish completes."""
+    from prompts.services.notifications import create_notification
+    try:
+        # Refresh from DB to get accurate published_count
+        job.refresh_from_db(fields=['published_count'])
+        published = job.published_count
+        if published == 0:
+            return  # Nothing published — no notification
+        # Count how many images failed (status='failed' on the GeneratedImage)
+        failed = job.images.filter(status='failed').count()
+        profile_url = f'/profile/{job.created_by.username}/'
+        if failed == 0:
+            notif_type = 'bulk_gen_published'
+            title = f'{published} prompt{"s" if published != 1 else ""} published successfully'
+            message = 'View your new prompt pages in your gallery.'
+        else:
+            notif_type = 'bulk_gen_partial'
+            title = f'{published} of {published + failed} prompts published ({failed} failed)'
+            message = 'Some prompts could not be published. View your gallery for details.'
+        create_notification(
+            recipient=job.created_by,
+            notification_type=notif_type,
+            title=title,
+            message=message,
+            link=profile_url,
+        )
+    except Exception:
+        logger.exception('Failed to fire bulk gen publish notification for job %s', job.id)
+
+
 def run_nsfw_moderation(upload_id: str, image_url: str) -> dict:
     """
     Background NSFW moderation task for Phase N optimistic upload UX.
@@ -2671,6 +2727,8 @@ def process_bulk_generation_job(job_id: str) -> None:
         logger.error("No API key for job %s, cannot generate", job_id)
         job.status = 'failed'
         job.save(update_fields=['status'])
+        # NOTIF-BG-1: notify user job failed
+        _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
         return
 
     try:
@@ -2679,6 +2737,8 @@ def process_bulk_generation_job(job_id: str) -> None:
         logger.error("Failed to decrypt API key for job %s: %s", job_id, e)
         job.status = 'failed'
         job.save(update_fields=['status'])
+        # NOTIF-BG-1: notify user job failed
+        _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
         return
 
     provider = get_provider(job.provider, mock_mode=False)
@@ -2707,6 +2767,12 @@ def process_bulk_generation_job(job_id: str) -> None:
                 'status', 'completed_at', 'completed_count',
                 'failed_count', 'actual_cost',
             ])
+            # NOTIF-BG-1: notify user job is ready for review
+            succeeded = job.images.filter(status='completed').count()
+            _fire_bulk_gen_job_notification(job, succeeded)
+        elif job.status == 'failed':
+            # NOTIF-BG-1: notify user job failed (auth failure path)
+            _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
         logger.info(
             "Bulk job %s finished: %d completed, %d failed, cost $%s",
             job_id, completed_count, failed_count, total_cost,
@@ -3277,6 +3343,9 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
         "Publish complete for job %s: %d published, %d skipped, %d errors",
         job_id, published_count, skipped_count, len(errors),
     )
+
+    # NOTIF-BG-2: notify user about publish result
+    _fire_bulk_gen_publish_notification(job)
 
     # skipped_count: non-zero only in the rare case where a concurrent task
     # published the same image between the pre-filter queryset and the

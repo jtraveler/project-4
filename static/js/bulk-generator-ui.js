@@ -123,10 +123,14 @@
                 } else if (image.status === 'failed') {
                     G.fillFailedSlot(groupIndex, slotIndex,
                         image.error_message || '',
-                        image.prompt_text || '');
+                        image.prompt_text || '',
+                        groupImages[0].size || '');
                 }
             }
         }
+
+        // Update header outcome stats (size, quality, succeeded, failed) on every render pass
+        G.updateHeaderStats(images);
     };
 
     /**
@@ -313,6 +317,74 @@
         setTimeout(function () {
             G.announcer.textContent = '';
         }, 1000);
+    };
+
+    // ─── Header Stats: Size/Quality/Succeeded/Failed (UI-IMPROVEMENTS-1) ─
+    G.updateHeaderStats = function (images) {
+        if (!images || !images.length) return;
+
+        // Collect unique sizes and count outcomes
+        var uniqueSizes = {};
+        var qualitySet = {};
+        var succeededCount = 0;
+        var failedCount = 0;
+        // Use raw DB key for comparison (data-job-quality) to avoid get_quality_display label fragility
+        var jobQuality = (G.jobQuality || '').toLowerCase();
+
+        for (var i = 0; i < images.length; i++) {
+            var img = images[i];
+            if (img.size) { uniqueSizes[img.size] = true; }
+            if (img.quality) { qualitySet[img.quality.toLowerCase()] = true; }
+            if (img.status === 'completed') { succeededCount++; }
+            if (img.status === 'failed') { failedCount++; }
+        }
+
+        // Smart Size: single size shown as "W×H"; multiple shown as "N sizes"
+        var sizeEl = document.getElementById('header-size');
+        if (sizeEl) {
+            var sizeKeys = Object.keys(uniqueSizes);
+            if (sizeKeys.length === 1) {
+                sizeEl.textContent = sizeKeys[0].replace('x', '\u00d7');
+            } else if (sizeKeys.length > 1) {
+                sizeEl.textContent = sizeKeys.length + ' sizes';
+            }
+        }
+
+        // Quality: reveal column only when a prompt overrides the job default
+        var qualKeys = Object.keys(qualitySet);
+        var hasOverride = qualKeys.length > 1 ||
+            (qualKeys.length === 1 && qualKeys[0] !== jobQuality);
+        if (hasOverride) {
+            var qualTh = document.getElementById('header-quality-col-th');
+            var qualTd = document.getElementById('header-quality-col-td');
+            if (qualTh) { qualTh.style.removeProperty('display'); }
+            if (qualTd) { qualTd.textContent = 'Mixed'; qualTd.style.removeProperty('display'); }
+        }
+
+        // Succeeded count — bold weight when non-zero (matches Failed treatment)
+        var succeededEl = document.getElementById('header-succeeded-count');
+        if (succeededEl) {
+            succeededEl.textContent = succeededCount;
+            var succeededItem = succeededEl.closest('.setting-item');
+            if (succeededItem) {
+                succeededItem.classList.toggle('header-stat--succeeded', succeededCount > 0);
+            }
+        }
+
+        // Failed count — red + non-color indicator via CSS class; announce first failure via SR
+        var failedEl = document.getElementById('header-failed-count');
+        if (failedEl) {
+            var prevFailed = failedEl.textContent === '\u2014' ? 0 : (parseInt(failedEl.textContent, 10) || 0);
+            failedEl.textContent = failedCount;
+            if (failedCount > 0 && prevFailed === 0 && G.announce) {
+                // Route first-failure through existing SR announcer (A11Y-4)
+                G.announce(failedCount + ' image' + (failedCount !== 1 ? 's' : '') + ' failed to generate');
+            }
+            var failedItem = failedEl.closest('.setting-item');
+            if (failedItem) {
+                failedItem.classList.toggle('header-stat--failed', failedCount > 0);
+            }
+        }
     };
 
     // ─── Gallery: Overlay Positioning (Phase 5B Round 3) ──────────

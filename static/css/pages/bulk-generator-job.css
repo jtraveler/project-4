@@ -105,6 +105,25 @@
     margin: 0;
 }
 
+/* Failed outcome stat — red tint + non-color indicator when non-zero (UI-IMPROVEMENTS-1) */
+.setting-item.header-stat--failed .setting-value {
+    color: #b91c1c; /* red-700 — 5.9:1 on --gray-50 background (WCAG AA ✓) */
+    font-weight: 600;
+}
+
+/* WCAG 1.4.1: non-color indicator appended to label when failures > 0 */
+.setting-item.header-stat--failed .setting-label::after {
+    content: " (!)";
+    font-size: 0.8em;
+    font-weight: 400;
+    color: #b91c1c;
+}
+
+/* Succeeded stat — bold weight when non-zero to match Failed treatment */
+.setting-item.header-stat--succeeded .setting-value {
+    font-weight: 600;
+}
+
 /* ─── Progress Section ───────────────────────────────────── */
 .job-progress-section {
     background: var(--white);
@@ -370,11 +389,13 @@
 .prompt-group-meta span {
     font-size: 15px;
     color: var(--gray-500);
+    font-weight: 600; /* Group footer text weight (UI-IMPROVEMENTS-1) */
 }
 
 .prompt-group-meta span + span::before {
     content: "\00b7";
     margin-right: 0.5rem;
+    font-weight: 700; /* Dot separator slightly heavier than label text; 900 outweighed content (UI-IMPROVEMENTS-1) */
 }
 
 /* ─── Prompt Text Hover Overlay ─────────────────────────────── */

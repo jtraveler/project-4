@@ -326,6 +326,7 @@
         G.galleryInstruction = document.getElementById('galleryInstruction');
         G.spriteUrl = G.root.dataset.spriteUrl || '';
         G.qualityDisplay = G.root.dataset.qualityDisplay || '';
+        G.jobQuality = G.root.dataset.jobQuality || ''; // raw DB key for quality comparison (UI-IMPROVEMENTS-1)
         G.sizeDisplay = G.root.dataset.sizeDisplay || '';
         G.galleryAspect = G.root.dataset.galleryAspect || '1 / 1';
 

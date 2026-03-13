@@ -20,6 +20,7 @@
      data-csrf="{{ csrf_token }}"
      data-images-per-prompt="{{ job.images_per_prompt }}"
      data-quality-display="{{ job.get_quality_display }}"
+     data-job-quality="{{ job.quality }}"
      data-size-display="{{ display_size }}"
      data-sprite-url="{% static 'icons/sprite.svg' %}"
      data-gallery-aspect="{{ gallery_aspect }}"
@@ -48,19 +49,28 @@
             </div>
             <div class="setting-item">
                 <dt class="setting-label">Size</dt>
-                <dd class="setting-value">{{ display_size }}</dd>
+                <dd class="setting-value" id="header-size">{{ display_size }}</dd>
             </div>
-            <div class="setting-item">
+            {# Quality hidden by default; JS reveals it if any prompt overrides the job default #}
+            <div class="setting-item" id="header-quality-col-th" style="display:none">
                 <dt class="setting-label">Quality</dt>
-                <dd class="setting-value">{{ job.get_quality_display }}</dd>
-            </div>
-            <div class="setting-item">
-                <dt class="setting-label">Images/Prompt</dt>
-                <dd class="setting-value">{{ job.images_per_prompt }}</dd>
+                <dd class="setting-value" id="header-quality-col-td"></dd>
             </div>
             <div class="setting-item">
                 <dt class="setting-label">Total Prompts</dt>
                 <dd class="setting-value">{{ job.total_prompts }}</dd>
+            </div>
+            <div class="setting-item">
+                <dt class="setting-label">Total Images</dt>
+                <dd class="setting-value">{{ job.actual_total_images|default:job.total_images }}</dd>
+            </div>
+            <div class="setting-item">
+                <dt class="setting-label">Succeeded</dt>
+                <dd class="setting-value" id="header-succeeded-count">&mdash;</dd>
+            </div>
+            <div class="setting-item">
+                <dt class="setting-label">Failed</dt>
+                <dd class="setting-value" id="header-failed-count">&mdash;</dd>
             </div>
         </dl>
     </div>

@@ -299,7 +299,7 @@
         groupData.slots[slotIndex] = image.id;
     };
 
-    G.fillFailedSlot = function (groupIndex, slotIndex, errorMessage, promptText) {
+    G.fillFailedSlot = function (groupIndex, slotIndex, errorMessage, promptText, groupSize) {
         var groupData = G.renderedGroups[groupIndex];
         if (!groupData) return;
 
@@ -315,10 +315,16 @@
             container.removeChild(placeholder);
         }
 
+        // Compute per-group aspect ratio; fall back to job-level if groupSize is absent
+        var parsedSize = G.parseGroupSize(groupSize);
+        var slotAspect = (parsedSize.w > 0)
+            ? (parsedSize.w + ' / ' + parsedSize.h)
+            : G.galleryAspect;
+
         // Show failed indicator
         var failed = document.createElement('div');
         failed.className = 'placeholder-failed';
-        failed.style.aspectRatio = G.galleryAspect;
+        failed.style.aspectRatio = slotAspect;
         failed.setAttribute('role', 'alert');
         var ariaLabel = 'Image generation failed';
         if (errorMessage) {

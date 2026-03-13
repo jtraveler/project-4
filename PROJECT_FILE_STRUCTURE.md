@@ -2,8 +2,8 @@
 
 **Last Updated:** March 10, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phases 1–7 complete — pre-launch QA), Phase N4 (~99%), Phase K (~96%)
-**Total Tests:** ~1117 passing, 12 skipped (43% coverage, threshold 40%)
+**Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA), Phase N4 (~100%), Phase K (~96%)
+**Total Tests:** 1149 passing, 12 skipped (Session 122)
 
 ---
 
@@ -14,10 +14,10 @@
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 45 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 12 | static/css/ |
-| **JavaScript Files** | 14 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121) |
+| **JavaScript Files** | 15 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121, bulk-generator-gallery.js added Session 122) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 70 | prompts/migrations/ (68), about/migrations/ (2) |
-| **Test Files** | 23 | prompts/tests/ |
+| **Migrations** | 74 | prompts/migrations/ (72), about/migrations/ (2) |
+| **Test Files** | 24 | prompts/tests/ |
 | **Management Commands** | 29 | prompts/management/commands/ |
 | **Services** | 15 | prompts/services/ |
 | **View Modules** | 13 | prompts/views/ |
@@ -150,8 +150,13 @@ live-working-project/
 │   │   └── style.css
 │   ├── icons/                    # SVG icon sprite (Phase J.2)
 │   │   └── sprite.svg            # 33 icons from Lucide Icons
-│   └── js/                       # 10 JavaScript files
-│       ├── bulk-generator.js     # Bulk generator frontend: upload, preview, auto-save, validation (~900 lines, Sessions 92-93)
+│   └── js/                       # 15 JavaScript files
+│       ├── bulk-generator.js         # Bulk generator frontend: upload, preview, auto-save, validation (~900 lines, Sessions 92-93)
+│       ├── bulk-generator-config.js  # 156 lines — BulkGen namespace + config (Session 121 JS-SPLIT-1)
+│       ├── bulk-generator-ui.js      # 338 lines — gallery render, createGroupRow, parseGroupSize (Session 122 6E-CLEANUP-2)
+│       ├── bulk-generator-gallery.js # 452 lines — card states, fillImageSlot, fillFailedSlot, lightbox (Session 122) ← NEW
+│       ├── bulk-generator-polling.js # ~408 lines — polling loop, terminal state, initPage (Session 121 JS-SPLIT-1)
+│       ├── bulk-generator-selection.js # 581 lines — selection, publish bar (Session 121 JS-SPLIT-1)
 │       ├── collections.js        # Collections modal interactions (Phase K, ~760 lines)
 │       ├── like-button.js        # Centralized like button handler
 │       ├── navbar.js             # Extracted navbar JavaScript (~650 lines) + notification polling (15s, Session 87)
@@ -178,7 +183,7 @@ live-working-project/
 | Command | Purpose | Schedule |
 |---------|---------|----------|
 | `cleanup_deleted_prompts` | Automated trash cleanup (5/30 day retention) | Daily 3:00 UTC |
-| `detect_orphaned_files` | Cloudinary orphan + missing image detection | Daily 4:00 UTC |
+| `detect_orphaned_files` | ⚠️ CLOUDINARY-SPECIFIC — NON-FUNCTIONAL FOR B2. Runs via Heroku Scheduler but produces no useful output. Must be rewritten as `detect_b2_orphans` before orphan detection is active again. | Daily 4:00 UTC |
 | `backup_email_preferences` | Backup user email preferences to JSON | Manual |
 | `restore_email_preferences` | Restore email preferences from backup | Manual |
 | `auto_draft_no_media` | Move prompts without media to draft | Manual |
@@ -486,10 +491,11 @@ static/css/
 ```
 static/js/
 ├── bulk-generator.js     # ~900 lines - Bulk generator frontend (Sessions 92-93)
-├── bulk-generator-config.js  # 156 lines  - Namespace init, constants (POLL_INTERVAL, TERMINAL_STATES, STATUS_HEADINGS), state variable declarations, utility functions (getCookie, formatCost, formatTime, gcd, getAspectLabel) (Session 121 JS-SPLIT-1)
-├── bulk-generator-ui.js      # 722 lines  - Progress UI, gallery cleanup, card state management (markCardPublished, markCardFailed), gallery rendering, lightbox (Session 121 JS-SPLIT-1)
-├── bulk-generator-polling.js # 408 lines  - Terminal state UI, polling loop, cancel handler, focusFirstGalleryCard, initPage, DOMContentLoaded (Session 121 JS-SPLIT-1)
-├── bulk-generator-selection.js # 581 lines - Selection, trash, download, toast, publish bar, publish flow, retry (handleRetryFailed, startPublishProgressPolling) (Session 121 JS-SPLIT-1)
+├── bulk-generator-config.js     # 156 lines  - Namespace init, constants (POLL_INTERVAL, TERMINAL_STATES, STATUS_HEADINGS), state variable declarations, utility functions (getCookie, formatCost, formatTime, gcd, getAspectLabel) (Session 121 JS-SPLIT-1)
+├── bulk-generator-ui.js         # 338 lines  - Gallery render, createGroupRow, parseGroupSize (Session 122 6E-CLEANUP-2 — was 766 lines)
+├── bulk-generator-gallery.js    # 452 lines  - Card states, fillImageSlot, fillFailedSlot, lightbox (Session 122 6E-CLEANUP-2) ← NEW
+├── bulk-generator-polling.js    # ~408 lines - Terminal state UI, polling loop, cancel handler, focusFirstGalleryCard, initPage, DOMContentLoaded (Session 121 JS-SPLIT-1)
+├── bulk-generator-selection.js  # 581 lines  - Selection, trash, download, toast, publish bar, publish flow, retry (handleRetryFailed, startPublishProgressPolling) (Session 121 JS-SPLIT-1)
 ├── collections.js        # ~760 lines - Collections modal (Phase K)
 ├── like-button.js        # ~155 lines - Centralized like handler (Phase J.2)
 ├── navbar.js             # ~650 lines - Extracted from base.html
@@ -509,8 +515,9 @@ static/js/
 |------|-------|---------|
 | **bulk-generator.js** | ~900 | Bulk generator frontend: upload, preview, auto-save, validation, modals (Sessions 92-93) |
 | **bulk-generator-config.js** | 156 | Bulk generator constants, state declarations, utility functions — shared namespace init (Session 121 JS-SPLIT-1) |
-| **bulk-generator-ui.js** | 722 | Bulk generator gallery rendering, card states, lightbox, progress UI (Session 121 JS-SPLIT-1) |
-| **bulk-generator-polling.js** | 408 | Bulk generator polling loop, terminal state, focus management, initPage (Session 121 JS-SPLIT-1) |
+| **bulk-generator-ui.js** | 338 | Bulk generator gallery rendering, createGroupRow, parseGroupSize (Session 122 6E-CLEANUP-2 — was 766 lines) |
+| **bulk-generator-gallery.js** | 452 | Card states, fillImageSlot, fillFailedSlot, lightbox (Session 122 6E-CLEANUP-2) ← NEW |
+| **bulk-generator-polling.js** | ~408 | Bulk generator polling loop, terminal state, focus management, initPage (Session 121 JS-SPLIT-1) |
 | **bulk-generator-selection.js** | 581 | Bulk generator selection, publish flow, retry, download, toast (Session 121 JS-SPLIT-1) |
 | **collections.js** | ~760 | Collections modal, API integration, thumbnail grids |
 | **navbar.js** | ~750 | Dropdowns, search, mobile menu, scroll, notification polling (15s) + keyboard nav + bell sync dispatch + stale/count-updated listeners (Phase R1/R1-D) |
@@ -1654,6 +1661,7 @@ prompts/templates/prompts/
 - `static/js/bulk-generator-polling.js` (408 lines) — Session 121 JS-SPLIT-1
 - `static/js/bulk-generator-selection.js` (581 lines) — Session 121 JS-SPLIT-1
 - `prompts/tests/test_bulk_gen_rename.py` (283 lines) — Session 121 HARDENING-1
+- `prompts/tests/test_upload_views.py` (2 tests) — Session 122 N4H-UPLOAD-RENAME-FIX ← NEW
 - `prompts/management/commands/backfill_bulk_gen_seo_rename.py` — Session 121 SMOKE2-FIX-E
 
 **Modified files:**

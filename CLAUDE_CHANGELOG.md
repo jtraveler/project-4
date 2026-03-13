@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 11, 2026 (Sessions 101–121, SMOKE2 + HARDENING-1 + JS-SPLIT-1 + HARDENING-2)
+**Last Updated:** March 12, 2026 (Sessions 101–122, 6E series complete, N4h resolved, gallery.js extracted)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,70 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 122 — March 12, 2026
+
+**Final state:** 1149 tests, 12 skipped, 0 failures. Migration 0072. 5 JS modules.
+
+#### CLEANUP-SLOTS-REFACTOR
+- Removed unreachable `:not(.placeholder-terminal)` from `cleanupGroupEmptySlots()`
+- Agents: @frontend-developer 9.1, @code-reviewer 9.2
+
+#### Bulk Gen 6E-A — Per-prompt size override
+- `GeneratedImage.size` CharField, migration 0069
+- Commit: e1fd774
+
+#### Bulk Gen 6E-B — Per-prompt quality override
+- `GeneratedImage.quality` CharField, migration 0070
+- Unspecced: `actual_cost` now uses per-image quality/size
+- Commit: 87d33fa
+
+#### Bulk Gen 6E-C — Per-prompt image count override
+- `GeneratedImage.target_count` PositiveSmallIntegerField, migration 0071
+- `VALID_COUNTS = {1,2,3,4}`
+- Commit: 7d6efb6 — 1139 tests
+
+#### 6E-HARDENING-1 — Backend hardening
+- `BulkGenerationJob.actual_total_images`, migration 0072
+- `VALID_SIZES` rebuilt from `SUPPORTED_IMAGE_SIZES`
+- 8 new cost/count tests
+- Commit: 3b42114 — 1147 tests
+
+#### 6E-HARDENING-2 — Frontend display
+- `G.totalImages` three-level fallback
+- Group headers show per-group size + quality
+- Per-group placeholder aspect ratios
+- Commit: 7b1ff65 — 1147 tests
+
+#### 6E-CLEANUP-1 — Python micro-cleanup
+- frozenset on VALID_SIZES/QUALITIES/COUNTS
+- `total_images_estimate` → `resolved_total_images`
+- `> 0` guard in `get_job_status()`
+- Commit: 0b6b720
+
+#### 6E-CLEANUP-2 — JS module split
+- New file: `static/js/bulk-generator-gallery.js` (452 lines)
+- `bulk-generator-ui.js` 766 → 338 lines
+- Functions extracted: cleanupGroupEmptySlots, markCardPublished, markCardFailed, fillImageSlot, fillFailedSlot, lightbox functions
+- Load order: config → ui → gallery → polling → selection
+- Commit: 5f1ced3
+
+#### 6E-CLEANUP-3 — JS bug + quality
+- Cancel-path `G.totalImages` fix: `data-actual-total-images` attr + `initPage()` reads it
+- `parseGroupSize()` helper replaces 3× inline split in `createGroupRow()`
+- ARIA `progressAnnouncer` clear-then-50ms-set pattern
+- Dead ternary guards removed from `renderImages()`
+- Commit: 90ac2cb — 1147 tests
+
+#### N4H-UPLOAD-RENAME-FIX
+- `upload_views.py`: guard changed from `is_b2_upload and prompt.pk` to `prompt.b2_image_url`
+- `async_task` import moved to module level
+- New file: `prompts/tests/test_upload_views.py` (2 tests)
+- Discovery: core call was already present from Session 67 — fix tightened the guard
+- Closes N4h blocker from CLAUDE.md Current Blockers
+- Commit: a9acbc4 — 1149 tests
+
+---
 
 ### Session 121 — March 11, 2026
 

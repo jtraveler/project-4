@@ -28,13 +28,13 @@
 | L | Media Infrastructure | ✅ Done | Cloudinary → B2 + Cloudflare |
 | M | Video Moderation | ✅ Done | FFmpeg + OpenAI Vision NSFW check |
 | N3 | Single-Page Upload | 🔄 ~95% | Upload page optimization |
-| **N4** | **Optimistic Upload Flow** | **🔄 ~99% Complete** | **N4h rename trigger, XML sitemap, indexes migration** |
+| **N4** | **Optimistic Upload Flow** | **🔄 ~100% Complete** | **N4h resolved (Session 122, a9acbc4). XML sitemap + final production verification remaining.** |
 | **2B** | **Category Taxonomy Revamp + Tag Pipeline** | **✅ 2B-1 through 2B-9 + S80-81 Done** | **46 categories, 109 descriptors, AI backfill, demographic SEO, IDF-weighted scoring, tag validation pipeline, admin metadata** |
 | **R1 + R1-D** | **User Notifications** | **🔄 ~95% (S86-89)** | **Infrastructure (S86) + page redesign (S87) + management features (S88) + CI/CD fix (S89). Follow Back, action labels, admin panel** |
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **✅ Phases 1–7 Complete — Pre-launch QA** | **Staff tool for multi-image generation via OpenAI GPT-Image-1 BYOK** |
+| **BG** | **Bulk AI Image Generator** | **✅ Phases 1–7 + 6E Complete — Pre-launch QA** | **Staff tool. 6E series: per-prompt size/quality/count overrides. 1149 tests. 5 JS modules.** |
 
 ---
 
@@ -102,7 +102,7 @@ Reduce perceived upload time from 15-20 seconds to 5-10 seconds by restructuring
 | N4 Cleanup | Remove old upload code | ✅ Complete |
 | N4g | Video submit fix (session key mismatch) | ✅ Resolved (S64) |
 | N4-SEO | Race/ethnicity, Schema.org VideoObject, alt tags | ✅ Complete (S64) |
-| N4h | Deferred B2 file renaming task | ✅ Code complete (trigger issue remaining) |
+| N4h | Deferred B2 file renaming task | ✅ Complete (Session 122, a9acbc4 — guard fixed, trigger confirmed) |
 | N4i | SEO additions (JSON-LD, sitemap) | 🔄 Deferred to pre-launch (JSON-LD done, sitemap pending) |
 | N4j | Testing & polish | ⏳ Pending |
 | N4-SEO | robots.txt, preconnect cleanup, font optimization | ✅ Complete (Session 69) |
@@ -113,7 +113,7 @@ Reduce perceived upload time from 15-20 seconds to 5-10 seconds by restructuring
 - Performance: 96 | Accessibility: 100 | Best Practices: 100 | SEO: 100
 
 **Remaining Items:**
-- N4h rename not triggering in production (code complete, needs debugging)
+- ~~N4h rename not triggering~~ — ✅ RESOLVED Session 122 (commit a9acbc4)
 - XML sitemap (deferred to pre-launch)
 - Indexes migration pending (`makemigrations` needed)
 - Final testing and deploy
@@ -523,12 +523,12 @@ Staff-only admin dashboard at `/staff/system-notifications/` for composing and m
 
 ---
 
-## ✅ Bulk AI Image Generator (Phases 1–7 Complete — Pre-launch QA)
+## ✅ Bulk AI Image Generator (Phases 1–7 + 6E Complete — Pre-launch QA)
 
-**Status:** Feature-complete for staff use. Production smoke test pending before V2.
+**Status:** Feature-complete for staff use. 6E series complete (per-prompt size/quality/count overrides + hardening + cleanup). Production smoke test pending before V2.
 **Started:** Session 92 (February 28, 2026)
 **URL:** `/tools/bulk-ai-generator/` (staff-only)
-**Tests:** ~375 bulk-gen tests (48 view tests + 21 source credit tests + 237 job view tests + 9 new 5C tests + 8 flush tests + 9 P1/P2 tests + 17 SanitiseErrorMessageTests + 5 JobStatusErrorReasonTests + 4 ConcurrentGenerationLoopTests + 9 PublishFlowTests + 8 TransactionHardeningTests); ~1100 total project tests passing, 12 skipped
+**Tests:** 1149 total project tests passing, 12 skipped (as of Session 122)
 
 ### What This Feature Does
 
@@ -556,7 +556,29 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 | 6D | Per-Image Error Recovery + Retry | ✅ | 119 | .is-failed state, stale detection, Retry Failed button, retry backend path, 1106 tests |
 | 6D Hotfix | Badge Keyboard Access + Template v2.5 | ✅ | 119 | aria-hidden fix, aria-label, double-ring focus, CC_SPEC_TEMPLATE v2.5, 1106 tests |
 | 7 | Integration Polish + Hardening | ✅ | 119 | .btn-zoom focus, status text, cumulative progress, rate limiter, 6 tests, 1112 tests |
+| CLEANUP-SLOTS | Dead code removal | ✅ | 122 | Removed unreachable `:not(.placeholder-terminal)` from `cleanupGroupEmptySlots()` |
+| 6E-A | Per-prompt size override | ✅ | 122 | `GeneratedImage.size`, migration 0069, `VALID_SIZES` allowlist, `createGroupRow()` groupSize param |
+| 6E-B | Per-prompt quality override | ✅ | 122 | `GeneratedImage.quality`, migration 0070, `VALID_QUALITIES`, per-image cost tracking |
+| 6E-C | Per-prompt image count | ✅ | 122 | `GeneratedImage.target_count`, migration 0071, `VALID_COUNTS = {1,2,3,4}` |
+| 6E-HARDENING-1 | Backend hardening | ✅ | 122 | `actual_total_images` field + migration 0072, VALID_SIZES from constants, 8 new tests, 1147 tests |
+| 6E-HARDENING-2 | Frontend display | ✅ | 122 | `G.totalImages` 3-level fallback, per-group headers, placeholder aspect ratios, 1147 tests |
+| 6E-CLEANUP-1 | Python micro-cleanup | ✅ | 122 | frozenset allowlists, `resolved_total_images` rename, `> 0` guard |
+| 6E-CLEANUP-2 | JS module split | ✅ | 122 | New `bulk-generator-gallery.js` (452 lines), ui.js 766→338 lines, 5-module architecture |
+| 6E-CLEANUP-3 | JS bug + quality | ✅ | 122 | Cancel-path totalImages fix, `parseGroupSize()` helper, ARIA clear-then-set, dead code, 1147 tests |
 | V2 | BYOK Premium + Replicate Models | 🔲 | — | Premium user access, Flux/SDXL via Replicate, archive staging page |
+
+### 6E Series — Architecture Summary (Session 122)
+
+**6E series complete.** `GeneratedImage` now has three per-prompt override fields:
+`size`, `quality`, `target_count`. All resolve at task/API layer with `or` fallback to
+job defaults. Module-level allowlists: `VALID_SIZES` (frozenset), `VALID_QUALITIES`
+(frozenset), `VALID_COUNTS` (frozenset). JS function signature:
+`createGroupRow(groupId, prompts, groupSize, groupQuality, targetCount)`.
+`parseGroupSize(groupSize)` helper returns `{w, h}` — use it everywhere a size string
+needs parsing, never inline split.
+
+**5 JS modules (Session 122):** config (156) → ui (338) → gallery (452) → polling (~408) → selection (581).
+All well below the 780-line CC safety threshold.
 
 ### Key Technical Decisions
 
@@ -578,6 +600,10 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 - `0066` - Add `prompt_page` FK to GeneratedImage (Phase 6A)
 - `0067` - Add `published_count` IntegerField to BulkGenerationJob (Phase 6A)
 - `0068` - Fix `generator_category` default + backfill 35 rows (Phase 6B.5)
+- `0069` - Add `GeneratedImage.size` CharField (Phase 6E-A, Session 122)
+- `0070` - Add `GeneratedImage.quality` CharField (Phase 6E-B, Session 122)
+- `0071` - Add `GeneratedImage.target_count` PositiveSmallIntegerField (Phase 6E-C, Session 122)
+- `0072` - Add `BulkGenerationJob.actual_total_images` PositiveIntegerField (6E-HARDENING-1, Session 122)
 
 ### Files Created/Modified
 
@@ -598,6 +624,8 @@ Staff-only tool for generating multiple AI images at once using OpenAI's GPT-Ima
 - `static/js/bulk-generator-ui.js` — Gallery rendering, card states, lightbox (Session 121 JS-SPLIT-1)
 - `static/js/bulk-generator-polling.js` — Polling loop, terminal state, initPage (Session 121 JS-SPLIT-1)
 - `static/js/bulk-generator-selection.js` — Selection, publish flow, retry (Session 121 JS-SPLIT-1)
+- `static/js/bulk-generator-gallery.js` — 452 lines: card states, fillImageSlot, fillFailedSlot, lightbox (Session 122 6E-CLEANUP-2)
+- `prompts/tests/test_upload_views.py` — 2 tests for rename task queuing on upload submit (Session 122 N4H)
 - `prompts/tests/test_bulk_generator_job.py` — 237-line test suite for job view
 - `prompts/management/commands/create_test_gallery.py` — Test data generator for gallery development
 - `static/images/sample-{1-by-1,2-by-3,3-by-2,16-by-9}-{a,b,c,d}.{png,jpg}` — 16 sample images for testing

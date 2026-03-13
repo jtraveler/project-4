@@ -49,7 +49,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~99% Complete | Optimistic Upload Flow | XML sitemap, indexes migration, final testing |
+| **Phase N4** | 🔄 ~100% Complete | Optimistic Upload Flow | N4h resolved (Session 122, a9acbc4). XML sitemap + final production verification remaining. |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 | **Bulk Gen Phase 6A** | ✅ COMPLETE | Bug Fixes (scaffolding) | Done — 6 of 7 bugs, Session 114 |
 | **Bulk Gen Phase 6A.5** | ✅ COMPLETE | Data Correctness (gpt-image-1 choice + pipeline alignment) | Done — Session 114 |
@@ -73,6 +73,16 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| N4H-UPLOAD-RENAME-FIX | Mar 12, 2026 | Fixed `rename_prompt_files_for_seo` guard in `upload_views.py`. Guard changed from `is_b2_upload and prompt.pk` (session flag) to `prompt.b2_image_url` (model field check). `async_task` import moved to module level. Discovery: the core `async_task` call was already present from Session 67 — this fix tightened the guard and added tests. New file: `prompts/tests/test_upload_views.py` (2 tests). Commit: a9acbc4. Agents: @django-pro 8.5, @test-automator 8.2. Avg 8.35/10. 1149 tests. |
+| 6E-CLEANUP-3 | Mar 12, 2026 | JS bug + quality: cancel-path `G.totalImages` staleness fixed (`data-actual-total-images` template attr + `initPage()` reads it), `parseGroupSize()` helper replaces 3× inline parse in `createGroupRow()`, ARIA `progressAnnouncer` clear-then-50ms-set pattern, dead ternary guards removed from `renderImages()`. Commit: 90ac2cb. Agents: @frontend-developer 8.5, @accessibility 8.5, @code-reviewer 9.0. Avg 8.67/10. 1147 tests. |
+| 6E-CLEANUP-2 | Mar 12, 2026 | Extracted `bulk-generator-gallery.js` from `bulk-generator-ui.js` (766→338 lines). New file: `static/js/bulk-generator-gallery.js` (452 lines). Contains: `cleanupGroupEmptySlots`, `markCardPublished`, `markCardFailed`, `fillImageSlot`, `fillFailedSlot`, `createLightbox`, `openLightbox`, `closeLightbox`. Load order: config→ui→gallery→polling→selection. Commit: 5f1ced3. Agents: @frontend-developer 9.0, @code-reviewer 9.0. Avg 9.0/10. 1147 tests. |
+| 6E-CLEANUP-1 | Mar 12, 2026 | Python micro-cleanup: `VALID_SIZES`, `VALID_QUALITIES`, `VALID_COUNTS` converted to `frozenset`; `total_images_estimate` renamed to `resolved_total_images` (3 occurrences in `create_job()`); `get_job_status()` `actual_total_images` fallback uses explicit `> 0` guard; CLAUDE.md Section B forward reference names target heading. Commit: 0b6b720. Agents: @django-pro 9.5, @code-reviewer 9.0. Avg 9.25/10. 1147 tests. |
+| 6E-HARDENING-2 | Mar 12, 2026 | Frontend display: `G.totalImages` reads `actual_total_images \|\| total_images \|\| G.totalImages` (3-level fallback); `createGroupRow()` adds `groupQuality` param; group headers show per-group size and quality with job fallbacks; placeholder slots use per-group aspect ratio from `groupSize`; bonus: terminal-on-load one-shot fetch now syncs `G.totalImages`. Commit: 7b1ff65. Agents: @frontend-developer 9.0, @accessibility 9.0, @code-reviewer 8.0. Avg 8.67/10. 1147 tests. |
+| 6E-HARDENING-1 | Mar 12, 2026 | Backend hardening: `BulkGenerationJob.actual_total_images` PositiveIntegerField, migration 0072, populated at job creation from `sum(resolved_counts)`; status API returns `actual_total_images` with fallback; `VALID_SIZES` rebuilt from `SUPPORTED_IMAGE_SIZES` (blocks 1792×1024); module-level `VALID_SIZES`, `VALID_QUALITIES`, `VALID_COUNTS`; 8 new tests. Commit: 3b42114. Agents: @django-pro 9.0, @security-auditor 8.5, @test-automator 8.5. Avg 8.67/10. 1147 tests. |
+| 6E-C — Per-prompt image count | Mar 12, 2026 | `GeneratedImage.target_count` PositiveSmallIntegerField, migration 0071. Per-prompt count override (1–4). `VALID_COUNTS = {1,2,3,4}`. `createGroupRow()` uses `targetCount` param. All 4 `G.imagesPerPrompt` refs audited. Commit: 7d6efb6. Agents: @django-pro 9.2, @frontend-developer 9.0, @security-auditor 9.4, @accessibility 8.5. Avg 9.025/10. 1139 tests. |
+| 6E-B — Per-prompt quality | Mar 12, 2026 | `GeneratedImage.quality` CharField, migration 0070. Per-prompt quality override. `VALID_QUALITIES` allowlist. Task resolves per-image or job fallback. Unspecced improvement: `actual_cost` now uses per-image quality/size for accurate cost tracking. Commit: 87d33fa. Agents: @django-pro 9.0, @frontend-developer 9.1, @security-auditor 9.3. Avg 9.13/10. |
+| 6E-A — Per-prompt size | Mar 12, 2026 | `GeneratedImage.size` CharField, migration 0069. Per-prompt size override. `VALID_SIZES` allowlist. Task resolves per-image or job fallback. `createGroupRow()` accepts `groupSize`. Placeholder slot-count guard uses `groupData.targetCount`. Commit: e1fd774. Agents: @django-pro 9.1, @frontend-developer 8.7, @security-auditor 9.2, @accessibility 8.7. Avg 8.9/10. |
+| CLEANUP-SLOTS-REFACTOR | Mar 12, 2026 | Removed unreachable `:not(.placeholder-terminal)` selector from `cleanupGroupEmptySlots()` in `bulk-generator-ui.js`. Dead code — `:not(.placeholder-terminal)` exclusion proven unreachable because `fillImageSlot`/`fillFailedSlot` remove `.placeholder-loading` before slot-count guard is reached. Agents: @frontend-developer 9.1, @code-reviewer 9.2. Avg 9.15/10. |
 | SMOKE2 Series (Fixes A–E) | Mar 11, 2026 | Production smoke test + 5 bug fixes: Fix-A (`processing_complete=True` in publish pipeline), Fix-B (focus ring on page load), Fix-C (`b2_large_url` never set — Media Missing root cause), Fix-D (SEO rename task never queued for bulk-gen), Fix-E (images relocated from `bulk-gen/` path to standard `media/images/{year}/{month}/large/`). All 6 production prompts backfilled. Heroku v649→v653. |
 | HARDENING-1 | Mar 11, 2026 | 5 unit tests for sibling-check cleanup path in `rename_prompt_files_for_seo` (including non-blocking exception contract). Batch mirror field saves: N individual DB writes → 1. `prompts/tests/test_bulk_gen_rename.py` (283 lines, new). 1117 tests. Agents: @django-pro 9.5, @test-automator 8.5. |
 | JS-SPLIT-1 | Mar 11, 2026 | Split `bulk-generator-job.js` (1830 lines, above 800-line CC safety threshold) into 4 modules: `bulk-generator-config.js` (156), `bulk-generator-ui.js` (722), `bulk-generator-polling.js` (408), `bulk-generator-selection.js` (581). Shared state via `window.BulkGen` namespace. Original file deleted. Template `<script>` tags updated in dependency order. 1117 tests. Agents: @frontend-developer 8.5, @code-reviewer 9.0, @accessibility 8.6. |
@@ -152,9 +162,21 @@ batch). Atomic rate limiter on `api_create_pages` using `cache.add()` + `cache.i
 6 new tests: `EndToEndPublishFlowTests` (3) + `CreatePagesAPITests` (3). `cache.clear()`
 in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
-**Status:** Feature-complete for staff use. Next: production smoke test (see Phase 6D
-report testing guide). V2 scope: BYOK for premium users, Replicate models (Flux, SDXL),
-archive staging page at `/profile/<username>/ai-generations/`.
+**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS modules. 1149 tests. Next: production smoke test before V2 launch, then UI improvements (failed slot dimensions, header stats, group footer weights). V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
+
+**Resolved (Session 122):** Cancel-path `G.totalImages` staleness ✅, `bulk-generator-ui.js` at 766/780 lines ✅ (now 338 lines), N4h rename not triggering ✅.
+
+**Open items as of Session 122:**
+
+| Item | Notes |
+|------|-------|
+| **VALID_PROVIDERS / VALID_VISIBILITIES** | Still mutable `set` in `bulk_generator_views.py` lines 36–37. Same file as the now-frozenset constants. Two-line fix. |
+| **create_test_gallery.py VALID_SIZES** | Has its own `VALID_SIZES = set(...)` independent of the module-level frozenset. Low priority management command. |
+| **Terminal-state ARIA branches** | Three branches in `updateProgress()` (completed/cancelled/failed) use direct `textContent` assignment without clear-then-set. Non-actionable — mutually exclusive branches, fires once. Document only. |
+| **Admin path rename task** | `admin.py` Prompt creation path not verified for `rename_prompt_files_for_seo`. Flagged by N4H report. Investigate before V2 launch. |
+| **Video B2 rename** | `rename_prompt_files_for_seo` only processes image fields — `b2_video_url` never renamed. Feature gap for V2. |
+| **@csp_exempt blank line** | `upload_views.py` lines 235–237 have blank line between `@csp_exempt` and `def upload_submit`. In Python, this means `@csp_exempt` is NOT applied. Pre-existing bug. One-line fix. |
+| **Debug print() statements** | `upload_views.py` contains `print(f"[DEBUG upload_submit]...")` statements emitting to Heroku logs. Remove before V2 launch. |
 
 **Phase 6 Architecture — Two-Page Staging:**
 - Temp staging page (`/tools/bulk-ai-generator/job/<uuid>/`): shows results of the most recent job. Phase 6 adds the publish flow here.
@@ -261,9 +283,11 @@ Rebuilding upload flow to feel "instant" by:
 
 ### Current Blockers
 
+> No current blockers as of Session 122.
+
 | Issue | Description | Impact |
 |-------|-------------|--------|
-| **N4h rename (upload-flow)** | `rename_prompt_files_for_seo` still not triggering for upload-flow prompts. Bulk-gen path fixed in SMOKE2-FIX-D (Session 121) — upload-flow is a separate remaining investigation. | Upload-flow files keep UUID names instead of SEO slugs |
+| **~~N4h rename (upload-flow)~~** | ✅ RESOLVED Session 122 (commit a9acbc4). Guard changed from `is_b2_upload and prompt.pk` to `prompt.b2_image_url`. | Resolved — upload-flow prompts now trigger rename task |
 | **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests at time of fix; now 976 passing, 12 skipped, flake8 clean, bandit clean) | ✅ All 3 jobs green |
 
 
@@ -1055,8 +1079,15 @@ prompts/templates/prompts/partials/_collection_modal.html   # Modal HTML
 TEMPLATES:
 prompts/templates/prompts/bulk_generator.html   # Full page template
 
-JAVASCRIPT:
-static/js/bulk-generator.js    # All frontend logic (~900 lines)
+JAVASCRIPT (5 modules — window.BulkGen namespace):
+static/js/bulk-generator-config.js     156 lines  (BulkGen namespace + config object)
+static/js/bulk-generator-ui.js         338 lines  (gallery render, createGroupRow, parseGroupSize)
+static/js/bulk-generator-gallery.js    452 lines  (card states, fillImageSlot, fillFailedSlot, lightbox) ← NEW (6E-CLEANUP-2)
+static/js/bulk-generator-polling.js    ~408 lines (status API polling loop)
+static/js/bulk-generator-selection.js  581 lines  (image selection, publish bar)
+
+CC safety threshold: 780 lines per file.
+All files well below threshold as of Session 122.
 
 CSS:
 static/css/pages/bulk-generator.css   # All styles (~1100 lines)

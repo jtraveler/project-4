@@ -223,7 +223,7 @@ prompts/services/
 ├── b2_rename.py             # B2 file renaming via copy-verify-delete (Phase N4h)
 ├── b2_upload_service.py     # B2 upload orchestration (Phase L)
 ├── bulk_generation.py       # BulkGenerationService: job creation, scheduling, rate limiting, per-image status, encrypt/decrypt/clear_api_key helpers (~300 lines, Sessions 92-101)
-├── cloudinary_moderation.py # OpenAI Vision moderation for images and videos
+├── vision_moderation.py     # OpenAI Vision moderation for images and videos (renamed Session 125)
 ├── content_generation.py    # GPT-4o content generation for uploads
 ├── image_processor.py       # Pillow image optimization (Phase L)
 ├── image_providers/         # Provider abstraction package (Session 92)
@@ -255,7 +255,7 @@ prompts/utils/
 | **b2_upload_service** | Orchestrates B2 uploads with optimization | ~$0.005/GB |
 | **bulk_generation** | BulkGenerationService: create jobs, schedule image generation, rate limiting (Session 92) | N/A |
 | **image_providers** | Provider abstraction for AI image generation — ImageProvider base class + OpenAI GPT-Image-1 adapter (Session 92) | N/A |
-| **cloudinary_moderation** | Cloudinary AI Vision for image/video moderation | ~$5-10/1000 images |
+| **vision_moderation** | OpenAI Vision moderation for images and videos | ~$5-10/1000 images |
 | **content_generation** | GPT-4o-mini for AI-generated titles, descriptions, tags | ~$0.00255/upload |
 | **image_processor** | Pillow-based image optimization (thumb, medium, large, webp) | N/A |
 | **leaderboard** | User ranking by views, activity, engagement | N/A |
@@ -388,6 +388,7 @@ prompts/views/
 | `test_bulk_generator_views.py` | ~48 | Bulk generator API endpoints: access control, validation, BYOK, reference image domain allowlist, charDesc max 250 (Sessions 92-93) |
 | `test_source_credit.py` | 21 | Source/credit URL parsing, KNOWN_SITES domain mapping, adversarial inputs (Session 93) |
 | `test_bulk_generator_job.py` | 237 | Job progress page view: access control, context variables, IMAGE_COST_MAP, template rendering (Session 98) |
+| `test_bulk_gen_notifications.py` | 6 | Bulk gen notification helpers: job completed/failed + publish notifications fired with correct types and links (Session 125) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -1661,7 +1662,8 @@ prompts/templates/prompts/
 - `static/js/bulk-generator-polling.js` (408 lines) — Session 121 JS-SPLIT-1
 - `static/js/bulk-generator-selection.js` (581 lines) — Session 121 JS-SPLIT-1
 - `prompts/tests/test_bulk_gen_rename.py` (283 lines) — Session 121 HARDENING-1
-- `prompts/tests/test_upload_views.py` (2 tests) — Session 122 N4H-UPLOAD-RENAME-FIX ← NEW
+- `prompts/tests/test_upload_views.py` (2 tests) — Session 122 N4H-UPLOAD-RENAME-FIX
+- `prompts/tests/test_bulk_gen_notifications.py` (6 tests) — Session 125 NOTIF-BG-1+2 ← NEW
 - `prompts/management/commands/backfill_bulk_gen_seo_rename.py` — Session 121 SMOKE2-FIX-E
 
 **Modified files:**
@@ -1941,7 +1943,7 @@ prompts/templates/prompts/
 
 **v2.7 (January 14, 2026):**
 - Phase M Video Moderation complete
-- Updated cloudinary_moderation.py description (OpenAI Vision)
+- Renamed moderation service to vision_moderation.py (Session 125)
 - Updated video_processor.py description (frame extraction)
 - Added UPLOAD_ISSUE_DIAGNOSTIC_REPORT.md to docs/reports/
 

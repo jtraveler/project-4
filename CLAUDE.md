@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| NOTIF-BG-1+2 | Mar 13, 2026 | Added 4 bulk gen notification types (`bulk_gen_job_completed`, `bulk_gen_job_failed`, `bulk_gen_published`, `bulk_gen_partial`) to `Notification.NOTIFICATION_TYPES`. Migration 0073. New helper functions `_fire_bulk_gen_job_notification` + `_fire_bulk_gen_publish_notification` in `tasks.py`. New test file: `prompts/tests/test_bulk_gen_notifications.py` (6 tests). Renamed `cloudinary_moderation.py` → `vision_moderation.py` (all import sites updated). 1149 → 1155 tests. |
 | DETECT-B2-ORPHANS | Mar 13, 2026 | New `detect_b2_orphans` management command (404 lines) in `prompts/management/commands/`. Read-only B2 bucket audit via boto3 paginator. Cross-references `Prompt.all_objects` (7 B2 fields) + `GeneratedImage.image_url` + `BulkGenerationJob.reference_image_url`. `SCAN_PREFIXES` limits scan to `media/` and `bulk-gen/`. `_safe_error_message()` uses structured `ClientError.response['Error']` fields — credential-safe. `iterator(chunk_size=500)` on all DB queries. Flags: `--days`, `--all`, `--dry-run`, `--output`, `--verbose`. CSV output to `docs/orphans_b2.csv`. Commit: 61edad1. Agents: @security-auditor 9.0, @django-pro 9.0, @code-reviewer 8.5. Avg 8.83/10. 1149 tests. |
 | MICRO-CLEANUP-1 | Mar 13, 2026 | Seven cleanup items in one commit: (1) group footer separator `·`→`\|` with `margin: 0 0.4rem` and `color: var(--gray-500)`; (2) ID rename `header-quality-col-th/td` → `header-quality-item/value` in HTML + JS; (3) `style.removeProperty('display')` → `.is-quality-visible` class toggle; (4) `VALID_PROVIDERS` + `VALID_VISIBILITIES` → `frozenset` in `bulk_generator_views.py`; (5) `VALID_SIZES` → `frozenset` in `create_test_gallery.py`; (6) `@csp_exempt` blank line removed in `upload_views.py` (bonus: same fix on `extend_upload_time`); (7) `replace('x','×')` → anchored regex `/(\d+)x(\d+)/i`. Commit: a222d15. Agents: @frontend-developer 8.8, @code-reviewer 9.0, @django-pro 8.5. Avg 8.77/10. 1149 tests. |
 | N4H-UPLOAD-RENAME-FIX | Mar 12, 2026 | Fixed `rename_prompt_files_for_seo` guard in `upload_views.py`. Guard changed from `is_b2_upload and prompt.pk` (session flag) to `prompt.b2_image_url` (model field check). `async_task` import moved to module level. Discovery: the core `async_task` call was already present from Session 67 — this fix tightened the guard and added tests. New file: `prompts/tests/test_upload_views.py` (2 tests). Commit: a9acbc4. Agents: @django-pro 8.5, @test-automator 8.2. Avg 8.35/10. 1149 tests. |
@@ -164,7 +165,7 @@ batch). Atomic rate limiter on `api_create_pages` using `cache.add()` + `cache.i
 6 new tests: `EndToEndPublishFlowTests` (3) + `CreatePagesAPITests` (3). `cache.clear()`
 in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
-**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS modules. 1149 tests. Next: production smoke test before V2 launch, then UI improvements (failed slot dimensions, header stats, group footer weights). V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
+**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS modules. 1155 tests. Next: production smoke test before V2 launch, then UI improvements (failed slot dimensions, header stats, group footer weights). V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
 
 **Resolved (Session 122):** Cancel-path `G.totalImages` staleness ✅, `bulk-generator-ui.js` at 766/780 lines ✅ (now 338 lines), N4h rename not triggering ✅.
 
@@ -772,6 +773,13 @@ Options for `initOverflowTabs()`:
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | NEW - Phase 2B taxonomy revamp full design (S74) |
 | `docs/PHASE_2B_AGENDA.md` | NEW - Phase 2B execution roadmap (S74) |
 
+**Session 125 (March 13, 2026):**
+- Renamed `cloudinary_moderation.py` → `vision_moderation.py` (all import sites updated)
+- Added bulk gen notification types: `bulk_gen_job_completed`, `bulk_gen_job_failed`,
+  `bulk_gen_published`, `bulk_gen_partial` (migration 0073)
+- New test file: `prompts/tests/test_bulk_gen_notifications.py` (6 tests)
+- 1149 → 1155 tests
+
 **Committed in Sessions 90-91 (Feb 26-27, 2026):**
 - `prompts/models.py` - Added batch_id CharField to Notification model
 - `prompts/services/notifications.py` - batch_id generation, group by batch_id, delete by batch_id, bleach protocol allowlist, sanitized HTML in title
@@ -1069,7 +1077,7 @@ prompts/tasks.py                     # Background tasks (AI generation, SEO rena
 ### Working on Moderation?
 
 ```
-prompts/services/cloudinary_moderation.py   # VisionModerationService (OpenAI Vision)
+prompts/services/vision_moderation.py   # VisionModerationService (OpenAI Vision)
 prompts/services/video_processor.py         # FFmpeg frame extraction
 prompts/services/video_moderation.py        # Video NSFW checking
 prompts/services/content_generation.py      # AI title/description/tag generation
@@ -1115,6 +1123,7 @@ prompts/models.py                            # BulkGenerationJob, GeneratedImage
 TESTS:
 prompts/tests/test_bulk_generator_views.py   # ~48 tests
 prompts/tests/test_source_credit.py          # 21 tests
+prompts/tests/test_bulk_gen_notifications.py # 6 tests (Session 125 — NOTIF-BG-1+2)
 
 UTILITIES:
 prompts/utils/source_credit.py               # parse_source_credit() + KNOWN_SITES

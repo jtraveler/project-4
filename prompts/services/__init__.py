@@ -2,7 +2,7 @@
 Services package for PromptFinder.
 
 This package contains:
-- AI Moderation Services (OpenAI, Cloudinary, Profanity Filter)
+- AI Moderation Services (OpenAI Vision, Profanity Filter)
 - Leaderboard Service (community rankings)
 - Image Processing Service (optimization, thumbnails, WebP conversion)
 - B2 Upload Service (upload pipeline to Backblaze B2)

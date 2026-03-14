@@ -102,6 +102,96 @@ def _fire_bulk_gen_publish_notification(job):
         logger.exception('Failed to fire bulk gen publish notification for job %s', job.id)
 
 
+# NOTIF-ADMIN-1: NSFW violation tracking
+NSFW_VIOLATION_THRESHOLD = 3       # violations to trigger admin alert
+NSFW_VIOLATION_WINDOW_DAYS = 7     # rolling window in days
+
+
+def _record_nsfw_violation(user, severity, prompt=None):
+    """
+    Record an NSFW violation for the user and check the repeat-offender threshold.
+    Called when moderation rejects an upload with severity 'critical' or 'high'.
+    Non-blocking — wrapped in try/except so task never crashes.
+    """
+    try:
+        from prompts.models import NSFWViolation
+        NSFWViolation.objects.create(
+            user=user,
+            severity=severity,
+            prompt=prompt,
+        )
+        _check_nsfw_repeat_offender(user)
+    except Exception:
+        logger.exception(
+            'Failed to record NSFW violation for user %s', user.id
+        )
+
+
+def _check_nsfw_repeat_offender(user):
+    """
+    Check if user has hit the repeat-offender threshold (3 violations in 7 days).
+    If yes, fire a staff notification. Non-blocking.
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from prompts.models import NSFWViolation
+
+        window_start = timezone.now() - timedelta(days=NSFW_VIOLATION_WINDOW_DAYS)
+        recent_count = NSFWViolation.objects.filter(
+            user=user,
+            created_at__gte=window_start,
+        ).count()
+
+        if recent_count >= NSFW_VIOLATION_THRESHOLD:
+            # Dedup: fire at most once per 24 hours per user.
+            # cache.add() is atomic — returns False if key already exists (TOCTOU-safe).
+            cooldown_key = f'nsfw_repeat_offender_notified:{user.id}'
+            if not cache.add(cooldown_key, True, 60 * 60 * 24):  # 24-hour cooldown
+                return
+            _fire_nsfw_repeat_offender_notification(user, recent_count)
+    except Exception:
+        logger.exception(
+            'Failed to check NSFW repeat offender threshold for user %s', user.id
+        )
+
+
+def _fire_nsfw_repeat_offender_notification(user, violation_count):
+    """
+    Fire an admin-only notification for a repeat NSFW offender.
+    Sends to all staff users with is_admin_notification=True.
+    """
+    try:
+        from prompts.services.notifications import create_notification
+        from django.contrib.auth.models import User as DjangoUser
+
+        title = (
+            f'NSFW repeat offender: {user.username} '
+            f'({violation_count} violations in {NSFW_VIOLATION_WINDOW_DAYS} days)'
+        )
+        message = (
+            f'User @{user.username} has triggered {violation_count} NSFW rejections '
+            f'in the past {NSFW_VIOLATION_WINDOW_DAYS} days. '
+            f'Review their recent uploads in the admin panel.'
+        )
+        profile_url = reverse('prompts:user_profile', args=[user.username])
+
+        staff_users = DjangoUser.objects.filter(is_staff=True, is_active=True)
+        for staff_user in staff_users:
+            create_notification(
+                recipient=staff_user,
+                notification_type='nsfw_repeat_offender',
+                title=title,
+                message=message,
+                link=profile_url,
+                is_admin_notification=True,
+            )
+    except Exception:
+        logger.exception(
+            'Failed to fire NSFW repeat offender notification for user %s', user.id
+        )
+
+
 def run_nsfw_moderation(upload_id: str, image_url: str) -> dict:
     """
     Background NSFW moderation task for Phase N optimistic upload UX.

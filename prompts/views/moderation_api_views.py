@@ -208,7 +208,15 @@ def b2_moderate_upload(request):
         logger.info(f"Moderation result: status={status}, "
                     f"is_safe={result.get('is_safe')}, "
                     f"severity={result.get('severity')}, "
-                    f"timeout={result.get('timeout', False)}")
+                    f"timeout={result.get('timeout', False)})")
+
+        # NOTIF-ADMIN-1: Track NSFW violations for actual rejections only.
+        # Only fire for critical/high severity AND status == 'rejected'.
+        # 'flagged' (approved with warning) is not a violation — content was allowed through.
+        _violation_severity = result.get('severity')
+        if _violation_severity in ('critical', 'high') and result.get('status') == 'rejected':
+            from prompts.tasks import _record_nsfw_violation
+            _record_nsfw_violation(request.user, severity=_violation_severity, prompt=None)
 
         # N4-Refactor: Start AI content generation if NSFW check passed
         # This runs in parallel while user fills out the form

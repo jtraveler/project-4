@@ -2733,6 +2733,7 @@ NOTIFICATION_TYPE_CATEGORY_MAP = {
     'bulk_gen_job_failed': 'system',
     'bulk_gen_published': 'system',
     'bulk_gen_partial': 'system',
+    'nsfw_repeat_offender': 'system',
 }
 
 
@@ -2750,6 +2751,7 @@ class Notification(models.Model):
         BULK_GEN_JOB_FAILED = 'bulk_gen_job_failed', 'Generation job failed'
         BULK_GEN_PUBLISHED = 'bulk_gen_published', 'Prompts published'
         BULK_GEN_PARTIAL = 'bulk_gen_partial', 'Prompts partially published'
+        NSFW_REPEAT_OFFENDER = 'nsfw_repeat_offender', 'Repeat NSFW offender'
 
     class Category(models.TextChoices):
         COMMENTS = 'comments', 'Comments'
@@ -3040,3 +3042,46 @@ class GeneratedImage(models.Model):
     def is_variation(self):
         """Whether this is a variation (not the first for its prompt)."""
         return self.variation_number > 1
+
+
+class NSFWViolation(models.Model):
+    """
+    Records individual NSFW moderation rejections per user.
+    Used to detect repeat offenders via the 3-in-7-days threshold.
+    Created when moderation severity is 'critical' or 'high' (rejected upload).
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='nsfw_violations',
+        db_index=True,
+    )
+    prompt = models.ForeignKey(
+        'Prompt',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='nsfw_violations',
+        help_text='The prompt associated with this violation, if created before rejection.',
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=[
+            ('high', 'High'),
+            ('critical', 'Critical'),
+        ],
+        help_text='NSFW severity level that triggered this violation (critical/high).',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['user', '-created_at'],
+                name='nsfw_violation_user_recent',
+            ),
+        ]
+
+    def __str__(self):
+        return f'NSFWViolation({self.user.username}, {self.severity}, {self.created_at:%Y-%m-%d})'

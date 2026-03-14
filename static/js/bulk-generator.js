@@ -138,6 +138,15 @@
                 '<input type="text" class="bg-box-source-input" id="' + boxId + '-source" ' +
                     'maxlength="200">' +
             '</div>' +
+            '<div class="bg-prompt-source-image-row">' +
+                '<input ' +
+                    'type="url" ' +
+                    'class="bg-prompt-source-image-input" ' +
+                    'placeholder="Source image URL (optional) \u2014 .jpg, .png, .webp..." ' +
+                    'aria-label="Source image URL for prompt ' + boxIdCounter + '" ' +
+                    'maxlength="2000" ' +
+                    'autocomplete="off">' +
+            '</div>' +
             '<div class="bg-box-error" role="alert"></div>' +
             '<div class="bg-box-overrides">' +
                 '<div class="bg-box-override-row">' +
@@ -347,7 +356,8 @@
             updateGenerateBtn();
             scheduleSave();
         }
-        if (e.target.classList.contains('bg-box-source-input')) {
+        if (e.target.classList.contains('bg-box-source-input') ||
+            e.target.classList.contains('bg-prompt-source-image-input')) {
             scheduleSave();
         }
     });
@@ -1020,15 +1030,31 @@
     });
 
     // ─── Validation + Generation ──────────────────────────────────
+    var IMAGE_URL_EXTENSIONS = /\.(jpg|jpeg|png|webp|gif|avif)(\?.*)?$/i;
+
+    function validateSourceImageUrls(promptBoxes) {
+        var invalidPromptNumbers = [];
+        promptBoxes.forEach(function (box, index) {
+            var input = box.querySelector('.bg-prompt-source-image-input');
+            var url = input ? input.value.trim() : '';
+            if (url && !IMAGE_URL_EXTENSIONS.test(url)) {
+                invalidPromptNumbers.push(index + 1);
+            }
+        });
+        return invalidPromptNumbers;
+    }
+
     function collectPrompts() {
         var prompts = [];
         var sourceCredits = [];
+        var sourceImageUrls = [];
         var promptSizes = [];
         var promptQualities = [];
         var promptCounts = [];
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
+            var si = box.querySelector('.bg-prompt-source-image-input');
             var sz = box.querySelector('.bg-override-size');
             var ql = box.querySelector('.bg-override-quality');
             var ic = box.querySelector('.bg-override-images');
@@ -1036,12 +1062,13 @@
             if (text) {
                 prompts.push(text);
                 sourceCredits.push(sc ? sc.value.trim() : '');
+                sourceImageUrls.push(si ? si.value.trim() : '');
                 promptSizes.push(sz ? sz.value.trim() : '');
                 promptQualities.push(ql ? ql.value.trim() : '');
                 promptCounts.push(ic ? ic.value.trim() : '');
             }
         });
-        return { prompts: prompts, sourceCredits: sourceCredits, promptSizes: promptSizes, promptQualities: promptQualities, promptCounts: promptCounts };
+        return { prompts: prompts, sourceCredits: sourceCredits, sourceImageUrls: sourceImageUrls, promptSizes: promptSizes, promptQualities: promptQualities, promptCounts: promptCounts };
     }
 
     function clearValidationErrors() {
@@ -1102,11 +1129,23 @@
         var collected = collectPrompts();
         var prompts = collected.prompts;
         var sourceCredits = collected.sourceCredits;
+        var sourceImageUrls = collected.sourceImageUrls;
         var promptSizes = collected.promptSizes;
         var promptQualities = collected.promptQualities;
         var promptCounts = collected.promptCounts;
         if (prompts.length === 0) {
             showValidationErrors([{ message: 'At least 1 prompt is required.' }]);
+            return;
+        }
+
+        // Validate source image URLs before generation
+        var allBoxes = Array.from(promptGrid.querySelectorAll('.bg-prompt-box'));
+        var invalidSrcNums = validateSourceImageUrls(allBoxes);
+        if (invalidSrcNums.length > 0) {
+            showValidationErrors([{
+                message: 'Source image URLs for prompts [' + invalidSrcNums.join(', ') + '] are not valid image links. ' +
+                    'Please enter a URL ending in .jpg, .png, .webp, .gif, or .avif, or leave the field blank.'
+            }]);
             return;
         }
 
@@ -1133,6 +1172,10 @@
                 if (!isNaN(parsedCount) && parsedCount > 0) {
                     obj.image_count = parsedCount;
                 }
+            }
+            var srcImageUrl = sourceImageUrls && sourceImageUrls[i] ? sourceImageUrls[i] : '';
+            if (srcImageUrl) {
+                obj.source_image_url = srcImageUrl;
             }
             return obj;
         });
@@ -1238,11 +1281,14 @@
         var boxes = promptGrid.querySelectorAll('.bg-prompt-box');
         var prompts = [];
         var sourceCredits = [];
+        var sourceImageUrls = [];
         boxes.forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
+            var si = box.querySelector('.bg-prompt-source-image-input');
             prompts.push(ta ? ta.value : '');
             sourceCredits.push(sc ? sc.value : '');
+            sourceImageUrls.push(si ? si.value : '');
         });
 
         var charDesc = settingCharDesc.value;
@@ -1252,6 +1298,7 @@
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({
                     prompts: prompts,
                     sourceCredits: sourceCredits,
+                    sourceImageUrls: sourceImageUrls,
                     charDesc: charDesc
                 }));
                 showDraftIndicator();
@@ -1289,14 +1336,16 @@
             var data = JSON.parse(saved);
 
             // Backward compat: old format was plain array of strings
-            var prompts, sourceCredits, charDesc;
+            var prompts, sourceCredits, sourceImageUrls, charDesc;
             if (Array.isArray(data)) {
                 prompts = data;
                 sourceCredits = [];
+                sourceImageUrls = [];
                 charDesc = '';
             } else {
                 prompts = data.prompts || [];
                 sourceCredits = data.sourceCredits || [];
+                sourceImageUrls = data.sourceImageUrls || [];
                 charDesc = data.charDesc || '';
             }
 
@@ -1333,6 +1382,8 @@
                         autoGrowTextarea(ta);
                     }
                     if (sc && sourceCredits[i]) sc.value = sourceCredits[i];
+                    var si = boxes[i].querySelector('.bg-prompt-source-image-input');
+                    if (si && sourceImageUrls[i]) si.value = sourceImageUrls[i];
                 }
             });
 

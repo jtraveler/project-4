@@ -211,8 +211,6 @@ def upload_step1(request):
         'uploads_this_week': uploads_this_week,
         'weekly_limit': weekly_limit,
         'uploads_remaining': uploads_remaining,
-        'cloudinary_cloud_name': settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
-        'cloudinary_upload_preset': 'ml_default',
     }
 
     return render(request, 'prompts/upload.html', context)
@@ -250,7 +248,7 @@ def upload_submit(request):
     )
 
     # Get form data
-    cloudinary_id = request.POST.get('cloudinary_id')
+    cloudinary_id = request.POST.get('b2_file_key')  # renamed from cloudinary_id
     resource_type = request.POST.get('resource_type', 'image')
     content = request.POST.get('content', '').strip()  # User's prompt text
     ai_generator = request.POST.get('ai_generator', '').strip()
@@ -477,22 +475,6 @@ def upload_submit(request):
             prompt.b2_large_url = b2_large
             prompt.b2_webp_url = b2_webp
             logger.info(f"Set B2 image URLs - original: {b2_original[:50]}..." if b2_original else "No B2 image URL")
-    else:
-        # Cloudinary upload (legacy) - use CloudinaryResource
-        from cloudinary import CloudinaryResource
-
-        if resource_type == 'video':
-            prompt.featured_video = CloudinaryResource(
-                public_id=cloudinary_id,
-                resource_type='video'
-            )
-        else:
-            prompt.featured_image = CloudinaryResource(
-                public_id=cloudinary_id,
-                resource_type='image'
-            )
-        logger.info(f"Set Cloudinary resource: {cloudinary_id}")
-
     # Save to get ID (needed for moderation to access image URL)
     # Uses _save_with_unique_title to handle duplicate title race conditions
     _save_with_unique_title(prompt)
@@ -711,7 +693,7 @@ def prompt_processing(request, processing_uuid):
 @require_POST
 def cancel_upload(request):
     """
-    Cancel an abandoned upload and delete file from Cloudinary.
+    Cancel an abandoned upload and clear session state.
     Called via AJAX when user times out or clicks "Cancel Upload".
     """
     try:
@@ -719,26 +701,13 @@ def cancel_upload(request):
         if 'upload_timer' not in request.session:
             return JsonResponse({'success': False, 'error': 'No active upload session'})
 
-        upload_data = request.session['upload_timer']
-        cloudinary_id = upload_data['cloudinary_id']
-        resource_type = upload_data['resource_type']
-
-        # Delete from Cloudinary
-        import cloudinary.uploader
-        result = cloudinary.uploader.destroy(
-            cloudinary_id,
-            resource_type=resource_type,
-            invalidate=True
-        )
-
         # Clear all upload-related session keys
         clear_upload_session(request)
         logger.info(f"Cleared all upload session keys after cancel for user {request.user.id if request.user.is_authenticated else 'anonymous'}")
 
         return JsonResponse({
             'success': True,
-            'message': 'Upload canceled and file deleted',
-            'cloudinary_result': result
+            'message': 'Upload canceled',
         })
 
     except Exception as e:

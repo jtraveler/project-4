@@ -90,3 +90,23 @@ class BulkGenNotificationTests(TestCase):
             _fire_bulk_gen_job_notification(self.job, succeeded=3)
         except Exception:
             self.fail('_fire_bulk_gen_job_notification raised an exception when it should not have')
+
+    @patch('prompts.services.notifications.create_notification')
+    def test_job_notification_link_resolves_to_job_page(self, mock_create):
+        """Notification link for job helper points to the correct job page URL."""
+        _fire_bulk_gen_job_notification(self.job, succeeded=3)
+        mock_create.assert_called_once()
+        kwargs = mock_create.call_args[1]
+        expected_link = f'/tools/bulk-ai-generator/job/{self.job.id}/'
+        self.assertEqual(kwargs['link'], expected_link)
+
+    @patch('prompts.services.notifications.create_notification')
+    def test_publish_notification_link_resolves_to_profile_page(self, mock_create):
+        """Notification link for publish helper points to the correct profile URL."""
+        self.job.published_count = 3
+        self.job.save()
+        _fire_bulk_gen_publish_notification(self.job)
+        mock_create.assert_called_once()
+        kwargs = mock_create.call_args[1]
+        expected_link = f'/users/{self.user.username}/'
+        self.assertEqual(kwargs['link'], expected_link)

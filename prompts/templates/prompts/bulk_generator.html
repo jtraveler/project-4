@@ -370,6 +370,7 @@
 {% endblock %}
 
 {% block extras %}
+<script src="{% static 'js/bulk-generator-utils.js' %}"></script>
 <script src="{% static 'js/bulk-generator.js' %}"></script>
 
 {% if request.user.is_staff %}

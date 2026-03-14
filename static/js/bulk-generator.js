@@ -1032,19 +1032,7 @@
     });
 
     // ─── Validation + Generation ──────────────────────────────────
-    var IMAGE_URL_EXTENSIONS = /\.(jpg|jpeg|png|webp|gif|avif)(\?.*)?$/i;
-
-    function validateSourceImageUrls(promptBoxes) {
-        var invalidPromptNumbers = [];
-        promptBoxes.forEach(function (box, index) {
-            var input = box.querySelector('.bg-prompt-source-image-input');
-            var url = input ? input.value.trim() : '';
-            if (url && !IMAGE_URL_EXTENSIONS.test(url)) {
-                invalidPromptNumbers.push(index + 1);
-            }
-        });
-        return invalidPromptNumbers;
-    }
+    // validateSourceImageUrls extracted to bulk-generator-utils.js (Session 130)
 
     function collectPrompts() {
         var prompts = [];
@@ -1142,7 +1130,7 @@
 
         // Validate source image URLs before generation
         var allBoxes = Array.from(promptGrid.querySelectorAll('.bg-prompt-box'));
-        var invalidSrcNums = validateSourceImageUrls(allBoxes);
+        var invalidSrcNums = BulkGenUtils.validateSourceImageUrls(allBoxes);
         if (invalidSrcNums.length > 0) {
             showValidationErrors([{
                 message: 'Source image URLs for prompts [' + invalidSrcNums.join(', ') + '] are not valid image links. ' +

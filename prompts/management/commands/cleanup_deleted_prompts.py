@@ -168,6 +168,23 @@ class Command(BaseCommand):
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('Cleanup complete!'))
 
+        # NOTIF-ADMIN-2: Notify staff of cleanup outcome (production runs only)
+        if not dry_run:
+            try:
+                from prompts.services.notifications import create_system_notification
+                create_system_notification(
+                    message=(
+                        f'Cleanup run: {stats["successful"]} prompt(s) deleted. '
+                        f'Processed {stats["total_processed"]} candidates, '
+                        f'{stats["failed"]} failed.'
+                    ),
+                    audience='staff',
+                )
+            except Exception:
+                logger.exception(
+                    'Failed to send cleanup_deleted_prompts notification'
+                )
+
     def _get_expired_prompts(self, free_user_cutoff, premium_user_cutoff):
         """
         Query all expired prompts for both free and premium users.

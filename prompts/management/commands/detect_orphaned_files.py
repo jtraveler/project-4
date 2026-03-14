@@ -336,6 +336,22 @@ class Command(BaseCommand):
             f'{len(missing_images)} prompts with missing images'
         )
 
+        # NOTIF-ADMIN-2: Notify staff of orphan detection run
+        try:
+            from prompts.services.notifications import create_system_notification
+            create_system_notification(
+                message=(
+                    'Orphan detection ran (Cloudinary-only — non-functional for B2). '
+                    'B2 orphan detection is not yet active. '
+                    'See detect_b2_orphans for the B2-aware replacement.'
+                ),
+                audience='staff',
+            )
+        except Exception:
+            logger.exception(
+                'Failed to send detect_orphaned_files notification'
+            )
+
     def _fetch_cloudinary_resources(self, resource_type, cutoff_date, verbose):
         """
         Fetch all resources from Cloudinary with pagination.

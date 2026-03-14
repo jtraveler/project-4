@@ -69,6 +69,11 @@
         // Update heading for the terminal state
         G.updateHeading(status);
 
+        // Terminal-state textContent assignments below use direct assignment
+        // (not the clear-then-set pattern used for in-progress updates).
+        // This is intentional: these branches are mutually exclusive and each
+        // fires exactly once — the clearInterval guard (Phase 7) prevents
+        // re-entry. Screen readers reliably announce a single terminal update.
         if (status === 'completed') {
             if (G.progressBar) {
                 G.progressBar.classList.add('progress-complete');

@@ -49,7 +49,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | Status | Description | What's Left |
 |-------|--------|-------------|-------------|
-| **Phase N4** | 🔄 ~100% Complete | Optimistic Upload Flow | N4h resolved (Session 122, a9acbc4). XML sitemap + final production verification remaining. |
+| **Phase N4** | ✅ 100% Complete | Optimistic Upload Flow | All open items resolved Sessions 122–127. Admin rename fix, print removal, ARIA comment, stale items closed. |
 | **Phase N3** | 🔄 ~95% | Single-Page Upload | Final testing, deploy to prod |
 | **Bulk Gen Phase 6A** | ✅ COMPLETE | Bug Fixes (scaffolding) | Done — 6 of 7 bugs, Session 114 |
 | **Bulk Gen Phase 6A.5** | ✅ COMPLETE | Data Correctness (gpt-image-1 choice + pipeline alignment) | Done — Session 114 |
@@ -169,14 +169,14 @@ in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
 **Resolved (Session 122):** Cancel-path `G.totalImages` staleness ✅, `bulk-generator-ui.js` at 766/780 lines ✅ (now 338 lines), N4h rename not triggering ✅.
 
-**Open items as of Session 122:**
+**Open items as of Session 127 (post-audit):**
 
 | Item | Notes |
 |------|-------|
-| **Terminal-state ARIA branches** | Three branches in `updateProgress()` (completed/cancelled/failed) use direct `textContent` assignment without clear-then-set. Non-actionable — mutually exclusive branches, fires once. Document only. |
-| **Admin path rename task** | `admin.py` Prompt creation path not verified for `rename_prompt_files_for_seo`. Flagged by N4H report. Investigate before V2 launch. |
-| **Video B2 rename** | `rename_prompt_files_for_seo` only processes image fields — `b2_video_url` never renamed. Feature gap for V2. |
-| **Debug print() statements** | `upload_views.py` contains `print(f"[DEBUG upload_submit]...")` statements emitting to Heroku logs. Remove before V2 launch. |
+| **Terminal-state ARIA branches** | ✅ CLOSED — comment added to `bulk-generator-polling.js` (Session 127). Non-actionable by design. |
+| **Admin path rename task** | ✅ FIXED — `async_task` queued from `save_model` in `admin.py` (Session 127). |
+| **Video B2 rename** | ✅ CLOSED — audit confirmed `b2_video_url` already handled in `tasks.py` lines 1936–1944. Stale entry. |
+| **Debug print() statements** | ✅ FIXED — 13 print() statements removed from `upload_views.py` (Session 127). |
 
 ### Recommended Build Sequence — Remaining Safety Infrastructure
 

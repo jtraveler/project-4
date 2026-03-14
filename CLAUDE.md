@@ -115,6 +115,129 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 ---
 
+## 🛠️ CC Working Constraints & Spec Guidelines
+
+> This section exists to guide session planning and spec writing.
+> Claude (planning) and CC (implementing) should both reference this
+> before scoping any session or spec.
+
+### File Size Limits
+
+CC's `str_replace` editing reliability degrades on large files.
+Never assume CC can safely edit a file without checking its tier first.
+
+| Tier | CC Strategy |
+|------|-------------|
+| 🔴 Critical (2000+ lines) | Never edit directly. Read-only access. All changes via create-new + rewrite-original strategy. |
+| 🟠 High Risk (1200–1999 lines) | Avoid direct editing. New file strategy preferred. If must edit, single precise str_replace only. |
+| 🟡 Caution (800–1199 lines) | str_replace with very precise anchor strings. Maximum 2–3 edits per spec. |
+| ✅ Safe (under 800 lines) | Normal CC editing. |
+
+#### Current File Tiers (from Session 128 audit)
+
+**🔴 Critical — Never Edit Directly:**
+- `prompts/tasks.py` (3,451 lines)
+- `prompts/models.py` (3,087 lines)
+- `prompts/tests/test_notifications.py` (2,872 lines)
+- `prompts/admin.py` (2,366 lines)
+- `prompts/tests/test_bulk_generator_views.py` (2,210 lines)
+- `prompts/templates/prompts/user_profile.html` (2,073 lines)
+- `static/css/style.css` (4,466 lines)
+
+**🟠 High Risk — Avoid Direct Editing:**
+- `prompts/tests/test_bulk_generation_tasks.py` (1,861 lines)
+- `prompts/templates/prompts/prompt_list.html` (1,700 lines)
+- `prompts/views/prompt_views.py` (1,694 lines)
+- `prompts/tests/test_bulk_page_creation.py` (1,621 lines)
+- `static/css/pages/prompt-detail.css` (1,549 lines)
+- `static/css/pages/bulk-generator.css` (1,484 lines)
+- `static/js/bulk-generator.js` (1,367 lines) — input page JS, actively used
+- `static/css/navbar.css` (1,268 lines)
+
+**🟡 Caution — str_replace with Precision (max 2–3 edits per spec):**
+- `prompts/tests/test_validate_tags.py` (1,117 lines)
+- `static/js/collections.js` (1,108 lines)
+- `prompts/tests/test_pass2_seo_review.py` (1,048 lines)
+- `prompts/templates/prompts/collections_profile.html` (1,017 lines)
+- `prompts/templates/prompts/prompt_detail.html` (1,010 lines)
+- `prompts/tests/test_user_profiles.py` (991 lines)
+- `static/js/upload-form.js` (1,069 lines)
+- `static/js/navbar.js` (899 lines)
+- `static/css/upload.css` (921 lines)
+- `prompts/services/vision_moderation.py` (904 lines)
+- `prompts/views/upload_api_views.py` (852 lines)
+- `prompts/management/commands/detect_orphaned_files.py` (798 lines)
+- `static/css/pages/bulk-generator-job.css` (1,179 lines)
+
+**✅ Safe but Growing — Watch These:**
+- `prompts/views/collection_views.py` (792) — at boundary
+- `prompts/views/upload_views.py` (751) — modified 3 recent sessions
+- `prompts/views/bulk_generator_views.py` (721) — active development
+
+*Last updated: Session 128 (March 14, 2026). Re-run the file size audit
+whenever a file is significantly extended or split.*
+
+---
+
+### Specs Per Session
+
+| Spec Type | Max Per Session | Notes |
+|-----------|----------------|-------|
+| Audit / read-only | 6 | Lightweight — greps and reports only |
+| Docs-only | 4 | No suite run needed |
+| Code change (small) | 4 | Single file, low complexity |
+| Code change (medium) | 3 | Multiple files or migration |
+| Code change (high risk) | 1–2 | New model, file split, migration + logic |
+| Mixed session | 4–5 total | Count high-risk as 2 toward the total |
+
+**When to split a session into two:**
+- Any spec touches a 🔴 Critical file AND requires a migration
+- More than 2 high-risk specs in the queue
+- Previous spec had average agent score below 8.5 (quality may be degrading)
+- Full suite run count would exceed 4 in a single session
+
+---
+
+### Full Test Suite Budget
+
+- Each full suite run takes approximately 15–25 minutes
+- Maximum **4 full suite runs per session**
+- `python manage.py check` (isolated check) does NOT count toward this budget
+- Audit and docs-only specs never require a full suite run
+
+---
+
+### Large File Strategies
+
+**For 🔴 Critical files (models.py, tasks.py, etc.):**
+- CC reads the file first with targeted greps
+- New logic goes in new helper functions at the bottom of the file
+- Uses local imports inside functions to avoid circular import risks
+- str_replace uses multi-line anchor strings (5+ lines) to guarantee uniqueness
+- Never attempts to rewrite or reorganise the file structure
+
+**For splitting a large file (like api_views.py was in Session 128):**
+- CC creates new domain module files (new content only)
+- CC rewrites the original as a thin compatibility shim
+- The shim re-exports everything so urls.py requires no changes
+- urls.py is updated to import from modules directly in a follow-up spec
+
+---
+
+### Spec Quality Gates
+
+Every spec — including audit and docs specs — must:
+- Complete all Step 0 greps before writing any code
+- Run `python manage.py check` after implementation
+- Run all required agents (see individual spec for count)
+- Include an agent ratings table in the completion report
+- Only commit after the full suite passes (for code specs)
+- Save the report before committing (report is part of the commit)
+
+Each spec gets exactly one commit. Never bundle two specs into one commit.
+
+---
+
 ## 🚀 Current Phases: Bulk AI Image Generator + N4 Upload Flow
 
 ### Bulk AI Image Generator (Phases 1–7 complete — Pre-launch QA)

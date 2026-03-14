@@ -281,6 +281,25 @@ sessions. If you can see the fix and it fits in scope, close it now.
 
 Per `CC_COMMUNICATION_PROTOCOL.md`, CC must use appropriate agents for this task.
 
+### ⚠️ AGENT RATINGS TABLE IS MANDATORY FOR ALL SPECS
+
+This applies to **every spec without exception** — including audit specs, read-only
+specs, and documentation-only specs. If a spec has agents, the completion report
+MUST include an agent ratings table.
+
+Agents for audit/read-only specs verify that findings are complete, accurate, and
+well-reasoned — the same verification standard as code specs.
+
+**Required table format in every completion report:**
+```
+| Agent | Score | Notes |
+|-------|-------|-------|
+| @agent-name | X/10 | key observations |
+| Average | X/10 | Pass (≥8.0) / Fail |
+```
+
+**Missing this table = incomplete report. Do not mark a spec complete without it.**
+
 ### Required Agents (Minimum 2-3)
 
 **1. [Agent Name]** (e.g., @django-pro)

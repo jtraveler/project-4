@@ -1654,6 +1654,41 @@ prompts/templates/prompts/
 
 ### Changelog
 
+**v3.30 (March 13-14, 2026 - Sessions 125-127 End-of-Session Docs Update):**
+
+**Session 125:**
+- `prompts/services/cloudinary_moderation.py` → renamed to `vision_moderation.py`
+- `prompts/migrations/0073_alter_notification_notification_type.py` — NEW
+- `prompts/tests/test_bulk_gen_notifications.py` — NEW (6 tests)
+- Notification types added: `bulk_gen_job_completed`, `bulk_gen_job_failed`, `bulk_gen_published`, `bulk_gen_partial`
+
+**Session 126:**
+- `docs/REPORT_NOTIF_URL_REVERSE.md` — NEW
+- `docs/REPORT_DOCS_UPDATE_SESSION125.md` — NEW
+- `docs/REPORT_CLOUDINARY_VIEWS_AUDIT.md` — NEW
+- `docs/REPORT_N4_CLEANUP_AUDIT.md` — NEW
+- `reverse()` calls replacing hardcoded URLs in notification helpers (tasks.py)
+- `prompts/services/__init__.py` docstring updated
+
+**Session 127:**
+- Debug print() statements removed from `upload_views.py`
+- `import cloudinary.api` removed from `admin_views.py`
+- `async_task` queued from `admin.py save_model` for B2 prompts
+- ARIA comment added to `bulk-generator-polling.js`
+- Phase N4 marked ✅ 100% Complete
+- Dead Cloudinary upload path removed from `upload_views.py`
+- `cloudinary_id` form field renamed to `b2_file_key` in `upload.html`
+- `docs/REPORT_PRINT_REMOVAL.md` — NEW
+- `docs/REPORT_ADMIN_RENAME_FIX.md` — NEW
+- `docs/REPORT_N4_CLOSEOUT.md` — NEW
+- `docs/REPORT_CANCEL_UPLOAD_AUDIT.md` — NEW
+- `docs/REPORT_UPLOAD_VIEWS_CLOUDINARY_CLEANUP.md` — NEW
+- `docs/REPORT_NOTIF_URL_TESTS.md` — NEW
+- `prompts/tests/test_bulk_gen_notifications.py` — 2 URL assertion tests added (8 total)
+- Test count: 1155 → 1157
+
+**Updated statistics:** 1157 tests passing, 12 skipped
+
 **v3.29 (March 11, 2026 - Session 121 End-of-Session Docs Update):**
 
 **New files:**

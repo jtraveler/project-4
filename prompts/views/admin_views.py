@@ -10,7 +10,6 @@ from django.core.cache import cache
 from django.utils import timezone as tz
 from dal import autocomplete
 from taggit.models import Tag
-import cloudinary.api
 import json
 import logging
 

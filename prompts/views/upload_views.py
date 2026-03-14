@@ -249,15 +249,6 @@ def upload_submit(request):
         'application/json' in request.headers.get('Accept', '')
     )
 
-    # DEBUG LOGGING - Session State
-    print(f"[DEBUG upload_submit] === SESSION STATE ===")
-    print(f"  - upload_b2_video: {request.session.get('upload_b2_video', 'NOT SET')}")
-    print(f"  - upload_b2_video_thumb: {request.session.get('upload_b2_video_thumb', 'NOT SET')}")
-    print(f"  - upload_is_b2: {request.session.get('upload_is_b2', 'NOT SET')}")
-    print(f"  - direct_upload_is_video: {request.session.get('direct_upload_is_video', 'NOT SET')}")
-    print(f"  - is_video (form): {request.POST.get('is_video', 'NOT IN POST')}")
-    print(f"  - resource_type (form): {request.POST.get('resource_type', 'NOT IN POST')}")
-
     # Get form data
     cloudinary_id = request.POST.get('cloudinary_id')
     resource_type = request.POST.get('resource_type', 'image')
@@ -471,14 +462,6 @@ def upload_submit(request):
     if is_b2_upload:
         # B2 upload - set B2 URL fields
         if resource_type == 'video':
-            # DEBUG LOGGING - Before saving
-            print(f"[DEBUG upload_submit] === SAVING VIDEO TO MODEL ===")
-            print(f"  - resource_type: {resource_type}")
-            print(f"  - b2_video: {b2_video}")
-            print(f"  - b2_video_thumb: {b2_video_thumb}")
-            print(f"  - About to save: prompt.b2_video_url = {b2_video or b2_original}")
-            print(f"  - About to save: prompt.b2_video_thumb_url = {b2_video_thumb}")
-
             prompt.b2_video_url = b2_video or b2_original
             prompt.b2_video_thumb_url = b2_video_thumb
             # Phase M5: Save video dimensions to model

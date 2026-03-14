@@ -72,62 +72,7 @@ logger = logging.getLogger(__name__)
 @login_required
 @require_POST
 def b2_upload_api(request):
-    """
-    API endpoint for uploading images and videos to B2 storage.
-
-    Rate limited to 20 uploads per hour per user.
-
-    Accepts: POST with multipart/form-data
-    Returns: JSON with B2 URLs or error message
-
-    Request:
-        - file: The image or video file (required)
-        - quick: If "true", only upload original + thumbnail for faster response
-                 (use /api/upload/b2/variants/ to generate remaining variants)
-
-    Response (success - image):
-        {
-            "success": true,
-            "filename": "abc123.jpg",
-            "urls": {
-                "original": "https://media.promptfinder.net/...",
-                "thumb": "https://media.promptfinder.net/...",
-                "medium": "https://media.promptfinder.net/...",  // Not in quick mode
-                "large": "https://media.promptfinder.net/...",   // Not in quick mode
-                "webp": "https://media.promptfinder.net/..."     // Not in quick mode
-            },
-            "info": {
-                "format": "JPEG",
-                "width": 1920,
-                "height": 1080
-            },
-            "quick_mode": false  // true if quick=true was passed
-        }
-
-    Response (success - video):
-        {
-            "success": true,
-            "filename": "vabc123.mp4",
-            "urls": {
-                "original": "https://media.promptfinder.net/...",
-                "thumb": "https://media.promptfinder.net/..."
-            },
-            "info": {
-                "duration": 15.5,
-                "width": 1920,
-                "height": 1080,
-                "codec": "h264"
-            }
-        }
-
-    Response (error):
-        {
-            "success": false,
-            "error": "Error message here"
-        }
-
-    URL: /api/upload/b2/
-    """
+    """POST /api/upload/b2/ — Upload image/video to B2. Rate-limited 20/hr. Returns JSON with URLs or error."""
     # Rate limiting check (20 uploads per hour per user)
     cache_key = f"b2_upload_rate:{request.user.id}"
     upload_count = cache.get(cache_key, 0)
@@ -499,6 +444,23 @@ def b2_presign_upload(request):
     })
 
 
+def _generate_image_thumbnail(cdn_url, filename):
+    """Download original image and generate thumbnail. Returns thumb URL or None."""
+    _logger = logging.getLogger(__name__)
+    try:
+        image_response = requests.get(cdn_url, timeout=10)
+        image_response.raise_for_status()
+        result = generate_image_variants(image_response.content, filename)
+        if result.get('success') and result.get('urls', {}).get('thumb'):
+            _logger.info(f"Image thumbnail generated: {result['urls']['thumb']}")
+            return result['urls']['thumb']
+        _logger.warning("Image thumbnail generation failed")
+        return None
+    except Exception as e:
+        _logger.error(f"Image thumbnail error: {e}")
+        return None
+
+
 @login_required
 @require_POST
 def b2_upload_complete(request):
@@ -506,53 +468,7 @@ def b2_upload_complete(request):
     logger = logging.getLogger(__name__)
     logger.info("=== B2_UPLOAD_COMPLETE STARTED ===")  # Add this FIRST
 
-    """
-    Handle completion of direct browser-to-B2 upload.
-
-    Called after the browser has uploaded directly to B2 using the presigned URL.
-    Verifies the upload exists and stores URL for deferred variant generation.
-
-    L8-DIRECT-FIX: This endpoint now ONLY verifies the upload and stores the URL.
-    Variant generation is deferred to Step 2 via b2_generate_variants endpoint.
-    This reduces Step 1 time from ~18s to ~3-5s.
-
-    Accepts: POST with JSON body
-    Parameters:
-        - quick: Whether to defer variant generation (default: true for images)
-
-    Returns: JSON with upload confirmation and original URL
-
-    Response (success - image):
-        {
-            "success": true,
-            "filename": "abc123.jpg",
-            "urls": {
-                "original": "https://media.promptfinder.net/..."
-            },
-            "is_video": false,
-            "variants_pending": true
-        }
-
-    Response (success - video):
-        {
-            "success": true,
-            "filename": "vabc123.mp4",
-            "urls": {
-                "original": "https://media.promptfinder.net/...",
-                "thumb": "https://media.promptfinder.net/..."
-            },
-            "is_video": true,
-            "variants_pending": false
-        }
-
-    Response (error):
-        {
-            "success": false,
-            "error": "Error message here"
-        }
-
-    URL: /api/upload/b2/complete/
-    """
+    """POST /api/upload/b2/complete/ — Confirm direct B2 upload, verify file exists, store URLs."""
     # Get pending upload from session
     pending = request.session.get('pending_direct_upload')
     logger.info(f"=== PENDING DATA EXISTS: {pending is not None} ===")
@@ -588,26 +504,12 @@ def b2_upload_complete(request):
 
     # For images: generate thumbnail synchronously, defer medium/large/webp to Step 2
     if not is_video:
-        # Generate thumbnail immediately (quick mode still defers medium/large/webp)
-        try:
-            from prompts.services.b2_upload_service import generate_image_variants
-
-            # Fetch original image for thumbnail generation
-            image_response = requests.get(cdn_url, timeout=10)
-            image_response.raise_for_status()
-
-            # Generate only thumbnail (300x300)
-            thumb_result = generate_image_variants(image_response.content, filename)
-
-            if thumb_result.get('success') and thumb_result.get('urls', {}).get('thumb'):
-                urls['thumb'] = thumb_result['urls']['thumb']
-                logger.info(f"=== IMAGE THUMB GENERATED: {urls['thumb']} ===")
-            else:
-                logger.warning("=== IMAGE THUMB GENERATION FAILED ===")
-
-        except Exception as e:
-            logger.error(f"=== IMAGE THUMB ERROR: {e} ===")
-            # Continue without thumb - not fatal
+        thumb_url = _generate_image_thumbnail(cdn_url, filename)
+        if thumb_url:
+            urls['thumb'] = thumb_url
+            logger.info(f"=== IMAGE THUMB GENERATED: {thumb_url} ===")
+        else:
+            logger.warning("=== IMAGE THUMB GENERATION FAILED ===")
 
         # Still defer medium/large/webp to Step 2
         request.session['pending_variant_url'] = cdn_url

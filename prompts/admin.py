@@ -11,7 +11,7 @@ from django_summernote.admin import SummernoteModelAdmin
 from django.urls import reverse, path
 from django.utils.html import format_html
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect, Notification, BulkGenerationJob, GeneratedImage
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect, Notification, BulkGenerationJob, GeneratedImage, NSFWViolation
 from .utils.related import (
     W_TAG, W_CATEGORY, W_DESCRIPTOR, W_GENERATOR, W_ENGAGEMENT, W_RECENCY,
 )
@@ -2360,6 +2360,25 @@ class CustomUserAdmin(BaseUserAdmin):
         'date_joined', 'last_login',
     )
     ordering = ('-date_joined',)
+
+
+@admin.register(NSFWViolation)
+class NSFWViolationAdmin(admin.ModelAdmin):
+    """Read-only admin view for NSFW violation records."""
+    list_display = ('user', 'severity', 'prompt', 'created_at')
+    list_filter = ('severity', 'created_at')
+    search_fields = ('user__username', 'user__email')
+    readonly_fields = ('user', 'severity', 'prompt', 'created_at')
+    ordering = ('-created_at',)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 # Set custom admin index template

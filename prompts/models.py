@@ -943,6 +943,14 @@ class Prompt(models.Model):
         help_text="B2 CDN URL for video thumbnail (600x600)"
     )
 
+    # Source Image B2 URL (SRC feature — copied from GeneratedImage on publish)
+    b2_source_image_url = models.URLField(
+        max_length=2000,
+        blank=True,
+        default='',
+        help_text='B2 CDN URL of source/reference image (admin-only display on prompt detail)'
+    )
+
     # Video dimension fields (Phase M5: Layout Shift Prevention)
     # Stores video dimensions extracted during upload for CLS optimization.
     video_width = models.PositiveIntegerField(
@@ -2979,6 +2987,20 @@ class GeneratedImage(models.Model):
         max_length=200,
         blank=True,
         help_text='Source credit text entered in bulk generator'
+    )
+
+    # Source Image (SRC feature — optional reference image URL)
+    source_image_url = models.URLField(
+        max_length=2000,
+        blank=True,
+        default='',
+        help_text='External URL of the source/reference image entered by the user'
+    )
+    b2_source_image_url = models.URLField(
+        max_length=2000,
+        blank=True,
+        default='',
+        help_text='B2 CDN URL of source image after download and re-upload (set by SRC-3)'
     )
 
     # Per-prompt overrides (6E series)

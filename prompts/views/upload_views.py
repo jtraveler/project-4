@@ -248,7 +248,7 @@ def upload_submit(request):
     )
 
     # Get form data
-    cloudinary_id = request.POST.get('b2_file_key')  # renamed from cloudinary_id
+    b2_file_key = request.POST.get('b2_file_key')
     resource_type = request.POST.get('resource_type', 'image')
     content = request.POST.get('content', '').strip()  # User's prompt text
     ai_generator = request.POST.get('ai_generator', '').strip()
@@ -342,7 +342,7 @@ def upload_submit(request):
                 'field_errors': {'content': error_msg}
             }, status=400)
         messages.error(request, error_msg)
-        return redirect(f'/upload/details?cloudinary_id={cloudinary_id}&resource_type={resource_type}')
+        return redirect('prompts:upload_step1')
 
     if not ai_generator:
         error_msg = 'Please select an AI generator.'
@@ -353,7 +353,7 @@ def upload_submit(request):
                 'field_errors': {'ai_generator': error_msg}
             }, status=400)
         messages.error(request, error_msg)
-        return redirect(f'/upload/details?cloudinary_id={cloudinary_id}&resource_type={resource_type}')
+        return redirect('prompts:upload_step1')
 
     # Validate upload data - B2 uploads need b2_original (images) or b2_video (videos)
     if is_b2_upload:
@@ -369,7 +369,7 @@ def upload_submit(request):
             messages.error(request, error_msg)
             return redirect('prompts:upload_step1')
     else:
-        if not cloudinary_id:
+        if not b2_file_key:
             error_msg = 'Upload data missing. Please try again.'
             if is_ajax:
                 return JsonResponse({
@@ -712,9 +712,10 @@ def cancel_upload(request):
 
     except Exception as e:
         logger.error(f"Error canceling upload: {str(e)}", exc_info=True)
+        from prompts.services.bulk_generation import _sanitise_error_message
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': _sanitise_error_message(str(e))
         })
 
 
@@ -743,7 +744,8 @@ def extend_upload_time(request):
 
     except Exception as e:
         logger.error(f"Error extending upload time: {str(e)}", exc_info=True)
+        from prompts.services.bulk_generation import _sanitise_error_message
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': _sanitise_error_message(str(e))
         })

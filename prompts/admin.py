@@ -1004,6 +1004,21 @@ class PromptAdmin(SummernoteModelAdmin):
         if change and 'order' in form.changed_data:
             self.clear_prompt_caches()
 
+        # Queue SEO file rename if B2 image is present.
+        # Mirrors the guard in upload_views.py — applies to both new and edited prompts.
+        if obj.b2_image_url:
+            from django_q.tasks import async_task
+            try:
+                async_task(
+                    'prompts.tasks.rename_prompt_files_for_seo',
+                    obj.pk,
+                    task_name=f'seo-rename-{obj.pk}',
+                )
+                logger.info(f'Admin save_model: queued SEO rename for prompt {obj.pk}')
+            except Exception as e:
+                # Non-blocking: rename failure shouldn't break the admin save
+                logger.warning(f'Admin save_model: failed to queue SEO rename for prompt {obj.pk}: {e}')
+
     def save_related(self, request, form, formsets, change):
         """M2M validation warnings after save."""
         super().save_related(request, form, formsets, change)

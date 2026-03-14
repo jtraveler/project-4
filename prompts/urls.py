@@ -2,10 +2,12 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 from . import views
 from . import views_admin
-from .views import api_views
 from .views import admin_views  # For prompt ordering functions
 from .views import notification_views
 from .views import bulk_generator_views
+from .views import upload_api_views
+from .views import moderation_api_views
+from .views import ai_api_views
 
 app_name = 'prompts'
 
@@ -123,18 +125,18 @@ urlpatterns = [
     path('prompts-admin/bulk-reorder/', admin_views.bulk_reorder_prompts, name='bulk_reorder_prompts'),
 
     # B2 Upload Status API
-    path('api/upload/b2/status/', api_views.b2_upload_status, name='b2_upload_status'),
+    path('api/upload/b2/status/', upload_api_views.b2_upload_status, name='b2_upload_status'),
     # NSFW Moderation API (Phase N2 - Background Validation)
-    path('api/upload/nsfw/queue/', api_views.nsfw_queue_task, name='nsfw_queue_task'),
-    path('api/upload/nsfw/status/', api_views.nsfw_check_status, name='nsfw_check_status'),
+    path('api/upload/nsfw/queue/', moderation_api_views.nsfw_queue_task, name='nsfw_queue_task'),
+    path('api/upload/nsfw/status/', moderation_api_views.nsfw_check_status, name='nsfw_check_status'),
     # Alias for N3 upload template compatibility
-    path('api/upload/nsfw/status/', api_views.nsfw_check_status, name='nsfw_status'),
+    path('api/upload/nsfw/status/', moderation_api_views.nsfw_check_status, name='nsfw_status'),
 
     # N4f: Processing status polling endpoint
     path('api/prompt/status/<uuid:processing_uuid>/', views.prompt_processing_status, name='prompt_processing_status'),
 
     # N4-Refactor: AI job status polling endpoint (cache-based)
-    path('api/ai-job-status/<str:job_id>/', api_views.ai_job_status, name='ai_job_status'),
+    path('api/ai-job-status/<str:job_id>/', ai_api_views.ai_job_status, name='ai_job_status'),
 
     # Notification pages and API (Phase R1)
     path('notifications/', notification_views.notifications_page, name='notifications'),

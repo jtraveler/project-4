@@ -173,6 +173,8 @@ Never assume CC can safely edit a file without checking its tier first.
 - `prompts/views/collection_views.py` (792) — at boundary
 - `prompts/views/upload_views.py` (751) — modified 3 recent sessions
 - `prompts/views/bulk_generator_views.py` (721) — active development
+- `prompts/views/user_views.py` (630) — growing, modified Sessions 74, 86
+- `prompts/views/admin_views.py` (577) — admin additions ongoing
 
 *Last updated: Session 128 (March 14, 2026). Re-run the file size audit
 whenever a file is significantly extended or split.*

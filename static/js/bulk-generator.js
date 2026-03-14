@@ -142,7 +142,7 @@
                 '<input ' +
                     'type="url" ' +
                     'class="bg-prompt-source-image-input" ' +
-                    'placeholder="Source image URL (optional) \u2014 .jpg, .png, .webp..." ' +
+                    'placeholder="Source image URL (optional) \u2014 .jpg, .png, .webp, .gif, .avif..." ' +
                     'aria-label="Source image URL for prompt ' + boxIdCounter + '" ' +
                     'maxlength="2000" ' +
                     'autocomplete="off">' +
@@ -314,6 +314,8 @@
             if (qualitySelect) qualitySelect.setAttribute('aria-label', 'Image quality for prompt ' + num);
             var imagesSelect = box.querySelector('.bg-override-images');
             if (imagesSelect) imagesSelect.setAttribute('aria-label', 'Number of images for prompt ' + num);
+            var srcImg = box.querySelector('.bg-prompt-source-image-input');
+            if (srcImg) srcImg.setAttribute('aria-label', 'Source image URL for prompt ' + num);
         });
     }
 

@@ -1648,7 +1648,7 @@ prompts/templates/prompts/
 
 *This document is updated after major structural changes. Last audit: January 9, 2026.*
 
-**Version:** 3.27
+**Version:** 3.30
 **Audit Date:** March 9, 2026
 **Maintained By:** Mateo Johnson - Prompt Finder
 

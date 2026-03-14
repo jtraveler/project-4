@@ -464,10 +464,6 @@ def _generate_image_thumbnail(cdn_url, filename):
 @login_required
 @require_POST
 def b2_upload_complete(request):
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info("=== B2_UPLOAD_COMPLETE STARTED ===")  # Add this FIRST
-
     """POST /api/upload/b2/complete/ — Confirm direct B2 upload, verify file exists, store URLs."""
     # Get pending upload from session
     pending = request.session.get('pending_direct_upload')

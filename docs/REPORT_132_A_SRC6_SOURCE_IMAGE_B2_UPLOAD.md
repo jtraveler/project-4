@@ -120,7 +120,7 @@ python manage.py test prompts.tests.test_src6_source_image_upload -v2
 
 | Hash | Message |
 |------|---------|
-| *(pending)* | feat(bulk-gen): SRC-6 download and upload source image to B2 on generation |
+| dd79758 | feat(bulk-gen): SRC-6 download and upload source image to B2 on generation |
 
 ---
 

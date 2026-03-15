@@ -36,6 +36,7 @@ VALID_QUALITIES = frozenset({'low', 'medium', 'high'})
 VALID_COUNTS = frozenset({1, 2, 3, 4})
 VALID_PROVIDERS = frozenset({'openai'})
 VALID_VISIBILITIES = frozenset({'public', 'private'})
+_SRC_IMG_EXTENSIONS = re.compile(r'\.(jpg|jpeg|png|webp|gif|avif)$', re.IGNORECASE)
 
 # Allowed domains for reference image URLs
 ALLOWED_REFERENCE_DOMAINS = [
@@ -179,9 +180,6 @@ def api_start_generation(request):
     ]
 
     # --- Validate source image URLs (server-side, security gate) ---
-    _SRC_IMG_EXTENSIONS = re.compile(
-        r'\.(jpg|jpeg|png|webp|gif|avif)(\?.*)?$', re.IGNORECASE
-    )
     invalid_src_indices = []
     for _i, _url in enumerate(source_image_urls):
         if _url:

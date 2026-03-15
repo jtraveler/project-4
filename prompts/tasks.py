@@ -3100,6 +3100,8 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
             prompt_page.b2_thumb_url = gen_image.image_url   # fallback — real thumbnails in Phase 7
             prompt_page.b2_medium_url = gen_image.image_url  # fallback — real thumbnails in Phase 7
             prompt_page.b2_large_url = gen_image.image_url   # fallback — real thumbnails in Phase 7
+            if gen_image.b2_source_image_url:
+                prompt_page.b2_source_image_url = gen_image.b2_source_image_url
 
             # Per-image DB lock: select_for_update() must be inside
             # transaction.atomic() — autocommit mode releases locks immediately.
@@ -3362,6 +3364,8 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
             prompt_page.b2_thumb_url = gen_image.image_url
             prompt_page.b2_medium_url = gen_image.image_url
             prompt_page.b2_large_url = gen_image.image_url   # fallback — real thumbnails in Phase 7
+            if gen_image.b2_source_image_url:
+                prompt_page.b2_source_image_url = gen_image.b2_source_image_url
 
             # Idempotency flag — set inside atomic if image already published by
             # a concurrent task that raced past the pre-filter above.

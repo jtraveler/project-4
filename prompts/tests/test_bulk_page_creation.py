@@ -1619,3 +1619,123 @@ class EndToEndPublishFlowTests(TestCase):
         self.assertEqual(data['error'], 'Too many requests. Please wait before retrying.')
         # Negative: must not leak implementation details (cache keys, internals)
         self.assertNotIn('cache', data['error'])
+
+
+# =============================================================================
+# SRC-4 — Source Image Publish + Delete
+# =============================================================================
+
+@override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
+class SourceImagePublishTests(TestCase):
+    """SRC-4: b2_source_image_url copied from GeneratedImage to Prompt on publish."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='srctest', password='pass', is_staff=True
+        )
+
+    @patch('prompts.tasks._call_openai_vision')
+    @patch('django_q.tasks.async_task')
+    def test_b2_source_image_url_copied_on_publish(self, mock_async, mock_vision):
+        """b2_source_image_url is copied from GeneratedImage to Prompt on create_prompt_pages_from_job."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.user)
+        img = _make_image(job)
+        img.b2_source_image_url = 'https://media.promptfinder.net/bulk-gen/source/ref.jpg'
+        img.save(update_fields=['b2_source_image_url'])
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        self.assertIsNotNone(img.prompt_page)
+        self.assertEqual(
+            img.prompt_page.b2_source_image_url,
+            'https://media.promptfinder.net/bulk-gen/source/ref.jpg',
+        )
+
+    @patch('prompts.tasks._call_openai_vision')
+    @patch('django_q.tasks.async_task')
+    def test_empty_b2_source_image_url_not_copied(self, mock_async, mock_vision):
+        """Empty b2_source_image_url on GeneratedImage does not set Prompt field."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.user)
+        img = _make_image(job)
+        # b2_source_image_url is blank by default
+
+        create_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        self.assertIsNotNone(img.prompt_page)
+        self.assertEqual(img.prompt_page.b2_source_image_url, '')
+
+    def test_hard_delete_triggers_b2_source_deletion(self):
+        """hard_delete() calls B2MediaStorage().delete for b2_source_image_url."""
+        prompt = Prompt.objects.create(
+            title='Source delete test',
+            slug='source-delete-test',
+            author=self.user,
+            content='test prompt',
+            b2_source_image_url='https://media.promptfinder.net/bulk-gen/source/ref.jpg',
+        )
+
+        with patch('prompts.storage_backends.B2MediaStorage') as mock_storage_cls:
+            mock_storage = mock_storage_cls.return_value
+            mock_storage.delete.return_value = None
+            prompt.hard_delete()
+
+        # Called twice: once from hard_delete(), once from post_delete signal
+        # (same pattern as Cloudinary deletion — both paths are defence-in-depth)
+        self.assertEqual(mock_storage.delete.call_count, 2)
+        mock_storage.delete.assert_called_with('bulk-gen/source/ref.jpg')
+
+    def test_hard_delete_no_source_image_no_deletion(self):
+        """hard_delete() with empty b2_source_image_url does not call B2MediaStorage().delete."""
+        prompt = Prompt.objects.create(
+            title='No source test',
+            slug='no-source-test',
+            author=self.user,
+            content='test prompt',
+            b2_source_image_url='',
+        )
+
+        with patch('prompts.storage_backends.B2MediaStorage') as mock_storage_cls:
+            prompt.hard_delete()
+
+        mock_storage_cls.assert_not_called()
+
+    def test_hard_delete_b2_failure_does_not_block_deletion(self):
+        """B2 deletion failure in hard_delete() is caught — prompt still deleted."""
+        prompt = Prompt.objects.create(
+            title='B2 fail test',
+            slug='b2-fail-test',
+            author=self.user,
+            content='test prompt',
+            b2_source_image_url='https://media.promptfinder.net/bulk-gen/source/ref.jpg',
+        )
+        prompt_id = prompt.pk
+
+        with patch('prompts.storage_backends.B2MediaStorage') as mock_storage_cls:
+            mock_storage_cls.return_value.delete.side_effect = Exception('B2 unreachable')
+            prompt.hard_delete()
+
+        # Prompt must be gone from DB despite B2 failure
+        self.assertFalse(Prompt.all_objects.filter(pk=prompt_id).exists())
+
+    @patch('prompts.tasks._call_openai_vision')
+    @patch('django_q.tasks.async_task')
+    def test_b2_source_image_url_copied_on_publish_via_publish_function(self, mock_async, mock_vision):
+        """b2_source_image_url is copied in publish_prompt_pages_from_job as well."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+        job = _make_job(self.user)
+        img = _make_image(job)
+        img.b2_source_image_url = 'https://media.promptfinder.net/bulk-gen/source/pub.jpg'
+        img.save(update_fields=['b2_source_image_url'])
+
+        publish_prompt_pages_from_job(str(job.id), [str(img.id)])
+
+        img.refresh_from_db()
+        self.assertIsNotNone(img.prompt_page)
+        self.assertEqual(
+            img.prompt_page.b2_source_image_url,
+            'https://media.promptfinder.net/bulk-gen/source/pub.jpg',
+        )

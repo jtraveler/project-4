@@ -1095,6 +1095,24 @@ class Prompt(models.Model):
                     exc_info=True
                 )
 
+        # Delete B2 source image if present
+        if self.b2_source_image_url:
+            try:
+                from urllib.parse import urlparse as _urlparse
+                from prompts.storage_backends import B2MediaStorage
+                _parsed = _urlparse(self.b2_source_image_url)
+                b2_key = _parsed.path.lstrip('/')
+                if b2_key:
+                    B2MediaStorage().delete(b2_key)
+                    logger.info(
+                        f"Deleted B2 source image for Prompt '{self.title}': {b2_key}"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"Failed to delete B2 source image for Prompt '{self.title}': {e}",
+                    exc_info=True
+                )
+
         # Then delete from database
         super().delete()
 
@@ -2258,6 +2276,26 @@ def delete_cloudinary_assets(sender, instance, **kwargs):
             # Log error but don't block the prompt deletion
             logger.error(
                 f"Failed to delete Cloudinary video for Prompt '{instance.title}': {e}",
+                exc_info=True
+            )
+
+    # Delete B2 source image if present
+    if instance.b2_source_image_url:
+        try:
+            from urllib.parse import urlparse as _urlparse
+            from prompts.storage_backends import B2MediaStorage
+            _parsed = _urlparse(instance.b2_source_image_url)
+            b2_key = _parsed.path.lstrip('/')
+            if b2_key:
+                B2MediaStorage().delete(b2_key)
+                logger.info(
+                    f"Deleted B2 source image for Prompt '{instance.title}' "
+                    f"(signal): {b2_key}"
+                )
+        except Exception as e:
+            logger.error(
+                f"Failed to delete B2 source image for Prompt '{instance.title}' "
+                f"(signal): {e}",
                 exc_info=True
             )
 

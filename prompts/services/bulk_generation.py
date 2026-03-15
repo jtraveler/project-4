@@ -147,6 +147,7 @@ class BulkGenerationService:
         reference_image_url: str = '',
         character_description: str = '',
         source_credits: list[str] | None = None,
+        source_image_urls: list[str] | None = None,
         per_prompt_sizes: list[str] | None = None,
         per_prompt_qualities: list[str] | None = None,
         per_prompt_counts: list[int | None] | None = None,
@@ -218,6 +219,11 @@ class BulkGenerationService:
             if source_credits and order < len(source_credits):
                 credit = source_credits[order]
 
+            # Get source image URL for this prompt (SRC-3: stored as-is)
+            src_image_url = ''
+            if source_image_urls and order < len(source_image_urls):
+                src_image_url = source_image_urls[order]
+
             # Per-prompt size override (6E-A): empty string means use job default
             per_size = ''
             if per_prompt_sizes and order < len(per_prompt_sizes):
@@ -238,6 +244,7 @@ class BulkGenerationService:
                     prompt_order=order,
                     variation_number=variation,
                     source_credit=credit,
+                    source_image_url=src_image_url,
                     size=per_size,
                     quality=per_quality,
                     target_count=prompt_count,

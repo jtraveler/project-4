@@ -2208,3 +2208,102 @@ class JobStatusErrorReasonTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data['error_reason'], '')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SRC-3: source_image_url parsing and server-side validation
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@override_settings(OPENAI_API_KEY='test-key')
+class SourceImageUrlParsingTests(TestCase):
+    """SRC-3: source_image_url parsed from request and saved to GeneratedImage."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='staffsrc3', password='testpass', is_staff=True,
+        )
+        self.client.login(username='staffsrc3', password='testpass')
+        self.url = reverse('prompts:api_bulk_start_generation')
+        self.base_payload = {
+            'prompts': ['a beautiful sunset'],
+            'provider': 'openai',
+            'model': 'gpt-image-1',
+            'quality': 'medium',
+            'size': '1024x1024',
+            'images_per_prompt': 1,
+            'visibility': 'public',
+            'generator_category': 'ChatGPT',
+            'reference_image_url': '',
+            'character_description': '',
+            'api_key': 'sk-testvalidkey1234',
+        }
+
+    @patch('prompts.services.bulk_generation.async_task')
+    def test_valid_source_image_url_accepted(self, mock_async):
+        """Valid https image URL passes server-side validation and is saved."""
+        payload = {
+            **self.base_payload,
+            'source_image_urls': ['https://example.com/ref.jpg'],
+        }
+        response = self.client.post(
+            self.url, json.dumps(payload), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('job_id', data)
+        gen_image = GeneratedImage.objects.filter(
+            job_id=data['job_id']
+        ).first()
+        self.assertIsNotNone(gen_image)
+        self.assertEqual(gen_image.source_image_url, 'https://example.com/ref.jpg')
+
+    @patch('prompts.services.bulk_generation.async_task')
+    def test_empty_source_image_url_accepted(self, mock_async):
+        """Empty source image URL is valid (field is optional)."""
+        payload = {
+            **self.base_payload,
+            'source_image_urls': [''],
+        }
+        response = self.client.post(
+            self.url, json.dumps(payload), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_http_source_image_url_rejected(self):
+        """http:// URL rejected — must be https://."""
+        payload = {
+            **self.base_payload,
+            'source_image_urls': ['http://example.com/ref.jpg'],
+        }
+        response = self.client.post(
+            self.url, json.dumps(payload), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid source image URL', response.json()['error'])
+
+    def test_non_image_url_rejected(self):
+        """URL not ending in image extension rejected."""
+        payload = {
+            **self.base_payload,
+            'source_image_urls': ['https://example.com/page'],
+        }
+        response = self.client.post(
+            self.url, json.dumps(payload), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid source image URL', response.json()['error'])
+
+    @patch('prompts.services.bulk_generation.async_task')
+    def test_missing_source_image_urls_defaults_to_empty(self, mock_async):
+        """Request without source_image_urls key defaults to empty string on GeneratedImage."""
+        response = self.client.post(
+            self.url, json.dumps(self.base_payload), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        gen_image = GeneratedImage.objects.filter(
+            job_id=data['job_id']
+        ).first()
+        self.assertIsNotNone(gen_image)
+        self.assertEqual(gen_image.source_image_url, '')

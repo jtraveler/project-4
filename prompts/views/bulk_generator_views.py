@@ -7,6 +7,7 @@ API endpoints return JsonResponse.
 """
 import json
 import logging
+import re
 from urllib.parse import urlparse
 
 from django.contrib.admin.views.decorators import staff_member_required
@@ -168,6 +169,37 @@ def api_start_generation(request):
         for sc in raw_source_credits
     ]
 
+    # --- Optional: per-prompt source image URLs ---
+    raw_source_image_urls = data.get('source_image_urls', [])
+    if not isinstance(raw_source_image_urls, list):
+        raw_source_image_urls = []
+    source_image_urls = [
+        str(siu)[:2000] if isinstance(siu, str) else ''
+        for siu in raw_source_image_urls
+    ]
+
+    # --- Validate source image URLs (server-side, security gate) ---
+    _SRC_IMG_EXTENSIONS = re.compile(
+        r'\.(jpg|jpeg|png|webp|gif|avif)(\?.*)?$', re.IGNORECASE
+    )
+    invalid_src_indices = []
+    for _i, _url in enumerate(source_image_urls):
+        if _url:
+            _parsed = urlparse(_url)
+            if _parsed.scheme != 'https' or not _SRC_IMG_EXTENSIONS.search(_url):
+                invalid_src_indices.append(_i + 1)  # 1-based prompt number
+
+    if invalid_src_indices:
+        return JsonResponse(
+            {'error': (
+                f'Invalid source image URL for prompt(s): '
+                f'{", ".join(str(i) for i in invalid_src_indices)}. '
+                f'URL must be https:// and end in .jpg, .jpeg, .png, '
+                f'.webp, .gif, or .avif.'
+            )},
+            status=400,
+        )
+
     # --- Required field ---
     raw_prompts = data.get('prompts')
     if not isinstance(raw_prompts, list) or len(raw_prompts) == 0:
@@ -300,9 +332,11 @@ def api_start_generation(request):
         )
 
     # Create and start the job
-    # Pad source_credits to match prompts length
+    # Pad source_credits and source_image_urls to match prompts length
     while len(source_credits) < len(prompts):
         source_credits.append('')
+    while len(source_image_urls) < len(prompts):
+        source_image_urls.append('')
 
     job = service.create_job(
         user=request.user,
@@ -317,6 +351,7 @@ def api_start_generation(request):
         reference_image_url=reference_image_url,
         character_description=character_description,
         source_credits=source_credits,
+        source_image_urls=source_image_urls,
         per_prompt_sizes=per_prompt_sizes,
         per_prompt_qualities=per_prompt_qualities,
         per_prompt_counts=per_prompt_counts,

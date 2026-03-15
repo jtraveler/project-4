@@ -2658,6 +2658,31 @@ def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
         image.save(update_fields=[
             'status', 'image_url', 'revised_prompt', 'completed_at',
         ])
+
+        # SRC-6: Download and upload source image to B2 if provided
+        if image.source_image_url:
+            try:
+                raw_bytes = _download_source_image(image.source_image_url)
+                if raw_bytes:
+                    src_url = _upload_source_image_to_b2(raw_bytes, job, image)
+                    image.b2_source_image_url = src_url
+                    image.save(update_fields=['b2_source_image_url'])
+                    logger.info(
+                        "[SRC-6] Source image uploaded: gen_image=%s url=%s",
+                        image.id, src_url,
+                    )
+                else:
+                    logger.warning(
+                        "[SRC-6] Source image download failed, continuing: gen_image=%s",
+                        image.id,
+                    )
+            except Exception as exc:
+                # Non-critical — never let source image failure cancel generation
+                logger.warning(
+                    "[SRC-6] Source image upload failed, continuing: gen_image=%s exc=%s",
+                    image.id, exc,
+                )
+
         return cost, True
     except Exception as e:
         logger.error("B2 upload failed for image %s: %s", image.id, e)
@@ -2926,6 +2951,79 @@ def _upload_generated_image_to_b2(image_data, job, image):
     final_url = f'https://{settings.B2_CUSTOM_DOMAIN}/{b2_key}'
     logger.info("[BULK-DEBUG] Upload complete. url=%s", final_url)
     return final_url
+
+
+def _upload_source_image_to_b2(image_bytes: bytes, job, image) -> str:
+    """
+    Upload a source reference image to B2.
+
+    Stores at bulk-gen/{job_id}/source/{image_id}.jpg — separate from
+    generated images to make cleanup and auditing straightforward.
+
+    Args:
+        image_bytes: Raw image bytes.
+        job: BulkGenerationJob instance.
+        image: GeneratedImage instance.
+
+    Returns:
+        Full Cloudflare CDN URL string.
+
+    Raises:
+        Exception if upload fails.
+    """
+    import boto3
+    from django.conf import settings
+
+    b2_key = f'bulk-gen/{job.id}/source/{image.id}.jpg'
+
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=settings.B2_ENDPOINT_URL,
+        aws_access_key_id=settings.B2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
+    )
+
+    s3_client.put_object(
+        Bucket=settings.B2_BUCKET_NAME,
+        Key=b2_key,
+        Body=image_bytes,
+        ContentType='image/jpeg',
+    )
+
+    return f'https://{settings.B2_CUSTOM_DOMAIN}/{b2_key}'
+
+
+def _download_source_image(url: str) -> 'Optional[bytes]':
+    """
+    Download a user-supplied source image from any HTTPS URL.
+
+    Applies basic safety checks (HTTPS only, content-type, size limit)
+    without the domain allowlist used by _download_and_encode_image
+    (which is restricted to known CDN domains for AI processing).
+
+    Returns raw bytes or None on failure.
+    """
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme != 'https' or not parsed.netloc:
+            logger.warning("[SRC-6] Rejected non-HTTPS source image URL: %s", url[:100])
+            return None
+        with requests.get(url, timeout=30, stream=True) as response:
+            response.raise_for_status()
+            content_type = response.headers.get('content-type', '')
+            if not content_type.startswith('image/'):
+                logger.warning("[SRC-6] Rejected non-image content-type: %s", content_type)
+                return None
+            content = b''
+            for chunk in response.iter_content(chunk_size=8192):
+                content += chunk
+                if len(content) > MAX_IMAGE_SIZE:
+                    logger.warning("[SRC-6] Source image exceeded size limit")
+                    return None
+        return content
+    except Exception as exc:
+        logger.warning("[SRC-6] Failed to download source image: %s", exc)
+        return None
 
 
 def _apply_m2m_to_prompt(prompt_page, ai_content, cat_lookup, desc_lookup):

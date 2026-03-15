@@ -704,7 +704,7 @@ assignment.
 ═══════════════════════════════════════════════
 FIELD 1: "title" (string)
 ═══════════════════════════════════════════════
-A concise, SEO-optimized title for this image. Max 60 characters. 
+A concise, SEO-optimized title for this image. Max 60 characters.
 Include the most important subject and style keywords.
 
 ═══════════════════════════════════════════════

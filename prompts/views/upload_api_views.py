@@ -467,7 +467,6 @@ def b2_upload_complete(request):
     """POST /api/upload/b2/complete/ — Confirm direct B2 upload, verify file exists, store URLs."""
     # Get pending upload from session
     pending = request.session.get('pending_direct_upload')
-    logger.info(f"=== PENDING DATA EXISTS: {pending is not None} ===")
 
     if not pending:
         return JsonResponse({
@@ -482,9 +481,7 @@ def b2_upload_complete(request):
     is_video = pending['is_video']
 
     # Verify the upload exists in B2
-    logger.info(f"=== ABOUT TO VERIFY KEY: {key} ===")
     verification = verify_upload_exists(key)
-    logger.info(f"=== VERIFY RESULT: {verification} ===")
 
     if not verification['exists']:
         return JsonResponse({
@@ -492,27 +489,23 @@ def b2_upload_complete(request):
             'error': verification.get('error', 'Upload verification failed. File not found in storage.')
         }, status=400)
 
-    logger.info(f"=== VERIFICATION PASSED, is_video={is_video} ===")
     urls = {'original': cdn_url}
     variants_pending = False
     video_moderation_result = None  # Will store moderation result for videos
-    logger.info("=== URLS DICT CREATED ===")
 
     # For images: generate thumbnail synchronously, defer medium/large/webp to Step 2
     if not is_video:
         thumb_url = _generate_image_thumbnail(cdn_url, filename)
         if thumb_url:
             urls['thumb'] = thumb_url
-            logger.info(f"=== IMAGE THUMB GENERATED: {thumb_url} ===")
         else:
-            logger.warning("=== IMAGE THUMB GENERATION FAILED ===")
+            logger.warning("Image thumbnail generation failed")
 
         # Still defer medium/large/webp to Step 2
         request.session['pending_variant_url'] = cdn_url
         request.session['pending_variant_filename'] = filename
         request.session['variants_complete'] = False
         variants_pending = True
-        logger.info("=== IMAGE PATH: Session vars set, thumb generated ===")
 
     # For videos: generate thumbnail synchronously (required for display)
     if is_video:
@@ -661,7 +654,6 @@ def b2_upload_complete(request):
             # Continue without thumbnail - video is still valid
 
     # Clear pending upload from session
-    logger.info("=== ABOUT TO CLEAR PENDING UPLOAD ===")
     del request.session['pending_direct_upload']
     request.session.modified = True
 
@@ -725,7 +717,6 @@ def b2_upload_complete(request):
 
     request.session.modified = True
 
-    logger.info(f"=== RETURNING SUCCESS: is_video={is_video}, variants_pending={variants_pending} ===")
     response_data = {
         'success': True,
         'filename': filename,

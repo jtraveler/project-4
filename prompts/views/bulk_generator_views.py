@@ -186,7 +186,7 @@ def api_start_generation(request):
     for _i, _url in enumerate(source_image_urls):
         if _url:
             _parsed = urlparse(_url)
-            if _parsed.scheme != 'https' or not _SRC_IMG_EXTENSIONS.search(_url):
+            if _parsed.scheme != 'https' or not _parsed.netloc or not _SRC_IMG_EXTENSIONS.search(_parsed.path):
                 invalid_src_indices.append(_i + 1)  # 1-based prompt number
 
     if invalid_src_indices:

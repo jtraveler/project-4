@@ -1060,7 +1060,7 @@ class Prompt(models.Model):
         self.save()
 
     def hard_delete(self):
-        """Permanently delete prompt and Cloudinary assets"""
+        """Permanently delete prompt, Cloudinary assets, and B2 source image."""
         # Delete from Cloudinary first
         if self.featured_image:
             try:
@@ -1103,10 +1103,15 @@ class Prompt(models.Model):
                 _parsed = _urlparse(self.b2_source_image_url)
                 b2_key = _parsed.path.lstrip('/')
                 if b2_key:
-                    B2MediaStorage().delete(b2_key)
-                    logger.info(
-                        f"Deleted B2 source image for Prompt '{self.title}': {b2_key}"
-                    )
+                    if not (b2_key.startswith('bulk-gen/') or b2_key.startswith('media/')):
+                        logger.warning(
+                            "Refusing to delete B2 key with unexpected prefix: %s", b2_key
+                        )
+                    else:
+                        B2MediaStorage().delete(b2_key)
+                        logger.info(
+                            f"Deleted B2 source image for Prompt '{self.title}': {b2_key}"
+                        )
             except Exception as e:
                 logger.error(
                     f"Failed to delete B2 source image for Prompt '{self.title}': {e}",
@@ -2287,11 +2292,16 @@ def delete_cloudinary_assets(sender, instance, **kwargs):
             _parsed = _urlparse(instance.b2_source_image_url)
             b2_key = _parsed.path.lstrip('/')
             if b2_key:
-                B2MediaStorage().delete(b2_key)
-                logger.info(
-                    f"Deleted B2 source image for Prompt '{instance.title}' "
-                    f"(signal): {b2_key}"
-                )
+                if not (b2_key.startswith('bulk-gen/') or b2_key.startswith('media/')):
+                    logger.warning(
+                        "Refusing to delete B2 key with unexpected prefix: %s", b2_key
+                    )
+                else:
+                    B2MediaStorage().delete(b2_key)
+                    logger.info(
+                        f"Deleted B2 source image for Prompt '{instance.title}' "
+                        f"(signal): {b2_key}"
+                    )
         except Exception as e:
             logger.error(
                 f"Failed to delete B2 source image for Prompt '{instance.title}' "

@@ -471,6 +471,28 @@
             </div>
             {% endif %}
 
+            <!-- Source Image Card (staff-only, SRC-5) -->
+            {% if user.is_staff and prompt.b2_source_image_url %}
+            <div class="rail-card source-image-card" id="source-image-card">
+                <h2 class="rail-card-title">Source Image</h2>
+                <div class="source-image-content">
+                    <img src="{{ prompt.b2_source_image_url }}"
+                         alt="Source image for {{ prompt.title }}"
+                         class="source-image-thumb"
+                         loading="lazy"
+                         style="max-width: 120px; border-radius: var(--radius-sm, 6px); display: block; margin-bottom: 0.5rem;">
+                    <button type="button"
+                            class="btn-outline-standard action-icon-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#sourceImageModal"
+                            aria-label="View full size source image for {{ prompt.title }}">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-eye"/></svg>
+                        View Source Image
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Prompt Text Card -->
             <div class="rail-card prompt-card">
                 <div class="prompt-card-header">
@@ -841,6 +863,28 @@
     </div>
 </div>
 </div><!-- .prompt-detail-page -->
+
+{% if user.is_staff and prompt.b2_source_image_url %}
+<!-- Source Image Lightbox Modal (staff-only, SRC-5) -->
+<div class="modal fade" id="sourceImageModal" tabindex="-1"
+     aria-labelledby="sourceImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sourceImageModalLabel">Source Image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-2">
+                <img src="{{ prompt.b2_source_image_url }}"
+                     alt="Full size source image for {{ prompt.title }}"
+                     class="img-fluid"
+                     loading="lazy"
+                     style="max-height: 80vh; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% endblock content %}
 

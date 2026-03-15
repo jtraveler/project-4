@@ -132,7 +132,7 @@ p.save()
 
 | Hash | Message |
 |------|---------|
-| *(pending)* | feat(prompt-detail): SRC-5 staff-only source image display + lightbox |
+| 765bcf8 | feat(prompt-detail): SRC-5 staff-only source image display + lightbox |
 
 ---
 

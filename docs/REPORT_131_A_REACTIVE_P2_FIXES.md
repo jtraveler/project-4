@@ -104,7 +104,7 @@ python manage.py test
 
 | Hash | Message |
 |------|---------|
-| *(see below)* | fix: regex path validation, B2 prefix allowlist, hard_delete docstring, debug log cleanup |
+| 522f402 | fix: regex path validation, B2 prefix allowlist, hard_delete docstring, debug log cleanup |
 
 ---
 

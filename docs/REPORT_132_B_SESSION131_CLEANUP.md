@@ -96,7 +96,7 @@ python manage.py test
 
 | Hash | Message |
 |------|---------|
-| *(pending)* | fix: promote _SRC_IMG_EXTENSIONS to module level, thumbnail max-height, modal open-in-new-tab |
+| 27bfd2e | fix: promote _SRC_IMG_EXTENSIONS to module level, thumbnail max-height, modal open-in-new-tab |
 
 ---
 

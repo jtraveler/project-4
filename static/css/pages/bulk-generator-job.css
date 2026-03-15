@@ -88,6 +88,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
+    flex: 1 120px;
+    max-width: 120px;
 }
 
 .setting-label {
@@ -234,6 +236,7 @@
     font-weight: var(--font-medium);
     color: var(--gray-800);
     font-size: 15px;
+    font-weight: 600;
 }
 
 .cost-estimated {
@@ -312,7 +315,7 @@
     }
 
     .job-summary-settings-grid {
-        gap: 1rem;
+        gap: 2rem;
     }
 
     .progress-stats-row {
@@ -403,8 +406,9 @@
 .prompt-group-meta span + span::before {
     content: "|";
     margin: 0 0.4rem;
-    font-weight: 400;
+    font-weight: 900;
     color: var(--gray-500);
+    margin-right
 }
 
 /* ─── Prompt Text Hover Overlay ─────────────────────────────── */

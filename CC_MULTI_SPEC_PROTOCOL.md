@@ -2,7 +2,7 @@
 # Multi-Spec Execution Protocol
 
 **Version:** 2.1
-**Date:** March 15, 2026
+**Date:** March 16, 2026
 **Purpose:** Defines the rules CC must follow whenever running specs.
 These rules apply automatically — they do not need to be repeated in
 individual specs or run instructions.
@@ -67,9 +67,12 @@ For specs that make no code changes (documentation updates, read-only audits):
 4. python manage.py check → must return 0 issues
 5. Complete PRE-AGENT SELF-CHECK
 6. Run required agents → all must score 8.0+
-7. Write FULL completion report (all 11 sections)
-8. Commit immediately (report + any doc changes in same commit)
-9. Only then: start the next spec
+7. If ANY agent scores below 8.0 → fix issues and re-run that agent.
+   Do NOT commit until a confirmed round scores 8.0+ average.
+   Fixes applied without a re-run do not count as passing.
+8. Write FULL completion report (all 11 sections)
+9. Commit immediately (report + any doc changes in same commit)
+10. Only then: start the next spec
 ```
 
 Docs and audit specs commit immediately — they contain no code that could
@@ -235,4 +238,6 @@ It does not expire between sessions. Apply it every time.
 Version history: v1.0 initial, v1.1 added universal rules + PRE-AGENT reminder,
 v2.0 hold-all-commits until full suite, two-pass report, Step 0 research rule,
 corrected file size guidance, restored PRE-AGENT section, v2.1 clarified Critical
-tier str_replace limit (2 max, only when new-file strategy not possible).
+tier str_replace limit (2 max, only when new-file strategy not possible),
+v2.1 docs gate re-run rule: agent scores below 8.0 require a confirmed re-run
+before committing. Fixes without re-run verification do not count as passing.

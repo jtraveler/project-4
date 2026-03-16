@@ -8,11 +8,15 @@ from .views import bulk_generator_views
 from .views import upload_api_views
 from .views import moderation_api_views
 from .views import ai_api_views
+from .views import prompt_list_views
+from .views import prompt_edit_views
+from .views import prompt_comment_views
+from .views import prompt_trash_views
 
 app_name = 'prompts'
 
 urlpatterns = [
-    path('', views.PromptList.as_view(), name='home'),
+    path('', prompt_list_views.PromptList.as_view(), name='home'),
     # 301 redirect: /create-prompt/ → /upload/ (SEO preservation)
     path('create-prompt/',
          RedirectView.as_view(pattern_name='prompts:upload_step1', permanent=True),
@@ -30,17 +34,17 @@ urlpatterns = [
     # 301 redirect: /prompt/ (without slug) -> /prompts/
     path('prompt/', RedirectView.as_view(url='/prompts/', permanent=True)),
     # Related prompts AJAX endpoint (must be before catch-all slug pattern)
-    path('prompt/<slug:slug>/related/', views.related_prompts_ajax, name='related_prompts_ajax'),
-    path('prompt/<slug:slug>/', views.prompt_detail, name='prompt_detail'),
-    path('prompt/<slug:slug>/edit/', views.prompt_edit, name='prompt_edit'),
-    path('prompt/<slug:slug>/delete/', views.prompt_delete, name='prompt_delete'),
-    path('prompt/<slug:slug>/publish/', views.prompt_publish, name='prompt_publish'),
+    path('prompt/<slug:slug>/related/', prompt_list_views.related_prompts_ajax, name='related_prompts_ajax'),
+    path('prompt/<slug:slug>/', prompt_list_views.prompt_detail, name='prompt_detail'),
+    path('prompt/<slug:slug>/edit/', prompt_edit_views.prompt_edit, name='prompt_edit'),
+    path('prompt/<slug:slug>/delete/', prompt_trash_views.prompt_delete, name='prompt_delete'),
+    path('prompt/<slug:slug>/publish/', prompt_trash_views.prompt_publish, name='prompt_publish'),
     path('prompt/<slug:slug>/like/', views.prompt_like, name='prompt_like'),
     # Trash bin URLs (Phase D.5)
-    path('trash/', views.trash_bin, name='trash_bin'),
-    path('trash/<slug:slug>/restore/', views.prompt_restore, name='prompt_restore'),
-    path('trash/<slug:slug>/delete-forever/', views.prompt_permanent_delete, name='prompt_permanent_delete'),
-    path('trash/empty/', views.empty_trash, name='empty_trash'),
+    path('trash/', prompt_trash_views.trash_bin, name='trash_bin'),
+    path('trash/<slug:slug>/restore/', prompt_trash_views.prompt_restore, name='prompt_restore'),
+    path('trash/<slug:slug>/delete-forever/', prompt_trash_views.prompt_permanent_delete, name='prompt_permanent_delete'),
+    path('trash/empty/', prompt_trash_views.empty_trash, name='empty_trash'),
     # User profile URLs (Phase E)
     path('users/<str:username>/', views.user_profile, name='user_profile'),
     path('users/<str:username>/trash/', views.user_profile, {'active_tab': 'trash'}, name='user_profile_trash'),
@@ -119,9 +123,9 @@ urlpatterns = [
     path('collections/<slug:slug>/delete-forever/', views.collection_permanent_delete, name='collection_permanent_delete'),
     path('collections/trash/empty/', views.empty_collections_trash, name='empty_collections_trash'),
     path('prompt/<slug:slug>/edit_comment/<int:comment_id>/',
-         views.comment_edit, name='comment_edit'),
+         prompt_comment_views.comment_edit, name='comment_edit'),
     path('prompt/<slug:slug>/delete_comment/<int:comment_id>/',
-         views.comment_delete, name='comment_delete'),
+         prompt_comment_views.comment_delete, name='comment_delete'),
 
     # Admin ordering URLs (moved to admin_views.py)
     path('prompt/<slug:slug>/move-up/', admin_views.prompt_move_up, name='prompt_move_up'),

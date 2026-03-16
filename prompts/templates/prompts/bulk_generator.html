@@ -371,6 +371,7 @@
 
 {% block extras %}
 <script src="{% static 'js/bulk-generator-utils.js' %}"></script>
+<script src="{% static 'js/bulk-generator-paste.js' %}"></script>
 <script src="{% static 'js/bulk-generator.js' %}"></script>
 
 {% if request.user.is_staff %}
@@ -410,63 +411,6 @@
     padding: 0.75rem 1.25rem;
     text-align: center;
     font-size: 0.9rem;
-}
-
-/* SRC paste feature — active row selection */
-.bg-prompt-box.is-paste-target {
-    border-color: var(--primary, #2563eb);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
-}
-.bg-source-paste-hint {
-    font-size: 0.72rem;
-    color: var(--gray-500, #6b7280);
-    margin-top: 0.25rem;
-    display: none;
-}
-.bg-prompt-box.is-paste-target .bg-source-paste-hint {
-    display: block;
-    color: var(--primary);
-    font-weight: 500;
-}
-.bg-source-paste-preview {
-    display: none;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.4rem;
-}
-.bg-source-paste-thumb {
-    max-width: 250px;
-    max-height: 150px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid var(--gray-200, #e5e7eb);
-}
-.bg-source-paste-clear {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--gray-500, #6b7280);
-    font-size: 1.1rem;
-    line-height: 1;
-    padding: 0.1rem 0.3rem;
-}
-.bg-source-paste-clear:hover { color: var(--gray-900, #111827); }
-.bg-source-paste-clear:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
-    border-radius: 2px;
-}
-/* Error badge on prompt boxes */
-.bg-box-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-.bg-box-error-badge {
-    display: none;
-}
-.bg-prompt-box.has-error .bg-box-error-badge {
-    display: inline !important;
 }
 </style>
 

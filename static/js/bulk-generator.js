@@ -366,7 +366,11 @@
         if (e.target.classList.contains('bg-source-paste-clear')) {
             var clearBox = e.target.closest('.bg-prompt-box');
             if (clearBox) {
-                clearBox.querySelector('.bg-prompt-source-image-input').value = '';
+                var clearInput = clearBox.querySelector('.bg-prompt-source-image-input');
+                clearInput.value = '';
+                clearInput.removeAttribute('readonly');
+                clearInput.style.opacity = '';
+                clearInput.title = '';
                 clearBox.querySelector('.bg-source-paste-preview').style.display = 'none';
                 clearBox.querySelector('.bg-source-paste-status').textContent = '';
             }
@@ -421,6 +425,9 @@
         .then(function(data) {
             if (data.success) {
                 urlInput.value = data.cdn_url;
+                urlInput.setAttribute('readonly', 'readonly');
+                urlInput.style.opacity = '0.6';
+                urlInput.title = 'Populated by pasted image — clear preview to edit';
                 thumb.src = data.cdn_url;
                 preview.style.display = 'flex';
                 status.textContent = '';
@@ -1191,7 +1198,30 @@
         validationBannerList.innerHTML = '';
         errors.forEach(function (err) {
             var li = document.createElement('li');
-            li.textContent = err.message || err;
+            // Build clickable anchor link if promptNum is provided
+            if (err.promptNum) {
+                var allBoxes = promptGrid.querySelectorAll('.bg-prompt-box');
+                var box = allBoxes[err.index];
+                var link = document.createElement('a');
+                link.href = '#';
+                link.textContent = 'Prompt ' + err.promptNum;
+                link.style.cssText = 'color:inherit;font-weight:600;text-decoration:underline;cursor:pointer;';
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (box) {
+                        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        var ta = box.querySelector('.bg-box-textarea');
+                        if (ta) ta.focus();
+                    }
+                });
+                li.appendChild(link);
+                li.appendChild(document.createTextNode(
+                    ' — source image URL is not a valid image link. ' +
+                    'Please enter a URL ending in .jpg, .png, .webp, .gif, or .avif, or leave the field blank.'
+                ));
+            } else {
+                li.textContent = err.message || err;
+            }
             validationBannerList.appendChild(li);
 
             // Highlight individual box by index
@@ -1200,7 +1230,10 @@
                 if (boxes[err.index]) {
                     boxes[err.index].classList.add('has-error');
                     var errEl = boxes[err.index].querySelector('.bg-box-error');
-                    if (errEl) errEl.textContent = err.message || 'Error';
+                    if (errEl) {
+                        errEl.textContent = err.message || 'Error';
+                        errEl.style.display = 'block';
+                    }
                 }
             }
         });
@@ -1247,10 +1280,16 @@
         var allBoxes = Array.from(promptGrid.querySelectorAll('.bg-prompt-box'));
         var invalidSrcNums = BulkGenUtils.validateSourceImageUrls(allBoxes);
         if (invalidSrcNums.length > 0) {
-            showValidationErrors([{
-                message: 'Source image URLs for prompts [' + invalidSrcNums.join(', ') + '] are not valid image links. ' +
-                    'Please enter a URL ending in .jpg, .png, .webp, .gif, or .avif, or leave the field blank.'
-            }]);
+            // Build per-prompt errors so inline box errors fire alongside the banner
+            var srcErrors = invalidSrcNums.map(function(num) {
+                return {
+                    message: 'Source image URL for prompt ' + num + ' is not a valid image link. ' +
+                        'Please enter a URL ending in .jpg, .png, .webp, .gif, or .avif, or leave the field blank.',
+                    index: num - 1,  // 0-based index for box lookup
+                    promptNum: num
+                };
+            });
+            showValidationErrors(srcErrors);
             return;
         }
 
@@ -1488,7 +1527,21 @@
                     }
                     if (sc && sourceCredits[i]) sc.value = sourceCredits[i];
                     var si = boxes[i].querySelector('.bg-prompt-source-image-input');
-                    if (si && sourceImageUrls[i]) si.value = sourceImageUrls[i];
+                    if (si && sourceImageUrls[i]) {
+                        si.value = sourceImageUrls[i];
+                        // If URL is a B2 paste URL, reconstruct the preview thumbnail
+                        if (sourceImageUrls[i].indexOf('/source-paste/') !== -1) {
+                            var preview = boxes[i].querySelector('.bg-source-paste-preview');
+                            var thumb = boxes[i].querySelector('.bg-source-paste-thumb');
+                            if (preview && thumb) {
+                                thumb.src = sourceImageUrls[i];
+                                preview.style.display = 'flex';
+                                si.setAttribute('readonly', 'readonly');
+                                si.style.opacity = '0.6';
+                                si.title = 'Populated by pasted image — clear preview to edit';
+                            }
+                        }
+                    }
                 }
             });
 

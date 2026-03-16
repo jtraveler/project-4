@@ -27,7 +27,7 @@
         promptBoxes.forEach(function (box, index) {
             var input = box.querySelector('.bg-prompt-source-image-input');
             var url = input ? input.value.trim() : '';
-            if (url && !IMAGE_URL_EXTENSIONS.test(url)) {
+            if (url && !(url.startsWith('https://') && IMAGE_URL_EXTENSIONS.test(url))) {
                 invalid.push(index + 1);
             }
         });
@@ -42,7 +42,8 @@
      * @returns {boolean} True if the URL ends in a valid image extension
      */
     BulkGenUtils.isValidSourceImageUrl = function (url) {
-        return IMAGE_URL_EXTENSIONS.test(url);
+        return url.startsWith('https://') &&
+            IMAGE_URL_EXTENSIONS.test(url);
     };
 
     /**

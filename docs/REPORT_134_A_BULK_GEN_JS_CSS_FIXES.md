@@ -147,7 +147,9 @@ python manage.py test
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| a0dc41b | fix(bulk-gen): clickable error links, inline error persistence, draft thumbnail restore, URL lock, https validation, paste target CSS |
 
 ---
 

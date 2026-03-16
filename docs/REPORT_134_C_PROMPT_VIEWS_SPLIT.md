@@ -137,7 +137,9 @@ python manage.py test
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 2affd60 | refactor(views): split prompt_views.py into domain modules (list, edit, comment, trash) |
 
 ---
 

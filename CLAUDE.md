@@ -147,7 +147,7 @@ Never assume CC can safely edit a file without checking its tier first.
 **🟠 High Risk — Avoid Direct Editing:**
 - `prompts/tests/test_bulk_generation_tasks.py` (1,861 lines)
 - `prompts/templates/prompts/prompt_list.html` (1,700 lines)
-- `prompts/views/prompt_views.py` (1,694 lines)
+- ~~`prompts/views/prompt_views.py` (1,694 lines)~~ — split Session 134, now 50-line shim
 - `prompts/tests/test_bulk_page_creation.py` (1,621 lines)
 - `static/css/pages/prompt-detail.css` (1,549 lines)
 - `static/css/pages/bulk-generator.css` (1,484 lines)
@@ -1330,18 +1330,28 @@ Views were split into a modular package for maintainability:
 
 ```
 prompts/views/
-├── __init__.py           # Exports all views
-├── admin_views.py        # Admin functions (ordering, bulk actions)
-├── api_views.py          # API endpoints (1374 lines - TOO BIG FOR CC)
-├── collection_views.py   # Collections API
-├── generator_views.py    # AI generator filter pages
-├── leaderboard_views.py  # Leaderboard/ranking pages
-├── prompt_views.py       # Prompt CRUD, detail, tag filtering
-├── redirect_views.py     # URL redirects and legacy routes
-├── social_views.py       # Social sharing endpoints
-├── upload_views.py       # Upload page views
-├── user_views.py         # User profile pages
-└── utility_views.py      # Utility/helper views
+├── __init__.py              # Exports all views
+├── admin_views.py           # Admin functions (ordering, bulk actions)
+├── api_views.py             # API shim (Session 128 split)
+├── ai_api_views.py          # AI suggestions, job status (Session 128 split)
+├── moderation_api_views.py  # NSFW moderation endpoints (Session 128 split)
+├── social_api_views.py      # Collaborate, like endpoints (Session 128 split)
+├── upload_api_views.py      # B2 upload, presign, paste endpoints (Session 128 split)
+├── bulk_generator_views.py  # Bulk generator page + 8 API endpoints
+├── collection_views.py      # Collections API
+├── generator_views.py       # AI generator filter pages
+├── leaderboard_views.py     # Leaderboard/ranking pages
+├── notification_views.py    # Notification API + page views
+├── prompt_views.py          # Shim — re-exports from 4 domain modules (Session 134)
+├── prompt_list_views.py     # PromptList, prompt_detail, related_prompts_ajax (620 lines)
+├── prompt_edit_views.py     # prompt_edit, prompt_create (528 lines)
+├── prompt_comment_views.py  # comment_edit, comment_delete (139 lines)
+├── prompt_trash_views.py    # prompt_delete, trash_bin, restore, publish, perm_delete, empty (396 lines)
+├── redirect_views.py        # URL redirects and legacy routes
+├── social_views.py          # Social sharing endpoints
+├── upload_views.py          # Upload page views
+├── user_views.py            # User profile pages
+└── utility_views.py         # Utility/helper views
 ```
 
 ---

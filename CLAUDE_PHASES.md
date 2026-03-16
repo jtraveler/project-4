@@ -34,7 +34,7 @@
 | **P2-A** | **System Notifications Admin** | **✅ Done (S90-91)** | **Quill.js dashboard, batch management, batch_id tracking, rate limiting, auto-mark seen** |
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
-| **BG** | **Bulk AI Image Generator** | **✅ Phases 1–7 + 6E Complete — Pre-launch QA** | **Staff tool. 6E series: per-prompt size/quality/count overrides. UI-IMPROVEMENTS-1 (live header stats, failed slot dimensions, footer weights). MICRO-CLEANUP-1 (separator, frozenset, class toggle, csp fix). detect_b2_orphans command complete. 1149 tests. 5 JS modules.** |
+| **BG** | **Bulk AI Image Generator** | **✅ Phases 1–7 + 6E Complete — Pre-launch QA** | **Staff tool. SRC pipeline complete (Sessions 131–134). UX fixes batch (Session 134). `prompt_views.py` split into 4 domain modules. 1193 tests. 5 JS modules.** |
 
 ---
 

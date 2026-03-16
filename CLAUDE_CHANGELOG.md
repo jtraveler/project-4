@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 13, 2026 (Sessions 101–123, MICRO-CLEANUP-1, detect_b2_orphans command)
+**Last Updated:** March 16, 2026 (Sessions 101–134)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,91 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 134 — March 16, 2026
+
+**Final state:** 1193 tests, 12 skipped, 0 failures. Migration 0076. `prompt_views.py` split into 4 domain modules.
+
+#### Spec A — Bulk Gen JS/CSS Fixes (commit a0dc41b)
+- Clickable error links: `showValidationErrors` builds `<a>` tags with `scrollIntoView` + `focus()` when `err.promptNum` provided
+- Inline error persistence: per-prompt errors with `err.index` fire `.bg-box-error` alongside the banner
+- Draft restore: reconstructs paste thumbnail preview from localStorage for `/source-paste/` URLs
+- URL field lock: `readonly` + `opacity: 0.6` + tooltip after paste; clear button removes all three
+- `https://` validation: added to both `isValidSourceImageUrl` and `validateSourceImageUrls`
+- `.is-paste-target` CSS: `outline` replaced with `border-color` + `box-shadow` (matches `:focus-within`)
+- Agents: @frontend-developer 8.5, @ui-ux-designer 8.2, @code-reviewer 8.5. Avg 8.4/10
+
+#### Spec B — bytearray + Content-Length Pre-check (commit fad5d92)
+- `_download_and_encode_image`: `b''` + `+=` → `bytearray()` + `.extend()` (O(n^2) → O(n))
+- `_download_source_image`: same bytearray fix + Content-Length header pre-check (parity with `_download_and_encode_image`)
+- `bytes(content)` return in `_download_source_image` (callers expect `bytes`)
+- 1 new test: `test_content_length_precheck_rejects_large_source_image`
+- Agents: @django-pro 10/10, @code-reviewer 9/10. Avg 9.5/10
+
+#### Spec C — prompt_views.py Split (commit 2affd60)
+- Split 1,694-line `prompt_views.py` into 4 domain modules:
+  - `prompt_list_views.py` (620 lines) — PromptList, prompt_detail, related_prompts_ajax
+  - `prompt_edit_views.py` (528 lines) — prompt_edit, prompt_create
+  - `prompt_comment_views.py` (139 lines) — comment_edit, comment_delete
+  - `prompt_trash_views.py` (396 lines) — prompt_delete, trash_bin, prompt_restore, prompt_publish, prompt_permanent_delete, empty_trash
+- `prompt_views.py` is now a 50-line shim re-exporting all 13 public names
+- `urls.py` updated to import from domain modules directly
+- Fixed stray blank lines between decorators and `def` (bandit + security auditor)
+- Fixed `hashlib.md5` → `usedforsecurity=False` (bandit)
+- Removed unused imports (`login_required`, `Tag`) from `prompt_list_views.py`
+- Agents: @django-pro 9.0, @code-reviewer 8.0, @security-auditor 7.0→9.0 (round 2). Avg 8.7/10
+
+### Session 133 — March 15, 2026
+
+**Final state:** 1192 tests, 12 skipped, 0 failures. Migration 0076.
+
+#### SRC Blur Validation
+- Source URL inline blur validation with error display
+- `isValidSourceImageUrl` + `validateSourceImageUrls` in `bulk-generator-utils.js`
+
+#### SRC Paste Upload
+- Active row selection + global paste for source image upload
+- Solves Facebook URL problem (users can paste images directly)
+- New endpoint: `/api/bulk-gen/source-image-paste/`
+- B2 upload to `source-paste/` prefix
+
+#### SSRF Hardening
+- `_is_private_ip_host()` private IP filter in `_download_source_image`
+- `allow_redirects=False` with manual redirect validation
+- Reject non-HTTPS redirects and private host redirects
+
+#### P3 Cleanup
+- `_get_b2_client()` DRY helper extracted
+- `rel="noreferrer"` on external links
+- Direct unit tests for `_download_source_image`
+
+### Session 132 — March 15, 2026
+
+**Final state:** 1176 tests, 12 skipped, 0 failures. Migration 0076.
+
+#### SRC-6 Source Image Download + B2 Upload
+- `_download_source_image()` in `tasks.py` — downloads from any HTTPS URL
+- B2 upload pipeline for source images (completes SRC pipeline)
+- New test file: `prompts/tests/test_src6_source_image_upload.py`
+
+#### Session 131 Cleanup
+- Regex module-level compilation
+- Thumbnail max-height constraint
+- Modal open-in-new-tab link
+
+### Session 131 — March 14, 2026
+
+**Final state:** 1162 tests, 12 skipped, 0 failures. Migration 0076.
+
+#### Reactive P2 Fixes
+- Regex path fix (B2 prefix allowlist)
+- Docstring corrections
+- Debug log cleanup
+
+#### SRC-5 Staff Source Image Display
+- Staff-only source image display on prompt detail page
+- Lightbox viewer for source images
+- `source_credit` and `source_credit_url` display
 
 ### Session 123 — March 13, 2026
 

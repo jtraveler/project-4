@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 10, 2026
+**Last Updated:** March 16, 2026
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA), Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1149 passing, 12 skipped (Session 122)
+**Total Tests:** 1193 passing, 12 skipped (Session 134)
 
 ---
 
@@ -109,15 +109,24 @@ live-working-project/
 │   │       └── _collection_modal.html  # Collections modal (Phase K)
 │   ├── templatetags/             # 3 template tag files
 │   ├── tests/                    # 19 test files
-│   └── views/                    # 12 view modules (refactored)
+│   └── views/                    # 21 view modules (refactored, prompt_views split Session 134)
 │       ├── __init__.py           # Package exports
 │       ├── admin_views.py        # Admin dashboard views
-│       ├── api_views.py          # REST API endpoints (Phase L)
+│       ├── api_views.py          # API shim (Session 128 split)
+│       ├── ai_api_views.py      # AI suggestions, job status
+│       ├── moderation_api_views.py # NSFW moderation endpoints
+│       ├── social_api_views.py  # Collaborate, like endpoints
+│       ├── upload_api_views.py  # B2 upload, presign, paste endpoints
+│       ├── bulk_generator_views.py # Bulk generator page + APIs
 │       ├── collection_views.py   # Collection API and page views (Phase K)
 │       ├── generator_views.py    # AI generator category pages
 │       ├── leaderboard_views.py  # Leaderboard functionality
 │       ├── notification_views.py # Notification API + page views (Phase R1)
-│       ├── prompt_views.py       # Prompt detail, edit, delete views
+│       ├── prompt_views.py       # Shim — re-exports from 4 domain modules (Session 134)
+│       ├── prompt_list_views.py  # PromptList, prompt_detail, related_prompts_ajax
+│       ├── prompt_edit_views.py  # prompt_edit, prompt_create
+│       ├── prompt_comment_views.py # comment_edit, comment_delete
+│       ├── prompt_trash_views.py # prompt_delete, trash_bin, restore, publish, perm_delete, empty
 │       ├── redirect_views.py     # URL redirects and legacy routes
 │       ├── social_views.py       # Follow, like, share views
 │       ├── upload_views.py       # Upload workflow views
@@ -268,26 +277,34 @@ prompts/utils/
 
 ---
 
-## Views Package Architecture (11 modules)
+## Views Package Architecture (21 modules)
 
 *Refactored December 2025 - Previously a single 3,929-line views.py file*
 
 ```
 prompts/views/
-├── __init__.py           # Package exports (all public views)
-├── admin_views.py        # Admin dashboard, debug pages, bulk actions
-├── api_views.py          # REST API endpoints (B2 upload - Phase L)
-├── bulk_generator_views.py # Bulk generator page view + 8 API endpoints (Sessions 92-107)
-├── collection_views.py   # Collection API and page views (Phase K)
-├── generator_views.py    # AI generator category pages
-├── leaderboard_views.py  # Leaderboard rankings, filters
-├── notification_views.py # Notification API + page views (Phase R1)
-├── prompt_views.py       # Prompt detail, edit, delete, list views
-├── redirect_views.py     # URL redirects and legacy routes
-├── social_views.py       # Follow/unfollow, likes, shares
-├── upload_views.py       # Two-step upload, AI generation, validation
-├── user_views.py         # User profiles, settings, avatar
-└── utility_views.py      # Utility and helper views
+├── __init__.py              # Package exports (all public views)
+├── admin_views.py           # Admin dashboard, debug pages, bulk actions
+├── api_views.py             # API shim (Session 128 split)
+├── ai_api_views.py          # AI suggestions, job status (Session 128 split)
+├── moderation_api_views.py  # NSFW moderation endpoints (Session 128 split)
+├── social_api_views.py      # Collaborate, like endpoints (Session 128 split)
+├── upload_api_views.py      # B2 upload, presign, paste endpoints (Session 128 split)
+├── bulk_generator_views.py  # Bulk generator page view + 8 API endpoints (Sessions 92-107)
+├── collection_views.py      # Collection API and page views (Phase K)
+├── generator_views.py       # AI generator category pages
+├── leaderboard_views.py     # Leaderboard rankings, filters
+├── notification_views.py    # Notification API + page views (Phase R1)
+├── prompt_views.py          # Shim — re-exports from 4 domain modules (Session 134)
+├── prompt_list_views.py     # PromptList, prompt_detail, related_prompts_ajax (620 lines)
+├── prompt_edit_views.py     # prompt_edit, prompt_create (528 lines)
+├── prompt_comment_views.py  # comment_edit, comment_delete (139 lines)
+├── prompt_trash_views.py    # prompt_delete, trash_bin, restore, publish, perm_delete, empty (396 lines)
+├── redirect_views.py        # URL redirects and legacy routes
+├── social_views.py          # Follow/unfollow, likes, shares
+├── upload_views.py          # Two-step upload, AI generation, validation
+├── user_views.py            # User profiles, settings, avatar
+└── utility_views.py         # Utility and helper views
 ```
 
 ### Module Descriptions
@@ -301,7 +318,11 @@ prompts/views/
 | **generator_views** | ~5 | AI generator category pages with filtering |
 | **leaderboard_views** | ~4 | Rankings, time filters, user stats |
 | **notification_views** | ~8 | Notification API (unread-count, mark-read, delete, delete-all), notifications page, category filtering, pagination |
-| **prompt_views** | ~20 | Prompt detail, edit, delete, list, homepage views |
+| **prompt_views** | shim | Re-exports from 4 domain modules (Session 134 split) |
+| **prompt_list_views** | ~3 | PromptList (homepage), prompt_detail, related_prompts_ajax |
+| **prompt_edit_views** | ~2 | prompt_edit, prompt_create |
+| **prompt_comment_views** | ~2 | comment_edit, comment_delete |
+| **prompt_trash_views** | ~6 | prompt_delete, trash_bin, prompt_restore, prompt_publish, prompt_permanent_delete, empty_trash |
 | **redirect_views** | ~3 | URL redirects, legacy route handling |
 | **social_views** | ~10 | Follow system, likes, shares, reports |
 | **upload_views** | ~12 | Step 1/2 upload, AI generation, validation |
@@ -409,7 +430,7 @@ prompts/views/
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `views/` | ~3,929 | View package (11 modules) ✅ REFACTORED |
+| `views/` | ~3,929 | View package (21 modules) ✅ REFACTORED |
 | `models.py` | ~2,200 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, Notification, BulkGenerationJob, GeneratedImage, etc.) + `seo_pass2_at` field + `ordered_tags()` method + `api_key_encrypted` (BinaryField, Fernet) + `api_key_hint` fields (Session 100) |
 | `admin.py` | ~2,300 | Django admin (PromptAdmin with two-button system, SEO Review + Rebuild actions, M2M ordering) |
 | `forms.py` | ~300 | Django forms |
@@ -1015,7 +1036,7 @@ Admin routes for the SEO Review Queue feature, defined in `prompts/views/admin_v
 
 | Issue | Impact | Status |
 |-------|--------|--------|
-| `views.py` at 147KB (~3,929 lines) | Maintenance difficulty | ✅ RESOLVED - Split into 11 modules |
+| `views.py` at 147KB (~3,929 lines) | Maintenance difficulty | ✅ RESOLVED - Split into 21 modules |
 | No CI/CD pipeline | Manual deployments | ✅ RESOLVED - GitHub Actions operational |
 | No error monitoring | Blind to production errors | ✅ RESOLVED - Sentry integrated |
 | 37 migrations | Slow migration runs | ⏳ Squash before launch |

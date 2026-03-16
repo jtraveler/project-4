@@ -18,6 +18,8 @@ app_name = 'prompts'
 urlpatterns = [
     path('', prompt_list_views.PromptList.as_view(), name='home'),
     # 301 redirect: /create-prompt/ → /upload/ (SEO preservation)
+    # Note: prompt_create view function removed Session 135 — this URL name
+    # maps only to RedirectView, not a view function.
     path('create-prompt/',
          RedirectView.as_view(pattern_name='prompts:upload_step1', permanent=True),
          name='prompt_create'),

@@ -12,7 +12,24 @@
 
     window.BulkGenUtils = window.BulkGenUtils || {};
 
-    var IMAGE_URL_EXTENSIONS = /\.(jpg|jpeg|png|webp|gif|avif)(\?.*)?$/i;
+    var IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif|avif)/i;
+
+    /**
+     * Return true if url contains a recognised image extension in either
+     * the path or the decoded query string.
+     * Handles CDN/Next.js optimisation URLs like:
+     *   https://host/_next/image?url=%2Fphoto.png&w=1920&q=75
+     */
+    function _hasImageExtension(url) {
+        try {
+            var parsed = new URL(url);
+            if (IMAGE_EXT_RE.test(parsed.pathname)) return true;
+            // Fallback: check decoded query string
+            return IMAGE_EXT_RE.test(decodeURIComponent(parsed.search));
+        } catch (e) {
+            return false;
+        }
+    }
 
     /**
      * Validate source image URLs for all prompt boxes.
@@ -27,7 +44,7 @@
         promptBoxes.forEach(function (box, index) {
             var input = box.querySelector('.bg-prompt-source-image-input');
             var url = input ? input.value.trim() : '';
-            if (url && !(url.startsWith('https://') && IMAGE_URL_EXTENSIONS.test(url))) {
+            if (url && !(url.startsWith('https://') && _hasImageExtension(url))) {
                 invalid.push(index + 1);
             }
         });
@@ -42,8 +59,7 @@
      * @returns {boolean} True if the URL ends in a valid image extension
      */
     BulkGenUtils.isValidSourceImageUrl = function (url) {
-        return url.startsWith('https://') &&
-            IMAGE_URL_EXTENSIONS.test(url);
+        return url.startsWith('https://') && _hasImageExtension(url);
     };
 
     /**

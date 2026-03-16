@@ -106,6 +106,21 @@
         textarea.style.height = textarea.scrollHeight + 'px';
     }
 
+    // ─── Paste URL Lock Helpers ───────────────────────────────────
+    function lockPasteInput(input) {
+        input.setAttribute('readonly', 'readonly');
+        input.style.opacity = '0.6';
+        input.style.cursor = 'not-allowed';
+        input.title = 'Populated by pasted image \u2014 clear preview to edit';
+    }
+
+    function unlockPasteInput(input) {
+        input.removeAttribute('readonly');
+        input.style.opacity = '';
+        input.style.cursor = '';
+        input.title = '';
+    }
+
     // ─── Prompt Boxes ────────────────────────────────────────────
     function createPromptBox(promptText) {
         boxIdCounter++;
@@ -123,9 +138,15 @@
         box.innerHTML =
             '<div class="bg-box-header">' +
                 '<span class="bg-box-title" id="' + boxId + '-title">Prompt ' + boxIdCounter + '</span>' +
-                '<button type="button" class="bg-box-delete-btn" aria-label="Delete prompt ' + boxIdCounter + '">' +
-                    '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-trash"/></svg>' +
-                '</button>' +
+                '<div class="bg-box-header-actions">' +
+                    '<span class="bg-box-error-badge" aria-hidden="true" ' +
+                          'style="display:none;" title="This prompt has an error">' +
+                        '\u26a0\ufe0f' +
+                    '</span>' +
+                    '<button type="button" class="bg-box-delete-btn" aria-label="Delete prompt ' + boxIdCounter + '">' +
+                        '<svg class="icon" aria-hidden="true"><use href="' + spriteBase + '#icon-trash"/></svg>' +
+                    '</button>' +
+                '</div>' +
             '</div>' +
             '<div class="bg-box-text-wrapper">' +
                 '<div class="bg-box-char-preview" aria-hidden="true" style="display:none"></div>' +
@@ -368,9 +389,7 @@
             if (clearBox) {
                 var clearInput = clearBox.querySelector('.bg-prompt-source-image-input');
                 clearInput.value = '';
-                clearInput.removeAttribute('readonly');
-                clearInput.style.opacity = '';
-                clearInput.title = '';
+                unlockPasteInput(clearInput);
                 clearBox.querySelector('.bg-source-paste-preview').style.display = 'none';
                 clearBox.querySelector('.bg-source-paste-status').textContent = '';
             }
@@ -425,9 +444,7 @@
         .then(function(data) {
             if (data.success) {
                 urlInput.value = data.cdn_url;
-                urlInput.setAttribute('readonly', 'readonly');
-                urlInput.style.opacity = '0.6';
-                urlInput.title = 'Populated by pasted image — clear preview to edit';
+                lockPasteInput(urlInput);
                 thumb.src = data.cdn_url;
                 preview.style.display = 'flex';
                 status.textContent = '';
@@ -1185,6 +1202,8 @@
         validationBannerList.innerHTML = '';
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             box.classList.remove('has-error');
+            var badge = box.querySelector('.bg-box-error-badge');
+            if (badge) badge.style.display = '';
             var err = box.querySelector('.bg-box-error');
             if (err) {
                 err.textContent = '';
@@ -1210,6 +1229,10 @@
                     e.preventDefault();
                     if (box) {
                         box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Nudge up 120px to clear the sticky bottom bar
+                        setTimeout(function() {
+                            window.scrollBy({ top: -120, behavior: 'smooth' });
+                        }, 350);
                         var ta = box.querySelector('.bg-box-textarea');
                         if (ta) ta.focus();
                     }
@@ -1229,6 +1252,8 @@
                 var boxes = promptGrid.querySelectorAll('.bg-prompt-box');
                 if (boxes[err.index]) {
                     boxes[err.index].classList.add('has-error');
+                    var badge = boxes[err.index].querySelector('.bg-box-error-badge');
+                    if (badge) badge.style.display = 'inline';
                     var errEl = boxes[err.index].querySelector('.bg-box-error');
                     if (errEl) {
                         errEl.textContent = err.message || 'Error';
@@ -1529,16 +1554,20 @@
                     var si = boxes[i].querySelector('.bg-prompt-source-image-input');
                     if (si && sourceImageUrls[i]) {
                         si.value = sourceImageUrls[i];
-                        // If URL is a B2 paste URL, reconstruct the preview thumbnail
-                        if (sourceImageUrls[i].indexOf('/source-paste/') !== -1) {
-                            var preview = boxes[i].querySelector('.bg-source-paste-preview');
-                            var thumb = boxes[i].querySelector('.bg-source-paste-thumb');
-                            if (preview && thumb) {
-                                thumb.src = sourceImageUrls[i];
-                                preview.style.display = 'flex';
-                                si.setAttribute('readonly', 'readonly');
-                                si.style.opacity = '0.6';
-                                si.title = 'Populated by pasted image — clear preview to edit';
+                        // Reconstruct preview thumbnail for any source image URL
+                        var preview = boxes[i].querySelector('.bg-source-paste-preview');
+                        var thumb = boxes[i].querySelector('.bg-source-paste-thumb');
+                        if (preview && thumb) {
+                            var isPasteUrl = sourceImageUrls[i].indexOf('/source-paste/') !== -1;
+                            thumb.src = sourceImageUrls[i];
+                            thumb.onerror = function() {
+                                // Hide preview gracefully if image fails to load
+                                preview.style.display = 'none';
+                                thumb.onerror = null;
+                            };
+                            preview.style.display = 'flex';
+                            if (isPasteUrl) {
+                                lockPasteInput(si);
                             }
                         }
                     }

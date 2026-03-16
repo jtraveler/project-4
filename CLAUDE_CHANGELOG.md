@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 16, 2026 (Sessions 101–135)
+**Last Updated:** March 16, 2026 (Sessions 101–136)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,44 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 136 — March 16, 2026
+
+**Focus:** CSS migration, paste module extraction, P3 fixes, views docs
+
+**Final state:** 1193 tests, 12 skipped, 0 failures. `bulk-generator.js` reduced from 1,605 → 1,546 lines.
+
+#### Spec A — CSS Migration (commit 6328db2)
+- Moved paste/badge inline CSS from `bulk_generator.html` to `bulk-generator.css`
+- 11 rule blocks moved verbatim — zero visual changes
+- Flush button CSS retained in template (template-specific)
+- Agents: @frontend-developer 10/10, @code-reviewer 7.5/10 (false positives on pre-existing diff). Avg 8.75/10
+
+#### Spec B — Paste Module Extraction (commit 3acd654)
+- Created `bulk-generator-paste.js` (78 lines) — `BulkGenPaste.init(promptGrid, csrf)`
+- Moved `lockPasteInput`/`unlockPasteInput` to `BulkGenUtils` in `bulk-generator-utils.js`
+- Removed helpers + global paste listener from `bulk-generator.js` (63 lines removed)
+- All call sites updated to namespaced `BulkGenUtils.lockPasteInput()`
+- Script load order: utils → paste → main
+- Agents: @frontend-developer 9.5/10, @code-reviewer 8.5/10, @security-auditor 9.0/10. Avg 9.0/10
+
+#### Spec C — P3 Batch (commit 75dcab8)
+- `prefers-reduced-motion` support on error link scroll (`behavior: 'auto'`, `setTimeout(0)`)
+- `IMAGE_EXT_RE` anchored with `(?:[?#&]|$)` lookahead — blocks `/photo.jpgfoo`
+- `@accessibility` review: no WCAG AA failures found on `showValidationErrors` error links
+- Agents: @frontend-developer 9.5/10, @accessibility 9.0/10. Avg 9.25/10
+
+#### Spec D — Views Structure Docs (commit 5e65138)
+- Rewrote `prompts/views/STRUCTURE.txt` and `README.md` for 22-module state
+- All line counts exact (0 discrepancies per agent verification)
+- Agent: @docs-architect 9.0/10
+
+#### Spec E — Docs Update
+- Updated CLAUDE.md: file tier table, Deferred P3 Items (3 resolved, 1 added)
+- Session 136 entry added to CLAUDE_CHANGELOG.md
+- `bulk-generator-paste.js` added to PROJECT_FILE_STRUCTURE.md
+
+---
 
 ### Session 135 — March 16, 2026
 

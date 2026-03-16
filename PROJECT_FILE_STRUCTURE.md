@@ -159,8 +159,10 @@ live-working-project/
 │   │   └── style.css
 │   ├── icons/                    # SVG icon sprite (Phase J.2)
 │   │   └── sprite.svg            # 33 icons from Lucide Icons
-│   └── js/                       # 15 JavaScript files
-│       ├── bulk-generator.js         # Bulk generator frontend: upload, preview, auto-save, validation (~900 lines, Sessions 92-93)
+│   └── js/                       # 17 JavaScript files
+│       ├── bulk-generator.js         # Bulk generator frontend: upload, preview, auto-save, validation (~1,546 lines)
+│       ├── bulk-generator-paste.js   # 78 lines — clipboard paste upload handler (Session 136)
+│       ├── bulk-generator-utils.js   # 113 lines — BulkGenUtils: URL validation, paste helpers (Sessions 130, 136)
 │       ├── bulk-generator-config.js  # 156 lines — BulkGen namespace + config (Session 121 JS-SPLIT-1)
 │       ├── bulk-generator-ui.js      # 338 lines — gallery render, createGroupRow, parseGroupSize (Session 122 6E-CLEANUP-2)
 │       ├── bulk-generator-gallery.js # 452 lines — card states, fillImageSlot, fillFailedSlot, lightbox (Session 122) ← NEW
@@ -512,7 +514,9 @@ static/css/
 
 ```
 static/js/
-├── bulk-generator.js     # ~900 lines - Bulk generator frontend (Sessions 92-93)
+├── bulk-generator.js     # ~1,546 lines - Bulk generator frontend (Sessions 92-136)
+├── bulk-generator-paste.js     # 78 lines   - Clipboard paste upload handler (Session 136)
+├── bulk-generator-utils.js     # 113 lines  - BulkGenUtils: URL validation, paste helpers (Sessions 130, 136)
 ├── bulk-generator-config.js     # 156 lines  - Namespace init, constants (POLL_INTERVAL, TERMINAL_STATES, STATUS_HEADINGS), state variable declarations, utility functions (getCookie, formatCost, formatTime, gcd, getAspectLabel) (Session 121 JS-SPLIT-1)
 ├── bulk-generator-ui.js         # 338 lines  - Gallery render, createGroupRow, parseGroupSize (Session 122 6E-CLEANUP-2 — was 766 lines)
 ├── bulk-generator-gallery.js    # 452 lines  - Card states, fillImageSlot, fillFailedSlot, lightbox (Session 122 6E-CLEANUP-2) ← NEW
@@ -535,7 +539,9 @@ static/js/
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| **bulk-generator.js** | ~900 | Bulk generator frontend: upload, preview, auto-save, validation, modals (Sessions 92-93) |
+| **bulk-generator.js** | ~1,546 | Bulk generator frontend: upload, preview, auto-save, validation, modals (Sessions 92-136) |
+| **bulk-generator-paste.js** | 78 | Clipboard paste upload handler for source images (Session 136) |
+| **bulk-generator-utils.js** | 113 | BulkGenUtils: URL validation, paste lock/unlock helpers (Sessions 130, 136) |
 | **bulk-generator-config.js** | 156 | Bulk generator constants, state declarations, utility functions — shared namespace init (Session 121 JS-SPLIT-1) |
 | **bulk-generator-ui.js** | 338 | Bulk generator gallery rendering, createGroupRow, parseGroupSize (Session 122 6E-CLEANUP-2 — was 766 lines) |
 | **bulk-generator-gallery.js** | 452 | Card states, fillImageSlot, fillFailedSlot, lightbox (Session 122 6E-CLEANUP-2) ← NEW |

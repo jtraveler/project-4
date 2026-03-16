@@ -106,21 +106,6 @@
         textarea.style.height = textarea.scrollHeight + 'px';
     }
 
-    // ─── Paste URL Lock Helpers ───────────────────────────────────
-    function lockPasteInput(input) {
-        input.setAttribute('readonly', 'readonly');
-        input.style.opacity = '0.6';
-        input.style.cursor = 'not-allowed';
-        input.title = 'Populated by pasted image \u2014 clear preview to edit';
-    }
-
-    function unlockPasteInput(input) {
-        input.removeAttribute('readonly');
-        input.style.opacity = '';
-        input.style.cursor = '';
-        input.title = '';
-    }
-
     // ─── Prompt Boxes ────────────────────────────────────────────
     function createPromptBox(promptText) {
         boxIdCounter++;
@@ -389,7 +374,7 @@
             if (clearBox) {
                 var clearInput = clearBox.querySelector('.bg-prompt-source-image-input');
                 clearInput.value = '';
-                unlockPasteInput(clearInput);
+                BulkGenUtils.unlockPasteInput(clearInput);
                 clearBox.querySelector('.bg-source-paste-preview').style.display = 'none';
                 clearBox.querySelector('.bg-source-paste-status').textContent = '';
             }
@@ -403,59 +388,6 @@
                 .forEach(function(b) { b.classList.remove('is-paste-target'); });
             clickedBox.classList.add('is-paste-target');
         }
-    });
-
-    // Global paste handler — uploads image to the active prompt row
-    document.addEventListener('paste', function(e) {
-        var activeBox = promptGrid
-            ? promptGrid.querySelector('.bg-prompt-box.is-paste-target')
-            : null;
-        if (!activeBox) return;
-
-        var items = (e.clipboardData || window.clipboardData).items;
-        var imageItem = null;
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                imageItem = items[i];
-                break;
-            }
-        }
-        if (!imageItem) return;
-        e.preventDefault();
-
-        var urlInput = activeBox.querySelector('.bg-prompt-source-image-input');
-        var preview  = activeBox.querySelector('.bg-source-paste-preview');
-        var thumb    = activeBox.querySelector('.bg-source-paste-thumb');
-        var status   = activeBox.querySelector('.bg-source-paste-status');
-
-        status.textContent = 'Uploading\u2026';
-
-        var blob = imageItem.getAsFile();
-        var ext  = blob.type.split('/')[1] || 'png';
-        var fd   = new FormData();
-        fd.append('file', blob, 'paste.' + ext);
-
-        fetch('/api/bulk-gen/source-image-paste/', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': csrf },
-            body: fd,
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) {
-                urlInput.value = data.cdn_url;
-                lockPasteInput(urlInput);
-                thumb.src = data.cdn_url;
-                preview.style.display = 'flex';
-                status.textContent = '';
-                activeBox.classList.remove('is-paste-target');
-            } else {
-                status.textContent = data.error || 'Upload failed.';
-            }
-        })
-        .catch(function() {
-            status.textContent = 'Upload failed. Check your connection.';
-        });
     });
 
     promptGrid.addEventListener('input', function (e) {
@@ -1228,11 +1160,15 @@
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
                     if (box) {
-                        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        var reducedMotion = window.matchMedia(
+                            '(prefers-reduced-motion: reduce)'
+                        ).matches;
+                        var scrollBehavior = reducedMotion ? 'auto' : 'smooth';
+                        box.scrollIntoView({ behavior: scrollBehavior, block: 'center' });
                         // Nudge up 120px to clear the sticky bottom bar
                         setTimeout(function() {
-                            window.scrollBy({ top: -120, behavior: 'smooth' });
-                        }, 350);
+                            window.scrollBy({ top: -120, behavior: scrollBehavior });
+                        }, reducedMotion ? 0 : 350);
                         var ta = box.querySelector('.bg-box-textarea');
                         if (ta) ta.focus();
                     }
@@ -1567,7 +1503,7 @@
                             };
                             preview.style.display = 'flex';
                             if (isPasteUrl) {
-                                lockPasteInput(si);
+                                BulkGenUtils.lockPasteInput(si);
                             }
                         }
                     }
@@ -1600,6 +1536,11 @@
     var charDescCountSpan = document.getElementById('charDescCount');
     if (charDescCountSpan) {
         charDescCountSpan.textContent = settingCharDesc.value.length;
+    }
+
+    // ─── Initialise Paste Module ──────────────────────────────────
+    if (window.BulkGenPaste) {
+        BulkGenPaste.init(promptGrid, csrf);
     }
 
 })();

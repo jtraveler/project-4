@@ -12,7 +12,7 @@
 
     window.BulkGenUtils = window.BulkGenUtils || {};
 
-    var IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif|avif)/i;
+    var IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif|avif)(?:[?#&]|$)/i;
 
     /**
      * Return true if url contains a recognised image extension in either
@@ -60,6 +60,32 @@
      */
     BulkGenUtils.isValidSourceImageUrl = function (url) {
         return url.startsWith('https://') && _hasImageExtension(url);
+    };
+
+    /**
+     * Lock a paste-populated source image URL input as read-only.
+     * Call after a successful paste upload to prevent accidental overwrites.
+     *
+     * @param {HTMLInputElement} input - The source image URL input element
+     */
+    BulkGenUtils.lockPasteInput = function(input) {
+        input.setAttribute('readonly', 'readonly');
+        input.style.opacity = '0.6';
+        input.style.cursor = 'not-allowed';
+        input.title = 'Populated by pasted image \u2014 clear preview to edit';
+    };
+
+    /**
+     * Unlock a paste-populated source image URL input.
+     * Call when the paste preview is cleared.
+     *
+     * @param {HTMLInputElement} input - The source image URL input element
+     */
+    BulkGenUtils.unlockPasteInput = function(input) {
+        input.removeAttribute('readonly');
+        input.style.opacity = '';
+        input.style.cursor = '';
+        input.title = '';
     };
 
     /**

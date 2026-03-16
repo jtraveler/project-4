@@ -1,28 +1,39 @@
 VIEWS PACKAGE STRUCTURE
 ═══════════════════════════════════════════════════════════════════
 
-Original: prompts/views.py (3,929 lines, 147KB)
+Original: prompts/views.py (3,929 lines, December 2025)
                     ↓
-         Split into 11 modules
+    Split into 11 modules (December 2025)
                     ↓
+    API split: 4 domain modules (Session 128, March 2026)
+                    ↓
+    Prompt views split: 4 domain modules (Session 134, March 2026)
+                    ↓
+         Current: 22 modules
 
 prompts/views/
 │
-├── __init__.py (163 lines)
-│   └── Re-exports all 47 views for backward compatibility
+├── __init__.py (259 lines)
+│   └── Re-exports all views for backward compatibility
 │
-├── CORE VIEWS
-│   ├── redirect_views.py (119 lines, 2 functions)
-│   │   ├── calculate_similarity_score()
-│   │   └── find_best_redirect_match()
+├── SHIMS (re-export only — no logic)
+│   ├── prompt_views.py (51 lines) — shim for 4 prompt domain modules
+│   └── api_views.py (62 lines) — shim for 4 API domain modules
+│
+├── PROMPT DOMAIN MODULES (Session 134 split)
+│   ├── prompt_list_views.py (620 lines, 3 functions)
+│   │   ├── PromptList (ListView class)
+│   │   ├── prompt_detail()
+│   │   └── related_prompts_ajax()
 │   │
-│   └── prompt_views.py (1,711 lines, 12 functions) ⭐ LARGEST
-│       ├── PromptList (ListView class)
-│       ├── prompt_detail()
-│       ├── comment_edit()
-│       ├── comment_delete()
-│       ├── prompt_edit()
-│       ├── prompt_create()
+│   ├── prompt_edit_views.py (323 lines, 1 function)
+│   │   └── prompt_edit()
+│   │
+│   ├── prompt_comment_views.py (139 lines, 2 functions)
+│   │   ├── comment_edit()
+│   │   └── comment_delete()
+│   │
+│   └── prompt_trash_views.py (396 lines, 6 functions)
 │       ├── prompt_delete()
 │       ├── trash_bin()
 │       ├── prompt_restore()
@@ -30,8 +41,34 @@ prompts/views/
 │       ├── prompt_permanent_delete()
 │       └── empty_trash()
 │
+├── API DOMAIN MODULES (Session 128 split)
+│   ├── ai_api_views.py (298 lines, 3 functions)
+│   │   ├── ai_suggestions()
+│   │   ├── ai_job_status()
+│   │   └── prompt_processing_status()
+│   │
+│   ├── moderation_api_views.py (340 lines, 4 functions)
+│   │   ├── nsfw_queue_task()
+│   │   ├── nsfw_check_status()
+│   │   ├── b2_moderate_upload()
+│   │   └── b2_delete_upload()
+│   │
+│   ├── social_api_views.py (111 lines, 2 functions)
+│   │   ├── collaborate_request()
+│   │   └── prompt_like()
+│   │
+│   └── upload_api_views.py (812 lines, 8 functions)
+│       ├── b2_upload_api()
+│       ├── b2_generate_variants()
+│       ├── b2_variants_status()
+│       ├── b2_upload_status()
+│       ├── b2_presign_upload()
+│       ├── b2_upload_complete()
+│       ├── _generate_image_thumbnail()
+│       └── source_image_paste_upload()
+│
 ├── UPLOAD FLOW
-│   └── upload_views.py (514 lines, 5 functions)
+│   └── upload_views.py (751 lines, 5 functions)
 │       ├── upload_step1()
 │       ├── upload_step2()
 │       ├── upload_submit()
@@ -39,46 +76,49 @@ prompts/views/
 │       └── extend_upload_time()
 │
 ├── USER MANAGEMENT
-│   └── user_views.py (521 lines, 4 functions)
+│   └── user_views.py (630 lines, 4 functions)
 │       ├── user_profile()
 │       ├── edit_profile()
 │       ├── email_preferences()
 │       └── report_prompt()
 │
 ├── SOCIAL FEATURES
-│   └── social_views.py (209 lines, 3 functions)
+│   └── social_views.py (216 lines, 3 functions)
 │       ├── follow_user()
 │       ├── unfollow_user()
 │       └── get_follow_status()
 │
-├── API/AJAX ENDPOINTS
-│   └── api_views.py (280 lines, 6 functions)
-│       ├── collaborate_request()
-│       ├── prompt_like()
-│       ├── prompt_move_up()
-│       ├── prompt_move_down()
-│       ├── prompt_set_order()
-│       └── bulk_reorder_prompts()
+├── COLLECTIONS
+│   └── collection_views.py (792 lines, multiple functions)
+│       └── Collection CRUD + API endpoints
+│
+├── NOTIFICATIONS
+│   └── notification_views.py (185 lines, multiple functions)
+│       └── Notification page + API endpoints
+│
+├── BULK GENERATOR
+│   └── bulk_generator_views.py (754 lines, 8+ functions)
+│       └── Bulk AI image generator page + 8 API endpoints
 │
 ├── ADMIN TOOLS
-│   └── admin_views.py (251 lines, 6 functions)
-│       ├── media_issues_dashboard()
-│       ├── fix_all_media_issues()
-│       ├── debug_no_media()
-│       ├── bulk_delete_no_media()
-│       ├── bulk_set_draft_no_media()
-│       └── bulk_set_published_no_media()
+│   └── admin_views.py (577 lines, multiple functions)
+│       └── Admin utility views, ordering, bulk actions
 │
 ├── CONTENT PAGES
-│   ├── generator_views.py (225 lines, 2 functions)
+│   ├── generator_views.py (238 lines, 2 functions)
 │   │   ├── inspiration_index()
 │   │   └── ai_generator_category()
 │   │
-│   └── leaderboard_views.py (68 lines, 1 function) ⭐ SMALLEST
+│   └── leaderboard_views.py (64 lines, 1 function)
 │       └── leaderboard()
 │
+├── REDIRECTS
+│   └── redirect_views.py (119 lines, 2 functions)
+│       ├── calculate_similarity_score()
+│       └── find_best_redirect_match()
+│
 └── UTILITIES
-    └── utility_views.py (447 lines, 6 functions)
+    └── utility_views.py (448 lines, 6 functions)
         ├── get_client_ip()
         ├── _disable_all_notifications()
         ├── ratelimited()
@@ -90,24 +130,35 @@ prompts/views/
 STATISTICS
 ═══════════════════════════════════════════════════════════════════
 
-Total Modules:      11
-Total Functions:    47
-Total Lines:        4,508
-Largest Module:     prompt_views.py (1,711 lines)
-Smallest Module:    leaderboard_views.py (68 lines)
-Import Overhead:    +579 lines (+17KB)
+Total Modules:      22 (including 2 shims)
+Total Lines:        8,185
+Largest Module:     upload_api_views.py (812 lines)
+Smallest Module:    prompt_views.py shim (51 lines)
 
 ═══════════════════════════════════════════════════════════════════
 BACKWARD COMPATIBILITY
 ═══════════════════════════════════════════════════════════════════
 
-✅ All existing imports still work:
+Two shim files preserve backward compatibility:
 
-    from prompts.views import PromptList
-    from prompts.views import prompt_detail
-    from prompts.views import upload_step1, upload_step2
-    # ... etc
+  prompt_views.py (51 lines)
+    Re-exports from: prompt_list_views, prompt_edit_views,
+                     prompt_comment_views, prompt_trash_views
 
-The __init__.py file re-exports everything from the submodules.
+  api_views.py (62 lines)
+    Re-exports from: ai_api_views, moderation_api_views,
+                     social_api_views, upload_api_views
 
+All existing imports through __init__.py still work.
+
+═══════════════════════════════════════════════════════════════════
+HISTORY
+═══════════════════════════════════════════════════════════════════
+
+December 2025:   Original 11-module split from monolithic views.py
+Session 128:     api_views.py split into 4 domain modules + shim
+Session 134:     prompt_views.py split into 4 domain modules + shim
+Session 135:     prompt_create() removed from prompt_edit_views.py
+
+Last updated: Session 136 (March 16, 2026)
 ═══════════════════════════════════════════════════════════════════

@@ -2,183 +2,91 @@
 
 This directory contains the modular views structure for the prompts application.
 
-## Migration from Monolithic views.py
+## Migration History
 
-**Date**: December 13, 2025
-**Original File**: `prompts/views.py` (3,929 lines)
-**Backup**: `prompts/views.py.backup`
+| When | What |
+|------|------|
+| December 2025 | Original 11-module split from monolithic `views.py` (3,929 lines) |
+| Session 128 (March 2026) | `api_views.py` split into 4 domain modules + compatibility shim |
+| Session 134 (March 2026) | `prompt_views.py` split into 4 domain modules + compatibility shim |
+| Session 135 (March 2026) | `prompt_create()` removed from `prompt_edit_views.py` |
 
-The monolithic `views.py` file has been split into 11 focused modules for better organization and maintainability.
-
-## Package Structure
+## Package Structure (22 modules)
 
 ```
 prompts/views/
-├── __init__.py                 # Re-exports all views for backward compatibility
-├── redirect_views.py           # SEO redirect utilities (119 lines)
-├── prompt_views.py             # Prompt CRUD operations (1,711 lines)
-├── upload_views.py             # Upload flow (514 lines)
-├── user_views.py               # User profiles & settings (521 lines)
-├── social_views.py             # Follow/unfollow social features (209 lines)
-├── api_views.py                # AJAX/API endpoints (280 lines)
-├── admin_views.py              # Admin utility views (251 lines)
-├── generator_views.py          # AI generator category pages (225 lines)
-├── leaderboard_views.py        # Leaderboard views (68 lines)
-├── utility_views.py            # Utility functions (447 lines)
-└── README.md                   # This file
+├── __init__.py                  # Re-exports all views (259 lines)
+├── STRUCTURE.txt                # ASCII tree diagram
+├── README.md                    # This file
+│
+├── SHIMS (re-export only)
+│   ├── prompt_views.py          # → prompt_list/edit/comment/trash (51 lines)
+│   └── api_views.py             # → ai_api/moderation_api/social_api/upload_api (62 lines)
+│
+├── PROMPT DOMAIN MODULES
+│   ├── prompt_list_views.py     # PromptList, prompt_detail, related_prompts_ajax (620 lines)
+│   ├── prompt_edit_views.py     # prompt_edit (323 lines)
+│   ├── prompt_comment_views.py  # comment_edit, comment_delete (139 lines)
+│   └── prompt_trash_views.py    # prompt_delete, trash_bin, restore, publish, perm_delete, empty (396 lines)
+│
+├── API DOMAIN MODULES
+│   ├── ai_api_views.py          # ai_suggestions, ai_job_status, prompt_processing_status (298 lines)
+│   ├── moderation_api_views.py  # nsfw_queue_task, nsfw_check_status, b2_moderate, b2_delete (340 lines)
+│   ├── social_api_views.py      # collaborate_request, prompt_like (111 lines)
+│   └── upload_api_views.py      # b2_upload, variants, presign, paste_upload (812 lines)
+│
+├── UPLOAD & MEDIA
+│   ├── upload_views.py          # Upload flow: step1, step2, submit, cancel, extend (751 lines)
+│   └── collection_views.py      # Collection CRUD + API endpoints (792 lines)
+│
+├── USER & SOCIAL
+│   ├── user_views.py            # user_profile, edit_profile, email_preferences, report (630 lines)
+│   ├── social_views.py          # follow, unfollow, get_follow_status (216 lines)
+│   └── notification_views.py    # Notification page + API endpoints (185 lines)
+│
+├── TOOLS & ADMIN
+│   ├── bulk_generator_views.py  # Bulk AI image generator + 8 API endpoints (754 lines)
+│   └── admin_views.py           # Admin utilities, ordering, bulk actions (577 lines)
+│
+├── CONTENT PAGES
+│   ├── generator_views.py       # inspiration_index, ai_generator_category (238 lines)
+│   └── leaderboard_views.py     # leaderboard (64 lines)
+│
+├── REDIRECTS
+│   └── redirect_views.py        # SEO redirect utilities (119 lines)
+│
+└── UTILITIES
+    └── utility_views.py         # get_client_ip, ratelimited, unsubscribe (448 lines)
 ```
 
-**Total Lines**: 4,508 (includes module-specific imports)
+**Total: 22 modules, 8,185 lines**
 
-## Module Breakdown
+## Shim Architecture
 
-### redirect_views.py (2 functions)
-**Purpose**: SEO utilities for handling deleted prompts
-- `calculate_similarity_score()` - Calculate similarity between prompts
-- `find_best_redirect_match()` - Find best redirect for deleted prompts
+Two files exist solely for backward compatibility. They re-export views from domain
+modules so that `urls.py` and `__init__.py` imports continue to work:
 
-### prompt_views.py (12 functions/classes)
-**Purpose**: Core prompt CRUD operations and listing
-- `PromptList` - Homepage listing with filtering
-- `prompt_detail()` - Display single prompt
-- `comment_edit()` - Edit comment
-- `comment_delete()` - Delete comment
-- `prompt_edit()` - Edit prompt
-- `prompt_create()` - Create new prompt
-- `prompt_delete()` - Soft delete prompt
-- `trash_bin()` - View deleted prompts
-- `prompt_restore()` - Restore from trash
-- `prompt_publish()` - Publish draft prompt
-- `prompt_permanent_delete()` - Hard delete prompt
-- `empty_trash()` - Empty entire trash bin
+### prompt_views.py (51 lines — shim)
+Re-exports from: `prompt_list_views`, `prompt_edit_views`, `prompt_comment_views`, `prompt_trash_views`
 
-### upload_views.py (5 functions)
-**Purpose**: Two-step upload flow
-- `upload_step1()` - Initial file upload
-- `upload_step2()` - Prompt details form
-- `upload_submit()` - Process submission
-- `cancel_upload()` - Cancel upload session
-- `extend_upload_time()` - Extend upload session
-
-### user_views.py (4 functions)
-**Purpose**: User profiles and settings
-- `user_profile()` - Display user profile
-- `edit_profile()` - Edit profile settings
-- `email_preferences()` - Manage email notifications
-- `report_prompt()` - Report inappropriate content
-
-### social_views.py (3 functions)
-**Purpose**: Social interactions
-- `follow_user()` - Follow a user
-- `unfollow_user()` - Unfollow a user
-- `get_follow_status()` - Check follow status (AJAX)
-
-### api_views.py (6 functions)
-**Purpose**: AJAX/API endpoints
-- `collaborate_request()` - Collaboration requests
-- `prompt_like()` - Like/unlike prompt
-- `prompt_move_up()` - Move prompt up in order
-- `prompt_move_down()` - Move prompt down in order
-- `prompt_set_order()` - Set prompt order
-- `bulk_reorder_prompts()` - Bulk reorder (admin)
-
-### admin_views.py (6 functions)
-**Purpose**: Admin utility views
-- `media_issues_dashboard()` - View media issues
-- `fix_all_media_issues()` - Fix all issues
-- `debug_no_media()` - Debug missing media
-- `bulk_delete_no_media()` - Bulk delete prompts
-- `bulk_set_draft_no_media()` - Bulk set as draft
-- `bulk_set_published_no_media()` - Bulk publish
-
-### generator_views.py (2 functions)
-**Purpose**: AI generator category pages
-- `inspiration_index()` - Browse inspiration
-- `ai_generator_category()` - Generator-specific pages
-
-### leaderboard_views.py (1 function)
-**Purpose**: Community leaderboard
-- `leaderboard()` - Display leaderboard rankings
-
-### utility_views.py (6 functions)
-**Purpose**: Utility and helper functions
-- `get_client_ip()` - Extract client IP address
-- `_disable_all_notifications()` - Disable all email notifications
-- `ratelimited()` - Rate limit error handler
-- `_test_rate_limit_trigger()` - Test rate limiting
-- `unsubscribe_custom()` - Custom unsubscribe handler
-- `unsubscribe_package()` - Package unsubscribe handler
+### api_views.py (62 lines — shim)
+Re-exports from: `ai_api_views`, `moderation_api_views`, `social_api_views`, `upload_api_views`
 
 ## Backward Compatibility
 
-The `__init__.py` file re-exports all 47 views, ensuring complete backward compatibility:
+The `__init__.py` file re-exports all views, ensuring complete backward compatibility:
 
 ```python
 from prompts.views import PromptList, prompt_detail, upload_step1, ...
 ```
 
-All existing imports will continue to work without modification.
-
-## Import Structure
-
-Each module has its own minimal imports. Common imports across all modules:
-
-```python
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from django.http import JsonResponse, HttpResponseRedirect, Http404
-from django.urls import reverse
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from prompts.models import Prompt, Comment, UserProfile
-```
-
-Module-specific imports are added as needed.
+All existing imports continue to work without modification.
 
 ## Testing
 
-After splitting, verify all tests pass:
-
 ```bash
-python manage.py test prompts
+python manage.py test
+# Expected: 1193+ tests, 0 failures
 ```
 
-Expected: All 70+ tests should pass without modification.
-
-## Benefits of Modular Structure
-
-1. **Maintainability**: Easier to locate and modify specific views
-2. **Code Organization**: Logical grouping by functionality
-3. **Readability**: Smaller files are easier to navigate
-4. **Team Collaboration**: Reduced merge conflicts
-5. **Performance**: Potential for selective imports
-6. **Testing**: Easier to write focused unit tests
-
-## Migration Checklist
-
-- [x] Backup original views.py
-- [x] Create views/ package directory
-- [x] Split functions into 11 modules
-- [x] Create __init__.py with re-exports
-- [x] Verify Python syntax (all files valid)
-- [ ] Run full test suite
-- [ ] Verify all URLs still work
-- [ ] Check for import errors in production
-- [ ] Update documentation references
-- [ ] Remove views.py.backup after verification
-
-## Rollback Plan
-
-If issues occur, restore the original:
-
-```bash
-mv prompts/views.py.backup prompts/views.py
-rm -rf prompts/views/
-```
-
-## Future Improvements
-
-- Add docstrings to module-level __init__.py
-- Consider further splitting prompt_views.py (largest module)
-- Add type hints for better IDE support
-- Create views/tests/ subdirectory for module-specific tests
+Last updated: Session 136 (March 16, 2026)

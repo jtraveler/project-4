@@ -87,7 +87,9 @@ python manage.py test
 
 ## Section 10 — Commits
 
-*(To be filled after commit)*
+| Hash | Message |
+|------|---------|
+| 75dcab8 | fix(a11y): prefers-reduced-motion scroll, IMAGE_EXT_RE anchor, accessibility review |
 
 ## Section 11 — What to Work on Next
 

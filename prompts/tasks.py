@@ -2898,6 +2898,21 @@ def process_bulk_generation_job(job_id: str) -> None:
         BulkGenerationService.clear_api_key(job)
 
 
+def _get_b2_client():
+    """
+    Return a configured boto3 S3 client for Backblaze B2.
+    Centralises credential and endpoint configuration.
+    """
+    import boto3
+    from django.conf import settings
+    return boto3.client(
+        's3',
+        endpoint_url=settings.B2_ENDPOINT_URL,
+        aws_access_key_id=settings.B2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
+    )
+
+
 def _upload_generated_image_to_b2(image_data, job, image):
     """
     Upload generated image bytes directly to B2 via boto3.
@@ -2922,7 +2937,6 @@ def _upload_generated_image_to_b2(image_data, job, image):
         job.id, image.id, type(image_data).__name__,
     )
 
-    import boto3
     import base64
     from django.conf import settings
 
@@ -2930,12 +2944,7 @@ def _upload_generated_image_to_b2(image_data, job, image):
     # Keeps bulk-generated images separate from user uploads
     b2_key = f'bulk-gen/{job.id}/{image.id}.jpg'
 
-    s3_client = boto3.client(
-        's3',
-        endpoint_url=settings.B2_ENDPOINT_URL,
-        aws_access_key_id=settings.B2_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
-    )
+    s3_client = _get_b2_client()
 
     # B2 ignores the ACL parameter entirely — bucket-level permissions
     # control public access. Do NOT add ACL='public-read' here.
@@ -2971,17 +2980,11 @@ def _upload_source_image_to_b2(image_bytes: bytes, job, image) -> str:
     Raises:
         Exception if upload fails.
     """
-    import boto3
     from django.conf import settings
 
     b2_key = f'bulk-gen/{job.id}/source/{image.id}.jpg'
 
-    s3_client = boto3.client(
-        's3',
-        endpoint_url=settings.B2_ENDPOINT_URL,
-        aws_access_key_id=settings.B2_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
-    )
+    s3_client = _get_b2_client()
 
     s3_client.put_object(
         Bucket=settings.B2_BUCKET_NAME,
@@ -2991,6 +2994,22 @@ def _upload_source_image_to_b2(image_bytes: bytes, job, image) -> str:
     )
 
     return f'https://{settings.B2_CUSTOM_DOMAIN}/{b2_key}'
+
+
+def _is_private_ip_host(hostname: str) -> bool:
+    """
+    Return True if the hostname resolves to a private/loopback/link-local IP.
+    Used to prevent SSRF in source image downloads.
+    """
+    import socket
+    import ipaddress
+    try:
+        ip_str = socket.gethostbyname(hostname)
+        ip = ipaddress.ip_address(ip_str)
+        return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+    except Exception:
+        # If resolution fails, reject the host
+        return True
 
 
 def _download_source_image(url: str) -> 'Optional[bytes]':
@@ -3008,7 +3027,28 @@ def _download_source_image(url: str) -> 'Optional[bytes]':
         if parsed.scheme != 'https' or not parsed.netloc:
             logger.warning("[SRC-6] Rejected non-HTTPS source image URL: %s", url[:100])
             return None
-        with requests.get(url, timeout=30, stream=True) as response:
+        # SSRF: Reject hosts that resolve to private IPs
+        if _is_private_ip_host(parsed.hostname or ''):
+            logger.warning("[SRC-6] Rejected private/reserved host: %s", parsed.hostname)
+            return None
+        # allow_redirects=False to prevent SSRF via redirect chains
+        with requests.get(url, timeout=30, stream=True,
+                          allow_redirects=False) as response:
+            # Handle redirects manually with re-validation
+            if response.status_code in (301, 302, 303, 307, 308):
+                redirect_url = response.headers.get('Location', '')
+                if not redirect_url.startswith('https://'):
+                    logger.warning("[SRC-6] Rejected non-HTTPS redirect: %s", redirect_url[:100])
+                    return None
+                try:
+                    redir_parsed = urlparse(redirect_url)
+                    if _is_private_ip_host(redir_parsed.hostname or ''):
+                        logger.warning("[SRC-6] Rejected redirect to private host: %s", redir_parsed.hostname)
+                        return None
+                except Exception:
+                    return None
+                logger.warning("[SRC-6] Redirect detected, not following: %s", url[:100])
+                return None  # Decline all redirects for simplicity
             response.raise_for_status()
             content_type = response.headers.get('content-type', '')
             if not content_type.startswith('image/'):

@@ -146,6 +146,18 @@
                     'aria-label="Source image URL for prompt ' + boxIdCounter + '" ' +
                     'maxlength="2000" ' +
                     'autocomplete="off">' +
+                '<span class="bg-source-paste-hint">' +
+                    'Click this prompt then press Ctrl+V / Cmd+V to paste an image' +
+                '</span>' +
+                '<div class="bg-source-paste-preview">' +
+                    '<img class="bg-source-paste-thumb" src="" ' +
+                         'alt="Pasted source image preview">' +
+                    '<button type="button" class="bg-source-paste-clear" ' +
+                            'aria-label="Remove pasted source image">\u00d7</button>' +
+                '</div>' +
+                '<div class="bg-source-paste-status" aria-live="polite" ' +
+                     'style="font-size:0.75rem;color:var(--gray-500);margin-top:0.25rem;">' +
+                '</div>' +
             '</div>' +
             '<div class="bg-box-error" role="alert"></div>' +
             '<div class="bg-box-overrides">' +
@@ -349,6 +361,77 @@
             if (resetBox) resetBoxOverrides(resetBox);
             return;
         }
+
+        // Clear pasted source image
+        if (e.target.classList.contains('bg-source-paste-clear')) {
+            var clearBox = e.target.closest('.bg-prompt-box');
+            if (clearBox) {
+                clearBox.querySelector('.bg-prompt-source-image-input').value = '';
+                clearBox.querySelector('.bg-source-paste-preview').style.display = 'none';
+                clearBox.querySelector('.bg-source-paste-status').textContent = '';
+            }
+            return;
+        }
+
+        // Active paste target — click any prompt box to select it for pasting
+        var clickedBox = e.target.closest('.bg-prompt-box');
+        if (clickedBox) {
+            promptGrid.querySelectorAll('.bg-prompt-box.is-paste-target')
+                .forEach(function(b) { b.classList.remove('is-paste-target'); });
+            clickedBox.classList.add('is-paste-target');
+        }
+    });
+
+    // Global paste handler — uploads image to the active prompt row
+    document.addEventListener('paste', function(e) {
+        var activeBox = promptGrid
+            ? promptGrid.querySelector('.bg-prompt-box.is-paste-target')
+            : null;
+        if (!activeBox) return;
+
+        var items = (e.clipboardData || window.clipboardData).items;
+        var imageItem = null;
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                imageItem = items[i];
+                break;
+            }
+        }
+        if (!imageItem) return;
+        e.preventDefault();
+
+        var urlInput = activeBox.querySelector('.bg-prompt-source-image-input');
+        var preview  = activeBox.querySelector('.bg-source-paste-preview');
+        var thumb    = activeBox.querySelector('.bg-source-paste-thumb');
+        var status   = activeBox.querySelector('.bg-source-paste-status');
+
+        status.textContent = 'Uploading\u2026';
+
+        var blob = imageItem.getAsFile();
+        var ext  = blob.type.split('/')[1] || 'png';
+        var fd   = new FormData();
+        fd.append('file', blob, 'paste.' + ext);
+
+        fetch('/api/bulk-gen/source-image-paste/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf },
+            body: fd,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                urlInput.value = data.cdn_url;
+                thumb.src = data.cdn_url;
+                preview.style.display = 'flex';
+                status.textContent = '';
+                activeBox.classList.remove('is-paste-target');
+            } else {
+                status.textContent = data.error || 'Upload failed.';
+            }
+        })
+        .catch(function() {
+            status.textContent = 'Upload failed. Check your connection.';
+        });
     });
 
     promptGrid.addEventListener('input', function (e) {
@@ -361,6 +444,35 @@
         if (e.target.classList.contains('bg-box-source-input') ||
             e.target.classList.contains('bg-prompt-source-image-input')) {
             scheduleSave();
+        }
+    });
+
+    // Source image URL blur validation — inline feedback before generation
+    promptGrid.addEventListener('focusout', function (e) {
+        if (!e.target.classList.contains('bg-prompt-source-image-input')) return;
+        var val = e.target.value.trim();
+        var box = e.target.closest('.bg-prompt-box');
+        var errDiv = box ? box.querySelector('.bg-box-error') : null;
+        if (errDiv) {
+            if (val && !BulkGenUtils.isValidSourceImageUrl(val)) {
+                errDiv.textContent = 'Please use a direct image URL ending in ' +
+                    '.jpg, .png, .webp, .gif, or .avif \u2014 or paste an image instead.';
+                errDiv.style.display = 'block';
+            } else {
+                errDiv.textContent = '';
+                errDiv.style.display = 'none';
+            }
+        }
+    });
+
+    // Clear source image URL error on focus
+    promptGrid.addEventListener('focusin', function (e) {
+        if (!e.target.classList.contains('bg-prompt-source-image-input')) return;
+        var box = e.target.closest('.bg-prompt-box');
+        var errDiv = box ? box.querySelector('.bg-box-error') : null;
+        if (errDiv) {
+            errDiv.textContent = '';
+            errDiv.style.display = 'none';
         }
     });
 
@@ -1067,7 +1179,10 @@
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             box.classList.remove('has-error');
             var err = box.querySelector('.bg-box-error');
-            if (err) err.textContent = '';
+            if (err) {
+                err.textContent = '';
+                err.style.display = '';
+            }
         });
     }
 

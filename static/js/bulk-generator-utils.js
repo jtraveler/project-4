@@ -35,6 +35,17 @@
     };
 
     /**
+     * Check whether a single URL ends in a recognised image extension.
+     * Used for inline blur validation on individual source image URL fields.
+     *
+     * @param {string} url - The URL to validate
+     * @returns {boolean} True if the URL ends in a valid image extension
+     */
+    BulkGenUtils.isValidSourceImageUrl = function (url) {
+        return IMAGE_URL_EXTENSIONS.test(url);
+    };
+
+    /**
      * Create a debounced version of a function.
      * The returned function delays invoking fn until after delay ms
      * have elapsed since the last time the debounced function was called.

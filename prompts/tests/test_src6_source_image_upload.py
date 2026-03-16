@@ -139,3 +139,96 @@ class SourceImageUploadTests(TestCase):
 
         self.assertTrue(success)
         mock_download_src.assert_not_called()
+
+
+class SSRFHardeningTests(TestCase):
+    """Test SSRF hardening in _download_source_image and _is_private_ip_host."""
+
+    @patch('socket.gethostbyname', return_value='192.168.1.1')
+    def test_private_ip_host_rejected(self, mock_dns):
+        """Private IP addresses are rejected by _is_private_ip_host."""
+        from prompts.tasks import _is_private_ip_host
+        self.assertTrue(_is_private_ip_host('evil.example.com'))
+        mock_dns.assert_called_once_with('evil.example.com')
+
+    @patch('socket.gethostbyname', return_value='127.0.0.1')
+    def test_loopback_host_rejected(self, mock_dns):
+        """Loopback addresses are rejected by _is_private_ip_host."""
+        from prompts.tasks import _is_private_ip_host
+        self.assertTrue(_is_private_ip_host('localhost'))
+
+    @patch('prompts.tasks._is_private_ip_host', return_value=False)
+    @patch('prompts.tasks.requests.get')
+    def test_redirect_response_rejected(self, mock_get, mock_ip_check):
+        """HTTP redirects cause _download_source_image to return None."""
+        from prompts.tasks import _download_source_image
+        mock_response = MagicMock()
+        mock_response.status_code = 302
+        mock_response.headers = {'Location': 'https://evil.com/image.jpg'}
+        mock_response.__enter__ = lambda s: s
+        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_get.return_value = mock_response
+
+        result = _download_source_image('https://example.com/image.jpg')
+        self.assertIsNone(result)
+
+    @patch('socket.gethostbyname', side_effect=OSError('lookup failed'))
+    def test_dns_resolution_failure_rejects_host(self, mock_dns):
+        """DNS resolution failure triggers fail-closed rejection."""
+        from prompts.tasks import _is_private_ip_host
+        self.assertTrue(_is_private_ip_host('unresolvable.internal'))
+
+    @patch('socket.gethostbyname', return_value='93.184.216.34')
+    def test_public_ip_host_accepted(self, mock_dns):
+        """Public IP addresses are accepted by _is_private_ip_host."""
+        from prompts.tasks import _is_private_ip_host
+        self.assertFalse(_is_private_ip_host('example.com'))
+
+    @patch('socket.gethostbyname', return_value='169.254.169.254')
+    def test_link_local_metadata_endpoint_rejected(self, mock_dns):
+        """AWS/GCP metadata endpoint (169.254.169.254) is rejected."""
+        from prompts.tasks import _is_private_ip_host
+        self.assertTrue(_is_private_ip_host('metadata.google.internal'))
+
+
+class DownloadSourceImageDirectTests(TestCase):
+    """Direct unit tests for _download_source_image in isolation."""
+
+    def test_non_https_url_rejected(self):
+        """_download_source_image rejects http:// URLs."""
+        from prompts.tasks import _download_source_image
+        result = _download_source_image('http://example.com/image.jpg')
+        self.assertIsNone(result)
+
+    @patch('prompts.tasks._is_private_ip_host', return_value=False)
+    @patch('prompts.tasks.requests.get')
+    def test_content_type_rejection(self, mock_get, mock_ip_check):
+        """_download_source_image rejects non-image content-type."""
+        from prompts.tasks import _download_source_image
+        mock_response = MagicMock()
+        mock_response.__enter__ = lambda s: s
+        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_response.status_code = 200
+        mock_response.headers = {'content-type': 'text/html'}
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        result = _download_source_image('https://example.com/not-an-image')
+        self.assertIsNone(result)
+
+    @patch('prompts.tasks._is_private_ip_host', return_value=False)
+    @patch('prompts.tasks.requests.get')
+    def test_size_limit_enforced(self, mock_get, mock_ip_check):
+        """_download_source_image rejects images over MAX_IMAGE_SIZE."""
+        from prompts.tasks import _download_source_image, MAX_IMAGE_SIZE
+        mock_response = MagicMock()
+        mock_response.__enter__ = lambda s: s
+        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_response.status_code = 200
+        mock_response.headers = {'content-type': 'image/jpeg'}
+        mock_response.raise_for_status = MagicMock()
+        # Return chunks that exceed the size limit
+        big_chunk = b'\x00' * (MAX_IMAGE_SIZE + 1)
+        mock_response.iter_content = MagicMock(return_value=[big_chunk])
+        mock_get.return_value = mock_response
+        result = _download_source_image('https://example.com/huge.jpg')
+        self.assertIsNone(result)

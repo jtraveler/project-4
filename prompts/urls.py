@@ -95,6 +95,11 @@ urlpatterns = [
     path('api/upload/b2/moderate/', views.b2_moderate_upload, name='b2_moderate_upload'),
     path('api/upload/b2/delete/', views.b2_delete_upload, name='b2_delete_upload'),
 
+    # Bulk Gen Source Image Paste Upload (Session 133)
+    path('api/bulk-gen/source-image-paste/',
+         upload_api_views.source_image_paste_upload,
+         name='source_image_paste_upload'),
+
     # AI Suggestions API (Step 2 Deferred - L8-STEP2-PERF)
     path('api/upload/ai-suggestions/', views.ai_suggestions, name='ai_suggestions'),
 

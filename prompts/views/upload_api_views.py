@@ -739,3 +739,74 @@ def b2_upload_complete(request):
         response_data['ai_job_id'] = request.session.get('ai_job_id')
 
     return JsonResponse(response_data)
+
+
+@login_required
+@require_POST
+def source_image_paste_upload(request):
+    """
+    POST /api/bulk-gen/source-image-paste/
+    Staff-only. Accepts a pasted image (PNG/JPEG/WebP/GIF) from the
+    bulk generator active row paste feature. Uploads to B2 at
+    bulk-gen/source-paste/{user_id}/{uuid}.{ext}.
+    Returns JSON with cdn_url or error.
+    """
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'Staff only.'}, status=403)
+
+    if 'file' not in request.FILES:
+        return JsonResponse({'success': False, 'error': 'No file provided.'}, status=400)
+
+    pasted_file = request.FILES['file']
+
+    allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if pasted_file.content_type not in allowed_types:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid image type. Allowed: JPEG, PNG, WebP, GIF.'
+        }, status=400)
+
+    max_size = 5 * 1024 * 1024  # 5MB
+    if pasted_file.size > max_size:
+        return JsonResponse({
+            'success': False,
+            'error': 'Image too large. Maximum 5MB.'
+        }, status=400)
+
+    try:
+        import boto3
+        from django.conf import settings
+
+        image_bytes = pasted_file.read()
+        file_ext = 'jpg' if pasted_file.content_type == 'image/jpeg' \
+            else pasted_file.content_type.split('/')[-1]
+        b2_key = f'bulk-gen/source-paste/{request.user.id}/{uuid.uuid4().hex}.{file_ext}'
+
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=settings.B2_ENDPOINT_URL,
+            aws_access_key_id=settings.B2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
+        )
+        s3_client.put_object(
+            Bucket=settings.B2_BUCKET_NAME,
+            Key=b2_key,
+            Body=image_bytes,
+            ContentType=pasted_file.content_type,
+        )
+        cdn_url = f'https://{settings.B2_CUSTOM_DOMAIN}/{b2_key}'
+        logger.info(
+            "[PASTE-UPLOAD] Staff user %s uploaded source image: %s",
+            request.user.id, b2_key,
+        )
+        return JsonResponse({'success': True, 'cdn_url': cdn_url})
+
+    except Exception as exc:
+        logger.error(
+            "[PASTE-UPLOAD] Upload failed for user %s: %s",
+            request.user.id, exc,
+        )
+        return JsonResponse(
+            {'success': False, 'error': 'Upload failed. Please try again.'},
+            status=500,
+        )

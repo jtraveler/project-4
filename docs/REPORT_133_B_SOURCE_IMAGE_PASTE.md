@@ -148,7 +148,7 @@ Click outside the prompt grid to deselect.
 
 ## Section 10 — Commits
 
-*(Commit hash to be filled after git commit)*
+Commit: `aae7b7a`
 
 ---
 

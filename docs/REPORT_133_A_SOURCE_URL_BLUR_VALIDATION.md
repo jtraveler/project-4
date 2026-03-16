@@ -108,7 +108,7 @@ Error message should appear. Clear the field and tab out — error should clear.
 
 ## Section 10 — Commits
 
-*(Commit hash to be filled after git commit)*
+Commit: `aae7b7a`
 
 ---
 

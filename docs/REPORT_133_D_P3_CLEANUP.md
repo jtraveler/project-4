@@ -113,7 +113,7 @@ python manage.py test prompts.tests.test_src6_source_image_upload.DownloadSource
 
 ## Section 10 — Commits
 
-*(Commit hash to be filled after git commit)*
+Commit: `aae7b7a`
 
 ---
 

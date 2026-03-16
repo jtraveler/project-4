@@ -1575,3 +1575,9 @@
 .bg-prompt-box.has-error .bg-box-error-badge {
     display: inline !important;
 }
+
+/* ── Paste lock state (Sessions 133–137) ─────────────────── */
+.bg-paste-locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

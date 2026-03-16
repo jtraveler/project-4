@@ -1174,10 +1174,11 @@
                     }
                 });
                 li.appendChild(link);
-                li.appendChild(document.createTextNode(
-                    ' — source image URL is not a valid image link. ' +
-                    'Please enter a URL ending in .jpg, .png, .webp, .gif, or .avif, or leave the field blank.'
-                ));
+                // Strip "Source image URL for prompt N" prefix since link covers it
+                var suffix = err.message.replace(
+                    'Source image URL for prompt ' + err.promptNum, ''
+                );
+                li.appendChild(document.createTextNode(suffix));
             } else {
                 li.textContent = err.message || err;
             }

@@ -70,8 +70,7 @@
      */
     BulkGenUtils.lockPasteInput = function(input) {
         input.setAttribute('readonly', 'readonly');
-        input.style.opacity = '0.6';
-        input.style.cursor = 'not-allowed';
+        input.classList.add('bg-paste-locked');
         input.title = 'Populated by pasted image \u2014 clear preview to edit';
     };
 
@@ -83,31 +82,8 @@
      */
     BulkGenUtils.unlockPasteInput = function(input) {
         input.removeAttribute('readonly');
-        input.style.opacity = '';
-        input.style.cursor = '';
+        input.classList.remove('bg-paste-locked');
         input.title = '';
-    };
-
-    /**
-     * Create a debounced version of a function.
-     * The returned function delays invoking fn until after delay ms
-     * have elapsed since the last time the debounced function was called.
-     *
-     * @param {Function} fn - The function to debounce
-     * @param {number} delay - Milliseconds to wait before invoking fn
-     * @returns {Function} Debounced function
-     */
-    // BulkGenUtils.debounce is provided as a utility for future use.
-    // Not currently called from bulk-generator.js (all save scheduling
-    // uses the existing inline saveTimer pattern in the IIFE closure).
-    BulkGenUtils.debounce = function (fn, delay) {
-        var timer;
-        return function () {
-            var ctx = this;
-            var args = arguments;
-            clearTimeout(timer);
-            timer = setTimeout(function () { fn.apply(ctx, args); }, delay);
-        };
     };
 
 })();

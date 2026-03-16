@@ -993,9 +993,9 @@ def _download_and_encode_image(url: str) -> Optional[Tuple[str, str]]:
                 media_type = 'image/jpeg'
 
             # Download with size limit
-            content = b''
+            content = bytearray()
             for chunk in response.iter_content(chunk_size=8192):
-                content += chunk
+                content.extend(chunk)
                 if len(content) > MAX_IMAGE_SIZE:
                     logger.warning("[AI Generation] Image exceeded max size during download")
                     return None
@@ -3054,13 +3054,18 @@ def _download_source_image(url: str) -> 'Optional[bytes]':
             if not content_type.startswith('image/'):
                 logger.warning("[SRC-6] Rejected non-image content-type: %s", content_type)
                 return None
-            content = b''
+            # Pre-check Content-Length header if available (parity with _download_and_encode_image)
+            content_length = response.headers.get('content-length')
+            if content_length and int(content_length) > MAX_IMAGE_SIZE:
+                logger.warning("[SRC-6] Source image too large (Content-Length): %s bytes", content_length)
+                return None
+            content = bytearray()
             for chunk in response.iter_content(chunk_size=8192):
-                content += chunk
+                content.extend(chunk)
                 if len(content) > MAX_IMAGE_SIZE:
                     logger.warning("[SRC-6] Source image exceeded size limit")
                     return None
-        return content
+        return bytes(content)
     except Exception as exc:
         logger.warning("[SRC-6] Failed to download source image: %s", exc)
         return None

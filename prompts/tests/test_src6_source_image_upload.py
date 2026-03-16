@@ -232,3 +232,23 @@ class DownloadSourceImageDirectTests(TestCase):
         mock_get.return_value = mock_response
         result = _download_source_image('https://example.com/huge.jpg')
         self.assertIsNone(result)
+
+    @patch('prompts.tasks._is_private_ip_host', return_value=False)
+    @patch('prompts.tasks.requests.get')
+    def test_content_length_precheck_rejects_large_source_image(self, mock_get, mock_ip_check):
+        """_download_source_image rejects when Content-Length header exceeds MAX_IMAGE_SIZE."""
+        from prompts.tasks import _download_source_image, MAX_IMAGE_SIZE
+        mock_response = MagicMock()
+        mock_response.__enter__ = lambda s: s
+        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_response.status_code = 200
+        mock_response.headers = {
+            'content-type': 'image/jpeg',
+            'content-length': str(MAX_IMAGE_SIZE + 1),
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        result = _download_source_image('https://example.com/huge.jpg')
+        self.assertIsNone(result)
+        # Verify iter_content was never called — early rejection
+        mock_response.iter_content.assert_not_called()

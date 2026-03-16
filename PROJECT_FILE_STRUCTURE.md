@@ -3,7 +3,7 @@
 **Last Updated:** March 16, 2026
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA), Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1193 passing, 12 skipped (Session 134)
+**Total Tests:** 1193 passing, 12 skipped (Session 135)
 
 ---
 
@@ -124,7 +124,7 @@ live-working-project/
 │       ├── notification_views.py # Notification API + page views (Phase R1)
 │       ├── prompt_views.py       # Shim — re-exports from 4 domain modules (Session 134)
 │       ├── prompt_list_views.py  # PromptList, prompt_detail, related_prompts_ajax
-│       ├── prompt_edit_views.py  # prompt_edit, prompt_create
+│       ├── prompt_edit_views.py  # prompt_edit (prompt_create removed Session 135)
 │       ├── prompt_comment_views.py # comment_edit, comment_delete
 │       ├── prompt_trash_views.py # prompt_delete, trash_bin, restore, publish, perm_delete, empty
 │       ├── redirect_views.py     # URL redirects and legacy routes
@@ -297,7 +297,7 @@ prompts/views/
 ├── notification_views.py    # Notification API + page views (Phase R1)
 ├── prompt_views.py          # Shim — re-exports from 4 domain modules (Session 134)
 ├── prompt_list_views.py     # PromptList, prompt_detail, related_prompts_ajax (620 lines)
-├── prompt_edit_views.py     # prompt_edit, prompt_create (528 lines)
+├── prompt_edit_views.py     # prompt_edit (320 lines — prompt_create removed Session 135)
 ├── prompt_comment_views.py  # comment_edit, comment_delete (139 lines)
 ├── prompt_trash_views.py    # prompt_delete, trash_bin, restore, publish, perm_delete, empty (396 lines)
 ├── redirect_views.py        # URL redirects and legacy routes
@@ -320,7 +320,7 @@ prompts/views/
 | **notification_views** | ~8 | Notification API (unread-count, mark-read, delete, delete-all), notifications page, category filtering, pagination |
 | **prompt_views** | shim | Re-exports from 4 domain modules (Session 134 split) |
 | **prompt_list_views** | ~3 | PromptList (homepage), prompt_detail, related_prompts_ajax |
-| **prompt_edit_views** | ~2 | prompt_edit, prompt_create |
+| **prompt_edit_views** | ~1 | prompt_edit |
 | **prompt_comment_views** | ~2 | comment_edit, comment_delete |
 | **prompt_trash_views** | ~6 | prompt_delete, trash_bin, prompt_restore, prompt_publish, prompt_permanent_delete, empty_trash |
 | **redirect_views** | ~3 | URL redirects, legacy route handling |

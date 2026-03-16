@@ -117,7 +117,7 @@ python manage.py test
 
 | Hash | Message |
 |------|---------|
-| *(to be filled after commit)* | fix(bulk-gen): URL validator for CDN/Next.js URLs, thumbnail restore, scroll offset, error badge |
+| 4111114 | fix(bulk-gen): URL validator for CDN/Next.js URLs, thumbnail restore, scroll offset, error badge |
 
 ---
 

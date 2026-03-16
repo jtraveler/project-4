@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 16, 2026 (Sessions 101–134)
+**Last Updated:** March 16, 2026 (Sessions 101–135)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,28 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 135 — March 16, 2026
+
+**Final state:** 1193 tests, 12 skipped, 0 failures. `prompt_create` dead code removed (~207 lines).
+
+#### Spec A — Bulk Gen UX Fixes (commit 4111114)
+- Fixed URL validator to accept CDN/Next.js optimisation URLs (decoded query string check via `_hasImageExtension`)
+- Thumbnail reconstruction on draft restore for all source image URLs (not just paste)
+- `onerror` handler hides broken thumbnails gracefully with self-clear
+- ⚠️ error badge added to prompt boxes with validation errors (`bg-box-error-badge` in `bg-box-header-actions`)
+- Scroll offset fix — error link now lands prompt box in readable position (`setTimeout(350)` + `scrollBy(-120)`)
+- Fixed badge display reset bug (added base CSS rule `.bg-box-error-badge { display: none; }`)
+- Agents: @frontend-developer 9.2, @ui-ux-designer 8.5, @code-reviewer 8.5. Avg 8.73/10
+
+#### Spec B — Cleanup Batch (commit 8dee2dc)
+- Extracted `lockPasteInput`/`unlockPasteInput` helpers — 3 inline lock/unlock patterns replaced
+- Added `cursor: not-allowed` on locked paste URL inputs
+- `prompt_create` confirmed dead (URL maps to `RedirectView`, no template/JS references) — removed ~207 lines from `prompt_edit_views.py`
+- Updated shim (`prompt_views.py`), `__init__.py`, and `urls.py` comment
+- Agents: @frontend-developer 9.5, @code-reviewer 8.5. Avg 9.0/10
+
+---
 
 ### Session 134 — March 16, 2026
 
@@ -107,6 +129,91 @@ This is a running log of development sessions. Each session entry includes:
 - Staff-only source image display on prompt detail page
 - Lightbox viewer for source images
 - `source_credit` and `source_credit_url` display
+
+### Session 130 — March 14, 2026
+
+**Focus:** SRC pipeline Phase 4 — source image copy on publish + B2 hard delete
+
+**Key outcomes:**
+- `b2_source_image_url` copied from `GeneratedImage` to `Prompt` on publish (commit 2d687cb)
+- Source image deleted from B2 on `hard_delete()` — extends existing cleanup path
+- SRC-3: Parse and validate `source_image_urls` in backend, save to `GeneratedImage` (commit 3e46c94)
+
+---
+
+### Session 129 — March 14, 2026
+
+**Focus:** SRC pipeline Phases 1-2 — source image URL model fields + frontend input
+
+**Key outcomes:**
+- SRC-1: `source_image_url` fields added to `GeneratedImage` and `Prompt` models (commit 4d4a93a)
+- SRC-2: Source image URL input field in bulk generator UI with client-side validation (commit a7e7ac0)
+- `renumberBoxes` aria-label fix, placeholder extension display, version header cleanup (commit 7ff7a58)
+- JS refactor: extracted `bulk-generator-utils.js` companion module from `bulk-generator.js` (commit 9b6d06b)
+
+---
+
+### Session 128 — March 14, 2026
+
+**Focus:** File size audit + api_views.py split + working constraints documentation
+
+**Key outcomes:**
+- File size audit: identified 7 Critical (2000+), 8 High Risk (1200-1999), 13 Caution (800-1199) files (commit 968098b)
+- `api_views.py` split into 4 domain modules: `ai_api_views.py`, `moderation_api_views.py`, `social_api_views.py`, `upload_api_views.py` + compatibility shim (commit 9ef06a0)
+- Added CC Working Constraints & Spec Guidelines section to `CLAUDE.md` (commit bf6f5a6)
+- Updated `urls.py` to import from domain modules directly (commit 46e55ea)
+- `NSFWViolationAdmin` read-only admin class added (commit bf9b938)
+
+---
+
+### Session 127 — March 13, 2026
+
+**Focus:** N4 open item closure + admin fixes + debug cleanup
+
+**Key outcomes:**
+- Admin `save_model` fix: queue `rename_prompt_files_for_seo` for B2 prompts (commit bb93256)
+- Removed 13 debug `print()` statements from `upload_views.py` + dead cloudinary import (commit 598b6ad)
+- N4 cleanup audit: confirmed ARIA comment, stale entries closed, marked 100% complete (commit 4640a92)
+- Cloudinary views audit: `admin_views.py` + `upload_views.py` findings documented (commit 50aef7c)
+
+---
+
+### Session 126 — March 13, 2026
+
+**Focus:** Notification admin alerts + upload cleanup
+
+**Key outcomes:**
+- NOTIF-ADMIN-1: NSFW repeat offender admin alerts (commit b8b4ac2)
+- NOTIF-ADMIN-2: Scheduled task outcome notifications (commit dea0a71)
+- Upload cleanup: remove dead Cloudinary upload path, rename `cloudinary_id` field (commit 54dde7a)
+- `cancel_upload` audit documented (commit d9f2788)
+- Upload views refactor: rename `cloudinary_id` var, fix dead redirects, sanitise cancel error (commit 285286f)
+
+---
+
+### Session 125 — March 13, 2026
+
+**Focus:** Cloudinary audit + bulk gen notifications + vision moderation rename
+
+**Key outcomes:**
+- Cloudinary codebase audit report — findings only, no code changes (commit 8d911a4)
+- Renamed `cloudinary_moderation.py` → `vision_moderation.py` — all import sites updated (commit f2e7a6f)
+- Added 4 bulk gen notification types: `bulk_gen_job_completed`, `bulk_gen_job_failed`, `bulk_gen_published`, `bulk_gen_partial` (commit 9508743)
+- Migration 0073. New test file: `prompts/tests/test_bulk_gen_notifications.py` (6 tests)
+- Fixed hardcoded URLs in notification helpers with `reverse()` (commit f7dd17e)
+- 1149 → 1155 tests
+
+---
+
+### Session 124 — March 13, 2026
+
+**Focus:** Bulk gen header stats + session 123 docs
+
+**Key outcomes:**
+- Added Total Duration to bulk gen job page header stats dashboard (commit 8eab63b)
+- End-of-session 123 docs update (commit d2fb499)
+
+---
 
 ### Session 123 — March 13, 2026
 

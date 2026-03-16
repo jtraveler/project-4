@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 13, 2026
+**Last Updated:** March 16, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -314,6 +314,20 @@ in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
 > ⚠️ Step 3 (frontend UI) must not be specced or built until Step 2 is fully committed and tested.
 > The Section A build order in "Bulk Job Deletion — Pre-Build Reference" is mandatory — no skipping ahead.
+
+### Deferred P3 Items
+
+Small items not worth individual specs — batch into cleanup passes periodically.
+
+| Item | File | Notes |
+|------|------|-------|
+| `@accessibility` review on clickable error links | `bulk-generator.js` | WCAG 1.4.1 satisfied by underline but accessible name in context not reviewed |
+| Banner link message text hardcoded separately from `err.message` | `bulk-generator.js` `showValidationErrors` | Minor maintenance risk — two locations to update if copy changes |
+| `prompt_list_views.py` growth monitor | `prompts/views/prompt_list_views.py` | 620 lines, `prompt_detail` is ~320 lines — watch for growth |
+| `__init__.py` imports through shim | `prompts/views/__init__.py` | Could import directly from domain modules — low priority polish |
+| `int(content_length)` no try/except | `prompts/tasks.py` | Pre-existing in both download functions — safe but opaque error on malformed header |
+| `bulk-generator.js` module split | `static/js/bulk-generator.js` | ~1,410 lines 🟠 High Risk — paste feature extraction planned for Session 136 |
+| Move badge CSS to `bulk-generator.css` | `bulk_generator.html` inline `<style>` | 3 rules for `.bg-box-header-actions`, `.bg-box-error-badge` should live in external CSS |
 
 **Phase 6 Architecture — Two-Page Staging:**
 - Temp staging page (`/tools/bulk-ai-generator/job/<uuid>/`): shows results of the most recent job. Phase 6 adds the publish flow here.
@@ -1344,7 +1358,7 @@ prompts/views/
 ├── notification_views.py    # Notification API + page views
 ├── prompt_views.py          # Shim — re-exports from 4 domain modules (Session 134)
 ├── prompt_list_views.py     # PromptList, prompt_detail, related_prompts_ajax (620 lines)
-├── prompt_edit_views.py     # prompt_edit, prompt_create (528 lines)
+├── prompt_edit_views.py     # prompt_edit (320 lines — prompt_create removed Session 135)
 ├── prompt_comment_views.py  # comment_edit, comment_delete (139 lines)
 ├── prompt_trash_views.py    # prompt_delete, trash_bin, restore, publish, perm_delete, empty (396 lines)
 ├── redirect_views.py        # URL redirects and legacy routes
@@ -1647,4 +1661,4 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 ---
 
 **Version:** 4.30 (Session 121 — SMOKE2 series A–E, HARDENING-1, JS-SPLIT-1, HARDENING-2; 1117 tests; bulk-gen smoke test complete; all SMOKE2 production prompts backfilled)
-**Last Updated:** March 13, 2026
+**Last Updated:** March 16, 2026

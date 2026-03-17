@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 16, 2026 (Sessions 101–136)
+**Last Updated:** March 17, 2026 (Sessions 101–137)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,21 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 137 — March 16, 2026
+
+**Focus:** Protocol hardening, P3 cleanup
+
+**Specs:** 137-A (protocol v2.1), 137-B (P3 cleanup batch), 137-C (docs)
+
+**Key outcomes:**
+- CC_MULTI_SPEC_PROTOCOL.md v2.1 — docs gate re-run rule added
+- BulkGenUtils.debounce dead code removed
+- Banner error text reads from err.message (no duplicate copy)
+- Paste lock state replaced with .bg-paste-locked CSS class
+- 136-E and 134-D unconfirmed scores closed
+
+---
 
 ### Session 136 — March 16, 2026
 

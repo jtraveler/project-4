@@ -151,7 +151,7 @@ Never assume CC can safely edit a file without checking its tier first.
 - `prompts/tests/test_bulk_page_creation.py` (1,621 lines)
 - `static/css/pages/prompt-detail.css` (1,549 lines)
 - `static/css/pages/bulk-generator.css` (1,484 lines)
-- `static/js/bulk-generator.js` (1,546 lines) — input page JS, actively used
+- `static/js/bulk-generator.js` (1,547 lines) — input page JS, actively used
 - `static/css/navbar.css` (1,268 lines)
 
 **🟡 Caution — str_replace with Precision (max 2–3 edits per spec):**
@@ -321,11 +321,9 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 
 | Item | File | Notes |
 |------|------|-------|
-| Banner link message text hardcoded separately from `err.message` | `bulk-generator.js` `showValidationErrors` | Minor maintenance risk — two locations to update if copy changes |
 | `prompt_list_views.py` growth monitor | `prompts/views/prompt_list_views.py` | 620 lines, `prompt_detail` is ~320 lines — watch for growth |
 | `__init__.py` imports through shim | `prompts/views/__init__.py` | Could import directly from domain modules — low priority polish |
 | `int(content_length)` no try/except | `prompts/tasks.py` | Pre-existing in both download functions — safe but opaque error on malformed header |
-| `opacity: 0.6` on locked paste inputs | `bulk-generator-utils.js` `lockPasteInput` | Pre-existing pattern — may not meet WCAG 4.5:1 contrast on readonly input |
 
 **Phase 6 Architecture — Two-Page Staging:**
 - Temp staging page (`/tools/bulk-ai-generator/job/<uuid>/`): shows results of the most recent job. Phase 6 adds the publish flow here.
@@ -1236,8 +1234,8 @@ TEMPLATES:
 prompts/templates/prompts/bulk_generator.html   # Full page template
 
 JAVASCRIPT — Input page (3 modules):
-static/js/bulk-generator.js            1,546 lines (main IIFE — form, validation, auto-save)
-static/js/bulk-generator-utils.js      113 lines   (BulkGenUtils — URL validation, paste helpers)
+static/js/bulk-generator.js            1,547 lines (main IIFE — form, validation, auto-save)
+static/js/bulk-generator-utils.js      89 lines    (BulkGenUtils — URL validation, paste helpers)
 static/js/bulk-generator-paste.js      78 lines    (BulkGenPaste — clipboard paste upload)
 
 JAVASCRIPT — Job page (5 modules — window.BulkGen namespace):

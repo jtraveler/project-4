@@ -250,6 +250,22 @@
     function deleteBox(box) {
         if (box.classList.contains('removing')) return;
 
+        // Clean up B2 paste image if this box had one
+        var pasteInput = box.querySelector('.bg-prompt-source-image-input');
+        var pasteUrl = pasteInput ? pasteInput.value.trim() : '';
+        if (pasteUrl && pasteUrl.indexOf('/source-paste/') !== -1) {
+            fetch('/api/bulk-gen/source-image-paste/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf,
+                },
+                body: JSON.stringify({ cdn_url: pasteUrl }),
+            }).catch(function() {
+                // Non-critical — ignore, proceed with box deletion
+            });
+        }
+
         // 1. FIRST — Record positions of all remaining boxes
         var allBoxes = Array.from(promptGrid.querySelectorAll('.bg-prompt-box:not(.removing)'));
         var positions = new Map();
@@ -260,6 +276,10 @@
         });
 
         // 2. REMOVE — Animate the deleted box out
+        // Capture index BEFORE adding .removing so querySelector :not(.removing) still finds it
+        var allBeforeRemove = Array.from(promptGrid.querySelectorAll('.bg-prompt-box:not(.removing)'));
+        var boxIndex = allBeforeRemove.indexOf(box);
+
         box.classList.add('removing');
 
         var removeDuration = prefersReducedMotion ? 0 : 300;
@@ -268,7 +288,6 @@
         setTimeout(function () {
             // Find the next sibling box to focus after deletion
             var allCurrent = Array.from(promptGrid.querySelectorAll('.bg-prompt-box:not(.removing)'));
-            var boxIndex = allCurrent.indexOf(box);
             var nextSibling = allCurrent.filter(function (b) { return b !== box; });
             var focusTarget = nextSibling[boxIndex] || nextSibling[nextSibling.length - 1];
 
@@ -1156,6 +1175,7 @@
                 var link = document.createElement('a');
                 link.href = '#';
                 link.textContent = 'Prompt ' + err.promptNum;
+                link.setAttribute('aria-label', 'Go to Prompt ' + err.promptNum);
                 link.style.cssText = 'color:inherit;font-weight:600;text-decoration:underline;cursor:pointer;';
                 link.addEventListener('click', function(e) {
                     e.preventDefault();

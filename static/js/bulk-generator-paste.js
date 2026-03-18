@@ -44,6 +44,21 @@
             var thumb    = activeBox.querySelector('.bg-source-paste-thumb');
             var status   = activeBox.querySelector('.bg-source-paste-status');
 
+            // If row already has a paste URL, delete the old B2 file first
+            var existingUrl = urlInput.value.trim();
+            if (existingUrl && existingUrl.indexOf('/source-paste/') !== -1) {
+                fetch('/api/bulk-gen/source-image-paste/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf,
+                    },
+                    body: JSON.stringify({ cdn_url: existingUrl }),
+                }).catch(function() {
+                    // Non-critical — ignore failure, proceed with new upload
+                });
+            }
+
             status.textContent = 'Uploading\u2026';
 
             var blob = imageItem.getAsFile();

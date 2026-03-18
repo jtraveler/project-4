@@ -810,3 +810,61 @@ def source_image_paste_upload(request):
             {'success': False, 'error': 'Upload failed. Please try again.'},
             status=500,
         )
+
+
+@login_required
+@require_POST
+def source_image_paste_delete(request):
+    """
+    POST /api/bulk-gen/source-image-paste/delete/
+    Staff-only. Deletes a previously pasted source image from B2.
+    Accepts JSON: {"cdn_url": "https://media.promptfinder.net/bulk-gen/source-paste/..."}
+    Non-critical — failure is logged but does not affect generation flow.
+    """
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'Staff only.'}, status=403)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+
+    cdn_url = body.get('cdn_url', '')
+    if not isinstance(cdn_url, str) or not cdn_url:
+        return JsonResponse({'success': False, 'error': 'cdn_url required.'}, status=400)
+
+    # Security: only allow deletion of bulk-gen/source-paste/ keys
+    from django.conf import settings
+    expected_prefix = f'https://{settings.B2_CUSTOM_DOMAIN}/'
+    if not cdn_url.startswith(expected_prefix):
+        return JsonResponse({'success': False, 'error': 'Invalid URL.'}, status=400)
+
+    b2_key = cdn_url[len(expected_prefix):]
+    if not b2_key.startswith('bulk-gen/source-paste/'):
+        return JsonResponse({'success': False, 'error': 'Invalid key prefix.'}, status=400)
+
+    try:
+        import boto3
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=settings.B2_ENDPOINT_URL,
+            aws_access_key_id=settings.B2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.B2_SECRET_ACCESS_KEY,
+        )
+        s3_client.delete_object(
+            Bucket=settings.B2_BUCKET_NAME,
+            Key=b2_key,
+        )
+        logger.info(
+            "[PASTE-DELETE] Staff user %s deleted paste image: %s",
+            request.user.id, b2_key,
+        )
+        return JsonResponse({'success': True})
+
+    except Exception as exc:
+        logger.warning(
+            "[PASTE-DELETE] Failed to delete paste image for user %s: %s",
+            request.user.id, exc,
+        )
+        # Non-critical — return success anyway so client flow is not disrupted
+        return JsonResponse({'success': True})

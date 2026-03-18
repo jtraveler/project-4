@@ -105,6 +105,9 @@ urlpatterns = [
     path('api/bulk-gen/source-image-paste/',
          upload_api_views.source_image_paste_upload,
          name='source_image_paste_upload'),
+    path('api/bulk-gen/source-image-paste/delete/',
+         upload_api_views.source_image_paste_delete,
+         name='source_image_paste_delete'),
 
     # AI Suggestions API (Step 2 Deferred - L8-STEP2-PERF)
     path('api/upload/ai-suggestions/', views.ai_suggestions, name='ai_suggestions'),

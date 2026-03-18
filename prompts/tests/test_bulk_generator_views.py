@@ -2244,7 +2244,7 @@ class SourceImageUrlParsingTests(TestCase):
         """Valid https image URL passes server-side validation and is saved."""
         payload = {
             **self.base_payload,
-            'source_image_urls': ['https://example.com/ref.jpg'],
+            'prompts': [{'text': 'a beautiful sunset', 'source_image_url': 'https://example.com/ref.jpg'}],
         }
         response = self.client.post(
             self.url, json.dumps(payload), content_type='application/json',
@@ -2263,7 +2263,7 @@ class SourceImageUrlParsingTests(TestCase):
         """Empty source image URL is valid (field is optional)."""
         payload = {
             **self.base_payload,
-            'source_image_urls': [''],
+            'prompts': [{'text': 'a beautiful sunset', 'source_image_url': ''}],
         }
         response = self.client.post(
             self.url, json.dumps(payload), content_type='application/json',
@@ -2274,7 +2274,7 @@ class SourceImageUrlParsingTests(TestCase):
         """http:// URL rejected — must be https://."""
         payload = {
             **self.base_payload,
-            'source_image_urls': ['http://example.com/ref.jpg'],
+            'prompts': [{'text': 'a beautiful sunset', 'source_image_url': 'http://example.com/ref.jpg'}],
         }
         response = self.client.post(
             self.url, json.dumps(payload), content_type='application/json',
@@ -2286,7 +2286,7 @@ class SourceImageUrlParsingTests(TestCase):
         """URL not ending in image extension rejected."""
         payload = {
             **self.base_payload,
-            'source_image_urls': ['https://example.com/page'],
+            'prompts': [{'text': 'a beautiful sunset', 'source_image_url': 'https://example.com/page'}],
         }
         response = self.client.post(
             self.url, json.dumps(payload), content_type='application/json',

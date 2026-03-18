@@ -171,32 +171,9 @@ def api_start_generation(request):
     ]
 
     # --- Optional: per-prompt source image URLs ---
-    raw_source_image_urls = data.get('source_image_urls', [])
-    if not isinstance(raw_source_image_urls, list):
-        raw_source_image_urls = []
-    source_image_urls = [
-        str(siu)[:2000] if isinstance(siu, str) else ''
-        for siu in raw_source_image_urls
-    ]
-
-    # --- Validate source image URLs (server-side, security gate) ---
-    invalid_src_indices = []
-    for _i, _url in enumerate(source_image_urls):
-        if _url:
-            _parsed = urlparse(_url)
-            if _parsed.scheme != 'https' or not _parsed.netloc or not _SRC_IMG_EXTENSIONS.search(_parsed.path):
-                invalid_src_indices.append(_i + 1)  # 1-based prompt number
-
-    if invalid_src_indices:
-        return JsonResponse(
-            {'error': (
-                f'Invalid source image URL for prompt(s): '
-                f'{", ".join(str(i) for i in invalid_src_indices)}. '
-                f'URL must be https:// and end in .jpg, .jpeg, .png, '
-                f'.webp, .gif, or .avif.'
-            )},
-            status=400,
-        )
+    # Extracted from each prompt object (not a top-level key).
+    # Built during prompt parsing loop below.
+    source_image_urls = []
 
     # --- Required field ---
     raw_prompts = data.get('prompts')
@@ -230,11 +207,14 @@ def api_start_generation(request):
                 raw_count if isinstance(raw_count, int) and raw_count in VALID_COUNTS
                 else None
             )
+            raw_src_url = entry.get('source_image_url', '')
+            per_prompt_src_url = str(raw_src_url)[:2000] if isinstance(raw_src_url, str) else ''
         elif isinstance(entry, str):
             prompt_text = entry.strip()
             per_prompt_size = ''
             per_prompt_quality = ''
             per_prompt_count = None
+            per_prompt_src_url = ''
         else:
             return JsonResponse(
                 {'error': 'Each prompt must be a string or an object with a text key'},
@@ -244,6 +224,26 @@ def api_start_generation(request):
         per_prompt_sizes.append(per_prompt_size)
         per_prompt_qualities.append(per_prompt_quality)
         per_prompt_counts.append(per_prompt_count)
+        source_image_urls.append(per_prompt_src_url)
+
+    # --- Validate source image URLs (server-side, security gate) ---
+    invalid_src_indices = []
+    for _i, _url in enumerate(source_image_urls):
+        if _url:
+            _parsed = urlparse(_url)
+            if _parsed.scheme != 'https' or not _parsed.netloc or not _SRC_IMG_EXTENSIONS.search(_parsed.path):
+                invalid_src_indices.append(_i + 1)  # 1-based prompt number
+
+    if invalid_src_indices:
+        return JsonResponse(
+            {'error': (
+                f'Invalid source image URL for prompt(s): '
+                f'{", ".join(str(i) for i in invalid_src_indices)}. '
+                f'URL must be https:// and end in .jpg, .jpeg, .png, '
+                f'.webp, .gif, or .avif.'
+            )},
+            status=400,
+        )
 
     for i, p in enumerate(prompts):
         if not p:

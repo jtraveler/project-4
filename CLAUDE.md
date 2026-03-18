@@ -290,7 +290,7 @@ batch). Atomic rate limiter on `api_create_pages` using `cache.add()` + `cache.i
 6 new tests: `EndToEndPublishFlowTests` (3) + `CreatePagesAPITests` (3). `cache.clear()`
 in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
-**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS modules. 1155 tests. Next: production smoke test before V2 launch, then UI improvements (failed slot dimensions, header stats, group footer weights). V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
+**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS modules. 1193 tests. Next: production smoke test before V2 launch, then UI improvements (failed slot dimensions, header stats, group footer weights). V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
 
 **Resolved (Session 122):** Cancel-path `G.totalImages` staleness ✅, `bulk-generator-ui.js` at 766/780 lines ✅ (now 338 lines), N4h rename not triggering ✅.
 
@@ -322,7 +322,7 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 | Item | File | Notes |
 |------|------|-------|
 | `prompt_list_views.py` growth monitor | `prompts/views/prompt_list_views.py` | 620 lines, `prompt_detail` is ~320 lines — watch for growth |
-| `__init__.py` imports through shim | `prompts/views/__init__.py` | Could import directly from domain modules — low priority polish |
+| ~~`__init__.py` imports through shim~~ | `prompts/views/__init__.py` | ✅ RESOLVED Session 138 — imports directly from domain modules |
 | `int(content_length)` no try/except | `prompts/tasks.py` | Pre-existing in both download functions — safe but opaque error on malformed header |
 
 **Phase 6 Architecture — Two-Page Staging:**

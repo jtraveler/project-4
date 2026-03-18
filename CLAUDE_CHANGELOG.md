@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 17, 2026 (Sessions 101–137)
+**Last Updated:** March 18, 2026 (Sessions 101–138)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,27 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 138 — March 18, 2026
+
+**Focus:** Bug fixes, SRC-6 pipeline, results page UI, paste orphan cleanup
+
+**Specs:** 138-A (delete focus fix), 138-B (SRC-6 pipeline fix),
+138-C (results page UI), 138-D (paste orphan cleanup), 138-E (docs),
+138-F (P3 cleanup)
+
+**Final state:** 1193 tests, 12 skipped, 0 failures.
+
+**Key outcomes:**
+- Fixed delete box focus always jumping to last prompt (captured boxIndex before .removing)
+- Fixed SRC-6: source image URL now correctly flows from JS payload to GeneratedImage records (key name mismatch between client and server)
+- Source Image card now appears on prompt detail page after publish (pending Mateo verification)
+- Results page: lightbox on image click, queued/generating placeholder states (clock→spinner+progress bar), checkbox dark circle redesign (top-left, check on hover, blue fill selected)
+- B2 paste orphan cleanup: new `/api/bulk-gen/source-image-paste/delete/` endpoint, deletes old paste file on re-paste and prompt box delete
+- P3: `aria-label="Go to Prompt N"` on error links, `__init__.py` direct imports from domain modules (removed shim hop)
+- Updated 3 source image URL tests to use per-prompt dict format (matched SRC-6 fix)
+
+---
 
 ### Session 137 — March 16, 2026
 

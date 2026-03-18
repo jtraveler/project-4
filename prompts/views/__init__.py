@@ -11,14 +11,20 @@ from .redirect_views import (
     find_best_redirect_match,
 )
 
-# Import prompt CRUD and listing views
-from .prompt_views import (
+# Prompt domain modules (Session 134 split)
+from .prompt_list_views import (
     PromptList,
     prompt_detail,
-    related_prompts_ajax,  # Related prompts AJAX endpoint
+    related_prompts_ajax,
+)
+from .prompt_edit_views import (
+    prompt_edit,
+)
+from .prompt_comment_views import (
     comment_edit,
     comment_delete,
-    prompt_edit,
+)
+from .prompt_trash_views import (
     prompt_delete,
     trash_bin,
     prompt_restore,
@@ -52,17 +58,23 @@ from .social_views import (
     get_follow_status,
 )
 
-# Import API/AJAX endpoints
-from .api_views import (
+# API domain modules (Session 128 split)
+from .social_api_views import (
     collaborate_request,
     prompt_like,
+)
+from .upload_api_views import (
     b2_upload_api,
     b2_generate_variants,
     b2_variants_status,
     b2_presign_upload,
     b2_upload_complete,
+)
+from .moderation_api_views import (
     b2_moderate_upload,
     b2_delete_upload,
+)
+from .ai_api_views import (
     ai_suggestions,
     prompt_processing_status,  # N4f: Processing status polling
     ai_job_status,  # N4-Refactor: AI job status polling

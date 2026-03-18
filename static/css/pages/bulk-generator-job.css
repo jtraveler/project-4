@@ -302,6 +302,9 @@
 /* ─── Gallery Container ────────────────────────────────────── */
 .job-gallery-container {
     min-height: 200px;
+    padding: 30px 30px 40px;
+    background: var(--gray-200);
+    border-radius: var(--radius-lg);
 }
 
 /* ─── Responsive: ≤ 768px ─────────────────────────────────── */
@@ -345,7 +348,6 @@
 
 /* ─── Prompt Group Row ──────────────────────────────────────── */
 .prompt-group {
-    margin-bottom: 2rem;
     animation: promptGroupFadeIn 300ms ease-out forwards;
     opacity: 0;
 }
@@ -387,6 +389,9 @@
     display: block;
     max-width: 100%;
     cursor: pointer;
+    background: white;
+    border-radius: 5px;
+    padding: 2px 8px;
 }
 
 .prompt-group-meta {
@@ -479,6 +484,40 @@
     font-style: italic;
 }
 
+/* Queued state */
+.loading-text--queued {
+    font-size: 0.75rem;
+    color: var(--gray-600, #525252); /* --gray-400 fails AA on --gray-100 bg; --gray-600 = 6.86:1 pass */
+}
+
+/* Generating state — animated progress bar */
+.placeholder-progress-wrap {
+    width: 80%;
+    height: 3px;
+    background: var(--gray-200, #e5e7eb);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.placeholder-progress-fill {
+    height: 100%;
+    background: var(--accent-color-primary, rgb(73, 242, 100));
+    border-radius: 2px;
+    width: 0%;
+    animation: placeholderProgress linear forwards;
+    /* duration set inline by JS based on quality */
+}
+
+@keyframes placeholderProgress {
+    from { width: 0%; }
+    to   { width: 90%; } /* stops at 90% — never claims done until API confirms */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .placeholder-progress-fill { animation: none; width: 30%; }
+}
+
 /* ─── Failed State for Image Slots ─────────────────────────── */
 .placeholder-failed {
     width: 100%;
@@ -560,6 +599,7 @@
     height: auto;
     display: block;
     animation: imageFadeIn 400ms ease-out;
+    cursor: pointer;
 }
 
 @keyframes imageFadeIn {
@@ -570,7 +610,7 @@
 .placeholder-empty {
     width: 100%;
     /* aspect-ratio set dynamically by JS based on job size */
-    background: var(--gray-100);
+    background: var(--gray-200);
     border-radius: var(--radius-lg);
 }
 
@@ -615,7 +655,6 @@
 
 /* Shared button base: transparent with white icons + drop-shadow on SVG */
 .btn-download,
-.btn-select,
 .btn-trash {
     width: 38px;
     height: 38px;
@@ -632,7 +671,6 @@
 
 /* Drop shadow on SVG icons — follows icon shape, not button box */
 .btn-download svg,
-.btn-select svg,
 .btn-trash svg {
     width: 24px;
     height: 24px;
@@ -640,13 +678,11 @@
 }
 
 .btn-download:hover,
-.btn-select:hover,
 .btn-trash:hover {
     background: rgba(0, 0, 0, 0.15);
 }
 
 .btn-download:focus-visible,
-.btn-select:focus-visible,
 .btn-trash:focus-visible {
     outline: none;
     /* Double-ring: dark inner + white outer — visible on both light and dark images */
@@ -655,18 +691,64 @@
         0 0 0 4px rgba(255, 255, 255, 0.9);
 }
 
+/* Select button — dark circle, top-left of image */
+.btn-select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.4);
+    color: transparent;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    z-index: 6;
+    pointer-events: auto;
+}
+
+.btn-select svg {
+    width: 16px;
+    height: 16px;
+    filter: none;
+}
+
+.btn-select:hover,
+.prompt-image-slot:hover .btn-select {
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.btn-select:focus-visible {
+    outline: none;
+    color: white;
+    box-shadow:
+        0 0 0 2px rgba(0, 0, 0, 0.65),
+        0 0 0 4px rgba(255, 255, 255, 0.9);
+}
+
 /* ─── Selected State ────────────────────────────────────────── */
 .prompt-image-slot.is-selected {
-    box-shadow: 0 0 0 3px var(--accent-color-primary, #6d28d9) !important;
+    box-shadow: 0 0 0 3px var(--primary, #2563eb) !important;
 }
 
 .prompt-image-slot.is-selected .btn-select {
-    background: rgba(255, 255, 255, 0.9);
-    color: var(--gray-800, #1f2937);
+    background: var(--primary, #2563eb);
+    border-color: var(--primary, #2563eb);
+    color: white;
 }
 
 .prompt-image-slot.is-selected .btn-select svg {
     filter: none;
+}
+
+.prompt-image-slot.is-deselected .btn-select {
+    opacity: 0.5;
 }
 
 .prompt-image-slot.is-deselected {

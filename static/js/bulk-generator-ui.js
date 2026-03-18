@@ -125,12 +125,64 @@
                         image.error_message || '',
                         image.prompt_text || '',
                         groupImages[0].size || '');
+                } else if (image.status === 'generating') {
+                    var imgQuality = image.quality || G.jobQuality || 'medium';
+                    G.updateSlotToGenerating(groupIndex, slotIndex, imgQuality);
                 }
+                // status === 'queued': leave as queued placeholder (default)
             }
         }
 
         // Update header outcome stats (size, quality, succeeded, failed) on every render pass
         G.updateHeaderStats(images);
+    };
+
+    /**
+     * Update a placeholder slot from queued → generating state.
+     * Called when renderImages detects status === 'generating'.
+     * Replaces the clock icon + "Queued" label with spinner + progress bar.
+     */
+    G.updateSlotToGenerating = function (groupIndex, slotIndex, quality) {
+        var groupData = G.renderedGroups[groupIndex];
+        if (!groupData) return;
+        var slot = groupData.element.querySelector('[data-slot="' + slotIndex + '"]');
+        if (!slot) return;
+        var existing = slot.querySelector('.placeholder-queued');
+        if (!existing) return; // Already generating or filled
+
+        var slotAspect = existing.style.aspectRatio || '1 / 1';
+        var container = slot.querySelector('.prompt-image-container');
+        if (!container) return;
+
+        // Estimate duration based on quality
+        var QUALITY_DURATIONS = { low: 10, medium: 20, high: 40 };
+        var duration = QUALITY_DURATIONS[quality] || 20;
+
+        var loading = document.createElement('div');
+        loading.className = 'placeholder-loading placeholder-generating';
+        loading.style.aspectRatio = slotAspect;
+        loading.setAttribute('role', 'status');
+        loading.setAttribute('aria-label', 'Image generating');
+
+        var spinner = document.createElement('div');
+        spinner.className = 'loading-spinner';
+
+        var genLabel = document.createElement('span');
+        genLabel.className = 'loading-text';
+        genLabel.textContent = 'Generating\u2026';
+
+        // Animated progress bar
+        var progressWrap = document.createElement('div');
+        progressWrap.className = 'placeholder-progress-wrap';
+        var progressFill = document.createElement('div');
+        progressFill.className = 'placeholder-progress-fill';
+        progressFill.style.animationDuration = duration + 's';
+        progressWrap.appendChild(progressFill);
+
+        loading.appendChild(spinner);
+        loading.appendChild(genLabel);
+        loading.appendChild(progressWrap);
+        container.replaceChild(loading, existing);
     };
 
     /**
@@ -274,22 +326,36 @@
                 emptyPlaceholder.style.aspectRatio = slotAspect;
                 container.appendChild(emptyPlaceholder);
             } else {
-                // Loading spinner for active slots
+                // Queued placeholder — shown until image transitions to generating
                 var loading = document.createElement('div');
-                loading.className = 'placeholder-loading';
+                loading.className = 'placeholder-loading placeholder-queued';
                 loading.style.aspectRatio = slotAspect;
                 loading.setAttribute('role', 'status');
-                loading.setAttribute('aria-label', 'Image generating');
+                loading.setAttribute('aria-label', 'Image queued');
 
-                var spinner = document.createElement('div');
-                spinner.className = 'loading-spinner';
+                var clockSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                clockSvg.setAttribute('width', '28');
+                clockSvg.setAttribute('height', '28');
+                clockSvg.setAttribute('viewBox', '0 0 24 24');
+                clockSvg.setAttribute('fill', 'none');
+                clockSvg.setAttribute('stroke', 'var(--gray-500, #737373)');
+                clockSvg.setAttribute('stroke-width', '1.5');
+                clockSvg.setAttribute('aria-hidden', 'true');
+                var clockCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                clockCircle.setAttribute('cx', '12');
+                clockCircle.setAttribute('cy', '12');
+                clockCircle.setAttribute('r', '10');
+                var clockLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                clockLine.setAttribute('points', '12 6 12 12 16 14');
+                clockSvg.appendChild(clockCircle);
+                clockSvg.appendChild(clockLine);
 
-                var loadingLabel = document.createElement('span');
-                loadingLabel.className = 'loading-text';
-                loadingLabel.textContent = 'Generating\u2026';
+                var queuedLabel = document.createElement('span');
+                queuedLabel.className = 'loading-text loading-text--queued';
+                queuedLabel.textContent = 'Queued';
 
-                loading.appendChild(spinner);
-                loading.appendChild(loadingLabel);
+                loading.appendChild(clockSvg);
+                loading.appendChild(queuedLabel);
                 container.appendChild(loading);
             }
 

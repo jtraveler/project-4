@@ -360,6 +360,19 @@
                     G.openLightbox(zoomBtn.dataset.imageUrl, zoomBtn.dataset.promptText);
                     return;
                 }
+                // Clicking the image itself (not any button) also opens lightbox
+                if (!e.target.closest('button')) {
+                    var clickedImg = e.target.closest('.prompt-image-container img');
+                    if (clickedImg) {
+                        var slot = clickedImg.closest('.prompt-image-slot');
+                        var zoom = slot ? slot.querySelector('.btn-zoom') : null;
+                        if (zoom) {
+                            e.preventDefault();
+                            G.openLightbox(zoom.dataset.imageUrl, zoom.dataset.promptText);
+                            return;
+                        }
+                    }
+                }
                 // Trash button toggles soft delete
                 var trashBtn = e.target.closest('.btn-trash');
                 if (trashBtn) {

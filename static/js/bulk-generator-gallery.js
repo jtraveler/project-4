@@ -186,17 +186,27 @@
         downloadBtn.setAttribute('data-group', groupIndex);
         downloadBtn.setAttribute('data-slot', slotIndex);
 
-        // Select button
+        // Select button — dark circle top-left, check mark on hover
         var selectBtn = document.createElement('button');
         selectBtn.className = 'btn-select';
         selectBtn.type = 'button';
         selectBtn.setAttribute('aria-label', 'Select image ' + (slotIndex + 1));
         selectBtn.setAttribute('aria-pressed', 'false');
+
+        // Plain check path (no circle) — M20 6 9 17l-5-5
         var selSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        selSvg.setAttribute('width', '16');
+        selSvg.setAttribute('height', '16');
+        selSvg.setAttribute('viewBox', '0 0 24 24');
+        selSvg.setAttribute('fill', 'none');
+        selSvg.setAttribute('stroke', 'currentColor');
+        selSvg.setAttribute('stroke-width', '2.5');
+        selSvg.setAttribute('stroke-linecap', 'round');
+        selSvg.setAttribute('stroke-linejoin', 'round');
         selSvg.setAttribute('aria-hidden', 'true');
-        var selUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-        selUse.setAttributeNS('http://www.w3.org/1999/xlink', 'href', G.spriteUrl + '#icon-circle-check');
-        selSvg.appendChild(selUse);
+        var checkPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        checkPath.setAttribute('d', 'M20 6 9 17l-5-5');
+        selSvg.appendChild(checkPath);
         selectBtn.appendChild(selSvg);
 
         selectBtn.setAttribute('data-image-id', image.id);
@@ -242,10 +252,10 @@
         trashSvg.appendChild(trashLine2);
         trashBtn.appendChild(trashSvg);
 
-        // Order: download | trash | select
+        // Order: download | trash in overlay; select is positioned independently
         overlay.appendChild(downloadBtn);
         overlay.appendChild(trashBtn);
-        overlay.appendChild(selectBtn);
+        container.appendChild(selectBtn);
         container.appendChild(overlay);
 
         // Magnifying glass button (centered, hover-reveal)

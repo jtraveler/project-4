@@ -73,11 +73,25 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1193 tests, 0 failures, 12 skipped
+```
+
+**Manual browser steps:**
+1. Open bulk generator results page → hover anywhere on an image (not the circle) → verify check mark does NOT show
+2. Hover the dark circle in the top-left → verify check mark appears
+3. Click a published image → verify lightbox does NOT open
+4. Click an unpublished image → verify lightbox opens normally
+5. Open bulk generator input page → verify 2:3 is the pre-selected dimension
+6. Paste an image → click Clear All → check Heroku logs for `[PASTE-DELETE]`
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 5d94766 | feat(prompt-detail): merged source card, zoom lightbox, 180px thumb, WebP conversion (bundled with Specs A+B) |
 
 ## Section 11 — What to Work on Next
 

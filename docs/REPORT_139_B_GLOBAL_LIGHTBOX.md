@@ -79,11 +79,24 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1193 tests, 0 failures, 12 skipped
+```
+
+**Manual browser steps:**
+1. Results page — hover an image, click → lightbox opens with NO caption text
+2. Prompt detail — hover the hero image → magnifying glass appears, cursor changes to zoom-in
+3. Click hero image → lightbox opens, "Open in new tab" link visible
+4. Source image (from Spec A) → click thumbnail → same lightbox style
+5. Press Escape → lightbox closes, focus returns to trigger element
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 5d94766 | feat(prompt-detail): merged source card, zoom lightbox, 180px thumb, WebP conversion (bundled with Specs A+C) |
 
 ## Section 11 — What to Work on Next
 

@@ -75,11 +75,24 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1193 tests, 0 failures, 12 skipped
+```
+
+**Manual browser steps:**
+1. Visit a prompt detail page (as staff) with both source credit and source image — verify one row with credit left, image right
+2. Hover the source image thumbnail — verify magnifying glass appears
+3. Click the thumbnail — verify custom lightbox opens (Spec B)
+4. Visit a page with only source credit — verify only left column shows
+5. Visit a page with only source image — verify only right column shows
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 5d94766 | feat(prompt-detail): merged source card, zoom lightbox, 180px thumb, WebP conversion |
 
 ## Section 11 — What to Work on Next
 

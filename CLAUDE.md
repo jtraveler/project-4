@@ -325,6 +325,88 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 | ~~`__init__.py` imports through shim~~ | `prompts/views/__init__.py` | ✅ RESOLVED Session 138 — imports directly from domain modules |
 | `int(content_length)` no try/except | `prompts/tasks.py` | Pre-existing in both download functions — safe but opaque error on malformed header |
 
+### 🚀 Planned New Features
+
+> These features are scoped and discussed but not yet specced for implementation.
+> Documented here so context is not lost between sessions.
+
+#### Feature 1: Translate Prompts to English
+
+**Summary:** Before generation starts, send all non-English prompts to GPT-4o in a single batch call to translate them to English. Fires during the "Starting generation…" phase — invisible to the user.
+
+**Benefits:** OpenAI's image models perform significantly better with English prompts. Users who copy prompts from non-English sources get better outputs without manual translation. Zero user friction — happens automatically.
+
+**Implementation approach:** One GPT-4o call with all prompts batched. System prompt: detect language of each prompt, translate to English if not already English, return array of cleaned prompts in same order. Runs after validation, before `service.create_job()`. Estimated latency: 1-3 seconds added to "Starting…" phase.
+
+**Pros:** High value, low cost (text is cheap), one API call, no UI changes.
+**Cons:** Adds latency to generation start, GPT-4o translation is not perfect for highly technical or stylistic prompts.
+**Risks:** Translated prompt may lose nuance from the original language. Mitigation: only translate if detected language is not English.
+**Priority:** High — relatively simple, high impact.
+
+#### Feature 2: Generate Prompt from Source Image (Vision API)
+
+**Summary:** A per-prompt checkbox ("Generate prompt from source image") that uses GPT-4o Vision to generate a concise image-generation prompt from the attached source image. The Vision-generated prompt replaces the text field content and is used for both generation and the result page display.
+
+**UX behaviour:** Checkbox appears below the source image URL field. When ticked: text field disabled (strike-through on existing text), source image URL field becomes required. When ticked + Character Description is filled: Character Description still applies and is NOT struck through. Vision API call fires per ticked prompt during "Starting…" phase.
+
+**Vision API prompt strategy:** Instruct GPT-4o Vision to output exactly 1-2 sentences covering subject, style, composition, lighting, technical quality. No narrative, no filler — generation-ready format.
+
+**Implementation approach:** New `generate_prompt_from_image(image_url)` helper in tasks.py using GPT-4o Vision API. Called per image during job preparation, results stored on GeneratedImage as `vision_generated_prompt`. Front-end: new checkbox per prompt box, JS disables/strikes text field.
+
+**Pros:** Major differentiator, solves "I have an image but no prompt" problem, high accuracy with Vision API.
+**Cons:** One Vision API call per ticked prompt (~$0.01 each), adds latency per checked prompt, requires accessible source image URL.
+**Risks:** Vision API may not always produce concise output — requires careful system prompt tuning. Source image must be HTTPS and accessible (validated by existing SSRF hardening).
+**Priority:** High — genuine differentiator.
+
+#### Feature 3: Remove Watermark Text from Prompts
+
+**Summary:** Before generation, automatically detect and strip "watermark instructions" from prompts — text that instructs the AI to add a brand name or logo. Runs invisibly in the "Starting…" phase.
+
+**Watermark text pattern:** Typically appears as an instruction wrapped in quotes at the end of a prompt, e.g.: `"Add The name 'IA Arte& Promts' in a clean, professional font in the bottom left corner."`
+
+**Key distinction:** Watermark instructions tell the AI to *add text to the image*. Legitimate scene text describes *text already in the scene* (signs, storefronts). GPT-4o is reliable at distinguishing these.
+
+**Implementation approach:** Batch GPT-4o call alongside translation (or combined into one call). System prompt: for each prompt, identify and remove any instruction to add watermark/branding text. Do not remove descriptions of existing scene text. Can be combined with translation into a single "prepare prompts" GPT-4o call.
+
+**Pros:** High value for users who copy prompts from watermarked sources, zero user friction, one batch API call.
+**Cons:** GPT-4o may occasionally misidentify legitimate text as watermark (low risk with careful prompt).
+**Risks:** If combined with translation, system prompt complexity increases — test carefully.
+**Priority:** High — easy to implement, high value.
+
+#### Feature 4: Save Prompt Draft (Premium)
+
+**Summary:** Allow users to save named prompt drafts server-side, persisting prompt text, source image URLs, pasted images, and all micro-settings. Currently drafts are saved to localStorage only and are lost on "Generate All".
+
+**UX behaviour:** "Save Prompt Draft" button in the sticky bar. First click: modal prompts for draft name. Subsequent edits auto-save every 500ms. Draft can be loaded from a "My Drafts" page (future).
+
+**Implementation approach:** New `PromptDraft` model (`user`, `name`, `prompts_json`, `settings_json`, `created_at`, `updated_at`). Pasted images (B2 paste URLs) must be marked as "draft-pinned" so orphan cleanup does not delete them. New API endpoints: `save_draft`, `load_draft`, `list_drafts`, `delete_draft`.
+
+**Pros:** High value for power users, premium tier justification, prevents loss of complex prompt sets.
+**Cons:** Significant storage implications (especially with paste images), requires new model + migrations + API endpoints + UI — 2-3 sessions of work.
+**Risks:** Paste image pinning conflicts with orphan cleanup logic (must coordinate). Premium feature requires subscription/tier gating.
+**Priority:** Medium — valuable but complex. Build after features 1-3.
+**Status:** Deferred — do not spec until other new features are stable.
+
+#### Combined "Prepare Prompts" Architecture
+
+Features 1, 2, and 3 all fire before generation starts. They should be combined into a single "prepare prompts" step:
+
+```
+User clicks Generate →
+1. Validate API key
+2. Validate prompts (existing)
+3. Prepare prompts (NEW single step):
+   a. Strip watermark text from all prompts
+   b. Translate non-English prompts to English
+   c. For prompts with "generate from image" checked:
+      → Vision API call per image → replace prompt text
+4. Start generation job
+```
+
+The UI shows a single "Preparing prompts…" status rather than separate spinners for each step.
+
+---
+
 **Phase 6 Architecture — Two-Page Staging:**
 - Temp staging page (`/tools/bulk-ai-generator/job/<uuid>/`): shows results of the most recent job. Phase 6 adds the publish flow here.
 - Archive staging page (`/profile/<username>/ai-generations/` — FUTURE PHASE): master archive of all AI-generated images. Private to the user. Tier-based retention windows (2–10 days). Auto-delete after window expires.

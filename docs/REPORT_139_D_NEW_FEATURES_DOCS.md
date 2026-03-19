@@ -61,7 +61,7 @@ Verify by reading `CLAUDE.md` and searching for "Planned New Features" — all 4
 
 | Hash | Message |
 |------|---------|
-| *(to be filled after commit)* | docs: planned new features — translate, vision prompt gen, watermark removal, save draft |
+| 8bd4c03 | docs: planned new features — translate, vision prompt gen, watermark removal, save draft |
 
 ## Section 11 — What to Work on Next
 

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 18, 2026 (Sessions 101–138)
+**Last Updated:** March 19, 2026 (Sessions 101–139)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,32 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 139 — March 19, 2026
+
+**Focus:** Prompt detail redesign, global lightbox, results page fixes, new features docs
+
+**Specs:** 139-A (source image card), 139-B (global lightbox), 139-C (results fixes),
+139-D (new features docs), 139-E (docs)
+
+**Key outcomes:**
+- Source credit + source image merged into one row on prompt detail
+- Bootstrap modal replaced with custom lightbox (consistent with results page)
+- Hero image on prompt detail opens in lightbox on click
+- Lightbox caption/prompt text removed from results page lightbox
+- "Open in new tab" added to prompt detail lightbox
+- .btn-select hover isolation fixed (circle only reacts on direct hover)
+- 2:3 set as default master dimension
+- WebP conversion added to source image B2 upload via Pillow
+- clearAllConfirm fires paste cleanup before clearing boxes
+- Published slot lightbox guard added
+- .btn-select dark halo for WCAG 1.4.11 contrast on light images
+- New features documented: translate, vision prompt gen, watermark removal, save draft
+- Session 138 Spec C unconfirmed score closed (gray-600 + --primary verified)
+
+**Final state:** 1193 tests, 12 skipped, 0 failures.
+
+---
 
 ### Session 138 — March 18, 2026
 

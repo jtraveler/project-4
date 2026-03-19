@@ -703,9 +703,10 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.75);
     background: rgba(0, 0, 0, 0.4);
     color: transparent;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); /* dark halo — ensures 3:1 contrast on light images */
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     z-index: 6;
     pointer-events: auto;
@@ -717,8 +718,7 @@
     filter: none;
 }
 
-.btn-select:hover,
-.prompt-image-slot:hover .btn-select {
+.btn-select:hover {
     background: rgba(0, 0, 0, 0.6);
     color: white;
     border-color: rgba(255, 255, 255, 0.8);
@@ -1032,14 +1032,7 @@ a.published-badge:focus-visible {
     border-radius: var(--radius-lg, 0.5rem);
 }
 
-.lightbox-caption {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: var(--text-sm, 0.875rem);
-    margin-top: 1rem;
-    text-align: center;
-    max-width: 600px;
-    line-height: 1.5;
-}
+/* .lightbox-caption removed — Session 139 (caption no longer rendered) */
 
 /* ─── Gallery Responsive ────────────────────────────────────── */
 /* Hide empty placeholder slots below 990px */

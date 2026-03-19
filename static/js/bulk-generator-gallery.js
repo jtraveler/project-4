@@ -384,7 +384,6 @@
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-label', 'Image preview');
-        overlay.setAttribute('aria-describedby', 'lightboxCaption');
 
         var inner = document.createElement('div');
         inner.className = 'lightbox-inner';
@@ -400,13 +399,8 @@
         img.id = 'lightboxImage';
         img.alt = '';
 
-        var caption = document.createElement('p');
-        caption.className = 'lightbox-caption';
-        caption.id = 'lightboxCaption';
-
         inner.appendChild(closeBtn);
         inner.appendChild(img);
-        inner.appendChild(caption);
         overlay.appendChild(inner);
         document.body.appendChild(overlay);
 
@@ -438,13 +432,11 @@
 
         if (!G.lightboxEl) G.createLightbox();
         var img = document.getElementById('lightboxImage');
-        var caption = document.getElementById('lightboxCaption');
 
         img.src = imageUrl;
         img.alt = promptText
             ? 'Full size preview: ' + promptText.substring(0, 100)
             : 'Full size preview';
-        caption.textContent = promptText ? '\u201C' + promptText + '\u201D' : '';
 
         G.lightboxEl.classList.add('is-open');
         document.body.style.overflow = 'hidden';

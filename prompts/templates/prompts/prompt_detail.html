@@ -218,17 +218,32 @@
                         </video>
                     {% elif prompt.display_large_url %}
                         <!-- Image Display (B2 or Cloudinary) -->
-                        <img src="{{ prompt.display_large_url }}"
-                             srcset="{{ prompt.display_medium_url }} 600w,
-                                     {{ prompt.display_large_url }} 1200w"
-                             sizes="(max-width: 768px) 100vw,
-                                    60vw"
-                             class="hero-image"
-                             alt="{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation"
-                             width="1200"
-                             height="1200"
-                             loading="eager"
-                             fetchpriority="high">
+                        <div class="hero-image-wrap"
+                             role="button"
+                             tabindex="0"
+                             aria-label="View full size image"
+                             onclick="if(window.openPromptDetailLightbox)window.openPromptDetailLightbox(this.querySelector('img').src,this.querySelector('img').alt)"
+                             onkeydown="if((event.key==='Enter'||event.key===' ')&&window.openPromptDetailLightbox){event.preventDefault();window.openPromptDetailLightbox(this.querySelector('img').src,this.querySelector('img').alt)}">
+                            <img src="{{ prompt.display_large_url }}"
+                                 srcset="{{ prompt.display_medium_url }} 600w,
+                                         {{ prompt.display_large_url }} 1200w"
+                                 sizes="(max-width: 768px) 100vw,
+                                        60vw"
+                                 class="hero-image"
+                                 alt="{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation"
+                                 width="1200"
+                                 height="1200"
+                                 loading="eager"
+                                 fetchpriority="high">
+                            <div class="hero-image-zoom-icon" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                     stroke="white" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                            </div>
+                        </div>
                     {% elif prompt.featured_image %}
                         <!-- Fallback: Direct Cloudinary URL -->
                         {% if "placeholder" in prompt.featured_image.url %}
@@ -238,13 +253,28 @@
                                  loading="eager"
                                  style="background-color: #f0f0f0; object-fit: contain;">
                         {% else %}
-                            <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}"
-                                 class="hero-image"
-                                 alt="{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation"
-                                 width="1200"
-                                 height="1200"
-                                 loading="eager"
-                                 fetchpriority="high">
+                            <div class="hero-image-wrap"
+                                 role="button"
+                                 tabindex="0"
+                                 aria-label="View full size image"
+                                 onclick="if(window.openPromptDetailLightbox)window.openPromptDetailLightbox(this.querySelector('img').src,this.querySelector('img').alt)"
+                                 onkeydown="if((event.key==='Enter'||event.key===' ')&&window.openPromptDetailLightbox){event.preventDefault();window.openPromptDetailLightbox(this.querySelector('img').src,this.querySelector('img').alt)}">
+                                <img src="{{ prompt.featured_image.url|cloudinary_transform:'w_1200,c_limit,f_webp,q_90' }}"
+                                     class="hero-image"
+                                     alt="{{ prompt.title }} - {{ prompt.ai_generator }} AI Art Prompt for Image Generation"
+                                     width="1200"
+                                     height="1200"
+                                     loading="eager"
+                                     fetchpriority="high">
+                                <div class="hero-image-zoom-icon" aria-hidden="true">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                         stroke="white" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                    </svg>
+                                </div>
+                            </div>
                         {% endif %}
                     {% else %}
                         <!-- No media available -->
@@ -450,46 +480,55 @@
                 </div>
             </div>
 
-            <!-- SOURCE / CREDIT Section (staff-only, if present) -->
-            {% if user.is_staff and prompt.source_credit %}
-            <div class="rail-card source-credit-card">
-                <h2 class="rail-card-title">Source</h2>
-                <div class="source-credit-content">
-                    {% if prompt.source_credit_url %}
-                    <a href="{{ prompt.source_credit_url }}"
-                       target="_blank"
-                       rel="noopener nofollow"
-                       class="source-credit-link"
-                       aria-label="{{ prompt.source_credit }} (opens in new tab)">
-                        {{ prompt.source_credit }}
-                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-external-link"/></svg>
-                    </a>
-                    {% else %}
-                    <span class="source-credit-text">{{ prompt.source_credit }}</span>
-                    {% endif %}
+            <!-- SOURCE / CREDIT + SOURCE IMAGE Combined Card (staff-only, Session 139) -->
+            {% if user.is_staff and prompt.source_credit or user.is_staff and prompt.b2_source_image_url %}
+            <div class="rail-card source-combined-card">
+                {% if prompt.source_credit %}
+                <div class="source-credit-col">
+                    <h2 class="rail-card-title">Source</h2>
+                    <div class="source-credit-content">
+                        {% if prompt.source_credit_url %}
+                        <a href="{{ prompt.source_credit_url }}"
+                           target="_blank"
+                           rel="noopener nofollow"
+                           class="source-credit-link"
+                           aria-label="{{ prompt.source_credit }} (opens in new tab)">
+                            {{ prompt.source_credit }}
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-external-link"/></svg>
+                        </a>
+                        {% else %}
+                        <span class="source-credit-text">{{ prompt.source_credit }}</span>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
-            <!-- Source Image Card (staff-only, SRC-5) -->
-            {% if user.is_staff and prompt.b2_source_image_url %}
-            <div class="rail-card source-image-card" id="source-image-card">
-                <h2 class="rail-card-title">Source Image</h2>
-                <div class="source-image-content">
-                    <img src="{{ prompt.b2_source_image_url }}"
-                         alt="Source image for {{ prompt.title }}"
-                         class="source-image-thumb"
-                         loading="lazy"
-                         style="max-width: 120px; max-height: 80px; object-fit: cover; border-radius: var(--radius-sm, 6px); display: block; margin-bottom: 0.5rem;">
-                    <button type="button"
-                            class="btn-outline-standard action-icon-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#sourceImageModal"
-                            aria-label="View full size source image for {{ prompt.title }}">
-                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-eye"/></svg>
-                        View Source Image
-                    </button>
+                {% if prompt.b2_source_image_url %}
+                <div class="source-image-col">
+                    <h2 class="rail-card-title">Source Image</h2>
+                    <div class="source-image-content">
+                        <div class="source-image-thumb-wrap"
+                             role="button"
+                             tabindex="0"
+                             aria-label="View full size source image"
+                             onclick="openSourceImageLightbox()"
+                             onkeydown="if(event.key==='Enter'||event.key===' ')openSourceImageLightbox()">
+                            <img src="{{ prompt.b2_source_image_url }}"
+                                 alt="Source image for {{ prompt.title }}"
+                                 class="source-image-thumb"
+                                 loading="lazy">
+                            <div class="source-image-zoom-icon" aria-hidden="true">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                     stroke="white" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                {% endif %}
             </div>
             {% endif %}
 
@@ -864,41 +903,122 @@
 </div>
 </div><!-- .prompt-detail-page -->
 
-{% if user.is_staff and prompt.b2_source_image_url %}
-<!-- Source Image Lightbox Modal (staff-only, SRC-5) -->
-<div class="modal fade" id="sourceImageModal" tabindex="-1"
-     aria-labelledby="sourceImageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="sourceImageModalLabel">Source Image</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center p-2">
-                <img src="{{ prompt.b2_source_image_url }}"
-                     alt="Full size source image for {{ prompt.title }}"
-                     class="img-fluid"
-                     loading="lazy"
-                     style="max-height: 80vh; object-fit: contain;">
-                <div class="mt-2">
-                    <a href="{{ prompt.b2_source_image_url }}"
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       class="btn-outline-standard action-icon-btn"
-                       aria-label="Open source image in new tab">
-                        <svg class="icon icon-sm" aria-hidden="true"><use href="{% static 'icons/sprite.svg' %}#icon-external-link"/></svg>
-                        Open in new tab
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 
 {% endblock content %}
 
 {% block extras %}
+{% if prompt.b2_source_image_url or prompt.display_large_url %}
+<script>
+(function() {
+    'use strict';
+
+    var pdLightboxEl = null;
+    var pdLightboxTrigger = null;
+
+    function createPdLightbox() {
+        var overlay = document.createElement('div');
+        overlay.className = 'lightbox-overlay';
+        overlay.id = 'pdImageLightbox';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', 'Image preview');
+
+        var inner = document.createElement('div');
+        inner.className = 'lightbox-inner';
+
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'lightbox-close';
+        closeBtn.setAttribute('aria-label', 'Close preview');
+        closeBtn.setAttribute('type', 'button');
+        closeBtn.innerHTML = '&times;';
+
+        var img = document.createElement('img');
+        img.className = 'lightbox-image';
+        img.id = 'pdLightboxImage';
+        img.alt = '';
+
+        var openLink = document.createElement('a');
+        openLink.className = 'lightbox-open-link';
+        openLink.target = '_blank';
+        openLink.rel = 'noopener noreferrer';
+        openLink.innerHTML =
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" ' +
+            'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+            'stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>' +
+            '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' +
+            '</svg> Open in new tab';
+
+        inner.appendChild(closeBtn);
+        inner.appendChild(img);
+        inner.appendChild(openLink);
+        overlay.appendChild(inner);
+        document.body.appendChild(overlay);
+
+        closeBtn.addEventListener('click', closePdLightbox);
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) closePdLightbox();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (!overlay.classList.contains('is-open')) return;
+            if (e.key === 'Escape') closePdLightbox();
+            if (e.key === 'Tab') {
+                var focusable = [closeBtn, openLink];
+                var first = focusable[0];
+                var last = focusable[focusable.length - 1];
+                if (e.shiftKey) {
+                    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+                } else {
+                    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+            }
+        });
+
+        pdLightboxEl = overlay;
+        return overlay;
+    }
+
+    function openPdLightbox(imageUrl, altText) {
+        pdLightboxTrigger = document.activeElement;
+        if (!pdLightboxEl) createPdLightbox();
+        var img = document.getElementById('pdLightboxImage');
+        var link = pdLightboxEl.querySelector('.lightbox-open-link');
+        img.src = imageUrl;
+        img.alt = altText || 'Full size preview';
+        link.href = imageUrl;
+        pdLightboxEl.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        pdLightboxEl.querySelector('.lightbox-close').focus();
+    }
+
+    function closePdLightbox() {
+        if (!pdLightboxEl) return;
+        pdLightboxEl.classList.remove('is-open');
+        document.body.style.overflow = '';
+        if (pdLightboxTrigger && typeof pdLightboxTrigger.focus === 'function') {
+            pdLightboxTrigger.focus();
+            pdLightboxTrigger = null;
+        }
+    }
+
+    window.openPromptDetailLightbox = openPdLightbox;
+})();
+</script>
+{% endif %}
+
+{% if user.is_staff and prompt.b2_source_image_url %}
+<script>
+function openSourceImageLightbox() {
+    if (window.openPromptDetailLightbox) {
+        window.openPromptDetailLightbox(
+            '{{ prompt.b2_source_image_url|escapejs }}',
+            '{{ prompt.title|escapejs }}'
+        );
+    }
+}
+</script>
+{% endif %}
+
 <!-- Prompt Detail Page JavaScript (deferred for performance) -->
 <script src="{% static 'js/prompt-detail.js' %}" defer></script>
 

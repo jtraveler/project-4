@@ -288,8 +288,7 @@
         setTimeout(function () {
             // Find the next sibling box to focus after deletion
             var allCurrent = Array.from(promptGrid.querySelectorAll('.bg-prompt-box:not(.removing)'));
-            var nextSibling = allCurrent.filter(function (b) { return b !== box; });
-            var focusTarget = nextSibling[boxIndex] || nextSibling[nextSibling.length - 1];
+            var focusTarget = allCurrent[boxIndex] || allCurrent[allCurrent.length - 1];
 
             box.remove();
             renumberBoxes();
@@ -1031,6 +1030,24 @@
     clearAllBtn.addEventListener('click', function () { showModal(clearAllModal); });
     clearAllCancel.addEventListener('click', function () { hideModal(clearAllModal); });
     clearAllConfirm.addEventListener('click', function () {
+        // Clean up B2 paste images before clearing all boxes
+        promptGrid.querySelectorAll('.bg-prompt-box').forEach(function(box) {
+            var pasteInput = box.querySelector('.bg-prompt-source-image-input');
+            var pasteUrl = pasteInput ? pasteInput.value.trim() : '';
+            if (pasteUrl && pasteUrl.indexOf('/source-paste/') !== -1) {
+                fetch('/api/bulk-gen/source-image-paste/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf,
+                    },
+                    body: JSON.stringify({ cdn_url: pasteUrl }),
+                }).catch(function() {
+                    // Non-critical — ignore failure
+                });
+            }
+        });
+
         promptGrid.querySelectorAll('.bg-box-textarea').forEach(function (ta) {
             ta.value = '';
             autoGrowTextarea(ta);

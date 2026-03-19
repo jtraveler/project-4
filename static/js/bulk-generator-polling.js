@@ -365,6 +365,7 @@
                     var clickedImg = e.target.closest('.prompt-image-container img');
                     if (clickedImg) {
                         var slot = clickedImg.closest('.prompt-image-slot');
+                        if (slot && slot.classList.contains('is-published')) return;
                         var zoom = slot ? slot.querySelector('.btn-zoom') : null;
                         if (zoom) {
                             e.preventDefault();

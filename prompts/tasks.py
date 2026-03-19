@@ -2982,7 +2982,27 @@ def _upload_source_image_to_b2(image_bytes: bytes, job, image) -> str:
     """
     from django.conf import settings
 
-    b2_key = f'bulk-gen/{job.id}/source/{image.id}.jpg'
+    # Convert to WebP for efficient storage and delivery
+    content_type = 'image/jpeg'
+    file_ext = 'jpg'
+    try:
+        from PIL import Image as PILImage
+        import io
+        pil_img = PILImage.open(io.BytesIO(image_bytes))
+        if pil_img.mode in ('RGBA', 'LA', 'P'):
+            pil_img = pil_img.convert('RGB')
+        pil_img.thumbnail((1200, 1200), PILImage.LANCZOS)
+        webp_buffer = io.BytesIO()
+        pil_img.save(webp_buffer, format='WEBP', quality=85, method=4)
+        image_bytes = webp_buffer.getvalue()
+        content_type = 'image/webp'
+        file_ext = 'webp'
+    except Exception as pil_exc:
+        logger.warning(
+            "[SRC-6] WebP conversion failed, uploading original: %s", pil_exc
+        )
+
+    b2_key = f'bulk-gen/{job.id}/source/{image.id}.{file_ext}'
 
     s3_client = _get_b2_client()
 
@@ -2990,7 +3010,7 @@ def _upload_source_image_to_b2(image_bytes: bytes, job, image) -> str:
         Bucket=settings.B2_BUCKET_NAME,
         Key=b2_key,
         Body=image_bytes,
-        ContentType='image/jpeg',
+        ContentType=content_type,
     )
 
     return f'https://{settings.B2_CUSTOM_DOMAIN}/{b2_key}'

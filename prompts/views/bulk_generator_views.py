@@ -142,7 +142,7 @@ def api_start_generation(request):
     Creates a bulk generation job and starts processing.
 
     Body JSON: {
-        "prompts": ["prompt 1", ...],
+        "prompts": [{"text": "prompt 1", ...}, ...] or ["prompt 1", ...],
         "provider": "openai",
         "model": "gpt-image-1",
         "quality": "medium",
@@ -153,6 +153,15 @@ def api_start_generation(request):
         "reference_image_url": "",
         "character_description": ""
     }
+
+    Each prompt entry (when object) may include:
+      "text": str — the prompt text (required)
+      "size": str — per-prompt size override (optional)
+      "quality": str — per-prompt quality override (optional)
+      "image_count": int — per-prompt image count override (optional)
+      "source_image_url": str — per-prompt source image URL (optional)
+        URL must be https:// and end in a recognised image extension.
+        Used by SRC-6 to download and store the source image to B2.
     """
     try:
         data = json.loads(request.body)

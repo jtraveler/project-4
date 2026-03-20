@@ -324,6 +324,13 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 | `prompt_list_views.py` growth monitor | `prompts/views/prompt_list_views.py` | 620 lines, `prompt_detail` is ~320 lines — watch for growth |
 | ~~`__init__.py` imports through shim~~ | `prompts/views/__init__.py` | ✅ RESOLVED Session 138 — imports directly from domain modules |
 | `int(content_length)` no try/except | `prompts/tasks.py` | Pre-existing in both download functions — safe but opaque error on malformed header |
+| ~~`clearAllConfirm` paste state reset~~ | `static/js/bulk-generator.js` | ✅ RESOLVED Session 140 — full paste state reset added |
+| ~~`B2_CUSTOM_DOMAIN` empty edge case~~ | `prompts/views/upload_api_views.py` | ✅ RESOLVED Session 140 — empty guard with 500 response |
+| ~~`getMasterDimensions()` hardcoded fallback~~ | `static/js/bulk-generator.js` | ✅ RESOLVED Session 140 — reads first available button from DOM |
+| ~~`lightbox-open-link:focus-visible`~~ | `static/css/pages/prompt-detail.css` | ✅ RESOLVED Session 140 — double-ring pattern added |
+| ~~Hidden 16:9 button `aria-hidden`~~ | `prompts/templates/prompts/bulk_generator.html` | ✅ RESOLVED Session 140 — aria-hidden + tabindex=-1 |
+| ~~`_upload_source_image_to_b2` docstring~~ | `prompts/tasks.py` | ✅ RESOLVED Session 140 — WebP conversion documented |
+| ~~Space key `event.preventDefault()`~~ | `prompts/templates/prompts/prompt_detail.html` | ✅ RESOLVED Session 140 — preventDefault on source image wrap |
 
 ### 🚀 Planned New Features
 
@@ -1743,5 +1750,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.30 (Session 121 — SMOKE2 series A–E, HARDENING-1, JS-SPLIT-1, HARDENING-2; 1117 tests; bulk-gen smoke test complete; all SMOKE2 production prompts backfilled)
-**Last Updated:** March 16, 2026
+**Version:** 4.31 (Session 140 — JS bug fixes, lightbox desktop layout, P3 cleanup, protocol v2.2; 1193+ tests)
+**Last Updated:** March 20, 2026

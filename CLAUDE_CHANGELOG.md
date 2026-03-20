@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 19, 2026 (Sessions 101–139)
+**Last Updated:** March 20, 2026 (Sessions 101–140)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,30 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 140 — March 20, 2026
+
+**Focus:** Bug fixes, lightbox desktop layout, P3 cleanup, protocol v2.2
+
+**Specs:** 140-A (JS bug fixes), 140-B (backend/CSS fixes), 140-C (lightbox layout),
+140-D (P3 cleanup), 140-E (protocol v2.2), 140-F (docs)
+
+**Key outcomes:**
+- Download button now uses fetch+blob (fixes cross-origin download failure)
+- Thumbnail preview now shows on blur for valid typed source URLs
+- Clear All now fully resets paste state (URL, lock, preview, thumbnail, status)
+- Server-side URL validator now handles CDN URLs with query strings
+- Error banner now shows jump links after server-side validation rejection
+- Textarea prompt field is now user-resizable (wrapper resize: vertical)
+- Lightbox desktop layout: full height image, × and links in right panel
+- Source image thumbnail: object-fit: contain, cursor: zoom-in
+- P3 batch: Space preventDefault, B2 domain guard, focus-visible, aria-hidden,
+  docstring update, dimension fallback
+- Protocol v2.2: WCAG 1.4.11, focus trap, reduced-motion, cross-origin fetch
+  added to mandatory PRE-AGENT SELF-CHECK
+- Tests: 1193+ passing, 12 skipped, 0 failures
+
+---
 
 ### Session 139 — March 19, 2026
 

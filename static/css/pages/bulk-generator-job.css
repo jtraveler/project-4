@@ -302,8 +302,6 @@
 /* ─── Gallery Container ────────────────────────────────────── */
 .job-gallery-container {
     min-height: 200px;
-    padding: 30px 30px 40px;
-    background: var(--gray-200);
     border-radius: var(--radius-lg);
 }
 
@@ -350,6 +348,8 @@
 .prompt-group {
     animation: promptGroupFadeIn 300ms ease-out forwards;
     opacity: 0;
+    padding: 30px 30px 40px;
+    background: var(--gray-50);
 }
 
 @keyframes promptGroupFadeIn {
@@ -493,7 +493,7 @@
 /* Generating state — animated progress bar */
 .placeholder-progress-wrap {
     width: 80%;
-    height: 3px;
+    height: 6px;
     background: var(--gray-200, #e5e7eb);
     border-radius: 2px;
     overflow: hidden;

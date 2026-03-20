@@ -1,8 +1,8 @@
 # CC_MULTI_SPEC_PROTOCOL.md
 # Multi-Spec Execution Protocol
 
-**Version:** 2.1
-**Date:** March 16, 2026
+**Version:** 2.2
+**Date:** March 20, 2026
 **Purpose:** Defines the rules CC must follow whenever running specs.
 These rules apply automatically — they do not need to be repeated in
 individual specs or run instructions.
@@ -155,6 +155,48 @@ should not be the first line of defence against basic errors.
 **The self-check is not optional and cannot be skipped.** An agent score above
 8.0 does not retroactively validate a skipped self-check.
 
+### Mandatory Additional Checks (v2.2 — Session 140)
+
+The following checks MUST be completed before running agents on any spec
+that adds or modifies interactive elements, dialogs, buttons, or CSS:
+
+#### WCAG 1.4.11 — Non-text contrast (recurring miss: Sessions 138-C, 139-B, 139-C)
+- [ ] Every interactive element (button, input, checkbox, select, toggle) has
+      a visible boundary or indicator with 3:1 contrast ratio against its
+      adjacent background in BOTH its default and focus states
+- [ ] This includes: button borders, input borders, focus rings, icon-only
+      buttons, checkboxes, and any non-text UI component
+- [ ] Check on BOTH light and dark backgrounds if the element can appear on
+      variable backgrounds (e.g. overlays on images)
+- [ ] Common failure pattern: white border/icon on light image background —
+      fix with dark halo box-shadow compositing
+
+#### Focus trap completeness (recurring miss: Session 139-B)
+- [ ] Any new `role="dialog"` or modal element with multiple focusable children
+      has a complete Tab cycle covering ALL focusable elements
+- [ ] Verify with `e.shiftKey` boundary wrapping (forward and backward Tab)
+- [ ] Never assume only one focusable element exists — count them explicitly
+
+#### `prefers-reduced-motion` coverage (recurring miss: Session 139-B)
+- [ ] Every new CSS `transition` or `animation` added must be included in the
+      `prefers-reduced-motion` block
+- [ ] Check for existing reduced-motion blocks in the file and add new
+      transitions there — do not create orphaned transitions without coverage
+- [ ] New JS animations (e.g. scroll, progress bars) must also check
+      `window.matchMedia('(prefers-reduced-motion: reduce)').matches`
+
+#### Cross-origin fetch (new pattern: Session 140)
+- [ ] Any `fetch()` call that retrieves resources from a different origin
+      (e.g. B2/CDN URLs) must use the blob+objectURL pattern for file downloads
+- [ ] Direct `<a download>` on cross-origin URLs will fail silently in all
+      modern browsers — always use fetch+blob for downloads
+
+#### General reminders
+- [ ] `escapejs` filter used on all Django template variables interpolated
+      into inline JavaScript strings
+- [ ] `aria-hidden="true"` on all decorative SVG icons
+- [ ] `tabindex="-1"` on any hidden-but-present interactive element
+
 ---
 
 ## 📊 COMPLETION REPORTS
@@ -241,3 +283,6 @@ corrected file size guidance, restored PRE-AGENT section, v2.1 clarified Critica
 tier str_replace limit (2 max, only when new-file strategy not possible),
 v2.1 docs gate re-run rule: agent scores below 8.0 require a confirmed re-run
 before committing. Fixes without re-run verification do not count as passing.
+v2.2 (Session 140): Added WCAG 1.4.11 non-text contrast, focus trap completeness,
+prefers-reduced-motion coverage, and cross-origin fetch pattern to mandatory
+PRE-AGENT SELF-CHECK. Added escapejs, aria-hidden, tabindex general reminders.

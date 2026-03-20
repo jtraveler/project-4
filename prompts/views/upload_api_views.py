@@ -835,7 +835,11 @@ def source_image_paste_delete(request):
 
     # Security: only allow deletion of bulk-gen/source-paste/ keys
     from django.conf import settings
-    expected_prefix = f'https://{settings.B2_CUSTOM_DOMAIN}/'
+    b2_domain = getattr(settings, 'B2_CUSTOM_DOMAIN', '') or ''
+    if not b2_domain:
+        logger.warning("[PASTE-DELETE] B2_CUSTOM_DOMAIN not configured — cannot validate URL.")
+        return JsonResponse({'success': False, 'error': 'Storage not configured.'}, status=500)
+    expected_prefix = f'https://{b2_domain}/'
     if not cdn_url.startswith(expected_prefix):
         return JsonResponse({'success': False, 'error': 'Invalid URL.'}, status=400)
 

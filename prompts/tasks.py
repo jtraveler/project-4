@@ -2964,21 +2964,13 @@ def _upload_generated_image_to_b2(image_data, job, image):
 
 def _upload_source_image_to_b2(image_bytes: bytes, job, image) -> str:
     """
-    Upload a source reference image to B2.
+    Download, convert to WebP (via Pillow), and upload a source image to B2.
 
-    Stores at bulk-gen/{job_id}/source/{image_id}.jpg — separate from
-    generated images to make cleanup and auditing straightforward.
+    Converts the source image to WebP format (quality 85, max 1200×1200px)
+    before uploading. Falls back to the original bytes if Pillow conversion
+    fails. Uploaded under key: bulk-gen/{job_id}/source/{image_id}.webp
 
-    Args:
-        image_bytes: Raw image bytes.
-        job: BulkGenerationJob instance.
-        image: GeneratedImage instance.
-
-    Returns:
-        Full Cloudflare CDN URL string.
-
-    Raises:
-        Exception if upload fails.
+    Returns the CDN URL of the uploaded file, or empty string on failure.
     """
     from django.conf import settings
 

@@ -1558,7 +1558,6 @@ a.model-name:hover {
 }
 
 .source-credit-col {
-    flex: 1;
     min-width: 120px;
 }
 
@@ -1570,16 +1569,19 @@ a.model-name:hover {
 .source-image-thumb-wrap {
     position: relative;
     display: inline-block;
-    cursor: pointer;
+    cursor: zoom-in;
     border-radius: var(--radius-sm, 6px);
     overflow: hidden;
 }
 
+/* Show full image without cropping */
 .source-image-thumb {
     display: block;
-    width: 180px;
-    height: 180px;
-    object-fit: cover;
+    max-width: 180px;
+    max-height: 180px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
     border-radius: var(--radius-sm, 6px);
     transition: opacity 0.2s ease;
 }
@@ -1693,17 +1695,36 @@ a.model-name:hover {
 
 .lightbox-inner {
     position: relative;
-    max-width: 90vw;
-    max-height: 90vh;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    max-width: 95vw;
+    max-height: 95vh;
+}
+
+.lightbox-image {
+    max-width: 85vw;
+    max-height: 95vh;
+    object-fit: contain;
+    border-radius: var(--radius-lg, 0.5rem);
+    display: block;
+}
+
+/* Right panel — absolutely positioned so image stays centered */
+.lightbox-right-panel {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 0;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: space-between;
+    min-width: 40px;
 }
 
 .lightbox-close {
-    position: absolute;
-    top: -40px;
-    right: -8px;
     width: 36px;
     height: 36px;
     background: none;
@@ -1716,7 +1737,7 @@ a.model-name:hover {
     justify-content: center;
     border-radius: 50%;
     transition: background 0.15s ease;
-    z-index: 1;
+    flex-shrink: 0;
 }
 
 .lightbox-close:hover {
@@ -1728,17 +1749,38 @@ a.model-name:hover {
     outline-offset: 2px;
 }
 
-.lightbox-image {
-    max-width: 90vw;
-    max-height: 80vh;
-    object-fit: contain;
-    border-radius: var(--radius-lg, 0.5rem);
+.lightbox-open-link:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px rgba(0, 0, 0, 0.65),
+        0 0 0 4px rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Tablet and below — close button on top, stacked layout */
+@media (max-width: 768px) {
+    .lightbox-inner {
+        flex-direction: column;
+        max-height: 90vh;
+    }
+    .lightbox-image {
+        max-width: 90vw;
+        max-height: 80vh;
+    }
+    .lightbox-right-panel {
+        position: static;
+        flex-direction: row;
+        width: 100%;
+        justify-content: flex-end;
+        height: auto;
+        padding-top: 0.5rem;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .hero-image-zoom-icon { transition: none; }
     .hero-image-wrap { cursor: pointer; }
     .lightbox-overlay { transition: none; }
-    .lightbox-close,
+    .lightbox-close { transition: none; }
     .lightbox-open-link { transition: none; }
 }

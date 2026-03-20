@@ -303,6 +303,9 @@
 .job-gallery-container {
     min-height: 200px;
     border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
 }
 
 /* ─── Responsive: ≤ 768px ─────────────────────────────────── */
@@ -990,17 +993,36 @@ a.published-badge:focus-visible {
 
 .lightbox-inner {
     position: relative;
-    max-width: 90vw;
-    max-height: 90vh;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    max-width: 95vw;
+    max-height: 95vh;
+}
+
+.lightbox-image {
+    max-width: 85vw;
+    max-height: 95vh;
+    object-fit: contain;
+    border-radius: var(--radius-lg, 0.5rem);
+    display: block;
+}
+
+/* Right panel — absolutely positioned so image stays centered */
+.lightbox-right-panel {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 0;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: space-between;
+    min-width: 40px;
 }
 
 .lightbox-close {
-    position: absolute;
-    top: -40px;
-    right: -8px;
     width: 36px;
     height: 36px;
     background: none;
@@ -1013,7 +1035,7 @@ a.published-badge:focus-visible {
     justify-content: center;
     border-radius: 50%;
     transition: background 0.15s ease;
-    z-index: 1;
+    flex-shrink: 0;
 }
 
 .lightbox-close:hover {
@@ -1025,11 +1047,24 @@ a.published-badge:focus-visible {
     outline-offset: 2px;
 }
 
-.lightbox-image {
-    max-width: 90vw;
-    max-height: 80vh;
-    object-fit: contain;
-    border-radius: var(--radius-lg, 0.5rem);
+/* Tablet and below — close button on top, stacked layout */
+@media (max-width: 768px) {
+    .lightbox-inner {
+        flex-direction: column;
+        max-height: 90vh;
+    }
+    .lightbox-image {
+        max-width: 90vw;
+        max-height: 80vh;
+    }
+    .lightbox-right-panel {
+        position: static;
+        flex-direction: row;
+        width: 100%;
+        justify-content: flex-end;
+        height: auto;
+        padding-top: 0.5rem;
+    }
 }
 
 /* .lightbox-caption removed — Session 139 (caption no longer rendered) */
@@ -1112,6 +1147,7 @@ a.published-badge:focus-visible {
     .progress-bar-fill { transition: none; }
     .prompt-image-container img { animation: none; }
     .lightbox-overlay { transition: none; }
+    .lightbox-close { transition: none; }
     .prompt-group-text-overlay { transition: none; }
     .prompt-image-slot.is-discarded .prompt-image-container img { transition: none; }
     .prompt-image-slot.is-published .prompt-image-container img { transition: none; }

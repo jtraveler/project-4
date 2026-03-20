@@ -512,7 +512,7 @@
                              tabindex="0"
                              aria-label="View full size source image"
                              onclick="openSourceImageLightbox()"
-                             onkeydown="if(event.key==='Enter'||event.key===' ')openSourceImageLightbox()">
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSourceImageLightbox()}">
                             <img src="{{ prompt.b2_source_image_url }}"
                                  alt="Source image for {{ prompt.title }}"
                                  class="source-image-thumb"
@@ -949,9 +949,12 @@
             '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' +
             '</svg> Open in new tab';
 
-        inner.appendChild(closeBtn);
+        var rightPanel = document.createElement('div');
+        rightPanel.className = 'lightbox-right-panel';
+        rightPanel.appendChild(closeBtn);
+        rightPanel.appendChild(openLink);
         inner.appendChild(img);
-        inner.appendChild(openLink);
+        inner.appendChild(rightPanel);
         overlay.appendChild(inner);
         document.body.appendChild(overlay);
 

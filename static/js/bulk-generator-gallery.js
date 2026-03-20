@@ -399,8 +399,11 @@
         img.id = 'lightboxImage';
         img.alt = '';
 
-        inner.appendChild(closeBtn);
+        var rightPanel = document.createElement('div');
+        rightPanel.className = 'lightbox-right-panel';
+        rightPanel.appendChild(closeBtn);
         inner.appendChild(img);
+        inner.appendChild(rightPanel);
         overlay.appendChild(inner);
         document.body.appendChild(overlay);
 

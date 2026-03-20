@@ -8,7 +8,7 @@ API endpoints return JsonResponse.
 import json
 import logging
 import re
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
@@ -36,7 +36,10 @@ VALID_QUALITIES = frozenset({'low', 'medium', 'high'})
 VALID_COUNTS = frozenset({1, 2, 3, 4})
 VALID_PROVIDERS = frozenset({'openai'})
 VALID_VISIBILITIES = frozenset({'public', 'private'})
-_SRC_IMG_EXTENSIONS = re.compile(r'\.(jpg|jpeg|png|webp|gif|avif)$', re.IGNORECASE)
+_SRC_IMG_EXTENSIONS = re.compile(
+    r'\.(jpg|jpeg|png|webp|gif|avif)(?:[?#&/]|$)',
+    re.IGNORECASE,
+)
 
 # Allowed domains for reference image URLs
 ALLOWED_REFERENCE_DOMAINS = [
@@ -240,7 +243,11 @@ def api_start_generation(request):
     for _i, _url in enumerate(source_image_urls):
         if _url:
             _parsed = urlparse(_url)
-            if _parsed.scheme != 'https' or not _parsed.netloc or not _SRC_IMG_EXTENSIONS.search(_parsed.path):
+            path_ok = bool(_SRC_IMG_EXTENSIONS.search(_parsed.path))
+            # Fallback: check decoded query string (handles CDN optimisation URLs)
+            if not path_ok and _parsed.query:
+                path_ok = bool(_SRC_IMG_EXTENSIONS.search(unquote(_parsed.query)))
+            if _parsed.scheme != 'https' or not _parsed.netloc or not path_ok:
                 invalid_src_indices.append(_i + 1)  # 1-based prompt number
 
     if invalid_src_indices:

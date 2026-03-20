@@ -120,13 +120,35 @@
         var groupIdx = parseInt(btn.getAttribute('data-group'), 10);
         var slotIdx = parseInt(btn.getAttribute('data-slot'), 10);
         var ext = G.getExtensionFromUrl(url);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'prompt-' + (groupIdx + 1) + '-image-' + (slotIdx + 1) + ext;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        var filename = 'prompt-' + (groupIdx + 1) + '-image-' + (slotIdx + 1) + ext;
+
+        // Use fetch+blob to bypass cross-origin download restriction
+        fetch(url)
+            .then(function(r) {
+                if (!r.ok) throw new Error('Fetch failed');
+                return r.blob();
+            })
+            .then(function(blob) {
+                var objectUrl = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = objectUrl;
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function() { URL.revokeObjectURL(objectUrl); }, 100);
+            })
+            .catch(function() {
+                // Fallback: direct link if blob fetch fails
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
     };
 
     // ─── Toast Notifications (Phase 6B) ──────────────────────────

@@ -435,6 +435,19 @@
             } else {
                 errDiv.textContent = '';
                 errDiv.style.display = 'none';
+                // Show thumbnail preview for valid non-paste URLs
+                if (val && val.indexOf('/source-paste/') === -1) {
+                    var preview = box.querySelector('.bg-source-paste-preview');
+                    var thumb = box.querySelector('.bg-source-paste-thumb');
+                    if (preview && thumb) {
+                        thumb.src = val;
+                        thumb.onerror = function() {
+                            preview.style.display = 'none';
+                            thumb.onerror = null;
+                        };
+                        preview.style.display = 'flex';
+                    }
+                }
             }
         }
     });
@@ -792,8 +805,12 @@
     }
 
     function getMasterDimensions() {
-        var active = document.querySelector('#settingDimensions .bg-btn-group-option.active');
-        return active ? active.dataset.value : '1024x1024';
+        var dimEl = document.getElementById('settingDimensions');
+        var active = dimEl ? dimEl.querySelector('.bg-btn-group-option.active') : null;
+        if (active && active.dataset.value) return active.dataset.value;
+        // Fallback: first available option (not hardcoded — respects template default)
+        var first = dimEl ? dimEl.querySelector('.bg-btn-group-option[data-value]') : null;
+        return first ? first.dataset.value : '';
     }
 
     function getVisibility() {
@@ -1055,7 +1072,28 @@
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             box.classList.remove('has-error');
             var err = box.querySelector('.bg-box-error');
-            if (err) err.textContent = '';
+            if (err) { err.textContent = ''; err.style.display = ''; }
+
+            // Reset badge
+            var badge = box.querySelector('.bg-box-error-badge');
+            if (badge) badge.style.display = '';
+
+            // Reset paste state — URL field, lock, preview, status
+            var si = box.querySelector('.bg-prompt-source-image-input');
+            if (si) {
+                si.value = '';
+                BulkGenUtils.unlockPasteInput(si);
+            }
+            var preview = box.querySelector('.bg-source-paste-preview');
+            if (preview) preview.style.display = 'none';
+            var thumb = box.querySelector('.bg-source-paste-thumb');
+            if (thumb) { thumb.src = ''; thumb.onerror = null; }
+            var status = box.querySelector('.bg-source-paste-status');
+            if (status) status.textContent = '';
+
+            // Also reset source credit field
+            var sc = box.querySelector('.bg-box-source-input');
+            if (sc) sc.value = '';
         });
         hideModal(clearAllModal);
         clearValidationErrors();
@@ -1386,7 +1424,29 @@
             .then(function (data) {
                 if (!data) return;
                 if (data.error) {
-                    showValidationErrors([{ message: data.error }]);
+                    // Try to parse prompt numbers from server error format:
+                    // "Invalid source image URL for prompt(s): 2, 3. URL must be..."
+                    var srcErrMatch = data.error.match(
+                        /Invalid source image URL for prompt\(s\):\s*([\d,\s]+)\./i
+                    );
+                    if (srcErrMatch) {
+                        var nums = srcErrMatch[1].split(',').map(function(s) {
+                            return parseInt(s.trim(), 10);
+                        }).filter(function(n) { return !isNaN(n); });
+                        var srcErrors = nums.map(function(num) {
+                            return {
+                                message: 'Source image URL for prompt ' + num +
+                                    ' is not a valid image link. ' +
+                                    'Please enter a URL ending in .jpg, .png, ' +
+                                    '.webp, .gif, or .avif, or leave the field blank.',
+                                index: num - 1,
+                                promptNum: num,
+                            };
+                        });
+                        showValidationErrors(srcErrors);
+                    } else {
+                        showValidationErrors([{ message: data.error }]);
+                    }
                     resetGenerateBtn();
                     return;
                 }

@@ -393,8 +393,12 @@
                 var clearInput = clearBox.querySelector('.bg-prompt-source-image-input');
                 clearInput.value = '';
                 BulkGenUtils.unlockPasteInput(clearInput);
-                clearBox.querySelector('.bg-source-paste-preview').style.display = 'none';
-                clearBox.querySelector('.bg-source-paste-status').textContent = '';
+                var clearPreview = clearBox.querySelector('.bg-source-paste-preview');
+                if (clearPreview) clearPreview.style.display = 'none';
+                var clearThumb = clearBox.querySelector('.bg-source-paste-thumb');
+                if (clearThumb) { clearThumb.src = ''; clearThumb.onerror = null; }
+                var clearStatus = clearBox.querySelector('.bg-source-paste-status');
+                if (clearStatus) clearStatus.textContent = '';
             }
             return;
         }
@@ -1047,43 +1051,46 @@
     clearAllBtn.addEventListener('click', function () { showModal(clearAllModal); });
     clearAllCancel.addEventListener('click', function () { hideModal(clearAllModal); });
     clearAllConfirm.addEventListener('click', function () {
-        // Clean up B2 paste images before clearing all boxes
+        // Step 1: Collect all paste URLs BEFORE touching any fields
+        var pasteUrlsToDelete = [];
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function(box) {
             var pasteInput = box.querySelector('.bg-prompt-source-image-input');
             var pasteUrl = pasteInput ? pasteInput.value.trim() : '';
             if (pasteUrl && pasteUrl.indexOf('/source-paste/') !== -1) {
-                fetch('/api/bulk-gen/source-image-paste/delete/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrf,
-                    },
-                    body: JSON.stringify({ cdn_url: pasteUrl }),
-                }).catch(function() {
-                    // Non-critical — ignore failure
-                });
+                pasteUrlsToDelete.push(pasteUrl);
             }
         });
 
-        promptGrid.querySelectorAll('.bg-box-textarea').forEach(function (ta) {
-            ta.value = '';
-            autoGrowTextarea(ta);
+        // Step 2: Fire B2 deletes (URLs already captured above)
+        pasteUrlsToDelete.forEach(function(pasteUrl) {
+            fetch('/api/bulk-gen/source-image-paste/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf,
+                },
+                body: JSON.stringify({ cdn_url: pasteUrl }),
+            }).catch(function(err) {
+                console.warn('[PASTE-DELETE] fetch failed:', err);
+            });
         });
+
+        // Step 3: Reset ALL box state (text, paste, errors)
         promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
+            // Textarea
+            var ta = box.querySelector('.bg-box-textarea');
+            if (ta) { ta.value = ''; autoGrowTextarea(ta); }
+
+            // Error state
             box.classList.remove('has-error');
             var err = box.querySelector('.bg-box-error');
             if (err) { err.textContent = ''; err.style.display = ''; }
-
-            // Reset badge
             var badge = box.querySelector('.bg-box-error-badge');
             if (badge) badge.style.display = '';
 
-            // Reset paste state — URL field, lock, preview, status
+            // Paste state — URL field, lock, preview, thumbnail, status
             var si = box.querySelector('.bg-prompt-source-image-input');
-            if (si) {
-                si.value = '';
-                BulkGenUtils.unlockPasteInput(si);
-            }
+            if (si) { si.value = ''; BulkGenUtils.unlockPasteInput(si); }
             var preview = box.querySelector('.bg-source-paste-preview');
             if (preview) preview.style.display = 'none';
             var thumb = box.querySelector('.bg-source-paste-thumb');
@@ -1091,10 +1098,11 @@
             var status = box.querySelector('.bg-source-paste-status');
             if (status) status.textContent = '';
 
-            // Also reset source credit field
+            // Source credit
             var sc = box.querySelector('.bg-box-source-input');
             if (sc) sc.value = '';
         });
+
         hideModal(clearAllModal);
         clearValidationErrors();
         clearSavedPrompts();

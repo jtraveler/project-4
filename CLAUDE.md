@@ -331,6 +331,9 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 | ~~Hidden 16:9 button `aria-hidden`~~ | `prompts/templates/prompts/bulk_generator.html` | ✅ RESOLVED Session 140 — aria-hidden + tabindex=-1 |
 | ~~`_upload_source_image_to_b2` docstring~~ | `prompts/tasks.py` | ✅ RESOLVED Session 140 — WebP conversion documented |
 | ~~Space key `event.preventDefault()`~~ | `prompts/templates/prompts/prompt_detail.html` | ✅ RESOLVED Session 140 — preventDefault on source image wrap |
+| ~~Single-box ✕ B2 delete~~ | `static/js/bulk-generator.js` | ✅ RESOLVED Session 142 — fires B2 delete before clearing URL field |
+| ~~`X-Content-Type-Options` on download proxy~~ | `prompts/views/upload_api_views.py` | ✅ RESOLVED Session 142 — nosniff added to download proxy |
+| ~~gallery.js lightbox close button~~ | `static/js/bulk-generator-gallery.js` | ✅ RESOLVED Session 142 — confirmed on overlay (141 fix verified) |
 
 ### 🚀 Planned New Features
 
@@ -1751,5 +1754,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.32 (Session 141 — download proxy, blur thumbnail, lightbox fix, reference image; 1193+ tests)
+**Version:** 4.33 (Session 142 — STRIDE proxy review, 141-D closed, single-box B2 delete, nosniff; 1193 tests)
 **Last Updated:** March 21, 2026

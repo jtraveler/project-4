@@ -142,7 +142,7 @@ python manage.py test prompts.tests.test_bulk_generator
 
 | Hash | Message |
 |------|---------|
-| *(see below)* | fix(lightbox): gallery.js close button on overlay (re-applied), caption removed; 141-D closed |
+| 8c3f5ef | fix(lightbox): gallery.js close button on overlay (re-applied), caption removed; 141-D closed |
 
 ## Section 11 — What to Work on Next
 

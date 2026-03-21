@@ -3,7 +3,7 @@
 **Last Updated:** March 21, 2026
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA), Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1193 passing, 12 skipped (Session 140)
+**Total Tests:** 1193 passing, 12 skipped (Session 142)
 
 ---
 
@@ -241,7 +241,7 @@ prompts/services/
 ├── image_providers/         # Provider abstraction package (Session 92)
 │   ├── __init__.py          # Package init
 │   ├── base.py              # Abstract ImageProvider base class + GenerationResult dataclass (error_type, retry_after added Session 100)
-│   └── openai_adapter.py    # OpenAI GPT-Image-1 adapter — real generation, structured error handling (Session 100-101)
+│   └── openai_provider.py   # OpenAI GPT-Image-1 provider — real generation, images.edit() for ref images (Session 100-101, 141)
 ├── leaderboard.py           # Leaderboard calculations (Phase G)
 ├── notifications.py         # Notification service: create, count, mark-read, duplicate prevention (Phase R1)
 ├── openai_moderation.py     # OpenAI text moderation API

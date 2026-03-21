@@ -119,7 +119,7 @@ python manage.py test
 
 | Hash | Message |
 |------|---------|
-| *(see below)* | fix(bulk-gen): single-box clear fires B2 delete, nosniff on download proxy, SDK note in docs |
+| c2272e6 | fix(bulk-gen): single-box clear fires B2 delete, nosniff on download proxy, SDK note in docs |
 
 ## Section 11 — What to Work on Next
 

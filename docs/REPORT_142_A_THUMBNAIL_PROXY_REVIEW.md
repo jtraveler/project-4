@@ -165,7 +165,7 @@ python manage.py test
 
 | Hash | Message |
 |------|---------|
-| *(see below)* | feat(bulk-gen): thumbnail proxy formally reviewed (STRIDE), thumb.src routed through proxy |
+| e20a536 | feat(bulk-gen): thumbnail proxy formally reviewed (STRIDE), thumb.src routed through proxy |
 
 ## Section 11 — What to Work on Next
 

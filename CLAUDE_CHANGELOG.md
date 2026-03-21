@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 21, 2026 (Sessions 101–141)
+**Last Updated:** March 21, 2026 (Sessions 101–142)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,30 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 142 — March 21, 2026
+
+**Focus:** Security hardening, protocol closure, lightbox fix, P3 batch
+
+**Specs:** 142-A (thumbnail proxy review), 142-B (141-D closure + lightbox),
+142-C (P3 batch), 142-D (docs)
+
+**Key outcomes:**
+- Thumbnail proxy (`/api/bulk-gen/image-proxy/`) formally reviewed with
+  STRIDE threat model — all 12 security controls confirmed. Source URL
+  preview now works for hotlink-protected and Next.js optimised URLs.
+- 141-D protocol violation formally closed — @django-pro and @python-pro
+  confirmed openai_provider.py reference image fix is correctly implemented
+- gallery.js lightbox close button confirmed on overlay (not inner) —
+  caption fully removed, aria-describedby removed (already correct from 141)
+- prompt_detail.html and lightbox.css confirmed already correct (no changes)
+- Single-box ✕ clear now fires B2 delete before clearing URL field
+- X-Content-Type-Options: nosniff added to download proxy
+- OpenAI SDK images.edit() vs images.generate() documented in CLAUDE.md
+- **Tests:** 1193 passing, 0 failures, 12 skipped
+- **Commits:** e20a536, 8c3f5ef, c2272e6
+
+---
 
 ### Session 141 — March 21, 2026
 

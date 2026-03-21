@@ -926,6 +926,7 @@ def proxy_image_download(request):
             content_type=content_type,
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['X-Content-Type-Options'] = 'nosniff'
         if 'Content-Length' in r.headers:
             response['Content-Length'] = r.headers['Content-Length']
         return response

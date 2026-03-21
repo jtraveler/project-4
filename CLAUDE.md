@@ -446,6 +446,7 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
 - **`continue` is illegal inside `with transaction.atomic()`:** Use a flag variable (`_already_published = False`, set inside block, tested after) instead of `continue` inside an atomic context manager.
 - **M2M assignment must be duplicated in `IntegrityError` retry block:** Django rolls back the entire `transaction.atomic()` block on `IntegrityError`, including any M2M `.add()` calls. The retry block must re-apply all M2M (tags, categories, descriptors) from scratch.
 - **Static `aria-live` announcer over dynamic injection:** Dynamically injected `aria-live` regions are not reliably announced by screen readers. Declare the region in the HTML at page load and populate its text content from JS (clear + 50ms timeout before setting).
+- **OpenAI SDK note (Session 141):** GPT-Image-1 reference images require `client.images.edit(image=ref_file, ...)` — NOT `client.images.generate()`. The Python SDK v2.26.0 does not support an `images` parameter on `images.generate()`. Pass a `BytesIO` file-like object with `.name` attribute set (e.g. `ref_file.name = 'reference.png'`).
 
 ---
 

@@ -390,9 +390,29 @@
         if (e.target.classList.contains('bg-source-paste-clear')) {
             var clearBox = e.target.closest('.bg-prompt-box');
             if (clearBox) {
-                var clearInput = clearBox.querySelector('.bg-prompt-source-image-input');
-                clearInput.value = '';
-                BulkGenUtils.unlockPasteInput(clearInput);
+                var clearInput = clearBox.querySelector(
+                    '.bg-prompt-source-image-input'
+                );
+                // Fire B2 delete BEFORE clearing the field
+                if (clearInput) {
+                    var clearUrl = clearInput.value.trim();
+                    if (clearUrl && clearUrl.indexOf('/source-paste/') !== -1) {
+                        fetch('/api/bulk-gen/source-image-paste/delete/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrf,
+                            },
+                            body: JSON.stringify({ cdn_url: clearUrl }),
+                        }).catch(function(err) {
+                            console.warn(
+                                '[PASTE-DELETE] single-box fetch failed:', err
+                            );
+                        });
+                    }
+                    clearInput.value = '';
+                    BulkGenUtils.unlockPasteInput(clearInput);
+                }
                 var clearPreview = clearBox.querySelector('.bg-source-paste-preview');
                 if (clearPreview) clearPreview.style.display = 'none';
                 var clearThumb = clearBox.querySelector('.bg-source-paste-thumb');

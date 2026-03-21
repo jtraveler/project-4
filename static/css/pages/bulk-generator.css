@@ -591,6 +591,8 @@
     border-radius: var(--radius-lg, 12px);
     padding: 16px;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    min-height: 480px;
+    height: 100%;
 }
 
 .bg-prompt-box:focus-within {

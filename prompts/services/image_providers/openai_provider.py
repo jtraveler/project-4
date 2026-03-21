@@ -89,13 +89,58 @@ class OpenAIImageProvider(ImageProvider):
 
             client = OpenAI(api_key=effective_key)
 
-            response = client.images.generate(
-                model='gpt-image-1',
-                prompt=prompt,
-                size=size,
-                quality=quality,
-                n=1,
-            )
+            # If a reference image URL is provided, download and use
+            # client.images.edit() which accepts an image parameter.
+            # GPT-Image-1 requires a file-like object, not a URL string.
+            ref_file = None
+            if reference_image_url:
+                try:
+                    import io
+                    import requests
+                    r = requests.get(
+                        reference_image_url, timeout=20,
+                        headers={'User-Agent': 'PromptFinder/1.0'},
+                    )
+                    r.raise_for_status()
+                    ref_bytes = r.content
+                    # Limit to 20MB to prevent runaway memory usage
+                    if len(ref_bytes) > 20 * 1024 * 1024:
+                        logger.warning(
+                            "[REF-IMAGE] Reference image too large (%d bytes), skipping",
+                            len(ref_bytes),
+                        )
+                    else:
+                        ref_file = io.BytesIO(ref_bytes)
+                        ref_file.name = 'reference.png'
+                        logger.info(
+                            "[REF-IMAGE] Attached reference image: %s",
+                            reference_image_url,
+                        )
+                except Exception as ref_exc:
+                    # Non-fatal: proceed without reference image on any failure
+                    logger.warning(
+                        "[REF-IMAGE] Failed to download reference image %s: %s",
+                        reference_image_url, ref_exc,
+                    )
+
+            if ref_file:
+                # Use images.edit() when a reference image is available
+                response = client.images.edit(
+                    image=ref_file,
+                    model='gpt-image-1',
+                    prompt=prompt,
+                    size=size,
+                    quality=quality,
+                    n=1,
+                )
+            else:
+                response = client.images.generate(
+                    model='gpt-image-1',
+                    prompt=prompt,
+                    size=size,
+                    quality=quality,
+                    n=1,
+                )
 
             image_data = None
             if (

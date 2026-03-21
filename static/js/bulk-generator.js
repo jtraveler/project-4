@@ -444,9 +444,14 @@
                     var preview = box.querySelector('.bg-source-paste-preview');
                     var thumb = box.querySelector('.bg-source-paste-thumb');
                     if (preview && thumb) {
-                        thumb.src = '/api/bulk-gen/download/?url=' + encodeURIComponent(val);
+                        thumb.src = val;
                         thumb.onerror = function() {
                             preview.style.display = 'none';
+                            var errDiv = box.querySelector('.bg-box-error');
+                            if (errDiv) {
+                                errDiv.textContent = 'Preview unavailable \u2014 the image may still be used for generation.';
+                                errDiv.style.display = 'block';
+                            }
                             thumb.onerror = null;
                         };
                         preview.style.display = 'flex';

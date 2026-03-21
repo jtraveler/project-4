@@ -95,6 +95,7 @@
 </style>
 
 <!-- Non-critical CSS loaded asynchronously -->
+<link rel="stylesheet" href="{% static 'css/components/lightbox.css' %}">
 <link rel="preload" href="{% static 'css/pages/prompt-detail.css' %}" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="{% static 'css/pages/prompt-detail.css' %}"></noscript>
 
@@ -923,20 +924,22 @@
         overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-label', 'Image preview');
 
-        var inner = document.createElement('div');
-        inner.className = 'lightbox-inner';
-
+        // Close button — absolutely positioned top-right of overlay
         var closeBtn = document.createElement('button');
         closeBtn.className = 'lightbox-close';
         closeBtn.setAttribute('aria-label', 'Close preview');
         closeBtn.setAttribute('type', 'button');
         closeBtn.innerHTML = '&times;';
 
+        var inner = document.createElement('div');
+        inner.className = 'lightbox-inner';
+
         var img = document.createElement('img');
         img.className = 'lightbox-image';
         img.id = 'pdLightboxImage';
         img.alt = '';
 
+        // "Open in new tab" link — below the image, centered
         var openLink = document.createElement('a');
         openLink.className = 'lightbox-open-link';
         openLink.target = '_blank';
@@ -949,12 +952,9 @@
             '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' +
             '</svg> Open in new tab';
 
-        var rightPanel = document.createElement('div');
-        rightPanel.className = 'lightbox-right-panel';
-        rightPanel.appendChild(closeBtn);
-        rightPanel.appendChild(openLink);
         inner.appendChild(img);
-        inner.appendChild(rightPanel);
+        inner.appendChild(openLink); // Link is inside inner, below image
+        overlay.appendChild(closeBtn); // Close button directly on overlay
         overlay.appendChild(inner);
         document.body.appendChild(overlay);
 
@@ -964,15 +964,14 @@
         });
         document.addEventListener('keydown', function(e) {
             if (!overlay.classList.contains('is-open')) return;
-            if (e.key === 'Escape') closePdLightbox();
+            if (e.key === 'Escape') { closePdLightbox(); return; }
             if (e.key === 'Tab') {
-                var focusable = [closeBtn, openLink];
-                var first = focusable[0];
-                var last = focusable[focusable.length - 1];
-                if (e.shiftKey) {
-                    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+                e.preventDefault();
+                var focused = document.activeElement;
+                if (focused === closeBtn) {
+                    openLink.focus();
                 } else {
-                    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+                    closeBtn.focus();
                 }
             }
         });

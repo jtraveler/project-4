@@ -1,0 +1,106 @@
+/**
+ * Shared Lightbox Component
+ * Used by: bulk_generator_job.html, prompt_detail.html
+ * Session 141 — extracted from bulk-generator-job.css and prompt-detail.css
+ */
+
+.lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.lightbox-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.lightbox-inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 90vw;
+    max-height: 90vh;
+}
+
+.lightbox-image {
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: var(--radius-lg, 0.5rem);
+    display: block;
+}
+
+/* Close button — absolutely positioned top-right of overlay, not in flow */
+.lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.15s ease;
+    z-index: 10000; /* above the image */
+}
+
+.lightbox-close:hover {
+    background: rgba(0, 0, 0, 0.75);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+.lightbox-close:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px rgba(0, 0, 0, 0.65),
+        0 0 0 4px rgba(255, 255, 255, 0.9);
+}
+
+/* Open in new tab link — below image, centered */
+.lightbox-open-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.875rem;
+    text-decoration: none;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.lightbox-open-link:hover {
+    color: white;
+    border-color: rgba(255, 255, 255, 0.7);
+}
+
+.lightbox-open-link:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px rgba(0, 0, 0, 0.65),
+        0 0 0 4px rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lightbox-overlay { transition: none; }
+    .lightbox-close { transition: none; }
+    .lightbox-open-link { transition: none; }
+}

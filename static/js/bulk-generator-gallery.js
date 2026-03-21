@@ -384,45 +384,37 @@
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-label', 'Image preview');
+        // No aria-describedby — caption was removed in Session 139
 
-        var inner = document.createElement('div');
-        inner.className = 'lightbox-inner';
-
+        // Close button — absolutely positioned top-right of overlay
         var closeBtn = document.createElement('button');
         closeBtn.className = 'lightbox-close';
         closeBtn.setAttribute('aria-label', 'Close preview');
         closeBtn.setAttribute('type', 'button');
-        closeBtn.innerHTML = '&times;';  /* Safe: hardcoded character */
+        closeBtn.innerHTML = '&times;';
+
+        var inner = document.createElement('div');
+        inner.className = 'lightbox-inner';
 
         var img = document.createElement('img');
         img.className = 'lightbox-image';
         img.id = 'lightboxImage';
         img.alt = '';
+        // No caption element — removed in Session 139
 
-        var rightPanel = document.createElement('div');
-        rightPanel.className = 'lightbox-right-panel';
-        rightPanel.appendChild(closeBtn);
         inner.appendChild(img);
-        inner.appendChild(rightPanel);
+        overlay.appendChild(closeBtn); // Close directly on overlay, NOT in inner
         overlay.appendChild(inner);
         document.body.appendChild(overlay);
 
-        // Close handlers
         closeBtn.addEventListener('click', G.closeLightbox);
         overlay.addEventListener('click', function (e) {
             if (e.target === overlay) G.closeLightbox();
         });
         document.addEventListener('keydown', function (e) {
             if (!overlay.classList.contains('is-open')) return;
-            if (e.key === 'Escape') {
-                G.closeLightbox();
-                return;
-            }
-            // Focus trap: keep Tab within lightbox (close button is only focusable element)
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                closeBtn.focus();
-            }
+            if (e.key === 'Escape') { G.closeLightbox(); return; }
+            if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
         });
 
         G.lightboxEl = overlay;

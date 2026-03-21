@@ -352,7 +352,8 @@
     animation: promptGroupFadeIn 300ms ease-out forwards;
     opacity: 0;
     padding: 30px 30px 40px;
-    background: var(--gray-50);
+    background: var(--gray-100);
+    border-radius: var(--radius-lg);
 }
 
 @keyframes promptGroupFadeIn {
@@ -392,8 +393,6 @@
     display: block;
     max-width: 100%;
     cursor: pointer;
-    background: white;
-    border-radius: 5px;
     padding: 2px 8px;
 }
 
@@ -706,7 +705,6 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.75);
     background: rgba(0, 0, 0, 0.4);
     color: transparent;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); /* dark halo — ensures 3:1 contrast on light images */
@@ -972,102 +970,7 @@ a.published-badge:focus-visible {
     }
 }
 
-/* ─── Lightbox Modal ───────────────────────────────────────── */
-.lightbox-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
-}
-
-.lightbox-overlay.is-open {
-    opacity: 1;
-    visibility: visible;
-}
-
-.lightbox-inner {
-    position: relative;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    max-width: 95vw;
-    max-height: 95vh;
-}
-
-.lightbox-image {
-    max-width: 85vw;
-    max-height: 95vh;
-    object-fit: contain;
-    border-radius: var(--radius-lg, 0.5rem);
-    display: block;
-}
-
-/* Right panel — absolutely positioned so image stays centered */
-.lightbox-right-panel {
-    position: absolute;
-    left: calc(100% + 12px);
-    top: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
-    min-width: 40px;
-}
-
-.lightbox-close {
-    width: 36px;
-    height: 36px;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 28px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background 0.15s ease;
-    flex-shrink: 0;
-}
-
-.lightbox-close:hover {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.lightbox-close:focus-visible {
-    outline: 2px solid white;
-    outline-offset: 2px;
-}
-
-/* Tablet and below — close button on top, stacked layout */
-@media (max-width: 768px) {
-    .lightbox-inner {
-        flex-direction: column;
-        max-height: 90vh;
-    }
-    .lightbox-image {
-        max-width: 90vw;
-        max-height: 80vh;
-    }
-    .lightbox-right-panel {
-        position: static;
-        flex-direction: row;
-        width: 100%;
-        justify-content: flex-end;
-        height: auto;
-        padding-top: 0.5rem;
-    }
-}
-
-/* .lightbox-caption removed — Session 139 (caption no longer rendered) */
+/* ─── Lightbox — now in static/css/components/lightbox.css (Session 141) ─── */
 
 /* ─── Gallery Responsive ────────────────────────────────────── */
 /* Hide empty placeholder slots below 990px */
@@ -1146,8 +1049,7 @@ a.published-badge:focus-visible {
     .progress-bar-container.progress-pending .progress-bar-fill { animation: none; }
     .progress-bar-fill { transition: none; }
     .prompt-image-container img { animation: none; }
-    .lightbox-overlay { transition: none; }
-    .lightbox-close { transition: none; }
+    /* lightbox transitions now in components/lightbox.css */
     .prompt-group-text-overlay { transition: none; }
     .prompt-image-slot.is-discarded .prompt-image-container img { transition: none; }
     .prompt-image-slot.is-published .prompt-image-container img { transition: none; }

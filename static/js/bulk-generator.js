@@ -444,7 +444,7 @@
                     var preview = box.querySelector('.bg-source-paste-preview');
                     var thumb = box.querySelector('.bg-source-paste-thumb');
                     if (preview && thumb) {
-                        thumb.src = val;
+                        thumb.src = '/api/bulk-gen/download/?url=' + encodeURIComponent(val);
                         thumb.onerror = function() {
                             preview.style.display = 'none';
                             thumb.onerror = null;

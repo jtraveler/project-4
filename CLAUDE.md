@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 16, 2026
+**Last Updated:** March 21, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -1750,5 +1750,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.31 (Session 140 — JS bug fixes, lightbox desktop layout, P3 cleanup, protocol v2.2; 1193+ tests)
-**Last Updated:** March 20, 2026
+**Version:** 4.32 (Session 141 — download proxy, blur thumbnail, lightbox fix, reference image; 1193+ tests)
+**Last Updated:** March 21, 2026

@@ -1,6 +1,6 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 20, 2026
+**Last Updated:** March 21, 2026
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA), Phase N4 (~100%), Phase K (~96%)
 **Total Tests:** 1193 passing, 12 skipped (Session 140)
@@ -146,6 +146,7 @@ live-working-project/
 │   ├── css/                      # 9 CSS files (~105KB total)
 │   │   ├── components/
 │   │   │   ├── icons.css         # SVG icon system styles
+│   │   │   ├── lightbox.css      # Shared lightbox component (Session 141 — extracted from page CSS)
 │   │   │   ├── masonry-grid.css
 │   │   │   └── profile-tabs.css  # Shared tab component CSS (Session 86)
 │   │   ├── pages/
@@ -601,6 +602,7 @@ PromptFinder uses a custom SVG sprite system for icons, replacing Font Awesome f
 |------|----------|---------|
 | `sprite.svg` | static/icons/ | SVG sprite with 33 icon definitions |
 | `icons.css` | static/css/components/ | Icon utility classes |
+| `lightbox.css` | static/css/components/ | Shared lightbox overlay, close button, open-link (Session 141) |
 
 ### Available Icons (33 total)
 

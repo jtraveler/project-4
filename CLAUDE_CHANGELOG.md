@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 20, 2026 (Sessions 101–140)
+**Last Updated:** March 21, 2026 (Sessions 101–141)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,33 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 141 — March 21, 2026
+
+**Focus:** Recurring bug fixes, lightbox structure, reference image fix
+
+**Specs:** 141-A (download proxy + blur thumbnail), 141-B (clear all cleanup),
+141-C (lightbox close button), 141-D (reference image fix), 141-E (docs)
+
+**Key outcomes:**
+- Download button now works via server-side proxy endpoint
+  (`/api/bulk-gen/download/`) — bypasses CORS restriction on CDN URLs
+- Blur thumbnail preview confirmed already present (Session 140 fix verified)
+- Clear All hardened — paste URLs captured into array before fields cleared,
+  full paste state reset in single loop with `console.warn` on fetch failure
+- Single-box ✕ clear now resets `thumb.src` and `thumb.onerror`
+- Lightbox close button absolutely positioned on overlay (not in flow)
+  — no longer appears below image on mobile
+- Lightbox caption fully removed from results page lightbox
+- Lightbox CSS extracted to `static/css/components/lightbox.css`
+  (removed from both `bulk-generator-job.css` and `prompt-detail.css`)
+- Reference image fix — GPT-Image-1 now receives reference image as
+  BytesIO file object via `client.images.edit()` (was silently ignored
+  since feature was built; SDK `images.generate()` has no `image` param)
+- **Tests:** 1193 passing, 0 failures, 12 skipped
+- **Commits:** d1e1e14, 475f62e, 1e42d02, 63056d1
+
+---
 
 ### Session 140 — March 20, 2026
 

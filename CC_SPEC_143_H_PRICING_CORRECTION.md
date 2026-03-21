@@ -1,9 +1,9 @@
-# CC_SPEC_143_D_PRICING_CORRECTION.md
+# CC_SPEC_143_H_PRICING_CORRECTION.md
 # GPT-Image-1 Pricing Correction — IMAGE_COST_MAP + COST_MAP + Docs
 
 **Session:** 143
 **Spec Type:** Code — commit after full test suite passes
-**Report Path:** `docs/REPORT_143_D_PRICING_CORRECTION.md`
+**Report Path:** `docs/REPORT_143_H_PRICING_CORRECTION.md`
 **Commit Message:** `fix: correct GPT-Image-1 pricing in IMAGE_COST_MAP and openai_provider (Session 143)`
 
 ---

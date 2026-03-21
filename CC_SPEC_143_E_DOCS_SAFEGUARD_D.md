@@ -1,9 +1,9 @@
-# CC_SPEC_143_A_DOCS_SAFEGUARD_D.md
+# CC_SPEC_143_E_DOCS_SAFEGUARD_D.md
 # CLAUDE.md — Safeguard Section D + Quota Architecture Notes
 
 **Session:** 143
 **Spec Type:** Docs only — commit immediately after agents pass
-**Report Path:** `docs/REPORT_143_A_DOCS_SAFEGUARD_D.md`
+**Report Path:** `docs/REPORT_143_E_DOCS_SAFEGUARD_D.md`
 **Commit Message:** `docs: add safeguard section D, rate limit compliance note, quota architecture (Session 143)`
 
 ---
@@ -387,7 +387,7 @@ round averages 8.0+. Work is REJECTED without a passing agent round.
 
 ## 📊 COMPLETION REPORT
 
-Write the full report (all 11 sections) to `docs/REPORT_143_A_DOCS_SAFEGUARD_D.md`.
+Write the full report (all 11 sections) to `docs/REPORT_143_E_DOCS_SAFEGUARD_D.md`.
 Commit report + CLAUDE.md changes together in a single commit.
 
 **Commit message:** `docs: add safeguard section D, rate limit compliance note, quota architecture (Session 143)`

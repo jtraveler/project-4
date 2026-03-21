@@ -1,9 +1,9 @@
-# CC_SPEC_143_B_PENDING_SWEEP_AND_RATE_LIMIT.md
+# CC_SPEC_143_F_PENDING_SWEEP_AND_RATE_LIMIT.md
 # D1 — Pending Image Sweep + D3 — Rate Limit Compliance
 
 **Session:** 143
 **Spec Type:** Code — commit after full test suite passes
-**Report Path:** `docs/REPORT_143_B_PENDING_SWEEP_AND_RATE_LIMIT.md`
+**Report Path:** `docs/REPORT_143_F_PENDING_SWEEP_AND_RATE_LIMIT.md`
 **Commit Message:** `fix: D1 pending image sweep + D3 rate limit inter-batch delay (Session 143)`
 
 ---

@@ -1,13 +1,13 @@
-# CC_SPEC_143_C_QUOTA_ERROR_AND_NOTIFICATION.md
+# CC_SPEC_143_G_QUOTA_ERROR_AND_NOTIFICATION.md
 # QUOTA-1 — Quota Error Distinction + Bell Notification
 
 **Session:** 143
 **Spec Type:** Code — commit after full test suite passes
-**Report Path:** `docs/REPORT_143_C_QUOTA_ERROR_AND_NOTIFICATION.md`
+**Report Path:** `docs/REPORT_143_G_QUOTA_ERROR_AND_NOTIFICATION.md`
 **Commit Message:** `feat: quota error distinct from rate limit, bell notification on quota kill (Session 143)`
 
-**⚠️ DEPENDENCY:** Run this spec AFTER Spec 143-B is agent-reviewed and in HOLD state.
-The D1 pending sweep (143-B) must be complete before this spec runs, as both
+**⚠️ DEPENDENCY:** Run this spec AFTER Spec 143-F is agent-reviewed and in HOLD state.
+The D1 pending sweep (143-F) must be complete before this spec runs, as both
 touch `process_bulk_generation_job()` in tasks.py. The full suite gate runs
 once for both specs together.
 
@@ -25,7 +25,7 @@ once for both specs together.
 ║                                                              ║
 ║  prompts/tasks.py         🔴 Critical (~3,411 lines)         ║
 ║    → Maximum 1 str_replace call on tasks.py                  ║
-║      (Spec 143-B already used 2 — treat as fresh budget      ║
+║      (Spec 143-F already used 2 — treat as fresh budget      ║
 ║       since it is a different spec, but be conservative)     ║
 ║    → Add helper function at BOTTOM of file only              ║
 ║    → ONE str_replace to add the helper call in               ║
@@ -336,7 +336,7 @@ ONE str_replace for `_run_generation_with_retry()` (Part B), then make
 ONE str_replace for `process_bulk_generation_job()` (Part C).
 
 **REVISED BUDGET:** This gives tasks.py 2 str_replace calls in this spec.
-Since Spec 143-B also uses 2 str_replace calls, be aware that the cumulative
+Since Spec 143-F also uses 2 str_replace calls, be aware that the cumulative
 session total for tasks.py is 4. This is within acceptable limits given these
 are separate specs with separate commits. Do not exceed 2 str_replace calls
 on tasks.py in THIS spec.

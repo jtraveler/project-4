@@ -982,7 +982,11 @@ def proxy_image_thumbnail(request):
         r'\.(jpg|jpeg|png|webp|gif|avif)(?:[?#&/]|$)',
         re.IGNORECASE,
     )
-    if not IMAGE_EXT_RE.search(parsed.path):
+    from urllib.parse import unquote
+    path_ok = bool(IMAGE_EXT_RE.search(parsed.path))
+    if not path_ok and parsed.query:
+        path_ok = bool(IMAGE_EXT_RE.search(unquote(parsed.query)))
+    if not path_ok:
         return HttpResponseBadRequest('URL must point to an image file.')
 
     # 5. Block private/internal/loopback/reserved IP ranges (SSRF)

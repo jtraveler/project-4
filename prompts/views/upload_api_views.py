@@ -933,3 +933,159 @@ def proxy_image_download(request):
     except Exception as exc:
         logger.warning("[DOWNLOAD-PROXY] Failed to fetch %s: %s", url, exc)
         return HttpResponseBadRequest('Failed to fetch image.')
+
+
+@login_required
+@require_GET
+def proxy_image_thumbnail(request):
+    """
+    GET /api/bulk-gen/image-proxy/?url=<encoded_url>
+    Server-side proxy for source image URL thumbnail previews.
+
+    Fetches any valid https:// image URL server-side, bypassing
+    hotlink protection. Returns image bytes inline (not as attachment).
+
+    Security controls: staff-only, https-only, port-443-only,
+    image-extension check, private-IP block, no-redirect-follow,
+    content-type check, 10MB limit, 15s timeout, URL length limit.
+    """
+    from urllib.parse import urlparse
+    import re
+    import ipaddress
+    import socket
+    from django.http import HttpResponse, HttpResponseBadRequest
+
+    # Staff-only guard first — before any URL processing
+    if not request.user.is_staff:
+        return HttpResponseBadRequest('Not authorized.')
+
+    url = request.GET.get('url', '').strip()
+    if not url:
+        return HttpResponseBadRequest('url parameter required.')
+
+    # 1. URL length limit
+    if len(url) > 2048:
+        return HttpResponseBadRequest('URL too long.')
+
+    # 2. Scheme: https only — blocks http://, file://, ftp://, etc.
+    parsed = urlparse(url)
+    if parsed.scheme != 'https':
+        return HttpResponseBadRequest('Invalid URL.')
+
+    # 3. Port: 443 or unspecified only — blocks internal services
+    # on non-standard ports (e.g. https://internal:8080/image.jpg)
+    if parsed.port is not None and parsed.port != 443:
+        return HttpResponseBadRequest('Invalid URL.')
+
+    # 4. Image extension required in path
+    IMAGE_EXT_RE = re.compile(
+        r'\.(jpg|jpeg|png|webp|gif|avif)(?:[?#&/]|$)',
+        re.IGNORECASE,
+    )
+    if not IMAGE_EXT_RE.search(parsed.path):
+        return HttpResponseBadRequest('URL must point to an image file.')
+
+    # 5. Block private/internal/loopback/reserved IP ranges (SSRF)
+    hostname = parsed.netloc.split(':')[0]
+    try:
+        ip = socket.gethostbyname(hostname)
+        addr = ipaddress.ip_address(ip)
+        if (addr.is_private or addr.is_loopback
+                or addr.is_link_local or addr.is_reserved):
+            logger.warning(
+                "[IMAGE-PROXY] Blocked private IP request: %s -> %s",
+                hostname, ip,
+            )
+            return HttpResponseBadRequest('Invalid URL.')
+    except socket.gaierror:
+        return HttpResponseBadRequest('Invalid URL.')
+
+    try:
+        # 6. Fetch with redirects disabled (blocks redirect-based SSRF)
+        r = requests.get(
+            url,
+            timeout=15,
+            stream=True,
+            allow_redirects=False,
+            headers={'User-Agent': 'PromptFinder/1.0'},
+        )
+
+        # 7. Handle same-host redirects only — reject cross-host
+        if r.is_redirect or r.status_code in (301, 302, 303, 307, 308):
+            redirect_url = r.headers.get('Location', '')
+            if redirect_url:
+                redirect_parsed = urlparse(redirect_url)
+                redirect_host = redirect_parsed.netloc or parsed.netloc
+                # Reject cross-host redirects
+                if redirect_host != parsed.netloc:
+                    logger.warning(
+                        "[IMAGE-PROXY] Blocked cross-host redirect: "
+                        "%s -> %s",
+                        parsed.netloc, redirect_host,
+                    )
+                    return HttpResponseBadRequest('Invalid URL.')
+                # Re-validate redirect target: scheme + port + IP
+                if redirect_parsed.scheme and redirect_parsed.scheme != 'https':
+                    return HttpResponseBadRequest('Invalid URL.')
+                redir_port = redirect_parsed.port
+                if redir_port is not None and redir_port != 443:
+                    return HttpResponseBadRequest('Invalid URL.')
+                try:
+                    redir_ip = socket.gethostbyname(redirect_host)
+                    redir_addr = ipaddress.ip_address(redir_ip)
+                    if (redir_addr.is_private or redir_addr.is_loopback
+                            or redir_addr.is_link_local
+                            or redir_addr.is_reserved):
+                        logger.warning(
+                            "[IMAGE-PROXY] Blocked private IP on "
+                            "redirect: %s -> %s",
+                            redirect_host, redir_ip,
+                        )
+                        return HttpResponseBadRequest('Invalid URL.')
+                except socket.gaierror:
+                    return HttpResponseBadRequest('Invalid URL.')
+                # Re-request the same-host redirect target
+                r = requests.get(
+                    redirect_url,
+                    timeout=15,
+                    stream=True,
+                    allow_redirects=False,
+                    headers={'User-Agent': 'PromptFinder/1.0'},
+                )
+
+        r.raise_for_status()
+
+        # 8. Content-Type must be image/*
+        content_type = r.headers.get('Content-Type', '')
+        if not content_type.startswith('image/'):
+            logger.warning(
+                "[IMAGE-PROXY] Non-image content-type %s for %s",
+                content_type, url,
+            )
+            return HttpResponseBadRequest('URL did not return an image.')
+
+        # 9. 10MB size limit — enforce during chunked read
+        MAX_SIZE = 10 * 1024 * 1024
+        chunks = []
+        total = 0
+        for chunk in r.iter_content(chunk_size=8192):
+            total += len(chunk)
+            if total > MAX_SIZE:
+                logger.warning(
+                    "[IMAGE-PROXY] Response too large for %s", url
+                )
+                return HttpResponseBadRequest('Image too large.')
+            chunks.append(chunk)
+
+        image_data = b''.join(chunks)
+        response = HttpResponse(image_data, content_type=content_type)
+        # 10. Security headers
+        response['X-Content-Type-Options'] = 'nosniff'
+        # Cache thumbnail privately for 1 hour
+        response['Cache-Control'] = 'private, max-age=3600'
+        logger.info("[IMAGE-PROXY] Served %d bytes for %s", total, url)
+        return response
+
+    except Exception as exc:
+        logger.warning("[IMAGE-PROXY] Failed to fetch %s: %s", url, exc)
+        return HttpResponseBadRequest('Failed to fetch image.')

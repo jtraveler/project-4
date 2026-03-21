@@ -111,6 +111,9 @@ urlpatterns = [
     path('api/bulk-gen/download/',
          upload_api_views.proxy_image_download,
          name='proxy_image_download'),
+    path('api/bulk-gen/image-proxy/',
+         upload_api_views.proxy_image_thumbnail,
+         name='proxy_image_thumbnail'),
 
     # AI Suggestions API (Step 2 Deferred - L8-STEP2-PERF)
     path('api/upload/ai-suggestions/', views.ai_suggestions, name='ai_suggestions'),

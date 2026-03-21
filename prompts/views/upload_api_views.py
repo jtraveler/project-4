@@ -12,7 +12,7 @@ import uuid
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django_ratelimit.decorators import ratelimit
 from django_q.tasks import async_task
 
@@ -872,3 +872,64 @@ def source_image_paste_delete(request):
         )
         # Non-critical — return success anyway so client flow is not disrupted
         return JsonResponse({'success': True})
+
+
+@login_required
+@require_GET
+def proxy_image_download(request):
+    """
+    GET /api/bulk-gen/download/?url=<encoded_url>
+    Server-side proxy to download B2/CDN images, bypassing browser CORS
+    restrictions on cross-origin fetch+blob downloads.
+
+    Validates the URL is from media.promptfinder.net before fetching.
+    Returns the image as an attachment with Content-Disposition header.
+    """
+    from django.conf import settings
+    from django.http import StreamingHttpResponse, HttpResponseBadRequest
+    from urllib.parse import urlparse
+    import re
+
+    # Staff-only — consistent with all other bulk-gen endpoints
+    if not request.user.is_staff:
+        return HttpResponseBadRequest('Not authorized.')
+
+    url = request.GET.get('url', '').strip()
+    if not url:
+        return HttpResponseBadRequest('url parameter required.')
+
+    # Security: only allow downloads from our own CDN domain
+    b2_domain = getattr(settings, 'B2_CUSTOM_DOMAIN', '') or ''
+    if not b2_domain:
+        return HttpResponseBadRequest('Storage not configured.')
+
+    parsed = urlparse(url)
+    if parsed.scheme != 'https' or parsed.netloc != b2_domain:
+        return HttpResponseBadRequest('Invalid URL.')
+
+    # Derive filename from URL path
+    path = parsed.path
+    filename = path.split('/')[-1] or 'image.jpg'
+    # Sanitise filename — alphanumeric, dots, hyphens, underscores only
+    filename = re.sub(r'[^\w.\-]', '_', filename)
+
+    try:
+        r = requests.get(
+            url, timeout=30, stream=True,
+            headers={'User-Agent': 'PromptFinder/1.0'},
+        )
+        r.raise_for_status()
+        content_type = r.headers.get('Content-Type', 'image/jpeg')
+
+        response = StreamingHttpResponse(
+            streaming_content=r.iter_content(chunk_size=8192),
+            content_type=content_type,
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        if 'Content-Length' in r.headers:
+            response['Content-Length'] = r.headers['Content-Length']
+        return response
+
+    except Exception as exc:
+        logger.warning("[DOWNLOAD-PROXY] Failed to fetch %s: %s", url, exc)
+        return HttpResponseBadRequest('Failed to fetch image.')

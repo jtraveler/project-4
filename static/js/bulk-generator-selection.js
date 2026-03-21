@@ -114,41 +114,24 @@
 
         var url = btn.getAttribute('data-image-url');
         if (!url) return;
-        // Only allow HTTP(S) or relative URLs as defense-in-depth
-        if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0 && url.indexOf('/') !== 0) return;
+        // Security: only proxy https:// URLs
+        if (url.indexOf('https://') !== 0) return;
 
         var groupIdx = parseInt(btn.getAttribute('data-group'), 10);
         var slotIdx = parseInt(btn.getAttribute('data-slot'), 10);
         var ext = G.getExtensionFromUrl(url);
         var filename = 'prompt-' + (groupIdx + 1) + '-image-' + (slotIdx + 1) + ext;
 
-        // Use fetch+blob to bypass cross-origin download restriction
-        fetch(url)
-            .then(function(r) {
-                if (!r.ok) throw new Error('Fetch failed');
-                return r.blob();
-            })
-            .then(function(blob) {
-                var objectUrl = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = objectUrl;
-                a.download = filename;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setTimeout(function() { URL.revokeObjectURL(objectUrl); }, 100);
-            })
-            .catch(function() {
-                // Fallback: direct link if blob fetch fails
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            });
+        // Use server-side proxy to bypass cross-origin download restriction.
+        // Direct <a download> and fetch+blob both fail on cross-origin CDN URLs.
+        var proxyUrl = '/api/bulk-gen/download/?url=' + encodeURIComponent(url);
+        var a = document.createElement('a');
+        a.href = proxyUrl;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     };
 
     // ─── Toast Notifications (Phase 6B) ──────────────────────────

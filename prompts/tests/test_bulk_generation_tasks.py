@@ -213,8 +213,8 @@ class CreateJobTests(TestCase):
             quality='high',
         )
 
-        # OpenAI high quality = $0.05/image, 2 prompts * 2 images = 4
-        expected = Decimal('0.2')
+        # OpenAI high quality = $0.167/image, 2 prompts * 2 images = 4
+        expected = Decimal('0.668')
         self.assertEqual(job.estimated_cost, expected)
 
     def test_create_job_image_ordering(self):
@@ -563,8 +563,8 @@ class CostTrackingAndActualTotalImagesTests(TestCase):
     def test_estimated_cost_correct_for_mixed_count_job(self):
         """estimated_cost sums resolved per-prompt counts (6E-C improvement).
 
-        The provider's COST_MAP returns 0.03 for medium quality (independent
-        of size). Two prompts with per_prompt_counts=[3, None] and
+        The provider's get_cost_per_image returns 0.042 for medium/1024x1024.
+        Two prompts with per_prompt_counts=[3, None] and
         images_per_prompt=1 give resolved [3, 1] = 4 images total.
         The incorrect pre-6E-C formula would compute 2*1=2 images.
         """
@@ -578,12 +578,12 @@ class CostTrackingAndActualTotalImagesTests(TestCase):
             size='1024x1024',
             per_prompt_counts=[3, None],
         )
-        # provider.get_cost_per_image('medium') = 0.03 (from OpenAIImageProvider.COST_MAP)
-        cost_per_image = Decimal('0.03')
+        # provider.get_cost_per_image('1024x1024', 'medium') = 0.042 (from IMAGE_COST_MAP)
+        cost_per_image = Decimal('0.042')
         # Correct (6E-C): sum([3, 1]) = 4 images
-        expected_correct = cost_per_image * 4  # Decimal('0.12')
+        expected_correct = cost_per_image * 4  # Decimal('0.168')
         # Incorrect (pre-6E-C): total_prompts * images_per_prompt = 2 * 1 = 2 images
-        expected_wrong = cost_per_image * 2  # Decimal('0.06')
+        expected_wrong = cost_per_image * 2  # Decimal('0.084')
         self.assertEqual(job.estimated_cost, expected_correct)
         self.assertNotEqual(job.estimated_cost, expected_wrong)
 
@@ -878,9 +878,9 @@ class ProcessBulkJobTests(TestCase):
         process_bulk_generation_job(str(job.id))
 
         job.refresh_from_db()
-        # Cost comes from IMAGE_COST_MAP['medium']['1024x1024'] = 0.034
-        # 2 images × 0.034 = 0.068
-        self.assertEqual(job.actual_cost, Decimal('0.068'))
+        # Cost comes from IMAGE_COST_MAP['medium']['1024x1024'] = 0.042
+        # 2 images × 0.042 = 0.084
+        self.assertEqual(job.actual_cost, Decimal('0.084'))
 
 
 @override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)

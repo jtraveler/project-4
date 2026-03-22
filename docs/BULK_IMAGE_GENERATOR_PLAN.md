@@ -228,13 +228,15 @@ To add a prompt to PromptFinder today:
 | Landscape | 3:2 | 1536×1024 | Medium | ~1.5× |
 | Portrait | 2:3 | 1024×1536 | Medium | ~1.5× |
 
-### Quality Options (GPT Image 1.5 Official Pricing)
+### Quality Options (GPT-Image-1 Official Pricing — corrected Session 143)
 
 | Quality | 1024×1024 | 1024×1536 | 1536×1024 | Recommended For |
 |---------|-----------|-----------|-----------|-----------------|
-| `low` | **$0.009** | $0.013 | $0.013 | Testing, drafts |
-| `medium` | **$0.034** | $0.05 | $0.05 | General use ⭐ |
-| `high` | **$0.133** | $0.20 | $0.20 | Hero images, important content |
+| `low` | **$0.011** | $0.016 | $0.016 | Testing, drafts |
+| `medium` | **$0.042** | $0.063 | $0.063 | General use ⭐ |
+| `high` | **$0.167** | $0.250 | $0.250 | Hero images, important content |
+
+*(Prices as of March 2026. Source: openai.com/api/pricing)*
 
 ### Rate Limits by Tier (Official)
 
@@ -346,7 +348,7 @@ response = client.images.generate(
 )
 
 print(response.data[0].revised_prompt)
-# Output: "A domestic cat with soft fur, sitting gracefully. 
+# Output: "A domestic cat with soft fur, sitting gracefully.
 #          The cat has bright, attentive eyes and a calm expression..."
 ```
 
@@ -731,21 +733,21 @@ See [Premium User Access: BYOK Model](#premium-user-access-byok-model) for full 
 ```python
 class BulkGenerationJob(models.Model):
     """Tracks an overall bulk generation job."""
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    
+
     # Settings
     model = models.CharField(max_length=50, default='gpt-image-1')
     size = models.CharField(max_length=20, default='1024x1024')
     quality = models.CharField(max_length=10, default='high')
     generator = models.ForeignKey(AIGenerator, on_delete=models.SET_NULL, null=True)
-    
+
     # Progress
     total_prompts = models.PositiveIntegerField()
     completed_count = models.PositiveIntegerField(default=0)
     failed_count = models.PositiveIntegerField(default=0)
-    
+
     # Status
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -755,29 +757,29 @@ class BulkGenerationJob(models.Model):
         ('failed', 'Failed'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         ordering = ['-created_at']
 
 
 class GeneratedImage(models.Model):
     """Individual generated image within a job."""
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     job = models.ForeignKey(BulkGenerationJob, on_delete=models.CASCADE, related_name='images')
-    
+
     # Input
     prompt_text = models.TextField()
     order = models.PositiveIntegerField()  # Position in original list
-    
+
     # Output
     image_url = models.URLField(blank=True)  # B2/Cloudflare URL
     revised_prompt = models.TextField(blank=True)  # Model's interpretation
-    
+
     # Status
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -787,15 +789,15 @@ class GeneratedImage(models.Model):
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     error_message = models.TextField(blank=True)
-    
+
     # Selection
     is_selected = models.BooleanField(default=True)  # User selection
-    
+
     # Link to created prompt (after page creation)
     prompt = models.ForeignKey('Prompt', on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['order']
 ```
@@ -813,14 +815,14 @@ DELAY_BETWEEN_TASKS = 6  # seconds (60/10 = 6)
 
 def queue_bulk_generation(job_id):
     """Queue all image generation tasks with rate limiting."""
-    
+
     job = BulkGenerationJob.objects.get(id=job_id)
     images = job.images.filter(status='pending').order_by('order')
-    
+
     for index, image in enumerate(images):
         # Schedule with staggered delay
         delay_seconds = index * DELAY_BETWEEN_TASKS
-        
+
         async_task(
             'prompts.tasks.generate_single_image',
             str(image.id),
@@ -830,7 +832,7 @@ def queue_bulk_generation(job_id):
                 'timeout': 120,
             }
         )
-        
+
         # Add delay between task queuing to respect rate limits
         if delay_seconds > 0:
             import time
@@ -848,25 +850,25 @@ class BulkGeneratorProgress {
         this.pollInterval = 2000; // 2 seconds
         this.polling = false;
     }
-    
+
     startPolling() {
         this.polling = true;
         this.poll();
     }
-    
+
     stopPolling() {
         this.polling = false;
     }
-    
+
     async poll() {
         if (!this.polling) return;
-        
+
         try {
             const response = await fetch(`/api/bulk-generator/status/${this.jobId}/`);
             const data = await response.json();
-            
+
             this.updateUI(data);
-            
+
             if (data.status === 'completed' || data.status === 'failed') {
                 this.stopPolling();
                 this.onComplete(data);
@@ -878,14 +880,14 @@ class BulkGeneratorProgress {
             setTimeout(() => this.poll(), this.pollInterval);
         }
     }
-    
+
     updateUI(data) {
         // Update progress bar
         const percent = (data.completed_count / data.total_prompts) * 100;
         document.querySelector('.progress-bar').style.width = `${percent}%`;
-        document.querySelector('.progress-text').textContent = 
+        document.querySelector('.progress-text').textContent =
             `${data.completed_count} of ${data.total_prompts} complete`;
-        
+
         // Add newly completed images to gallery
         data.images.forEach(image => {
             if (image.status === 'completed' && !this.renderedImages.has(image.id)) {
@@ -1078,12 +1080,12 @@ from django.conf import settings
 
 class UserAPIKeys(models.Model):
     """Securely store user API keys with encryption."""
-    
+
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     _openai_key_encrypted = models.BinaryField(null=True, blank=True)
     key_added_at = models.DateTimeField(null=True, blank=True)
     key_verified = models.BooleanField(default=False)
-    
+
     def set_openai_key(self, plain_key):
         """Encrypt and store the key."""
         if plain_key:
@@ -1094,14 +1096,14 @@ class UserAPIKeys(models.Model):
             self._openai_key_encrypted = None
             self.key_added_at = None
             self.key_verified = False
-    
+
     def get_openai_key(self):
         """Decrypt and return the key (server-side only)."""
         if not self._openai_key_encrypted:
             return None
         fernet = Fernet(settings.ENCRYPTION_KEY)
         return fernet.decrypt(bytes(self._openai_key_encrypted)).decode()
-    
+
     openai_key = property(get_openai_key, set_openai_key)
 ```
 

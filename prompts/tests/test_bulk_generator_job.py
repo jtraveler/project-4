@@ -104,7 +104,7 @@ class BulkGeneratorJobViewContextTests(TestCase):
         url = reverse('prompts:bulk_generator_job', kwargs={'job_id': job.id})
         response = self.client.get(url)
         self.assertIn('cost_per_image', response.context)
-        self.assertEqual(response.context['cost_per_image'], 0.034)
+        self.assertEqual(response.context['cost_per_image'], 0.042)
 
     def test_context_contains_total_images(self):
         job = self._make_job(total_prompts=5, images_per_prompt=2)
@@ -118,8 +118,8 @@ class BulkGeneratorJobViewContextTests(TestCase):
         url = reverse('prompts:bulk_generator_job', kwargs={'job_id': job.id})
         response = self.client.get(url)
         self.assertIn('estimated_total_cost', response.context)
-        # 10 images × $0.034 = $0.34
-        self.assertAlmostEqual(response.context['estimated_total_cost'], 0.34, places=4)
+        # 10 images × $0.042 = $0.42
+        self.assertAlmostEqual(response.context['estimated_total_cost'], 0.42, places=4)
 
     def test_context_display_size_uses_multiplication_sign(self):
         job = self._make_job(size='1024x1024')
@@ -196,22 +196,22 @@ class ImageCostMapTests(TestCase):
         self.assertEqual(IMAGE_COST_MAP['low']['1024x1536'], 0.016)
 
     def test_medium_quality_square(self):
-        self.assertEqual(IMAGE_COST_MAP['medium']['1024x1024'], 0.034)
+        self.assertEqual(IMAGE_COST_MAP['medium']['1024x1024'], 0.042)
 
     def test_medium_quality_landscape(self):
-        self.assertEqual(IMAGE_COST_MAP['medium']['1536x1024'], 0.046)
+        self.assertEqual(IMAGE_COST_MAP['medium']['1536x1024'], 0.063)
 
     def test_medium_quality_portrait(self):
-        self.assertEqual(IMAGE_COST_MAP['medium']['1024x1536'], 0.046)
+        self.assertEqual(IMAGE_COST_MAP['medium']['1024x1536'], 0.063)
 
     def test_high_quality_square(self):
-        self.assertEqual(IMAGE_COST_MAP['high']['1024x1024'], 0.067)
+        self.assertEqual(IMAGE_COST_MAP['high']['1024x1024'], 0.167)
 
     def test_high_quality_landscape(self):
-        self.assertEqual(IMAGE_COST_MAP['high']['1536x1024'], 0.092)
+        self.assertEqual(IMAGE_COST_MAP['high']['1536x1024'], 0.250)
 
     def test_high_quality_portrait(self):
-        self.assertEqual(IMAGE_COST_MAP['high']['1024x1536'], 0.092)
+        self.assertEqual(IMAGE_COST_MAP['high']['1024x1536'], 0.250)
 
     def test_all_quality_levels_present(self):
         self.assertIn('low', IMAGE_COST_MAP)
@@ -233,5 +233,42 @@ class ImageCostMapTests(TestCase):
         )
         url = reverse('prompts:bulk_generator_job', kwargs={'job_id': job.id})
         response = self.client.get(url)
-        self.assertEqual(response.context['cost_per_image'], 0.092)
-        self.assertAlmostEqual(response.context['estimated_total_cost'], 0.092, places=4)
+        self.assertEqual(response.context['cost_per_image'], 0.250)
+        self.assertAlmostEqual(response.context['estimated_total_cost'], 0.250, places=4)
+
+
+class GetCostPerImageDelegationTests(TestCase):
+    """Tests that get_cost_per_image() delegates to IMAGE_COST_MAP (Session 143)."""
+
+    def setUp(self):
+        from prompts.services.image_providers.openai_provider import OpenAIImageProvider
+        self.provider = OpenAIImageProvider(api_key='sk-test')
+
+    def test_high_square(self):
+        cost = self.provider.get_cost_per_image(size='1024x1024', quality='high')
+        self.assertAlmostEqual(cost, 0.167)
+        self.assertNotAlmostEqual(cost, 0.067)  # old stale value
+
+    def test_high_portrait(self):
+        cost = self.provider.get_cost_per_image(size='1024x1536', quality='high')
+        self.assertAlmostEqual(cost, 0.250)
+        self.assertNotAlmostEqual(cost, 0.092)  # old stale value
+
+    def test_medium_landscape(self):
+        cost = self.provider.get_cost_per_image(size='1536x1024', quality='medium')
+        self.assertAlmostEqual(cost, 0.063)
+        self.assertNotAlmostEqual(cost, 0.046)  # old stale value
+
+    def test_low_square(self):
+        cost = self.provider.get_cost_per_image(size='1024x1024', quality='low')
+        self.assertAlmostEqual(cost, 0.011)
+
+    def test_unknown_quality_falls_back(self):
+        cost = self.provider.get_cost_per_image(size='1024x1024', quality='unknown')
+        self.assertAlmostEqual(cost, 0.042)  # fallback is medium square
+
+    def test_size_is_no_longer_ignored(self):
+        """Regression: old COST_MAP ignored size entirely."""
+        square_cost = self.provider.get_cost_per_image(size='1024x1024', quality='high')
+        portrait_cost = self.provider.get_cost_per_image(size='1024x1536', quality='high')
+        self.assertNotEqual(square_cost, portrait_cost)  # must differ by size

@@ -43,7 +43,7 @@ def _make_result():
 
 
 IMAGE_COST_MAP = {
-    'medium': {'1024x1024': Decimal('0.034')},
+    'medium': {'1024x1024': Decimal('0.042')},
 }
 
 

@@ -45,6 +45,12 @@ FERNET_KEY = os.environ.get('FERNET_KEY', '')
 # Bulk image generation concurrency (tune via Heroku config var when upgrading API tier)
 BULK_GEN_MAX_CONCURRENT = int(os.environ.get('BULK_GEN_MAX_CONCURRENT', 4))
 
+# Inter-batch delay for OpenAI rate limit compliance (seconds).
+# Tier 1 (5 img/min): set to 12 with BULK_GEN_MAX_CONCURRENT=1
+# Tier 2 (20 img/min): set to 3 with BULK_GEN_MAX_CONCURRENT=2
+# Default 0 = no delay (safe only if BULK_GEN_MAX_CONCURRENT=1 and jobs are small)
+OPENAI_INTER_BATCH_DELAY = int(os.environ.get('OPENAI_INTER_BATCH_DELAY', 0))
+
 
 ALLOWED_HOSTS = [
     '127.0.0.1',

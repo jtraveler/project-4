@@ -2612,6 +2612,18 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
             image.error_message = result.error_message
             return None, False
 
+        # Quota exhaustion — stop the entire job immediately.
+        # Retrying is pointless: same key, same zero balance.
+        if error_type == 'quota':
+            logger.error(
+                "Quota exhausted for job %s image %s, stopping job",
+                job.id, image.id,
+            )
+            image.status = 'failed'
+            image.error_message = result.error_message
+            job.status = 'failed'
+            return None, True  # stop_job=True
+
         # Rate limit or server error — retry with exponential backoff
         if error_type in ('rate_limit', 'server_error') and retry_count < max_retries:
             base_wait = result.retry_after or 30
@@ -2806,6 +2818,22 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
         job.actual_cost = total_cost
         job.save(update_fields=['actual_cost'])
 
+        # D3: Inter-batch delay for OpenAI rate limit compliance.
+        # Tier 1 allows 5 images/min. With max_workers=4 and no delay,
+        # throughput exceeds the limit. Set OPENAI_INTER_BATCH_DELAY=12
+        # in Heroku config vars to comply with Tier 1 (one image every 12s).
+        # Skip the delay after the last batch.
+        _inter_batch_delay = getattr(settings, 'OPENAI_INTER_BATCH_DELAY', 0)
+        _is_last_batch = (
+            batch_start + MAX_CONCURRENT_IMAGE_REQUESTS >= len(images_list)
+        )
+        if _inter_batch_delay > 0 and not _is_last_batch:
+            logger.info(
+                "[D3-RATE-LIMIT] Sleeping %ds between batches (job %s)",
+                _inter_batch_delay, job.id,
+            )
+            time.sleep(_inter_batch_delay)
+
     return completed_count, failed_count, total_cost
 
 
@@ -2871,6 +2899,27 @@ def process_bulk_generation_job(job_id: str) -> None:
             job, provider, job_api_key, images, IMAGE_COST_MAP, tz,
         )
 
+        # D1: Sweep any images left in 'queued' or 'generating' state.
+        # These occur when stop_job breaks the batch loop before remaining
+        # batches are processed. Without this sweep, those images stay as
+        # 'queued' and are never counted in failed_count.
+        orphaned_qs = job.images.filter(status__in=['queued', 'generating'])
+        orphaned_count = orphaned_qs.count()
+        if orphaned_count:
+            orphaned_qs.update(
+                status='failed',
+                error_message='Not generated — job ended unexpectedly',
+            )
+            logger.warning(
+                "[D1-SWEEP] Swept %d orphaned images to failed for job %s",
+                orphaned_count, job_id,
+            )
+            # Recalculate from DB — in-memory counter may be stale after sweep
+            failed_count = job.images.filter(status='failed').count()
+            BulkGenerationJob.objects.filter(pk=job.pk).update(
+                failed_count=failed_count
+            )
+
         # Mark job complete (if not cancelled or stopped by auth failure)
         job.refresh_from_db(fields=['status'])
         if job.status not in ('cancelled', 'failed'):
@@ -2887,8 +2936,14 @@ def process_bulk_generation_job(job_id: str) -> None:
             succeeded = job.images.filter(status='completed').count()
             _fire_bulk_gen_job_notification(job, succeeded)
         elif job.status == 'failed':
-            # NOTIF-BG-1: notify user job failed (auth failure path)
+            # NOTIF-BG-1: notify user job failed (auth failure or quota path)
             _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
+            # Fire a specific quota alert if quota exhaustion caused the stop
+            if job.images.filter(
+                status='failed',
+                error_message__icontains='quota',
+            ).exists():
+                _fire_quota_alert_notification(job)
         logger.info(
             "Bulk job %s finished: %d completed, %d failed, cost $%s",
             job_id, completed_count, failed_count, total_cost,
@@ -3608,3 +3663,28 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
         'skipped_count': skipped_count,  # see note above
         'errors': errors,
     }
+
+
+def _fire_quota_alert_notification(job):
+    """
+    Fire an openai_quota_alert notification when quota exhaustion kills a job.
+    Called in addition to the standard bulk_gen_job_failed notification.
+    Non-blocking — wrapped in try/except so task never crashes.
+    """
+    from prompts.services.notifications import create_notification
+    try:
+        job_url = reverse('prompts:bulk_generator_job', args=[str(job.id)])
+        create_notification(
+            recipient=job.created_by,
+            notification_type='openai_quota_alert',
+            title='API quota exhausted — generation stopped',
+            message=(
+                'Your OpenAI API quota ran out mid-job. '
+                'Top up your OpenAI account balance and retry.'
+            ),
+            link=job_url,
+        )
+    except Exception:
+        logger.exception(
+            'Failed to fire quota alert notification for job %s', job.id
+        )

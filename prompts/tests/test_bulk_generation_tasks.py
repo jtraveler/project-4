@@ -1859,3 +1859,208 @@ class OpenAIProviderGenerateTests(TestCase):
 
         self.assertFalse(result.success)
         self.assertEqual(result.error_type, 'content_policy')
+
+
+@override_settings(OPENAI_API_KEY='test-key')
+class D1PendingSweepTests(TestCase):
+    """Tests for D1 — orphaned image sweep after generation loop."""
+
+    def setUp(self):
+        self.service = BulkGenerationService()
+        self.user = User.objects.create_user(
+            username='d1sweepuser', password='testpass123'
+        )
+
+    def _make_job(self, prompts, **kwargs):
+        job = self.service.create_job(
+            user=self.user,
+            prompts=prompts,
+            **kwargs,
+        )
+        job.api_key_encrypted = encrypt_api_key('sk-test1234567890')
+        job.api_key_hint = '7890'
+        job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
+        return job
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_orphaned_queued_images_swept_to_failed(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """Images left in 'queued' after stop_job are swept to 'failed'."""
+        from prompts.tasks import process_bulk_generation_job
+
+        call_count = [0]
+
+        def generate_side_effect(**kwargs):
+            call_count[0] += 1
+            if call_count[0] >= 2:
+                # Second image triggers auth failure → stop_job
+                return GenerationResult(
+                    success=False,
+                    error_type='auth',
+                    error_message='Invalid API key',
+                )
+            return GenerationResult(
+                success=True,
+                image_data=b'fake-png-data',
+                revised_prompt='ok',
+                cost=0.03,
+            )
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.side_effect = generate_side_effect
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job(
+            [{'text': f'prompt {i}'} for i in range(4)],
+            model_name='gpt-image-1',
+            quality='low',
+            size='1024x1024',
+        )
+
+        process_bulk_generation_job(str(job.id))
+        job.refresh_from_db()
+
+        # D1 sweep should have marked orphaned images as failed
+        orphaned = job.images.filter(status='queued')
+        self.assertEqual(orphaned.count(), 0, "No images should remain in 'queued' status")
+
+        failed = job.images.filter(status='failed')
+        self.assertGreater(failed.count(), 0, "At least one image should be 'failed'")
+
+        # failed_count should reflect reality
+        self.assertEqual(job.failed_count, failed.count())
+
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_no_sweep_when_all_images_complete(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """When all images complete normally, sweep finds nothing."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.return_value = GenerationResult(
+            success=True,
+            image_data=b'fake-png-data',
+            revised_prompt='revised',
+            cost=0.03,
+        )
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job(
+            [{'text': 'prompt 1'}, {'text': 'prompt 2'}],
+            model_name='gpt-image-1',
+            quality='low',
+            size='1024x1024',
+        )
+
+        process_bulk_generation_job(str(job.id))
+        job.refresh_from_db()
+
+        orphaned = job.images.filter(status='queued')
+        self.assertEqual(orphaned.count(), 0)
+
+        self.assertEqual(job.failed_count, 0)
+        self.assertNotEqual(job.status, 'failed')
+
+
+@override_settings(OPENAI_API_KEY='test-key', OPENAI_INTER_BATCH_DELAY=5)
+class D3InterBatchDelayTests(TestCase):
+    """Tests for D3 — inter-batch rate limit delay."""
+
+    def setUp(self):
+        self.service = BulkGenerationService()
+        self.user = User.objects.create_user(
+            username='d3delayuser', password='testpass123'
+        )
+
+    def _make_job(self, prompts, **kwargs):
+        job = self.service.create_job(
+            user=self.user,
+            prompts=prompts,
+            **kwargs,
+        )
+        job.api_key_encrypted = encrypt_api_key('sk-test1234567890')
+        job.api_key_hint = '7890'
+        job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
+        return job
+
+    @override_settings(OPENAI_INTER_BATCH_DELAY=5)
+    @patch('prompts.tasks.MAX_CONCURRENT_IMAGE_REQUESTS', 1)
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_inter_batch_delay_fires_between_batches(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """time.sleep called between batches but not after the last one."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.return_value = GenerationResult(
+            success=True,
+            image_data=b'fake-png-data',
+            revised_prompt='revised',
+            cost=0.03,
+        )
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        # 2 images with MAX_CONCURRENT=1 → 2 batches
+        job = self._make_job(
+            [{'text': 'prompt 1'}, {'text': 'prompt 2'}],
+            model_name='gpt-image-1',
+            quality='low',
+            size='1024x1024',
+            images_per_prompt=1,
+        )
+
+        process_bulk_generation_job(str(job.id))
+
+        # Should sleep once between batch 1 and batch 2, not after last batch
+        sleep_calls = [c for c in mock_sleep.call_args_list if c[0][0] == 5]
+        self.assertEqual(len(sleep_calls), 1, "Should sleep exactly once between 2 batches")
+
+    @override_settings(OPENAI_INTER_BATCH_DELAY=0)
+    @patch('prompts.tasks.time.sleep')
+    @patch('prompts.tasks._upload_generated_image_to_b2')
+    @patch('prompts.services.image_providers.get_provider')
+    def test_no_delay_when_setting_is_zero(
+        self, mock_get_provider, mock_upload, mock_sleep
+    ):
+        """No sleep when OPENAI_INTER_BATCH_DELAY=0 (default)."""
+        from prompts.tasks import process_bulk_generation_job
+
+        mock_provider = MagicMock()
+        mock_provider.get_rate_limit.return_value = 5
+        mock_provider.generate.return_value = GenerationResult(
+            success=True,
+            image_data=b'fake-png-data',
+            revised_prompt='revised',
+            cost=0.03,
+        )
+        mock_get_provider.return_value = mock_provider
+        mock_upload.return_value = 'https://cdn.example.com/img.png'
+
+        job = self._make_job(
+            [{'text': 'prompt 1'}, {'text': 'prompt 2'}],
+            model_name='gpt-image-1',
+            quality='low',
+            size='1024x1024',
+        )
+
+        process_bulk_generation_job(str(job.id))
+
+        # No D3 delay calls — only provider retry sleeps may exist
+        d3_sleep_calls = [c for c in mock_sleep.call_args_list
+                          if c[0] and c[0][0] >= 5]
+        self.assertEqual(len(d3_sleep_calls), 0, "No D3 delay should fire")

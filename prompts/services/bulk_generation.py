@@ -37,8 +37,11 @@ def _sanitise_error_message(raw: str | None) -> str:
         return 'Content policy violation'
     if 'upload failed' in msg or 'b2' in msg or 's3' in msg:
         return 'Upload failed'
-    # 'quota' / 'insufficient_quota' covers OpenAI's billing-limit error message.
-    if 'retries' in msg or 'rate limit' in msg or 'quota' in msg:
+    # Quota exhaustion is distinct from rate limiting:
+    # rate limit = temporary (retryable), quota = permanent (requires top-up).
+    if 'quota' in msg or 'insufficient_quota' in msg:
+        return 'Quota exceeded'
+    if 'retries' in msg or 'rate limit' in msg:
         return 'Rate limit reached'
     # 'invalid' catch-all comes after specific categories to avoid masking them.
     if 'invalid' in msg:

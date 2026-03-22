@@ -2790,6 +2790,7 @@ NOTIFICATION_TYPE_CATEGORY_MAP = {
     'bulk_gen_published': 'system',
     'bulk_gen_partial': 'system',
     'nsfw_repeat_offender': 'system',
+    'openai_quota_alert': 'system',
 }
 
 
@@ -2807,6 +2808,7 @@ class Notification(models.Model):
         BULK_GEN_JOB_FAILED = 'bulk_gen_job_failed', 'Generation job failed'
         BULK_GEN_PUBLISHED = 'bulk_gen_published', 'Prompts published'
         BULK_GEN_PARTIAL = 'bulk_gen_partial', 'Prompts partially published'
+        OPENAI_QUOTA_ALERT = 'openai_quota_alert', 'OpenAI Quota Alert'
         NSFW_REPEAT_OFFENDER = 'nsfw_repeat_offender', 'Repeat NSFW offender'
 
     class Category(models.TextChoices):

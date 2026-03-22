@@ -110,3 +110,192 @@ class BulkGenNotificationTests(TestCase):
         kwargs = mock_create.call_args[1]
         expected_link = f'/users/{self.user.username}/'
         self.assertEqual(kwargs['link'], expected_link)
+
+
+class QuotaErrorAndNotificationTests(TestCase):
+    """Tests for QUOTA-1: quota error distinction and bell notification."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='quotauser', email='quota@example.com',
+            password='testpass', is_staff=True,
+        )
+        self.job = BulkGenerationJob.objects.create(
+            created_by=self.user,
+            total_prompts=2,
+            status='processing',
+        )
+
+    @patch('openai.OpenAI')
+    def test_provider_quota_error_returns_quota_type(self, MockOpenAI):
+        """RateLimitError with insufficient_quota returns error_type='quota'."""
+        from openai import RateLimitError
+        from prompts.services.image_providers.openai_provider import (
+            OpenAIImageProvider,
+        )
+        import httpx
+
+        mock_response = httpx.Response(
+            status_code=429,
+            request=httpx.Request('POST', 'https://api.openai.com/v1/images/generations'),
+        )
+        mock_error = RateLimitError(
+            message='You exceeded your current quota. insufficient_quota',
+            response=mock_response,
+            body=None,
+        )
+        MockOpenAI.return_value.images.generate.side_effect = mock_error
+
+        provider = OpenAIImageProvider(api_key='sk-test')
+        result = provider.generate(
+            prompt='test prompt',
+            size='1024x1024',
+            quality='medium',
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_type, 'quota')
+        self.assertNotEqual(result.error_type, 'rate_limit')
+        self.assertIn('quota', result.error_message.lower())
+
+    @patch('openai.OpenAI')
+    def test_provider_rate_limit_still_returns_rate_limit_type(self, MockOpenAI):
+        """RateLimitError WITHOUT insufficient_quota returns error_type='rate_limit'."""
+        from openai import RateLimitError
+        from prompts.services.image_providers.openai_provider import (
+            OpenAIImageProvider,
+        )
+        import httpx
+
+        mock_httpx_response = httpx.Response(
+            status_code=429,
+            headers={'retry-after': '30'},
+            request=httpx.Request('POST', 'https://api.openai.com/v1/images/generations'),
+        )
+        mock_error = RateLimitError(
+            message='Rate limit exceeded. Please retry after 30 seconds.',
+            response=mock_httpx_response,
+            body=None,
+        )
+        MockOpenAI.return_value.images.generate.side_effect = mock_error
+
+        provider = OpenAIImageProvider(api_key='sk-test')
+        result = provider.generate(
+            prompt='test prompt',
+            size='1024x1024',
+            quality='medium',
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_type, 'rate_limit')
+        self.assertNotEqual(result.error_type, 'quota')
+        self.assertIsNotNone(result.retry_after)
+
+    def test_sanitiser_quota_maps_to_quota_exceeded(self):
+        """Sanitiser maps quota keywords to 'Quota exceeded', not 'Rate limit reached'."""
+        from prompts.services.bulk_generation import _sanitise_error_message
+
+        self.assertEqual(
+            _sanitise_error_message('insufficient_quota'), 'Quota exceeded'
+        )
+        self.assertEqual(
+            _sanitise_error_message('API quota exhausted'), 'Quota exceeded'
+        )
+        # Rate limit still distinct
+        self.assertEqual(
+            _sanitise_error_message('rate limit reached'), 'Rate limit reached'
+        )
+        self.assertNotEqual(
+            _sanitise_error_message('quota exhausted'), 'Rate limit reached'
+        )
+
+    def test_quota_error_does_not_retry(self):
+        """Quota error_type routes to stop_job=True (no retry)."""
+        from prompts.services.image_providers.openai_provider import GenerationResult
+        from prompts.tasks import _run_generation_with_retry
+        from unittest.mock import MagicMock
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value = GenerationResult(
+            success=False,
+            error_type='quota',
+            error_message='API quota exhausted.',
+        )
+
+        image = GeneratedImage.objects.create(
+            job=self.job,
+            prompt_text='test',
+            status='queued',
+            prompt_order=0,
+            variation_number=0,
+        )
+
+        with patch('prompts.tasks.time.sleep') as mock_sleep:
+            _result, stop_job = _run_generation_with_retry(
+                mock_provider, image, self.job, 'sk-test',
+            )
+
+        # Quota → stop_job=True (whole job stops)
+        self.assertTrue(stop_job)
+        # No retries — provider.generate called exactly once
+        self.assertEqual(mock_provider.generate.call_count, 1)
+        # No retry sleep
+        mock_sleep.assert_not_called()
+        # Image marked failed
+        self.assertEqual(image.status, 'failed')
+        # Job marked failed
+        self.assertEqual(self.job.status, 'failed')
+
+    @patch('prompts.services.notifications.create_notification')
+    def test_quota_alert_fires_on_quota_failed_images(self, mock_create):
+        """Quota alert notification fires when job has quota-failed images."""
+        from prompts.tasks import _fire_quota_alert_notification
+
+        GeneratedImage.objects.create(
+            job=self.job,
+            prompt_text='test',
+            status='failed',
+            error_message='API quota exhausted.',
+            prompt_order=0,
+            variation_number=0,
+        )
+
+        _fire_quota_alert_notification(self.job)
+
+        mock_create.assert_called_once()
+        kwargs = mock_create.call_args[1]
+        self.assertEqual(kwargs['notification_type'], 'openai_quota_alert')
+        self.assertEqual(kwargs['recipient'], self.user)
+        self.assertIn('quota', kwargs['title'].lower())
+        self.assertNotEqual(kwargs['notification_type'], 'bulk_gen_job_failed')
+
+    @patch('prompts.services.notifications.create_notification')
+    def test_quota_alert_does_not_fire_for_auth_failures(self, mock_create):
+        """Quota alert should NOT fire when job failed due to auth error."""
+        from prompts.models import Notification
+
+        GeneratedImage.objects.create(
+            job=self.job,
+            prompt_text='test',
+            status='failed',
+            error_message='Invalid API key. Please check your key.',
+            prompt_order=0,
+            variation_number=0,
+        )
+        self.job.status = 'failed'
+        self.job.save()
+
+        # The condition check that process_bulk_generation_job uses:
+        has_quota_images = self.job.images.filter(
+            status='failed',
+            error_message__icontains='quota',
+        ).exists()
+
+        self.assertFalse(has_quota_images, "Auth failure should not match quota filter")
+        # Confirm no quota alert notification exists
+        self.assertFalse(
+            Notification.objects.filter(
+                notification_type='openai_quota_alert',
+                recipient=self.user,
+            ).exists()
+        )

@@ -100,13 +100,14 @@
     // ─── Error Reason Formatter ───────────────────────────────────
     G._getReadableErrorReason = function (errorMessage) {
         if (!errorMessage) return '';
-        // Receives only the 6 fixed sanitised strings from the backend —
+        // Receives only the 7 fixed sanitised strings from the backend —
         // use exact-match map so JS and backend can never silently drift.
         var reasonMap = {
             'Authentication error':     'Invalid API key \u2014 check your key and try again.',
             'Invalid request':          'Invalid request \u2014 check your prompt or settings.',
             'Content policy violation': 'Content policy violation \u2014 revise this prompt.',
             'Upload failed':            'Generation succeeded but file upload failed \u2014 try regenerating.',
+            'Quota exceeded':           'Failed. API quota exceeded \u2014 contact admin.',
             'Rate limit reached':       'Rate limit reached \u2014 try again in a few minutes.',
             'Generation failed':        'Generation failed \u2014 try again or contact support if this repeats.',
         };

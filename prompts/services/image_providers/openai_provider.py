@@ -23,13 +23,6 @@ class OpenAIImageProvider(ImageProvider):
 
     supported_qualities = ['low', 'medium', 'high']
 
-    # Cost per image by quality (1024x1024 square)
-    COST_MAP = {
-        'low': 0.015,
-        'medium': 0.03,
-        'high': 0.05,
-    }
-
     # Rate limits by OpenAI tier
     TIER_RATE_LIMITS = {
         1: 5,
@@ -171,6 +164,20 @@ class OpenAIImageProvider(ImageProvider):
                 ),
             )
         except RateLimitError as e:
+            # Distinguish quota exhaustion from true rate limits.
+            # Both raise RateLimitError but only quota has 'insufficient_quota'
+            # in the error body. Quota must NOT be retried — same key, same result.
+            error_body = str(e).lower()
+            if 'insufficient_quota' in error_body or (
+                hasattr(e, 'code') and e.code == 'insufficient_quota'
+            ):
+                return GenerationResult(
+                    success=False,
+                    error_type='quota',
+                    error_message=(
+                        'API quota exhausted. Please top up your OpenAI account.'
+                    ),
+                )
             retry_after = None
             if hasattr(e, 'response') and e.response is not None:
                 try:
@@ -267,5 +274,11 @@ class OpenAIImageProvider(ImageProvider):
     def get_cost_per_image(
         self, size: str = '1024x1024', quality: str = 'medium'
     ) -> float:
-        """Return cost per image based on quality."""
-        return self.COST_MAP.get(quality, 0.03)
+        """Return cost per image based on quality and size.
+
+        Delegates to IMAGE_COST_MAP in prompts.constants — single source of
+        truth for all pricing. Falls back to medium square price if the
+        quality/size combination is not found.
+        """
+        from prompts.constants import IMAGE_COST_MAP
+        return IMAGE_COST_MAP.get(quality, {}).get(size, 0.042)

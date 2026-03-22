@@ -68,11 +68,22 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_bulk_generation_tasks.D1PendingSweepTests prompts.tests.test_bulk_generation_tasks.D3InterBatchDelayTests -v2
+# Expected: 4 tests, 0 failures
+```
+
+**Manual (Heroku):**
+1. Set `BULK_GEN_MAX_CONCURRENT=1` and `OPENAI_INTER_BATCH_DELAY=12`
+2. Run a 4-prompt job — check Heroku logs for `[D3-RATE-LIMIT]` entries between batches
+3. If any images fail, check logs for `[D1-SWEEP]` entries
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| a6a8493 | `fix: D1 pending image sweep + D3 rate limit inter-batch delay (Session 143)` |
 
 ## Section 11 — What to Work on Next
 

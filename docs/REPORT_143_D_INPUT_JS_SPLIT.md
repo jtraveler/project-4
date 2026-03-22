@@ -79,11 +79,24 @@ No remaining issues. All spec objectives met.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts --verbosity=0
+# Expected: 1209 tests, 0 failures, 12 skipped
+```
+
+**Manual browser verification:**
+1. Load bulk generator input page — all prompt boxes render
+2. Add/delete prompt boxes, validate source URLs, paste images
+3. Fill API key → validate → generate → redirects to job page
+4. Auto-save works (add prompts, reload, prompts restored)
+5. Reference image upload, Clear All modal, Reset Master modal
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| ca1bbad | `refactor: split bulk-generator.js (1685 lines) into 3 modules via BulkGenInput namespace` |
 
 ## Section 11 — What to Work on Next
 

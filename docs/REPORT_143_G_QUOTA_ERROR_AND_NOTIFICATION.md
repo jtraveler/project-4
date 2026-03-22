@@ -92,11 +92,27 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_bulk_gen_notifications.QuotaErrorAndNotificationTests -v2
+# Expected: 6 tests, 0 failures
+
+python manage.py test prompts.tests.test_bulk_generator_views.SanitiseErrorMessageTests -v2
+# Expected: includes test_quota_keyword asserting 'Quota exceeded'
+```
+
+**Manual (Heroku):**
+1. Exhaust a test API key's quota
+2. Run a bulk gen job with that key
+3. Verify gallery shows "Failed. API quota exceeded" (not "Rate limit reached")
+4. Verify bell notification shows "API quota exhausted — generation stopped"
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 98fc1aa | `feat: quota error distinct from rate limit, bell notification on quota kill (Session 143)` |
+| 82ab410 | `fix: update quota sanitiser test to expect 'Quota exceeded' (Session 143)` |
 
 ## Section 11 — What to Work on Next
 

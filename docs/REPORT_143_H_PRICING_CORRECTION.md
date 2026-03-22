@@ -64,11 +64,33 @@ All relevant agents would be included in the full-suite gate review.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_bulk_generator_job.GetCostPerImageDelegationTests prompts.tests.test_bulk_generator_job.ImageCostMapTests -v2
+# Expected: 17 tests, 0 failures
+
+python manage.py test prompts.tests.test_bulk_generator.TestOpenAIImageProvider -v2
+# Expected: 16 tests, 0 failures (includes updated cost assertions)
+```
+
+**Verification greps:**
+```bash
+# No stale prices remain
+grep -rn "0\.034\|0\.046\|0\.067\|0\.092" prompts/constants.py
+# Expected: only in comment (line 431)
+
+# COST_MAP removed from provider
+grep "COST_MAP" prompts/services/image_providers/openai_provider.py
+# Expected: 0 results
+```
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 8871a5d | `fix: correct GPT-Image-1 pricing in IMAGE_COST_MAP and openai_provider (Session 143)` |
+| 3e5d33c | `fix: update remaining stale price assertions in test_bulk_generation_tasks.py (Session 143)` |
+| 128cb34 | `fix: update stale price assertions in test_bulk_generator.py (Session 143)` |
 
 ## Section 11 — What to Work on Next
 

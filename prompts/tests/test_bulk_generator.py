@@ -324,7 +324,7 @@ class TestOpenAIImageProvider(unittest.TestCase):
         result = provider.generate(
             'Test', quality='high'
         )
-        self.assertEqual(result.cost, 0.05)
+        self.assertEqual(result.cost, 0.167)
 
     def test_openai_provider_validate_settings_valid(self):
         """All valid combinations pass."""
@@ -365,16 +365,16 @@ class TestOpenAIImageProvider(unittest.TestCase):
             )
 
     def test_openai_provider_cost_per_quality(self):
-        """Low=0.015, Medium=0.03, High=0.05."""
+        """Low=0.011, Medium=0.042, High=0.167 (corrected Session 143)."""
         provider = OpenAIImageProvider(mock_mode=True)
         self.assertEqual(
-            provider.get_cost_per_image(quality='low'), 0.015
+            provider.get_cost_per_image(quality='low'), 0.011
         )
         self.assertEqual(
-            provider.get_cost_per_image(quality='medium'), 0.03
+            provider.get_cost_per_image(quality='medium'), 0.042
         )
         self.assertEqual(
-            provider.get_cost_per_image(quality='high'), 0.05
+            provider.get_cost_per_image(quality='high'), 0.167
         )
 
     def test_openai_provider_requires_nsfw_false(self):
@@ -401,10 +401,10 @@ class TestOpenAIImageProvider(unittest.TestCase):
         self.assertEqual(provider.get_rate_limit(), 5)
 
     def test_openai_provider_cost_unknown_quality(self):
-        """Unknown quality defaults to medium cost."""
+        """Unknown quality defaults to medium square cost (0.042)."""
         provider = OpenAIImageProvider(mock_mode=True)
         self.assertEqual(
-            provider.get_cost_per_image(quality='unknown'), 0.03
+            provider.get_cost_per_image(quality='unknown'), 0.042
         )
 
     def test_openai_provider_generate_failure(self):
@@ -531,4 +531,4 @@ class TestBulkGeneratorIntegration(TestCase):
         job.refresh_from_db()
         self.assertEqual(job.completed_count, 2)
         self.assertEqual(job.progress_percent, 100)
-        self.assertEqual(float(job.actual_cost), 0.06)  # 2 x $0.03
+        self.assertEqual(float(job.actual_cost), 0.084)  # 2 x $0.042

@@ -2081,7 +2081,7 @@ class SanitiseErrorMessageTests(TestCase):
     def test_quota_keyword(self):
         self.assertEqual(
             self.sanitise('You exceeded your current quota, please check your billing'),
-            'Rate limit reached',
+            'Quota exceeded',
         )
 
     def test_generate_does_not_trigger_rate_limit(self):

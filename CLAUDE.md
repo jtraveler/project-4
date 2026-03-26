@@ -967,6 +967,13 @@ Options for `initOverflowTabs()`:
   - Operations: s3_put, s3_get, s3_head
   - Use B2 CLI to update: `b2 bucket update --cors-rules ...`
 
+- **Cloudflare Bot Fight Mode**: ENABLED (March 26, 2026)
+  - Enabled on promptfinder.net domain via Cloudflare Security → Settings → Bot traffic
+  - Detects and challenges malicious bot traffic
+  - Verified search engine bots (Googlebot, Bingbot etc.) are whitelisted — no SEO impact
+  - JS Detections: On
+  - Triggered by PHP probe scan observed in Heroku logs from IP 4.232.84.11
+
 ### Uncommitted Changes (Do Not Revert)
 
 | File | Change |

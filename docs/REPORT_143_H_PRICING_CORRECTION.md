@@ -56,11 +56,30 @@ No concerns. The single-source-of-truth pattern (IMAGE_COST_MAP in constants.py)
 
 ## Section 7 — Agent Ratings
 
-Spec H agents deferred to full suite gate — implementation is straightforward pricing data changes with comprehensive test coverage. Agent review will be performed if any issues surface during full suite.
+Retroactive 6-agent review performed Session 143 (March 26, 2026).
+
+| Agent | Score | Key Feedback |
+|-------|-------|-------------|
+| @python-pro | 9.2 | Clean idioms, double `.get()` chain is safe, minor gap: no `test_unknown_size_falls_back` |
+| @django-pro | 9.2 | Local import pattern correct for circular-dep avoidance, fallback semantically right, `@override_settings` on `GetCostPerImageDelegationTests` unnecessary but harmless |
+| @security-auditor | 8.5 | No user-tamperable surface, fallback charges more not less. Flagged: stale `0.034` fallback in `bulk_generator_views.py` (pre-correction leftover), suggest `logger.warning()` on fallback activation |
+| @backend-security-coder | 9.2 | Upstream `validate_settings()` allowlist + safe fallback = defense in depth satisfied. Test credential hygiene clean (`test-key`/`sk-test`). No injection, leakage, or privilege escalation paths |
+| @code-reviewer | 9.2 | Single source of truth well enforced, comment quality exemplary, regression test `test_size_is_no_longer_ignored` catches exact prior bug class. Minor: `0.042` fallback is magic number (could derive from map) |
+| @api-documenter | 8.8 | Block comment answers 5 key developer questions (when, why, source, consumers, dead entries). Test names self-documenting. Minor gaps: no "auto" quality note, no retrieval date on source URL |
+
+**Average: 9.02 / 10** ✅ (threshold: 8.0)
+
+### Actionable Items Surfaced by Agents
+
+| Item | Agent | Severity | Action |
+|------|-------|----------|--------|
+| Stale `0.034` fallback in `bulk_generator_views.py` | @security-auditor | Medium | Fix in next session — update to `0.042` |
+| `logger.warning()` on fallback activation | @security-auditor | Low | P3 — add when touching `get_cost_per_image()` next |
+| `0.042` fallback is magic number | @code-reviewer, @api-documenter | Low | P3 — consider deriving from `IMAGE_COST_MAP['medium']['1024x1024']` |
 
 ## Section 8 — Recommended Additional Agents
 
-All relevant agents would be included in the full-suite gate review.
+No additional agents needed — 6-agent review is comprehensive for this change type.
 
 ## Section 9 — How to Test
 

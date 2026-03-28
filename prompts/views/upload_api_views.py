@@ -66,6 +66,10 @@ from prompts.services.b2_presign_service import (
 B2_UPLOAD_RATE_LIMIT = 20  # Max uploads per hour per user
 B2_UPLOAD_RATE_WINDOW = 3600  # 1 hour in seconds
 
+# Rate limiting constants for thumbnail proxy
+PROXY_RATE_LIMIT = 60   # Max proxy requests per minute per staff user
+PROXY_RATE_WINDOW = 60  # 1 minute in seconds
+
 logger = logging.getLogger(__name__)
 
 
@@ -960,6 +964,18 @@ def proxy_image_thumbnail(request):
     if not request.user.is_staff:
         return HttpResponseBadRequest('Not authorized.')
 
+    # Rate limiting: 60 requests per minute per staff user
+    _proxy_cache_key = f"img_proxy_rate:{request.user.pk}"
+    if not cache.add(_proxy_cache_key, 1, PROXY_RATE_WINDOW):
+        _proxy_count = cache.incr(_proxy_cache_key)
+        if _proxy_count > PROXY_RATE_LIMIT:
+            logger.warning(
+                "[IMAGE-PROXY] Rate limit exceeded for user %s (%d requests)",
+                request.user.pk, _proxy_count,
+            )
+            from django.http import HttpResponse as _HttpResponse
+            return _HttpResponse(status=429)
+
     url = request.GET.get('url', '').strip()
     if not url:
         return HttpResponseBadRequest('url parameter required.')
@@ -998,8 +1014,8 @@ def proxy_image_thumbnail(request):
         if (addr.is_private or addr.is_loopback
                 or addr.is_link_local or addr.is_reserved):
             logger.warning(
-                "[IMAGE-PROXY] Blocked private IP request: %s -> %s",
-                hostname, ip,
+                "[IMAGE-PROXY] Blocked private IP request: %s -> %s (user %s)",
+                hostname, ip, request.user.pk,
             )
             return HttpResponseBadRequest('Invalid URL.')
     except socket.gaierror:
@@ -1024,9 +1040,8 @@ def proxy_image_thumbnail(request):
                 # Reject cross-host redirects
                 if redirect_host != parsed.netloc:
                     logger.warning(
-                        "[IMAGE-PROXY] Blocked cross-host redirect: "
-                        "%s -> %s",
-                        parsed.netloc, redirect_host,
+                        "[IMAGE-PROXY] Blocked cross-host redirect: %s -> %s (user %s)",
+                        parsed.netloc, redirect_host, request.user.pk,
                     )
                     return HttpResponseBadRequest('Invalid URL.')
                 # Re-validate redirect target: scheme + port + IP
@@ -1042,9 +1057,8 @@ def proxy_image_thumbnail(request):
                             or redir_addr.is_link_local
                             or redir_addr.is_reserved):
                         logger.warning(
-                            "[IMAGE-PROXY] Blocked private IP on "
-                            "redirect: %s -> %s",
-                            redirect_host, redir_ip,
+                            "[IMAGE-PROXY] Blocked private IP on redirect: %s -> %s (user %s)",
+                            redirect_host, redir_ip, request.user.pk,
                         )
                         return HttpResponseBadRequest('Invalid URL.')
                 except socket.gaierror:
@@ -1064,8 +1078,8 @@ def proxy_image_thumbnail(request):
         content_type = r.headers.get('Content-Type', '')
         if not content_type.startswith('image/'):
             logger.warning(
-                "[IMAGE-PROXY] Non-image content-type %s for %s",
-                content_type, url,
+                "[IMAGE-PROXY] Non-image content-type %s for %s (user %s)",
+                content_type, url, request.user.pk,
             )
             return HttpResponseBadRequest('URL did not return an image.')
 
@@ -1077,7 +1091,7 @@ def proxy_image_thumbnail(request):
             total += len(chunk)
             if total > MAX_SIZE:
                 logger.warning(
-                    "[IMAGE-PROXY] Response too large for %s", url
+                    "[IMAGE-PROXY] Response too large for %s (user %s)", url, request.user.pk,
                 )
                 return HttpResponseBadRequest('Image too large.')
             chunks.append(chunk)
@@ -1088,9 +1102,9 @@ def proxy_image_thumbnail(request):
         response['X-Content-Type-Options'] = 'nosniff'
         # Cache thumbnail privately for 1 hour
         response['Cache-Control'] = 'private, max-age=3600'
-        logger.info("[IMAGE-PROXY] Served %d bytes for %s", total, url)
+        logger.info("[IMAGE-PROXY] Served %d bytes for %s (user %s)", total, url, request.user.pk)
         return response
 
     except Exception as exc:
-        logger.warning("[IMAGE-PROXY] Failed to fetch %s: %s", url, exc)
+        logger.warning("[IMAGE-PROXY] Failed to fetch %s: %s (user %s)", url, exc, request.user.pk)
         return HttpResponseBadRequest('Failed to fetch image.')

@@ -22,7 +22,6 @@
     I.csrf = page.dataset.csrf;
     I.urlValidate = page.dataset.urlValidate;
     I.urlStart = page.dataset.urlStart;
-    I.urlValidateRef = page.dataset.urlValidateRef;
     I.urlValidateKey = page.dataset.urlValidateKey;
 
     // API key elements
@@ -267,8 +266,8 @@
                     'X-CSRFToken': I.csrf,
                 },
                 body: JSON.stringify({ cdn_url: pasteUrl }),
-            }).catch(function() {
-                // Non-critical — ignore, proceed with box deletion
+            }).catch(function(err) {
+                console.warn('[PASTE-DELETE] deleteBox fetch failed:', err);
             });
         }
 
@@ -393,8 +392,9 @@
         }
 
         // Clear pasted source image
-        if (e.target.classList.contains('bg-source-paste-clear')) {
-            var clearBox = e.target.closest('.bg-prompt-box');
+        var clearBtn = e.target.closest('.bg-source-paste-clear');
+        if (clearBtn) {
+            var clearBox = clearBtn.closest('.bg-prompt-box');
             if (clearBox) {
                 var clearInput = clearBox.querySelector(
                     '.bg-prompt-source-image-input'

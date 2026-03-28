@@ -93,11 +93,19 @@ value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_openai_provider --verbosity=2
+# Expected: 4 tests, 0 failures
+```
+
+**Full suite:** 1213 tests, 0 failures, 12 skipped.
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 1f9f250 | fix(bulk-gen): .finally() removed, dead urlValidateRef removed, container CSS moved, ref_file.name sniffs Content-Type |
 
 ## Section 11 — What to Work on Next
 

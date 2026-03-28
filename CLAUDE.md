@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 144 | Mar 28, 2026 | PASTE-DELETE `.closest()` fix, stale 0.034→0.042 cost fallback, proxy `user.pk` logging + 60 req/min rate limit, `.finally()` removed, dead `urlValidateRef` removed, `.container` CSS moved, `ref_file.name` Content-Type sniff, `deleteBox` `.catch` warns, `OPENAI_INTER_BATCH_DELAY` hoisted, quota capitalisation fixed. 1213 tests. |
 | Session 143 bulk-gen | Mar 26, 2026 | JS split (1685→725 lines + 2 modules), D1 pending sweep, D3 inter-batch delay, QUOTA-1 error distinction, pricing correction, migration 0077. 1209 tests. |
 | NOTIF-BG-1+2 | Mar 13, 2026 | Added 4 bulk gen notification types (`bulk_gen_job_completed`, `bulk_gen_job_failed`, `bulk_gen_published`, `bulk_gen_partial`) to `Notification.NOTIFICATION_TYPES`. Migration 0073. New helper functions `_fire_bulk_gen_job_notification` + `_fire_bulk_gen_publish_notification` in `tasks.py`. New test file: `prompts/tests/test_bulk_gen_notifications.py` (6 tests). Renamed `cloudinary_moderation.py` → `vision_moderation.py` (all import sites updated). 1149 → 1155 tests. |
 | DETECT-B2-ORPHANS | Mar 13, 2026 | New `detect_b2_orphans` management command (404 lines) in `prompts/management/commands/`. Read-only B2 bucket audit via boto3 paginator. Cross-references `Prompt.all_objects` (7 B2 fields) + `GeneratedImage.image_url` + `BulkGenerationJob.reference_image_url`. `SCAN_PREFIXES` limits scan to `media/` and `bulk-gen/`. `_safe_error_message()` uses structured `ClientError.response['Error']` fields — credential-safe. `iterator(chunk_size=500)` on all DB queries. Flags: `--days`, `--all`, `--dry-run`, `--output`, `--verbose`. CSV output to `docs/orphans_b2.csv`. Commit: 61edad1. Agents: @security-auditor 9.0, @django-pro 9.0, @code-reviewer 8.5. Avg 8.83/10. 1149 tests. |
@@ -291,7 +292,7 @@ batch). Atomic rate limiter on `api_create_pages` using `cache.add()` + `cache.i
 6 new tests: `EndToEndPublishFlowTests` (3) + `CreatePagesAPITests` (3). `cache.clear()`
 in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
-**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS input modules + 5 JS job modules. 1209 tests. D1 pending sweep + D3 rate limit delay deployed. QUOTA-1 error distinction live. Next: D2 generation retry, then V2 launch. V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
+**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS input modules + 5 JS job modules. 1213 tests. D1 pending sweep + D3 rate limit delay deployed. QUOTA-1 error distinction live. Next: D2 generation retry, then V2 launch. V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
 
 **Resolved (Session 122):** Cancel-path `G.totalImages` staleness ✅, `bulk-generator-ui.js` at 766/780 lines ✅ (now 338 lines), N4h rename not triggering ✅.
 
@@ -335,8 +336,8 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 | ~~Single-box ✕ B2 delete~~ | `static/js/bulk-generator.js` | ✅ RESOLVED Session 142 — fires B2 delete before clearing URL field |
 | ~~`X-Content-Type-Options` on download proxy~~ | `prompts/views/upload_api_views.py` | ✅ RESOLVED Session 142 — nosniff added to download proxy |
 | ~~gallery.js lightbox close button~~ | `static/js/bulk-generator-gallery.js` | ✅ RESOLVED Session 142 — confirmed on overlay (141 fix verified) |
-| `[PASTE-DELETE]` ✕ button `.classList.contains()` | `static/js/bulk-generator.js` | Uses `.classList.contains()` not `.closest()` — fix in Session 144 |
-| Stale 0.034 fallback in cost estimate | `prompts/views/bulk_generator_views.py` | Flagged by @security-auditor in 143-H retroactive review — fix in Session 144 |
+| ~~`[PASTE-DELETE]` ✕ button `.classList.contains()`~~ | `static/js/bulk-generator.js` | ✅ RESOLVED Session 144 — uses `.closest()` matching deleteBtn/resetBtn pattern |
+| ~~Stale 0.034 fallback in cost estimate~~ | `prompts/views/bulk_generator_views.py` | ✅ RESOLVED Session 144 — updated to 0.042, consistent with IMAGE_COST_MAP |
 
 ### 🚀 Planned New Features
 
@@ -1973,5 +1974,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.34 (Session 143 — JS split, D1 sweep, D3 delay, QUOTA-1, pricing correction; 1209 tests)
-**Last Updated:** March 26, 2026
+**Version:** 4.35 (Session 144 — P1 fixes, proxy hardening, P3/P4 cleanup batch; 1213 tests)
+**Last Updated:** March 28, 2026

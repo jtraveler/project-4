@@ -82,11 +82,25 @@ value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_bulk_generator_views --verbosity=1
+# Expected: all tests pass
+```
+
+**Full suite:** 1213 tests, 0 failures, 12 skipped.
+
+**Verification:**
+```bash
+grep -n "0\.034\|0\.042" prompts/views/bulk_generator_views.py
+# Expected: only 0.042 at line 77
+```
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 9e46999 | fix(bulk-gen): update stale 0.034 cost fallback to 0.042 in job view |
 
 ## Section 11 — What to Work on Next
 

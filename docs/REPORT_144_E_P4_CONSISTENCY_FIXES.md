@@ -70,11 +70,25 @@ value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_bulk_generator --verbosity=1
+# Expected: all tests pass
+```
+
+**Full suite:** 1213 tests, 0 failures, 12 skipped.
+
+**Verification:**
+```bash
+grep -n "OPENAI_INTER_BATCH_DELAY" prompts/tasks.py
+# Expected: 2 results — comment + getattr, both above the for loop
+```
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 91ef568 | fix(bulk-gen): deleteBox .catch logs warn, inter-batch delay hoisted, CLAUDE.md quota capitalisation |
 
 ## Section 11 — What to Work on Next
 

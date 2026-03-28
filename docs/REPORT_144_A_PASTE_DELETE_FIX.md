@@ -78,11 +78,25 @@ for this spec.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_bulk_generator --verbosity=1
+# Expected: all tests pass
+```
+
+**Full suite:** 1213 tests, 0 failures, 12 skipped.
+
+**Manual browser steps:**
+1. Navigate to `/tools/bulk-ai-generator/`
+2. Paste an image into a prompt box source image field
+3. Click the SVG icon inside the ✕ clear button (not the button edge)
+4. Verify the pasted image is cleared
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| d2facfe | fix(bulk-gen): paste-clear button uses .closest() — fixes click miss on SVG child |
 
 ## Section 11 — What to Work on Next
 

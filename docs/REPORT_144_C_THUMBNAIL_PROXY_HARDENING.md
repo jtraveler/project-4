@@ -107,11 +107,25 @@ value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests --verbosity=1
+# Expected: all tests pass
+```
+
+**Full suite:** 1213 tests, 0 failures, 12 skipped.
+
+**Verification:**
+```bash
+grep -n "IMAGE-PROXY" prompts/views/upload_api_views.py
+# Expected: all 8 lines include "user %s" or "user.pk"
+```
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| a6d0ed0 | fix(proxy): add user.pk to all IMAGE-PROXY log lines, add 60 req/min rate limit |
 
 ## Section 11 — What to Work on Next
 

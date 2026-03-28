@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 21, 2026 (Sessions 101–142)
+**Last Updated:** March 28, 2026 (Sessions 101–144)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,69 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 144 — March 28, 2026
+
+**Focus:** P1 bug fixes, thumbnail proxy hardening, P3/P4 cleanup batch
+
+**Specs:** 144-A (PASTE-DELETE fix), 144-B (stale cost fallback),
+144-C (proxy hardening), 144-D (P3 cleanup), 144-E (P4 fixes),
+144-F (docs)
+
+**Key outcomes:**
+- PASTE-DELETE ✕ button fix: `.classList.contains()` → `.closest()`
+  pattern, matching deleteBtn and resetBtn above it in same listener
+- Stale 0.034 cost fallback updated to 0.042 in bulk_generator_views.py
+  (flagged Medium severity by @security-auditor in Session 143-H)
+- Thumbnail proxy: request.user.pk added to all 7 [IMAGE-PROXY] log
+  lines; per-user rate limit added (60 req/min, cache.add/incr pattern)
+- .finally() removed from validateApiKey (ES2015 compat); replaced with
+  .then() chain that correctly passes result through
+- Dead I.urlValidateRef property removed from bulk-generator.js
+- .container max-width rule moved from lightbox.css to style.css
+- ref_file.name now sniffs Content-Type instead of hardcoding 'reference.png'
+- deleteBox .catch now logs console.warn (was silent)
+- OPENAI_INTER_BATCH_DELAY hoisted above generation loop (was re-read
+  per iteration)
+- CLAUDE.md quota capitalisation fixed: "quota exhausted" → "Quota exceeded"
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+**Commits:** d2facfe, 9e46999, a6d0ed0, 1f9f250, 91ef568
+
+---
+
+### Session 143 — March 26, 2026
+
+**Focus:** bulk-generator.js split, D1 pending sweep, D3 rate limit delay, QUOTA-1
+error distinction, pricing correction, security hardening
+
+**Specs:** 143-D (JS split), 143-E (docs safeguard D), 143-F (D1+D3),
+143-G (quota error), 143-H (pricing), 143-I (docs)
+
+**Key outcomes:**
+- bulk-generator.js split: 1685 → 725 lines; extracted `bulk-generator-generation.js`
+  (625 lines) and `bulk-generator-autosave.js` (376 lines) via `window.BulkGenInput` namespace
+- D1 pending sweep: orphaned queued/generating images now swept to failed after loop exits;
+  `failed_count` recalculated from DB
+- D3 inter-batch delay: `OPENAI_INTER_BATCH_DELAY` setting added; set to 12s in Heroku
+  for Tier 1 rate limit compliance
+- QUOTA-1: quota exhaustion now returns `error_type='quota'` (distinct from `rate_limit`);
+  no retry; fires `openai_quota_alert` bell notification; new migration 0077
+- Pricing correction: `IMAGE_COST_MAP` corrected (medium 0.034→0.042, high 0.067→0.167
+  square / 0.092→0.250 portrait); `COST_MAP` removed from `openai_provider.py`;
+  `get_cost_per_image()` now delegates to `IMAGE_COST_MAP` (single source of truth)
+- Safeguard Section D added to CLAUDE.md: D1/D2/D3 architecture + QUOTA/P2-B/P2-C plans
+- Cloudflare Bot Fight Mode enabled on promptfinder.net (Security → Settings → Bot traffic)
+- `OPENAI_INTER_BATCH_DELAY=12` set in Heroku config vars
+
+**Bug discovered (not yet fixed):**
+- [PASTE-DELETE] ✕ button uses `.classList.contains()` not `.closest()` — fix in Session 144
+- Stale 0.034 fallback in `bulk_generator_views.py` — flagged by @security-auditor in 143-H
+
+**Tests:** 1209 passing, 12 skipped, 0 failures
+**Commits:** ca1bbad, c02b0a7, a6a8493, 98fc1aa, 82ab410, 8871a5d, 3e5d33c, 128cb34
+
+---
 
 ### Session 142 — March 21, 2026
 

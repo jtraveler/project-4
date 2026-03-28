@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 21, 2026
+**Last Updated:** March 28, 2026
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA), Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1193 passing, 12 skipped (Session 142)
+**Total Tests:** 1213 passing, 12 skipped (Session 144)
 
 ---
 
@@ -14,9 +14,9 @@
 | **Python Files** | 96 | Various directories |
 | **HTML Templates** | 45 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 12 | static/css/ |
-| **JavaScript Files** | 15 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121, bulk-generator-gallery.js added Session 122) |
+| **JavaScript Files** | 19 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121, bulk-generator-gallery.js added Session 122, bulk-generator.js split +2 modules Session 143) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 74 | prompts/migrations/ (72), about/migrations/ (2) |
+| **Migrations** | 78 | prompts/migrations/ (76), about/migrations/ (2) |
 | **Test Files** | 24 | prompts/tests/ |
 | **Management Commands** | 29 | prompts/management/commands/ |
 | **Services** | 15 | prompts/services/ |
@@ -160,8 +160,10 @@ live-working-project/
 │   │   └── style.css
 │   ├── icons/                    # SVG icon sprite (Phase J.2)
 │   │   └── sprite.svg            # 33 icons from Lucide Icons
-│   └── js/                       # 17 JavaScript files
-│       ├── bulk-generator.js         # Bulk generator frontend: upload, preview, auto-save, validation (~1,546 lines)
+│   └── js/                       # 19 JavaScript files
+│       ├── bulk-generator.js         # Bulk generator frontend: form UI, prompt boxes, DOM init (725 lines, split Session 143)
+│       ├── bulk-generator-generation.js  # NEW Session 143 — API key validation, modals, generation flow (625 lines)
+│       ├── bulk-generator-autosave.js    # NEW Session 143 — reference image upload, auto-save to localStorage (376 lines)
 │       ├── bulk-generator-paste.js   # 78 lines — clipboard paste upload handler (Session 136)
 │       ├── bulk-generator-utils.js   # 89 lines — BulkGenUtils: URL validation, paste helpers (Sessions 130, 136)
 │       ├── bulk-generator-config.js  # 156 lines — BulkGen namespace + config (Session 121 JS-SPLIT-1)
@@ -413,6 +415,7 @@ prompts/views/
 | `test_source_credit.py` | 21 | Source/credit URL parsing, KNOWN_SITES domain mapping, adversarial inputs (Session 93) |
 | `test_bulk_generator_job.py` | 237 | Job progress page view: access control, context variables, IMAGE_COST_MAP, template rendering (Session 98) |
 | `test_bulk_gen_notifications.py` | 6 | Bulk gen notification helpers: job completed/failed + publish notifications fired with correct types and links (Session 125) |
+| `test_openai_provider.py` | 4 | Content-Type → extension mapping for ref_file.name: JPEG, WebP, unknown fallback, charset stripping (Session 144) |
 
 **Note:** 12 Selenium tests skipped in CI (require browser)
 
@@ -515,7 +518,9 @@ static/css/
 
 ```
 static/js/
-├── bulk-generator.js     # ~1,547 lines - Bulk generator frontend (Sessions 92-137)
+├── bulk-generator.js     # 725 lines - Bulk generator frontend: form UI, prompt boxes, DOM init (Sessions 92-143, split Session 143)
+├── bulk-generator-generation.js  # 625 lines - API key validation, modals, generation flow (NEW Session 143)
+├── bulk-generator-autosave.js    # 376 lines - Reference image upload, auto-save to localStorage (NEW Session 143)
 ├── bulk-generator-paste.js     # 78 lines   - Clipboard paste upload handler (Session 136)
 ├── bulk-generator-utils.js     # 89 lines   - BulkGenUtils: URL validation, paste helpers (Sessions 130, 136-137)
 ├── bulk-generator-config.js     # 156 lines  - Namespace init, constants (POLL_INTERVAL, TERMINAL_STATES, STATUS_HEADINGS), state variable declarations, utility functions (getCookie, formatCost, formatTime, gcd, getAspectLabel) (Session 121 JS-SPLIT-1)
@@ -540,7 +545,9 @@ static/js/
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| **bulk-generator.js** | ~1,547 | Bulk generator frontend: upload, preview, auto-save, validation, modals (Sessions 92-137) |
+| **bulk-generator.js** | 725 | Bulk generator frontend: form UI, prompt boxes, DOM init (Sessions 92-143, split Session 143) |
+| **bulk-generator-generation.js** | 625 | API key validation, modals, validation + generation flow (NEW Session 143) |
+| **bulk-generator-autosave.js** | 376 | Reference image upload, auto-save to localStorage (NEW Session 143) |
 | **bulk-generator-paste.js** | 78 | Clipboard paste upload handler for source images (Session 136) |
 | **bulk-generator-utils.js** | 89 | BulkGenUtils: URL validation, paste lock/unlock helpers (Sessions 130, 136) |
 | **bulk-generator-config.js** | 156 | Bulk generator constants, state declarations, utility functions — shared namespace init (Session 121 JS-SPLIT-1) |
@@ -1690,6 +1697,28 @@ prompts/templates/prompts/
 - `prompts/migrations/0073_alter_notification_notification_type.py` — NEW
 - `prompts/tests/test_bulk_gen_notifications.py` — NEW (6 tests)
 - Notification types added: `bulk_gen_job_completed`, `bulk_gen_job_failed`, `bulk_gen_published`, `bulk_gen_partial`
+
+**Sessions 128-142:**
+- `prompts/migrations/0074_add_nsfw_violation_model.py` — NEW
+- `prompts/migrations/0075_nsfw_violation_severity_choices.py` — NEW
+- `prompts/migrations/0076_add_source_image_fields.py` — NEW
+- Multiple view module splits and refactors (see CLAUDE_CHANGELOG.md Sessions 128-142)
+
+**Session 143:**
+- `static/js/bulk-generator.js` — split from ~1685 → 725 lines
+- `static/js/bulk-generator-generation.js` — NEW (625 lines, extracted from bulk-generator.js)
+- `static/js/bulk-generator-autosave.js` — NEW (376 lines, extracted from bulk-generator.js)
+- `prompts/migrations/0077_add_openai_quota_alert_notification_type.py` — NEW
+- `prompts/constants.py` — `IMAGE_COST_MAP` pricing corrected
+- `prompts/services/image_providers/openai_provider.py` — `COST_MAP` removed, quota error routing added
+- `prompts/services/bulk_generation.py` — `_sanitise_error_message()` quota split, D1 pending sweep
+- `prompts/tasks.py` — `openai_quota_alert` notification, D1 sweep logic
+- `docs/REPORT_143_D_INPUT_JS_SPLIT.md` — NEW
+- `docs/REPORT_143_E_DOCS_SAFEGUARD_D.md` — NEW
+- `docs/REPORT_143_F_PENDING_SWEEP_AND_RATE_LIMIT.md` — NEW
+- `docs/REPORT_143_G_QUOTA_ERROR_AND_NOTIFICATION.md` — NEW
+- `docs/REPORT_143_H_PRICING_CORRECTION.md` — NEW
+- Tests: 1193 → 1209 (16 new tests)
 
 **Session 126:**
 - `docs/REPORT_NOTIF_URL_REVERSE.md` — NEW

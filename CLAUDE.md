@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 21, 2026
+**Last Updated:** March 26, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 143 bulk-gen | Mar 26, 2026 | JS split (1685→725 lines + 2 modules), D1 pending sweep, D3 inter-batch delay, QUOTA-1 error distinction, pricing correction, migration 0077. 1209 tests. |
 | NOTIF-BG-1+2 | Mar 13, 2026 | Added 4 bulk gen notification types (`bulk_gen_job_completed`, `bulk_gen_job_failed`, `bulk_gen_published`, `bulk_gen_partial`) to `Notification.NOTIFICATION_TYPES`. Migration 0073. New helper functions `_fire_bulk_gen_job_notification` + `_fire_bulk_gen_publish_notification` in `tasks.py`. New test file: `prompts/tests/test_bulk_gen_notifications.py` (6 tests). Renamed `cloudinary_moderation.py` → `vision_moderation.py` (all import sites updated). 1149 → 1155 tests. |
 | DETECT-B2-ORPHANS | Mar 13, 2026 | New `detect_b2_orphans` management command (404 lines) in `prompts/management/commands/`. Read-only B2 bucket audit via boto3 paginator. Cross-references `Prompt.all_objects` (7 B2 fields) + `GeneratedImage.image_url` + `BulkGenerationJob.reference_image_url`. `SCAN_PREFIXES` limits scan to `media/` and `bulk-gen/`. `_safe_error_message()` uses structured `ClientError.response['Error']` fields — credential-safe. `iterator(chunk_size=500)` on all DB queries. Flags: `--days`, `--all`, `--dry-run`, `--output`, `--verbose`. CSV output to `docs/orphans_b2.csv`. Commit: 61edad1. Agents: @security-auditor 9.0, @django-pro 9.0, @code-reviewer 8.5. Avg 8.83/10. 1149 tests. |
 | MICRO-CLEANUP-1 | Mar 13, 2026 | Seven cleanup items in one commit: (1) group footer separator `·`→`\|` with `margin: 0 0.4rem` and `color: var(--gray-500)`; (2) ID rename `header-quality-col-th/td` → `header-quality-item/value` in HTML + JS; (3) `style.removeProperty('display')` → `.is-quality-visible` class toggle; (4) `VALID_PROVIDERS` + `VALID_VISIBILITIES` → `frozenset` in `bulk_generator_views.py`; (5) `VALID_SIZES` → `frozenset` in `create_test_gallery.py`; (6) `@csp_exempt` blank line removed in `upload_views.py` (bonus: same fix on `extend_upload_time`); (7) `replace('x','×')` → anchored regex `/(\d+)x(\d+)/i`. Commit: a222d15. Agents: @frontend-developer 8.8, @code-reviewer 9.0, @django-pro 8.5. Avg 8.77/10. 1149 tests. |
@@ -151,7 +152,6 @@ Never assume CC can safely edit a file without checking its tier first.
 - `prompts/tests/test_bulk_page_creation.py` (1,621 lines)
 - `static/css/pages/prompt-detail.css` (1,549 lines)
 - `static/css/pages/bulk-generator.css` (1,484 lines)
-- `static/js/bulk-generator.js` (1,547 lines) — input page JS, actively used
 - `static/css/navbar.css` (1,268 lines)
 
 **🟡 Caution — str_replace with Precision (max 2–3 edits per spec):**
@@ -176,8 +176,9 @@ Never assume CC can safely edit a file without checking its tier first.
 - `prompts/views/user_views.py` (630) — growing, modified Sessions 74, 86
 - `prompts/views/admin_views.py` (577) — admin additions ongoing
 
-*Last updated: Session 128 (March 14, 2026). Re-run the file size audit
-whenever a file is significantly extended or split.*
+*Last updated: Session 143 (March 26, 2026). `bulk-generator.js` split from
+1,547→725 lines. Re-run the file size audit whenever a file is significantly
+extended or split.*
 
 ---
 
@@ -290,7 +291,7 @@ batch). Atomic rate limiter on `api_create_pages` using `cache.add()` + `cache.i
 6 new tests: `EndToEndPublishFlowTests` (3) + `CreatePagesAPITests` (3). `cache.clear()`
 in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
-**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS modules. 1193 tests. Next: production smoke test before V2 launch, then UI improvements (failed slot dimensions, header stats, group footer weights). V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
+**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS input modules + 5 JS job modules. 1209 tests. D1 pending sweep + D3 rate limit delay deployed. QUOTA-1 error distinction live. Next: D2 generation retry, then V2 launch. V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
 
 **Resolved (Session 122):** Cancel-path `G.totalImages` staleness ✅, `bulk-generator-ui.js` at 766/780 lines ✅ (now 338 lines), N4h rename not triggering ✅.
 
@@ -334,6 +335,8 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 | ~~Single-box ✕ B2 delete~~ | `static/js/bulk-generator.js` | ✅ RESOLVED Session 142 — fires B2 delete before clearing URL field |
 | ~~`X-Content-Type-Options` on download proxy~~ | `prompts/views/upload_api_views.py` | ✅ RESOLVED Session 142 — nosniff added to download proxy |
 | ~~gallery.js lightbox close button~~ | `static/js/bulk-generator-gallery.js` | ✅ RESOLVED Session 142 — confirmed on overlay (141 fix verified) |
+| `[PASTE-DELETE]` ✕ button `.classList.contains()` | `static/js/bulk-generator.js` | Uses `.classList.contains()` not `.closest()` — fix in Session 144 |
+| Stale 0.034 fallback in cost estimate | `prompts/views/bulk_generator_views.py` | Flagged by @security-auditor in 143-H retroactive review — fix in Session 144 |
 
 ### 🚀 Planned New Features
 
@@ -450,16 +453,16 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   dispatches up to 4 concurrent API calls per batch, completing in ~15s before the next batch
   starts. This produces ~16 images/minute against Tier 1's 5 images/minute limit. The original
   Phase 5C inter-image delay was removed in Phase 5D. **IMMEDIATE MITIGATION (no code deploy):**
-  Set `BULK_GEN_MAX_CONCURRENT=1` in Heroku config vars. **Permanent fix:** Safeguard Section D
-  (D3) — add `OPENAI_TIER` env var that auto-configures correct `max_workers` + inter-batch delay
-  per tier. Do not raise `BULK_GEN_MAX_CONCURRENT` above 1 for Tier 1 until D3 is built.
+  Set `BULK_GEN_MAX_CONCURRENT=1` in Heroku config vars. **Permanent fix (DEPLOYED Session 143):**
+  `OPENAI_INTER_BATCH_DELAY=12` setting added. D3 now enforces 12s inter-batch delay for Tier 1.
 
 - **Pending-after-completion gap (Session 143):** If the generation loop exits before all
   `GeneratedImage` records transition from `status='pending'` to `status='failed'` (e.g., quota
   exhaustion, unhandled exception), those images show as "Not generated" in the gallery but are
   never counted in `failed_count`. The job reports 0 failures despite images not generating.
   Root cause: `failed_count` only increments when the backend explicitly catches an exception per
-  image — orphaned `pending` records are never swept up. Fix is Safeguard Section D (D1).
+  image — orphaned `pending` records are never swept up. **Fix deployed (Session 143, D1):**
+  post-loop sweep marks orphaned pending/generating images as failed and recalculates `failed_count`.
 - **`select_for_update()` must be inside `transaction.atomic()`:** In Django autocommit mode, row locks acquired outside an explicit transaction are released immediately after the SELECT. Always wrap `select_for_update()` calls in `with transaction.atomic()`.
 - **`continue` is illegal inside `with transaction.atomic()`:** Use a flag variable (`_already_published = False`, set inside block, tested after) instead of `continue` inside an atomic context manager.
 - **M2M assignment must be duplicated in `IntegrityError` retry block:** Django rolls back the entire `transaction.atomic()` block on `IntegrityError`, including any M2M `.add()` calls. The retry block must re-apply all M2M (tags, categories, descriptors) from scratch.
@@ -1348,10 +1351,12 @@ prompts/templates/prompts/partials/_collection_modal.html   # Modal HTML
 TEMPLATES:
 prompts/templates/prompts/bulk_generator.html   # Full page template
 
-JAVASCRIPT — Input page (3 modules):
-static/js/bulk-generator.js            1,547 lines (main IIFE — form, validation, auto-save)
-static/js/bulk-generator-utils.js      89 lines    (BulkGenUtils — URL validation, paste helpers)
-static/js/bulk-generator-paste.js      78 lines    (BulkGenPaste — clipboard paste upload)
+JAVASCRIPT — Input page (5 modules — window.BulkGenInput namespace):
+static/js/bulk-generator.js            725 lines  (main IIFE — form UI, prompt boxes, DOM init)
+static/js/bulk-generator-generation.js 625 lines  (API key validation, modals, generation flow)
+static/js/bulk-generator-autosave.js   376 lines  (reference image upload, auto-save to localStorage)
+static/js/bulk-generator-utils.js      89 lines   (BulkGenUtils — URL validation, paste helpers)
+static/js/bulk-generator-paste.js      78 lines   (BulkGenPaste — clipboard paste upload)
 
 JAVASCRIPT — Job page (5 modules — window.BulkGen namespace):
 static/js/bulk-generator-config.js     156 lines  (BulkGen namespace + config object)
@@ -1361,7 +1366,7 @@ static/js/bulk-generator-polling.js    ~408 lines (status API polling loop)
 static/js/bulk-generator-selection.js  581 lines  (image selection, publish bar)
 
 CC safety threshold: 780 lines per file.
-Job page modules well below threshold. Input page main file at 1,546 lines (🟠 High Risk).
+All modules well below threshold after Session 143 split.
 
 CSS:
 static/css/pages/bulk-generator.css   # All styles (~1100 lines)
@@ -1685,11 +1690,11 @@ scratch — implement exactly as documented here.
 ---
 
 **QUOTA-1 — Quota Exhaustion Error Message + Bell Notification**
-*(Planned: Session 143, ~1 spec, QUOTA-1 micro-spec)*
+*(Completed: Session 143, migration 0077, commit 98fc1aa)*
 
 | Layer | Change |
 |-------|--------|
-| `prompts/services/image_providers/openai_provider.py` | In `RateLimitError` handler, check for `'insufficient_quota'` in error body or `e.code == 'insufficient_quota'`. If quota: return `error_type='quota'`, `error_message='API quota exhausted...'` (distinct string — NOT the existing `'Rate limit reached'` message). If not quota: keep existing `error_type='rate_limit'` path unchanged. |
+| `prompts/services/image_providers/openai_provider.py` | In `RateLimitError` handler, check for `'insufficient_quota'` in error body or `e.code == 'insufficient_quota'`. If quota: return `error_type='quota'`, `error_message='Quota exceeded'` (distinct string — NOT the existing `'Rate limit reached'` message). If not quota: keep existing `error_type='rate_limit'` path unchanged. |
 | `bulk_generation.py` — `_sanitise_error_message()` | Split `'quota'` keyword out of rate-limit check into its own `'Quota exceeded'` return value. Must appear BEFORE the `'rate limit'` check in the if/elif chain to prevent masking. |
 | `static/js/bulk-generator-config.js` — `_getReadableErrorReason()` | Map `'Quota exceeded'` → `"Failed. API quota exceeded — contact admin."` |
 | `prompts/models.py` | Add `openai_quota_alert` to `NOTIFICATION_TYPES` |
@@ -1769,10 +1774,9 @@ error rate summary. Do not spec until P2-B is complete.
 > Section B (`detect_b2_orphans` — completed Session 123),
 > Section C (Admin Operational Notifications — above this section).
 
-> **Status:** Not yet built — requires planning session before spec writing.
-> **Priority:** HIGH — D1 (pending sweep) is a billing integrity issue. D3 (rate
-> limit compliance) is an account safety issue. Build D1 + D3 before V2 launch.
-> Capture date: Session 143 (March 21, 2026).
+> **Status:** D1 ✅ (Session 143), D3 ✅ (Session 143), D2 🔲 Planned.
+> **Priority:** D2 (generation retry) is the remaining item. Build after D1 verified in production.
+> Capture date: Session 143 (March 21, 2026). D1+D3 deployed March 26, 2026.
 
 #### The Problem
 
@@ -1969,5 +1973,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.33 (Session 142 — STRIDE proxy review, 141-D closed, single-box B2 delete, nosniff; 1193 tests)
-**Last Updated:** March 21, 2026
+**Version:** 4.34 (Session 143 — JS split, D1 sweep, D3 delay, QUOTA-1, pricing correction; 1209 tests)
+**Last Updated:** March 26, 2026

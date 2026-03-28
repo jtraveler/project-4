@@ -2735,6 +2735,10 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
         thread_provider = _get_provider(provider_name, mock_mode=False)
         return _run_generation_with_retry(thread_provider, image, job, job_api_key)
 
+    # D3: Read once — OPENAI_INTER_BATCH_DELAY is a static setting,
+    # no need to look it up on every batch iteration.
+    _inter_batch_delay = getattr(settings, 'OPENAI_INTER_BATCH_DELAY', 0)
+
     for batch_start in range(0, len(images_list), MAX_CONCURRENT_IMAGE_REQUESTS):
         # Cancel check before each batch
         job.refresh_from_db(fields=['status'])
@@ -2819,11 +2823,7 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
         job.save(update_fields=['actual_cost'])
 
         # D3: Inter-batch delay for OpenAI rate limit compliance.
-        # Tier 1 allows 5 images/min. With max_workers=4 and no delay,
-        # throughput exceeds the limit. Set OPENAI_INTER_BATCH_DELAY=12
-        # in Heroku config vars to comply with Tier 1 (one image every 12s).
         # Skip the delay after the last batch.
-        _inter_batch_delay = getattr(settings, 'OPENAI_INTER_BATCH_DELAY', 0)
         _is_last_batch = (
             batch_start + MAX_CONCURRENT_IMAGE_REQUESTS >= len(images_list)
         )

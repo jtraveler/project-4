@@ -104,7 +104,16 @@ class OpenAIImageProvider(ImageProvider):
                         )
                     else:
                         ref_file = io.BytesIO(ref_bytes)
-                        ref_file.name = 'reference.png'
+                        _ct = r.headers.get('Content-Type', '').split(';')[0].strip()
+                        _ext_map = {
+                            'image/jpeg': '.jpg',
+                            'image/png': '.png',
+                            'image/webp': '.webp',
+                            'image/gif': '.gif',
+                            'image/avif': '.avif',
+                        }
+                        _ext = _ext_map.get(_ct, '.png')
+                        ref_file.name = f'reference{_ext}'
                         logger.info(
                             "[REF-IMAGE] Attached reference image: %s",
                             reference_image_url,

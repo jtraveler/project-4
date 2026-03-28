@@ -102,8 +102,9 @@
             showApiKeyStatus('Validation failed — check your connection.', 'invalid');
             return false;
         })
-        .finally(function () {
+        .then(function (result) {
             if (I.validateKeyBtn) I.validateKeyBtn.disabled = false;
+            return result;
         });
     }
 

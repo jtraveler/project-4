@@ -106,11 +106,6 @@
 }
 
 
-@media (min-width: 1700px) {
-    .container { max-width: 1600px !important; }
-}
-
-
 /* Makes Lightbox positioning appear in the upper
 right corner of the image on mostly desktop screens */
 @media (min-width: 1000px) {

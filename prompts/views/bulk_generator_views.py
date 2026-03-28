@@ -74,7 +74,7 @@ def bulk_generator_job_view(request, job_id):
     """
     job = get_object_or_404(BulkGenerationJob, id=job_id, created_by=request.user)
 
-    cost_per_image = IMAGE_COST_MAP.get(job.quality, {}).get(job.size, 0.034)
+    cost_per_image = IMAGE_COST_MAP.get(job.quality, {}).get(job.size, 0.042)
     total_images = job.total_prompts * job.images_per_prompt
     estimated_total_cost = total_images * cost_per_image
 

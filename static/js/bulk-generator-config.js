@@ -128,16 +128,9 @@
         return '~' + mins + ' min remaining';
     };
 
-    G.formatDuration = function (seconds) {
-        // Round to integer once to avoid all boundary edge cases
-        var total = Math.round(seconds);
-        if (total < 60) {
-            return 'Done in ' + total + 's';
-        }
-        var m = Math.floor(total / 60);
-        var s = total % 60;
-        return 'Done in ' + m + 'm ' + s + 's';
-    };
+    // G.formatDuration removed — Session 146. The "Done in Xs" client-side
+    // timer conflicted with the server-side Duration display. Server-side
+    // Duration (in updateHeaderStats) is the authoritative display.
 
     G.gcd = function (a, b) {
         return b === 0 ? a : G.gcd(b, a % b);

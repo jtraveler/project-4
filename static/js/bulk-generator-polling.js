@@ -50,14 +50,10 @@
             G.cancelBtn.style.display = 'none';
         }
 
-        // Show total elapsed time (or dash if start time not known)
+        // Clear the in-progress time estimate — server-side "Duration" in
+        // updateHeaderStats (bulk-generator-ui.js) is the accurate display.
         if (G.progressTime) {
-            if (G.generationStartTime) {
-                var elapsedSecs = (Date.now() - G.generationStartTime) / 1000;
-                G.progressTime.textContent = G.formatDuration(elapsedSecs);
-            } else {
-                G.progressTime.textContent = '\u2014';
-            }
+            G.progressTime.textContent = '';
         }
 
         // Resolve completed count: use data if available, else fall back to

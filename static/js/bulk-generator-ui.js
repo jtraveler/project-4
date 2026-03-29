@@ -453,8 +453,8 @@
         }
 
         // Total Duration — populated at terminal state via G.durationSeconds (set in polling)
-        // Intentionally NOT calling G.formatDuration — that function adds "Done in" prefix
-        // which is appropriate for the progress timer but not for a bare stat cell value.
+        // G.formatDuration was removed (Session 146). This inline formatting
+        // is the only duration display — showing the server-side value directly.
         var durationEl = document.getElementById('header-duration-value');
         if (durationEl && G.durationSeconds !== null && G.durationSeconds !== undefined) {
             var ds = G.durationSeconds;

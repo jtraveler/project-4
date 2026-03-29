@@ -612,13 +612,13 @@ Q_CLUSTER = {
     'name': 'promptfinder',
     'workers': 2,                # Number of worker processes
     'recycle': 500,              # Restart worker after 500 tasks (memory management)
-    'timeout': 120,              # 2 minutes max per task
-    'retry': 180,                # Retry failed tasks after 3 minutes
+    'timeout': 7200,             # 2 hours — bulk gen jobs can run 1hr+ for large batches
+    'retry': 7500,               # Retry window slightly above timeout
     'queue_limit': 50,           # Maximum queue size
     'bulk': 10,                  # Bulk task processing count
     'orm': 'default',            # Use PostgreSQL via Django ORM (no Redis needed!)
     'catch_up': False,           # Don't run missed scheduled tasks
-    'max_attempts': 2,           # Retry failed tasks once
+    'max_attempts': 1,           # Do not retry bulk gen — retrying wastes API credits
     'ack_failures': True,        # Acknowledge failed tasks
     'poll': 2,                   # Poll database every 2 seconds
     'save_limit': 250,           # Keep last 250 successful tasks

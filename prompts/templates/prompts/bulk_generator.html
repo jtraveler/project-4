@@ -13,7 +13,8 @@
      data-url-validate="{% url 'prompts:api_bulk_validate_prompts' %}"
      data-url-start="{% url 'prompts:api_bulk_start_generation' %}"
      data-url-validate-ref="{% url 'prompts:api_bulk_validate_image' %}"
-     data-url-validate-key="{% url 'prompts:bulk_generator_validate_key' %}">
+     data-url-validate-key="{% url 'prompts:bulk_generator_validate_key' %}"
+     data-url-detect-tier="{% url 'prompts:bulk_generator_detect_tier' %}">
 
     {# ===== Page Header (centered, matches notifications) ===== #}
     <div class="bg-header">
@@ -146,19 +147,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="bg-setting-group">
-                    <label class="bg-setting-label" for="settingTier">OpenAI API Tier</label>
-                    <div class="bg-select-wrapper">
-                        <select class="bg-select" id="settingTier">
-                            <option value="1" selected>Tier 1 (5 img/min)</option>
-                            <option value="2">Tier 2 (20 img/min)</option>
-                            <option value="3">Tier 3 (50 img/min)</option>
-                            <option value="4">Tier 4 (150 img/min)</option>
-                            <option value="5">Tier 5 (250 img/min)</option>
-                        </select>
-                    </div>
-                    <span class="bg-setting-hint">Select your OpenAI API tier &mdash; higher tiers allow faster generation</span>
-                </div>
+                {# Tier dropdown moved to after API key section — Session 146 #}
             </div>
 
             {# Column 4: Visibility + Reset Master Settings #}
@@ -250,6 +239,96 @@
             from OpenAI. Your key is encrypted in transit and at rest, and is automatically deleted after your job completes.
         </p>
     </div>{# /.bg-api-key-section #}
+
+    {# ===== API Tier Section ===== #}
+    <div class="bg-tier-section" id="tierSection">
+        <div class="bg-tier-header">
+            <label class="bg-tier-label" for="settingTier">OpenAI API Tier</label>
+            <div class="bg-select-wrapper bg-tier-select-wrapper">
+                <select class="bg-select" id="settingTier">
+                    <option value="1" selected>Tier 1 — Default (5 img/min)</option>
+                    <option value="2">Tier 2 (20 img/min)</option>
+                    <option value="3">Tier 3 (50 img/min)</option>
+                    <option value="4">Tier 4 (150 img/min)</option>
+                    <option value="5">Tier 5 (250 img/min)</option>
+                </select>
+            </div>
+            <span class="bg-setting-hint">
+                Tier 1 is the safe default for most users. Only change this if you know your
+                <a href="https://platform.openai.com/account/limits" target="_blank"
+                   rel="noopener noreferrer">OpenAI API tier<span class="visually-hidden"> (opens in new tab)</span></a>.
+            </span>
+        </div>
+
+        {# Confirmation panel — hidden by default, shown when Tier 2-5 selected #}
+        <div class="bg-tier-confirm-panel" id="tierConfirmPanel"
+             aria-hidden="true">
+
+            <p class="bg-tier-confirm-intro">
+                You've selected <strong id="tierConfirmName">Tier 2</strong>.
+                Before proceeding, please confirm your tier is correct — selecting
+                the wrong tier may cause images to fail mid-job and your API
+                account will still be charged for any images generated before failure.
+            </p>
+
+            <div class="bg-tier-confirm-options">
+
+                {# Option A: Auto-detect #}
+                <label class="bg-tier-option" id="tierOptionAutoLabel">
+                    <input type="radio" name="tierConfirm" value="auto"
+                           id="tierConfirmAuto" class="bg-tier-option-radio">
+                    <div class="bg-tier-option-content">
+                        <span class="bg-tier-option-title">
+                            Auto-detect my tier
+                            <span class="bg-tier-option-badge">Recommended</span>
+                        </span>
+                        <span class="bg-tier-option-desc">
+                            We'll generate one small test image (~10 seconds) to
+                            detect your actual tier. This costs approximately $0.011
+                            on your OpenAI account. Your selected tier will be
+                            confirmed or corrected automatically.
+                        </span>
+                    </div>
+                </label>
+
+                {# Option B: I know my tier #}
+                <label class="bg-tier-option" id="tierOptionManualLabel">
+                    <input type="radio" name="tierConfirm" value="manual"
+                           id="tierConfirmManual" class="bg-tier-option-radio">
+                    <div class="bg-tier-option-content">
+                        <span class="bg-tier-option-title">I know my tier</span>
+                        <span class="bg-tier-option-desc">
+                            Skip detection. I've checked my
+                            <a href="https://platform.openai.com/account/limits"
+                               target="_blank" rel="noopener noreferrer">
+                               OpenAI rate limits<span class="visually-hidden"> (opens in new tab)</span></a>
+                            and I'm confident in my selection.
+                            <strong>Note:</strong> If you select the wrong tier,
+                            images may fail mid-job and you will be charged for
+                            any that were generated before failure.
+                        </span>
+                    </div>
+                </label>
+
+            </div>
+
+            {# Confirm button — enabled only when a radio is selected #}
+            <div class="bg-tier-confirm-actions">
+                <button type="button" class="bg-tier-confirm-btn"
+                        id="tierConfirmBtn" disabled>
+                    Confirm Tier &amp; Continue
+                </button>
+            </div>
+
+        </div>{# /.bg-tier-confirm-panel #}
+
+        {# Auto-detect status — outside panel to avoid nested aria-live.
+           Uses visibility:hidden (not display:none) to stay in a11y tree. #}
+        <div class="bg-tier-detect-status visually-hidden-live"
+             id="tierDetectStatus" role="status" aria-live="polite">
+        </div>
+
+    </div>{# /.bg-tier-section #}
 
     {# ===== Prompt Entry Section ===== #}
     <div class="bg-prompt-section-header">

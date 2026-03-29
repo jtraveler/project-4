@@ -114,6 +114,153 @@
         });
     }
 
+    // ─── Tier Confirmation Panel ─────────────────────────────────
+    // Tracks whether the user has confirmed their tier selection.
+    // Required before generation if tier is 2-5.
+    var tierConfirmed = true;  // Tier 1 default — no confirmation needed
+
+    function showTierConfirmPanel(tierValue) {
+        if (!I.tierConfirmPanel) return;
+        var tierNames = {
+            '2': 'Tier 2 (20 img/min)',
+            '3': 'Tier 3 (50 img/min)',
+            '4': 'Tier 4 (150 img/min)',
+            '5': 'Tier 5 (250 img/min)',
+        };
+        if (I.tierConfirmName) {
+            I.tierConfirmName.textContent = tierNames[tierValue] || 'Tier ' + tierValue;
+        }
+        // Reset panel state
+        if (I.tierConfirmAuto) I.tierConfirmAuto.checked = false;
+        if (I.tierConfirmManual) I.tierConfirmManual.checked = false;
+        if (I.tierConfirmBtn) I.tierConfirmBtn.disabled = true;
+        if (I.tierDetectStatus) {
+            I.tierDetectStatus.className = 'bg-tier-detect-status visually-hidden-live';
+            I.tierDetectStatus.textContent = '';
+        }
+        tierConfirmed = false;
+        I.tierConfirmPanel.setAttribute('aria-hidden', 'false');
+        // Focus the first radio for keyboard users
+        if (I.tierConfirmAuto) {
+            I.tierConfirmAuto.focus();
+        }
+    }
+
+    function hideTierConfirmPanel() {
+        if (!I.tierConfirmPanel) return;
+        I.tierConfirmPanel.setAttribute('aria-hidden', 'true');
+        // Return focus to tier dropdown for keyboard users
+        if (I.settingTier) I.settingTier.focus();
+        // Note: does NOT set tierConfirmed — callers own that state
+    }
+
+    function setTierDetectStatus(message, type) {
+        if (!I.tierDetectStatus) return;
+        I.tierDetectStatus.textContent = message;
+        // Toggle between visually hidden (stays in a11y tree) and visible
+        var base = 'bg-tier-detect-status';
+        if (message) {
+            I.tierDetectStatus.className = base + ' is-visible' +
+                (type ? ' status-' + type : '');
+        } else {
+            I.tierDetectStatus.className = base + ' visually-hidden-live';
+        }
+    }
+
+    // Enable confirm button when a radio is selected
+    ['tierConfirmAuto', 'tierConfirmManual'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', function () {
+                if (I.tierConfirmBtn) I.tierConfirmBtn.disabled = false;
+            });
+        }
+    });
+
+    // Confirm button handler
+    if (I.tierConfirmBtn) {
+        I.tierConfirmBtn.addEventListener('click', function () {
+            var autoSelected = I.tierConfirmAuto && I.tierConfirmAuto.checked;
+            var manualSelected = I.tierConfirmManual && I.tierConfirmManual.checked;
+
+            if (autoSelected) {
+                // Auto-detect path — generate one test image and read headers
+                var key = I.openaiApiKeyInput ? I.openaiApiKeyInput.value.trim() : '';
+                if (!key) {
+                    setTierDetectStatus(
+                        'Please validate your API key first.', 'invalid'
+                    );
+                    return;
+                }
+                I.tierConfirmBtn.disabled = true;
+                setTierDetectStatus(
+                    'Detecting your tier \u2014 this takes about 10 seconds\u2026',
+                    'loading'
+                );
+                fetch(I.urlDetectTier, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': I.csrf,
+                    },
+                    body: JSON.stringify({ api_key: key }),
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.detected_tier) {
+                        // Update the dropdown to match detected tier
+                        if (I.settingTier) {
+                            I.settingTier.value = String(data.detected_tier);
+                        }
+                        setTierDetectStatus(
+                            'Tier ' + data.detected_tier + ' detected \u2014 ready to generate.',
+                            'valid'
+                        );
+                        tierConfirmed = true;
+                        // Brief delay then hide panel
+                        setTimeout(function () {
+                            hideTierConfirmPanel();
+                        }, 1500);
+                    } else {
+                        setTierDetectStatus(
+                            data.error || 'Detection failed. Please try again.',
+                            'invalid'
+                        );
+                        I.tierConfirmBtn.disabled = false;
+                    }
+                })
+                .catch(function () {
+                    setTierDetectStatus(
+                        'Detection failed \u2014 check your connection.',
+                        'invalid'
+                    );
+                    I.tierConfirmBtn.disabled = false;
+                });
+
+            } else if (manualSelected) {
+                // Manual path — user confirms they know their tier
+                tierConfirmed = true;
+                hideTierConfirmPanel();
+            }
+        });
+    }
+
+    // Tier dropdown change handler
+    if (I.settingTier) {
+        I.settingTier.addEventListener('change', function () {
+            var val = I.settingTier.value;
+            if (val === '1') {
+                // Tier 1 = safe, no confirmation needed
+                hideTierConfirmPanel();
+                tierConfirmed = true; // Tier 1 needs no confirmation
+            } else {
+                // Tier 2-5 = show confirmation panel
+                showTierConfirmPanel(val);
+                tierConfirmed = false;
+            }
+        });
+    }
+
     if (I.openaiApiKeyInput) {
         I.openaiApiKeyInput.addEventListener('input', function () {
             showApiKeyStatus('', 'hidden');
@@ -452,6 +599,18 @@
 
     I.generateBtn.addEventListener('click', function () {
         clearValidationErrors();
+
+        // Block if tier 2-5 selected but not yet confirmed
+        if (!tierConfirmed) {
+            // Show panel if somehow hidden
+            if (I.tierConfirmPanel) I.tierConfirmPanel.setAttribute('aria-hidden', 'false');
+            // Show error in existing status area
+            showApiKeyStatus(
+                'Please confirm your API tier before generating.',
+                'invalid'
+            );
+            return;
+        }
 
         if (I.refImageError) {
             I.refImageModalBody.textContent = I.refImageError + ' Would you like to upload a new image before generating?';

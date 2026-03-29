@@ -180,6 +180,7 @@ urlpatterns = [
     path('tools/bulk-ai-generator/api/create-pages/<uuid:job_id>/', bulk_generator_views.api_create_pages, name='api_bulk_create_pages'),
     path('tools/bulk-ai-generator/api/validate-reference/', bulk_generator_views.api_validate_reference_image, name='api_bulk_validate_image'),
     path('tools/bulk-ai-generator/api/validate-key/', bulk_generator_views.api_validate_openai_key, name='bulk_generator_validate_key'),
+    path('tools/bulk-ai-generator/api/detect-tier/', bulk_generator_views.api_detect_openai_tier, name='bulk_generator_detect_tier'),
     path('tools/bulk-ai-generator/api/flush-all/', bulk_generator_views.bulk_generator_flush_all, name='bulk_generator_flush_all'),
 
     # Admin moderation dashboard

@@ -1585,3 +1585,207 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* ── Tier Section (Session 146) ──────────────────────────── */
+.bg-tier-section {
+    margin-bottom: 32px;
+    padding: 20px 24px;
+    background: var(--gray-50, #fafafa);
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+}
+
+.bg-tier-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.bg-tier-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-800, #262626);
+    white-space: nowrap;
+}
+
+.bg-tier-select-wrapper {
+    flex: 0 0 auto;
+}
+
+.bg-tier-section .bg-setting-hint {
+    font-size: 0.8125rem;
+    color: var(--gray-500, #737373);
+}
+
+.bg-tier-section .bg-setting-hint a {
+    color: var(--primary, #6366f1);
+    text-decoration: underline;
+}
+
+.bg-tier-confirm-panel {
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: #fefce8;
+    border: 1px solid #fbbf24;
+    border-radius: var(--radius-lg, 12px);
+}
+
+.bg-tier-confirm-panel[aria-hidden="true"] {
+    display: none;
+}
+
+/* Live region that stays in a11y tree when visually hidden */
+.visually-hidden-live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.visually-hidden-live.is-visible {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+
+.bg-tier-confirm-intro {
+    font-size: 0.875rem;
+    color: var(--gray-700, #404040);
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.bg-tier-confirm-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.bg-tier-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.bg-tier-option:hover {
+    border-color: var(--primary, #6366f1);
+}
+
+.bg-tier-option-radio {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.bg-tier-option-radio:focus-visible {
+    outline: 2px solid var(--primary, #6366f1);
+    outline-offset: 2px;
+}
+
+.bg-tier-option-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bg-tier-option-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-800, #262626);
+}
+
+.bg-tier-option-badge {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #166534;
+    background: #dcfce7;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.bg-tier-option-desc {
+    font-size: 0.8125rem;
+    color: var(--gray-600, #525252);
+    line-height: 1.45;
+}
+
+.bg-tier-option-desc a {
+    color: var(--primary, #6366f1);
+    text-decoration: underline;
+}
+
+.bg-tier-confirm-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bg-tier-confirm-btn {
+    padding: 8px 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--primary, #6366f1);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.bg-tier-confirm-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.bg-tier-confirm-btn:not(:disabled):hover {
+    opacity: 0.9;
+}
+
+.bg-tier-confirm-btn:focus-visible {
+    outline: 2px solid var(--primary, #6366f1);
+    outline-offset: 2px;
+}
+
+.bg-tier-detect-status {
+    font-size: 0.8125rem;
+    color: var(--gray-600, #525252);
+}
+
+.bg-tier-detect-status.status-valid {
+    color: #166534;
+}
+
+.bg-tier-detect-status.status-invalid {
+    color: #b91c1c;
+}
+
+.bg-tier-detect-status.status-loading {
+    color: var(--gray-600, #525252);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bg-tier-option,
+    .bg-tier-confirm-btn {
+        transition: none;
+    }
+}

@@ -648,6 +648,95 @@ def api_validate_openai_key(request):
 
 @staff_member_required
 @require_POST
+def api_detect_openai_tier(request):
+    """
+    POST /api/bulk-generator/detect-tier/
+    Detects the user's OpenAI API tier by generating one minimal image
+    and reading the x-ratelimit-limit-images response header.
+
+    Costs the user approximately $0.011 on their OpenAI account.
+    Returns {detected_tier: N} or {error: "message"}.
+    """
+    from openai import OpenAI, AuthenticationError, APIConnectionError, RateLimitError
+
+    try:
+        data = json.loads(request.body)
+        api_key = data.get('api_key', '').strip()
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid request body'}, status=400)
+
+    if not api_key or not api_key.startswith('sk-'):
+        return JsonResponse({'error': 'Valid API key required'}, status=400)
+
+    # Map x-ratelimit-limit-images header value to OpenAI tier
+    _TIER_MAP = {5: 1, 20: 2, 50: 3, 150: 4, 250: 5}
+
+    try:
+        client = OpenAI(api_key=api_key)
+
+        # Use the raw HTTP client to capture response headers.
+        # Generate one minimal image — smallest size, lowest quality.
+        raw_response = client.images.with_raw_response.generate(
+            model='gpt-image-1',
+            prompt='A plain white square',
+            size='1024x1024',
+            quality='low',
+            n=1,
+        )
+        limit_images = raw_response.headers.get(
+            'x-ratelimit-limit-images', ''
+        )
+
+        try:
+            limit_int = int(limit_images)
+            detected_tier = _TIER_MAP.get(limit_int)
+            if not detected_tier:
+                # Unknown value — find closest tier
+                closest_key = min(
+                    _TIER_MAP.keys(),
+                    key=lambda k: abs(k - limit_int)
+                )
+                detected_tier = _TIER_MAP[closest_key]
+        except (ValueError, TypeError):
+            # Header absent or unparseable — default to tier 1 (safe)
+            detected_tier = 1
+            logger.warning(
+                "[TIER-DETECT] Could not parse x-ratelimit-limit-images "
+                "header value: %s", limit_images
+            )
+
+        logger.info(
+            "[TIER-DETECT] Detected tier %d for user %s "
+            "(x-ratelimit-limit-images: %s)",
+            detected_tier, request.user.pk, limit_images,
+        )
+        return JsonResponse({'detected_tier': detected_tier})
+
+    except AuthenticationError:
+        return JsonResponse(
+            {'error': 'Invalid API key. Please validate your key first.'},
+            status=400,
+        )
+    except RateLimitError:
+        return JsonResponse(
+            {'error': 'Rate limit hit during detection. Try again in a moment.'},
+            status=429,
+        )
+    except APIConnectionError:
+        return JsonResponse(
+            {'error': 'Could not connect to OpenAI. Check your network.'},
+            status=400,
+        )
+    except Exception as e:
+        logger.error("[TIER-DETECT] Unexpected error: %s", e)
+        return JsonResponse(
+            {'error': 'Tier detection failed. Please try again.'},
+            status=500,
+        )
+
+
+@staff_member_required
+@require_POST
 def api_validate_reference_image(request):
     """
     POST /tools/bulk-ai-generator/api/validate-reference/

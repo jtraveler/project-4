@@ -1972,9 +1972,9 @@ class D1PendingSweepTests(TestCase):
         self.assertNotEqual(job.status, 'failed')
 
 
-@override_settings(OPENAI_API_KEY='test-key', OPENAI_INTER_BATCH_DELAY=5)
+@override_settings(OPENAI_API_KEY='test-key')
 class D3InterBatchDelayTests(TestCase):
-    """Tests for D3 — inter-batch rate limit delay."""
+    """Tests for D3 — per-job tier-based inter-batch rate limit delay."""
 
     def setUp(self):
         self.service = BulkGenerationService()
@@ -1993,15 +1993,13 @@ class D3InterBatchDelayTests(TestCase):
         job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
         return job
 
-    @override_settings(OPENAI_INTER_BATCH_DELAY=5)
-    @patch('prompts.tasks.MAX_CONCURRENT_IMAGE_REQUESTS', 1)
     @patch('prompts.tasks.time.sleep')
     @patch('prompts.tasks._upload_generated_image_to_b2')
     @patch('prompts.services.image_providers.get_provider')
     def test_inter_batch_delay_fires_between_batches(
         self, mock_get_provider, mock_upload, mock_sleep
     ):
-        """time.sleep called between batches but not after the last one."""
+        """time.sleep called between batches using per-job _TIER_RATE_PARAMS."""
         from prompts.tasks import process_bulk_generation_job
 
         mock_provider = MagicMock()
@@ -2015,7 +2013,8 @@ class D3InterBatchDelayTests(TestCase):
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 
-        # 2 images with MAX_CONCURRENT=1 → 2 batches
+        # Tier 1 low quality → _TIER_RATE_PARAMS gives (1, 3) → 1 concurrent, 3s delay
+        # 2 images with max_concurrent=1 → 2 batches
         job = self._make_job(
             [{'text': 'prompt 1'}, {'text': 'prompt 2'}],
             model_name='gpt-image-1',
@@ -2026,18 +2025,17 @@ class D3InterBatchDelayTests(TestCase):
 
         process_bulk_generation_job(str(job.id))
 
-        # Should sleep once between batch 1 and batch 2, not after last batch
-        sleep_calls = [c for c in mock_sleep.call_args_list if c[0][0] == 5]
+        # Should sleep 3s once between batch 1 and batch 2, not after last batch
+        sleep_calls = [c for c in mock_sleep.call_args_list if c[0][0] == 3]
         self.assertEqual(len(sleep_calls), 1, "Should sleep exactly once between 2 batches")
 
-    @override_settings(OPENAI_INTER_BATCH_DELAY=0)
     @patch('prompts.tasks.time.sleep')
     @patch('prompts.tasks._upload_generated_image_to_b2')
     @patch('prompts.services.image_providers.get_provider')
-    def test_no_delay_when_setting_is_zero(
+    def test_no_delay_for_medium_quality(
         self, mock_get_provider, mock_upload, mock_sleep
     ):
-        """No sleep when OPENAI_INTER_BATCH_DELAY=0 (default)."""
+        """Tier 1 medium quality has 0s delay — no inter-batch sleep."""
         from prompts.tasks import process_bulk_generation_job
 
         mock_provider = MagicMock()
@@ -2051,16 +2049,17 @@ class D3InterBatchDelayTests(TestCase):
         mock_get_provider.return_value = mock_provider
         mock_upload.return_value = 'https://cdn.example.com/img.png'
 
+        # Tier 1 medium → _TIER_RATE_PARAMS gives (1, 0) → no delay
         job = self._make_job(
             [{'text': 'prompt 1'}, {'text': 'prompt 2'}],
             model_name='gpt-image-1',
-            quality='low',
+            quality='medium',
             size='1024x1024',
         )
 
         process_bulk_generation_job(str(job.id))
 
-        # No D3 delay calls — only provider retry sleeps may exist
+        # No D3 delay calls — medium quality has 0s inter-batch delay
         d3_sleep_calls = [c for c in mock_sleep.call_args_list
-                          if c[0] and c[0][0] >= 5]
-        self.assertEqual(len(d3_sleep_calls), 0, "No D3 delay should fire")
+                          if c[0] and c[0][0] >= 1]
+        self.assertEqual(len(d3_sleep_calls), 0, "No D3 delay should fire for medium quality")

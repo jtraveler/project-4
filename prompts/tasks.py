@@ -2756,11 +2756,8 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
     _job_max_concurrent, _inter_batch_delay = _tier_params.get(
         _job_quality, _DEFAULT_RATE_PARAMS
     )
-    # Allow global override to take precedence if explicitly set.
-    # This lets Heroku config vars act as a ceiling for all jobs.
-    _global_delay = getattr(settings, 'OPENAI_INTER_BATCH_DELAY', 0)
-    if _global_delay > _inter_batch_delay:
-        _inter_batch_delay = _global_delay
+    # OPENAI_INTER_BATCH_DELAY is no longer used — per-job table controls delay.
+    # BULK_GEN_MAX_CONCURRENT acts as an emergency ceiling on concurrency only.
     _global_concurrent = getattr(settings, 'BULK_GEN_MAX_CONCURRENT', 0)
     if _global_concurrent and _global_concurrent < _job_max_concurrent:
         _job_max_concurrent = _global_concurrent

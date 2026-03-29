@@ -33,6 +33,7 @@
     // Master settings
     I.settingModel = document.getElementById('settingModel');
     I.settingQuality = document.getElementById('settingQuality');
+    I.settingTier = document.getElementById('settingTier');
     I.settingCharDesc = document.getElementById('settingCharDesc');
     I.settingVisibility = document.getElementById('settingVisibility');
     I.visibilityLabel = document.getElementById('visibilityLabel');

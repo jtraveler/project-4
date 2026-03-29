@@ -146,6 +146,19 @@
                         </select>
                     </div>
                 </div>
+                <div class="bg-setting-group">
+                    <label class="bg-setting-label" for="settingTier">OpenAI API Tier</label>
+                    <div class="bg-select-wrapper">
+                        <select class="bg-select" id="settingTier">
+                            <option value="1" selected>Tier 1 (5 img/min)</option>
+                            <option value="2">Tier 2 (20 img/min)</option>
+                            <option value="3">Tier 3 (50 img/min)</option>
+                            <option value="4">Tier 4 (150 img/min)</option>
+                            <option value="5">Tier 5 (250 img/min)</option>
+                        </select>
+                    </div>
+                    <span class="bg-setting-hint">Select your OpenAI API tier &mdash; higher tiers allow faster generation</span>
+                </div>
             </div>
 
             {# Column 4: Visibility + Reset Master Settings #}

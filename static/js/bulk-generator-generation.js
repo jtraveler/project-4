@@ -573,6 +573,7 @@
                     reference_image_url: I.validatedRefUrl,
                     character_description: charDesc,
                     api_key: I.openaiApiKeyInput ? I.openaiApiKeyInput.value.trim() : '',
+                    openai_tier: I.settingTier ? parseInt(I.settingTier.value, 10) : 1,
                 };
 
                 return fetch(I.urlStart, {

@@ -2934,6 +2934,18 @@ class BulkGenerationJob(models.Model):
 
     # Job configuration
     provider = models.CharField(max_length=50, default='openai')
+    OPENAI_TIER_CHOICES = [
+        (1, 'Tier 1 (5 img/min)'),
+        (2, 'Tier 2 (20 img/min)'),
+        (3, 'Tier 3 (50 img/min)'),
+        (4, 'Tier 4 (150 img/min)'),
+        (5, 'Tier 5 (250 img/min)'),
+    ]
+    openai_tier = models.PositiveSmallIntegerField(
+        default=1,
+        choices=OPENAI_TIER_CHOICES,
+        help_text="User's OpenAI API tier, used to set per-job concurrency and delay.",
+    )
     model_name = models.CharField(max_length=100, default='gpt-image-1')
     quality = models.CharField(
         max_length=10, choices=QUALITY_CHOICES, default='medium'

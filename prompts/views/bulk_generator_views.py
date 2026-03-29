@@ -296,6 +296,14 @@ def api_start_generation(request):
                 status=400,
             )
 
+    openai_tier = data.get('openai_tier', 1)
+    try:
+        openai_tier = int(openai_tier)
+    except (TypeError, ValueError):
+        openai_tier = 1
+    if openai_tier not in (1, 2, 3, 4, 5):
+        openai_tier = 1
+
     quality = data.get('quality', 'medium')
     if quality not in VALID_QUALITIES:
         return JsonResponse(
@@ -370,6 +378,7 @@ def api_start_generation(request):
         per_prompt_qualities=per_prompt_qualities,
         per_prompt_counts=per_prompt_counts,
         api_key=api_key,
+        openai_tier=openai_tier,
     )
 
     service.start_job(job)

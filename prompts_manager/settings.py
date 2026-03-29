@@ -45,10 +45,10 @@ FERNET_KEY = os.environ.get('FERNET_KEY', '')
 # Bulk image generation concurrency (tune via Heroku config var when upgrading API tier)
 BULK_GEN_MAX_CONCURRENT = int(os.environ.get('BULK_GEN_MAX_CONCURRENT', 4))
 
-# Inter-batch delay for OpenAI rate limit compliance (seconds).
-# Tier 1 (5 img/min): set to 12 with BULK_GEN_MAX_CONCURRENT=1
-# Tier 2 (20 img/min): set to 3 with BULK_GEN_MAX_CONCURRENT=2
-# Default 0 = no delay (safe only if BULK_GEN_MAX_CONCURRENT=1 and jobs are small)
+# Global override — applies as a ceiling across all jobs.
+# Per-job rate limiting is now handled by _get_job_rate_params() in tasks.py.
+# Set this only to impose a hard cap below the per-job calculated value.
+# Current production values: BULK_GEN_MAX_CONCURRENT=1, OPENAI_INTER_BATCH_DELAY=3
 OPENAI_INTER_BATCH_DELAY = int(os.environ.get('OPENAI_INTER_BATCH_DELAY', 0))
 
 

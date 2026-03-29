@@ -155,6 +155,7 @@ class BulkGenerationService:
         per_prompt_qualities: list[str] | None = None,
         per_prompt_counts: list[int | None] | None = None,
         api_key: str = '',
+        openai_tier: int = 1,
     ) -> BulkGenerationJob:
         """
         Create a BulkGenerationJob and its GeneratedImage records.
@@ -201,6 +202,7 @@ class BulkGenerationService:
                 cost_per_image * resolved_total_images
             )),
             actual_total_images=resolved_total_images,
+            openai_tier=openai_tier,
         )
 
         if api_key:

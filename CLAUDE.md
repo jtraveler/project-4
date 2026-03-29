@@ -292,7 +292,30 @@ batch). Atomic rate limiter on `api_create_pages` using `cache.add()` + `cache.i
 6 new tests: `EndToEndPublishFlowTests` (3) + `CreatePagesAPITests` (3). `cache.clear()`
 in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
-**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS input modules + 5 JS job modules. 1213 tests. D1 pending sweep + D3 rate limit delay deployed. QUOTA-1 error distinction live. Next: D2 generation retry, then V2 launch. V2 scope: BYOK for premium users, Replicate models (Flux, SDXL), archive staging page at `/profile/<username>/ai-generations/`.
+**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS input modules + 5 JS job modules. 1213 tests. D1 pending sweep + D3 rate limit delay deployed. D4 per-job tier rate limiting deployed (Session 145). QUOTA-1 error distinction live. D2 generation retry already implemented (Phase 5C `_run_generation_with_retry()`). Next: V2 launch. V2 scope: BYOK for premium users, Replicate models (Nano Banana 2, Flux), archive staging page at `/profile/<username>/ai-generations/`.
+
+#### Planned: Replicate Providers (Session 146+)
+
+Two models planned via Replicate (platform-paid — your Replicate key, users
+pay you via subscription, no BYOK required):
+
+- **Nano Banana 2** (`replicate.com/google/nano-banana-2`) — Google's image
+  model via Replicate. 1.5M+ runs, actively maintained. Platform-paid works
+  here because Replicate bills per-run to your account, not per-user-key.
+- **Flux** (Replicate) — via same platform-paid model.
+
+**BYOK field behaviour:**
+- OpenAI selected → BYOK key input shown (user brings their key)
+- Replicate model selected → BYOK field hidden entirely (server-side key)
+
+**Implementation:** One `replicate_provider.py` handles both models (different
+model IDs, same Replicate SDK). Add `register_provider('nano-banana-2', ...)` and
+`register_provider('flux', ...)` to `registry.py` `_register_defaults()`.
+`REPLICATE_API_TOKEN` stored as Heroku config var.
+
+**Note:** GPT-Image-1 is also listed on Replicate but is BYOK-only there —
+it routes charges to the user's OpenAI key. No advantage over calling OpenAI
+directly. Do not add this via Replicate.
 
 **Resolved (Session 122):** Cancel-path `G.totalImages` staleness ✅, `bulk-generator-ui.js` at 766/780 lines ✅ (now 338 lines), N4h rename not triggering ✅.
 
@@ -456,6 +479,19 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   Phase 5C inter-image delay was removed in Phase 5D. **IMMEDIATE MITIGATION (no code deploy):**
   Set `BULK_GEN_MAX_CONCURRENT=1` in Heroku config vars. **Permanent fix (DEPLOYED Session 143):**
   `OPENAI_INTER_BATCH_DELAY=12` setting added. D3 now enforces 12s inter-batch delay for Tier 1.
+- **`BULK_GEN_MAX_CONCURRENT=1` + `OPENAI_INTER_BATCH_DELAY=3` is the safe
+  Tier 1 baseline** (set March 28, 2026). With `MAX_CONCURRENT=1`, GPT-Image-1's
+  natural ~15–20s generation time paces requests under 5/min for medium and high
+  quality. The 3s delay is a safety buffer for low quality (which can complete in
+  ~8–10s). **Do not increase `MAX_CONCURRENT` beyond 1 until the user's OpenAI
+  tier is verified — or use the per-job tier system (see Section D).**
+- **D2 generation retry is already implemented** — `_run_generation_with_retry()`
+  in `tasks.py` retries `rate_limit` and `server_error` with exponential backoff
+  (30s→60s→120s, max 3 attempts). This was built in Phase 5C. Do not re-implement.
+- **Quality affects safe max_concurrent:** high quality (~30–40s gen time) is
+  naturally paced even at `MAX_CONCURRENT=2` on Tier 1. Low quality (~8–10s)
+  needs a delay buffer. Per-job rate params handle this automatically via
+  `_TIER_RATE_PARAMS` lookup in `_run_generation_loop()`, added in Session 145.
 
 - **Pending-after-completion gap (Session 143):** If the generation loop exits before all
   `GeneratedImage` records transition from `status='pending'` to `status='failed'` (e.g., quota
@@ -1775,9 +1811,9 @@ error rate summary. Do not spec until P2-B is complete.
 > Section B (`detect_b2_orphans` — completed Session 123),
 > Section C (Admin Operational Notifications — above this section).
 
-> **Status:** D1 ✅ (Session 143), D3 ✅ (Session 143), D2 🔲 Planned.
-> **Priority:** D2 (generation retry) is the remaining item. Build after D1 verified in production.
-> Capture date: Session 143 (March 21, 2026). D1+D3 deployed March 26, 2026.
+> **Status:** D1 ✅ (Session 143), D3 ✅ (Session 143), D4 ✅ (Session 145), D2 ✅ (already built — Phase 5C).
+> D2 `_run_generation_with_retry()` already implements exponential backoff retry (30s→60s→120s, max 3).
+> Capture date: Session 145 (March 29, 2026). D1+D3 deployed March 26, 2026. D4 deployed March 29, 2026.
 
 #### The Problem
 
@@ -1857,6 +1893,34 @@ lower for safety.
 
 **IMMEDIATE MITIGATION (no code deploy needed):** Set `BULK_GEN_MAX_CONCURRENT=1`
 in Heroku config vars until D3 is built.
+
+#### D4 — Per-Job Rate Limiting (Session 145)
+
+`BulkGenerationJob.openai_tier` (PositiveSmallIntegerField, default=1) stores
+the user's declared OpenAI tier. `_TIER_RATE_PARAMS` (local dict inside
+`_run_generation_loop()` in `tasks.py`) maps `(tier, quality)` to
+`(max_concurrent, inter_batch_delay)`. Lookup falls back to
+`_DEFAULT_RATE_PARAMS = (1, 3)` for unrecognised tier or quality values.
+
+**Rate parameter table:**
+| Tier | Images/min | Low quality | Medium quality | High quality |
+|------|-----------|-------------|----------------|--------------|
+| 1 | 5 | (1, 3s) | (1, 0s) | (1, 0s) |
+| 2 | 20 | (2, 3s) | (2, 0s) | (2, 0s) |
+| 3 | 50 | (4, 0s) | (4, 0s) | (4, 0s) |
+| 4 | 150 | (8, 0s) | (8, 0s) | (8, 0s) |
+| 5 | 250 | (10, 0s) | (10, 0s) | (10, 0s) |
+
+Format: (max_concurrent, inter_batch_delay)
+
+**Global override:** `BULK_GEN_MAX_CONCURRENT` acts as a ceiling on concurrency.
+`OPENAI_INTER_BATCH_DELAY` acts as a floor on delay. Both can only slow generation
+relative to the per-job calculated value. This allows emergency throttling without
+a code deploy.
+
+**Tier auto-detection (future):** `client.models.list()` does not return
+image-specific rate limit headers. Auto-detection requires a real image call
+(costs money). User-declared tier is the chosen approach for now.
 
 #### Build Order
 

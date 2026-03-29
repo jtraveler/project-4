@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 29, 2026 (Sessions 101–145)
+**Last Updated:** March 29, 2026 (Sessions 101–146)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,35 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 146 — March 29, 2026
+
+**Focus:** Production bug fixes from Session 145 browser testing
+
+**Specs:** 146-A (delay logic fix), 146-B (cost estimate fix),
+146-C (Django-Q timeout + duration display), 146-E (conditional tier UX),
+146-D (docs)
+
+**Key outcomes:**
+- Global delay override was acting as floor not ceiling — removed entirely.
+  OPENAI_INTER_BATCH_DELAY is now deprecated; per-job _TIER_RATE_PARAMS
+  controls all delay. BULK_GEN_MAX_CONCURRENT remains as concurrent ceiling.
+- Cost estimate now size-aware: portrait/landscape shows correct pricing
+  ($0.063 medium portrait, not $0.042 square). I.COST_MAP replaced with
+  nested size → quality structure matching constants.py IMAGE_COST_MAP.
+- Django-Q timeout increased from 2 minutes to 2 hours — high-quality
+  3-prompt jobs were being killed mid-run and re-queued, causing 1 of 3
+  images to always fail. max_attempts reduced to 1 to prevent credit waste.
+- "Done in Xs" client-side timer removed from job page — was showing
+  page-load time not job duration, conflicting with accurate server-side
+  "Duration: Xm Ys" display.
+- Conditional tier UX: Tier 1 has zero friction; Tier 2-5 shows confirmation
+  panel with auto-detect ($0.011 test image reads rate limit headers) or
+  manual confirmation. Generate blocked until confirmed.
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
 
 ### Session 145 — March 29, 2026
 

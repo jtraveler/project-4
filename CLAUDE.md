@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 146 | Mar 29, 2026 | Global delay floor bug fixed (OPENAI_INTER_BATCH_DELAY deprecated), cost estimate now size-aware (portrait/landscape prices correct), Django-Q timeout 120→7200s + max_attempts 1 (high-quality jobs no longer killed), "Done in Xs" timer removed (server-side Duration only), conditional tier UX (auto-detect for Tier 2+, Tier 1 zero friction). 1213 tests. |
 | Session 145 | Mar 29, 2026 | Stale 0.034→0.042 billing path fix in `_apply_generation_result()`, proxy `cache.incr()` ValueError guard + `_HttpResponse` alias removed, `openai_tier` field on `BulkGenerationJob` (migration 0078), `_TIER_RATE_PARAMS` per-job rate limiting in `_run_generation_loop()`, tier 1–5 dropdown on bulk gen input page, global settings now ceilings, D2 confirmed already built, CLAUDE.md D4 architecture + Replicate plans. 1213 tests. |
 | Session 144 | Mar 28, 2026 | PASTE-DELETE `.closest()` fix, stale 0.034→0.042 cost fallback, proxy `user.pk` logging + 60 req/min rate limit, `.finally()` removed, dead `urlValidateRef` removed, `.container` CSS moved, `ref_file.name` Content-Type sniff, `deleteBox` `.catch` warns, `OPENAI_INTER_BATCH_DELAY` hoisted, quota capitalisation fixed. 1213 tests. |
 | Session 143 bulk-gen | Mar 26, 2026 | JS split (1685→725 lines + 2 modules), D1 pending sweep, D3 inter-batch delay, QUOTA-1 error distinction, pricing correction, migration 0077. 1209 tests. |
@@ -480,12 +481,16 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   Phase 5C inter-image delay was removed in Phase 5D. **IMMEDIATE MITIGATION (no code deploy):**
   Set `BULK_GEN_MAX_CONCURRENT=1` in Heroku config vars. **Permanent fix (DEPLOYED Session 143):**
   `OPENAI_INTER_BATCH_DELAY=12` setting added. D3 now enforces 12s inter-batch delay for Tier 1.
-- **`BULK_GEN_MAX_CONCURRENT=1` + `OPENAI_INTER_BATCH_DELAY=3` is the safe
-  Tier 1 baseline** (set March 28, 2026). With `MAX_CONCURRENT=1`, GPT-Image-1's
-  natural ~15–20s generation time paces requests under 5/min for medium and high
-  quality. The 3s delay is a safety buffer for low quality (which can complete in
-  ~8–10s). **Do not increase `MAX_CONCURRENT` beyond 1 until the user's OpenAI
-  tier is verified — or use the per-job tier system (see Section D).**
+- **`OPENAI_INTER_BATCH_DELAY` — DEPRECATED (Session 146).** Per-job
+  `_TIER_RATE_PARAMS` in `tasks.py` now controls all delay. Setting this
+  config var has no effect. Use `BULK_GEN_MAX_CONCURRENT` for emergency
+  concurrency ceiling only.
+- **`BULK_GEN_MAX_CONCURRENT=1` is the safe Tier 1 baseline.** With
+  `MAX_CONCURRENT=1`, GPT-Image-1's natural ~15–20s generation time paces
+  requests under 5/min for medium and high quality. Low quality gets a 3s
+  delay from `_TIER_RATE_PARAMS`. **Do not increase `MAX_CONCURRENT` beyond
+  1 until the user's OpenAI tier is verified — or use the per-job tier
+  system (see Section D).**
 - **D2 generation retry is already implemented** — `_run_generation_with_retry()`
   in `tasks.py` retries `rate_limit` and `server_error` with exponential backoff
   (30s→60s→120s, max 3 attempts). This was built in Phase 5C. Do not re-implement.
@@ -493,6 +498,13 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   naturally paced even at `MAX_CONCURRENT=2` on Tier 1. Low quality (~8–10s)
   needs a delay buffer. Per-job rate params handle this automatically via
   `_TIER_RATE_PARAMS` lookup in `_run_generation_loop()`, added in Session 145.
+
+- **Django-Q timeout must exceed maximum expected job duration (Session 146).**
+  A 200-prompt high-quality job can take 2+ hours. `timeout: 7200`,
+  `retry: 7500`, `max_attempts: 1` are the correct production values.
+  Retrying bulk gen tasks wastes API credits and produces duplicate images.
+  The previous `timeout: 120` (2 minutes) was killing 3-prompt high-quality
+  jobs mid-run.
 
 - **Pending-after-completion gap (Session 143):** If the generation loop exits before all
   `GeneratedImage` records transition from `status='pending'` to `status='failed'` (e.g., quota
@@ -1914,10 +1926,10 @@ the user's declared OpenAI tier. `_TIER_RATE_PARAMS` (local dict inside
 
 Format: (max_concurrent, inter_batch_delay)
 
-**Global override:** `BULK_GEN_MAX_CONCURRENT` acts as a ceiling on concurrency.
-`OPENAI_INTER_BATCH_DELAY` acts as a floor on delay. Both can only slow generation
-relative to the per-job calculated value. This allows emergency throttling without
-a code deploy.
+**Global override:** `BULK_GEN_MAX_CONCURRENT` acts as a ceiling on concurrency —
+per-job params from `_TIER_RATE_PARAMS` take precedence when lower.
+`OPENAI_INTER_BATCH_DELAY` is deprecated (Session 146) and has no effect.
+Use `BULK_GEN_MAX_CONCURRENT` for emergency throttling without a code deploy.
 
 **Tier auto-detection (future):** `client.models.list()` does not return
 image-specific rate limit headers. Auto-detection requires a real image call
@@ -2039,5 +2051,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.36 (Session 145 — billing fallback, proxy fixes, per-job tier rate limiting; 1213 tests)
+**Version:** 4.37 (Session 146 — delay fix, cost estimate, timeout, tier UX; 1213 tests)
 **Last Updated:** March 29, 2026

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 28, 2026 (Sessions 101–144)
+**Last Updated:** March 29, 2026 (Sessions 101–145)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,37 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 145 — March 29, 2026
+
+**Focus:** Billing path cost fix, proxy hardening, per-job tier rate limiting,
+Replicate provider planning
+
+**Specs:** 145-A (billing fallback), 145-B (proxy minor fixes),
+145-C (per-job tier + rate limiting), 145-D (CLAUDE.md architecture),
+145-E (docs)
+
+**Key outcomes:**
+- Stale 0.034 billing fallback fixed in tasks.py `_apply_generation_result()`
+  — this is the actual cost recording path (more consequential than view fix)
+- All stale 0.034 fallbacks now resolved across entire codebase (confirmed by
+  @security-auditor)
+- Proxy rate limiter: ValueError race guard added to `cache.incr()`, redundant
+  HttpResponse alias removed
+- D2 generation retry confirmed already implemented (Phase 5C) — no rebuild needed
+- `openai_tier` field added to BulkGenerationJob (migration 0078)
+- `_TIER_RATE_PARAMS` lookup added to `_run_generation_loop()` — per-job concurrency
+  and delay derived from tier + quality combination
+- Global `BULK_GEN_MAX_CONCURRENT` and `OPENAI_INTER_BATCH_DELAY` now act as
+  ceilings only — per-job params take precedence when lower
+- Tier 1–5 dropdown added to bulk generator input page UI
+- CLAUDE.md updated: D4 architecture, Replicate provider plans,
+  D2 already-built note
+
+**Tests:** 1213 passing, 12 skipped
+**Migration:** 0078
+
+---
 
 ### Session 144 — March 28, 2026
 

@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 26, 2026
+**Last Updated:** March 29, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 145 | Mar 29, 2026 | Stale 0.034→0.042 billing path fix in `_apply_generation_result()`, proxy `cache.incr()` ValueError guard + `_HttpResponse` alias removed, `openai_tier` field on `BulkGenerationJob` (migration 0078), `_TIER_RATE_PARAMS` per-job rate limiting in `_run_generation_loop()`, tier 1–5 dropdown on bulk gen input page, global settings now ceilings, D2 confirmed already built, CLAUDE.md D4 architecture + Replicate plans. 1213 tests. |
 | Session 144 | Mar 28, 2026 | PASTE-DELETE `.closest()` fix, stale 0.034→0.042 cost fallback, proxy `user.pk` logging + 60 req/min rate limit, `.finally()` removed, dead `urlValidateRef` removed, `.container` CSS moved, `ref_file.name` Content-Type sniff, `deleteBox` `.catch` warns, `OPENAI_INTER_BATCH_DELAY` hoisted, quota capitalisation fixed. 1213 tests. |
 | Session 143 bulk-gen | Mar 26, 2026 | JS split (1685→725 lines + 2 modules), D1 pending sweep, D3 inter-batch delay, QUOTA-1 error distinction, pricing correction, migration 0077. 1209 tests. |
 | NOTIF-BG-1+2 | Mar 13, 2026 | Added 4 bulk gen notification types (`bulk_gen_job_completed`, `bulk_gen_job_failed`, `bulk_gen_published`, `bulk_gen_partial`) to `Notification.NOTIFICATION_TYPES`. Migration 0073. New helper functions `_fire_bulk_gen_job_notification` + `_fire_bulk_gen_publish_notification` in `tasks.py`. New test file: `prompts/tests/test_bulk_gen_notifications.py` (6 tests). Renamed `cloudinary_moderation.py` → `vision_moderation.py` (all import sites updated). 1149 → 1155 tests. |
@@ -2038,5 +2039,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.35 (Session 144 — P1 fixes, proxy hardening, P3/P4 cleanup batch; 1213 tests)
-**Last Updated:** March 28, 2026
+**Version:** 4.36 (Session 145 — billing fallback, proxy fixes, per-job tier rate limiting; 1213 tests)
+**Last Updated:** March 29, 2026

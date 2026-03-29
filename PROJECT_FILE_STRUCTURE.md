@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 28, 2026
+**Last Updated:** March 29, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA), Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1213 passing, 12 skipped (Session 144)
+**Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA + D4 per-job tier rate limiting), Phase N4 (~100%), Phase K (~96%)
+**Total Tests:** 1213 passing, 12 skipped (Session 145)
 
 ---
 
@@ -16,7 +16,7 @@
 | **CSS Files** | 12 | static/css/ |
 | **JavaScript Files** | 19 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121, bulk-generator-gallery.js added Session 122, bulk-generator.js split +2 modules Session 143) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 78 | prompts/migrations/ (76), about/migrations/ (2) |
+| **Migrations** | 80 | prompts/migrations/ (78), about/migrations/ (2) |
 | **Test Files** | 24 | prompts/tests/ |
 | **Management Commands** | 29 | prompts/management/commands/ |
 | **Services** | 15 | prompts/services/ |

@@ -23,6 +23,7 @@
     I.urlValidate = page.dataset.urlValidate;
     I.urlStart = page.dataset.urlStart;
     I.urlValidateKey = page.dataset.urlValidateKey;
+    I.urlDetectTier = page.dataset.urlDetectTier;
 
     // API key elements
     I.openaiApiKeyInput = document.getElementById('openaiApiKey');
@@ -34,6 +35,12 @@
     I.settingModel = document.getElementById('settingModel');
     I.settingQuality = document.getElementById('settingQuality');
     I.settingTier = document.getElementById('settingTier');
+    I.tierConfirmPanel = document.getElementById('tierConfirmPanel');
+    I.tierConfirmName = document.getElementById('tierConfirmName');
+    I.tierConfirmBtn = document.getElementById('tierConfirmBtn');
+    I.tierDetectStatus = document.getElementById('tierDetectStatus');
+    I.tierConfirmAuto = document.getElementById('tierConfirmAuto');
+    I.tierConfirmManual = document.getElementById('tierConfirmManual');
     I.settingCharDesc = document.getElementById('settingCharDesc');
     I.settingVisibility = document.getElementById('settingVisibility');
     I.visibilityLabel = document.getElementById('visibilityLabel');
@@ -80,7 +87,14 @@
     var boxIdCounter = 0;
     I.validatedRefUrl = '';
     I.refImageError = '';
-    I.COST_MAP = { low: 0.015, medium: 0.03, high: 0.05 };
+    // Cost per image by size then quality — matches IMAGE_COST_MAP in constants.py
+    // Updated Session 146: correct prices + size awareness (portrait ≠ square)
+    I.COST_MAP = {
+        '1024x1024': { low: 0.011, medium: 0.042, high: 0.167 },
+        '1024x1536': { low: 0.016, medium: 0.063, high: 0.250 },
+        '1536x1024': { low: 0.016, medium: 0.063, high: 0.250 },
+    };
+    I.COST_MAP_DEFAULT = I.COST_MAP['1024x1024']; // fallback for unknown sizes
     I.IMAGES_PER_MINUTE = 5;
     I.MODEL_CATEGORY_MAP = {
         'gpt-image-1': 'ChatGPT',
@@ -685,7 +699,9 @@
             totalImages += imgOverride ? parseInt(imgOverride, 10) : masterImgs;
         });
 
-        var costPerImage = I.COST_MAP[masterQuality] || 0.03;
+        var masterSize = I.getMasterDimensions ? I.getMasterDimensions() : '1024x1024';
+        var sizeMap = I.COST_MAP[masterSize] || I.COST_MAP_DEFAULT;
+        var costPerImage = sizeMap[masterQuality] || 0.042;
         var totalCost = totalImages * costPerImage;
         var timeMinutes = Math.ceil(totalImages / I.IMAGES_PER_MINUTE) || 0;
 

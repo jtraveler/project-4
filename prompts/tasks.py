@@ -2662,7 +2662,7 @@ def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
         )
         cost = IMAGE_COST_MAP.get(
             image.quality or job.quality or 'medium', {}
-        ).get(image.size or job.size, 0.034)
+        ).get(image.size or job.size, 0.042)
         image.status = 'completed'
         image.image_url = image_url
         image.revised_prompt = result.revised_prompt
@@ -2704,7 +2704,7 @@ def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
         return 0.0, False
 
 
-def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz):
+def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz):  # noqa: C901 — generation loop has inherent branching for batching, cancellation, and error handling
     """
     Execute the image generation loop for a bulk job.
 
@@ -2735,18 +2735,44 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
         thread_provider = _get_provider(provider_name, mock_mode=False)
         return _run_generation_with_retry(thread_provider, image, job, job_api_key)
 
-    # D3: Read once — OPENAI_INTER_BATCH_DELAY is a static setting,
-    # no need to look it up on every batch iteration.
-    _inter_batch_delay = getattr(settings, 'OPENAI_INTER_BATCH_DELAY', 0)
+    # Per-job rate params from tier + quality.
+    # Rate limit parameters keyed by (tier, quality).
+    # max_concurrent: images submitted in parallel per batch.
+    # inter_batch_delay: seconds to sleep between batches.
+    # Logic: generation time naturally paces Tier 1 medium/high.
+    # Low quality completes faster so a small delay is added.
+    _TIER_RATE_PARAMS = {
+        1: {'low': (1, 3), 'medium': (1, 0), 'high': (1, 0)},
+        2: {'low': (2, 3), 'medium': (2, 0), 'high': (2, 0)},
+        3: {'low': (4, 0), 'medium': (4, 0), 'high': (4, 0)},
+        4: {'low': (8, 0), 'medium': (8, 0), 'high': (8, 0)},
+        5: {'low': (10, 0), 'medium': (10, 0), 'high': (10, 0)},
+    }
+    _DEFAULT_RATE_PARAMS = (1, 3)  # Safe fallback: max_concurrent=1, delay=3s
 
-    for batch_start in range(0, len(images_list), MAX_CONCURRENT_IMAGE_REQUESTS):
+    _job_tier = getattr(job, 'openai_tier', 1)
+    _job_quality = job.quality or 'medium'
+    _tier_params = _TIER_RATE_PARAMS.get(_job_tier, _TIER_RATE_PARAMS[1])
+    _job_max_concurrent, _inter_batch_delay = _tier_params.get(
+        _job_quality, _DEFAULT_RATE_PARAMS
+    )
+    # Allow global override to take precedence if explicitly set.
+    # This lets Heroku config vars act as a ceiling for all jobs.
+    _global_delay = getattr(settings, 'OPENAI_INTER_BATCH_DELAY', 0)
+    if _global_delay > _inter_batch_delay:
+        _inter_batch_delay = _global_delay
+    _global_concurrent = getattr(settings, 'BULK_GEN_MAX_CONCURRENT', 0)
+    if _global_concurrent and _global_concurrent < _job_max_concurrent:
+        _job_max_concurrent = _global_concurrent
+
+    for batch_start in range(0, len(images_list), _job_max_concurrent):
         # Cancel check before each batch
         job.refresh_from_db(fields=['status'])
         if job.status == 'cancelled' or stop_job:
             logger.info("Job %s stopped before batch at index %d", job.id, batch_start)
             break
 
-        batch = images_list[batch_start:batch_start + MAX_CONCURRENT_IMAGE_REQUESTS]
+        batch = images_list[batch_start:batch_start + _job_max_concurrent]
 
         # Mark batch images as 'generating' sequentially before concurrent submission
         for img in batch:
@@ -2825,7 +2851,7 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
         # D3: Inter-batch delay for OpenAI rate limit compliance.
         # Skip the delay after the last batch.
         _is_last_batch = (
-            batch_start + MAX_CONCURRENT_IMAGE_REQUESTS >= len(images_list)
+            batch_start + _job_max_concurrent >= len(images_list)
         )
         if _inter_batch_delay > 0 and not _is_last_batch:
             logger.info(

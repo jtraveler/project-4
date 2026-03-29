@@ -967,14 +967,18 @@ def proxy_image_thumbnail(request):
     # Rate limiting: 60 requests per minute per staff user
     _proxy_cache_key = f"img_proxy_rate:{request.user.pk}"
     if not cache.add(_proxy_cache_key, 1, PROXY_RATE_WINDOW):
-        _proxy_count = cache.incr(_proxy_cache_key)
+        try:
+            _proxy_count = cache.incr(_proxy_cache_key)
+        except ValueError:
+            # Key expired between add() check and incr() — reset and allow
+            cache.add(_proxy_cache_key, 1, PROXY_RATE_WINDOW)
+            _proxy_count = 1
         if _proxy_count > PROXY_RATE_LIMIT:
             logger.warning(
                 "[IMAGE-PROXY] Rate limit exceeded for user %s (%d requests)",
                 request.user.pk, _proxy_count,
             )
-            from django.http import HttpResponse as _HttpResponse
-            return _HttpResponse(status=429)
+            return HttpResponse(status=429)
 
     url = request.GET.get('url', '').strip()
     if not url:

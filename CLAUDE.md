@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 147 | Mar 30, 2026 | Fixed visible template comment in tier section, tier error now uses prominent bottom-bar banner. New "Prepare Prompts" pipeline: one GPT-4o-mini call translates non-English prompts + strips watermarks before generation. Non-blocking fallback. Features 1 (Translate) and 3 (Watermark Removal) complete. 1213 tests. |
 | Session 146 | Mar 29, 2026 | Global delay floor bug fixed (OPENAI_INTER_BATCH_DELAY deprecated), cost estimate now size-aware (portrait/landscape prices correct), Django-Q timeout 120→7200s + max_attempts 1 (high-quality jobs no longer killed), "Done in Xs" timer removed (server-side Duration only), conditional tier UX (auto-detect for Tier 2+, Tier 1 zero friction). 1213 tests. |
 | Session 145 | Mar 29, 2026 | Stale 0.034→0.042 billing path fix in `_apply_generation_result()`, proxy `cache.incr()` ValueError guard + `_HttpResponse` alias removed, `openai_tier` field on `BulkGenerationJob` (migration 0078), `_TIER_RATE_PARAMS` per-job rate limiting in `_run_generation_loop()`, tier 1–5 dropdown on bulk gen input page, global settings now ceilings, D2 confirmed already built, CLAUDE.md D4 architecture + Replicate plans. 1213 tests. |
 | Session 144 | Mar 28, 2026 | PASTE-DELETE `.closest()` fix, stale 0.034→0.042 cost fallback, proxy `user.pk` logging + 60 req/min rate limit, `.finally()` removed, dead `urlValidateRef` removed, `.container` CSS moved, `ref_file.name` Content-Type sniff, `deleteBox` `.catch` warns, `OPENAI_INTER_BATCH_DELAY` hoisted, quota capitalisation fixed. 1213 tests. |
@@ -369,7 +370,7 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 > These features are scoped and discussed but not yet specced for implementation.
 > Documented here so context is not lost between sessions.
 
-#### Feature 1: Translate Prompts to English
+#### Feature 1: Translate Prompts to English — ✅ COMPLETE (Session 147)
 
 **Summary:** Before generation starts, send all non-English prompts to GPT-4o in a single batch call to translate them to English. Fires during the "Starting generation…" phase — invisible to the user.
 
@@ -397,7 +398,7 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 **Risks:** Vision API may not always produce concise output — requires careful system prompt tuning. Source image must be HTTPS and accessible (validated by existing SSRF hardening).
 **Priority:** High — genuine differentiator.
 
-#### Feature 3: Remove Watermark Text from Prompts
+#### Feature 3: Remove Watermark Text from Prompts — ✅ COMPLETE (Session 147)
 
 **Summary:** Before generation, automatically detect and strip "watermark instructions" from prompts — text that instructs the AI to add a brand name or logo. Runs invisibly in the "Starting…" phase.
 
@@ -426,7 +427,7 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 **Priority:** Medium — valuable but complex. Build after features 1-3.
 **Status:** Deferred — do not spec until other new features are stable.
 
-#### Combined "Prepare Prompts" Architecture
+#### Combined "Prepare Prompts" Architecture — ✅ LIVE (Session 147)
 
 Features 1, 2, and 3 all fire before generation starts. They should be combined into a single "prepare prompts" step:
 
@@ -2051,5 +2052,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.37 (Session 146 — delay fix, cost estimate, timeout, tier UX; 1213 tests)
+**Version:** 4.38 (Session 147 — tier UX fixes, prepare prompts pipeline; 1213 tests)
 **Last Updated:** March 29, 2026

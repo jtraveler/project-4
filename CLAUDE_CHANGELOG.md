@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 29, 2026 (Sessions 101–146)
+**Last Updated:** March 30, 2026 (Sessions 101–147)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,29 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 147 — March 30, 2026
+
+**Focus:** Tier UX bug fixes + Prepare Prompts pipeline
+
+**Specs:** 147-A (tier UX fixes), 147-B (prepare prompts), 147-C (docs)
+
+**Key outcomes:**
+- Fixed template comment rendering as visible text below tier panel
+- Tier confirmation error now uses prominent bottom-bar banner
+  (showGenerateErrorBanner) matching the API key error style + warning emoji
+- New "Prepare Prompts" pipeline step added between validation and
+  generation start: one GPT-4o-mini batch call translates non-English
+  prompts to English AND strips watermark/branding instructions
+- Prepare step is non-blocking — falls back to original prompts on any error
+- New endpoint: POST /api/bulk-generator/prepare-prompts/
+- Platform OPENAI_API_KEY used for prepare call (not user's BYOK key)
+- Users see "Preparing prompts..." status during the ~1-3 second step
+- 6 few-shot examples in system prompt for accurate watermark detection
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
 
 ### Session 146 — March 29, 2026
 

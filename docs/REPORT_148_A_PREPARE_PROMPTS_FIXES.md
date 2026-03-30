@@ -145,7 +145,7 @@ python manage.py test --verbosity=1
 
 | Hash | Message |
 |------|---------|
-| *(see below)* | fix(bulk-gen): wire OPENAI_API_KEY, scroll/shake on tier error, translation toggle |
+| 5429852 | fix(bulk-gen): wire OPENAI_API_KEY, scroll/shake on tier error, translation toggle |
 
 ## Section 11 — What to Work on Next
 

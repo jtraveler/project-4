@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 30, 2026 (Sessions 101–147)
+**Last Updated:** March 30, 2026 (Sessions 101–148)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,30 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 148 — March 30, 2026
+
+**Focus:** Prepare prompts fixes, tier UX improvements, P3 cleanup
+
+**Specs:** 148-A (prepare prompts fixes), 148-B (P3 cleanup), 148-C (docs)
+
+**Key outcomes:**
+- OPENAI_API_KEY wired from env to Django settings — fixes 401 error
+  that prevented translation and watermark removal from working
+- Translation toggle added to Column 4 (alongside Visibility), ON by default.
+  When OFF, watermark removal still runs but translation is skipped.
+- Tier error now scrolls page to tier section + shakes tierConfirmPanel
+  to direct user to the area requiring their attention
+- Tier error message simplified (scroll/shake replaces the directional hint)
+- Prepare-prompts endpoint rate limited (20 calls/hr per user)
+- Error banner auto-dismiss extended 5s → 8s; suppressed entirely for
+  prefers-reduced-motion users
+- Stale test patch in D3InterBatchDelayTests confirmed already correct
+  (was fixed in prior session)
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
 
 ### Session 147 — March 30, 2026
 

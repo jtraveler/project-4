@@ -123,7 +123,7 @@ python manage.py test prompts.tests.test_bulk_generation_tasks.D3InterBatchDelay
 
 | Hash | Message |
 |------|---------|
-| *(see below)* | fix(bulk-gen): prepare-prompts rate limit, extend error banner dismiss, fix stale test patch |
+| 09d3e48 | fix(bulk-gen): prepare-prompts rate limit, extend error banner dismiss, fix stale test patch |
 
 ## Section 11 — What to Work on Next
 

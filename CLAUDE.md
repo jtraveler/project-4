@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 148 | Mar 30, 2026 | OPENAI_API_KEY wired to settings (fixes 401 on prepare-prompts). Translation toggle in Column 4 (ON by default, skip translation when OFF). Tier error scrolls to tier section + shakes panel. Prepare-prompts rate limited (20/hr). Error banner auto-dismiss 5s→8s, suppressed for reduced-motion. 1213 tests. |
 | Session 147 | Mar 30, 2026 | Fixed visible template comment in tier section, tier error now uses prominent bottom-bar banner. New "Prepare Prompts" pipeline: one GPT-4o-mini call translates non-English prompts + strips watermarks before generation. Non-blocking fallback. Features 1 (Translate) and 3 (Watermark Removal) complete. 1213 tests. |
 | Session 146 | Mar 29, 2026 | Global delay floor bug fixed (OPENAI_INTER_BATCH_DELAY deprecated), cost estimate now size-aware (portrait/landscape prices correct), Django-Q timeout 120→7200s + max_attempts 1 (high-quality jobs no longer killed), "Done in Xs" timer removed (server-side Duration only), conditional tier UX (auto-detect for Tier 2+, Tier 1 zero friction). 1213 tests. |
 | Session 145 | Mar 29, 2026 | Stale 0.034→0.042 billing path fix in `_apply_generation_result()`, proxy `cache.incr()` ValueError guard + `_HttpResponse` alias removed, `openai_tier` field on `BulkGenerationJob` (migration 0078), `_TIER_RATE_PARAMS` per-job rate limiting in `_run_generation_loop()`, tier 1–5 dropdown on bulk gen input page, global settings now ceilings, D2 confirmed already built, CLAUDE.md D4 architecture + Replicate plans. 1213 tests. |
@@ -499,6 +500,13 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   naturally paced even at `MAX_CONCURRENT=2` on Tier 1. Low quality (~8–10s)
   needs a delay buffer. Per-job rate params handle this automatically via
   `_TIER_RATE_PARAMS` lookup in `_run_generation_loop()`, added in Session 145.
+
+- **Heroku env vars must be wired into `settings.py` (Session 148).** Setting a
+  config var in Heroku does NOT make it available via `getattr(settings, ...)`.
+  You must explicitly add `SETTING_NAME = os.environ.get('SETTING_NAME', '')`
+  to `settings.py`. The prepare-prompts pipeline returned 401 because
+  `OPENAI_API_KEY` existed in Heroku but `settings.OPENAI_API_KEY` resolved
+  to empty string. Always verify both Heroku config AND `settings.py` wiring.
 
 - **Django-Q timeout must exceed maximum expected job duration (Session 146).**
   A 200-prompt high-quality job can take 2+ hours. `timeout: 7200`,
@@ -2052,5 +2060,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.38 (Session 147 — tier UX fixes, prepare prompts pipeline; 1213 tests)
+**Version:** 4.39 (Session 148 — prepare prompts fixes, tier UX, P3 cleanup; 1213 tests)
 **Last Updated:** March 29, 2026

@@ -10,6 +10,7 @@ import logging
 import re
 from urllib.parse import unquote, urlparse
 
+from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -644,6 +645,196 @@ def api_validate_openai_key(request):
             {'valid': False, 'error': 'Key validation failed. Please check your key and try again.'},
             status=400,
         )
+
+
+@staff_member_required
+@require_POST
+def api_prepare_prompts(request):
+    """
+    POST /api/bulk-generator/prepare-prompts/
+    Prepares prompts for generation in a single GPT-4o-mini batch call:
+    1. Translates any non-English prompts to English
+    2. Removes watermark/branding instructions from all prompts
+
+    Body JSON: {"prompts": ["prompt 1", "prompt 2", ...]}
+    Returns: {"prompts": ["cleaned prompt 1", "cleaned prompt 2", ...]}
+
+    Returns original prompts unchanged on any error — never blocks generation.
+    Uses the platform OPENAI_API_KEY (not the user's BYOK key).
+    """
+    try:
+        data = json.loads(request.body)
+        prompts = data.get('prompts', [])
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid request body'}, status=400)
+
+    if not isinstance(prompts, list) or not prompts:
+        return JsonResponse(
+            {'error': 'prompts must be a non-empty list'}, status=400
+        )
+
+    # Cap at 100 prompts per call (safety limit)
+    if len(prompts) > 100:
+        return JsonResponse(
+            {'error': 'Maximum 100 prompts per prepare call'}, status=400
+        )
+
+    system_prompt = (
+        "You are a prompt cleaning assistant for an AI image generation "
+        "platform.\n\n"
+        "For each prompt in the input array, perform TWO tasks "
+        "simultaneously:\n\n"
+        "## TASK 1: TRANSLATE TO ENGLISH\n"
+        "If the prompt (or any part of it) is not in English, translate it "
+        "to English.\n"
+        "If the prompt is already in English, return it unchanged.\n"
+        "Preserve all technical photography terms, proper names, and brand "
+        "names exactly.\n\n"
+        "## TASK 2: REMOVE WATERMARK INSTRUCTIONS\n"
+        "Identify and completely remove any instruction that asks the AI "
+        "image model to add a watermark, signature, logo, branding text, "
+        "or creator credit to the output image.\n\n"
+        "### What IS a watermark instruction (REMOVE these):\n"
+        "An instruction telling the image model to ADD text, a name, "
+        "signature, or logo ONTO the final output image.\n\n"
+        "Common patterns to detect:\n"
+        "- Keywords: \"watermark\", \"marca de agua\", \"signature\", "
+        "\"firma\", \"sponsored by\", \"created by\", \"prompt by\", "
+        "\"add my logo\", \"place a\", \"include a footer\"\n"
+        "- Location words combined with a name: \"bottom-left corner\", "
+        "\"esquina\", \"bottom-right\", \"footer\", \"hovering over\"\n"
+        "- Style + name combos: \"handwritten calligraphy [name]\", "
+        "\"elegant signature [name]\", \"sans-serif font [brand]\", "
+        "\"thin white ink [name]\", \"gold text [name]\"\n"
+        "- Phrases like \"text that reads [name]\", "
+        "\"that says [brand name]\"\n"
+        "- Most likely appears TOWARDS THE END of the prompt\n\n"
+        "### What is NOT a watermark instruction (KEEP these):\n"
+        "Text that exists WITHIN the scene being depicted:\n"
+        "- A T-shirt with text: \"wearing a shirt that says "
+        "'FOLLOWERS ONLY'\" -> KEEP\n"
+        "- A sign in a scene: \"a storefront reading 'OPEN'\" -> KEEP\n"
+        "- A trophy or prop: \"a trophy engraved 'Champion'\" -> KEEP\n"
+        "- Negative instructions: \"NO CGI, NO illustration\" -> KEEP\n\n"
+        "### Key distinction:\n"
+        "Ask: \"Is this text part of the scene, or is it an instruction "
+        "to stamp/overlay something onto the final image?\"\n"
+        "If instruction to ADD branding TO the image -> REMOVE IT\n"
+        "If it describes something WITHIN the scene -> KEEP IT\n\n"
+        "### Removal rule:\n"
+        "Remove the ENTIRE watermark instruction including placement, "
+        "style, font description, and any related sentences. Do not "
+        "leave partial fragments. Leave all other prompt text unchanged.\n\n"
+        "## EXAMPLES\n\n"
+        "EXAMPLE 1 (English watermark at end):\n"
+        "INPUT: \"Ultra-realistic portrait of a woman on a beach at "
+        "golden hour, 8K. Add a subtle handwritten text in the "
+        "bottom-right corner that reads 'Created by PROMPTX', elegant "
+        "fashion-editorial signature style, thin white ink, slightly "
+        "transparent.\"\n"
+        "OUTPUT: \"Ultra-realistic portrait of a woman on a beach at "
+        "golden hour, 8K.\"\n\n"
+        "EXAMPLE 2 (Spanish watermark):\n"
+        "INPUT: \"Fotografía editorial profesional de maternidad. "
+        "Texturas ultra-realistas. REALISMO ABSOLUTO. CERO ILUSTRACIÓN. "
+        "Firma MV grabada perfectamente en una concha grande, visible e "
+        "integrada de forma realista. Marca de agua elegante "
+        "'MarthAiMagia' visible en una esquina.\"\n"
+        "OUTPUT: \"Professional editorial maternity photography. "
+        "Ultra-realistic textures. ABSOLUTE REALISM. ZERO ILLUSTRATION."
+        "\"\n\n"
+        "EXAMPLE 3 (Mid-prompt watermark, legitimate T-shirt text KEPT):\n"
+        "INPUT: \"Black and white portrait of a person wearing a "
+        "long-sleeved flannel shirt with a black T-shirt that says "
+        "'FOLLOWERS ONLY'. Add a very small handwritten calligraphy "
+        "signature 'MasYOYOKsaja' hovering over the subject's left "
+        "shoulder. Ultra-high detail, 4K illustration quality.\"\n"
+        "OUTPUT: \"Black and white portrait of a person wearing a "
+        "long-sleeved flannel shirt with a black T-shirt that says "
+        "'FOLLOWERS ONLY'. Ultra-high detail, 4K illustration quality."
+        "\"\n\n"
+        "EXAMPLE 4 (Multi-sentence watermark block):\n"
+        "INPUT: \"Post-apocalyptic warrior woman, flowing black hair. "
+        "Dusty desert wasteland at golden hour. Highly detailed, 4k, "
+        "cinematic. Add a stylish watermark at the bottom center of the "
+        "image that reads 'King Cairo | 2026' in white and gold. Below "
+        "it, add a small logo that reads 'Sponsored by AI PROMPT EG.' "
+        "Ensure the text is elegant and consistent with the overall "
+        "design.\"\n"
+        "OUTPUT: \"Post-apocalyptic warrior woman, flowing black hair. "
+        "Dusty desert wasteland at golden hour. Highly detailed, 4k, "
+        "cinematic.\"\n\n"
+        "EXAMPLE 5 (Non-English + watermark — translate AND remove):\n"
+        "INPUT: \"Retrato hiperrealista de una mujer embarazada en la "
+        "playa. Iluminación natural de hora dorada. Resolución 8K. "
+        "Marca de agua elegante 'MarthAiMagia' visible en una esquina."
+        "\"\n"
+        "OUTPUT: \"Hyperrealistic portrait of a pregnant woman on the "
+        "beach. Natural golden hour lighting. 8K resolution.\"\n\n"
+        "EXAMPLE 6 (No watermark, no translation — return unchanged):\n"
+        "INPUT: \"A serene Japanese garden with cherry blossoms, 8K "
+        "photography, golden hour lighting, shallow depth of field.\"\n"
+        "OUTPUT: \"A serene Japanese garden with cherry blossoms, 8K "
+        "photography, golden hour lighting, shallow depth of field.\"\n\n"
+        "## OUTPUT FORMAT\n"
+        "Return ONLY a valid JSON object with this exact structure:\n"
+        "{\"prompts\": [\"cleaned prompt 1\", \"cleaned prompt 2\", ...]}\n\n"
+        "The output array MUST have the same number of items as the "
+        "input array, in the same order. Do not add any explanation, "
+        "preamble, or markdown."
+    )
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=getattr(settings, 'OPENAI_API_KEY', '')
+        )
+
+        user_message = json.dumps(
+            {'prompts': prompts}, ensure_ascii=False
+        )
+
+        response = client.chat.completions.create(
+            model='gpt-4o-mini',
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_message},
+            ],
+            temperature=0.1,
+            max_tokens=8000,
+        )
+
+        raw = response.choices[0].message.content.strip()
+
+        # Strip markdown code fences if present
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[-1]
+            raw = raw.rsplit('```', 1)[0].strip()
+
+        result = json.loads(raw)
+        cleaned_prompts = result.get('prompts', [])
+
+        # Safety: must return same count as input
+        if len(cleaned_prompts) != len(prompts):
+            logger.warning(
+                "[PREPARE-PROMPTS] Count mismatch: sent %d, received %d "
+                "— returning originals",
+                len(prompts), len(cleaned_prompts),
+            )
+            return JsonResponse({'prompts': prompts})
+
+        logger.info(
+            "[PREPARE-PROMPTS] Prepared %d prompts for user %s",
+            len(prompts), request.user.pk,
+        )
+        return JsonResponse({'prompts': cleaned_prompts})
+
+    except Exception as e:
+        # Non-fatal: return originals unchanged so generation is not blocked
+        logger.error(
+            "[PREPARE-PROMPTS] Failed: %s — returning originals", e
+        )
+        return JsonResponse({'prompts': prompts})
 
 
 @staff_member_required

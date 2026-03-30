@@ -24,6 +24,7 @@
     I.urlStart = page.dataset.urlStart;
     I.urlValidateKey = page.dataset.urlValidateKey;
     I.urlDetectTier = page.dataset.urlDetectTier;
+    I.urlPreparePrompts = page.dataset.urlPreparePrompts;
 
     // API key elements
     I.openaiApiKeyInput = document.getElementById('openaiApiKey');

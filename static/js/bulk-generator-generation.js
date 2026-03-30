@@ -624,15 +624,17 @@
                 });
             }
 
-            // Shake the confirm panel to draw attention
+            // Shake the confirm panel to draw attention (delay lets scroll finish first)
             if (I.tierConfirmPanel) {
-                I.tierConfirmPanel.classList.remove('is-shaking');
-                // Force reflow so re-adding the class re-triggers the animation
-                void I.tierConfirmPanel.offsetWidth;
-                I.tierConfirmPanel.classList.add('is-shaking');
                 setTimeout(function () {
                     I.tierConfirmPanel.classList.remove('is-shaking');
-                }, 600);
+                    // Force reflow so re-adding the class re-triggers the animation
+                    void I.tierConfirmPanel.offsetWidth;
+                    I.tierConfirmPanel.classList.add('is-shaking');
+                    setTimeout(function () {
+                        I.tierConfirmPanel.classList.remove('is-shaking');
+                    }, 600);
+                }, 500);
             }
 
             // Use prominent bottom bar — same style as missing API key error.

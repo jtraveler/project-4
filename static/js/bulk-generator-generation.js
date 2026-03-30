@@ -604,10 +604,11 @@
         if (!tierConfirmed) {
             // Show panel if somehow hidden
             if (I.tierConfirmPanel) I.tierConfirmPanel.setAttribute('aria-hidden', 'false');
-            // Show error in existing status area
-            showApiKeyStatus(
-                'Please confirm your API tier before generating.',
-                'invalid'
+            // Use prominent bottom bar — same style as missing API key error.
+            // ⚠️ prefix helps user locate the issue on the page.
+            showGenerateErrorBanner(
+                '\u26a0\ufe0f Please confirm your API tier before generating \u2014 ' +
+                'find the OpenAI API Tier section above.'
             );
             return;
         }
@@ -714,68 +715,95 @@
                     return;
                 }
 
-                // Step 2: Start generation
+                // Step 2: Prepare prompts (translate + watermark removal)
                 I.generateBtn.innerHTML =
-                    '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-sparkles"/></svg> Starting...';
-                I.generateStatus.textContent = 'Starting generation...';
+                    '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-sparkles"/></svg> Preparing...';
+                I.generateStatus.textContent = 'Preparing prompts...';
 
-                var payload = {
-                    prompts: finalPromptObjects,
-                    source_credits: sourceCredits,
-                    provider: 'openai',
-                    model: I.settingModel.value,
-                    quality: I.getMasterQuality(),
-                    size: I.getMasterDimensions(),
-                    images_per_prompt: I.getMasterImagesPerPrompt(),
-                    visibility: I.getVisibility(),
-                    generator_category: I.MODEL_CATEGORY_MAP[I.settingModel.value] || 'ChatGPT',
-                    reference_image_url: I.validatedRefUrl,
-                    character_description: charDesc,
-                    api_key: I.openaiApiKeyInput ? I.openaiApiKeyInput.value.trim() : '',
-                    openai_tier: I.settingTier ? parseInt(I.settingTier.value, 10) : 1,
-                };
+                // Extract plain text from finalPromptObjects for prepare call
+                var textsForPrep = finalPromptObjects.map(function(obj) {
+                    return obj.text || '';
+                });
 
-                return fetch(I.urlStart, {
+                return fetch(I.urlPreparePrompts, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': I.csrf },
-                    body: JSON.stringify(payload),
-                });
-            })
-            .then(function (r) {
-                if (!r) return;
-                return r.json();
-            })
-            .then(function (data) {
-                if (!data) return;
-                if (data.error) {
-                    // Try to parse prompt numbers from server error format:
-                    // "Invalid source image URL for prompt(s): 2, 3. URL must be..."
-                    var srcErrMatch = data.error.match(
-                        /Invalid source image URL for prompt\(s\):\s*([\d,\s]+)\./i
-                    );
-                    if (srcErrMatch) {
-                        var nums = srcErrMatch[1].split(',').map(function(s) {
-                            return parseInt(s.trim(), 10);
-                        }).filter(function(n) { return !isNaN(n); });
-                        var srcErrors = nums.map(function(num) {
-                            return {
-                                message: 'Source image URL for prompt ' + num +
-                                    ' is not a valid image link. ' +
-                                    'Please enter a URL ending in .jpg, .png, ' +
-                                    '.webp, .gif, or .avif, or leave the field blank.',
-                                index: num - 1,
-                                promptNum: num,
-                            };
+                    body: JSON.stringify({ prompts: textsForPrep }),
+                })
+                .then(function (r) { return r.json(); })
+                .catch(function () {
+                    // Prepare failed — proceed with original prompts
+                    return { prompts: textsForPrep };
+                })
+                .then(function (prepData) {
+                    // Apply cleaned prompts back to finalPromptObjects
+                    // Falls back to original text if prepare call failed or mismatched
+                    if (prepData.prompts && prepData.prompts.length === finalPromptObjects.length) {
+                        finalPromptObjects = finalPromptObjects.map(function(obj, i) {
+                            var cleaned = prepData.prompts[i];
+                            return Object.assign({}, obj, {
+                                text: (cleaned && cleaned.trim()) ? cleaned.trim() : obj.text
+                            });
                         });
-                        showValidationErrors(srcErrors);
-                    } else {
-                        showValidationErrors([{ message: data.error }]);
                     }
-                    resetGenerateBtn();
-                    return;
-                }
-                if (I.clearSavedPrompts) I.clearSavedPrompts();
-                window.location.href = '/tools/bulk-ai-generator/job/' + data.job_id + '/';
+
+                    // Step 3: Start generation
+                    I.generateBtn.innerHTML =
+                        '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-sparkles"/></svg> Starting...';
+                    I.generateStatus.textContent = 'Starting generation...';
+
+                    var payload = {
+                        prompts: finalPromptObjects,
+                        source_credits: sourceCredits,
+                        provider: 'openai',
+                        model: I.settingModel.value,
+                        quality: I.getMasterQuality(),
+                        size: I.getMasterDimensions(),
+                        images_per_prompt: I.getMasterImagesPerPrompt(),
+                        visibility: I.getVisibility(),
+                        generator_category: I.MODEL_CATEGORY_MAP[I.settingModel.value] || 'ChatGPT',
+                        reference_image_url: I.validatedRefUrl,
+                        character_description: charDesc,
+                        api_key: I.openaiApiKeyInput ? I.openaiApiKeyInput.value.trim() : '',
+                        openai_tier: I.settingTier ? parseInt(I.settingTier.value, 10) : 1,
+                    };
+
+                    return fetch(I.urlStart, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': I.csrf },
+                        body: JSON.stringify(payload),
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (startData) {
+                        if (startData.error) {
+                            var srcErrMatch = startData.error.match(
+                                /Invalid source image URL for prompt\(s\):\s*([\d,\s]+)\./i
+                            );
+                            if (srcErrMatch) {
+                                var nums = srcErrMatch[1].split(',').map(function(s) {
+                                    return parseInt(s.trim(), 10);
+                                }).filter(function(n) { return !isNaN(n); });
+                                var srcErrors = nums.map(function(num) {
+                                    return {
+                                        message: 'Source image URL for prompt ' + num +
+                                            ' is not a valid image link. ' +
+                                            'Please enter a URL ending in .jpg, .png, ' +
+                                            '.webp, .gif, or .avif, or leave the field blank.',
+                                        index: num - 1,
+                                        promptNum: num,
+                                    };
+                                });
+                                showValidationErrors(srcErrors);
+                            } else {
+                                showValidationErrors([{ message: startData.error }]);
+                            }
+                            resetGenerateBtn();
+                            return;
+                        }
+                        if (I.clearSavedPrompts) I.clearSavedPrompts();
+                        window.location.href = '/tools/bulk-ai-generator/job/' + startData.job_id + '/';
+                    });
+                });
             })
             .catch(function (err) {
                 showValidationErrors([{ message: 'Network error: ' + err.message }]);

@@ -14,7 +14,8 @@
      data-url-start="{% url 'prompts:api_bulk_start_generation' %}"
      data-url-validate-ref="{% url 'prompts:api_bulk_validate_image' %}"
      data-url-validate-key="{% url 'prompts:bulk_generator_validate_key' %}"
-     data-url-detect-tier="{% url 'prompts:bulk_generator_detect_tier' %}">
+     data-url-detect-tier="{% url 'prompts:bulk_generator_detect_tier' %}"
+     data-url-prepare-prompts="{% url 'prompts:bulk_generator_prepare_prompts' %}">
 
     {# ===== Page Header (centered, matches notifications) ===== #}
     <div class="bg-header">
@@ -322,8 +323,7 @@
 
         </div>{# /.bg-tier-confirm-panel #}
 
-        {# Auto-detect status — outside panel to avoid nested aria-live.
-           Uses visibility:hidden (not display:none) to stay in a11y tree. #}
+        {# Tier detect status — sibling of panel, not nested (avoids aria-live conflict) #}
         <div class="bg-tier-detect-status visually-hidden-live"
              id="tierDetectStatus" role="status" aria-live="polite">
         </div>

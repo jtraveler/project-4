@@ -1187,6 +1187,28 @@
 
 .bg-modal-confirm.danger:hover { background: #dc2626; }
 
+/* Tier confirmation panel shake — draws attention when user tries to
+   generate without confirming their tier. Respects prefers-reduced-motion. */
+@keyframes bg-tier-shake {
+    0%, 100% { transform: translateX(0); }
+    15%       { transform: translateX(-6px); }
+    30%       { transform: translateX(6px); }
+    45%       { transform: translateX(-5px); }
+    60%       { transform: translateX(5px); }
+    75%       { transform: translateX(-3px); }
+    90%       { transform: translateX(3px); }
+}
+
+.bg-tier-confirm-panel.is-shaking {
+    animation: bg-tier-shake 0.5s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bg-tier-confirm-panel.is-shaking {
+        animation: none;
+    }
+}
+
 .bg-modal-confirm.primary {
     background: var(--primary, #2563eb);
     color: var(--white, #ffffff);

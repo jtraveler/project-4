@@ -63,8 +63,15 @@
         banner.querySelector('.generate-error-banner__close')
             .addEventListener('click', function () { banner.remove(); });
 
-        // Auto-dismiss after 5 seconds
-        setTimeout(function () { if (banner.parentNode) banner.remove(); }, 5000);
+        // 8 seconds — longer than 5s for users with cognitive disabilities.
+        // Suppress auto-dismiss entirely for prefers-reduced-motion users
+        // (motion sensitivity often correlates with need for more reading time).
+        var dismissDelay = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 0  // 0 = no auto-dismiss
+            : 8000;
+        if (dismissDelay > 0) {
+            setTimeout(function () { if (banner.parentNode) banner.remove(); }, dismissDelay);
+        }
     }
 
     function validateApiKey() {
@@ -604,11 +611,33 @@
         if (!tierConfirmed) {
             // Show panel if somehow hidden
             if (I.tierConfirmPanel) I.tierConfirmPanel.setAttribute('aria-hidden', 'false');
+
+            // Scroll to tier section so user can see it
+            var tierSection = document.getElementById('tierSection');
+            if (tierSection) {
+                var reducedMotion = window.matchMedia(
+                    '(prefers-reduced-motion: reduce)'
+                ).matches;
+                tierSection.scrollIntoView({
+                    behavior: reducedMotion ? 'auto' : 'smooth',
+                    block: 'center',
+                });
+            }
+
+            // Shake the confirm panel to draw attention
+            if (I.tierConfirmPanel) {
+                I.tierConfirmPanel.classList.remove('is-shaking');
+                // Force reflow so re-adding the class re-triggers the animation
+                void I.tierConfirmPanel.offsetWidth;
+                I.tierConfirmPanel.classList.add('is-shaking');
+                setTimeout(function () {
+                    I.tierConfirmPanel.classList.remove('is-shaking');
+                }, 600);
+            }
+
             // Use prominent bottom bar — same style as missing API key error.
-            // ⚠️ prefix helps user locate the issue on the page.
             showGenerateErrorBanner(
-                '\u26a0\ufe0f Please confirm your API tier before generating \u2014 ' +
-                'find the OpenAI API Tier section above.'
+                '\u26a0\ufe0f Please confirm your API tier before generating.'
             );
             return;
         }
@@ -728,7 +757,10 @@
                 return fetch(I.urlPreparePrompts, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': I.csrf },
-                    body: JSON.stringify({ prompts: textsForPrep }),
+                    body: JSON.stringify({
+                        prompts: textsForPrep,
+                        translate: I.settingTranslate ? I.settingTranslate.checked : true,
+                    }),
                 })
                 .then(function (r) { return r.json(); })
                 .catch(function () {

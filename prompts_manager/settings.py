@@ -42,6 +42,10 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 # Add to Heroku config vars before deploying the bulk generator.
 FERNET_KEY = os.environ.get('FERNET_KEY', '')
 
+# Platform OpenAI API key — used for prepare-prompts pipeline (translate + watermark removal).
+# This is the platform key, NOT the user's BYOK key. Set in Heroku config vars.
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
 # Bulk image generation concurrency (tune via Heroku config var when upgrading API tier)
 BULK_GEN_MAX_CONCURRENT = int(os.environ.get('BULK_GEN_MAX_CONCURRENT', 4))
 

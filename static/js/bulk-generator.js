@@ -45,6 +45,8 @@
     I.settingCharDesc = document.getElementById('settingCharDesc');
     I.settingVisibility = document.getElementById('settingVisibility');
     I.visibilityLabel = document.getElementById('visibilityLabel');
+    I.settingTranslate = document.getElementById('settingTranslate');
+    I.translateLabel = document.getElementById('translateLabel');
 
     // Reference image
     I.refUploadZone = document.getElementById('refUploadZone');
@@ -629,6 +631,13 @@
     I.settingVisibility.addEventListener('change', function () {
         I.visibilityLabel.textContent = I.settingVisibility.checked ? 'Public' : 'Private';
     });
+
+    // ─── Translation Toggle ─────────────────────────────────────────
+    if (I.settingTranslate) {
+        I.settingTranslate.addEventListener('change', function () {
+            I.translateLabel.textContent = I.settingTranslate.checked ? 'On' : 'Off';
+        });
+    }
 
     // ─── Character Description Preview Sync ─────────────────────────
     I.settingCharDesc.addEventListener('input', function () {

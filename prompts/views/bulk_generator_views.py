@@ -37,6 +37,10 @@ VALID_QUALITIES = frozenset({'low', 'medium', 'high'})
 VALID_COUNTS = frozenset({1, 2, 3, 4})
 VALID_PROVIDERS = frozenset({'openai'})
 VALID_VISIBILITIES = frozenset({'public', 'private'})
+
+# Rate limiting for prepare-prompts (platform-paid GPT-4o-mini call)
+PREPARE_RATE_LIMIT = 20   # Max prepare calls per hour per staff user
+PREPARE_RATE_WINDOW = 3600  # 1 hour in seconds
 _SRC_IMG_EXTENSIONS = re.compile(
     r'\.(jpg|jpeg|png|webp|gif|avif)(?:[?#&/]|$)',
     re.IGNORECASE,
@@ -662,11 +666,29 @@ def api_prepare_prompts(request):
     Returns original prompts unchanged on any error — never blocks generation.
     Uses the platform OPENAI_API_KEY (not the user's BYOK key).
     """
+    # Rate limiting: 20 prepare calls per hour per staff user
+    _prep_cache_key = f"prepare_prompts_rate:{request.user.pk}"
+    if not cache.add(_prep_cache_key, 1, PREPARE_RATE_WINDOW):
+        try:
+            _prep_count = cache.incr(_prep_cache_key)
+        except ValueError:
+            cache.add(_prep_cache_key, 1, PREPARE_RATE_WINDOW)
+            _prep_count = 1
+        if _prep_count > PREPARE_RATE_LIMIT:
+            logger.warning(
+                "[PREPARE-PROMPTS] Rate limit exceeded for user %s",
+                request.user.pk,
+            )
+            # Return originals — never block generation
+            return JsonResponse({'prompts': []})
+
     try:
         data = json.loads(request.body)
         prompts = data.get('prompts', [])
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'Invalid request body'}, status=400)
+
+    translate = bool(data.get('translate', True))
 
     if not isinstance(prompts, list) or not prompts:
         return JsonResponse(
@@ -685,9 +707,12 @@ def api_prepare_prompts(request):
         "For each prompt in the input array, perform TWO tasks "
         "simultaneously:\n\n"
         "## TASK 1: TRANSLATE TO ENGLISH\n"
-        "If the prompt (or any part of it) is not in English, translate it "
-        "to English.\n"
-        "If the prompt is already in English, return it unchanged.\n"
+        "Only perform this task if the input JSON includes "
+        "\"translate\": true.\n"
+        "If \"translate\": false — skip translation entirely and return "
+        "each prompt in its original language unchanged.\n"
+        "If \"translate\": true — translate any non-English prompt to "
+        "English. If already English, return unchanged.\n"
         "Preserve all technical photography terms, proper names, and brand "
         "names exactly.\n\n"
         "## TASK 2: REMOVE WATERMARK INSTRUCTIONS\n"
@@ -791,7 +816,8 @@ def api_prepare_prompts(request):
         )
 
         user_message = json.dumps(
-            {'prompts': prompts}, ensure_ascii=False
+            {'prompts': prompts, 'translate': translate},
+            ensure_ascii=False,
         )
 
         response = client.chat.completions.create(

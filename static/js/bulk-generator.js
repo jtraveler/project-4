@@ -252,10 +252,29 @@
                     '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="bg-box-vision-direction" style="display:none">' +
+            '<div class="bg-box-direction-toggle-row">' +
+                '<label class="bg-box-direction-toggle-label">' +
+                    '<input type="checkbox" class="bg-box-direction-checkbox"' +
+                        ' id="bgDirCheck-' + boxIdCounter + '"' +
+                        ' aria-controls="' + vdId + '-row">' +
+                    ' Add AI Direction' +
+                '</label>' +
+            '</div>' +
+            '<div class="bg-box-vision-direction" id="' + vdId + '-row" style="display:none">' +
                 '<label class="bg-box-override-label" for="' + vdId + '">' +
-                    'Direction Instructions' +
-                    '<span class="bg-box-override-hint"> \u2014 Guidance for the AI (e.g. \u201cReplace the man with a blonde woman in a golden dress\u201d)</span>' +
+                    'AI Direction' +
+                    '<span class="bg-tooltip-wrap">' +
+                        '<button class="bg-tooltip-trigger" type="button"' +
+                            ' aria-describedby="' + vdId + '-tt">\u24d8</button>' +
+                        '<span class="bg-tooltip" id="' + vdId + '-tt" role="tooltip">' +
+                            'Optional guidance for the AI when writing or editing this prompt. ' +
+                            'Examples: \u201cReplace the dog with a ball\u201d, ' +
+                            '\u201cChange the background to a forest\u201d, ' +
+                            '\u201cMake the lighting more dramatic\u201d. ' +
+                            'Sent to the AI alongside your source image (Vision mode) ' +
+                            'or applied as targeted edits to the written prompt.' +
+                        '</span>' +
+                    '</span>' +
                 '</label>' +
                 '<textarea' +
                     ' class="bg-vision-direction-input"' +
@@ -266,7 +285,7 @@
                     ' aria-describedby="' + vdId + '-hint"' +
                 '></textarea>' +
                 '<span class="bg-box-override-hint" id="' + vdId + '-hint">' +
-                    'This guidance is sent to the Vision AI alongside your source image.' +
+                    'Works in both Vision mode and with written prompts.' +
                 '</span>' +
             '</div>';
 
@@ -278,9 +297,20 @@
             charPreview.style.display = '';
         }
 
+        // Direction checkbox toggle — shows/hides direction textarea
+        // Works for BOTH Vision and text prompt modes
+        var dirCheckbox = box.querySelector('.bg-box-direction-checkbox');
+        var dirRow = box.querySelector('.bg-box-vision-direction');
+
+        if (dirCheckbox) {
+            dirCheckbox.addEventListener('change', function () {
+                if (dirRow) dirRow.style.display = dirCheckbox.checked ? '' : 'none';
+                if (I.scheduleSave) I.scheduleSave();
+            });
+        }
+
         // Vision mode toggle
         var visionSelect = box.querySelector('.bg-override-vision');
-        var visionDirectionRow = box.querySelector('.bg-box-vision-direction');
         var promptTextarea = box.querySelector('.bg-box-textarea');
         var sourceImageInput = box.querySelector('.bg-prompt-source-image-input');
 
@@ -288,8 +318,12 @@
             visionSelect.addEventListener('change', function () {
                 var isVision = visionSelect.value === 'yes';
 
-                // Show/hide direction row
-                if (visionDirectionRow) visionDirectionRow.style.display = isVision ? '' : 'none';
+                // Show/hide direction row — Vision=yes auto-enables direction
+                if (isVision && dirCheckbox && !dirCheckbox.checked) {
+                    dirCheckbox.checked = true;
+                    if (dirRow) dirRow.style.display = '';
+                }
+                // Vision=no does NOT hide direction row — user keeps it if they want
 
                 // Disable/enable prompt textarea (preserve text — Option A)
                 promptTextarea.disabled = isVision;
@@ -302,6 +336,10 @@
                         ? 'Source image URL required for Vision mode \u2014 .jpg, .png, .webp, .gif, or .avif'
                         : 'Source image URL (optional) \u2014 .jpg, .png, .webp, .gif, .avif...';
                 }
+
+                // Update cost estimate and generate button (Vision boxes count as prompts)
+                I.updateCostEstimate();
+                I.updateGenerateBtn();
 
                 // Trigger autosave
                 if (I.scheduleSave) I.scheduleSave();
@@ -712,6 +750,7 @@
     // ─── Visibility Toggle ────────────────────────────────────────
     I.settingVisibility.addEventListener('change', function () {
         I.visibilityLabel.textContent = I.settingVisibility.checked ? 'Public' : 'Private';
+        I.updateGenerateBtn();
     });
 
     // ─── Remove Watermarks Toggle ────────────────────────────────────
@@ -719,6 +758,7 @@
         I.settingRemoveWatermark.addEventListener('change', function () {
             I.removeWatermarkLabel.textContent =
                 I.settingRemoveWatermark.checked ? 'On' : 'Off';
+            I.updateGenerateBtn();
         });
     }
 
@@ -726,6 +766,7 @@
     if (I.settingTranslate) {
         I.settingTranslate.addEventListener('change', function () {
             I.translateLabel.textContent = I.settingTranslate.checked ? 'On' : 'Off';
+            I.updateGenerateBtn();
         });
     }
 
@@ -757,8 +798,12 @@
     // ─── Cost Estimation ──────────────────────────────────────────
     I.getPromptCount = function getPromptCount() {
         var count = 0;
-        I.promptGrid.querySelectorAll('.bg-box-textarea').forEach(function (ta) {
-            if (ta.value.trim()) count++;
+        I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
+            var ta = box.querySelector('.bg-box-textarea');
+            var vs = box.querySelector('.bg-override-vision');
+            // Count box if it has text OR if Vision mode is enabled
+            // (Vision boxes have empty textareas intentionally)
+            if ((ta && ta.value.trim()) || (vs && vs.value === 'yes')) count++;
         });
         return count;
     };
@@ -794,7 +839,10 @@
         // Sum per-box images, respecting overrides
         I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
-            if (!ta.value.trim()) return;
+            var vs = box.querySelector('.bg-override-vision');
+            var isVision = vs && vs.value === 'yes';
+            // Count box if it has text OR Vision mode is enabled
+            if (!ta.value.trim() && !isVision) return;
             var imgOverride = box.querySelector('.bg-override-images').value;
             totalImages += imgOverride ? parseInt(imgOverride, 10) : masterImgs;
         });
@@ -817,6 +865,7 @@
     };
 
     I.settingQuality.addEventListener('change', I.updateCostEstimate);
+    I.settingQuality.addEventListener('change', I.updateGenerateBtn);
 
     // ─── Generate Button State ────────────────────────────────────
     I.updateGenerateBtn = function updateGenerateBtn() {

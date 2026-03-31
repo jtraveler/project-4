@@ -129,10 +129,10 @@
     function showTierConfirmPanel(tierValue) {
         if (!I.tierConfirmPanel) return;
         var tierNames = {
-            '2': 'Tier 2 (20 img/min)',
-            '3': 'Tier 3 (50 img/min)',
-            '4': 'Tier 4 (150 img/min)',
-            '5': 'Tier 5 (250 img/min)',
+            '2': 'Tier 2 (~20 img/min)',
+            '3': 'Tier 3 (~50 img/min)',
+            '4': 'Tier 4 (~150 img/min)',
+            '5': 'Tier 5 (~250 img/min)',
         };
         if (I.tierConfirmName) {
             I.tierConfirmName.textContent = tierNames[tierValue] || 'Tier ' + tierValue;
@@ -503,6 +503,7 @@
         var promptCounts = [];
         var visionEnabled = [];
         var visionDirections = [];
+        var textDirections = [];
         I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
@@ -512,6 +513,9 @@
             var ic = box.querySelector('.bg-override-images');
             var vs = box.querySelector('.bg-override-vision');
             var vd = box.querySelector('.bg-vision-direction-input');
+            var dirCheckbox = box.querySelector('.bg-box-direction-checkbox');
+            var hasDirection = dirCheckbox && dirCheckbox.checked;
+            var dirText = (hasDirection && vd) ? vd.value.trim() : '';
             var text = ta ? ta.value.trim() : '';
             if (text || (vs && vs.value === 'yes')) {
                 prompts.push(text);
@@ -521,10 +525,11 @@
                 promptQualities.push(ql ? ql.value.trim() : '');
                 promptCounts.push(ic ? ic.value.trim() : '');
                 visionEnabled.push(vs ? vs.value === 'yes' : false);
-                visionDirections.push(vd ? vd.value.trim() : '');
+                visionDirections.push(vs && vs.value === 'yes' ? dirText : '');
+                textDirections.push(vs && vs.value !== 'yes' ? dirText : '');
             }
         });
-        return { prompts: prompts, sourceCredits: sourceCredits, sourceImageUrls: sourceImageUrls, promptSizes: promptSizes, promptQualities: promptQualities, promptCounts: promptCounts, visionEnabled: visionEnabled, visionDirections: visionDirections };
+        return { prompts: prompts, sourceCredits: sourceCredits, sourceImageUrls: sourceImageUrls, promptSizes: promptSizes, promptQualities: promptQualities, promptCounts: promptCounts, visionEnabled: visionEnabled, visionDirections: visionDirections, textDirections: textDirections };
     }
 
     function clearValidationErrors() {
@@ -671,6 +676,7 @@
         var promptCounts = collected.promptCounts;
         var visionEnabled = collected.visionEnabled || [];
         var visionDirections = collected.visionDirections || [];
+        var textDirections = collected.textDirections || [];
         if (prompts.length === 0) {
             showValidationErrors([{ message: 'At least 1 prompt is required.' }]);
             return;
@@ -757,7 +763,34 @@
         validateApiKey()
         .then(function (keyValid) {
             if (!keyValid) {
-                showGenerateErrorBanner('Please enter and validate your OpenAI API key before generating.');
+                // Scroll to API key section
+                var apiKeySection = document.getElementById('apiKeySection');
+                if (apiKeySection) {
+                    var reducedMotion = window.matchMedia(
+                        '(prefers-reduced-motion: reduce)'
+                    ).matches;
+                    apiKeySection.scrollIntoView({
+                        behavior: reducedMotion ? 'auto' : 'smooth',
+                        block: 'center',
+                    });
+                }
+
+                // Shake the API key input (500ms delay lets scroll finish first)
+                var apiKeyInput = document.getElementById('openaiApiKey');
+                if (apiKeyInput) {
+                    setTimeout(function () {
+                        apiKeyInput.classList.remove('is-shaking');
+                        void apiKeyInput.offsetWidth; // force reflow
+                        apiKeyInput.classList.add('is-shaking');
+                        setTimeout(function () {
+                            apiKeyInput.classList.remove('is-shaking');
+                        }, 600);
+                    }, 500);
+                }
+
+                showGenerateErrorBanner(
+                    '\u26a0\ufe0f Please enter and validate your OpenAI API key before generating.'
+                );
                 resetGenerateBtn();
                 return;
             }
@@ -800,6 +833,7 @@
                         source_image_urls: sourceImageUrls,
                         vision_enabled: visionEnabled,
                         vision_directions: visionDirections,
+                        text_directions: textDirections,
                     }),
                 })
                 .then(function (r) { return r.json(); })
@@ -813,8 +847,12 @@
                     if (prepData.prompts && prepData.prompts.length === finalPromptObjects.length) {
                         finalPromptObjects = finalPromptObjects.map(function(obj, i) {
                             var cleaned = prepData.prompts[i];
+                            var hasChanged = cleaned && cleaned.trim() &&
+                                cleaned.trim() !== obj.text.trim();
                             return Object.assign({}, obj, {
-                                text: (cleaned && cleaned.trim()) ? cleaned.trim() : obj.text
+                                original_text: obj.text,  // preserve original before overwrite
+                                text: (cleaned && cleaned.trim()) ? cleaned.trim() : obj.text,
+                                was_modified: hasChanged,
                             });
                         });
                     }

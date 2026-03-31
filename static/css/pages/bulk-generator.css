@@ -1203,8 +1203,13 @@
     animation: bg-tier-shake 0.5s ease-in-out;
 }
 
+#openaiApiKey.is-shaking {
+    animation: bg-tier-shake 0.5s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .bg-tier-confirm-panel.is-shaking {
+    .bg-tier-confirm-panel.is-shaking,
+    #openaiApiKey.is-shaking {
         animation: none;
     }
 }
@@ -1879,6 +1884,151 @@
 
 @media (prefers-reduced-motion: reduce) {
     .bg-box-textarea--vision-mode {
+        transition: none;
+    }
+}
+
+/* ─── Prompt Diff Display ─────────────────────────────────────────── */
+
+.prompt-diff-display {
+    display: block;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.prompt-diff-label {
+    font-size: 0.6875rem;
+    color: var(--gray-500, #737373);
+    display: block;
+    margin-bottom: 2px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.prompt-diff-del {
+    text-decoration: line-through;
+    color: var(--red-500, #ef4444);
+    background: var(--red-50, #fef2f2);
+    padding: 0 2px;
+    border-radius: 2px;
+    font-style: normal;
+}
+
+.prompt-diff-ins {
+    text-decoration: none;
+    color: var(--green-700, #15803d);
+    background: var(--green-50, #f0fdf4);
+    padding: 0 2px;
+    border-radius: 2px;
+    font-style: normal;
+}
+
+.prompt-group-text--modified::after {
+    content: ' \u2728';
+    font-size: 0.75em;
+}
+
+/* ─── Direction Toggle Row ─────────────────────────────────────────── */
+
+.bg-box-direction-toggle-row {
+    padding: 4px 12px 8px;
+}
+
+.bg-box-direction-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--gray-600, #525252);
+    cursor: pointer;
+}
+
+.bg-box-direction-checkbox {
+    margin: 0;
+    cursor: pointer;
+}
+
+/* ─── Tooltip System (CSS-only, no JS library) ─────────────────────────
+   Usage: <span class="bg-tooltip-wrap">
+            <button class="bg-tooltip-trigger" aria-describedby="tt-id">ⓘ</button>
+            <span class="bg-tooltip" id="tt-id" role="tooltip">Tooltip text here</span>
+          </span>
+   Appears on hover of wrapper OR focus of trigger button.
+   ─────────────────────────────────────────────────────────────────────── */
+
+.bg-tooltip-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.bg-tooltip-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--gray-400, #9ca3af);
+    background: transparent;
+    color: var(--gray-500, #737373);
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: help;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.bg-tooltip-trigger:focus-visible {
+    outline: 2px solid var(--color-primary, #6366f1);
+    outline-offset: 2px;
+}
+
+.bg-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 220px;
+    background: var(--gray-800, #1f2937);
+    color: var(--gray-100, #f3f4f6);
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    padding: 8px 10px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    z-index: 100;
+    white-space: normal;
+    text-align: left;
+}
+
+/* Arrow pointing down */
+.bg-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--gray-800, #1f2937);
+}
+
+/* Show on hover of wrapper or focus of trigger */
+.bg-tooltip-wrap:hover .bg-tooltip,
+.bg-tooltip-trigger:focus-visible ~ .bg-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bg-tooltip {
         transition: none;
     }
 }

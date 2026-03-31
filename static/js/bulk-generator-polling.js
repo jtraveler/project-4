@@ -439,7 +439,10 @@
                 console.warn('[bulk-gen-job] Terminal fetch error:', err.message);
             });
         } else {
-            // Active job — start polling immediately
+            // Active job — render known progress immediately before first poll
+            // so the bar doesn't flash 0% while waiting for the first response.
+            // G.initialCompleted is read from data-completed-count on page load.
+            G.updateProgressBar(G.initialCompleted, G.totalImages);
             G.startPolling();
         }
     };

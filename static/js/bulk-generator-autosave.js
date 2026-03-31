@@ -230,13 +230,19 @@
         var prompts = [];
         var sourceCredits = [];
         var sourceImageUrls = [];
+        var visionEnabled = [];
+        var visionDirections = [];
         boxes.forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
             var si = box.querySelector('.bg-prompt-source-image-input');
+            var vs = box.querySelector('.bg-override-vision');
+            var vd = box.querySelector('.bg-vision-direction-input');
             prompts.push(ta ? ta.value : '');
             sourceCredits.push(sc ? sc.value : '');
             sourceImageUrls.push(si ? si.value : '');
+            visionEnabled.push(vs ? vs.value : 'no');
+            visionDirections.push(vd ? vd.value : '');
         });
 
         var charDesc = I.settingCharDesc.value;
@@ -247,7 +253,9 @@
                     prompts: prompts,
                     sourceCredits: sourceCredits,
                     sourceImageUrls: sourceImageUrls,
-                    charDesc: charDesc
+                    charDesc: charDesc,
+                    visionEnabled: visionEnabled,
+                    visionDirections: visionDirections,
                 }));
                 showDraftIndicator();
             } catch (e) {
@@ -296,6 +304,9 @@
                 sourceImageUrls = data.sourceImageUrls || [];
                 charDesc = data.charDesc || '';
             }
+
+            var visionEnabled = data && !Array.isArray(data) ? (data.visionEnabled || []) : [];
+            var visionDirections = data && !Array.isArray(data) ? (data.visionDirections || []) : [];
 
             if (prompts.length === 0 && !charDesc) return;
 
@@ -349,6 +360,33 @@
                                 BulkGenUtils.lockPasteInput(si);
                             }
                         }
+                    }
+
+                    // Restore Vision state + apply side-effects
+                    var vs = boxes[i].querySelector('.bg-override-vision');
+                    var vd = boxes[i].querySelector('.bg-vision-direction-input');
+                    var visionRow = boxes[i].querySelector('.bg-box-vision-direction');
+
+                    var savedVision = visionEnabled[i] || 'no';
+                    if (vs && savedVision === 'yes') {
+                        vs.value = 'yes';
+
+                        // Apply Vision toggle side-effects
+                        if (visionRow) visionRow.style.display = '';
+                        if (ta) {
+                            ta.disabled = true;
+                            ta.classList.add('bg-box-textarea--vision-mode');
+                        }
+                        if (si) {
+                            si.required = true;
+                            si.placeholder =
+                                'Source image URL required for Vision mode \u2014 .jpg, .png, .webp, .gif, or .avif';
+                        }
+                    }
+
+                    // Restore direction text
+                    if (vd && visionDirections[i]) {
+                        vd.value = visionDirections[i];
                     }
                 }
             });

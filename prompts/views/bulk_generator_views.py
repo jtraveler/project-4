@@ -651,6 +651,141 @@ def api_validate_openai_key(request):
         )
 
 
+def _generate_prompt_from_image(
+    image_url: str,
+    direction: str,
+    api_key: str,
+    remove_watermarks: bool = True,
+) -> str | None:
+    """
+    Call GPT-4o-mini Vision to generate a concise image-generation prompt
+    from the provided image URL and optional direction instructions.
+
+    Args:
+        image_url: HTTPS URL of the source image (must be publicly accessible).
+        direction: Optional user guidance (e.g. "Replace man with a blonde woman").
+        api_key: Platform OpenAI API key.
+
+    Returns:
+        Generated prompt string (1-2 sentences), or None on any error.
+    """
+    try:
+        import requests as _requests
+        import base64 as _base64
+
+        from openai import OpenAI, APITimeoutError, APIConnectionError
+
+        if not api_key:
+            logger.warning("[VISION-PROMPT] No API key — skipping Vision call")
+            return None
+
+        # Validate URL scheme (defense-in-depth — staff-only, but enforce HTTPS)
+        from urllib.parse import urlparse as _urlparse
+        parsed = _urlparse(image_url)
+        if parsed.scheme != 'https' or not parsed.netloc:
+            logger.warning("[VISION-PROMPT] Rejected non-HTTPS URL: %s", image_url[:80])
+            return None
+
+        # Download and base64-encode image for reliability
+        # URL passing is unreliable with private/CDN-served images
+        MAX_VISION_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
+        try:
+            img_response = _requests.get(image_url, timeout=15, allow_redirects=False)
+            img_response.raise_for_status()
+            if len(img_response.content) > MAX_VISION_IMAGE_SIZE:
+                logger.warning("[VISION-PROMPT] Image too large (%d bytes): %s", len(img_response.content), image_url[:80])
+                return None
+            image_b64 = _base64.b64encode(img_response.content).decode('utf-8')
+            content_type = img_response.headers.get('Content-Type', 'image/jpeg')
+            # Normalise content type
+            if 'png' in content_type:
+                content_type = 'image/png'
+            elif 'webp' in content_type:
+                content_type = 'image/webp'
+            else:
+                content_type = 'image/jpeg'
+        except Exception as e:
+            logger.warning(
+                "[VISION-PROMPT] Image download failed for %s: %s",
+                image_url[:80], e,
+            )
+            return None
+
+        client = OpenAI(api_key=api_key, timeout=30)
+
+        direction_block = ''
+        if direction and direction.strip():
+            direction_block = (
+                f'\n\nUser direction: "{direction.strip()}"\n'
+                f'Incorporate these instructions into the prompt.'
+            )
+
+        no_watermark_rule = (
+            '- Do not include any instruction to add watermarks, logos, '
+            'or signatures.\n'
+            if remove_watermarks else ''
+        )
+
+        system_prompt = (
+            'You are an expert AI image prompt writer. '
+            'Analyse the provided image and write a concise, generation-ready prompt '
+            'that describes it for an AI image generator (GPT-Image-1 / DALL-E style). '
+            '\n\n'
+            'Rules:\n'
+            '- Output exactly 1-2 sentences. No preamble, no explanation.\n'
+            '- Cover: main subject, art style, composition, lighting, quality.\n'
+            '- Write in English only.\n'
+            + no_watermark_rule +
+            '- Output ONLY the prompt text — nothing else.'
+        )
+
+        user_content = [
+            {
+                'type': 'image_url',
+                'image_url': {
+                    'url': f'data:{content_type};base64,{image_b64}',
+                    'detail': 'low',  # Low detail = cheaper + faster for prompt generation
+                },
+            },
+            {
+                'type': 'text',
+                'text': (
+                    'Write a concise image-generation prompt for this image.'
+                    + direction_block
+                ),
+            },
+        ]
+
+        response = client.chat.completions.create(
+            model='gpt-4o-mini',
+            messages=[
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_content},
+            ],
+            max_tokens=200,
+            temperature=0.3,
+        )
+
+        result = response.choices[0].message.content.strip()
+
+        if not result:
+            logger.warning("[VISION-PROMPT] Empty response for %s", image_url[:80])
+            return None
+
+        logger.info(
+            "[VISION-PROMPT] Generated prompt (%d chars) from %s",
+            len(result), image_url[:80],
+        )
+        return result
+
+    except (APITimeoutError, APIConnectionError) as e:
+        logger.warning("[VISION-PROMPT] OpenAI connection error: %s", e)
+        return None
+    except Exception as e:
+        logger.error("[VISION-PROMPT] Unexpected error: %s", e)
+        return None
+
+
 @staff_member_required
 @require_POST
 def api_prepare_prompts(request):
@@ -689,6 +824,18 @@ def api_prepare_prompts(request):
         return JsonResponse({'error': 'Invalid request body'}, status=400)
 
     translate = bool(data.get('translate', True))
+    remove_watermarks = bool(data.get('remove_watermarks', True))
+    vision_enabled = data.get('vision_enabled', [])
+    vision_directions = data.get('vision_directions', [])
+    source_image_urls = data.get('source_image_urls', [])
+
+    # Pad to same length as prompts
+    while len(vision_enabled) < len(prompts):
+        vision_enabled.append(False)
+    while len(vision_directions) < len(prompts):
+        vision_directions.append('')
+    while len(source_image_urls) < len(prompts):
+        source_image_urls.append('')
 
     if not isinstance(prompts, list) or not prompts:
         return JsonResponse(
@@ -701,10 +848,50 @@ def api_prepare_prompts(request):
             {'error': 'Maximum 100 prompts per prepare call'}, status=400
         )
 
+    # Step 1: Vision prompt generation (per-prompt, sequential)
+    # Runs BEFORE translate/watermark so Vision output also gets cleaned.
+    platform_api_key = getattr(settings, 'OPENAI_API_KEY', '')
+    vision_count = 0
+
+    for i, is_vision in enumerate(vision_enabled):
+        if not is_vision:
+            continue
+        src_url = source_image_urls[i] if i < len(source_image_urls) else ''
+        if not src_url:
+            logger.warning(
+                "[VISION-PROMPT] Prompt %d has vision enabled but no source URL — skipping",
+                i,
+            )
+            continue
+
+        direction = vision_directions[i] if i < len(vision_directions) else ''
+        generated = _generate_prompt_from_image(
+            src_url, direction, platform_api_key,
+            remove_watermarks=remove_watermarks,
+        )
+
+        if generated:
+            prompts[i] = generated
+            vision_count += 1
+        else:
+            logger.warning(
+                "[VISION-PROMPT] Vision call failed for prompt %d — using original",
+                i,
+            )
+
+    if vision_count > 0:
+        logger.info(
+            "[VISION-PROMPT] Generated prompts for %d/%d vision-enabled prompts for user %s",
+            vision_count, sum(1 for v in vision_enabled if v), request.user.pk,
+        )
+
+    # Step 2: Translate + watermark removal batch call
+    task_count = "TWO" if remove_watermarks else "ONE"
     system_prompt = (
         "You are a prompt cleaning assistant for an AI image generation "
         "platform.\n\n"
-        "For each prompt in the input array, perform TWO tasks "
+        "For each prompt in the input array, perform " + task_count + " task"
+        + ("s" if remove_watermarks else "") + " "
         "simultaneously:\n\n"
         "## TASK 1: TRANSLATE TO ENGLISH\n"
         "Only perform this task if the input JSON includes "
@@ -715,92 +902,125 @@ def api_prepare_prompts(request):
         "English. If already English, return unchanged.\n"
         "Preserve all technical photography terms, proper names, and brand "
         "names exactly.\n\n"
-        "## TASK 2: REMOVE WATERMARK INSTRUCTIONS\n"
-        "Identify and completely remove any instruction that asks the AI "
-        "image model to add a watermark, signature, logo, branding text, "
-        "or creator credit to the output image.\n\n"
-        "### What IS a watermark instruction (REMOVE these):\n"
-        "An instruction telling the image model to ADD text, a name, "
-        "signature, or logo ONTO the final output image.\n\n"
-        "Common patterns to detect:\n"
-        "- Keywords: \"watermark\", \"marca de agua\", \"signature\", "
-        "\"firma\", \"sponsored by\", \"created by\", \"prompt by\", "
-        "\"add my logo\", \"place a\", \"include a footer\"\n"
-        "- Location words combined with a name: \"bottom-left corner\", "
-        "\"esquina\", \"bottom-right\", \"footer\", \"hovering over\"\n"
-        "- Style + name combos: \"handwritten calligraphy [name]\", "
-        "\"elegant signature [name]\", \"sans-serif font [brand]\", "
-        "\"thin white ink [name]\", \"gold text [name]\"\n"
-        "- Phrases like \"text that reads [name]\", "
-        "\"that says [brand name]\"\n"
-        "- Most likely appears TOWARDS THE END of the prompt\n\n"
-        "### What is NOT a watermark instruction (KEEP these):\n"
-        "Text that exists WITHIN the scene being depicted:\n"
-        "- A T-shirt with text: \"wearing a shirt that says "
-        "'FOLLOWERS ONLY'\" -> KEEP\n"
-        "- A sign in a scene: \"a storefront reading 'OPEN'\" -> KEEP\n"
-        "- A trophy or prop: \"a trophy engraved 'Champion'\" -> KEEP\n"
-        "- Negative instructions: \"NO CGI, NO illustration\" -> KEEP\n\n"
-        "### Key distinction:\n"
-        "Ask: \"Is this text part of the scene, or is it an instruction "
-        "to stamp/overlay something onto the final image?\"\n"
-        "If instruction to ADD branding TO the image -> REMOVE IT\n"
-        "If it describes something WITHIN the scene -> KEEP IT\n\n"
-        "### Removal rule:\n"
-        "Remove the ENTIRE watermark instruction including placement, "
-        "style, font description, and any related sentences. Do not "
-        "leave partial fragments. Leave all other prompt text unchanged.\n\n"
-        "## EXAMPLES\n\n"
-        "EXAMPLE 1 (English watermark at end):\n"
-        "INPUT: \"Ultra-realistic portrait of a woman on a beach at "
-        "golden hour, 8K. Add a subtle handwritten text in the "
-        "bottom-right corner that reads 'Created by PROMPTX', elegant "
-        "fashion-editorial signature style, thin white ink, slightly "
-        "transparent.\"\n"
-        "OUTPUT: \"Ultra-realistic portrait of a woman on a beach at "
-        "golden hour, 8K.\"\n\n"
-        "EXAMPLE 2 (Spanish watermark):\n"
-        "INPUT: \"Fotografía editorial profesional de maternidad. "
-        "Texturas ultra-realistas. REALISMO ABSOLUTO. CERO ILUSTRACIÓN. "
-        "Firma MV grabada perfectamente en una concha grande, visible e "
-        "integrada de forma realista. Marca de agua elegante "
-        "'MarthAiMagia' visible en una esquina.\"\n"
-        "OUTPUT: \"Professional editorial maternity photography. "
-        "Ultra-realistic textures. ABSOLUTE REALISM. ZERO ILLUSTRATION."
-        "\"\n\n"
-        "EXAMPLE 3 (Mid-prompt watermark, legitimate T-shirt text KEPT):\n"
-        "INPUT: \"Black and white portrait of a person wearing a "
-        "long-sleeved flannel shirt with a black T-shirt that says "
-        "'FOLLOWERS ONLY'. Add a very small handwritten calligraphy "
-        "signature 'MasYOYOKsaja' hovering over the subject's left "
-        "shoulder. Ultra-high detail, 4K illustration quality.\"\n"
-        "OUTPUT: \"Black and white portrait of a person wearing a "
-        "long-sleeved flannel shirt with a black T-shirt that says "
-        "'FOLLOWERS ONLY'. Ultra-high detail, 4K illustration quality."
-        "\"\n\n"
-        "EXAMPLE 4 (Multi-sentence watermark block):\n"
-        "INPUT: \"Post-apocalyptic warrior woman, flowing black hair. "
-        "Dusty desert wasteland at golden hour. Highly detailed, 4k, "
-        "cinematic. Add a stylish watermark at the bottom center of the "
-        "image that reads 'King Cairo | 2026' in white and gold. Below "
-        "it, add a small logo that reads 'Sponsored by AI PROMPT EG.' "
-        "Ensure the text is elegant and consistent with the overall "
-        "design.\"\n"
-        "OUTPUT: \"Post-apocalyptic warrior woman, flowing black hair. "
-        "Dusty desert wasteland at golden hour. Highly detailed, 4k, "
-        "cinematic.\"\n\n"
-        "EXAMPLE 5 (Non-English + watermark — translate AND remove):\n"
-        "INPUT: \"Retrato hiperrealista de una mujer embarazada en la "
-        "playa. Iluminación natural de hora dorada. Resolución 8K. "
-        "Marca de agua elegante 'MarthAiMagia' visible en una esquina."
-        "\"\n"
-        "OUTPUT: \"Hyperrealistic portrait of a pregnant woman on the "
-        "beach. Natural golden hour lighting. 8K resolution.\"\n\n"
-        "EXAMPLE 6 (No watermark, no translation — return unchanged):\n"
-        "INPUT: \"A serene Japanese garden with cherry blossoms, 8K "
-        "photography, golden hour lighting, shallow depth of field.\"\n"
-        "OUTPUT: \"A serene Japanese garden with cherry blossoms, 8K "
-        "photography, golden hour lighting, shallow depth of field.\"\n\n"
+    )
+
+    watermark_task = ""
+    if remove_watermarks:
+        watermark_task = (
+            "## TASK 2: REMOVE WATERMARK INSTRUCTIONS\n"
+            "Identify and completely remove any instruction that asks the AI "
+            "image model to add a watermark, signature, logo, branding text, "
+            "or creator credit to the output image.\n\n"
+            "### What IS a watermark instruction (REMOVE these):\n"
+            "An instruction telling the image model to ADD text, a name, "
+            "signature, or logo ONTO the final output image.\n\n"
+            "Common patterns to detect:\n"
+            "- Keywords: \"watermark\", \"marca de agua\", \"signature\", "
+            "\"firma\", \"sponsored by\", \"created by\", \"prompt by\", "
+            "\"add my logo\", \"place a\", \"include a footer\"\n"
+            "- Location words combined with a name: \"bottom-left corner\", "
+            "\"esquina\", \"bottom-right\", \"footer\", \"hovering over\"\n"
+            "- Style + name combos: \"handwritten calligraphy [name]\", "
+            "\"elegant signature [name]\", \"sans-serif font [brand]\", "
+            "\"thin white ink [name]\", \"gold text [name]\"\n"
+            "- Phrases like \"text that reads [name]\", "
+            "\"that says [brand name]\"\n"
+            "- Most likely appears TOWARDS THE END of the prompt\n\n"
+            "### What is NOT a watermark instruction (KEEP these):\n"
+            "Text that exists WITHIN the scene being depicted:\n"
+            "- A T-shirt with text: \"wearing a shirt that says "
+            "'FOLLOWERS ONLY'\" -> KEEP\n"
+            "- A sign in a scene: \"a storefront reading 'OPEN'\" -> KEEP\n"
+            "- A trophy or prop: \"a trophy engraved 'Champion'\" -> KEEP\n"
+            "- Negative instructions: \"NO CGI, NO illustration\" -> KEEP\n\n"
+            "### Key distinction:\n"
+            "Ask: \"Is this text part of the scene, or is it an instruction "
+            "to stamp/overlay something onto the final image?\"\n"
+            "If instruction to ADD branding TO the image -> REMOVE IT\n"
+            "If it describes something WITHIN the scene -> KEEP IT\n\n"
+            "### Removal rule:\n"
+            "Remove the ENTIRE watermark instruction including placement, "
+            "style, font description, and any related sentences. Do not "
+            "leave partial fragments. Leave all other prompt text unchanged.\n\n"
+        )
+
+    if remove_watermarks:
+        examples_block = (
+            "## EXAMPLES\n\n"
+            "EXAMPLE 1 (English watermark at end):\n"
+            "INPUT: \"Ultra-realistic portrait of a woman on a beach at "
+            "golden hour, 8K. Add a subtle handwritten text in the "
+            "bottom-right corner that reads 'Created by PROMPTX', elegant "
+            "fashion-editorial signature style, thin white ink, slightly "
+            "transparent.\"\n"
+            "OUTPUT: \"Ultra-realistic portrait of a woman on a beach at "
+            "golden hour, 8K.\"\n\n"
+            "EXAMPLE 2 (Spanish watermark):\n"
+            "INPUT: \"Fotografía editorial profesional de maternidad. "
+            "Texturas ultra-realistas. REALISMO ABSOLUTO. CERO ILUSTRACIÓN. "
+            "Firma MV grabada perfectamente en una concha grande, visible e "
+            "integrada de forma realista. Marca de agua elegante "
+            "'MarthAiMagia' visible en una esquina.\"\n"
+            "OUTPUT: \"Professional editorial maternity photography. "
+            "Ultra-realistic textures. ABSOLUTE REALISM. ZERO ILLUSTRATION."
+            "\"\n\n"
+            "EXAMPLE 3 (Mid-prompt watermark, legitimate T-shirt text KEPT):\n"
+            "INPUT: \"Black and white portrait of a person wearing a "
+            "long-sleeved flannel shirt with a black T-shirt that says "
+            "'FOLLOWERS ONLY'. Add a very small handwritten calligraphy "
+            "signature 'MasYOYOKsaja' hovering over the subject's left "
+            "shoulder. Ultra-high detail, 4K illustration quality.\"\n"
+            "OUTPUT: \"Black and white portrait of a person wearing a "
+            "long-sleeved flannel shirt with a black T-shirt that says "
+            "'FOLLOWERS ONLY'. Ultra-high detail, 4K illustration quality."
+            "\"\n\n"
+            "EXAMPLE 4 (Multi-sentence watermark block):\n"
+            "INPUT: \"Post-apocalyptic warrior woman, flowing black hair. "
+            "Dusty desert wasteland at golden hour. Highly detailed, 4k, "
+            "cinematic. Add a stylish watermark at the bottom center of the "
+            "image that reads 'King Cairo | 2026' in white and gold. Below "
+            "it, add a small logo that reads 'Sponsored by AI PROMPT EG.' "
+            "Ensure the text is elegant and consistent with the overall "
+            "design.\"\n"
+            "OUTPUT: \"Post-apocalyptic warrior woman, flowing black hair. "
+            "Dusty desert wasteland at golden hour. Highly detailed, 4k, "
+            "cinematic.\"\n\n"
+            "EXAMPLE 5 (Non-English + watermark — translate AND remove):\n"
+            "INPUT: \"Retrato hiperrealista de una mujer embarazada en la "
+            "playa. Iluminación natural de hora dorada. Resolución 8K. "
+            "Marca de agua elegante 'MarthAiMagia' visible en una esquina."
+            "\"\n"
+            "OUTPUT: \"Hyperrealistic portrait of a pregnant woman on the "
+            "beach. Natural golden hour lighting. 8K resolution.\"\n\n"
+            "EXAMPLE 6 (No watermark, no translation — return unchanged):\n"
+            "INPUT: \"A serene Japanese garden with cherry blossoms, 8K "
+            "photography, golden hour lighting, shallow depth of field.\"\n"
+            "OUTPUT: \"A serene Japanese garden with cherry blossoms, 8K "
+            "photography, golden hour lighting, shallow depth of field.\"\n\n"
+        )
+    else:
+        # Translation-only examples — no watermark removal demonstrated
+        examples_block = (
+            "## EXAMPLES\n\n"
+            "EXAMPLE 1 (Non-English — translate to English):\n"
+            "INPUT: \"Retrato hiperrealista de una mujer embarazada en la "
+            "playa. Iluminación natural de hora dorada. Resolución 8K.\"\n"
+            "OUTPUT: \"Hyperrealistic portrait of a pregnant woman on the "
+            "beach. Natural golden hour lighting. 8K resolution.\"\n\n"
+            "EXAMPLE 2 (Already English — return unchanged):\n"
+            "INPUT: \"A serene Japanese garden with cherry blossoms, 8K "
+            "photography, golden hour lighting, shallow depth of field.\"\n"
+            "OUTPUT: \"A serene Japanese garden with cherry blossoms, 8K "
+            "photography, golden hour lighting, shallow depth of field.\"\n\n"
+            "EXAMPLE 3 (Prompt with watermark text — KEEP as-is, only translate):\n"
+            "INPUT: \"Fotografía editorial profesional de maternidad. "
+            "Marca de agua elegante 'MarthAiMagia' visible en una esquina."
+            "\"\n"
+            "OUTPUT: \"Professional editorial maternity photography. "
+            "Elegant watermark 'MarthAiMagia' visible in a corner.\"\n\n"
+        )
+
+    system_prompt += watermark_task + examples_block + (
         "## OUTPUT FORMAT\n"
         "Return ONLY a valid JSON object with this exact structure:\n"
         "{\"prompts\": [\"cleaned prompt 1\", \"cleaned prompt 2\", ...]}\n\n"

@@ -68,11 +68,22 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1213 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks:**
+1. Set prompt 1 to Vision="Yes", add direction text
+2. Refresh page → prompt 1 should still show Vision="Yes", textarea disabled + struck, direction row visible with text restored
+3. Set back to Vision="No", refresh → textarea re-enabled, direction hidden
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 76e8c70 | feat(bulk-gen): Feature 2 autosave — persist Vision state across page refresh |
 
 ## Section 11 — What to Work on Next
 

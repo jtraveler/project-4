@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 30, 2026 (Sessions 101–148)
+**Last Updated:** March 31, 2026 (Sessions 101–149)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,29 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 149 — March 31, 2026
+
+**Focus:** Feature 2 — Generate Prompt from Source Image (Vision API) + Remove Watermarks toggle
+
+**Specs:** 149-A (frontend UI), 149-B (backend Vision), 149-C (autosave), 149-E (Remove Watermarks toggle), 149-D (docs)
+
+**Key outcomes:**
+- Per-prompt "Prompt from Image" dropdown added alongside "Images" in each prompt box. Default "No". Selecting "Yes" disables/strikes the prompt textarea (text preserved), shows a resizable direction instructions textarea, and marks the source image URL field as required.
+- Direction instructions textarea allows user to guide the Vision AI (e.g. "Replace the man with a blonde woman in a golden dress"). Up to 500 chars.
+- Backend: `_generate_prompt_from_image()` helper in `bulk_generator_views.py` calls GPT-4o-mini Vision (detail:low) with base64-encoded source image + direction instructions. Returns 1-2 sentence generation-ready prompt. HTTPS URL validation + 10 MB size cap for defense-in-depth.
+- Vision calls run BEFORE translate/watermark batch in `api_prepare_prompts` — so Vision output is also cleaned by the translate/watermark pass.
+- Vision failure always falls back to original prompt text — non-blocking.
+- Platform `OPENAI_API_KEY` used for Vision calls (~$0.003 per prompt).
+- Autosave extended: `visionEnabled` and `visionDirections` arrays saved to localStorage. Vision side-effects (disabled textarea, direction row) correctly restored on page refresh.
+- "Remove Watermarks (Beta)" toggle added to Column 4 between Visibility and Translate to English. ON by default. When OFF, TASK 2 (watermark removal) is skipped in the prepare-prompts system prompt and the Vision system prompt omits the "no watermarks" rule. Examples section is also conditional — translate-only examples shown when OFF.
+- Reset handler clears Vision state (dropdown, direction textarea, textarea disabled state).
+- `collectPrompts` updated to include Vision-only prompts (empty text with Vision=Yes).
+- Feature 2B (Master "Prompt from Image" Mode) documented as planned future feature.
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
 
 ### Session 148 — March 30, 2026
 

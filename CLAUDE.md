@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 149 | Mar 31, 2026 | Feature 2: "Prompt from Image" per-prompt dropdown + direction textarea + GPT-4o-mini Vision backend (detail:low, base64, ~$0.003/prompt). Vision runs before translate/watermark. Autosave extended for Vision state. "Remove Watermarks (Beta)" toggle in Column 4 (ON by default). Feature 2B (master mode) planned. 1213 tests. |
 | Session 148 | Mar 30, 2026 | OPENAI_API_KEY wired to settings (fixes 401 on prepare-prompts). Translation toggle in Column 4 (ON by default, skip translation when OFF). Tier error scrolls to tier section + shakes panel. Prepare-prompts rate limited (20/hr). Error banner auto-dismiss 5s→8s, suppressed for reduced-motion. 1213 tests. |
 | Session 147 | Mar 30, 2026 | Fixed visible template comment in tier section, tier error now uses prominent bottom-bar banner. New "Prepare Prompts" pipeline: one GPT-4o-mini call translates non-English prompts + strips watermarks before generation. Non-blocking fallback. Features 1 (Translate) and 3 (Watermark Removal) complete. 1213 tests. |
 | Session 146 | Mar 29, 2026 | Global delay floor bug fixed (OPENAI_INTER_BATCH_DELAY deprecated), cost estimate now size-aware (portrait/landscape prices correct), Django-Q timeout 120→7200s + max_attempts 1 (high-quality jobs no longer killed), "Done in Xs" timer removed (server-side Duration only), conditional tier UX (auto-detect for Tier 2+, Tier 1 zero friction). 1213 tests. |
@@ -384,20 +385,36 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 **Risks:** Translated prompt may lose nuance from the original language. Mitigation: only translate if detected language is not English.
 **Priority:** High — relatively simple, high impact.
 
-#### Feature 2: Generate Prompt from Source Image (Vision API)
+#### Feature 2: Generate Prompt from Source Image (Vision API) — ✅ COMPLETE (Session 149)
 
-**Summary:** A per-prompt checkbox ("Generate prompt from source image") that uses GPT-4o Vision to generate a concise image-generation prompt from the attached source image. The Vision-generated prompt replaces the text field content and is used for both generation and the result page display.
+**Summary:** A per-prompt "Prompt from Image" dropdown that uses GPT-4o-mini Vision to generate a concise image-generation prompt from the attached source image. The Vision-generated prompt replaces the text field content and is used for both generation and the result page display.
 
-**UX behaviour:** Checkbox appears below the source image URL field. When ticked: text field disabled (strike-through on existing text), source image URL field becomes required. When ticked + Character Description is filled: Character Description still applies and is NOT struck through. Vision API call fires per ticked prompt during "Starting…" phase.
+**UX behaviour:** "Prompt from Image" dropdown appears on the same row as IMAGES in each prompt box. When set to "Yes": text field disabled (strike-through on existing text, text preserved), a direction instructions textarea appears for AI guidance (max 500 chars), source image URL field becomes required. Character Description still applies. Vision API call fires per enabled prompt during "Preparing prompts…" phase, before translate/watermark.
 
-**Vision API prompt strategy:** Instruct GPT-4o Vision to output exactly 1-2 sentences covering subject, style, composition, lighting, technical quality. No narrative, no filler — generation-ready format.
+**Vision API prompt strategy:** Instruct GPT-4o-mini Vision (detail:low) to output exactly 1-2 sentences covering subject, style, composition, lighting, technical quality. No narrative, no filler — generation-ready format. Base64-encode images before sending.
 
-**Implementation approach:** New `generate_prompt_from_image(image_url)` helper in tasks.py using GPT-4o Vision API. Called per image during job preparation, results stored on GeneratedImage as `vision_generated_prompt`. Front-end: new checkbox per prompt box, JS disables/strikes text field.
+**Implementation approach:** `_generate_prompt_from_image()` helper in `bulk_generator_views.py` using GPT-4o-mini Vision API. Called per vision-enabled prompt during `api_prepare_prompts`, before translate/watermark batch. Falls back to original prompt text on any error. HTTPS URL validation + 10 MB size cap + no redirects for defense-in-depth. Front-end: dropdown per prompt box + direction textarea, autosave extension for Vision state.
 
 **Pros:** Major differentiator, solves "I have an image but no prompt" problem, high accuracy with Vision API.
-**Cons:** One Vision API call per ticked prompt (~$0.01 each), adds latency per checked prompt, requires accessible source image URL.
-**Risks:** Vision API may not always produce concise output — requires careful system prompt tuning. Source image must be HTTPS and accessible (validated by existing SSRF hardening).
+**Cons:** One Vision API call per enabled prompt (~$0.003 each), adds latency per checked prompt, requires accessible source image URL.
+**Risks:** Vision API may not always produce concise output — requires careful system prompt tuning. Source image must be HTTPS and accessible (validated by HTTPS scheme check + no-redirect policy).
 **Priority:** High — genuine differentiator.
+
+#### Feature 2B: Master "Prompt from Image" Mode (Planned — Future Session)
+
+**Summary:** A master toggle in Column 4 of the master settings grid (alongside Visibility and Translate to English) that puts ALL prompt boxes into Vision mode simultaneously. When enabled:
+- All prompt text fields are hidden (not just disabled — replaced by the direction instructions textarea as the primary input)
+- The "Prompt from Image" per-box dropdown is hidden (redundant in master mode)
+- A master direction instructions field appears in the master settings for global guidance that applies to all prompts
+- Source image URL field in each box becomes required
+
+**UX behaviour:** Toggle defaults OFF. When toggled ON, all boxes immediately enter Vision mode. Boxes that already have text in the prompt field: text is preserved but hidden. When toggled OFF: all boxes revert to normal mode with text restored.
+
+**Implementation approach:** New `settingMasterVision` checkbox in Column 4. On change: iterate all `.bg-prompt-box` elements, toggle `.bg-vision-master-mode` class on each. CSS handles field visibility. Per-box Vision dropdown hidden via `.bg-vision-master-mode .bg-box-override-vision` selector.
+
+**Dependency:** Feature 2 (per-prompt Vision) must be fully stable first.
+**Priority:** Medium — powerful for users who want all-Vision workflows.
+**Status:** Planned — do not spec until Feature 2 is confirmed stable in production.
 
 #### Feature 3: Remove Watermark Text from Prompts — ✅ COMPLETE (Session 147)
 
@@ -514,6 +531,12 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   Retrying bulk gen tasks wastes API credits and produces duplicate images.
   The previous `timeout: 120` (2 minutes) was killing 3-prompt high-quality
   jobs mid-run.
+
+- **Vision API calls use `detail: 'low'` for prompt generation (Session 149).**
+  Sufficient quality for scene description, ~3x cheaper than `detail: 'high'`.
+  Base64-encode images before sending (URL passing is unreliable with
+  CDN-served images). HTTPS URL validation + 10 MB size cap + no redirects
+  for defense-in-depth (staff-only endpoint). ~$0.003 per Vision call.
 
 - **Pending-after-completion gap (Session 143):** If the generation loop exits before all
   `GeneratedImage` records transition from `status='pending'` to `status='failed'` (e.g., quota
@@ -2060,5 +2083,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.39 (Session 148 — prepare prompts fixes, tier UX, P3 cleanup; 1213 tests)
-**Last Updated:** March 29, 2026
+**Version:** 4.40 (Session 149 — Feature 2 Vision prompt generation, Remove Watermarks toggle; 1213 tests)
+**Last Updated:** March 31, 2026

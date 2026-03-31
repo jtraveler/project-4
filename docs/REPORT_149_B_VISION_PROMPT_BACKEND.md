@@ -91,11 +91,22 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1213 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks:**
+1. Set a prompt box to Vision="Yes", add source image URL, click Generate
+2. Check logs: `heroku logs --app mj-project-4 --tail | grep "VISION-PROMPT"`
+3. Should see: `[VISION-PROMPT] Generated prompt (X chars) from https://...`
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 2ea9029 | feat(bulk-gen): Feature 2 backend — Vision prompt generation in prepare-prompts pipeline |
 
 ## Section 11 — What to Work on Next
 

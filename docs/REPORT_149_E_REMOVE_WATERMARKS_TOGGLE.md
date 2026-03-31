@@ -96,11 +96,23 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1213 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks:**
+1. Load page — "Remove Watermarks (Beta)" toggle visible in Column 4, ON by default
+2. Toggle OFF → label shows "Off"
+3. Paste prompt with watermark text, toggle OFF → Generate → watermark text preserved
+4. Toggle ON → same prompt → watermark text removed
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| b52c535 | feat(bulk-gen): Remove Watermarks (Beta) toggle — opt-out for watermark removal |
 
 ## Section 11 — What to Work on Next
 

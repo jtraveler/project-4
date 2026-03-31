@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** March 30, 2026
+**Last Updated:** March 31, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA + D4 per-job tier rate limiting), Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1213 passing, 12 skipped (Session 148)
+**Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA + D4 per-job tier rate limiting + Feature 2 Vision prompt), Phase N4 (~100%), Phase K (~96%)
+**Total Tests:** 1213 passing, 12 skipped (Session 149)
 
 ---
 
@@ -295,7 +295,7 @@ prompts/views/
 ├── moderation_api_views.py  # NSFW moderation endpoints (Session 128 split)
 ├── social_api_views.py      # Collaborate, like endpoints (Session 128 split)
 ├── upload_api_views.py      # B2 upload, presign, paste endpoints (Session 128 split)
-├── bulk_generator_views.py  # Bulk generator page view + 8 API endpoints (Sessions 92-107)
+├── bulk_generator_views.py  # Bulk generator page view + 8 API endpoints + _generate_prompt_from_image Vision helper (Sessions 92-149)
 ├── collection_views.py      # Collection API and page views (Phase K)
 ├── generator_views.py       # AI generator category pages
 ├── leaderboard_views.py     # Leaderboard rankings, filters

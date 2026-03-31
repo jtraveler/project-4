@@ -114,11 +114,24 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1213 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks:**
+1. Open bulk generator — "Prompt from Image" dropdown visible alongside IMAGES
+2. Select "Yes" → prompt textarea disabled + struck through, direction textarea appears
+3. Select "No" → textarea re-enabled, direction row hidden, text preserved
+4. Select "Yes" with no source URL → click Generate → validation error appears
+5. Click "Reset to master" → Vision resets to "No", textarea re-enabled
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 1f5f040 | feat(bulk-gen): Feature 2 frontend — Prompt from Image dropdown + direction textarea |
 
 ## Section 11 — What to Work on Next
 

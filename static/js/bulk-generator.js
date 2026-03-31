@@ -47,6 +47,8 @@
     I.visibilityLabel = document.getElementById('visibilityLabel');
     I.settingTranslate = document.getElementById('settingTranslate');
     I.translateLabel = document.getElementById('translateLabel');
+    I.settingRemoveWatermark = document.getElementById('settingRemoveWatermark');
+    I.removeWatermarkLabel = document.getElementById('removeWatermarkLabel');
 
     // Reference image
     I.refUploadZone = document.getElementById('refUploadZone');
@@ -144,6 +146,8 @@
         var qId = boxId + '-quality';
         var sId = boxId + '-size';
         var iId = boxId + '-images';
+        var vId = boxId + '-vision';
+        var vdId = boxId + '-vision-dir';
 
         box.innerHTML =
             '<div class="bg-box-header">' +
@@ -229,6 +233,17 @@
                             '</select>' +
                         '</div>' +
                     '</div>' +
+                    '<div>' +
+                        '<label class="bg-box-override-label" for="' + vId + '">Prompt from Image</label>' +
+                        '<div class="bg-box-override-wrapper">' +
+                            '<select class="bg-box-override-select bg-override-vision" id="' + vId + '" aria-label="Prompt from Image for prompt ' + boxIdCounter + '">' +
+                                '<option value="no" selected>No</option>' +
+                                '<option value="yes">Yes</option>' +
+                            '</select>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="bg-box-override-row" style="justify-content:flex-start;">' +
                     '<div style="display:flex;align-items:flex-end;">' +
                         '<button type="button" class="bg-box-reset">' +
                             '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-rotate-ccw"/></svg>' +
@@ -236,6 +251,23 @@
                         '</button>' +
                     '</div>' +
                 '</div>' +
+            '</div>' +
+            '<div class="bg-box-vision-direction" style="display:none">' +
+                '<label class="bg-box-override-label" for="' + vdId + '">' +
+                    'Direction Instructions' +
+                    '<span class="bg-box-override-hint"> \u2014 Guidance for the AI (e.g. \u201cReplace the man with a blonde woman in a golden dress\u201d)</span>' +
+                '</label>' +
+                '<textarea' +
+                    ' class="bg-vision-direction-input"' +
+                    ' id="' + vdId + '"' +
+                    ' placeholder="Optional \u2014 describe any changes or focus areas for the AI when writing this prompt..."' +
+                    ' rows="2"' +
+                    ' maxlength="500"' +
+                    ' aria-describedby="' + vdId + '-hint"' +
+                '></textarea>' +
+                '<span class="bg-box-override-hint" id="' + vdId + '-hint">' +
+                    'This guidance is sent to the Vision AI alongside your source image.' +
+                '</span>' +
             '</div>';
 
         // Set initial character description preview
@@ -244,6 +276,36 @@
         if (currentCharDesc) {
             charPreview.textContent = currentCharDesc;
             charPreview.style.display = '';
+        }
+
+        // Vision mode toggle
+        var visionSelect = box.querySelector('.bg-override-vision');
+        var visionDirectionRow = box.querySelector('.bg-box-vision-direction');
+        var promptTextarea = box.querySelector('.bg-box-textarea');
+        var sourceImageInput = box.querySelector('.bg-prompt-source-image-input');
+
+        if (visionSelect) {
+            visionSelect.addEventListener('change', function () {
+                var isVision = visionSelect.value === 'yes';
+
+                // Show/hide direction row
+                if (visionDirectionRow) visionDirectionRow.style.display = isVision ? '' : 'none';
+
+                // Disable/enable prompt textarea (preserve text — Option A)
+                promptTextarea.disabled = isVision;
+                promptTextarea.classList.toggle('bg-box-textarea--vision-mode', isVision);
+
+                // Mark source image field as required
+                if (sourceImageInput) {
+                    sourceImageInput.required = isVision;
+                    sourceImageInput.placeholder = isVision
+                        ? 'Source image URL required for Vision mode \u2014 .jpg, .png, .webp, .gif, or .avif'
+                        : 'Source image URL (optional) \u2014 .jpg, .png, .webp, .gif, .avif...';
+                }
+
+                // Trigger autosave
+                if (I.scheduleSave) I.scheduleSave();
+            });
         }
 
         return box;
@@ -382,13 +444,33 @@
         var q = box.querySelector('.bg-override-quality').value;
         var s = box.querySelector('.bg-override-size').value;
         var img = box.querySelector('.bg-override-images').value;
-        box.classList.toggle('has-override', !!(q || s || img));
+        var v = box.querySelector('.bg-override-vision');
+        var hasVision = v && v.value !== 'no';
+        box.classList.toggle('has-override', !!(q || s || img || hasVision));
     }
 
     function resetBoxOverrides(box) {
         box.querySelector('.bg-override-quality').value = '';
         box.querySelector('.bg-override-size').value = '';
         box.querySelector('.bg-override-images').value = '';
+
+        // Reset Vision state
+        var visionSel = box.querySelector('.bg-override-vision');
+        if (visionSel) {
+            visionSel.value = 'no';
+            var visionDir = box.querySelector('.bg-box-vision-direction');
+            if (visionDir) visionDir.style.display = 'none';
+            var ta = box.querySelector('.bg-box-textarea');
+            if (ta) { ta.disabled = false; ta.classList.remove('bg-box-textarea--vision-mode'); }
+            var srcInput = box.querySelector('.bg-prompt-source-image-input');
+            if (srcInput) {
+                srcInput.required = false;
+                srcInput.placeholder = 'Source image URL (optional) \u2014 .jpg, .png, .webp, .gif, .avif...';
+            }
+        }
+        var visionDirInput = box.querySelector('.bg-vision-direction-input');
+        if (visionDirInput) visionDirInput.value = '';
+
         box.classList.remove('has-override');
         I.updateCostEstimate();
     }
@@ -631,6 +713,14 @@
     I.settingVisibility.addEventListener('change', function () {
         I.visibilityLabel.textContent = I.settingVisibility.checked ? 'Public' : 'Private';
     });
+
+    // ─── Remove Watermarks Toggle ────────────────────────────────────
+    if (I.settingRemoveWatermark) {
+        I.settingRemoveWatermark.addEventListener('change', function () {
+            I.removeWatermarkLabel.textContent =
+                I.settingRemoveWatermark.checked ? 'On' : 'Off';
+        });
+    }
 
     // ─── Translation Toggle ─────────────────────────────────────────
     if (I.settingTranslate) {

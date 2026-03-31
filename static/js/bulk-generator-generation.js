@@ -501,6 +501,8 @@
         var promptSizes = [];
         var promptQualities = [];
         var promptCounts = [];
+        var visionEnabled = [];
+        var visionDirections = [];
         I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
@@ -508,17 +510,21 @@
             var sz = box.querySelector('.bg-override-size');
             var ql = box.querySelector('.bg-override-quality');
             var ic = box.querySelector('.bg-override-images');
+            var vs = box.querySelector('.bg-override-vision');
+            var vd = box.querySelector('.bg-vision-direction-input');
             var text = ta ? ta.value.trim() : '';
-            if (text) {
+            if (text || (vs && vs.value === 'yes')) {
                 prompts.push(text);
                 sourceCredits.push(sc ? sc.value.trim() : '');
                 sourceImageUrls.push(si ? si.value.trim() : '');
                 promptSizes.push(sz ? sz.value.trim() : '');
                 promptQualities.push(ql ? ql.value.trim() : '');
                 promptCounts.push(ic ? ic.value.trim() : '');
+                visionEnabled.push(vs ? vs.value === 'yes' : false);
+                visionDirections.push(vd ? vd.value.trim() : '');
             }
         });
-        return { prompts: prompts, sourceCredits: sourceCredits, sourceImageUrls: sourceImageUrls, promptSizes: promptSizes, promptQualities: promptQualities, promptCounts: promptCounts };
+        return { prompts: prompts, sourceCredits: sourceCredits, sourceImageUrls: sourceImageUrls, promptSizes: promptSizes, promptQualities: promptQualities, promptCounts: promptCounts, visionEnabled: visionEnabled, visionDirections: visionDirections };
     }
 
     function clearValidationErrors() {
@@ -663,6 +669,8 @@
         var promptSizes = collected.promptSizes;
         var promptQualities = collected.promptQualities;
         var promptCounts = collected.promptCounts;
+        var visionEnabled = collected.visionEnabled || [];
+        var visionDirections = collected.visionDirections || [];
         if (prompts.length === 0) {
             showValidationErrors([{ message: 'At least 1 prompt is required.' }]);
             return;
@@ -682,6 +690,30 @@
                 };
             });
             showValidationErrors(srcErrors);
+            return;
+        }
+
+        // Validate vision-enabled prompts have source image URLs
+        var visionMissingUrls = [];
+        allBoxes.forEach(function (box, i) {
+            var visionSel = box.querySelector('.bg-override-vision');
+            var srcInput = box.querySelector('.bg-prompt-source-image-input');
+            if (visionSel && visionSel.value === 'yes') {
+                var srcVal = srcInput ? srcInput.value.trim() : '';
+                if (!srcVal) {
+                    visionMissingUrls.push(i + 1);
+                }
+            }
+        });
+        if (visionMissingUrls.length > 0) {
+            showValidationErrors(visionMissingUrls.map(function (num) {
+                return {
+                    message: 'Prompt ' + num + ' has "Prompt from Image" enabled but no source image URL. ' +
+                        'Please add a source image URL or set "Prompt from Image" to No.',
+                    index: num - 1,
+                    promptNum: num,
+                };
+            }));
             return;
         }
 
@@ -762,6 +794,12 @@
                     body: JSON.stringify({
                         prompts: textsForPrep,
                         translate: I.settingTranslate ? I.settingTranslate.checked : true,
+                        remove_watermarks: I.settingRemoveWatermark
+                            ? I.settingRemoveWatermark.checked
+                            : true,
+                        source_image_urls: sourceImageUrls,
+                        vision_enabled: visionEnabled,
+                        vision_directions: visionDirections,
                     }),
                 })
                 .then(function (r) { return r.json(); })

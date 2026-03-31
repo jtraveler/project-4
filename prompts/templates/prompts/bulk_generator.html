@@ -20,7 +20,7 @@
     {# ===== Page Header (centered, matches notifications) ===== #}
     <div class="bg-header">
         <h1 class="bg-title">Bulk AI Image Generator</h1>
-        <p class="bg-subtitle">Generate multiple AI images at once. Staff-only tool.</p>
+        <p class="bg-subtitle">Generate multiple AI images at once.</p>
     </div>
 
     {# ===== Validation Error Banner ===== #}
@@ -46,7 +46,19 @@
                     </div>
                 </div>
                 <div class="bg-setting-group">
-                    <span class="bg-setting-label">Reference Image <span class="bg-setting-hint-inline">(optional)</span></span>
+                    <span class="bg-setting-label">Character Reference Image
+                        <span class="bg-setting-hint-inline">(optional)</span>
+                        <span class="bg-tooltip-wrap">
+                            <button class="bg-tooltip-trigger" type="button"
+                                    aria-describedby="tt-ref-image">ⓘ</button>
+                            <span class="bg-tooltip" id="tt-ref-image" role="tooltip">
+                                Upload a clear photo of a person to use as a character
+                                reference. The AI will preserve their facial features and
+                                appearance across generated images. Must be a well-lit,
+                                front-facing photo.
+                            </span>
+                        </span>
+                    </span>
 
                     {# Upload zone — visible when no image #}
                     <div class="bg-ref-upload" id="refUploadZone" role="button" tabindex="0"
@@ -73,7 +85,6 @@
                     {# Status messages #}
                     <div class="bg-ref-status" id="refStatus" role="status" aria-live="polite"></div>
 
-                    <span class="bg-setting-hint">Must be a clear photo of a person</span>
                 </div>
             </div>
 
@@ -95,13 +106,22 @@
                     <span class="bg-setting-hint" id="charDescHint">Prepended to every prompt (<span id="charDescCount">0</span>/250)</span>
                 </div>
                 <div class="bg-setting-group">
-                    <label class="bg-setting-label" for="settingCharacter">Character Selection <span class="bg-setting-hint-inline">(coming soon)</span></label>
+                    <label class="bg-setting-label" for="settingCharacter">Character Selection
+                        <span class="bg-setting-hint-inline">(coming soon)</span>
+                        <span class="bg-tooltip-wrap">
+                            <button class="bg-tooltip-trigger" type="button"
+                                    aria-describedby="tt-char-select">ⓘ</button>
+                            <span class="bg-tooltip" id="tt-char-select" role="tooltip">
+                                Save characters with their reference photos for quick
+                                reuse across jobs. Coming in a future update.
+                            </span>
+                        </span>
+                    </label>
                     <div class="bg-select-wrapper">
                         <select class="bg-select" id="settingCharacter" disabled>
                             <option value="">Select a character...</option>
                         </select>
                     </div>
-                    <span class="bg-setting-hint">Saved characters with reference photos</span>
                 </div>
             </div>
 
@@ -166,7 +186,18 @@
                     </div>
                 </div>
                 <div class="bg-setting-group">
-                    <span class="bg-setting-label" id="removeWatermarkGroupLabel">Remove Watermarks <span class="bg-beta-badge">Beta</span></span>
+                    <span class="bg-setting-label" id="removeWatermarkGroupLabel">
+                        Remove Watermarks <span class="bg-beta-badge">Beta</span>
+                        <span class="bg-tooltip-wrap">
+                            <button class="bg-tooltip-trigger" type="button"
+                                    aria-describedby="tt-remove-watermark">ⓘ</button>
+                            <span class="bg-tooltip" id="tt-remove-watermark" role="tooltip">
+                                Automatically strips branding, watermark instructions, and
+                                creator signatures from prompts before generation. May
+                                occasionally affect intended text — toggle off if needed.
+                            </span>
+                        </span>
+                    </span>
                     <div class="bg-visibility-card">
                         <div class="bg-visibility-info">
                             <span class="bg-visibility-label" id="removeWatermarkLabel">On</span>
@@ -174,14 +205,11 @@
                         <label class="bg-toggle-switch">
                             <input type="checkbox" id="settingRemoveWatermark"
                                    aria-labelledby="removeWatermarkGroupLabel removeWatermarkLabel"
-                                   aria-describedby="removeWatermarkHint"
+                                   aria-describedby="tt-remove-watermark"
                                    checked>
                             <span class="bg-toggle-slider"></span>
                         </label>
                     </div>
-                    <span class="bg-setting-hint" id="removeWatermarkHint">
-                        Strips branding &amp; watermark instructions from prompts before generation. May occasionally affect intended text &mdash; toggle off if needed.
-                    </span>
                 </div>
                 <div class="bg-setting-group">
                     <span class="bg-setting-label" id="translateGroupLabel">Translate to English</span>
@@ -280,7 +308,7 @@
             <label class="bg-tier-label" for="settingTier">OpenAI API Tier</label>
             <div class="bg-select-wrapper bg-tier-select-wrapper">
                 <select class="bg-select" id="settingTier">
-                    <option value="1" selected>Tier 1 — Default (5 img/min)</option>
+                    <option value="1" selected>Tier 1 — Default (~5 img/min)</option>
                     <option value="2">Tier 2 (~20 img/min)</option>
                     <option value="3">Tier 3 (~50 img/min)</option>
                     <option value="4">Tier 4 (~150 img/min)</option>
@@ -332,14 +360,17 @@
                     <div class="bg-tier-option-content">
                         <span class="bg-tier-option-title">I know my tier</span>
                         <span class="bg-tier-option-desc">
-                            Skip detection. I've checked my
+                            Skip detection. I've verified my tier at
                             <a href="https://platform.openai.com/account/limits"
                                target="_blank" rel="noopener noreferrer">
-                               OpenAI rate limits<span class="visually-hidden"> (opens in new tab)</span></a>
+                               platform.openai.com/account/limits<span class="visually-hidden"> (opens in new tab)</span></a>
                             and I'm confident in my selection.
-                            <strong>Note:</strong> If you select the wrong tier,
-                            images may fail mid-job and you will be charged for
-                            any that were generated before failure.
+                            <br><br>
+                            &#x26a0;&#xfe0f; <strong>Warning:</strong> Selecting a tier higher than your
+                            actual OpenAI account tier may cause images to fail mid-job.
+                            You will be charged for any images generated before failure.
+                            Repeatedly exceeding your rate limit may also cause OpenAI
+                            to temporarily restrict your API access.
                         </span>
                     </div>
                 </label>

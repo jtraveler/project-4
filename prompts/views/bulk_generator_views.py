@@ -208,6 +208,7 @@ def api_start_generation(request):
     # Prompts may be plain strings (legacy) or objects with a 'text' key (6E-A+).
     # Extract text and per-prompt size/quality from each entry.
     prompts = []
+    original_prompt_texts = []
     per_prompt_sizes = []
     per_prompt_qualities = []
     per_prompt_counts = []
@@ -238,6 +239,11 @@ def api_start_generation(request):
                 status=400,
             )
         prompts.append(prompt_text)
+        # Extract original text (before prepare-prompts modifications)
+        original_text = ''
+        if isinstance(entry, dict):
+            original_text = str(entry.get('original_text', '')).strip()
+        original_prompt_texts.append(original_text)
         per_prompt_sizes.append(per_prompt_size)
         per_prompt_qualities.append(per_prompt_quality)
         per_prompt_counts.append(per_prompt_count)
@@ -384,6 +390,7 @@ def api_start_generation(request):
         per_prompt_counts=per_prompt_counts,
         api_key=api_key,
         openai_tier=openai_tier,
+        original_prompt_texts=original_prompt_texts,
     )
 
     service.start_job(job)
@@ -658,7 +665,7 @@ def _generate_prompt_from_image(
     remove_watermarks: bool = True,
 ) -> str | None:
     """
-    Call GPT-4o-mini Vision to generate a concise image-generation prompt
+    Call GPT-4o-mini Vision to generate a detailed image-generation prompt
     from the provided image URL and optional direction instructions.
 
     Args:
@@ -667,7 +674,7 @@ def _generate_prompt_from_image(
         api_key: Platform OpenAI API key.
 
     Returns:
-        Generated prompt string (1-2 sentences), or None on any error.
+        Generated prompt string, or None on any error.
     """
     try:
         import requests as _requests
@@ -720,22 +727,41 @@ def _generate_prompt_from_image(
                 f'Incorporate these instructions into the prompt.'
             )
 
-        no_watermark_rule = (
+        ignore_watermark_rule = (
+            '- If the image contains visible watermark text, creator logos, '
+            'or brand signatures overlaid on the image, ignore them completely '
+            '— do not describe or reference them in your prompt.\n'
+            if remove_watermarks else ''
+        )
+
+        no_watermark_output_rule = (
             '- Do not include any instruction to add watermarks, logos, '
-            'or signatures.\n'
+            'or signatures to the output image.\n'
             if remove_watermarks else ''
         )
 
         system_prompt = (
             'You are an expert AI image prompt writer. '
-            'Analyse the provided image and write a concise, generation-ready prompt '
-            'that describes it for an AI image generator (GPT-Image-1 / DALL-E style). '
-            '\n\n'
+            'Analyse the provided image thoroughly and write a detailed, '
+            'generation-ready prompt for an AI image generator '
+            '(GPT-Image-1 / DALL-E style).\n\n'
+            'Your prompt should be descriptive and expressive — not limited to '
+            'one or two sentences. Cover everything that matters visually.\n\n'
+            'Include ALL of the following that are visible:\n'
+            '- Main subject(s): appearance, approximate age, gender, ethnicity, expression\n'
+            '- Clothing and accessories: specific garments, colours, materials, details\n'
+            '- Pose and body language\n'
+            '- Setting and background: location, environment, other people or elements\n'
+            '- Lighting: direction, quality, colour temperature, mood\n'
+            '- Art style and technical quality: photorealistic, cinematic, 8K, etc.\n'
+            '- Mood and atmosphere\n'
+            '- Notable props or objects\n\n'
             'Rules:\n'
-            '- Output exactly 1-2 sentences. No preamble, no explanation.\n'
-            '- Cover: main subject, art style, composition, lighting, quality.\n'
             '- Write in English only.\n'
-            + no_watermark_rule +
+            '- No preamble, no explanation — output the prompt text directly.\n'
+            '- Do not start with "This image shows" or similar narration.\n'
+            + ignore_watermark_rule
+            + no_watermark_output_rule +
             '- Output ONLY the prompt text — nothing else.'
         )
 
@@ -750,7 +776,7 @@ def _generate_prompt_from_image(
             {
                 'type': 'text',
                 'text': (
-                    'Write a concise image-generation prompt for this image.'
+                    'Write a detailed image-generation prompt for this image.'
                     + direction_block
                 ),
             },
@@ -762,7 +788,7 @@ def _generate_prompt_from_image(
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': user_content},
             ],
-            max_tokens=200,
+            max_tokens=500,
             temperature=0.3,
         )
 
@@ -883,6 +909,63 @@ def api_prepare_prompts(request):
         logger.info(
             "[VISION-PROMPT] Generated prompts for %d/%d vision-enabled prompts for user %s",
             vision_count, sum(1 for v in vision_enabled if v), request.user.pk,
+        )
+
+    # Step 1.5: Apply text direction edits (for non-Vision prompts with directions)
+    # These are targeted edits instructed by the user (e.g. "replace dog with ball")
+    text_directions = data.get('text_directions', [])
+    while len(text_directions) < len(prompts):
+        text_directions.append('')
+
+    text_direction_count = 0
+    for i, direction in enumerate(text_directions):
+        if not direction or not direction.strip():
+            continue
+        # Only apply to non-Vision prompts (Vision directions handled separately)
+        if vision_enabled[i]:
+            continue
+        direction = direction.strip()[:500]  # Match frontend maxlength
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=platform_api_key, timeout=30)
+            edit_response = client.chat.completions.create(
+                model='gpt-4o-mini',
+                messages=[
+                    {
+                        'role': 'system',
+                        'content': (
+                            'You are a prompt editor. Apply the user\'s direction '
+                            'to the provided prompt text. Make only the specific '
+                            'change requested — do not rewrite, expand, or alter '
+                            'any other part of the prompt. Return ONLY the edited '
+                            'prompt text with no explanation or preamble.'
+                        ),
+                    },
+                    {
+                        'role': 'user',
+                        'content': (
+                            f'Prompt: {prompts[i]}\n\n'
+                            f'Direction: {direction.strip()}'
+                        ),
+                    },
+                ],
+                max_tokens=600,
+                temperature=0.2,
+            )
+            edited = edit_response.choices[0].message.content.strip()
+            if edited:
+                prompts[i] = edited
+                text_direction_count += 1
+        except Exception as e:
+            logger.warning(
+                '[PREPARE-PROMPTS] Text direction edit failed for prompt %d: %s '
+                '— using original', i, e,
+            )
+
+    if text_direction_count > 0:
+        logger.info(
+            '[PREPARE-PROMPTS] Applied text direction edits to %d prompts for user %s',
+            text_direction_count, request.user.pk,
         )
 
     # Step 2: Translate + watermark removal batch call

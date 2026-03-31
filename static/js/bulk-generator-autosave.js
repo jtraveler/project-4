@@ -232,17 +232,20 @@
         var sourceImageUrls = [];
         var visionEnabled = [];
         var visionDirections = [];
+        var directionChecked = [];
         boxes.forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
             var si = box.querySelector('.bg-prompt-source-image-input');
             var vs = box.querySelector('.bg-override-vision');
             var vd = box.querySelector('.bg-vision-direction-input');
+            var dc = box.querySelector('.bg-box-direction-checkbox');
             prompts.push(ta ? ta.value : '');
             sourceCredits.push(sc ? sc.value : '');
             sourceImageUrls.push(si ? si.value : '');
             visionEnabled.push(vs ? vs.value : 'no');
             visionDirections.push(vd ? vd.value : '');
+            directionChecked.push(dc ? dc.checked : false);
         });
 
         var charDesc = I.settingCharDesc.value;
@@ -256,6 +259,7 @@
                     charDesc: charDesc,
                     visionEnabled: visionEnabled,
                     visionDirections: visionDirections,
+                    directionChecked: directionChecked,
                 }));
                 showDraftIndicator();
             } catch (e) {
@@ -307,6 +311,7 @@
 
             var visionEnabled = data && !Array.isArray(data) ? (data.visionEnabled || []) : [];
             var visionDirections = data && !Array.isArray(data) ? (data.visionDirections || []) : [];
+            var directionChecked = data && !Array.isArray(data) ? (data.directionChecked || []) : [];
 
             if (prompts.length === 0 && !charDesc) return;
 
@@ -372,7 +377,8 @@
                         vs.value = 'yes';
 
                         // Apply Vision toggle side-effects
-                        if (visionRow) visionRow.style.display = '';
+                        // Note: direction row visibility is handled by the direction
+                        // checkbox restore block below — not here.
                         if (ta) {
                             ta.disabled = true;
                             ta.classList.add('bg-box-textarea--vision-mode');
@@ -382,6 +388,14 @@
                             si.placeholder =
                                 'Source image URL required for Vision mode \u2014 .jpg, .png, .webp, .gif, or .avif';
                         }
+                    }
+
+                    // Restore direction checkbox state
+                    var dc = boxes[i].querySelector('.bg-box-direction-checkbox');
+                    var dirRowEl = boxes[i].querySelector('.bg-box-vision-direction');
+                    if (dc && directionChecked[i]) {
+                        dc.checked = true;
+                        if (dirRowEl) dirRowEl.style.display = '';
                     }
 
                     // Restore direction text

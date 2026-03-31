@@ -3043,6 +3043,15 @@ class GeneratedImage(models.Model):
 
     # Input
     prompt_text = models.TextField()
+    original_prompt_text = models.TextField(
+        blank=True,
+        default='',
+        help_text=(
+            'The prompt text as originally entered by the user, before any '
+            'prepare-prompts modifications (translation, watermark removal, '
+            'direction edits). Empty if the prompt was not modified.'
+        )
+    )
     prompt_order = models.PositiveIntegerField()
     variation_number = models.PositiveSmallIntegerField(default=1)
     source_credit = models.CharField(

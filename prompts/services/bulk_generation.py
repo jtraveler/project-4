@@ -156,6 +156,7 @@ class BulkGenerationService:
         per_prompt_counts: list[int | None] | None = None,
         api_key: str = '',
         openai_tier: int = 1,
+        original_prompt_texts: list[str] | None = None,
     ) -> BulkGenerationJob:
         """
         Create a BulkGenerationJob and its GeneratedImage records.
@@ -242,10 +243,18 @@ class BulkGenerationService:
             # Per-prompt count override (6E-C): resolved_counts already validated
             prompt_count = resolved_counts[order]
 
+            # Store original prompt text only when it differs from prepared text
+            original_text = ''
+            if original_prompt_texts and order < len(original_prompt_texts):
+                ot = original_prompt_texts[order]
+                if ot and ot.strip() != combined.strip():
+                    original_text = ot.strip()
+
             for variation in range(1, prompt_count + 1):
                 images_to_create.append(GeneratedImage(
                     job=job,
                     prompt_text=combined,
+                    original_prompt_text=original_text,
                     prompt_order=order,
                     variation_number=variation,
                     source_credit=credit,
@@ -347,6 +356,7 @@ class BulkGenerationService:
             {
                 'id': str(img.id),
                 'prompt_text': img.prompt_text,
+                'original_prompt_text': img.original_prompt_text or '',
                 'prompt_order': img.prompt_order,
                 'variation_number': img.variation_number,
                 'status': img.status,

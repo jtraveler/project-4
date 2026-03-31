@@ -109,7 +109,8 @@
                 var groupSize = groupImages[0].size || '';
                 var groupQuality = groupImages[0].quality || '';
                 var groupTargetCount = groupImages[0].target_count || G.imagesPerPrompt;
-                G.createGroupRow(groupIndex, promptText, groupSize, groupQuality, groupTargetCount);
+                var originalPromptText = groupImages[0].original_prompt_text || '';
+                G.createGroupRow(groupIndex, promptText, groupSize, groupQuality, groupTargetCount, originalPromptText);
             }
 
             // Fill image slots based on status
@@ -200,7 +201,62 @@
     }
     G.parseGroupSize = parseGroupSize;
 
-    G.createGroupRow = function (groupIndex, promptText, groupSize, groupQuality, targetCount) {
+    // Simple word-level diff for prompt change display
+    // Returns HTML with <del> for removed words, <ins> for added words
+    G.computeWordDiff = function (original, prepared) {
+        if (!original || !prepared || original.trim() === prepared.trim()) return null;
+
+        var origWords = original.trim().split(/\s+/);
+        var prepWords = prepared.trim().split(/\s+/);
+
+        // LCS-based word diff
+        var m = origWords.length;
+        var n = prepWords.length;
+        var dp = [];
+        var i, j;
+
+        for (i = 0; i <= m; i++) {
+            dp[i] = [];
+            for (j = 0; j <= n; j++) {
+                if (i === 0 || j === 0) {
+                    dp[i][j] = 0;
+                } else if (origWords[i - 1] === prepWords[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+
+        // Backtrack to find diff
+        var result = [];
+        i = m; j = n;
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && origWords[i - 1] === prepWords[j - 1]) {
+                result.unshift({ type: 'same', word: origWords[i - 1] });
+                i--; j--;
+            } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+                result.unshift({ type: 'add', word: prepWords[j - 1] });
+                j--;
+            } else {
+                result.unshift({ type: 'del', word: origWords[i - 1] });
+                i--;
+            }
+        }
+
+        return result.map(function (item) {
+            // HTML-escape each word to prevent XSS
+            var escaped = item.word.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (item.type === 'del') {
+                return '<del class="prompt-diff-del">' + escaped + '</del>';
+            } else if (item.type === 'add') {
+                return '<ins class="prompt-diff-ins">' + escaped + '</ins>';
+            }
+            return escaped;
+        }).join(' ');
+    };
+
+    G.createGroupRow = function (groupIndex, promptText, groupSize, groupQuality, targetCount, originalPromptText) {
         targetCount = targetCount || G.imagesPerPrompt;
         var parsedSize = parseGroupSize(groupSize);
         var group = document.createElement('div');
@@ -234,10 +290,27 @@
 
         var overlayContent = document.createElement('div');
         overlayContent.className = 'prompt-overlay-content';
-        overlayContent.textContent = '\u201C' + promptText + '\u201D';
+        // Show diff in overlay when prompt was modified by prepare-prompts
+        var diffHtml = originalPromptText ? G.computeWordDiff(originalPromptText, promptText) : null;
+        if (diffHtml) {
+            var diffLabel = document.createElement('span');
+            diffLabel.className = 'prompt-diff-label';
+            diffLabel.textContent = 'AI prepared:';
+            overlayContent.appendChild(diffLabel);
+            var diffContent = document.createElement('span');
+            diffContent.className = 'prompt-diff-display';
+            diffContent.innerHTML = diffHtml;
+            overlayContent.appendChild(diffContent);
+        } else {
+            overlayContent.textContent = '\u201C' + promptText + '\u201D';
+        }
         overlay.appendChild(overlayContent);
 
         truncatedText.setAttribute('aria-describedby', overlayId);
+        // Add visual indicator when prompt was modified
+        if (diffHtml) {
+            truncatedText.classList.add('prompt-group-text--modified');
+        }
 
         textWrapper.appendChild(truncatedText);
         textWrapper.appendChild(overlay);

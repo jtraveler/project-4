@@ -166,6 +166,24 @@
                     </div>
                 </div>
                 <div class="bg-setting-group">
+                    <span class="bg-setting-label" id="removeWatermarkGroupLabel">Remove Watermarks <span class="bg-beta-badge">Beta</span></span>
+                    <div class="bg-visibility-card">
+                        <div class="bg-visibility-info">
+                            <span class="bg-visibility-label" id="removeWatermarkLabel">On</span>
+                        </div>
+                        <label class="bg-toggle-switch">
+                            <input type="checkbox" id="settingRemoveWatermark"
+                                   aria-labelledby="removeWatermarkGroupLabel removeWatermarkLabel"
+                                   aria-describedby="removeWatermarkHint"
+                                   checked>
+                            <span class="bg-toggle-slider"></span>
+                        </label>
+                    </div>
+                    <span class="bg-setting-hint" id="removeWatermarkHint">
+                        Strips branding &amp; watermark instructions from prompts before generation. May occasionally affect intended text &mdash; toggle off if needed.
+                    </span>
+                </div>
+                <div class="bg-setting-group">
                     <span class="bg-setting-label" id="translateGroupLabel">Translate to English</span>
                     <div class="bg-visibility-card">
                         <div class="bg-visibility-info">
@@ -263,10 +281,10 @@
             <div class="bg-select-wrapper bg-tier-select-wrapper">
                 <select class="bg-select" id="settingTier">
                     <option value="1" selected>Tier 1 — Default (5 img/min)</option>
-                    <option value="2">Tier 2 (20 img/min)</option>
-                    <option value="3">Tier 3 (50 img/min)</option>
-                    <option value="4">Tier 4 (150 img/min)</option>
-                    <option value="5">Tier 5 (250 img/min)</option>
+                    <option value="2">Tier 2 (~20 img/min)</option>
+                    <option value="3">Tier 3 (~50 img/min)</option>
+                    <option value="4">Tier 4 (~150 img/min)</option>
+                    <option value="5">Tier 5 (~250 img/min)</option>
                 </select>
             </div>
             <span class="bg-setting-hint">

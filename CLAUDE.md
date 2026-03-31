@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 150 | Mar 31, 2026 | Bug fixes (Vision box count, progress bar init, API key scroll+shake). CSS tooltip system. UI labels cleaned, tier ~ prefix, stronger tier warning. Vision prompt quality (no sentence limit, visible watermark ignore, max_tokens 200→500). AI Direction for ALL boxes (text prompt editing via GPT-4o-mini). Diff display on results page (LCS word diff, strikethrough/highlight). Migration 0079 (original_prompt_text). Business model section added. 1213 tests. |
 | Session 149 | Mar 31, 2026 | Feature 2: "Prompt from Image" per-prompt dropdown + direction textarea + GPT-4o-mini Vision backend (detail:low, base64, ~$0.003/prompt). Vision runs before translate/watermark. Autosave extended for Vision state. "Remove Watermarks (Beta)" toggle in Column 4 (ON by default). Feature 2B (master mode) planned. 1213 tests. |
 | Session 148 | Mar 30, 2026 | OPENAI_API_KEY wired to settings (fixes 401 on prepare-prompts). Translation toggle in Column 4 (ON by default, skip translation when OFF). Tier error scrolls to tier section + shakes panel. Prepare-prompts rate limited (20/hr). Error banner auto-dismiss 5s→8s, suppressed for reduced-motion. 1213 tests. |
 | Session 147 | Mar 30, 2026 | Fixed visible template comment in tier section, tier error now uses prominent bottom-bar banner. New "Prepare Prompts" pipeline: one GPT-4o-mini call translates non-English prompts + strips watermarks before generation. Non-blocking fallback. Features 1 (Translate) and 3 (Watermark Removal) complete. 1213 tests. |
@@ -538,6 +539,12 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   CDN-served images). HTTPS URL validation + 10 MB size cap + no redirects
   for defense-in-depth (staff-only endpoint). ~$0.003 per Vision call.
 
+- **Word-level diff is computed client-side (Session 150).** LCS algorithm
+  in `bulk-generator-ui.js`. No extra DB query or server computation needed.
+  `original_prompt_text` stored only when different from prepared text
+  (empty string = no modifications, zero storage cost for unmodified prompts).
+  HTML-escaped per-word to prevent XSS in `innerHTML` context.
+
 - **Pending-after-completion gap (Session 143):** If the generation loop exits before all
   `GeneratedImage` records transition from `status='pending'` to `status='failed'` (e.g., quota
   exhaustion, unhandled exception), those images show as "Not generated" in the gallery but are
@@ -876,6 +883,7 @@ Runs Pass 2 SEO expert review on published prompts. Optimizes tags and descripti
 
 - **OpenAI Vision inconsistency:** Same image can return different demographics across runs
 - **Auto-flag gap:** `needs_seo_review` doesn't trigger when neither gender nor ethnicity assigned (only when gender present but ethnicity missing)
+- ⚠️ **Priority before content seeding at scale:** bulk-created prompt pages do not have `needs_seo_review` set. This must be fixed before large-scale content seeding begins — otherwise hundreds of pages bypass the SEO review queue. Planned for Session 151.
 - **Compound edge cases:** Preserve-by-default allows overly-specific compounds where both words are non-stop-words. GPT self-check (rule 7 + `compounds_check`) now catches most cases at Layer 1. 3-part compound split was attempted and reverted (Session 83) — too aggressive.
 - **~~Two GPT prompt copies~~** — CLOSED (Session 83): Resolved by `TAG_RULES_BLOCK` constant — single source of truth for tag rules in both GPT prompts.
 - **~~WEIGHTING RULES parity~~** — CLOSED: Upload path calls `_call_openai_vision()` with empty prompt_text (user hasn't submitted yet), so WEIGHTING RULES don't apply. Not a gap.
@@ -1295,12 +1303,37 @@ Options for `initOverflowTabs()`:
 | **Hobbyists** | Learn prompting techniques from the community |
 | **Beginners** | Copy working prompts instead of trial-and-error |
 
-### How We Make Money (Planned)
+### Business Model & Monetisation Plan
 
-| Tier | Price | Features |
+**Phase 1 — Content seeding (current):**
+Use the bulk generator internally to populate PromptFinder with
+high-quality prompt pages at scale. Builds the SEO content library and
+the organic traffic that makes the platform worth monetising.
+
+**Phase 2 — Subscription launch:**
+Once content library is established and attracting organic traffic,
+introduce payment plans. The bulk generator is the premium hook.
+
+**Planned pricing tiers:**
+| Tier | Price | Includes |
 |------|-------|----------|
-| **Free** | $0 | 10 uploads/week, 10 collections, 2 private collections |
-| **Premium** | $7/month | Unlimited uploads, unlimited collections, private prompts, analytics |
+| Free | $0 | Browse/discover prompts, limited downloads |
+| Pro | $19/mo | Full bulk generator access, all AI pipeline features |
+| Studio | $49/mo | Pro + Save Drafts, Replicate models (Flux, Nano Banana 2), priority |
+
+**Revenue streams:**
+- Bulk generator access (subscription)
+- Prompt marketplace (commission on sales or premium listings)
+- API access for developers (usage-based, future)
+
+**Key sequencing note:** Content seeding must happen BEFORE monetisation
+launch. The chicken-and-egg problem of needing content before users is
+solved by using the internal tool first. Fix `needs_seo_review` for
+bulk-created pages before seeding at scale.
+
+**Platform cost per user:** Minimal. Prepare-prompts pipeline (translate,
+watermark, Vision, direction) costs ~$0.001–0.01 per job (platform paid).
+Generation is BYOK — user pays OpenAI directly.
 
 ### Key URLs
 
@@ -2083,5 +2116,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.40 (Session 149 — Feature 2 Vision prompt generation, Remove Watermarks toggle; 1213 tests)
+**Version:** 4.41 (Session 150 — Bugs, UI, Vision quality, AI Direction all boxes, diff display; 1213 tests)
 **Last Updated:** March 31, 2026

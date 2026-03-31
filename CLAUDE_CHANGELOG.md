@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 31, 2026 (Sessions 101–149)
+**Last Updated:** March 31, 2026 (Sessions 101–150)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,29 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–March 2026 Sessions
+
+### Session 150 — March 31, 2026
+
+**Focus:** Bug fixes, UI cleanup, Vision quality, AI Direction for all boxes, diff display on results page
+
+**Specs:** 150-A (bug fixes), 150-B (UI cleanup), 150-C (Vision quality), 150-D (AI Direction all boxes), 150-E (diff display), 150-F (docs)
+
+**Key outcomes:**
+- Generate button now activates for Vision-enabled boxes and after any setting change (dropdowns, toggles, back navigation)
+- Progress bars initialise from server state immediately on page refresh (no 0% flash before first poll)
+- API key missing error now scrolls to API key field and shakes input (matching tier error UX)
+- Tooltip system built (CSS-only, hover + focus-visible, accessible). All inline hints converted to tooltips: Character Reference Image, Character Selection, Remove Watermarks, AI Direction.
+- "Staff-only tool." removed from subtitle
+- Tier options now show ~ prefix (approximate not guaranteed)
+- "I know my tier" warning strengthened with OpenAI account restriction note
+- Vision system prompt improved: no sentence limit, covers attire/age/background/props, visible watermarks in source images now ignored. max_tokens increased 200→500 for richer Vision output.
+- AI Direction field now available for ALL prompt boxes (not just Vision). "Add Direction" checkbox always visible. Text prompt direction applies targeted edits via GPT-4o-mini before generation (Step 1.5 in pipeline: Vision → Text direction → Translate/watermark).
+- Diff display on results page: strikethrough removed words, highlighted green added words. Shows changes from translation, watermark removal, direction edits. Clean text on publish. No diff shown if prompt unchanged.
+- Migration 0079: `original_prompt_text` field on GeneratedImage (blank=True, default='' — only stored when differs from prepared text)
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
 
 ### Session 149 — March 31, 2026
 

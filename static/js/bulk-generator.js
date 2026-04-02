@@ -157,6 +157,11 @@
                           'style="display:none;" title="This prompt has an error">' +
                         '\u26a0\ufe0f' +
                     '</span>' +
+                    '<button type="button" class="bg-box-reset bg-box-reset--header"' +
+                        ' aria-label="Reset prompt ' + boxIdCounter + ' to master settings">' +
+                        '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-rotate-ccw"/></svg>' +
+                        ' Reset' +
+                    '</button>' +
                     '<button type="button" class="bg-box-delete-btn" aria-label="Delete prompt ' + boxIdCounter + '">' +
                         '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-trash"/></svg>' +
                     '</button>' +
@@ -167,6 +172,39 @@
                 '<textarea class="bg-box-textarea" id="' + taId + '" aria-label="Prompt ' + boxIdCounter + '" placeholder="Enter your prompt...">' +
                     I.escapeHtml(promptText || '') +
                 '</textarea>' +
+            '</div>' +
+            '<div class="bg-box-direction-toggle-row">' +
+                '<label class="bg-box-direction-toggle-label">' +
+                    '<input type="checkbox" class="bg-box-direction-checkbox"' +
+                        ' id="bgDirCheck-' + boxIdCounter + '"' +
+                        ' aria-controls="' + vdId + '-row">' +
+                    ' Add AI Direction' +
+                '</label>' +
+            '</div>' +
+            '<div class="bg-box-vision-direction" id="' + vdId + '-row" style="display:none">' +
+                '<label class="bg-box-override-label" for="' + vdId + '">' +
+                    'AI Direction' +
+                    '<span class="bg-tooltip-wrap">' +
+                        '<button class="bg-tooltip-trigger" type="button"' +
+                            ' aria-describedby="' + vdId + '-tt">\u24d8</button>' +
+                        '<span class="bg-tooltip" id="' + vdId + '-tt" role="tooltip">' +
+                            'Optional guidance for the AI when writing or editing this prompt. ' +
+                            'Examples: \u201cReplace the dog with a ball\u201d, ' +
+                            '\u201cChange the background to a forest\u201d, ' +
+                            '\u201cMake the lighting more dramatic\u201d. ' +
+                            'Sent to the AI alongside your source image (Vision mode) ' +
+                            'or applied as targeted edits to the written prompt.' +
+                        '</span>' +
+                    '</span>' +
+                '</label>' +
+                '<textarea' +
+                    ' class="bg-vision-direction-input"' +
+                    ' id="' + vdId + '"' +
+                    ' placeholder="Optional \u2014 describe any changes or focus areas for the AI when writing this prompt..."' +
+                    ' rows="2"' +
+                    ' maxlength="500"' +
+                    ' aria-describedby="' + vdId + '-tt"' +
+                '></textarea>' +
             '</div>' +
             '<div class="bg-box-source">' +
                 '<label class="bg-box-source-label" for="' + boxId + '-source">Source / Credit <span class="bg-box-optional">(optional)</span></label>' +
@@ -243,50 +281,6 @@
                         '</div>' +
                     '</div>' +
                 '</div>' +
-                '<div class="bg-box-override-row" style="justify-content:flex-start;">' +
-                    '<div style="display:flex;align-items:flex-end;">' +
-                        '<button type="button" class="bg-box-reset">' +
-                            '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-rotate-ccw"/></svg>' +
-                            ' Reset to master' +
-                        '</button>' +
-                    '</div>' +
-                '</div>' +
-            '</div>' +
-            '<div class="bg-box-direction-toggle-row">' +
-                '<label class="bg-box-direction-toggle-label">' +
-                    '<input type="checkbox" class="bg-box-direction-checkbox"' +
-                        ' id="bgDirCheck-' + boxIdCounter + '"' +
-                        ' aria-controls="' + vdId + '-row">' +
-                    ' Add AI Direction' +
-                '</label>' +
-            '</div>' +
-            '<div class="bg-box-vision-direction" id="' + vdId + '-row" style="display:none">' +
-                '<label class="bg-box-override-label" for="' + vdId + '">' +
-                    'AI Direction' +
-                    '<span class="bg-tooltip-wrap">' +
-                        '<button class="bg-tooltip-trigger" type="button"' +
-                            ' aria-describedby="' + vdId + '-tt">\u24d8</button>' +
-                        '<span class="bg-tooltip" id="' + vdId + '-tt" role="tooltip">' +
-                            'Optional guidance for the AI when writing or editing this prompt. ' +
-                            'Examples: \u201cReplace the dog with a ball\u201d, ' +
-                            '\u201cChange the background to a forest\u201d, ' +
-                            '\u201cMake the lighting more dramatic\u201d. ' +
-                            'Sent to the AI alongside your source image (Vision mode) ' +
-                            'or applied as targeted edits to the written prompt.' +
-                        '</span>' +
-                    '</span>' +
-                '</label>' +
-                '<textarea' +
-                    ' class="bg-vision-direction-input"' +
-                    ' id="' + vdId + '"' +
-                    ' placeholder="Optional \u2014 describe any changes or focus areas for the AI when writing this prompt..."' +
-                    ' rows="2"' +
-                    ' maxlength="500"' +
-                    ' aria-describedby="' + vdId + '-hint"' +
-                '></textarea>' +
-                '<span class="bg-box-override-hint" id="' + vdId + '-hint">' +
-                    'Works in both Vision mode and with written prompts.' +
-                '</span>' +
             '</div>';
 
         // Set initial character description preview

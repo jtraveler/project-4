@@ -291,7 +291,14 @@
         var overlayContent = document.createElement('div');
         overlayContent.className = 'prompt-overlay-content';
         // Show diff in overlay when prompt was modified by prepare-prompts
-        var diffHtml = originalPromptText ? G.computeWordDiff(originalPromptText, promptText) : null;
+        // Suppress diff display if original was a Vision placeholder
+        // (system-generated text, not real user input — showing it
+        // as strikethrough would confuse users)
+        var isVisionPlaceholder = originalPromptText &&
+            originalPromptText.indexOf('[Vision prompt') === 0;
+        var diffHtml = (originalPromptText && !isVisionPlaceholder)
+            ? G.computeWordDiff(originalPromptText, promptText)
+            : null;
         if (diffHtml) {
             var diffLabel = document.createElement('span');
             diffLabel.className = 'prompt-diff-label';

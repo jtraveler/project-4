@@ -14,7 +14,7 @@
      data-cost-per-image="{{ cost_per_image }}"
      data-total-images="{{ total_images }}"
      data-actual-total-images="{{ job.actual_total_images|default:job.total_images }}"
-     data-completed-count="{{ job.completed_count }}"
+     data-completed-count="{{ live_completed_count }}"
      data-job-status="{{ job.status }}"
      data-status-url="{% url 'prompts:api_bulk_job_status' job.id %}"
      data-cancel-url="{% url 'prompts:api_bulk_cancel_job' job.id %}"
@@ -86,7 +86,7 @@
         {# Stats row: count/percent on left, time on right #}
         <div class="progress-stats-row">
             <div class="progress-text-left">
-                <span class="progress-count" id="progressCount">{{ job.completed_count }} of {{ total_images }} complete</span>
+                <span class="progress-count" id="progressCount">{{ live_completed_count }} of {{ total_images }} complete</span>
                 <span class="progress-percent" id="progressPercent">({{ job.progress_percent }}%)</span>
             </div>
             <div class="progress-text-right">
@@ -136,7 +136,7 @@
                 {% elif job.status == 'completed' %}
                     All {{ total_images }} image{{ total_images|pluralize }} generated!
                 {% elif job.status == 'cancelled' %}
-                    Cancelled &mdash; {{ job.completed_count }} of {{ total_images }} generated.
+                    Cancelled &mdash; {{ live_completed_count }} of {{ total_images }} generated.
                 {% elif job.status == 'failed' %}
                     Generation failed. Please try again or contact support.
                 {% endif %}

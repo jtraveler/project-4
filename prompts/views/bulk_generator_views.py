@@ -94,6 +94,9 @@ def bulk_generator_job_view(request, job_id):
     except (ValueError, ZeroDivisionError):
         gallery_aspect = "1 / 1"
 
+    # Live count from DB — job.completed_count may be stale during active generation
+    live_completed_count = job.images.filter(status='completed').count()
+
     return render(request, 'prompts/bulk_generator_job.html', {
         'job': job,
         'cost_per_image': cost_per_image,
@@ -101,6 +104,7 @@ def bulk_generator_job_view(request, job_id):
         'estimated_total_cost': round(estimated_total_cost, 4),
         'display_size': display_size,
         'gallery_aspect': gallery_aspect,
+        'live_completed_count': live_completed_count,
     })
 
 
@@ -741,28 +745,43 @@ def _generate_prompt_from_image(
         )
 
         system_prompt = (
-            'You are an expert AI image prompt writer. '
-            'Analyse the provided image thoroughly and write a detailed, '
-            'generation-ready prompt for an AI image generator '
-            '(GPT-Image-1 / DALL-E style).\n\n'
-            'Your prompt should be descriptive and expressive — not limited to '
-            'one or two sentences. Cover everything that matters visually.\n\n'
-            'Include ALL of the following that are visible:\n'
-            '- Main subject(s): appearance, approximate age, gender, ethnicity, expression\n'
-            '- Clothing and accessories: specific garments, colours, materials, details\n'
-            '- Pose and body language\n'
-            '- Setting and background: location, environment, other people or elements\n'
-            '- Lighting: direction, quality, colour temperature, mood\n'
-            '- Art style and technical quality: photorealistic, cinematic, 8K, etc.\n'
-            '- Mood and atmosphere\n'
-            '- Notable props or objects\n\n'
+            'You are an expert AI image prompt writer. Your goal is to RECREATE '
+            'the attached image as accurately as possible — not to reinterpret, '
+            'enhance, or improve it. Describe only what you actually see.\n\n'
+
+            'Before writing, carefully analyse these elements:\n'
+            '- Genre and art style (photorealistic, digital painting, illustration, etc.)\n'
+            '- Composition and framing\n'
+            '- Camera angle and perspective\n'
+            '- Lighting: direction, colour temperature, quality (soft/hard)\n'
+            '- Main subjects: exact age range, ethnicity, clothing details, '
+            'accessories, pose, expression, and spatial position relative to each other\n'
+            '- Background and environment: what is actually there — sharp or blurred, '
+            'near or far, specific elements visible\n'
+            '- Colour palette and materials\n'
+            '- Mood and atmosphere\n\n'
+
+            'Then write a single, continuous, high-quality prompt that covers all '
+            'of the above with precision. The prompt should be thorough enough to '
+            'reproduce the image faithfully — do not cut corners. This is a '
+            'premium feature and the prompt quality must reflect that.\n\n'
+
             'Rules:\n'
+            '- RECREATE, do not reinterpret. Describe what is there, not what '
+            'could make it better.\n'
+            '- Be spatially accurate: if a person is on the left, say so. If two '
+            'people are side by side, describe that. Do not rearrange subjects.\n'
+            '- If the background is sharp, say so. If it is blurred (bokeh), say so. '
+            'Do not add blur that is not in the image.\n'
+            '- Describe clothing, accessories, and materials specifically — not '
+            'generically. "White flowing dress with gold embroidery" not "dress".\n'
+            '- Do not invent details that are not visible in the image.\n'
+            '- Do not add suggestions, improvements, or creative additions.\n'
             '- Write in English only.\n'
-            '- No preamble, no explanation — output the prompt text directly.\n'
-            '- Do not start with "This image shows" or similar narration.\n'
             + ignore_watermark_rule
             + no_watermark_output_rule +
-            '- Output ONLY the prompt text — nothing else.'
+            '- Output ONLY the prompt text — no labels, no sections, no preamble, '
+            'no explanations.'
         )
 
         user_content = [
@@ -776,7 +795,8 @@ def _generate_prompt_from_image(
             {
                 'type': 'text',
                 'text': (
-                    'Write a detailed image-generation prompt for this image.'
+                    'Analyse this image carefully and write a high-quality, '
+                    'accurate prompt that would recreate it faithfully.'
                     + direction_block
                 ),
             },
@@ -788,7 +808,7 @@ def _generate_prompt_from_image(
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': user_content},
             ],
-            max_tokens=500,
+            max_tokens=800,
             temperature=0.3,
         )
 

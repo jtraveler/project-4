@@ -160,7 +160,7 @@
                     '<button type="button" class="bg-box-reset bg-box-reset--header"' +
                         ' aria-label="Reset prompt ' + boxIdCounter + ' to master settings">' +
                         '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-rotate-ccw"/></svg>' +
-                        ' Reset' +
+                        ' Reset to master' +
                     '</button>' +
                     '<button type="button" class="bg-box-delete-btn" aria-label="Delete prompt ' + boxIdCounter + '">' +
                         '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-trash"/></svg>' +

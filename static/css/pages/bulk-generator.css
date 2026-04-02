@@ -1906,7 +1906,9 @@
 .prompt-diff-display {
     display: block;
     font-size: 0.8125rem;
-    line-height: 1.5;
+    line-height: 1.6;
+    white-space: pre-wrap;  /* enables paragraph breaks in long prompts */
+    word-break: break-word;
 }
 
 .prompt-diff-label {
@@ -1920,15 +1922,17 @@
 
 .prompt-diff-del {
     text-decoration: line-through;
+    text-decoration-color: var(--red-500, #ef4444);
     color: var(--red-500, #ef4444);
     background: var(--red-50, #fef2f2);
     padding: 0 2px;
     border-radius: 2px;
     font-style: normal;
+    border-bottom: none; /* suppress browser default underline on <del> */
 }
 
 .prompt-diff-ins {
-    text-decoration: none;
+    text-decoration: none !important; /* suppress browser default underline on <ins> */
     color: var(--green-700, #15803d);
     background: var(--green-50, #f0fdf4);
     padding: 0 2px;

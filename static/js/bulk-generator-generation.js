@@ -865,6 +865,22 @@
                         });
                     }
 
+                    // Safety: check no Vision placeholder survived
+                    // If prepare-prompts failed to replace a placeholder,
+                    // abort here — prevents charging user for a random image
+                    var placeholderLeak = finalPromptObjects.some(function (obj) {
+                        return obj.text && obj.text.indexOf('[Vision prompt') !== -1;
+                    });
+                    if (placeholderLeak) {
+                        showGenerateErrorBanner(
+                            '\u26a0\ufe0f One or more prompts could not be prepared ' +
+                            'by the Vision AI. Please try again or remove the source ' +
+                            'image and enter a written prompt instead.'
+                        );
+                        resetGenerateBtn();
+                        return;
+                    }
+
                     // Step 3: Start generation
                     I.generateBtn.innerHTML =
                         '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-sparkles"/></svg> Starting...';

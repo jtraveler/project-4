@@ -96,6 +96,11 @@ def bulk_generator_job_view(request, job_id):
 
     # Live count from DB — job.completed_count may be stale during active generation
     live_completed_count = job.images.filter(status='completed').count()
+    total_images_for_percent = job.actual_total_images or job.total_images or 1
+    live_progress_percent = round(
+        (live_completed_count / total_images_for_percent) * 100, 1
+    )
+    live_progress_percent = min(live_progress_percent, 100)
 
     return render(request, 'prompts/bulk_generator_job.html', {
         'job': job,
@@ -105,6 +110,7 @@ def bulk_generator_job_view(request, job_id):
         'display_size': display_size,
         'gallery_aspect': gallery_aspect,
         'live_completed_count': live_completed_count,
+        'live_progress_percent': live_progress_percent,
     })
 
 
@@ -286,6 +292,31 @@ def api_start_generation(request):
                 {'error': f'Prompt {i + 1} exceeds {MAX_PROMPT_LENGTH} character limit'},
                 status=400,
             )
+
+    # Safety: reject any prompt that still contains the Vision placeholder.
+    # This means Vision generation failed but the placeholder wasn't caught.
+    # Failing fast here prevents the user being charged for a random image.
+    VISION_PLACEHOLDER_PREFIX = '[Vision prompt'
+    placeholder_indices = [
+        i for i, p in enumerate(prompts)
+        if VISION_PLACEHOLDER_PREFIX in p
+    ]
+    if placeholder_indices:
+        logger.error(
+            "[START-GEN] Vision placeholder detected in prompts %s for user %s "
+            "— aborting to prevent bad generation. Prompts: %s",
+            placeholder_indices,
+            request.user.pk,
+            [prompts[i][:80] for i in placeholder_indices],
+        )
+        return JsonResponse({
+            'error': (
+                'One or more prompts could not be prepared by the Vision AI. '
+                'Please try again or remove the source image and use a '
+                'written prompt instead.'
+            ),
+            'error_code': 'vision_placeholder_detected',
+        }, status=400)
 
     # --- Optional fields with validation ---
     provider = data.get('provider', 'openai')
@@ -819,8 +850,10 @@ def _generate_prompt_from_image(
             return None
 
         logger.info(
-            "[VISION-PROMPT] Generated prompt (%d chars) from %s",
-            len(result), image_url[:80],
+            "[VISION-PROMPT] Generated prompt (%d chars) from %s | Preview: %s",
+            len(result),
+            image_url[:80],
+            result[:300].replace('\n', ' '),
         )
         return result
 

@@ -87,7 +87,7 @@
         <div class="progress-stats-row">
             <div class="progress-text-left">
                 <span class="progress-count" id="progressCount">{{ live_completed_count }} of {{ total_images }} complete</span>
-                <span class="progress-percent" id="progressPercent">({{ job.progress_percent }}%)</span>
+                <span class="progress-percent" id="progressPercent">({{ live_progress_percent }}%)</span>
             </div>
             <div class="progress-text-right">
                 <span class="progress-time" id="progressTime">
@@ -104,12 +104,12 @@
         <div class="progress-bar-container"
              role="progressbar"
              aria-label="Generation progress"
-             aria-valuenow="{{ job.progress_percent }}"
+             aria-valuenow="{{ live_progress_percent }}"
              aria-valuemin="0"
              aria-valuemax="100"
              id="progressBar">
             <div class="progress-bar-fill" id="progressBarFill"
-                 style="width: {{ job.progress_percent }}%"></div>
+                 style="width: {{ live_progress_percent }}%"></div>
         </div>
 
         {# Details row: cost on left, cancel button on right #}

@@ -94,8 +94,12 @@ def bulk_generator_job_view(request, job_id):
     except (ValueError, ZeroDivisionError):
         gallery_aspect = "1 / 1"
 
-    # Live count from DB — job.completed_count may be stale during active generation
-    live_completed_count = job.images.filter(status='completed').count()
+    # Count both completed and actively generating images so the progress
+    # bar reflects real work in progress on page refresh — not just finished
+    # images. 'generating' images have started and will complete shortly.
+    live_completed_count = job.images.filter(
+        status__in=['completed', 'generating']
+    ).count()
     total_images_for_percent = job.actual_total_images or job.total_images or 1
     live_progress_percent = round(
         (live_completed_count / total_images_for_percent) * 100, 1
@@ -701,11 +705,14 @@ def _generate_prompt_from_image(
 ) -> str | None:
     """
     Call GPT-4o-mini Vision to generate a detailed image-generation prompt
-    from the provided image URL and optional direction instructions.
+    from the provided image URL. Pure description only — no direction.
+
+    Direction is applied as a separate text-edit step in Step 1.5 of
+    api_prepare_prompts, not during Vision analysis.
 
     Args:
         image_url: HTTPS URL of the source image (must be publicly accessible).
-        direction: Optional user guidance (e.g. "Replace man with a blonde woman").
+        direction: Kept for backwards compatibility but intentionally ignored.
         api_key: Platform OpenAI API key.
 
     Returns:
@@ -755,12 +762,13 @@ def _generate_prompt_from_image(
 
         client = OpenAI(api_key=api_key, timeout=30)
 
+        # Direction is intentionally NOT passed to Vision analysis.
+        # Vision's job is to purely describe what it sees — accurate
+        # and faithful. Direction is applied as a separate edit step
+        # after Vision generates its base description (see Step 1.5
+        # in api_prepare_prompts). Keeping the parameter for backwards
+        # compatibility but not using it here.
         direction_block = ''
-        if direction and direction.strip():
-            direction_block = (
-                f'\n\nUser direction: "{direction.strip()}"\n'
-                f'Incorporate these instructions into the prompt.'
-            )
 
         ignore_watermark_rule = (
             '- If the image contains visible watermark text, creator logos, '
@@ -820,7 +828,7 @@ def _generate_prompt_from_image(
                 'type': 'image_url',
                 'image_url': {
                     'url': f'data:{content_type};base64,{image_b64}',
-                    'detail': 'low',  # Low detail = cheaper + faster for prompt generation
+                    'detail': 'high',  # High detail preserves spatial accuracy for faithful recreation
                 },
             },
             {
@@ -828,7 +836,6 @@ def _generate_prompt_from_image(
                 'text': (
                     'Analyse this image carefully and write a high-quality, '
                     'accurate prompt that would recreate it faithfully.'
-                    + direction_block
                 ),
             },
         ]
@@ -943,9 +950,10 @@ def api_prepare_prompts(request):
             )
             continue
 
-        direction = vision_directions[i] if i < len(vision_directions) else ''
+        # Direction is NOT passed to Vision — pure description only.
+        # The direction will be applied as a text edit in Step 1.5.
         generated = _generate_prompt_from_image(
-            src_url, direction, platform_api_key,
+            src_url, '', platform_api_key,
             remove_watermarks=remove_watermarks,
         )
 
@@ -964,19 +972,35 @@ def api_prepare_prompts(request):
             vision_count, sum(1 for v in vision_enabled if v), request.user.pk,
         )
 
-    # Step 1.5: Apply text direction edits (for non-Vision prompts with directions)
+    # Step 1.5: Apply direction edits (for ALL prompts with directions)
     # These are targeted edits instructed by the user (e.g. "replace dog with ball")
     text_directions = data.get('text_directions', [])
     while len(text_directions) < len(prompts):
         text_directions.append('')
 
+    # Merge vision_directions into the direction source for Step 1.5.
+    # For Vision boxes, use vision_directions; for text boxes, use text_directions.
+    # This routes all direction instructions through the same edit pipeline.
+    combined_directions = []
+    for i in range(len(prompts)):
+        is_vis = vision_enabled[i] if i < len(vision_enabled) else False
+        if is_vis:
+            combined_directions.append(
+                vision_directions[i] if i < len(vision_directions) else ''
+            )
+        else:
+            combined_directions.append(
+                text_directions[i] if i < len(text_directions) else ''
+            )
+
     text_direction_count = 0
-    for i, direction in enumerate(text_directions):
+    for i, direction in enumerate(combined_directions):
         if not direction or not direction.strip():
             continue
-        # Only apply to non-Vision prompts (Vision directions handled separately)
-        if vision_enabled[i]:
-            continue
+        # Apply to both Vision and non-Vision prompts.
+        # For Vision boxes: direction is applied to the Vision-generated
+        # description as a targeted edit (two-step approach).
+        # For text boxes: direction edits the written prompt as before.
         direction = direction.strip()[:500]  # Match frontend maxlength
         try:
             from openai import OpenAI

@@ -97,9 +97,11 @@ def bulk_generator_job_view(request, job_id):
     # Count both completed and actively generating images so the progress
     # bar reflects real work in progress on page refresh — not just finished
     # images. 'generating' images have started and will complete shortly.
-    live_completed_count = job.images.filter(
-        status__in=['completed', 'generating']
-    ).count()
+    # Exclude only failed images — counts queued + generating + completed.
+    # This ensures the progress bar shows >0% immediately on page refresh
+    # even when images are still queued (job just started).
+    # Future-proof: any new status added later is automatically counted.
+    live_completed_count = job.images.exclude(status='failed').count()
     total_images_for_percent = job.actual_total_images or job.total_images or 1
     live_progress_percent = round(
         (live_completed_count / total_images_for_percent) * 100, 1
@@ -789,38 +791,65 @@ def _generate_prompt_from_image(
             'enhance, or improve it. Describe only what you actually see.\n\n'
 
             'Before writing, carefully analyse these elements:\n'
-            '- Genre and art style (photorealistic, digital painting, illustration, etc.)\n'
-            '- Composition and framing\n'
+            '- Genre and art style (photorealistic, digital painting, '
+            'illustration, etc.)\n'
+            '- Composition: describe positions using image-frame coordinates. '
+            'State whether subjects appear on the LEFT side, RIGHT side, or '
+            'CENTRE of the image frame. This is critical — left/right must '
+            'be from the viewer\'s perspective, not the subjects\'.\n'
+            '- Depth and layering: explicitly describe who or what is in the '
+            'FOREGROUND (closest to viewer), MIDGROUND, and BACKGROUND. If one '
+            'person is behind another, state this clearly.\n'
             '- Camera angle and perspective\n'
-            '- Lighting: direction, colour temperature, quality (soft/hard)\n'
-            '- Main subjects: exact age range, ethnicity, clothing details, '
-            'accessories, pose, expression, and spatial position relative to each other\n'
-            '- Background and environment: what is actually there — sharp or blurred, '
-            'near or far, specific elements visible\n'
+            '- Lighting: direction, colour temperature, quality (soft/hard). '
+            'State whether it is a warm sunset glow, cold overcast, etc.\n'
+            '- Main subjects: for every person visible, describe their exact '
+            'age range, ethnicity, hair style and colour, clothing details, '
+            'accessories, jewellery, decorations, pose, and expression.\n'
+            '- ALL people in the scene: do not skip background figures. '
+            'If there are people in the background, describe them — how many, '
+            'what they appear to be doing, their approximate position.\n'
+            '- Background and environment: describe what is actually visible '
+            'with precise detail. State explicitly whether the background is '
+            'IN SHARP FOCUS or BLURRED. Do not add blur that is not in the '
+            'image. Do not remove detail that is there.\n'
+            '- Decorative details: describe ALL visible accessories, patterns, '
+            'embroidery, jewellery, and ornamental details on clothing and in '
+            'the scene. These are often what makes an image distinctive.\n'
             '- Colour palette and materials\n'
             '- Mood and atmosphere\n\n'
 
-            'Then write a single, continuous, high-quality prompt that covers all '
-            'of the above with precision. The prompt should be thorough enough to '
-            'reproduce the image faithfully — do not cut corners. This is a '
-            'premium feature and the prompt quality must reflect that.\n\n'
+            'Then write a single, continuous, high-quality prompt that covers '
+            'all of the above with precision. The prompt must be thorough '
+            'enough to reproduce the image faithfully — do not cut corners. '
+            'This is a premium feature and the prompt quality must reflect '
+            'that.\n\n'
 
             'Rules:\n'
-            '- RECREATE, do not reinterpret. Describe what is there, not what '
-            'could make it better.\n'
-            '- Be spatially accurate: if a person is on the left, say so. If two '
-            'people are side by side, describe that. Do not rearrange subjects.\n'
-            '- If the background is sharp, say so. If it is blurred (bokeh), say so. '
-            'Do not add blur that is not in the image.\n'
-            '- Describe clothing, accessories, and materials specifically — not '
-            'generically. "White flowing dress with gold embroidery" not "dress".\n'
+            '- RECREATE, do not reinterpret. Describe what is there.\n'
+            '- Frame position is absolute: LEFT, RIGHT, CENTRE refers to the '
+            'image frame from the viewer\'s perspective — never relative to '
+            'another subject.\n'
+            '- Describe depth explicitly: who is in front of whom. '
+            '"The man stands slightly behind and to the right of the woman" '
+            'is correct. "The man and woman stand together" loses depth.\n'
+            '- If the background is sharp and detailed, say so explicitly. '
+            'NEVER add depth-of-field blur or bokeh unless it is clearly '
+            'present in the source image.\n'
+            '- Describe ALL people visible in the scene — including background '
+            'crowd, bystanders, and distant figures.\n'
+            '- Describe clothing, accessories, and decorative details '
+            'specifically. "White flowing dress with intricate gold and teal '
+            'embroidery at the neckline" not "white dress".\n'
+            '- Describe hair decorations, jewellery, and accessories on every '
+            'person — do not omit them.\n'
             '- Do not invent details that are not visible in the image.\n'
             '- Do not add suggestions, improvements, or creative additions.\n'
             '- Write in English only.\n'
             + ignore_watermark_rule
             + no_watermark_output_rule +
-            '- Output ONLY the prompt text — no labels, no sections, no preamble, '
-            'no explanations.'
+            '- Output ONLY the prompt text — no labels, no sections, '
+            'no preamble, no explanations.'
         )
 
         user_content = [

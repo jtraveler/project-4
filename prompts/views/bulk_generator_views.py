@@ -79,7 +79,7 @@ def bulk_generator_job_view(request, job_id):
     """
     job = get_object_or_404(BulkGenerationJob, id=job_id, created_by=request.user)
 
-    cost_per_image = IMAGE_COST_MAP.get(job.quality, {}).get(job.size, 0.042)
+    cost_per_image = IMAGE_COST_MAP.get(job.quality, {}).get(job.size, 0.034)
     total_images = job.total_prompts * job.images_per_prompt
     estimated_total_cost = total_images * cost_per_image
 
@@ -1282,7 +1282,7 @@ def api_detect_openai_tier(request):
     Detects the user's OpenAI API tier by generating one minimal image
     and reading the x-ratelimit-limit-images response header.
 
-    Costs the user approximately $0.011 on their OpenAI account.
+    Costs the user approximately $0.009 on their OpenAI account.
     Returns {detected_tier: N} or {error: "message"}.
     """
     from openai import OpenAI, AuthenticationError, APIConnectionError, RateLimitError

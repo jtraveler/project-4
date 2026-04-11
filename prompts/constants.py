@@ -422,33 +422,32 @@ ALL_IMAGE_SIZES = SUPPORTED_IMAGE_SIZES + [
 
 
 # =============================================================================
-# BULK AI IMAGE GENERATOR — GPT-Image-1 Pricing
+# BULK AI IMAGE GENERATOR — GPT-Image-1.5 Pricing
 # =============================================================================
 
-# Cost per image by quality and size (corrected March 2026 — Session 143)
-# Source: https://openai.com/api/pricing/ (GPT-Image-1 per-image equivalents)
-# Low: already correct. Medium and High were significantly under-estimated.
-# High quality was off by ~2.5x (was $0.067/$0.092, now $0.167/$0.250).
+# Cost per image by quality and size (updated April 2026 — Session 153)
+# Source: https://openai.com/api/pricing/ (GPT-Image-1.5 per-image equivalents)
+# GPT-Image-1.5 is 20% cheaper than GPT-Image-1 across all quality tiers.
 # Used by: bulk_generator_views.py (cost estimation), tasks.py (actual cost tracking)
 # Note: 1792x1024 is not currently supported (hidden in UI, rejected by VALID_SIZES).
 # Retained here for historical cost lookups on any pre-existing jobs stored with that size.
 IMAGE_COST_MAP = {
     'low': {
-        '1024x1024': 0.011,
-        '1536x1024': 0.016,
-        '1024x1536': 0.016,
-        '1792x1024': 0.016,  # unsupported — retained for historical lookups
+        '1024x1024': 0.009,
+        '1536x1024': 0.013,
+        '1024x1536': 0.013,
+        '1792x1024': 0.013,  # unsupported — retained for historical lookups
     },
     'medium': {
-        '1024x1024': 0.042,
-        '1536x1024': 0.063,
-        '1024x1536': 0.063,
-        '1792x1024': 0.063,  # unsupported — retained for historical lookups
+        '1024x1024': 0.034,
+        '1536x1024': 0.050,
+        '1024x1536': 0.050,
+        '1792x1024': 0.050,  # unsupported — retained for historical lookups
     },
     'high': {
-        '1024x1024': 0.167,
-        '1536x1024': 0.250,
-        '1024x1536': 0.250,
-        '1792x1024': 0.250,  # unsupported — retained for historical lookups
+        '1024x1024': 0.134,
+        '1536x1024': 0.200,
+        '1024x1536': 0.200,
+        '1792x1024': 0.200,  # unsupported — retained for historical lookups
     },
 }

@@ -299,4 +299,4 @@ class OpenAIImageProvider(ImageProvider):
         quality/size combination is not found.
         """
         from prompts.constants import IMAGE_COST_MAP
-        return IMAGE_COST_MAP.get(quality, {}).get(size, 0.042)
+        return IMAGE_COST_MAP.get(quality, {}).get(size, 0.034)

@@ -2662,7 +2662,7 @@ def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
         )
         cost = IMAGE_COST_MAP.get(
             image.quality or job.quality or 'medium', {}
-        ).get(image.size or job.size, 0.042)
+        ).get(image.size or job.size, 0.034)
         image.status = 'completed'
         image.image_url = image_url
         image.revised_prompt = result.revised_prompt

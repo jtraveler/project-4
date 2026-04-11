@@ -269,6 +269,36 @@ class QuotaErrorAndNotificationTests(TestCase):
         self.assertIn('quota', kwargs['title'].lower())
         self.assertNotEqual(kwargs['notification_type'], 'bulk_gen_job_failed')
 
+    def test_quota_alert_filter_matches_billing_errors(self):
+        """153-E: the production filter at tasks.py ~2965 must match billing
+        errors as well as quota errors, so billing hard limit failures also
+        trigger the quota alert notification."""
+        from django.db.models import Q
+
+        GeneratedImage.objects.create(
+            job=self.job,
+            prompt_text='test',
+            status='failed',
+            error_message=(
+                'API billing limit reached. Please top up your OpenAI '
+                'account at platform.openai.com/settings/organization/billing.'
+            ),
+            prompt_order=0,
+            variation_number=0,
+        )
+
+        # Mirror of the production filter in process_bulk_generation_job
+        has_quota_or_billing_images = self.job.images.filter(
+            Q(error_message__icontains='quota')
+            | Q(error_message__icontains='billing'),
+            status='failed',
+        ).exists()
+
+        self.assertTrue(
+            has_quota_or_billing_images,
+            "Billing limit error must match the quota/billing filter",
+        )
+
     @patch('prompts.services.notifications.create_notification')
     def test_quota_alert_does_not_fire_for_auth_failures(self, mock_create):
         """Quota alert should NOT fire when job failed due to auth error."""
@@ -285,13 +315,19 @@ class QuotaErrorAndNotificationTests(TestCase):
         self.job.status = 'failed'
         self.job.save()
 
-        # The condition check that process_bulk_generation_job uses:
+        # The condition check that process_bulk_generation_job uses
+        # (updated Session 153-E to also match billing errors):
+        from django.db.models import Q
         has_quota_images = self.job.images.filter(
+            Q(error_message__icontains='quota')
+            | Q(error_message__icontains='billing'),
             status='failed',
-            error_message__icontains='quota',
         ).exists()
 
-        self.assertFalse(has_quota_images, "Auth failure should not match quota filter")
+        self.assertFalse(
+            has_quota_images,
+            "Auth failure should not match quota/billing filter",
+        )
         # Confirm no quota alert notification exists
         self.assertFalse(
             Notification.objects.filter(

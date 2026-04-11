@@ -2084,6 +2084,33 @@ class SanitiseErrorMessageTests(TestCase):
             'Quota exceeded',
         )
 
+    def test_billing_limit_keyword_matches_153_d_message(self):
+        """153-D provider message 'API billing limit reached. ...' routes to
+        'Billing limit reached', not 'Generation failed'."""
+        self.assertEqual(
+            self.sanitise(
+                'API billing limit reached. Please top up your OpenAI '
+                'account at platform.openai.com/settings/organization/billing.'
+            ),
+            'Billing limit reached',
+        )
+
+    def test_billing_hard_limit_raw_code_matches(self):
+        """Raw OpenAI error code leaks through the branch as defense-in-depth."""
+        self.assertEqual(
+            self.sanitise('BadRequestError: billing_hard_limit_reached'),
+            'Billing limit reached',
+        )
+
+    def test_billing_branch_runs_before_quota_branch(self):
+        """Billing check must precede quota check so billing errors are not
+        mis-routed to 'Quota exceeded'. A message containing both 'billing
+        limit' and 'quota' should resolve to 'Billing limit reached'."""
+        self.assertEqual(
+            self.sanitise('billing limit reached (quota-related cap)'),
+            'Billing limit reached',
+        )
+
     def test_generate_does_not_trigger_rate_limit(self):
         """'generate' contains 'rate' — must not be misclassified as rate limit."""
         self.assertEqual(

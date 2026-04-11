@@ -26,7 +26,7 @@ import requests
 from django.conf import settings
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.urls import reverse
 from django.utils.text import slugify
 
@@ -2961,10 +2961,13 @@ def process_bulk_generation_job(job_id: str) -> None:
         elif job.status == 'failed':
             # NOTIF-BG-1: notify user job failed (auth failure or quota path)
             _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
-            # Fire a specific quota alert if quota exhaustion caused the stop
+            # Fire a specific quota alert if quota exhaustion OR billing hard
+            # limit caused the stop — both require the user to top up / raise
+            # their OpenAI account limit before generation can resume.
             if job.images.filter(
+                Q(error_message__icontains='quota')
+                | Q(error_message__icontains='billing'),
                 status='failed',
-                error_message__icontains='quota',
             ).exists():
                 _fire_quota_alert_notification(job)
         logger.info(

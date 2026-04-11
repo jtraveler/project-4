@@ -37,6 +37,15 @@ def _sanitise_error_message(raw: str | None) -> str:
         return 'Content policy violation'
     if 'upload failed' in msg or 'b2' in msg or 's3' in msg:
         return 'Upload failed'
+    # Billing hard limit is distinct from quota exhaustion: it's an account
+    # ceiling set by the user, not credit exhaustion. Check BEFORE quota so
+    # the more-specific branch wins. The 153-D provider stores the cleaned
+    # message "API billing limit reached. ..." on GeneratedImage.error_message,
+    # so the sanitiser matches "billing limit" (two words). The raw OpenAI
+    # error code "billing_hard_limit_reached" is also matched as defense-in-
+    # depth for any path that leaks the unsanitised exception body.
+    if 'billing_hard_limit_reached' in msg or 'billing limit' in msg:
+        return 'Billing limit reached'
     # Quota exhaustion is distinct from rate limiting:
     # rate limit = temporary (retryable), quota = permanent (requires top-up).
     if 'quota' in msg or 'insufficient_quota' in msg:

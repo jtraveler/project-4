@@ -136,6 +136,10 @@
 
         // Update header outcome stats (size, quality, succeeded, failed) on every render pass
         G.updateHeaderStats(images);
+
+        // Clear first-render flag after initial gallery is built.
+        // Subsequent polls know they are live (not a page-refresh scenario).
+        G.isFirstRenderPass = false;
     };
 
     /**
@@ -172,17 +176,21 @@
         genLabel.className = 'loading-text';
         genLabel.textContent = 'Generating\u2026';
 
-        // Animated progress bar
-        var progressWrap = document.createElement('div');
-        progressWrap.className = 'placeholder-progress-wrap';
-        var progressFill = document.createElement('div');
-        progressFill.className = 'placeholder-progress-fill';
-        progressFill.style.animationDuration = duration + 's';
-        progressWrap.appendChild(progressFill);
-
         loading.appendChild(spinner);
         loading.appendChild(genLabel);
-        loading.appendChild(progressWrap);
+
+        // Only show the timed progress bar when we know the image started
+        // generating in THIS browser session. On page refresh (isFirstRenderPass),
+        // we don't know how far along OpenAI is — don't fake 0% restart.
+        if (!G.isFirstRenderPass) {
+            var progressWrap = document.createElement('div');
+            progressWrap.className = 'placeholder-progress-wrap';
+            var progressFill = document.createElement('div');
+            progressFill.className = 'placeholder-progress-fill';
+            progressFill.style.animationDuration = duration + 's';
+            progressWrap.appendChild(progressFill);
+            loading.appendChild(progressWrap);
+        }
         container.replaceChild(loading, existing);
     };
 

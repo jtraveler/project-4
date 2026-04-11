@@ -168,7 +168,9 @@ python manage.py test
 
 ## Section 10 — Commits
 
-_(To be filled after commit)_
+| Hash | Message |
+|------|---------|
+| e59257b | feat(bulk-gen): upgrade image generation to GPT-Image-1.5 |
 
 ## Section 11 — What to Work on Next
 

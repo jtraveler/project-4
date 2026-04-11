@@ -68,7 +68,7 @@ grep -n "4.39" CLAUDE.md
 
 | Hash | Message |
 |------|---------|
-| *(see below)* | END OF SESSION DOCS UPDATE: session 148 — prepare prompts fixes, tier UX, P3 cleanup |
+| fd50890 | END OF SESSION DOCS UPDATE: session 148 — prepare prompts fixes, tier UX, P3 cleanup |
 
 ## Section 11 — What to Work on Next
 

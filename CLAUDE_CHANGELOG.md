@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** March 31, 2026 (Sessions 101–150)
+**Last Updated:** April 11, 2026 (Sessions 101–152)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -21,7 +21,84 @@ This is a running log of development sessions. Each session entry includes:
 
 ---
 
-## February–March 2026 Sessions
+## February–April 2026 Sessions
+
+### Session 152-B — April 11, 2026
+
+**Focus:** Progress bar exclude-failed query, Vision composition accuracy
+
+**Specs:** 152-B
+
+**Key outcomes:**
+- Progress bar query changed from `filter(status__in=[...])` to `exclude(status='failed')` — fixes missing `queued` images that were not counted
+- Vision system prompt enhanced with frame-position (LEFT/RIGHT/CENTRE from viewer's perspective), depth/distance, crowd/group counts, anti-bokeh instruction
+- Vision composition accuracy improved for spatial relationships
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
+
+### Session 152-A — April 11, 2026
+
+**Focus:** Vision `detail: 'high'`, direction decoupled from Vision, progress bar generating state
+
+**Specs:** 152-A
+
+**Key outcomes:**
+- Vision API upgraded from `detail: 'low'` to `detail: 'high'` — `detail: 'low'` compressed images to ~85×85px, losing spatial/depth information needed for accurate composition descriptions
+- Direction instructions decoupled from Vision analysis — previously direction was passed INTO the Vision call, causing it to reinterpret rather than describe. Now: Step 1 = Vision describes image (no direction), Step 1.5 = direction edits the Vision output via GPT-4o-mini (two-step approach)
+- Progress bar now counts `generating` + `completed` images (was only counting `completed`)
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
+
+### Session 151-C — April 10, 2026
+
+**Focus:** Vision prompt logging, placeholder safety, live progress bar
+
+**Specs:** 151-C
+
+**Key outcomes:**
+- Vision-generated prompts logged (first 300 chars) for debugging
+- Two-layer placeholder safety check: `VISION_PLACEHOLDER_PREFIX in p` (not `p.startswith(...)`) because charDesc prepending moves the placeholder to mid-string position
+- `data-completed-count` uses live DB query instead of stale template variable
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
+
+### Session 151-B — April 9, 2026
+
+**Focus:** Vision text override fix, diff suppression, overlay CSS, Reset label, Vision prompt quality
+
+**Specs:** 151-B
+
+**Key outcomes:**
+- Vision text override fixed: was always using placeholder text instead of Vision-generated prompt
+- Diff display suppressed for Vision placeholder prompts (no useful diff to show)
+- Overlay underline CSS artifacts fixed
+- "Reset" button renamed to "Reset to master"
+- Vision system prompt improved: "RECREATE not reinterpret" instruction, spatial accuracy emphasis
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
+
+### Session 151-A — April 8, 2026
+
+**Focus:** Vision empty prompt validation fix, Reset and AI Direction layout
+
+**Specs:** 151-A
+
+**Key outcomes:**
+- "Prompt cannot be empty" validation bug fixed for Vision-enabled boxes (Vision boxes use placeholder, don't require user text)
+- Reset button moved from prompt box footer to header
+- AI Direction textarea moved above Source Image URL / Credit fields for better flow
+
+**Tests:** 1213 passing, 12 skipped, 0 failures
+
+---
 
 ### Session 150 — March 31, 2026
 

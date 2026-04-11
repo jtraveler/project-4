@@ -93,7 +93,7 @@ grep -n "### Planned Feature Architecture" CLAUDE.md
 
 | Hash | Message |
 |------|---------|
-| *(pending)* | `docs: add safeguard section D, rate limit compliance note, quota architecture (Session 143)` |
+| c02b0a7 | `docs: add safeguard section D, rate limit compliance note, quota architecture (Session 143)` |
 
 ## Section 11 — What to Work on Next
 

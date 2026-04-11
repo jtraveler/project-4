@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** March 29, 2026
+**Last Updated:** April 11, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -73,8 +73,10 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 152 | Apr 11, 2026 | Vision `detail: 'low'`→`'high'` (spatial accuracy). Direction decoupled from Vision (two-step: describe then edit). Progress bar counts generating+completed, excludes failed. Vision composition: frame-position, depth, crowd, anti-bokeh. 1213 tests. |
+| Session 151 | Apr 8–10, 2026 | Vision empty prompt validation fix. Reset→header, AI Direction→above Source/Credit. Vision text override fix (was using placeholder). Diff suppressed for Vision placeholders. "Reset to master" label. Vision prompt: "RECREATE not reinterpret", spatial accuracy. Prompt logging (300 chars). Two-layer placeholder safety (`in` not `startswith`). `data-completed-count` live DB. 1213 tests. |
 | Session 150 | Mar 31, 2026 | Bug fixes (Vision box count, progress bar init, API key scroll+shake). CSS tooltip system. UI labels cleaned, tier ~ prefix, stronger tier warning. Vision prompt quality (no sentence limit, visible watermark ignore, max_tokens 200→500). AI Direction for ALL boxes (text prompt editing via GPT-4o-mini). Diff display on results page (LCS word diff, strikethrough/highlight). Migration 0079 (original_prompt_text). Business model section added. 1213 tests. |
-| Session 149 | Mar 31, 2026 | Feature 2: "Prompt from Image" per-prompt dropdown + direction textarea + GPT-4o-mini Vision backend (detail:low, base64, ~$0.003/prompt). Vision runs before translate/watermark. Autosave extended for Vision state. "Remove Watermarks (Beta)" toggle in Column 4 (ON by default). Feature 2B (master mode) planned. 1213 tests. |
+| Session 149 | Mar 31, 2026 | Feature 2: "Prompt from Image" per-prompt dropdown + direction textarea + GPT-4o-mini Vision backend (detail:high since Session 152, base64). Vision runs before translate/watermark. Autosave extended for Vision state. "Remove Watermarks (Beta)" toggle in Column 4 (ON by default). Feature 2B (master mode) planned. 1213 tests. |
 | Session 148 | Mar 30, 2026 | OPENAI_API_KEY wired to settings (fixes 401 on prepare-prompts). Translation toggle in Column 4 (ON by default, skip translation when OFF). Tier error scrolls to tier section + shakes panel. Prepare-prompts rate limited (20/hr). Error banner auto-dismiss 5s→8s, suppressed for reduced-motion. 1213 tests. |
 | Session 147 | Mar 30, 2026 | Fixed visible template comment in tier section, tier error now uses prominent bottom-bar banner. New "Prepare Prompts" pipeline: one GPT-4o-mini call translates non-English prompts + strips watermarks before generation. Non-blocking fallback. Features 1 (Translate) and 3 (Watermark Removal) complete. 1213 tests. |
 | Session 146 | Mar 29, 2026 | Global delay floor bug fixed (OPENAI_INTER_BATCH_DELAY deprecated), cost estimate now size-aware (portrait/landscape prices correct), Django-Q timeout 120→7200s + max_attempts 1 (high-quality jobs no longer killed), "Done in Xs" timer removed (server-side Duration only), conditional tier UX (auto-detect for Tier 2+, Tier 1 zero friction). 1213 tests. |
@@ -392,12 +394,12 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 
 **UX behaviour:** "Prompt from Image" dropdown appears on the same row as IMAGES in each prompt box. When set to "Yes": text field disabled (strike-through on existing text, text preserved), a direction instructions textarea appears for AI guidance (max 500 chars), source image URL field becomes required. Character Description still applies. Vision API call fires per enabled prompt during "Preparing prompts…" phase, before translate/watermark.
 
-**Vision API prompt strategy:** Instruct GPT-4o-mini Vision (detail:low) to output exactly 1-2 sentences covering subject, style, composition, lighting, technical quality. No narrative, no filler — generation-ready format. Base64-encode images before sending.
+**Vision API prompt strategy:** Instruct GPT-4o-mini Vision (detail:high) to describe subject, style, composition (frame-position, depth, crowd), lighting, technical quality. Covers 8 categories: subject, attire/appearance, setting/background, composition/framing, lighting, style/medium, mood/atmosphere, technical quality. No sentence limit. Base64-encode images before sending. Direction applied as separate GPT-4o-mini edit step (two-step architecture).
 
 **Implementation approach:** `_generate_prompt_from_image()` helper in `bulk_generator_views.py` using GPT-4o-mini Vision API. Called per vision-enabled prompt during `api_prepare_prompts`, before translate/watermark batch. Falls back to original prompt text on any error. HTTPS URL validation + 10 MB size cap + no redirects for defense-in-depth. Front-end: dropdown per prompt box + direction textarea, autosave extension for Vision state.
 
 **Pros:** Major differentiator, solves "I have an image but no prompt" problem, high accuracy with Vision API.
-**Cons:** One Vision API call per enabled prompt (~$0.003 each), adds latency per checked prompt, requires accessible source image URL.
+**Cons:** One Vision API call per enabled prompt (~$0.009–0.015 each at detail:high), adds latency per checked prompt, requires accessible source image URL.
 **Risks:** Vision API may not always produce concise output — requires careful system prompt tuning. Source image must be HTTPS and accessible (validated by HTTPS scheme check + no-redirect policy).
 **Priority:** High — genuine differentiator.
 
@@ -533,17 +535,47 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   The previous `timeout: 120` (2 minutes) was killing 3-prompt high-quality
   jobs mid-run.
 
-- **Vision API calls use `detail: 'low'` for prompt generation (Session 149).**
-  Sufficient quality for scene description, ~3x cheaper than `detail: 'high'`.
+- **Vision API calls use `detail: 'high'` for prompt generation (upgraded Session 152).**
+  `detail: 'low'` (Session 149 original) compressed images to ~85×85px, losing
+  spatial/depth information needed for accurate composition. `detail: 'high'`
+  costs ~$0.009–0.015 per call but produces far better spatial descriptions.
   Base64-encode images before sending (URL passing is unreliable with
   CDN-served images). HTTPS URL validation + 10 MB size cap + no redirects
-  for defense-in-depth (staff-only endpoint). ~$0.003 per Vision call.
+  for defense-in-depth (staff-only endpoint).
 
 - **Word-level diff is computed client-side (Session 150).** LCS algorithm
   in `bulk-generator-ui.js`. No extra DB query or server computation needed.
   `original_prompt_text` stored only when different from prepared text
   (empty string = no modifications, zero storage cost for unmodified prompts).
   HTML-escaped per-word to prevent XSS in `innerHTML` context.
+
+- **Vision direction must be decoupled from Vision analysis (Session 152).**
+  Passing direction instructions INTO the Vision API call causes the model to
+  reinterpret rather than describe the source image. Correct approach: Step 1 =
+  Vision describes image (no direction), Step 1.5 = direction edits the Vision
+  output via GPT-4o-mini (two-step). This produces accurate base descriptions
+  with targeted modifications applied separately.
+
+- **Vision composition: frame-position from viewer's perspective (Session 152).**
+  LEFT/RIGHT/CENTRE must be from the viewer's perspective, not relative to
+  subjects in the image. Add depth/distance, crowd/group counts, and
+  anti-bokeh instructions ("describe background in detail, do not say bokeh").
+
+- **Progress bar query: use `exclude(status='failed')` (Session 152).** Images
+  start as `queued` status. Using `filter(status__in=['generating','completed'])`
+  misses queued images. `exclude(status='failed')` catches all non-failed states.
+
+- **`VISION_PLACEHOLDER_PREFIX in p` not `p.startswith(...)` (Session 151).**
+  Character description prepending moves the Vision placeholder to mid-string
+  position. Use `in` operator for substring match, not `startswith`.
+
+- **Cloudflare caches job pages even with `Cache-Control: no-store` (Session 152).**
+  Requires a Cloudflare Cache Rule bypass for `/tools/bulk-ai-generator/job/*`
+  paths. Without this, users see stale progress on page refresh.
+
+- **GPT-Image-1.5 released December 2025** with better instruction following
+  and composition accuracy. Pending upgrade from `gpt-image-1`. Evaluate for
+  improved spatial accuracy in generated images.
 
 - **Pending-after-completion gap (Session 143):** If the generation loop exits before all
   `GeneratedImage` records transition from `status='pending'` to `status='failed'` (e.g., quota
@@ -2116,5 +2148,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.41 (Session 150 — Bugs, UI, Vision quality, AI Direction all boxes, diff display; 1213 tests)
-**Last Updated:** March 31, 2026
+**Version:** 4.42 (Session 152 — Vision detail:high, two-step direction, progress bar fix, composition accuracy; 1213 tests)
+**Last Updated:** April 11, 2026

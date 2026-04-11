@@ -108,7 +108,7 @@ def bulk_generator_job_view(request, job_id):
     )
     live_progress_percent = min(live_progress_percent, 100)
 
-    return render(request, 'prompts/bulk_generator_job.html', {
+    response = render(request, 'prompts/bulk_generator_job.html', {
         'job': job,
         'cost_per_image': cost_per_image,
         'total_images': total_images,
@@ -118,6 +118,8 @@ def bulk_generator_job_view(request, job_id):
         'live_completed_count': live_completed_count,
         'live_progress_percent': live_progress_percent,
     })
+    response['Cache-Control'] = 'no-store'
+    return response
 
 
 @staff_member_required

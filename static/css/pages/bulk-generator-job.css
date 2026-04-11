@@ -470,8 +470,8 @@
 .loading-spinner {
     width: 28px;
     height: 28px;
-    border: 3px solid var(--gray-200);
-    border-top-color: var(--accent-color-primary);
+    border: 3px solid var(--gray-300);
+    border-top-color: var(--gray-300);
     border-radius: 50%;
     animation: spinLoader 0.8s linear infinite;
 }
@@ -488,7 +488,6 @@
 
 /* Queued state */
 .loading-text--queued {
-    font-size: 0.75rem;
     color: var(--gray-600, #525252); /* --gray-400 fails AA on --gray-100 bg; --gray-600 = 6.86:1 pass */
 }
 
@@ -496,7 +495,7 @@
 .placeholder-progress-wrap {
     width: 80%;
     height: 6px;
-    background: var(--gray-200, #e5e7eb);
+    background: var(--gray-300, #e5e7eb);
     border-radius: 2px;
     overflow: hidden;
     margin-top: 0.25rem;
@@ -504,7 +503,7 @@
 
 .placeholder-progress-fill {
     height: 100%;
-    background: var(--accent-color-primary, rgb(73, 242, 100));
+    background: var(--gray-200, #e5e7eb);
     border-radius: 2px;
     width: 0%;
     animation: placeholderProgress linear forwards;

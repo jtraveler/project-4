@@ -203,6 +203,15 @@ class OpenAIImageProvider(ImageProvider):
             )
         except BadRequestError as e:
             error_body = str(e).lower()
+            if 'billing_hard_limit_reached' in error_body or 'billing hard limit' in error_body:
+                return GenerationResult(
+                    success=False,
+                    error_type='quota',
+                    error_message=(
+                        'API billing limit reached. Please top up your OpenAI account '
+                        'at platform.openai.com/settings/organization/billing.'
+                    ),
+                )
             if any(
                 kw in error_body
                 for kw in ('safety', 'content_policy', 'violated', 'content policy')

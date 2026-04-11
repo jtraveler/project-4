@@ -3277,7 +3277,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
             ai_content = _call_openai_vision(
                 image_url=gen_image.image_url,
                 prompt_text=gen_image.prompt_text,
-                ai_generator='gpt-image-1',
+                ai_generator='gpt-image-1.5',
                 available_tags=available_tags,
             )
 
@@ -3314,7 +3314,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                 author=job.created_by,
                 content=gen_image.prompt_text,
                 excerpt=ai_content.get('description', ''),
-                ai_generator='gpt-image-1',
+                ai_generator='gpt-image-1.5',
                 status=1 if job.visibility == 'public' else 0,
                 moderation_status='approved',  # staff-created; GPT-Image-1 already applied content policy
                 processing_complete=True,      # bulk-gen prompts are fully processed at creation time
@@ -3525,7 +3525,7 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
             ai_content = _call_openai_vision(
                 image_url=gen_image.image_url,
                 prompt_text=gen_image.prompt_text,
-                ai_generator='gpt-image-1',
+                ai_generator='gpt-image-1.5',
                 available_tags=available_tags,
             )
             return gen_image, ai_content, None
@@ -3582,7 +3582,7 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                 author=job.created_by,
                 content=gen_image.prompt_text,
                 excerpt=ai_content.get('description', ''),
-                ai_generator='gpt-image-1',
+                ai_generator='gpt-image-1.5',
                 status=1 if job.visibility == 'public' else 0,
                 moderation_status='approved',  # staff-created; GPT-Image-1 content policy applied at gen time
                 processing_complete=True,      # bulk-gen prompts are fully processed at creation time

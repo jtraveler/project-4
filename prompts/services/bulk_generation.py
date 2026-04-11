@@ -141,7 +141,7 @@ class BulkGenerationService:
         user,
         prompts: list[str],
         provider_name: str = 'openai',
-        model_name: str = 'gpt-image-1',
+        model_name: str = 'gpt-image-1.5',
         quality: str = 'medium',
         size: str = '1024x1024',
         images_per_prompt: int = 1,

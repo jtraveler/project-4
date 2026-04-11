@@ -43,7 +43,7 @@ def make_job(user, **kwargs):
     """Create a BulkGenerationJob with sensible defaults."""
     defaults = {
         'provider': 'openai',
-        'model_name': 'gpt-image-1',
+        'model_name': 'gpt-image-1.5',
         'quality': 'medium',
         'size': '1024x1024',
         'total_prompts': 5,
@@ -68,12 +68,12 @@ class TestBulkGenerationJobModel(TestCase):
         job = make_job(self.user)
         self.assertEqual(job.status, 'pending')
         self.assertEqual(job.provider, 'openai')
-        self.assertEqual(job.model_name, 'gpt-image-1')
+        self.assertEqual(job.model_name, 'gpt-image-1.5')
         self.assertEqual(job.quality, 'medium')
         self.assertEqual(job.size, '1024x1024')
         self.assertEqual(job.images_per_prompt, 2)
         self.assertEqual(job.visibility, 'public')
-        self.assertEqual(job.generator_category, 'gpt-image-1')  # default changed in migration 0068
+        self.assertEqual(job.generator_category, 'gpt-image-1.5')  # default changed in migration 0080
         self.assertEqual(job.completed_count, 0)
         self.assertEqual(job.failed_count, 0)
         self.assertEqual(job.reference_image_url, '')

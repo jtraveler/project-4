@@ -170,7 +170,7 @@ def api_start_generation(request):
     Body JSON: {
         "prompts": [{"text": "prompt 1", ...}, ...] or ["prompt 1", ...],
         "provider": "openai",
-        "model": "gpt-image-1",
+        "model": "gpt-image-1.5",
         "quality": "medium",
         "size": "1024x1024",
         "images_per_prompt": 1,
@@ -418,7 +418,7 @@ def api_start_generation(request):
         user=request.user,
         prompts=prompts,
         provider_name=provider,
-        model_name=data.get('model', 'gpt-image-1'),
+        model_name=data.get('model', 'gpt-image-1.5'),
         quality=quality,
         size=size,
         images_per_prompt=images_per_prompt,
@@ -1305,7 +1305,7 @@ def api_detect_openai_tier(request):
         # Use the raw HTTP client to capture response headers.
         # Generate one minimal image — smallest size, lowest quality.
         raw_response = client.images.with_raw_response.generate(
-            model='gpt-image-1',
+            model='gpt-image-1.5',
             prompt='A plain white square',
             size='1024x1024',
             quality='low',

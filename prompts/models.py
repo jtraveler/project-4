@@ -689,6 +689,7 @@ AI_GENERATOR_CHOICES = [
     ('ideogram', 'Ideogram'),
     ('runwayml', 'RunwayML'),
     ('gpt-image-1', 'GPT-Image-1'),
+    ('gpt-image-1.5', 'GPT-Image-1.5'),
     ('other', 'Other'),
 ]
 
@@ -2946,7 +2947,7 @@ class BulkGenerationJob(models.Model):
         choices=OPENAI_TIER_CHOICES,
         help_text="User's OpenAI API tier, used to set per-job concurrency and delay.",
     )
-    model_name = models.CharField(max_length=100, default='gpt-image-1')
+    model_name = models.CharField(max_length=100, default='gpt-image-1.5')
     quality = models.CharField(
         max_length=10, choices=QUALITY_CHOICES, default='medium'
     )
@@ -2957,7 +2958,7 @@ class BulkGenerationJob(models.Model):
     visibility = models.CharField(
         max_length=10, choices=VISIBILITY_CHOICES, default='public'
     )
-    generator_category = models.CharField(max_length=50, default='gpt-image-1')
+    generator_category = models.CharField(max_length=50, default='gpt-image-1.5')
 
     # Optional: reference image and character description
     reference_image_url = models.URLField(blank=True)

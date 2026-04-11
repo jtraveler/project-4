@@ -171,7 +171,7 @@ class CreateJobTests(TestCase):
 
         self.assertEqual(job.created_by, self.user)
         self.assertEqual(job.provider, 'openai')
-        self.assertEqual(job.model_name, 'gpt-image-1')
+        self.assertEqual(job.model_name, 'gpt-image-1.5')
         self.assertEqual(job.quality, 'medium')
         self.assertEqual(job.size, '1024x1024')
         self.assertEqual(job.total_prompts, 3)

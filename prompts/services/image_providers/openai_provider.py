@@ -129,7 +129,7 @@ class OpenAIImageProvider(ImageProvider):
                 # Use images.edit() when a reference image is available
                 response = client.images.edit(
                     image=ref_file,
-                    model='gpt-image-1',
+                    model='gpt-image-1.5',
                     prompt=prompt,
                     size=size,
                     quality=quality,
@@ -137,7 +137,7 @@ class OpenAIImageProvider(ImageProvider):
                 )
             else:
                 response = client.images.generate(
-                    model='gpt-image-1',
+                    model='gpt-image-1.5',
                     prompt=prompt,
                     size=size,
                     quality=quality,

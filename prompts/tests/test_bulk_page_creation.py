@@ -714,7 +714,7 @@ class ContentGenerationAlignmentTests(TestCase):
 
     @patch('prompts.tasks._call_openai_vision')
     def test_created_prompt_has_gpt_image_1_generator(self, mock_vision):
-        """Created Prompt pages must have ai_generator='gpt-image-1'."""
+        """Created Prompt pages must have ai_generator='gpt-image-1.5'."""
         mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
@@ -722,7 +722,7 @@ class ContentGenerationAlignmentTests(TestCase):
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
         img.refresh_from_db()
-        self.assertEqual(img.prompt_page.ai_generator, 'gpt-image-1')
+        self.assertEqual(img.prompt_page.ai_generator, 'gpt-image-1.5')
 
     @patch('prompts.tasks._call_openai_vision')
     def test_ai_generator_not_chatgpt(self, mock_vision):
@@ -754,7 +754,7 @@ class ContentGenerationAlignmentTests(TestCase):
 
     @patch('prompts.tasks._call_openai_vision')
     def test_vision_called_with_gpt_image_1(self, mock_vision):
-        """_call_openai_vision must be called with ai_generator='gpt-image-1'."""
+        """_call_openai_vision must be called with ai_generator='gpt-image-1.5'."""
         mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
@@ -763,7 +763,7 @@ class ContentGenerationAlignmentTests(TestCase):
 
         call_kwargs = mock_vision.call_args
         ai_gen = call_kwargs.kwargs.get('ai_generator')
-        self.assertEqual(ai_gen, 'gpt-image-1')
+        self.assertEqual(ai_gen, 'gpt-image-1.5')
 
     @patch('prompts.tasks._call_openai_vision')
     def test_vision_called_with_available_tags_list(self, mock_vision):
@@ -999,6 +999,18 @@ class ContentGenerationAlignmentTests(TestCase):
         choices_dict = dict(AI_GENERATOR_CHOICES)
         self.assertEqual(choices_dict.get('gpt-image-1'), 'GPT-Image-1')
 
+    def test_gpt_image_15_in_ai_generator_choices(self):
+        """'gpt-image-1.5' must be present in AI_GENERATOR_CHOICES."""
+        from prompts.models import AI_GENERATOR_CHOICES
+        valid_values = [c[0] for c in AI_GENERATOR_CHOICES]
+        self.assertIn('gpt-image-1.5', valid_values)
+
+    def test_gpt_image_15_choice_display_label(self):
+        """'gpt-image-1.5' choice must have display label 'GPT-Image-1.5'."""
+        from prompts.models import AI_GENERATOR_CHOICES
+        choices_dict = dict(AI_GENERATOR_CHOICES)
+        self.assertEqual(choices_dict.get('gpt-image-1.5'), 'GPT-Image-1.5')
+
 
 # =============================================================================
 # Phase 6B.5 — Transaction Hardening Tests
@@ -1147,12 +1159,12 @@ class TransactionHardeningTests(TestCase):
     # ── Fix 7: generator_category default ───────────────────────────────────
 
     def test_generator_category_default_is_gpt_image_1(self):
-        """BulkGenerationJob created without explicit generator_category uses 'gpt-image-1'."""
+        """BulkGenerationJob created without explicit generator_category uses 'gpt-image-1.5'."""
         job = BulkGenerationJob.objects.create(
             created_by=self.user,
             total_prompts=1,
         )
-        self.assertEqual(job.generator_category, 'gpt-image-1')
+        self.assertEqual(job.generator_category, 'gpt-image-1.5')
 
     def test_existing_chatgpt_jobs_migrated(self):
         """

@@ -1055,7 +1055,6 @@ a.published-badge:focus-visible {
 /* Reduced motion: disable animations for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
     .prompt-group { animation: none; opacity: 1; }
-    .loading-spinner { animation: none; }
     .progress-bar-container.progress-pending .progress-bar-fill { animation: none; }
     .progress-bar-fill { transition: none; }
     .prompt-image-container img { animation: none; }

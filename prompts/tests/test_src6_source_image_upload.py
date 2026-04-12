@@ -1,6 +1,5 @@
 """Tests for SRC-6: Source image download + B2 upload during generation."""
 
-from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
@@ -42,9 +41,7 @@ def _make_result():
     return result
 
 
-IMAGE_COST_MAP = {
-    'medium': {'1024x1024': Decimal('0.034')},
-}
+
 
 
 @override_settings(OPENAI_API_KEY='test-key')
@@ -66,7 +63,7 @@ class SourceImageUploadTests(TestCase):
             source_image_url='https://example.com/photo.jpg',
         )
         cost, success = _apply_generation_result(
-            job, image, _make_result(), IMAGE_COST_MAP, timezone,
+            job, image, _make_result(), timezone,
         )
 
         self.assertTrue(success)
@@ -93,7 +90,7 @@ class SourceImageUploadTests(TestCase):
             source_image_url='https://example.com/broken.jpg',
         )
         cost, success = _apply_generation_result(
-            job, image, _make_result(), IMAGE_COST_MAP, timezone,
+            job, image, _make_result(), timezone,
         )
 
         self.assertTrue(success)
@@ -116,7 +113,7 @@ class SourceImageUploadTests(TestCase):
             source_image_url='https://example.com/photo.jpg',
         )
         cost, success = _apply_generation_result(
-            job, image, _make_result(), IMAGE_COST_MAP, timezone,
+            job, image, _make_result(), timezone,
         )
 
         self.assertTrue(success)
@@ -134,7 +131,7 @@ class SourceImageUploadTests(TestCase):
 
         job, image = _make_job_and_image(source_image_url='')
         cost, success = _apply_generation_result(
-            job, image, _make_result(), IMAGE_COST_MAP, timezone,
+            job, image, _make_result(), timezone,
         )
 
         self.assertTrue(success)

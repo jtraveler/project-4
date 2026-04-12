@@ -453,7 +453,12 @@ IMAGE_COST_MAP = {
 }
 
 
-def get_image_cost(quality: str, size: str, fallback: float = 0.034) -> float:
+# Default fallback cost — medium square price, computed at import time
+# so it automatically tracks IMAGE_COST_MAP on future price changes.
+_DEFAULT_IMAGE_COST = IMAGE_COST_MAP.get('medium', {}).get('1024x1024', 0.034)
+
+
+def get_image_cost(quality: str, size: str, fallback: float = _DEFAULT_IMAGE_COST) -> float:
     """Return cost per image for the given quality and size.
 
     Single source of truth for all image cost lookups. Call sites should
@@ -463,8 +468,9 @@ def get_image_cost(quality: str, size: str, fallback: float = 0.034) -> float:
     Args:
         quality: Quality tier string ('low', 'medium', 'high').
         size: Size string ('1024x1024', '1024x1536', '1536x1024').
-        fallback: Price to return if quality/size not in map (default: 0.034
-                  — the medium square price as of GPT-Image-1.5 pricing).
+        fallback: Price to return if quality/size not in map (default: the
+                  medium square price from IMAGE_COST_MAP, computed at import
+                  time so it tracks future pricing changes automatically).
 
     Returns:
         Cost per image as a float.

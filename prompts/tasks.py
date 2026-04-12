@@ -1535,7 +1535,7 @@ def _handle_ai_failure(prompt, error_message: str) -> dict:
         prompt.excerpt = fallback_description
         prompt.slug = slug
         prompt.processing_complete = True
-        prompt.needs_seo_review = True  # Flag for manual review
+        prompt.needs_seo_review = True  # post-save pattern: AI content arrived async; bulk pipeline uses constructor-arg (153-H)
         prompt.save(update_fields=['title', 'excerpt', 'slug', 'processing_complete', 'needs_seo_review'])
 
         # Add generic fallback tags (lowercase, no AI tags per validator rules)
@@ -2646,7 +2646,7 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
     return None, False  # Safety fallback (loop exited without break)
 
 
-def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
+def _apply_generation_result(job, image, result, tz):
     """
     Upload a successful image to B2 and update its database record.
 
@@ -2706,7 +2706,7 @@ def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
         return 0.0, False
 
 
-def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz):  # noqa: C901 — generation loop has inherent branching for batching, cancellation, and error handling
+def _run_generation_loop(job, provider, job_api_key, images, tz):  # noqa: C901 — generation loop has inherent branching for batching, cancellation, and error handling
     """
     Execute the image generation loop for a bulk job.
 
@@ -2829,7 +2829,7 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
                     )
                 elif result.success:
                     cost, success = _apply_generation_result(
-                        job, img, result, IMAGE_COST_MAP, tz
+                        job, img, result, tz
                     )
                     if success:
                         total_cost += Decimal(str(cost))
@@ -2913,16 +2913,13 @@ def process_bulk_generation_job(job_id: str) -> None:
 
     provider = get_provider(job.provider, mock_mode=False)
 
-    # IMAGE_COST_MAP for accurate per-image cost tracking
-    from prompts.constants import IMAGE_COST_MAP
-
     images = job.images.filter(
         status='queued'
     ).order_by('prompt_order', 'variation_number')
 
     try:
         completed_count, failed_count, total_cost = _run_generation_loop(
-            job, provider, job_api_key, images, IMAGE_COST_MAP, tz,
+            job, provider, job_api_key, images, tz,
         )
 
         # D1: Sweep any images left in 'queued' or 'generating' state.

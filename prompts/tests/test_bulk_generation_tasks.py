@@ -409,7 +409,6 @@ class GetJobStatusTests(TestCase):
         from django.utils import timezone as tz
         from unittest.mock import MagicMock, patch
         from prompts.services.image_providers.openai_provider import GenerationResult
-        from prompts.constants import IMAGE_COST_MAP
 
         job = self.service.create_job(
             user=self.user,
@@ -431,7 +430,7 @@ class GetJobStatusTests(TestCase):
         ), patch('prompts.tasks.time.sleep'):
             _run_generation_loop(
                 job, mock_provider, 'sk-test',
-                list(job.images.all()), IMAGE_COST_MAP, tz,
+                list(job.images.all()), tz,
             )
 
         img = job.images.first()

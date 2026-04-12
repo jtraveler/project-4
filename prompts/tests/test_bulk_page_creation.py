@@ -405,6 +405,10 @@ class SlugRaceConditionTests(TestCase):
 
         self.assertEqual(result['created_count'], 1)
         self.assertEqual(result['errors'], [])
+        # 153-L: needs_seo_review must be preserved through the retry path
+        img.refresh_from_db()
+        self.assertTrue(img.prompt_page.needs_seo_review,
+                        "needs_seo_review must survive IntegrityError slug retry")
 
     @patch('prompts.tasks._call_openai_vision')
     def test_slug_after_retry_is_unique(self, mock_vision):

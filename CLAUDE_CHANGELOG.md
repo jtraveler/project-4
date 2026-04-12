@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 11, 2026 (Sessions 101–152)
+**Last Updated:** April 12, 2026 (Sessions 101–153)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,115 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 153 — April 11–12, 2026
+
+**Focus:** GPT-Image-1.5 upgrade, pricing accuracy, end-to-end billing
+error path, progress-bar refresh accuracy, BYOK UX
+
+**Specs:** 153-A, 153-B, 153-C, 153-D, 153-E, 153-F (Batch 1);
+153-G, 153-H, 153-I, 153-J (Batch 2)
+
+**Key outcomes (Batch 1 — shipped):**
+
+- **153-A — GPT-Image-1.5 upgrade.** Both `images.edit()` and
+  `images.generate()` API paths upgraded from `gpt-image-1` to
+  `gpt-image-1.5`. 7 production files plus 2 new choice tests.
+  Migration 0080 adds `gpt-image-1.5` to `AI_GENERATOR_CHOICES`.
+- **153-C — IMAGE_COST_MAP updated to GPT-Image-1.5 pricing.** 20%
+  reduction across all quality tiers and sizes. Propagated to 10
+  files: `constants.py`, 3 Python fallback defaults, JS `COST_MAP`,
+  user-facing template string, docstring, and 27 test assertions
+  (Option B Step 3b regression fix per `CC_MULTI_SPEC_PROTOCOL`).
+- **153-D — Billing hard limit error messaging.** OpenAI's
+  `billing_hard_limit_reached` arrives as a `BadRequestError` (400),
+  NOT a `RateLimitError` (429), so the existing `insufficient_quota`
+  handler did not catch it. A new branch in the `BadRequestError`
+  handler now returns `error_type='quota'` with an actionable
+  message pointing to `platform.openai.com/settings/organization/
+  billing`.
+- **153-E — Full billing chain end-to-end fix.** Three gaps closed
+  in one commit: (1) `_sanitise_error_message` in
+  `bulk_generation.py` had no billing branch — added BEFORE the
+  quota check, matches `'billing limit'` (two words, not three) to
+  catch the 153-D cleaned message; (2) `process_bulk_generation_job`
+  quota-alert notification filter widened from
+  `icontains='quota'` to `Q(quota) | Q(billing)`; (3) JS
+  `reasonMap` in `bulk-generator-config.js` gained `'Billing limit
+  reached'` entry and `'Quota exceeded'` was rewritten to remove
+  misleading "contact admin" (BYOK users ARE the admin). 4 new
+  tests cover all three gaps.
+- **153-F — Progress bar accuracy on page refresh.** New nullable
+  `GeneratedImage.generating_started_at` DateTimeField
+  (migration 0081). `_run_generation_loop` sets the timestamp
+  atomically with the `status='generating'` transition via
+  `tz.now()`. Status API returns the ISO string. JS
+  `updateSlotToGenerating` uses a negative CSS `animation-delay`
+  (e.g. `-8s` on a 20s animation = bar starts at 40% and continues
+  forward) so the bar reflects real elapsed time on both initial
+  load AND page refresh. `isFirstRenderPass` flag fully removed.
+  Also caught a missed `I.COST_MAP` update in `bulk-generator.js`
+  that 153-C had overlooked — sticky-bar input-page cost estimate
+  was still GPT-Image-1 pricing. Updated to GPT-Image-1.5 prices
+  and fallback default.
+
+**Key outcomes (Batch 2 — in progress):**
+
+- **153-G — End-of-session documentation update** (this entry).
+- **153-H — `needs_seo_review=True` on bulk-created pages** — fixes
+  the priority blocker that bulk-seeded content silently bypasses
+  the SEO review queue.
+- **153-I — P2/P3 cleanup batch:** `spinLoader` added to
+  `prefers-reduced-motion` block, quota notification body updated
+  from "quota ran out" → "credit ran out" (covers billing case),
+  billing check adds `hasattr(e, 'code')` structured-field guard,
+  `openai_provider.py` class + method docstrings updated to
+  GPT-Image-1.5, test method renamed from
+  `test_vision_called_with_gpt_image_1` → `_15`, Safari `+00:00`
+  ISO parse fix (`new Date(iso.replace('+00:00', 'Z'))`).
+- **153-J — `get_image_cost()` helper refactor.** Eliminates the
+  three duplicated `IMAGE_COST_MAP.get().get()` call sites in
+  `openai_provider.py`, `tasks.py`, and `bulk_generator_views.py`.
+  Single source of truth for price lookups.
+
+**Key architectural learnings:**
+
+- **JS ↔ Python constant drift.** `bulk-generator.js` has its own
+  `I.COST_MAP` that must be kept in sync with Python
+  `IMAGE_COST_MAP`. 153-C missed this; 153-F caught it in a
+  Step 0 grep. 153-J adds `get_image_cost()` as a partial
+  mitigation; full fix requires future template context injection
+  so JS prices are generated from Python at render time.
+- **Negative CSS `animation-delay` is the correct primitive for
+  elapsed-time accuracy.** Starts an animation as if it began N
+  seconds ago — not a pause. Combines with a 90% cap to prevent
+  near-complete display for slow-running images.
+- **Backend sanitiser keywords must be verified against the
+  canonical provider message.** The 153-D cleaned billing message
+  is `'API billing limit reached...'` (two words `billing limit`),
+  NOT `'billing hard limit'`. Using the three-word form would make
+  the sanitiser branch a no-op. Always verify the exact text with
+  `python -c` before adding a keyword branch.
+- **Agent name registry drift.** CC has consistently substituted
+  agent names (`@backend-security-coder` for `@django-security`,
+  `@ui-visual-validator` for `@accessibility-expert`,
+  `@tdd-orchestrator` for `@tdd-coach`). Session 153 Batch 2 run
+  instructions added a hard rule forbidding substitution without
+  explicit developer authorization. Spec templates should be
+  updated to use registry-correct names going forward.
+
+**Migrations:** 0080 (`gpt-image-1.5` in AI_GENERATOR_CHOICES),
+0081 (`GeneratedImage.generating_started_at`).
+
+**Tests:** 1221 passing, 12 skipped, 0 failures (up from 1213 at
+the start of the session — +8 new tests total: +2 in 153-A (new
+`gpt-image-1.5` choice assertions), +4 in 153-E (sanitiser billing
+branch, raw-code fallback, branch-ordering regression guard, and
+the quota/billing notification filter), +2 in 153-F
+(`generating_started_at` API shape and the task-write atomicity
+test)).
+
+---
 
 ### Session 152-B — April 11, 2026
 

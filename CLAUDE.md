@@ -73,6 +73,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 153 | Apr 11–12, 2026 | GPT-Image-1.5 upgrade (153-A, migration 0080 — both `images.edit()` and `images.generate()` paths, 7 files + metadata + 2 new choice tests). IMAGE_COST_MAP updated to GPT-Image-1.5 pricing (153-C, 20% reduction across 10 files + 27 test assertions via Option B regression fix). Billing hard limit shows actionable error (153-D, new `BadRequestError` branch). Full billing chain end-to-end: `_sanitise_error_message` emits `'Billing limit reached'`, Q-filter catches billing, JS reasonMap entry added, `'Quota exceeded'` no longer says "contact admin" for BYOK users (153-E, 4 new tests). Per-image progress bar survives page refresh via `generating_started_at` timestamp + negative CSS `animation-delay` (153-F, migration 0081, `isFirstRenderPass` flag removed, 2 new tests). Input page `I.COST_MAP` sticky-bar pricing sync with Python constants (153-F caught in Step 1 grep). 1221 tests. |
 | Session 152 | Apr 11, 2026 | Vision `detail: 'low'`→`'high'` (spatial accuracy). Direction decoupled from Vision (two-step: describe then edit). Progress bar counts generating+completed, excludes failed. Vision composition: frame-position, depth, crowd, anti-bokeh. 1213 tests. |
 | Session 151 | Apr 8–10, 2026 | Vision empty prompt validation fix. Reset→header, AI Direction→above Source/Credit. Vision text override fix (was using placeholder). Diff suppressed for Vision placeholders. "Reset to master" label. Vision prompt: "RECREATE not reinterpret", spatial accuracy. Prompt logging (300 chars). Two-layer placeholder safety (`in` not `startswith`). `data-completed-count` live DB. 1213 tests. |
 | Session 150 | Mar 31, 2026 | Bug fixes (Vision box count, progress bar init, API key scroll+shake). CSS tooltip system. UI labels cleaned, tier ~ prefix, stronger tier warning. Vision prompt quality (no sentence limit, visible watermark ignore, max_tokens 200→500). AI Direction for ALL boxes (text prompt editing via GPT-4o-mini). Diff display on results page (LCS word diff, strikethrough/highlight). Migration 0079 (original_prompt_text). Business model section added. 1213 tests. |
@@ -300,7 +301,7 @@ batch). Atomic rate limiter on `api_create_pages` using `cache.add()` + `cache.i
 6 new tests: `EndToEndPublishFlowTests` (3) + `CreatePagesAPITests` (3). `cache.clear()`
 in setUp for test isolation. Avg 8.625/10. 1112 tests passing, 12 skipped.
 
-**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS input modules + 5 JS job modules. 1213 tests. D1 pending sweep + D3 rate limit delay deployed. D4 per-job tier rate limiting deployed (Session 145). QUOTA-1 error distinction live. D2 generation retry already implemented (Phase 5C `_run_generation_with_retry()`). Next: V2 launch. V2 scope: BYOK for premium users, Replicate models (Nano Banana 2, Flux), archive staging page at `/profile/<username>/ai-generations/`.
+**Status:** Feature-complete for staff use. Full 6E series complete (per-prompt size, quality, image count overrides + hardening + cleanup). 5 JS input modules + 5 JS job modules. 1221 tests. D1 pending sweep + D3 rate limit delay deployed. D4 per-job tier rate limiting deployed (Session 145). QUOTA-1 error distinction live. D2 generation retry already implemented (Phase 5C `_run_generation_with_retry()`). Session 153: GPT-Image-1.5 upgrade (migration 0080), pricing updated to GPT-Image-1.5 rates, billing hard limit error path end-to-end, per-image progress bar survives page refresh (migration 0081 — `generating_started_at`). Next: V2 launch. V2 scope: BYOK for premium users, Replicate models (Nano Banana 2, Flux), archive staging page at `/profile/<username>/ai-generations/`.
 
 #### Planned: Replicate Providers (Session 146+)
 
@@ -490,6 +491,36 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
 
 ### Key Learnings & Principles
 
+- **Session 153 — JS cost maps can drift from Python constants.** `I.COST_MAP`
+  in `bulk-generator.js` is a client-side copy of `IMAGE_COST_MAP` in
+  `constants.py`. When 153-C updated the Python constant, the JS copy was
+  missed — caught in a Step 0 grep during 153-F. Fix pending in 153-J:
+  `get_image_cost()` helper + (future) template context injection so JS
+  prices are generated from Python at render time.
+- **Session 153 — CC agent name substitution is a protocol violation.** CC
+  has consistently substituted agent names (e.g. `@backend-security-coder`
+  for `@django-security`, `@ui-visual-validator` for
+  `@accessibility-expert`, `@tdd-orchestrator` for `@tdd-coach`). The
+  Session 153 Batch 2 run instructions added a hard rule: **Use EXACT agent
+  names. Do not substitute. If an agent is unavailable, stop and report.**
+  Spec templates should be updated to use registry-correct names going
+  forward.
+- **Session 153 — Negative CSS `animation-delay` for elapsed-time accuracy.**
+  `animation-delay: -Ns` starts an animation as if it began N seconds ago
+  (not a pause). Used in 153-F to show per-image progress bars at their
+  correct elapsed position on page refresh — no fake restart, no 0% bar,
+  no invisible placeholder. Combine with a `90%` cap (`Math.min(elapsed,
+  duration * 0.9)`) so a slow-running image never shows near-complete.
+- **Session 153 — `billing_hard_limit_reached` arrives as `BadRequestError`
+  (400), not `RateLimitError` (429).** The existing `insufficient_quota`
+  handler in `RateLimitError` does not catch billing-limit hits. A
+  separate branch in the `BadRequestError` handler is required (153-D),
+  and the backend sanitiser (`_sanitise_error_message`) also needs a
+  billing branch BEFORE the quota check so the JS `reasonMap` can surface
+  an actionable message (153-E). Matching keyword: `'billing limit'` (two
+  words), not `'billing hard limit'` (three words) — the 153-D cleaned
+  provider message is `'API billing limit reached...'` which does NOT
+  contain the three-word form.
 - **BYOK is the only viable model for bulk generation at scale:** Platform-paid API model fails because all users share Mateo's rate limits, creating unacceptable wait times with concurrent users.
 - **Django-Q2 runs synchronously in local dev:** Tasks queued via ORM broker execute in the web process locally (either `sync=True` setting or Django-Q2 default). This means `[BULK-DEBUG] process_bulk_generation_job CALLED` appears in `runserver.log`, not `qcluster.log`. Production behavior (separate Heroku worker dyno) is unaffected.
 - **`tee` for persistent log capture:** Use `python manage.py runserver 2>&1 | tee runserver.log` and `python manage.py qcluster 2>&1 | tee qcluster.log` for reliable debug log capture. Then grep with: `grep "BULK-DEBUG\|ERROR\|Traceback" runserver.log`
@@ -662,10 +693,11 @@ Rebuilding upload flow to feel "instant" by:
 
 ### Current Blockers
 
-> No current blockers as of Session 122.
+> `needs_seo_review` not set on bulk-created pages — fix in 153-H.
 
 | Issue | Description | Impact |
 |-------|-------------|--------|
+| **`needs_seo_review` on bulk pages** | `create_prompt_pages_from_job` creates `Prompt` objects without `needs_seo_review=True`. Bulk-created pages silently bypass the SEO review queue. Priority blocker before large-scale content seeding. | Fix in 153-H (Session 153 Batch 2). |
 | **~~N4h rename (upload-flow)~~** | ✅ RESOLVED Session 122 (commit a9acbc4). Guard changed from `is_b2_upload and prompt.pk` to `prompt.b2_image_url`. | Resolved — upload-flow prompts now trigger rename task |
 | **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests at time of fix; now 976 passing, 12 skipped, flake8 clean, bandit clean) | ✅ All 3 jobs green |
 
@@ -2148,5 +2180,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.42 (Session 152 — Vision detail:high, two-step direction, progress bar fix, composition accuracy; 1213 tests)
-**Last Updated:** April 11, 2026
+**Version:** 4.43 (Session 153 — GPT-Image-1.5 upgrade, pricing accuracy, billing error path, progress-bar refresh accuracy; 1221 tests)
+**Last Updated:** April 12, 2026

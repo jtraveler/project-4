@@ -2660,9 +2660,11 @@ def _apply_generation_result(job, image, result, IMAGE_COST_MAP, tz):
             job=job,
             image=image,
         )
-        cost = IMAGE_COST_MAP.get(
-            image.quality or job.quality or 'medium', {}
-        ).get(image.size or job.size, 0.034)
+        from prompts.constants import get_image_cost
+        cost = get_image_cost(
+            image.quality or job.quality or 'medium',
+            image.size or job.size,
+        )
         image.status = 'completed'
         image.image_url = image_url
         image.revised_prompt = result.revised_prompt
@@ -3320,8 +3322,9 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                 excerpt=ai_content.get('description', ''),
                 ai_generator='gpt-image-1.5',
                 status=1 if job.visibility == 'public' else 0,
-                moderation_status='approved',  # staff-created; GPT-Image-1 already applied content policy
+                moderation_status='approved',  # staff-created; GPT-Image-1.5 content policy applied at generation time
                 processing_complete=True,      # bulk-gen prompts are fully processed at creation time
+                needs_seo_review=True,         # bulk-created pages always require SEO review (153-H)
             )
 
             # Apply source credit if present on the generated image
@@ -3588,8 +3591,9 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                 excerpt=ai_content.get('description', ''),
                 ai_generator='gpt-image-1.5',
                 status=1 if job.visibility == 'public' else 0,
-                moderation_status='approved',  # staff-created; GPT-Image-1 content policy applied at gen time
+                moderation_status='approved',  # staff-created; GPT-Image-1.5 content policy applied at generation time
                 processing_complete=True,      # bulk-gen prompts are fully processed at creation time
+                needs_seo_review=True,         # bulk-created pages always require SEO review (153-H)
             )
 
             if gen_image.source_credit:
@@ -3706,7 +3710,7 @@ def _fire_quota_alert_notification(job):
             notification_type='openai_quota_alert',
             title='API quota exhausted — generation stopped',
             message=(
-                'Your OpenAI API quota ran out mid-job. '
+                'Your OpenAI API credit ran out mid-job. '
                 'Top up your OpenAI account balance and retry.'
             ),
             link=job_url,

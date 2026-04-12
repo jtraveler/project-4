@@ -341,6 +341,35 @@ class VisibilityMappingTests(TestCase):
         img.refresh_from_db()
         self.assertNotEqual(img.prompt_page.status, 0)
 
+    @patch('prompts.tasks._call_openai_vision')
+    def test_bulk_created_pages_have_needs_seo_review_true(self, mock_vision):
+        """153-H: All Prompt objects created by the bulk pipeline must
+        have needs_seo_review=True so they are flagged for the SEO
+        review queue. Before 153-H, bulk-seeded pages silently bypassed
+        the review workflow. Regression guard — both public and private
+        visibility must set the flag."""
+        mock_vision.return_value = MOCK_AI_CONTENT
+
+        # Public path
+        job_public = _make_job(self.staff_user, visibility='public')
+        img_public = _make_image(job_public)
+        create_prompt_pages_from_job(str(job_public.id), [str(img_public.id)])
+        img_public.refresh_from_db()
+        self.assertTrue(
+            img_public.prompt_page.needs_seo_review,
+            'needs_seo_review must be True on bulk-created public pages',
+        )
+
+        # Private path
+        job_private = _make_job(self.staff_user, visibility='private')
+        img_private = _make_image(job_private)
+        create_prompt_pages_from_job(str(job_private.id), [str(img_private.id)])
+        img_private.refresh_from_db()
+        self.assertTrue(
+            img_private.prompt_page.needs_seo_review,
+            'needs_seo_review must be True on bulk-created private pages',
+        )
+
 
 # =============================================================================
 # BUG 4 — TOCTOU Slug Race Condition
@@ -753,7 +782,7 @@ class ContentGenerationAlignmentTests(TestCase):
     # --- _call_openai_vision call args ---
 
     @patch('prompts.tasks._call_openai_vision')
-    def test_vision_called_with_gpt_image_1(self, mock_vision):
+    def test_vision_called_with_gpt_image_15(self, mock_vision):
         """_call_openai_vision must be called with ai_generator='gpt-image-1.5'."""
         mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
@@ -1239,6 +1268,24 @@ class PublishTaskTests(TestCase):
         self.assertEqual(result['skipped_count'], 0)
         self.assertEqual(result['errors'], [])
         self.assertEqual(Prompt.objects.count(), 1)
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_sets_needs_seo_review_true(self, _mock_vision):
+        """153-H: The concurrent publish path must also set
+        needs_seo_review=True on the created Prompt. Parallel to
+        test_bulk_created_pages_have_needs_seo_review_true which
+        covers create_prompt_pages_from_job (the sequential path).
+        Both paths independently construct Prompt objects, so both
+        need their own regression guard — a future edit could drift
+        one path's constructor away from the other."""
+        self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.img.refresh_from_db()
+        self.assertIsNotNone(self.img.prompt_page)
+        self.assertTrue(
+            self.img.prompt_page.needs_seo_review,
+            'publish_prompt_pages_from_job must set needs_seo_review=True',
+        )
 
     # ── 2. Image-to-prompt link ──────────────────────────────────────────────
 

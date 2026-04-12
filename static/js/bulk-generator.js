@@ -830,25 +830,31 @@
         var promptCount = I.getPromptCount();
         var masterImgs = I.getMasterImagesPerPrompt();
         var masterQuality = I.getMasterQuality();
+        var masterSize = I.getMasterDimensions ? I.getMasterDimensions() : '1024x1024';
         var totalImages = 0;
+        var totalCost = 0;
 
-        // Sum per-box images, respecting overrides
+        // Sum per-box images and cost, respecting per-box size and image count overrides
         I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
             var ta = box.querySelector('.bg-box-textarea');
             var vs = box.querySelector('.bg-override-vision');
             var isVision = vs && vs.value === 'yes';
             // Count box if it has text OR Vision mode is enabled
             if (!ta.value.trim() && !isVision) return;
+
             var imgOverride = box.querySelector('.bg-override-images').value;
-            totalImages += imgOverride ? parseInt(imgOverride, 10) : masterImgs;
+            var imgCount = imgOverride ? parseInt(imgOverride, 10) : masterImgs;
+            totalImages += imgCount;
+
+            // Use per-box size override if set, otherwise fall back to master size
+            var sizeOverride = box.querySelector('.bg-override-size');
+            var boxSize = (sizeOverride && sizeOverride.value) ? sizeOverride.value : masterSize;
+            var sizeMap = I.COST_MAP[boxSize] || I.COST_MAP_DEFAULT;
+            var costPerImage = sizeMap[masterQuality] || I.COST_MAP_DEFAULT[masterQuality] || 0.034;
+            totalCost += imgCount * costPerImage;
         });
 
-        var masterSize = I.getMasterDimensions ? I.getMasterDimensions() : '1024x1024';
-        var sizeMap = I.COST_MAP[masterSize] || I.COST_MAP_DEFAULT;
-        var costPerImage = sizeMap[masterQuality] || I.COST_MAP_DEFAULT[masterQuality] || 0.034;
-        var totalCost = totalImages * costPerImage;
         var timeMinutes = Math.ceil(totalImages / I.IMAGES_PER_MINUTE) || 0;
-
         I.costImages.innerHTML =
             '<span class="bg-cost-value">' + promptCount + '</span> prompt' +
             (promptCount !== 1 ? 's' : '') + ' &times; ' +

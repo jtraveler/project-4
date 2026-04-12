@@ -191,7 +191,10 @@
         // starts at 40% and continues forward. This is accurate on both initial
         // load AND page refresh. Falls back to spinner-only if no timestamp.
         if (generatingStartedAt) {
-            var elapsed = (Date.now() - new Date(generatingStartedAt).getTime()) / 1000;
+            // Safari <14 does not parse ISO strings with '+00:00' offset —
+            // normalize to 'Z' which is universally supported.
+            var isoNormalized = generatingStartedAt.replace('+00:00', 'Z');
+            var elapsed = (Date.now() - new Date(isoNormalized).getTime()) / 1000;
             if (elapsed < 0) { elapsed = 0; } // clock skew guard
             // Cap at 90% of duration — don't show a near-complete bar for
             // an image that is still generating server-side.

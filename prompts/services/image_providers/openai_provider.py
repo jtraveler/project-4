@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class OpenAIImageProvider(ImageProvider):
     """
-    OpenAI GPT-Image-1 provider.
+    OpenAI GPT-Image-1.5 provider.
 
     Uses the OpenAI Images API to generate images. OpenAI has built-in
     content filtering, so NSFW checks are not required.
@@ -60,7 +60,7 @@ class OpenAIImageProvider(ImageProvider):
         reference_image_url: str = '',
         api_key: str = '',
     ) -> GenerationResult:
-        """Generate an image using OpenAI's GPT-Image-1 API."""
+        """Generate an image using OpenAI's GPT-Image-1.5 API."""
 
         if self.mock_mode:
             return self._generate_mock(prompt, size, quality)
@@ -203,7 +203,11 @@ class OpenAIImageProvider(ImageProvider):
             )
         except BadRequestError as e:
             error_body = str(e).lower()
-            if 'billing_hard_limit_reached' in error_body or 'billing hard limit' in error_body:
+            if (
+                'billing_hard_limit_reached' in error_body
+                or 'billing hard limit' in error_body
+                or (hasattr(e, 'code') and e.code == 'billing_hard_limit_reached')
+            ):
                 return GenerationResult(
                     success=False,
                     error_type='quota',
@@ -294,9 +298,9 @@ class OpenAIImageProvider(ImageProvider):
     ) -> float:
         """Return cost per image based on quality and size.
 
-        Delegates to IMAGE_COST_MAP in prompts.constants — single source of
+        Delegates to get_image_cost() in prompts.constants — single source of
         truth for all pricing. Falls back to medium square price if the
         quality/size combination is not found.
         """
-        from prompts.constants import IMAGE_COST_MAP
-        return IMAGE_COST_MAP.get(quality, {}).get(size, 0.034)
+        from prompts.constants import get_image_cost
+        return get_image_cost(quality, size)

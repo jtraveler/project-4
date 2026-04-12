@@ -2774,7 +2774,8 @@ def _run_generation_loop(job, provider, job_api_key, images, IMAGE_COST_MAP, tz)
         # Mark batch images as 'generating' sequentially before concurrent submission
         for img in batch:
             img.status = 'generating'
-            img.save(update_fields=['status'])
+            img.generating_started_at = tz.now()
+            img.save(update_fields=['status', 'generating_started_at'])
 
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=len(batch)

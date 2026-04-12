@@ -93,11 +93,11 @@
     I.validatedRefUrl = '';
     I.refImageError = '';
     // Cost per image by size then quality — matches IMAGE_COST_MAP in constants.py
-    // Updated Session 146: correct prices + size awareness (portrait ≠ square)
+    // Updated Session 153: GPT-Image-1.5 pricing (20% cheaper than GPT-Image-1)
     I.COST_MAP = {
-        '1024x1024': { low: 0.011, medium: 0.042, high: 0.167 },
-        '1024x1536': { low: 0.016, medium: 0.063, high: 0.250 },
-        '1536x1024': { low: 0.016, medium: 0.063, high: 0.250 },
+        '1024x1024': { low: 0.009, medium: 0.034, high: 0.134 },
+        '1024x1536': { low: 0.013, medium: 0.050, high: 0.200 },
+        '1536x1024': { low: 0.013, medium: 0.050, high: 0.200 },
     };
     I.COST_MAP_DEFAULT = I.COST_MAP['1024x1024']; // fallback for unknown sizes
     I.IMAGES_PER_MINUTE = 5;
@@ -843,7 +843,7 @@
 
         var masterSize = I.getMasterDimensions ? I.getMasterDimensions() : '1024x1024';
         var sizeMap = I.COST_MAP[masterSize] || I.COST_MAP_DEFAULT;
-        var costPerImage = sizeMap[masterQuality] || 0.042;
+        var costPerImage = sizeMap[masterQuality] || 0.034;
         var totalCost = totalImages * costPerImage;
         var timeMinutes = Math.ceil(totalImages / I.IMAGES_PER_MINUTE) || 0;
 

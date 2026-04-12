@@ -3117,6 +3117,15 @@ class GeneratedImage(models.Model):
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
+    generating_started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            'When the image generation call was dispatched to OpenAI. '
+            'Used by the job page to show accurate per-image progress '
+            'on page refresh.'
+        ),
+    )
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

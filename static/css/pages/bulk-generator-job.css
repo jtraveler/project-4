@@ -467,6 +467,15 @@
     gap: 0.75rem;
 }
 
+/* Defensive min-height for the generating state: the 153-F fix made the
+   progress-bar child conditional on a known generating_started_at timestamp.
+   Container height is normally driven by the inline aspect-ratio JS sets,
+   but this guarantees visibility for the spinner + label even if the
+   aspect-ratio calculation ever produces an unexpectedly small box. */
+.placeholder-loading.placeholder-generating {
+    min-height: 80px;
+}
+
 .loading-spinner {
     width: 28px;
     height: 28px;

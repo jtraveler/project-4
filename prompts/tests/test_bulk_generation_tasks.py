@@ -374,6 +374,73 @@ class GetJobStatusTests(TestCase):
         self.assertIn('estimated_cost', status)
         self.assertIn('actual_cost', status)
 
+    def test_status_api_includes_generating_started_at(self):
+        """153-F: status API returns generating_started_at as ISO string
+        when the timestamp is set, and None when it is not."""
+        from django.utils import timezone as tz
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1'],
+            images_per_prompt=2,
+        )
+        images = list(job.images.order_by('prompt_order', 'variation_number'))
+        # One image with timestamp set, one without
+        started = tz.now()
+        images[0].status = 'generating'
+        images[0].generating_started_at = started
+        images[0].save(update_fields=['status', 'generating_started_at'])
+        # images[1] stays queued with null timestamp
+
+        status = self.service.get_job_status(job)
+        img_with_ts = status['images'][0]
+        img_without_ts = status['images'][1]
+
+        self.assertIn('generating_started_at', img_with_ts)
+        self.assertIn('generating_started_at', img_without_ts)
+        self.assertEqual(
+            img_with_ts['generating_started_at'], started.isoformat()
+        )
+        self.assertIsNone(img_without_ts['generating_started_at'])
+
+    def test_generating_started_at_set_when_status_transitions_to_generating(self):
+        """153-F: tasks.py batch loop sets generating_started_at atomically
+        with the status transition. Asserts both fields are persisted."""
+        from prompts.tasks import _run_generation_loop
+        from django.utils import timezone as tz
+        from unittest.mock import MagicMock, patch
+        from prompts.services.image_providers.openai_provider import GenerationResult
+        from prompts.constants import IMAGE_COST_MAP
+
+        job = self.service.create_job(
+            user=self.user,
+            prompts=['p1'],
+            images_per_prompt=1,
+        )
+        job.status = 'processing'
+        job.save(update_fields=['status'])
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value = GenerationResult(
+            success=True, image_data=b'data', revised_prompt='', cost=0.034,
+        )
+        # Stop the loop before actual upload — we only care that the
+        # generating state transition persisted the timestamp.
+        with patch(
+            'prompts.tasks._upload_generated_image_to_b2',
+            return_value='https://cdn.example.com/img.png',
+        ), patch('prompts.tasks.time.sleep'):
+            _run_generation_loop(
+                job, mock_provider, 'sk-test',
+                list(job.images.all()), IMAGE_COST_MAP, tz,
+            )
+
+        img = job.images.first()
+        img.refresh_from_db()
+        self.assertIsNotNone(
+            img.generating_started_at,
+            'generating_started_at must be set when batch loop marks image generating',
+        )
+
     def test_status_api_resolves_size_from_job_when_image_size_empty(self):
         """get_job_status() returns job.size when GeneratedImage.size is empty."""
         job = self.service.create_job(

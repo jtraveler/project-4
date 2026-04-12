@@ -303,7 +303,6 @@
         var actualTotal = parseInt(G.root.dataset.actualTotalImages, 10);
         G.totalImages = (actualTotal && actualTotal > 0) ? actualTotal : G.totalImages;
         G.initialCompleted = parseInt(G.root.dataset.completedCount, 10) || 0;
-        G.isFirstRenderPass = true;  // Cleared after first renderImages() call
         G.currentStatus = G.root.dataset.jobStatus;
         G.statusUrl = G.root.dataset.statusUrl;
         G.cancelUrl = G.root.dataset.cancelUrl;

@@ -128,7 +128,12 @@
                         groupImages[0].size || '');
                 } else if (image.status === 'generating') {
                     var imgQuality = image.quality || G.jobQuality || 'medium';
-                    G.updateSlotToGenerating(groupIndex, slotIndex, imgQuality);
+                    G.updateSlotToGenerating(
+                        groupIndex,
+                        slotIndex,
+                        imgQuality,
+                        image.generating_started_at || null
+                    );
                 }
                 // status === 'queued': leave as queued placeholder (default)
             }
@@ -136,18 +141,19 @@
 
         // Update header outcome stats (size, quality, succeeded, failed) on every render pass
         G.updateHeaderStats(images);
-
-        // Clear first-render flag after initial gallery is built.
-        // Subsequent polls know they are live (not a page-refresh scenario).
-        G.isFirstRenderPass = false;
     };
 
     /**
      * Update a placeholder slot from queued → generating state.
      * Called when renderImages detects status === 'generating'.
      * Replaces the clock icon + "Queued" label with spinner + progress bar.
+     * When generatingStartedAt (ISO 8601 string) is provided, the progress
+     * bar is positioned at the correct elapsed-time offset via negative
+     * animation-delay — so a page refresh mid-generation shows the bar at
+     * its true position instead of restarting from 0%. When null, the slot
+     * shows spinner + label only (no bar).
      */
-    G.updateSlotToGenerating = function (groupIndex, slotIndex, quality) {
+    G.updateSlotToGenerating = function (groupIndex, slotIndex, quality, generatingStartedAt) {
         var groupData = G.renderedGroups[groupIndex];
         if (!groupData) return;
         var slot = groupData.element.querySelector('[data-slot="' + slotIndex + '"]');
@@ -179,15 +185,25 @@
         loading.appendChild(spinner);
         loading.appendChild(genLabel);
 
-        // Only show the timed progress bar when we know the image started
-        // generating in THIS browser session. On page refresh (isFirstRenderPass),
-        // we don't know how far along OpenAI is — don't fake 0% restart.
-        if (!G.isFirstRenderPass) {
+        // Show the progress bar with an accurate elapsed-time offset so it
+        // reflects true generation time. Uses a negative CSS animation-delay —
+        // e.g. if 8s have elapsed on a 20s animation, delay is -8s so the bar
+        // starts at 40% and continues forward. This is accurate on both initial
+        // load AND page refresh. Falls back to spinner-only if no timestamp.
+        if (generatingStartedAt) {
+            var elapsed = (Date.now() - new Date(generatingStartedAt).getTime()) / 1000;
+            if (elapsed < 0) { elapsed = 0; } // clock skew guard
+            // Cap at 90% of duration — don't show a near-complete bar for
+            // an image that is still generating server-side.
+            var offset = Math.min(elapsed, duration * 0.9);
+
             var progressWrap = document.createElement('div');
             progressWrap.className = 'placeholder-progress-wrap';
             var progressFill = document.createElement('div');
             progressFill.className = 'placeholder-progress-fill';
             progressFill.style.animationDuration = duration + 's';
+            // Negative delay starts animation mid-progress (not a pause).
+            progressFill.style.animationDelay = '-' + offset.toFixed(2) + 's';
             progressWrap.appendChild(progressFill);
             loading.appendChild(progressWrap);
         }

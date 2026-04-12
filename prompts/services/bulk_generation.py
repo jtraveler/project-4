@@ -370,6 +370,10 @@ class BulkGenerationService:
                 'variation_number': img.variation_number,
                 'status': img.status,
                 'image_url': img.image_url or '',
+                'generating_started_at': (
+                    img.generating_started_at.isoformat()
+                    if img.generating_started_at else None
+                ),
                 'error_message': _sanitise_error_message(img.error_message or ''),
                 'size': img.size or job.size,
                 'quality': img.quality or getattr(job, 'quality', None) or 'medium',

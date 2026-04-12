@@ -88,6 +88,29 @@ class BulkGeneratorPageTests(TestCase):
         response = self.client.get(self.url)
         self.assertNotIn('generator_choices', response.context)
 
+    def test_cost_map_json_has_size_quality_structure(self):
+        """
+        153-P: cost_map_json context var must be {size: {quality: price}}.
+        The view transposes IMAGE_COST_MAP from {quality: {size: price}}
+        before injecting it — this test guards against regression.
+        """
+        import json
+        self.client.force_login(self.staff_user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+        cost_map = json.loads(response.context['cost_map_json'])
+
+        # Top-level keys must be size strings, not quality strings
+        self.assertIn('1024x1024', cost_map)
+        self.assertNotIn('medium', cost_map)  # quality must NOT be a top-level key
+
+        # Each size must contain quality sub-keys with float prices
+        square = cost_map['1024x1024']
+        self.assertIn('medium', square)
+        self.assertIsInstance(square['medium'], float)
+        self.assertGreater(square['medium'], 0)
+
 
 @override_settings(OPENAI_API_KEY='test-key')
 class ValidatePromptsAPITests(TestCase):

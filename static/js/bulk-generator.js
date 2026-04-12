@@ -101,6 +101,8 @@
     } catch (e) {
         I.COST_MAP = {};
     }
+    // Emergency fallback only — fires if template injection fails entirely.
+    // These values must match IMAGE_COST_MAP['medium']['1024x1024'] in constants.py.
     I.COST_MAP_DEFAULT = I.COST_MAP['1024x1024'] || { low: 0.009, medium: 0.034, high: 0.134 };
     I.IMAGES_PER_MINUTE = 5;
     I.MODEL_CATEGORY_MAP = {
@@ -833,6 +835,7 @@
         var masterSize = I.getMasterDimensions ? I.getMasterDimensions() : '1024x1024';
         var totalImages = 0;
         var totalCost = 0;
+        var hasMixedCounts = false;
 
         // Sum per-box images and cost, respecting per-box size and image count overrides
         I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
@@ -844,6 +847,7 @@
 
             var imgOverride = box.querySelector('.bg-override-images').value;
             var imgCount = imgOverride ? parseInt(imgOverride, 10) : masterImgs;
+            if (imgOverride) { hasMixedCounts = true; }
             totalImages += imgCount;
 
             // Use per-box size override if set, otherwise fall back to master size
@@ -858,13 +862,17 @@
         });
 
         var timeMinutes = Math.ceil(totalImages / I.IMAGES_PER_MINUTE) || 0;
-        I.costImages.innerHTML =
-            '<span class="bg-cost-value">' + promptCount + '</span> prompt' +
-            (promptCount !== 1 ? 's' : '') + ' &times; ' +
-            '<span class="bg-cost-value">' + masterImgs + '</span> image' +
-            (masterImgs !== 1 ? 's' : '') + ' = ' +
-            '<span class="bg-cost-value">' + totalImages + '</span> image' +
-            (totalImages !== 1 ? 's' : '');
+        I.costImages.innerHTML = hasMixedCounts
+            ? '<span class="bg-cost-value">' + promptCount + '</span> prompt' +
+              (promptCount !== 1 ? 's' : '') + ' = ' +
+              '<span class="bg-cost-value">' + totalImages + '</span> image' +
+              (totalImages !== 1 ? 's' : '')
+            : '<span class="bg-cost-value">' + promptCount + '</span> prompt' +
+              (promptCount !== 1 ? 's' : '') + ' &times; ' +
+              '<span class="bg-cost-value">' + masterImgs + '</span> image' +
+              (masterImgs !== 1 ? 's' : '') + ' = ' +
+              '<span class="bg-cost-value">' + totalImages + '</span> image' +
+              (totalImages !== 1 ? 's' : '');
         I.costTime.innerHTML = '~<span class="bg-cost-value">' + timeMinutes + '</span> min';
         I.costDollars.textContent = '$' + totalCost.toFixed(2);
     };

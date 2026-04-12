@@ -38,6 +38,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | `HANDOFF_TEMPLATE_STRUCTURE.md` | Session handoff document template |
 | `PROJECT_FILE_STRUCTURE.md` | Complete file tree |
 | `README.md` | Public-facing project README |
+| `CLAUDE_ARCHIVE_COMPLETED.md` | Archived older "Recently Completed" rows from CLAUDE.md (Session 153-M) |
 
 > **If you reorganize the repo**, update every cross-reference in all nine files above plus any active specs.
 

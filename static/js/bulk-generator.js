@@ -849,8 +849,11 @@
             // Use per-box size override if set, otherwise fall back to master size
             var sizeOverride = box.querySelector('.bg-override-size');
             var boxSize = (sizeOverride && sizeOverride.value) ? sizeOverride.value : masterSize;
+            // Use per-box quality override if set, otherwise fall back to master quality
+            var qualityOverride = box.querySelector('.bg-override-quality');
+            var boxQuality = (qualityOverride && qualityOverride.value) ? qualityOverride.value : masterQuality;
             var sizeMap = I.COST_MAP[boxSize] || I.COST_MAP_DEFAULT;
-            var costPerImage = sizeMap[masterQuality] || I.COST_MAP_DEFAULT[masterQuality] || 0.034;
+            var costPerImage = sizeMap[boxQuality] || I.COST_MAP_DEFAULT[boxQuality] || 0.034;
             totalCost += imgCount * costPerImage;
         });
 

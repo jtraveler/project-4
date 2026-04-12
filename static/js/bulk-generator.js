@@ -92,14 +92,16 @@
     var boxIdCounter = 0;
     I.validatedRefUrl = '';
     I.refImageError = '';
-    // Cost per image by size then quality — matches IMAGE_COST_MAP in constants.py
-    // Updated Session 153: GPT-Image-1.5 pricing (20% cheaper than GPT-Image-1)
-    I.COST_MAP = {
-        '1024x1024': { low: 0.009, medium: 0.034, high: 0.134 },
-        '1024x1536': { low: 0.013, medium: 0.050, high: 0.200 },
-        '1536x1024': { low: 0.013, medium: 0.050, high: 0.200 },
-    };
-    I.COST_MAP_DEFAULT = I.COST_MAP['1024x1024']; // fallback for unknown sizes
+    // Cost map injected from Python constants at render time — single source of truth.
+    // Prices come from IMAGE_COST_MAP in prompts/constants.py via the view context.
+    // Never edit prices here — edit constants.py only.
+    var _rawCostMap = page.dataset.costMap;
+    try {
+        I.COST_MAP = _rawCostMap ? JSON.parse(_rawCostMap) : {};
+    } catch (e) {
+        I.COST_MAP = {};
+    }
+    I.COST_MAP_DEFAULT = I.COST_MAP['1024x1024'] || { low: 0.009, medium: 0.034, high: 0.134 };
     I.IMAGES_PER_MINUTE = 5;
     I.MODEL_CATEGORY_MAP = {
         'gpt-image-1': 'ChatGPT',
@@ -843,7 +845,7 @@
 
         var masterSize = I.getMasterDimensions ? I.getMasterDimensions() : '1024x1024';
         var sizeMap = I.COST_MAP[masterSize] || I.COST_MAP_DEFAULT;
-        var costPerImage = sizeMap[masterQuality] || 0.034;
+        var costPerImage = sizeMap[masterQuality] || I.COST_MAP_DEFAULT[masterQuality] || 0.034;
         var totalCost = totalImages * costPerImage;
         var timeMinutes = Math.ceil(totalImages / I.IMAGES_PER_MINUTE) || 0;
 

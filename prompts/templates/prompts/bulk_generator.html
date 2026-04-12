@@ -15,7 +15,8 @@
      data-url-validate-ref="{% url 'prompts:api_bulk_validate_image' %}"
      data-url-validate-key="{% url 'prompts:bulk_generator_validate_key' %}"
      data-url-detect-tier="{% url 'prompts:bulk_generator_detect_tier' %}"
-     data-url-prepare-prompts="{% url 'prompts:bulk_generator_prepare_prompts' %}">
+     data-url-prepare-prompts="{% url 'prompts:bulk_generator_prepare_prompts' %}"
+     data-cost-map="{{ cost_map_json }}">
 
     {# ===== Page Header (centered, matches notifications) ===== #}
     <div class="bg-header">

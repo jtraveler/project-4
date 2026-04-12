@@ -19,7 +19,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
-from prompts.constants import SUPPORTED_IMAGE_SIZES, get_image_cost
+from prompts.constants import IMAGE_COST_MAP, SUPPORTED_IMAGE_SIZES, get_image_cost
 from prompts.models import BulkGenerationJob
 from prompts.services.bulk_generation import BulkGenerationService
 
@@ -65,8 +65,16 @@ def bulk_generator_page(request):
         created_by=request.user,
     ).order_by('-created_at')[:10]
 
+    # Transpose IMAGE_COST_MAP from {quality: {size: price}} to
+    # {size: {quality: price}} so JS can look up COST_MAP[size][quality].
+    cost_map_by_size = {}
+    for quality, sizes in IMAGE_COST_MAP.items():
+        for size, price in sizes.items():
+            cost_map_by_size.setdefault(size, {})[quality] = price
+
     return render(request, 'prompts/bulk_generator.html', {
         'jobs': jobs,
+        'cost_map_json': json.dumps(cost_map_by_size),
     })
 
 

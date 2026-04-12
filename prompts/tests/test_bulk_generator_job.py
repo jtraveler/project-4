@@ -272,3 +272,19 @@ class GetCostPerImageDelegationTests(TestCase):
         square_cost = self.provider.get_cost_per_image(size='1024x1024', quality='high')
         portrait_cost = self.provider.get_cost_per_image(size='1024x1536', quality='high')
         self.assertNotEqual(square_cost, portrait_cost)  # must differ by size
+
+
+class GetImageCostHelperTests(TestCase):
+    """153-J: Direct tests for the get_image_cost() helper in constants.py."""
+
+    def test_known_quality_and_size(self):
+        from prompts.constants import get_image_cost
+        self.assertEqual(get_image_cost('medium', '1024x1024'), 0.034)
+
+    def test_unknown_quality_returns_default_fallback(self):
+        from prompts.constants import get_image_cost
+        self.assertEqual(get_image_cost('unknown', '1024x1024'), 0.034)
+
+    def test_custom_fallback_is_honoured(self):
+        from prompts.constants import get_image_cost
+        self.assertEqual(get_image_cost('unknown', '9999x9999', fallback=0.099), 0.099)

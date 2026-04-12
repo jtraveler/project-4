@@ -19,7 +19,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_GET, require_POST
 
-from prompts.constants import IMAGE_COST_MAP, SUPPORTED_IMAGE_SIZES
+from prompts.constants import SUPPORTED_IMAGE_SIZES, get_image_cost
 from prompts.models import BulkGenerationJob
 from prompts.services.bulk_generation import BulkGenerationService
 
@@ -79,7 +79,7 @@ def bulk_generator_job_view(request, job_id):
     """
     job = get_object_or_404(BulkGenerationJob, id=job_id, created_by=request.user)
 
-    cost_per_image = IMAGE_COST_MAP.get(job.quality, {}).get(job.size, 0.034)
+    cost_per_image = get_image_cost(job.quality, job.size)
     total_images = job.total_prompts * job.images_per_prompt
     estimated_total_cost = total_images * cost_per_image
 

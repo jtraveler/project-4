@@ -3188,3 +3188,299 @@ class NSFWViolation(models.Model):
 
     def __str__(self):
         return f'NSFWViolation({self.user.username}, {self.severity}, {self.created_at:%Y-%m-%d})'
+
+
+class GeneratorModel(models.Model):
+    """
+    Admin-toggleable registry of AI image generation models.
+
+    This is the single source of truth for model availability, credit costs,
+    tier access gates, and supported parameters. The bulk generator UI reads
+    from this table — no hardcoded model lists exist elsewhere.
+
+    Tier availability flags control which subscription tier can access a model.
+    The promotional flag adds a 'Limited Time' badge in the UI and can be
+    toggled independently of tier gates.
+
+    Scheduled availability fields allow time-boxed promotions (e.g. Black Friday).
+    Set scheduled_available_from/until and a periodic task flips is_enabled.
+    """
+
+    PROVIDER_CHOICES = [
+        ('openai', 'OpenAI'),
+        ('replicate', 'Replicate'),
+        ('xai', 'xAI'),
+    ]
+
+    # Identity
+    name = models.CharField(
+        max_length=100,
+        help_text='Display name shown to users, e.g. "Flux Schnell"',
+    )
+    slug = models.SlugField(
+        unique=True,
+        help_text='URL-safe identifier, e.g. "flux-schnell"',
+    )
+    description = models.TextField(
+        blank=True,
+        help_text='Short description shown in model selector tooltip.',
+    )
+
+    # Provider config
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
+    model_identifier = models.CharField(
+        max_length=200,
+        help_text=(
+            'Exact model string passed to the provider API. '
+            'e.g. "black-forest-labs/flux-schnell" for Replicate, '
+            '"grok-imagine-image" for xAI.'
+        ),
+    )
+
+    # Pricing
+    credit_cost = models.PositiveSmallIntegerField(
+        default=1,
+        help_text=(
+            'Credits consumed per image. 1 credit = 1 Flux Schnell image (~$0.003). '
+            'Flux Dev = 10, Flux 1.1 Pro = 14, Nano Banana 2 = 20, Grok = 7, '
+            'GPT-Image-1.5 BYOK = 2 (platform overhead only).'
+        ),
+    )
+
+    # Tier availability
+    available_starter = models.BooleanField(
+        default=False,
+        help_text='Available on free Starter tier.',
+    )
+    available_creator = models.BooleanField(
+        default=False,
+        help_text='Available on Creator tier ($9/mo).',
+    )
+    available_pro = models.BooleanField(
+        default=True,
+        help_text='Available on Pro tier ($19/mo).',
+    )
+    available_studio = models.BooleanField(
+        default=True,
+        help_text='Available on Studio tier ($49/mo).',
+    )
+
+    # Feature flags
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text='Master switch. Disabled models are hidden from all users immediately.',
+    )
+    is_byok_only = models.BooleanField(
+        default=False,
+        help_text=(
+            'If True, this model only appears when the user has enabled BYOK mode. '
+            'Set True for GPT-Image-1.5 (OpenAI BYOK).'
+        ),
+    )
+    requires_platform_key = models.BooleanField(
+        default=True,
+        help_text=(
+            'If True, uses the master platform API key from env vars (platform mode). '
+            'If False + is_byok_only True, uses the user-supplied BYOK key.'
+        ),
+    )
+    is_promotional = models.BooleanField(
+        default=False,
+        help_text='Shows a promotional badge in the UI (e.g. "Limited Time").',
+    )
+    promotional_label = models.CharField(
+        max_length=50,
+        blank=True,
+        default='Limited Time',
+        help_text='Badge text shown when is_promotional is True.',
+    )
+
+    # Scheduling (for time-boxed promotions — processed by periodic task)
+    scheduled_available_from = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='If set, model becomes enabled at this UTC datetime.',
+    )
+    scheduled_available_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='If set, model becomes disabled at this UTC datetime.',
+    )
+
+    # Supported parameters
+    supported_aspect_ratios = models.JSONField(
+        default=list,
+        help_text=(
+            'List of supported aspect ratio strings for this model. '
+            'Empty list means the model uses pixel-based size selection '
+            '(OpenAI pattern). Replicate models use aspect ratios: '
+            '["1:1","16:9","3:2","2:3","4:5","5:4","9:16"].'
+        ),
+    )
+    supports_quality_tiers = models.BooleanField(
+        default=False,
+        help_text=(
+            'If True, the quality selector (Low/Med/High) is shown for this model. '
+            'OpenAI GPT-Image-1.5 = True. Replicate/Flux = False.'
+        ),
+    )
+    default_aspect_ratio = models.CharField(
+        max_length=20,
+        blank=True,
+        default='1:1',
+        help_text='Default aspect ratio pre-selected in the UI.',
+    )
+
+    # Ordering
+    sort_order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text='Lower numbers appear first in the model dropdown.',
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+        verbose_name = 'Generator Model'
+        verbose_name_plural = 'Generator Models'
+
+    def __str__(self):
+        enabled = '' if self.is_enabled else ' [DISABLED]'
+        return f'{self.name} ({self.provider}){enabled}'
+
+    def is_available_for_tier(self, tier: str) -> bool:
+        """Return True if this model is enabled and available for the given tier.
+
+        Args:
+            tier: One of 'starter', 'creator', 'pro', 'studio'.
+        """
+        if not self.is_enabled:
+            return False
+        tier_map = {
+            'starter': self.available_starter,
+            'creator': self.available_creator,
+            'pro': self.available_pro,
+            'studio': self.available_studio,
+        }
+        return tier_map.get(tier, False)
+
+
+class UserCredit(models.Model):
+    """
+    Credit balance for a user. One-to-one with User.
+
+    Credits are the platform's internal currency for image generation.
+    1 credit = 1 Flux Schnell image (~$0.003 API cost).
+    Higher-quality models cost proportionally more credits.
+
+    This model tracks the current balance and monthly allowance metadata.
+    The full transaction history lives in CreditTransaction.
+
+    Note: No Stripe integration yet — balance is managed manually or via
+    admin. Subscription enforcement (tier checks) is deferred to Phase SUB.
+    """
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='credits',
+    )
+    balance = models.PositiveIntegerField(
+        default=0,
+        help_text='Current spendable credit balance.',
+    )
+    lifetime_earned = models.PositiveIntegerField(
+        default=0,
+        help_text='Total credits ever granted to this user (all time).',
+    )
+    monthly_allowance = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            'Credits granted per subscription cycle. '
+            'Starter=50 (one-time), Creator=250, Pro=1000, Studio=3500. '
+            '0 means no active subscription.'
+        ),
+    )
+    allowance_resets_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the next monthly allowance top-up will be applied.',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'User Credit'
+        verbose_name_plural = 'User Credits'
+
+    def __str__(self):
+        return f'{self.user.username}: {self.balance} credits'
+
+
+class CreditTransaction(models.Model):
+    """
+    Append-only ledger of every credit earn and spend.
+
+    Never delete records from this table. It is the source of truth for
+    auditing, dispute resolution, and usage analytics.
+
+    amount is positive for credits earned (grants, top-ups) and negative
+    for credits spent (generation). balance_after is a snapshot of the
+    user's balance immediately after this transaction was applied.
+    """
+
+    TRANSACTION_TYPES = [
+        ('monthly_grant', 'Monthly Grant'),
+        ('starter_grant', 'Starter One-Time Grant'),
+        ('topup_purchase', 'Credit Top-Up Purchase'),
+        ('generation_spend', 'Generation Spend'),
+        ('refund', 'Refund'),
+        ('admin_adjustment', 'Admin Adjustment'),
+        ('promotional_grant', 'Promotional Grant'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='credit_transactions',
+    )
+    transaction_type = models.CharField(
+        max_length=30,
+        choices=TRANSACTION_TYPES,
+    )
+    amount = models.IntegerField(
+        help_text='Positive = earned, negative = spent.',
+    )
+    balance_after = models.PositiveIntegerField(
+        help_text='User credit balance immediately after this transaction.',
+    )
+    description = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Human-readable description, e.g. "Pro monthly grant" or "Flux Schnell x3".',
+    )
+    bulk_generation_job = models.ForeignKey(
+        'BulkGenerationJob',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='credit_transactions',
+        help_text='The generation job that caused this spend, if applicable.',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+        ]
+        verbose_name = 'Credit Transaction'
+        verbose_name_plural = 'Credit Transactions'
+
+    def __str__(self):
+        sign = '+' if self.amount >= 0 else ''
+        return (
+            f'{self.user.username}: {sign}{self.amount} credits '
+            f'({self.transaction_type}) → {self.balance_after}'
+        )

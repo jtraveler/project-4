@@ -11,7 +11,7 @@ from django_summernote.admin import SummernoteModelAdmin
 from django.urls import reverse, path
 from django.utils.html import format_html
 from taggit.models import Tag
-from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect, Notification, BulkGenerationJob, GeneratedImage, NSFWViolation
+from .models import Prompt, Comment, CollaborateRequest, ModerationLog, ContentFlag, ProfanityWord, TagCategory, SubjectCategory, SubjectDescriptor, UserProfile, PromptReport, EmailPreferences, SiteSettings, PromptView, Collection, CollectionItem, SlugRedirect, Notification, BulkGenerationJob, GeneratedImage, NSFWViolation, GeneratorModel, UserCredit, CreditTransaction
 from .utils.related import (
     W_TAG, W_CATEGORY, W_DESCRIPTOR, W_GENERATOR, W_ENGAGEMENT, W_RECENCY,
 )
@@ -2371,6 +2371,77 @@ class NSFWViolationAdmin(admin.ModelAdmin):
     readonly_fields = ('user', 'severity', 'prompt', 'created_at')
     ordering = ('-created_at',)
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(GeneratorModel)
+class GeneratorModelAdmin(admin.ModelAdmin):
+    list_display = [
+        'name', 'provider', 'credit_cost', 'is_enabled',
+        'available_creator', 'available_pro', 'available_studio',
+        'is_promotional', 'sort_order',
+    ]
+    list_editable = [
+        'is_enabled', 'available_creator', 'available_pro',
+        'available_studio', 'is_promotional', 'sort_order',
+    ]
+    list_filter = ['provider', 'is_enabled', 'is_byok_only', 'is_promotional']
+    search_fields = ['name', 'slug', 'model_identifier']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = [
+        ('Identity', {'fields': ['name', 'slug', 'description']}),
+        ('Provider', {'fields': ['provider', 'model_identifier', 'credit_cost']}),
+        ('Tier Availability', {'fields': [
+            'available_starter', 'available_creator',
+            'available_pro', 'available_studio',
+        ]}),
+        ('Flags', {'fields': [
+            'is_enabled', 'is_byok_only', 'requires_platform_key',
+            'is_promotional', 'promotional_label',
+        ]}),
+        ('Scheduling', {'fields': [
+            'scheduled_available_from', 'scheduled_available_until',
+        ]}),
+        ('Parameters', {'fields': [
+            'supported_aspect_ratios', 'supports_quality_tiers',
+            'default_aspect_ratio',
+        ]}),
+        ('Display', {'fields': ['sort_order']}),
+        ('Timestamps', {'fields': ['created_at', 'updated_at']}),
+    ]
+
+
+@admin.register(UserCredit)
+class UserCreditAdmin(admin.ModelAdmin):
+    list_display = [
+        'user', 'balance', 'monthly_allowance',
+        'lifetime_earned', 'allowance_resets_at',
+    ]
+    search_fields = ['user__username', 'user__email']
+    readonly_fields = ['lifetime_earned', 'updated_at']
+
+
+@admin.register(CreditTransaction)
+class CreditTransactionAdmin(admin.ModelAdmin):
+    list_display = [
+        'user', 'transaction_type', 'amount',
+        'balance_after', 'description', 'created_at',
+    ]
+    list_filter = ['transaction_type']
+    search_fields = ['user__username', 'description']
+    readonly_fields = [
+        'user', 'transaction_type', 'amount', 'balance_after',
+        'description', 'bulk_generation_job', 'created_at',
+    ]
+
+    # Append-only — no add/change/delete in admin
     def has_add_permission(self, request):
         return False
 

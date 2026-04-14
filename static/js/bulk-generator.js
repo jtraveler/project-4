@@ -783,6 +783,65 @@
         });
     }
 
+    // ─── Cost Estimate + Generate Button State ───────────────────
+    // Defined BEFORE handleModelChange — which calls updateCostEstimate()
+    // synchronously at init time (see handleModelChange() call below).
+    I.updateGenerateBtn = function updateGenerateBtn() {
+        I.generateBtn.disabled = I.getPromptCount() === 0;
+    };
+
+    I.updateCostEstimate = function updateCostEstimate() {
+        var promptCount = I.getPromptCount();
+        var masterImgs = I.getMasterImagesPerPrompt();
+        var masterQuality = I.getMasterQuality();
+        var masterSize = I.getMasterDimensions ? I.getMasterDimensions() : '1024x1024';
+        var totalImages = 0;
+        var totalCost = 0;
+        var hasMixedCounts = false;
+
+        // Sum per-box images and cost, respecting per-box size and image count overrides
+        I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
+            var ta = box.querySelector('.bg-box-textarea');
+            var vs = box.querySelector('.bg-override-vision');
+            var isVision = vs && vs.value === 'yes';
+            // Count box if it has text OR Vision mode is enabled
+            if (!ta.value.trim() && !isVision) return;
+
+            var imgOverride = box.querySelector('.bg-override-images').value;
+            var imgCount = imgOverride ? parseInt(imgOverride, 10) : masterImgs;
+            if (imgOverride) { hasMixedCounts = true; }
+            totalImages += imgCount;
+
+            // Use per-box size override if set, otherwise fall back to master size
+            var sizeOverride = box.querySelector('.bg-override-size');
+            var boxSize = (sizeOverride && sizeOverride.value) ? sizeOverride.value : masterSize;
+            // Use per-box quality override if set, otherwise fall back to master quality
+            var qualityOverride = box.querySelector('.bg-override-quality');
+            var boxQuality = (qualityOverride && qualityOverride.value) ? qualityOverride.value : masterQuality;
+            var sizeMap = I.COST_MAP[boxSize] || I.COST_MAP_DEFAULT;
+            var costPerImage = sizeMap[boxQuality] || I.COST_MAP_DEFAULT[boxQuality] || 0.034;
+            totalCost += imgCount * costPerImage;
+        });
+
+        var timeMinutes = Math.ceil(totalImages / I.IMAGES_PER_MINUTE) || 0;
+        I.costImages.innerHTML = hasMixedCounts
+            ? '<span class="bg-cost-value">' + promptCount + '</span> prompt' +
+              (promptCount !== 1 ? 's' : '') + ' = ' +
+              '<span class="bg-cost-value">' + totalImages + '</span> image' +
+              (totalImages !== 1 ? 's' : '')
+            : '<span class="bg-cost-value">' + promptCount + '</span> prompt' +
+              (promptCount !== 1 ? 's' : '') + ' &times; ' +
+              '<span class="bg-cost-value">' + masterImgs + '</span> image' +
+              (masterImgs !== 1 ? 's' : '') + ' = ' +
+              '<span class="bg-cost-value">' + totalImages + '</span> image' +
+              (totalImages !== 1 ? 's' : '');
+        I.costTime.innerHTML = '~<span class="bg-cost-value">' + timeMinutes + '</span> min';
+        I.costDollars.textContent = '$' + totalCost.toFixed(2);
+    };
+
+    I.settingQuality.addEventListener('change', I.updateCostEstimate);
+    I.settingQuality.addEventListener('change', I.updateGenerateBtn);
+
     // ─── Model Change Handler ─────────────────────────────────────
     // Defined BEFORE any call site so forward references are safe.
     I.pixelSizeGroup = document.getElementById('pixelSizeGroup');
@@ -801,9 +860,13 @@
         var isByokModel = opt.dataset.byokOnly === 'true';
         var defaultAspect = opt.dataset.defaultAspect || '1:1';
 
-        // Show/hide API key section based on whether selected model is BYOK
+        // Show/hide API key section and tier section — both only relevant for BYOK (OpenAI)
+        var tierSection = document.getElementById('tierSection');
         if (I.apiKeySection) {
             I.apiKeySection.style.display = isByokModel ? '' : 'none';
+        }
+        if (tierSection) {
+            tierSection.style.display = isByokModel ? '' : 'none';
         }
 
         // Show pixel size or aspect ratio selector
@@ -920,63 +983,6 @@
 
     I.getVisibility = function getVisibility() {
         return I.settingVisibility.checked ? 'public' : 'private';
-    };
-
-    I.updateCostEstimate = function updateCostEstimate() {
-        var promptCount = I.getPromptCount();
-        var masterImgs = I.getMasterImagesPerPrompt();
-        var masterQuality = I.getMasterQuality();
-        var masterSize = I.getMasterDimensions ? I.getMasterDimensions() : '1024x1024';
-        var totalImages = 0;
-        var totalCost = 0;
-        var hasMixedCounts = false;
-
-        // Sum per-box images and cost, respecting per-box size and image count overrides
-        I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
-            var ta = box.querySelector('.bg-box-textarea');
-            var vs = box.querySelector('.bg-override-vision');
-            var isVision = vs && vs.value === 'yes';
-            // Count box if it has text OR Vision mode is enabled
-            if (!ta.value.trim() && !isVision) return;
-
-            var imgOverride = box.querySelector('.bg-override-images').value;
-            var imgCount = imgOverride ? parseInt(imgOverride, 10) : masterImgs;
-            if (imgOverride) { hasMixedCounts = true; }
-            totalImages += imgCount;
-
-            // Use per-box size override if set, otherwise fall back to master size
-            var sizeOverride = box.querySelector('.bg-override-size');
-            var boxSize = (sizeOverride && sizeOverride.value) ? sizeOverride.value : masterSize;
-            // Use per-box quality override if set, otherwise fall back to master quality
-            var qualityOverride = box.querySelector('.bg-override-quality');
-            var boxQuality = (qualityOverride && qualityOverride.value) ? qualityOverride.value : masterQuality;
-            var sizeMap = I.COST_MAP[boxSize] || I.COST_MAP_DEFAULT;
-            var costPerImage = sizeMap[boxQuality] || I.COST_MAP_DEFAULT[boxQuality] || 0.034;
-            totalCost += imgCount * costPerImage;
-        });
-
-        var timeMinutes = Math.ceil(totalImages / I.IMAGES_PER_MINUTE) || 0;
-        I.costImages.innerHTML = hasMixedCounts
-            ? '<span class="bg-cost-value">' + promptCount + '</span> prompt' +
-              (promptCount !== 1 ? 's' : '') + ' = ' +
-              '<span class="bg-cost-value">' + totalImages + '</span> image' +
-              (totalImages !== 1 ? 's' : '')
-            : '<span class="bg-cost-value">' + promptCount + '</span> prompt' +
-              (promptCount !== 1 ? 's' : '') + ' &times; ' +
-              '<span class="bg-cost-value">' + masterImgs + '</span> image' +
-              (masterImgs !== 1 ? 's' : '') + ' = ' +
-              '<span class="bg-cost-value">' + totalImages + '</span> image' +
-              (totalImages !== 1 ? 's' : '');
-        I.costTime.innerHTML = '~<span class="bg-cost-value">' + timeMinutes + '</span> min';
-        I.costDollars.textContent = '$' + totalCost.toFixed(2);
-    };
-
-    I.settingQuality.addEventListener('change', I.updateCostEstimate);
-    I.settingQuality.addEventListener('change', I.updateGenerateBtn);
-
-    // ─── Generate Button State ────────────────────────────────────
-    I.updateGenerateBtn = function updateGenerateBtn() {
-        I.generateBtn.disabled = I.getPromptCount() === 0;
     };
 
     // ─── Initial State ───────────────────────────────────────────

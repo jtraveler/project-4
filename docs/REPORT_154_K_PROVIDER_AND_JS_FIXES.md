@@ -143,7 +143,7 @@ python manage.py test prompts
 
 | Hash | Message |
 |------|---------|
-| (TBD) | fix(bulk-gen): FileOutput crash + temp dollar display for billing verification |
+| 8d970a1 | fix(bulk-gen): FileOutput crash + temp dollar display for billing verification |
 
 ---
 

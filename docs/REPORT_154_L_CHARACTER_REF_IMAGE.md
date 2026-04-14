@@ -140,7 +140,7 @@ print(GeneratorModel.objects.get(slug='flux-schnell').supports_reference_image)
 
 | Hash | Message |
 |------|---------|
-| (TBD) | feat(bulk-gen): hide Character Reference Image for non-supporting models |
+| 55042b5 | feat(bulk-gen): hide Character Reference Image for non-supporting models |
 
 ---
 

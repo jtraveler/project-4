@@ -73,11 +73,27 @@ All relevant agents were included.
 
 ## Section 9 — How to Test
 
-*(Filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1227 tests, 0 failures, 12 skipped
+
+# Verify helpers exist
+grep -n "_get_platform_api_key\|_deduct_generation_credits" prompts/tasks.py
+# Expected: 4+ matches
+```
+
+**Manual** (requires Heroku env vars):
+1. Set `REPLICATE_API_TOKEN` and `XAI_API_KEY` in Heroku
+2. Create Replicate bulk gen job → verify no api_key_encrypted required
+3. Create OpenAI bulk gen job without api_key → verify fails with clear error
+4. Verify CreditTransaction records created after job completion
 
 ## Section 10 — Commits
 
-*(Filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| dc90b32 | feat(bulk-gen): platform mode architecture — master API keys for Replicate/xAI |
 
 ## Section 11 — What to Work on Next
 

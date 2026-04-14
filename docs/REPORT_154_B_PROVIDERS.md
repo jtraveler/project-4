@@ -79,11 +79,26 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(Filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1227 tests, 0 failures, 12 skipped
+
+# Verify providers register
+python manage.py shell -c "
+from prompts.services.image_providers import get_provider
+r = get_provider('replicate', mock_mode=True, model_name='black-forest-labs/flux-schnell')
+x = get_provider('xai', mock_mode=True)
+print('replicate:', type(r).__name__, '| xai:', type(x).__name__)
+"
+# Expected: replicate: ReplicateImageProvider | xai: XAIImageProvider
+```
 
 ## Section 10 — Commits
 
-*(Filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| a4e84ec | feat(bulk-gen): add Replicate + xAI image providers |
 
 ## Section 11 — What to Work on Next
 

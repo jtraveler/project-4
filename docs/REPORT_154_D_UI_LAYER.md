@@ -98,11 +98,29 @@ All relevant agents were included.
 
 ## Section 9 — How to Test
 
-*(Filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1227 tests, 0 failures, 12 skipped
+
+python manage.py collectstatic --noinput
+# Expected: static files collected
+```
+
+**Manual browser checks:**
+1. Go to `/tools/bulk-ai-generator/`
+2. Model dropdown shows 5 platform models (Flux Schnell/Dev/1.1-Pro, Grok, NB2) — GPT-Image-1.5 hidden
+3. Select Flux Schnell → pixel size buttons hidden, aspect ratio buttons shown
+4. Select different aspect ratio → sticky bar credit cost updates
+5. Enable BYOK toggle → API key section appears, GPT-Image-1.5 appears in dropdown
+6. Disable BYOK toggle → API key section hidden, GPT-Image-1.5 removed from dropdown
+7. Open DevTools Console → no JS errors (syntax error fix verified)
 
 ## Section 10 — Commits
 
-*(Filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 7833e15 | feat(bulk-gen): dynamic model selector, BYOK toggle, aspect ratio UI |
 
 ## Section 11 — What to Work on Next
 

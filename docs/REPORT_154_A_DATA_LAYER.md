@@ -75,11 +75,25 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(Filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1227 tests, 0 failures, 12 skipped
+
+# Verify models exist
+python manage.py shell -c "from prompts.models import GeneratorModel, UserCredit, CreditTransaction; print(GeneratorModel.objects.count())"
+# Expected: 6 (after seed command)
+
+# Seed is idempotent
+python manage.py seed_generator_models
+# Expected on re-run: 0 created, 6 updated
+```
 
 ## Section 10 — Commits
 
-*(Filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 35df90b | feat(bulk-gen): add GeneratorModel, UserCredit, CreditTransaction data layer |
 
 ## Section 11 — What to Work on Next
 

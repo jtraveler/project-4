@@ -765,10 +765,16 @@
         I.generateBtn.disabled = true;
         I.generateBtn.innerHTML =
             '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-sparkles"/></svg> Validating...';
-        I.generateStatus.textContent = 'Validating API key...';
-
-        // Step 0: Validate API key
-        validateApiKey()
+        // Step 0: Validate API key — BYOK (OpenAI) only.
+        // Platform models (Replicate, xAI) use master keys and skip this step.
+        var _initOpt = I.settingModel
+            ? I.settingModel.options[I.settingModel.selectedIndex]
+            : null;
+        var _needsKeyValidation = !!(_initOpt && _initOpt.dataset.byokOnly === 'true');
+        if (_needsKeyValidation) {
+            I.generateStatus.textContent = 'Validating API key...';
+        }
+        (_needsKeyValidation ? validateApiKey() : Promise.resolve(true))
         .then(function (keyValid) {
             if (!keyValid) {
                 // Scroll to API key section

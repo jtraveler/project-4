@@ -836,7 +836,18 @@
               '<span class="bg-cost-value">' + totalImages + '</span> image' +
               (totalImages !== 1 ? 's' : '');
         I.costTime.innerHTML = '~<span class="bg-cost-value">' + timeMinutes + '</span> min';
-        I.costDollars.textContent = '$' + totalCost.toFixed(2);
+        // Show credits for platform (non-BYOK) models, dollars for BYOK OpenAI
+        var _costOpt = I.settingModel
+            ? I.settingModel.options[I.settingModel.selectedIndex]
+            : null;
+        var _isByokCost = !!(_costOpt && _costOpt.dataset.byokOnly === 'true');
+        if (_isByokCost) {
+            I.costDollars.textContent = '$' + totalCost.toFixed(2);
+        } else {
+            var _creditCost = _costOpt ? parseInt(_costOpt.dataset.creditCost || '1', 10) : 1;
+            var _totalCredits = totalImages * _creditCost;
+            I.costDollars.textContent = _totalCredits + ' credit' + (_totalCredits !== 1 ? 's' : '');
+        }
     };
 
     I.settingQuality.addEventListener('change', I.updateCostEstimate);
@@ -854,8 +865,13 @@
         var opt = I.settingModel.options[I.settingModel.selectedIndex];
         if (!opt) return;
 
-        var aspectRatios = [];
-        try { aspectRatios = JSON.parse(opt.dataset.aspectRatios || '[]'); } catch (e) {}
+        // Read aspect ratios from MODEL_BY_IDENTIFIER (valid JSON from data-models attribute).
+        // Do NOT use opt.dataset.aspectRatios — Django renders Python lists with single
+        // quotes which are not valid JSON and cause JSON.parse to silently return [].
+        var _modelConfig = I.MODEL_BY_IDENTIFIER ? I.MODEL_BY_IDENTIFIER[opt.value] : null;
+        var aspectRatios = (_modelConfig && Array.isArray(_modelConfig.supported_aspect_ratios))
+            ? _modelConfig.supported_aspect_ratios
+            : [];
         var supportsQuality = opt.dataset.supportsQuality === 'true';
         var isByokModel = opt.dataset.byokOnly === 'true';
         var defaultAspect = opt.dataset.defaultAspect || '1:1';
@@ -908,6 +924,31 @@
         var qualityGroup = document.getElementById('qualityGroup');
         if (qualityGroup) {
             qualityGroup.style.display = supportsQuality ? '' : 'none';
+        }
+
+        // Sync per-box overrides to match master model capabilities.
+        // Hide quality + pixel-size override fields for non-quality-tier (Replicate/xAI)
+        // models. The containing "field" div (label + wrapper) has no class, so we
+        // target the parent of .bg-box-override-wrapper.
+        if (I.promptGrid) {
+            I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
+                var qualitySelect = box.querySelector('.bg-override-quality');
+                var sizeSelect = box.querySelector('.bg-override-size');
+                if (qualitySelect) {
+                    var qWrap = qualitySelect.closest('.bg-box-override-wrapper');
+                    var qField = qWrap ? qWrap.parentElement : null;
+                    if (qField) {
+                        qField.style.display = supportsQuality ? '' : 'none';
+                    }
+                }
+                if (sizeSelect) {
+                    var sWrap = sizeSelect.closest('.bg-box-override-wrapper');
+                    var sField = sWrap ? sWrap.parentElement : null;
+                    if (sField) {
+                        sField.style.display = supportsQuality ? '' : 'none';
+                    }
+                }
+            });
         }
 
         I.updateCostEstimate();

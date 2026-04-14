@@ -116,11 +116,26 @@ satisfies the inactive-component exemption.
 
 ## Section 9 — How to Test
 
-*(Filled in after full suite passes.)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1233 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks:**
+1. Flux Schnell → quality faded/disabled, ref image faded with hint
+2. GPT-Image-1.5 → quality active, ref image active with upload link
+3. Grok → quality disabled, ref image active (supports it)
+4. Nano Banana → quality disabled, ref image active
+5. Grok → Flux Dev → ref image disabled, hint appears
+6. Click "Add 4 more" on Flux Schnell → new boxes have quality disabled
+7. Upload link not visible when ref image disabled
 
 ## Section 10 — Commits
 
-*(Filled in after full suite passes.)*
+| Hash | Message |
+|------|---------|
+| 4f07485 | fix(bulk-gen): disable instead of hide Quality + Character Reference Image |
 
 ## Section 11 — What to Work on Next
 

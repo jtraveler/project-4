@@ -118,11 +118,26 @@ contains no prompt echo.
 
 ## Section 9 — How to Test
 
-*(Filled in after full suite passes.)*
+**Automated:**
+```bash
+python manage.py test
+# Expected: 1233 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks:**
+1. Select Flux Schnell → per-box Dimensions visible, Quality hidden
+2. Select GPT-Image-1.5 → per-box Dimensions + Quality both visible
+3. Generate button active on page load without typing
+4. Set aspect ratio 2:3 with Grok → switch to Flux Dev → 2:3 maintained
+5. Set 9:16 → switch to GPT-Image-1.5 → falls back gracefully
+6. Toggle "Prompt from Image" Yes → AI Influence NOT auto-checked
+7. Flux 1.1 Pro + NSFW prompt → "Possible content violation" message
 
 ## Section 10 — Commits
 
-*(Filled in after full suite passes.)*
+| Hash | Message |
+|------|---------|
+| cfb8fe8 | fix(bulk-gen): ModelError NSFW message, dimensions regression, vision/direction, generate button, aspect ratio defaults |
 
 ## Section 11 — What to Work on Next
 

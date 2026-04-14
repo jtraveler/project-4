@@ -129,11 +129,27 @@ checks after full suite passes.
 
 ## Section 9 — How to Test
 
-*(Filled in after full suite passes.)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_bulk_generator_views.JobDetailViewContextTests
+# Expected: 6 tests, 0 failures
+
+python manage.py test
+# Expected: 1233 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks:**
+1. Flux Dev job results page → "Flux Dev" shown (not identifier)
+2. Grok job → "Grok Imagine" shown
+3. Flux 2:3 job → placeholder cards render portrait
+4. Flux 16:9 job → placeholder cards render landscape
+5. OpenAI 1024x1536 job → still renders portrait
 
 ## Section 10 — Commits
 
-*(Filled in after full suite passes.)*
+| Hash | Message |
+|------|---------|
+| f864b49 | fix(bulk-gen): results page friendly model name + aspect ratio placeholders |
 
 ## Section 11 — What to Work on Next
 

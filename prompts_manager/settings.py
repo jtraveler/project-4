@@ -46,6 +46,12 @@ FERNET_KEY = os.environ.get('FERNET_KEY', '')
 # This is the platform key, NOT the user's BYOK key. Set in Heroku config vars.
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
+# Replicate API key — platform mode for Flux/Nano Banana 2 generation
+REPLICATE_API_TOKEN = os.environ.get('REPLICATE_API_TOKEN', '')
+
+# xAI API key — platform mode for Grok Imagine generation
+XAI_API_KEY = os.environ.get('XAI_API_KEY', '')
+
 # Bulk image generation concurrency (tune via Heroku config var when upgrading API tier)
 BULK_GEN_MAX_CONCURRENT = int(os.environ.get('BULK_GEN_MAX_CONCURRENT', 4))
 

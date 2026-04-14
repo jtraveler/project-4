@@ -215,10 +215,18 @@ class BulkGenerationService:
             openai_tier=openai_tier,
         )
 
+        # If api_key is provided, encrypt and store it (BYOK mode).
+        # If not provided and provider is not 'openai', job runs in platform mode.
         if api_key:
             job.api_key_encrypted = encrypt_api_key(api_key)
             job.api_key_hint = api_key[-4:] if len(api_key) >= 4 else ''
             job.save(update_fields=['api_key_encrypted', 'api_key_hint'])
+        elif provider == 'openai':
+            raise ValueError(
+                "OpenAI provider requires a BYOK API key. "
+                "Pass api_key when creating an OpenAI generation job."
+            )
+        # else: platform mode for Replicate/xAI — api_key_encrypted stays NULL
 
         # Build combined prompts (character description + individual prompt)
         images_to_create = []

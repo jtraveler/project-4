@@ -2706,7 +2706,7 @@ def _apply_generation_result(job, image, result, tz):
         return 0.0, False
 
 
-def _run_generation_loop(job, provider, job_api_key, images, tz):  # noqa: C901 — generation loop has inherent branching for batching, cancellation, and error handling
+def _run_generation_loop(job, provider, job_api_key, images, tz, _provider_kwargs=None):  # noqa: C901 — generation loop has inherent branching for batching, cancellation, and error handling
     """
     Execute the image generation loop for a bulk job.
 
@@ -2714,6 +2714,9 @@ def _run_generation_loop(job, provider, job_api_key, images, tz):  # noqa: C901 
     using ThreadPoolExecutor. Cancel detection fires between batches.
     Returns (completed_count, failed_count, total_cost).
     """
+    if _provider_kwargs is None:
+        _provider_kwargs = {'mock_mode': False}
+
     from decimal import Decimal
     from prompts.models import BulkGenerationJob
     from prompts.services.bulk_generation import BulkGenerationService
@@ -2734,7 +2737,7 @@ def _run_generation_loop(job, provider, job_api_key, images, tz):  # noqa: C901 
         thread before/after this function to avoid concurrent write contention.
         This function only performs the API call + retry logic.
         """
-        thread_provider = _get_provider(provider_name, mock_mode=False)
+        thread_provider = _get_provider(provider_name, **_provider_kwargs)
         return _run_generation_with_retry(thread_provider, image, job, job_api_key)
 
     # Per-job rate params from tier + quality.
@@ -2863,6 +2866,67 @@ def _run_generation_loop(job, provider, job_api_key, images, tz):  # noqa: C901 
     return completed_count, failed_count, total_cost
 
 
+def _get_platform_api_key(provider: str) -> str:
+    """
+    Return the platform master API key for the given provider.
+    Used in platform mode (no user BYOK key stored on the job).
+
+    OpenAI is always BYOK — never returns an OpenAI platform key.
+    Returns empty string if the env var is not set.
+    """
+    from django.conf import settings
+    key_map = {
+        'replicate': getattr(settings, 'REPLICATE_API_TOKEN', ''),
+        'xai': getattr(settings, 'XAI_API_KEY', ''),
+    }
+    return key_map.get(provider, '')
+
+
+def _deduct_generation_credits(job, completed_count: int) -> None:
+    """
+    Deduct credits from UserCredit for successfully generated images.
+    Creates a CreditTransaction record for the audit trail.
+    Non-blocking — wrapped in try/except so task never crashes on credit errors.
+    """
+    if completed_count <= 0:
+        return
+    try:
+        from prompts.models import GeneratorModel, UserCredit, CreditTransaction
+        # Look up the credit cost for this model
+        gen_model = GeneratorModel.objects.filter(
+            model_identifier=job.model_name
+        ).first()
+        credit_cost_per_image = gen_model.credit_cost if gen_model else 1
+        total_credits = completed_count * credit_cost_per_image
+
+        user_credit, _ = UserCredit.objects.get_or_create(
+            user=job.created_by,
+            defaults={'balance': 0},
+        )
+        # Never go below zero — if balance is insufficient, deduct what's there
+        actual_deduction = min(total_credits, user_credit.balance)
+        new_balance = user_credit.balance - actual_deduction
+        user_credit.balance = new_balance
+        user_credit.save(update_fields=['balance', 'updated_at'])
+
+        CreditTransaction.objects.create(
+            user=job.created_by,
+            transaction_type='generation_spend',
+            amount=-actual_deduction,
+            balance_after=new_balance,
+            description=(
+                f'{job.model_name or "Unknown model"} × {completed_count} image'
+                f'{"s" if completed_count != 1 else ""} '
+                f'({credit_cost_per_image} credit{"s" if credit_cost_per_image != 1 else ""} each)'
+            ),
+            bulk_generation_job=job,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to deduct credits for job %s (non-blocking)", job.id
+        )
+
+
 def process_bulk_generation_job(job_id: str) -> None:
     """
     Orchestrate image generation for a bulk job.
@@ -2893,25 +2957,50 @@ def process_bulk_generation_job(job_id: str) -> None:
     from prompts.services.bulk_generation import (
         decrypt_api_key, BulkGenerationService,
     )
-    if not job.api_key_encrypted:
-        logger.error("No API key for job %s, cannot generate", job_id)
+    # Resolve API key: BYOK (user key stored encrypted) or platform mode
+    # (master key from env vars). OpenAI is ALWAYS BYOK.
+    if job.api_key_encrypted:
+        # BYOK mode — decrypt user's stored key
+        try:
+            job_api_key = decrypt_api_key(job.api_key_encrypted)
+        except Exception as e:
+            logger.error(
+                "Failed to decrypt API key for job %s: %s", job_id, e
+            )
+            job.status = 'failed'
+            job.save(update_fields=['status'])
+            _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
+            return
+    elif job.provider == 'openai':
+        # OpenAI is always BYOK — no key stored is an error
+        logger.error(
+            "No API key for OpenAI job %s — OpenAI provider requires BYOK",
+            job_id,
+        )
         job.status = 'failed'
         job.save(update_fields=['status'])
-        # NOTIF-BG-1: notify user job failed
         _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
         return
+    else:
+        # Platform mode — use master key from env vars
+        job_api_key = _get_platform_api_key(job.provider)
+        if not job_api_key:
+            logger.error(
+                "No platform API key configured for provider '%s' (job %s). "
+                "Set REPLICATE_API_TOKEN or XAI_API_KEY in environment.",
+                job.provider, job_id,
+            )
+            job.status = 'failed'
+            job.save(update_fields=['status'])
+            _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
+            return
 
-    try:
-        job_api_key = decrypt_api_key(job.api_key_encrypted)
-    except Exception as e:
-        logger.error("Failed to decrypt API key for job %s: %s", job_id, e)
-        job.status = 'failed'
-        job.save(update_fields=['status'])
-        # NOTIF-BG-1: notify user job failed
-        _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
-        return
-
-    provider = get_provider(job.provider, mock_mode=False)
+    # Pass model_name for providers that support multiple models (Replicate).
+    # OpenAI and xAI providers ignore model_name (they have one model each).
+    _provider_kwargs = {'mock_mode': False}
+    if job.provider == 'replicate':
+        _provider_kwargs['model_name'] = job.model_name or 'black-forest-labs/flux-schnell'
+    provider = get_provider(job.provider, **_provider_kwargs)
 
     images = job.images.filter(
         status='queued'
@@ -2919,7 +3008,7 @@ def process_bulk_generation_job(job_id: str) -> None:
 
     try:
         completed_count, failed_count, total_cost = _run_generation_loop(
-            job, provider, job_api_key, images, tz,
+            job, provider, job_api_key, images, tz, _provider_kwargs,
         )
 
         # D1: Sweep any images left in 'queued' or 'generating' state.
@@ -2942,6 +3031,9 @@ def process_bulk_generation_job(job_id: str) -> None:
             BulkGenerationJob.objects.filter(pk=job.pk).update(
                 failed_count=failed_count
             )
+
+        # Deduct credits for completed images
+        _deduct_generation_credits(job, completed_count)
 
         # Mark job complete (if not cancelled or stopped by auth failure)
         job.refresh_from_db(fields=['status'])

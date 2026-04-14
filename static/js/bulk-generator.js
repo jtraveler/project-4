@@ -836,7 +836,8 @@
               '<span class="bg-cost-value">' + totalImages + '</span> image' +
               (totalImages !== 1 ? 's' : '');
         I.costTime.innerHTML = '~<span class="bg-cost-value">' + timeMinutes + '</span> min';
-        // Show credits for platform (non-BYOK) models, dollars for BYOK OpenAI
+        // TEMP: show actual API cost in dollars for all models during billing testing.
+        // TODO: revert to credits display after Replicate billing is verified.
         var _costOpt = I.settingModel
             ? I.settingModel.options[I.settingModel.selectedIndex]
             : null;
@@ -844,9 +845,15 @@
         if (_isByokCost) {
             I.costDollars.textContent = '$' + totalCost.toFixed(2);
         } else {
-            var _creditCost = _costOpt ? parseInt(_costOpt.dataset.creditCost || '1', 10) : 1;
-            var _totalCredits = totalImages * _creditCost;
-            I.costDollars.textContent = _totalCredits + ' credit' + (_totalCredits !== 1 ? 's' : '');
+            var _apiCosts = {
+                'black-forest-labs/flux-schnell': 0.003,
+                'black-forest-labs/flux-dev': 0.030,
+                'black-forest-labs/flux-1.1-pro': 0.040,
+                'google/nano-banana-2': 0.060,
+                'grok-imagine-image': 0.020,
+            };
+            var _apiCostPerImage = _costOpt ? (_apiCosts[_costOpt.value] || 0) : 0;
+            I.costDollars.textContent = '$' + (_apiCostPerImage * totalImages).toFixed(3);
         }
     };
 

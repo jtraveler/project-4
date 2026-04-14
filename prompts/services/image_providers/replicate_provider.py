@@ -148,8 +148,14 @@ class ReplicateImageProvider(ImageProvider):
                     error_message='Replicate returned empty output.',
                 )
 
-            # output is a list of FileOutput objects or URL strings
-            image_url = output[0] if isinstance(output[0], str) else str(output[0])
+            # Replicate SDK may return a list or a direct FileOutput object
+            # depending on the model version. Handle both cases defensively.
+            try:
+                first_output = output[0]
+            except TypeError:
+                # Direct FileOutput object (not subscriptable) — use as-is
+                first_output = output
+            image_url = str(first_output)
 
             # Download the image bytes from the URL
             image_data = self._download_image(image_url)

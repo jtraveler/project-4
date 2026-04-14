@@ -377,6 +377,10 @@
         I.renumberBoxes();
         I.updateCostEstimate();
         I.updateGenerateBtn();
+        // Re-apply current model's per-box disable state to newly created boxes.
+        // Without this, new boxes have enabled quality overrides even when the
+        // selected model doesn't support quality tiers (e.g. Flux Schnell).
+        if (I.handleModelChange) I.handleModelChange();
     };
 
     function deleteBox(box) {
@@ -950,18 +954,26 @@
         // Show/hide quality selector
         var qualityGroup = document.getElementById('qualityGroup');
         if (qualityGroup) {
-            qualityGroup.style.display = supportsQuality ? '' : 'none';
+            // Disable instead of hide — users can see it exists but understand
+            // it doesn't apply to the selected model.
+            qualityGroup.style.opacity = supportsQuality ? '' : '0.45';
+            qualityGroup.style.pointerEvents = supportsQuality ? '' : 'none';
+            qualityGroup.style.cursor = supportsQuality ? '' : 'default';
+            var qualitySelect = qualityGroup.querySelector('select');
+            if (qualitySelect) qualitySelect.disabled = !supportsQuality;
         }
 
-        // Hide per-box QUALITY override for non-quality models only.
+        // Disable per-box QUALITY override for non-quality models.
         // Dimensions override is ALWAYS visible — users can always override
         // per-prompt aspect ratio/size regardless of model.
         I.promptGrid.querySelectorAll('.bg-override-quality').forEach(function (sel) {
             var wrapper = sel.closest('.bg-box-override-wrapper');
             var parentDiv = wrapper ? wrapper.parentElement : null;
             if (parentDiv) {
-                parentDiv.style.display = supportsQuality ? '' : 'none';
+                parentDiv.style.opacity = supportsQuality ? '' : '0.45';
+                parentDiv.style.pointerEvents = supportsQuality ? '' : 'none';
             }
+            sel.disabled = !supportsQuality;
         });
         // Explicitly ensure dimensions override is always visible
         I.promptGrid.querySelectorAll('.bg-override-size').forEach(function (sel) {
@@ -972,12 +984,29 @@
             }
         });
 
-        // Show/hide Character Reference Image section
+        // Disable/enable Character Reference Image section.
         var refImageGroup = document.getElementById('refUploadZone')
             ? document.getElementById('refUploadZone').closest('.bg-setting-group')
             : null;
         if (refImageGroup) {
-            refImageGroup.style.display = supportsRefImage ? '' : 'none';
+            // Disable instead of hide. When disabled, also hide the upload
+            // link so users can't try to interact with it.
+            refImageGroup.style.opacity = supportsRefImage ? '' : '0.45';
+            refImageGroup.style.pointerEvents = supportsRefImage ? '' : 'none';
+            var uploadLink = refImageGroup.querySelector('.bg-ref-upload-link');
+            if (uploadLink) {
+                uploadLink.style.display = supportsRefImage ? '' : 'none';
+            }
+            // Show/hide "not available for this model" hint
+            var disabledHint = refImageGroup.querySelector('.bg-ref-disabled-hint');
+            if (!disabledHint && !supportsRefImage) {
+                var hint = document.createElement('span');
+                hint.className = 'bg-setting-hint bg-ref-disabled-hint';
+                hint.textContent = 'Not available for this model';
+                refImageGroup.appendChild(hint);
+            } else if (disabledHint) {
+                disabledHint.style.display = supportsRefImage ? 'none' : '';
+            }
         }
 
         I.updateCostEstimate();

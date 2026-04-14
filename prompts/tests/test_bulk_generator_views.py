@@ -2357,3 +2357,79 @@ class SourceImageUrlParsingTests(TestCase):
         ).first()
         self.assertIsNotNone(gen_image)
         self.assertEqual(gen_image.source_image_url, '')
+
+
+@override_settings(OPENAI_API_KEY='test-key')
+class JobDetailViewContextTests(TestCase):
+    """Spec 154-P: gallery_aspect (pixel + aspect ratio formats) and
+    model_display_name (GeneratorModel lookup + fallback) in the job
+    detail view context."""
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            username='staffuser', password='testpass', is_staff=True,
+        )
+        self.client.login(username='staffuser', password='testpass')
+
+    def _make_job(self, size='1024x1024', model_name='gpt-image-1'):
+        return BulkGenerationJob.objects.create(
+            created_by=self.staff_user,
+            total_prompts=1,
+            images_per_prompt=1,
+            size=size,
+            quality='medium',
+            model_name=model_name,
+            status='processing',
+        )
+
+    def _get_context(self, job):
+        url = reverse(
+            'prompts:bulk_generator_job', kwargs={'job_id': job.id},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        return response.context
+
+    def test_gallery_aspect_pixel_format(self):
+        """Pixel dimensions '1024x1536' → '1024 / 1536'."""
+        job = self._make_job(size='1024x1536')
+        self.assertEqual(self._get_context(job)['gallery_aspect'], '1024 / 1536')
+
+    def test_gallery_aspect_aspect_ratio_format(self):
+        """Aspect ratio string '2:3' → '2 / 3' (Replicate/xAI models)."""
+        job = self._make_job(size='2:3')
+        self.assertEqual(self._get_context(job)['gallery_aspect'], '2 / 3')
+
+    def test_gallery_aspect_empty_falls_back(self):
+        """Empty size falls back to '1 / 1'."""
+        job = self._make_job(size='')
+        self.assertEqual(self._get_context(job)['gallery_aspect'], '1 / 1')
+
+    def test_gallery_aspect_garbage_falls_back(self):
+        """Malformed size triggers the try/except fallback."""
+        # 'x' is present so the pixel branch is taken; split yields
+        # ['', ''] which fails int() conversion and falls back.
+        job = self._make_job(size='garbagexinput')
+        self.assertEqual(self._get_context(job)['gallery_aspect'], '1 / 1')
+
+    def test_model_display_name_from_generator_model(self):
+        """model_display_name resolves GeneratorModel.name by identifier."""
+        from prompts.models import GeneratorModel
+        GeneratorModel.objects.create(
+            slug='test-flux-dev',
+            name='Flux Dev',
+            description='test',
+            provider='replicate',
+            model_identifier='black-forest-labs/flux-dev',
+            credit_cost=10,
+        )
+        job = self._make_job(model_name='black-forest-labs/flux-dev')
+        self.assertEqual(self._get_context(job)['model_display_name'], 'Flux Dev')
+
+    def test_model_display_name_falls_back_to_raw(self):
+        """Unknown model_identifier falls back to raw job.model_name."""
+        job = self._make_job(model_name='unknown-legacy-model-id')
+        self.assertEqual(
+            self._get_context(job)['model_display_name'],
+            'unknown-legacy-model-id',
+        )

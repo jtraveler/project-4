@@ -115,13 +115,32 @@ def bulk_generator_job_view(request, job_id):
     # Format size for display (e.g. "1024x1024" → "1024×1024")
     display_size = job.size.replace('x', '×')
 
-    # Determine default gallery aspect ratio from job size
-    # (per-group columns are set dynamically by JS based on actual image dimensions)
-    try:
-        w, h = job.size.split('x')
-        gallery_aspect = f"{int(w)} / {int(h)}"
-    except (ValueError, ZeroDivisionError):
-        gallery_aspect = "1 / 1"
+    # Compute CSS aspect ratio for placeholder cards.
+    # job.size may be:
+    #   - Pixel dimensions: "1024x1536" → "1024 / 1536"
+    #   - Aspect ratio string: "2:3" → "2 / 3" (Replicate/xAI models)
+    #   - Empty or unknown → "1 / 1"
+    gallery_aspect = "1 / 1"
+    if job.size:
+        if 'x' in job.size:
+            try:
+                w, h = job.size.split('x')
+                gallery_aspect = f"{int(w)} / {int(h)}"
+            except (ValueError, TypeError):
+                gallery_aspect = "1 / 1"
+        elif ':' in job.size:
+            try:
+                w, h = job.size.split(':')
+                gallery_aspect = f"{int(w)} / {int(h)}"
+            except (ValueError, TypeError):
+                gallery_aspect = "1 / 1"
+
+    # Look up friendly display name from GeneratorModel registry
+    from prompts.models import GeneratorModel as GenModel
+    _gen_model = GenModel.objects.filter(
+        model_identifier=job.model_name
+    ).first()
+    model_display_name = _gen_model.name if _gen_model else job.model_name
 
     # Count both completed and actively generating images so the progress
     # bar reflects real work in progress on page refresh — not just finished
@@ -144,6 +163,7 @@ def bulk_generator_job_view(request, job_id):
         'estimated_total_cost': round(estimated_total_cost, 4),
         'display_size': display_size,
         'gallery_aspect': gallery_aspect,
+        'model_display_name': model_display_name,
         'live_completed_count': live_completed_count,
         'live_progress_percent': live_progress_percent,
     })

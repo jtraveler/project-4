@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 12, 2026 (Sessions 101–153)
+**Last Updated:** April 13, 2026 (Sessions 101–154)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,45 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 154 — April 13, 2026
+
+**Focus:** Phase REP — Replicate + xAI provider integration, credit tracking
+data layer, dynamic model selector UI
+
+**Specs:** 154-A through 154-E (Batch 1)
+
+- 154-A: Data Layer — `GeneratorModel`, `UserCredit`, `CreditTransaction` models.
+  Migration 0082. Admin with list_editable toggles. Seed command (6 models).
+  Append-only `CreditTransactionAdmin` (no add/change/delete).
+- 154-B: Providers — `ReplicateImageProvider` (Flux Schnell/Dev/1.1-Pro/Nano
+  Banana 2) via `replicate` SDK. `XAIImageProvider` (Grok Imagine) via OpenAI-
+  compatible xAI API. Both with mock mode, structured error handling, NSFW check
+  flag. Registry with try/except import guards.
+- 154-C: Task Layer — Platform mode key resolution in `tasks.py`. OpenAI always
+  BYOK, Replicate/xAI use master keys from env vars. `_get_platform_api_key()`
+  helper. `_deduct_generation_credits()` non-blocking credit deduction after job
+  completion. `model_name` passthrough for Replicate provider instantiation.
+- 154-D: UI Layer — Dynamic model dropdown from `GeneratorModel` DB. BYOK toggle
+  shows/hides API key section + OpenAI models. Aspect ratio selector replaces
+  pixel size buttons for Replicate/xAI models. `getMasterDimensions()` returns
+  aspect ratio or pixel size based on active selector. `is_byok` flag in API payload.
+- 154-E: Docs update — 4-tier subscription structure, credit system, key learnings,
+  CLAUDE.md + CLAUDE_CHANGELOG.md + PROJECT_FILE_STRUCTURE.md updated.
+
+**Key decisions:**
+- OpenAI GPT-Image-1.5 is ALWAYS BYOK (no platform OpenAI key)
+- Replicate/xAI run in platform mode (master keys in Heroku env vars)
+- `GeneratorModel` is the single source of truth for model availability
+- Credit enforcement deferred to Phase SUB (Stripe)
+- 4-tier structure: Starter (free), Creator ($9), Pro ($19), Studio ($49)
+
+**Agent scores:** All specs passed 8.0+ post-fix average. Critical bugs caught
+and fixed: `_provider_kwargs` scoping (Spec C), JS syntax error in payload
+(Spec D), seed command dict mutation (Spec A), Replicate SSRF hardening (Spec B).
+
+**Tests:** 1227 passing, 12 skipped
+**Migration:** 0082 (add_generator_models_and_credit_tracking)
 
 ### Session 153 — April 11–12, 2026
 

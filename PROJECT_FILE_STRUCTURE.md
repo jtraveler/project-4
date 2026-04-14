@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** April 12, 2026
+**Last Updated:** April 13, 2026
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Bulk AI Image Generator (Phases 1–7 + 6E complete — pre-launch QA + D4 per-job tier rate limiting + Feature 2 Vision prompt + Vision detail:high + two-step direction + Session 153 GPT-Image-1.5 upgrade + billing error path + progress bar refresh accuracy), Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1221 passing, 12 skipped (Session 153)
+**Current Phase:** Phase REP (Replicate + xAI providers — Session 154). Bulk AI Image Generator (Phases 1–7 + 6E complete). Phase N4 (~100%), Phase K (~96%)
+**Total Tests:** 1227 passing, 12 skipped (Session 154)
 
 ---
 
@@ -16,7 +16,7 @@
 | **CSS Files** | 12 | static/css/ |
 | **JavaScript Files** | 19 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121, bulk-generator-gallery.js added Session 122, bulk-generator.js split +2 modules Session 143) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 83 | prompts/migrations/ (81, latest 0081 `generating_started_at`), about/migrations/ (2) |
+| **Migrations** | 84 | prompts/migrations/ (82, latest 0082 `add_generator_models_and_credit_tracking`), about/migrations/ (2) |
 | **Test Files** | 24 | prompts/tests/ |
 | **Management Commands** | 29 | prompts/management/commands/ |
 | **Services** | 15 | prompts/services/ |
@@ -210,6 +210,7 @@ live-working-project/
 | `fix_ghost_prompts` | Remove ghost/orphan prompt records | Manual |
 | `fix_prompt_order` | Repair prompt ordering | Manual |
 | `generate_slugs` | Generate missing slugs for prompts | Manual |
+| `seed_generator_models` | Seed GeneratorModel records — 6 models (GPT-Image-1.5 BYOK, Flux Schnell, Grok, Flux Dev, Flux 1.1 Pro, Nano Banana 2). Idempotent via update_or_create. Run after first Phase REP deploy. (Session 154) | Manual — first deploy |
 | `initialize_prompt_order` | Initialize prompt ordering | Manual |
 | `moderate_prompts` | Run moderation on prompts | Manual |
 | `test_moderation` | Test moderation service | Manual |
@@ -240,10 +241,13 @@ prompts/services/
 ├── vision_moderation.py     # OpenAI Vision moderation for images and videos (renamed Session 125)
 ├── content_generation.py    # GPT-4o content generation for uploads
 ├── image_processor.py       # Pillow image optimization (Phase L)
-├── image_providers/         # Provider abstraction package (Session 92)
-│   ├── __init__.py          # Package init
-│   ├── base.py              # Abstract ImageProvider base class + GenerationResult dataclass (error_type, retry_after added Session 100)
-│   └── openai_provider.py   # OpenAI GPT-Image-1 provider — real generation, images.edit() for ref images (Session 100-101, 141)
+├── image_providers/           # Provider abstraction package (Session 92, expanded Session 154)
+│   ├── __init__.py            # Package init
+│   ├── base.py                # Abstract ImageProvider base class + GenerationResult dataclass (error_type, retry_after added Session 100)
+│   ├── openai_provider.py     # OpenAI GPT-Image-1.5 provider — BYOK only (Session 100-101, 141, 153)
+│   ├── registry.py            # Provider registry — get_provider(), _register_defaults() (Session 92, expanded Session 154)
+│   ├── replicate_provider.py  # Replicate provider — Flux Schnell/Dev/1.1-Pro, Nano Banana 2 (Session 154)
+│   └── xai_provider.py        # xAI Grok Imagine provider — OpenAI-compatible API (Session 154)
 ├── leaderboard.py           # Leaderboard calculations (Phase G)
 ├── notifications.py         # Notification service: create, count, mark-read, duplicate prevention (Phase R1)
 ├── openai_moderation.py     # OpenAI text moderation API

@@ -74,6 +74,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 154 | Apr 13, 2026 | Phase REP: Replicate + xAI providers. `GeneratorModel` admin-toggleable registry (6 models seeded). `UserCredit` + `CreditTransaction` DB credit tracking. `ReplicateImageProvider` (Flux Schnell/Dev/1.1-Pro/Nano Banana 2). `XAIImageProvider` (Grok Imagine, OpenAI-compatible). Platform mode architecture — master API keys, NULL `api_key_encrypted` valid for non-OpenAI. Dynamic model dropdown from DB. BYOK toggle. Aspect ratio selector for Replicate models. 4-tier subscription structure confirmed. Migration 0082. 1227 tests. |
 | Session 153 | Apr 11–12, 2026 | GPT-Image-1.5 upgrade (153-A, migration 0080 — both `images.edit()` and `images.generate()` paths, 7 files + metadata + 2 new choice tests). IMAGE_COST_MAP updated to GPT-Image-1.5 pricing (153-C, 20% reduction across 10 files + 27 test assertions via Option B regression fix). Billing hard limit shows actionable error (153-D, new `BadRequestError` branch). Full billing chain end-to-end: `_sanitise_error_message` emits `'Billing limit reached'`, Q-filter catches billing, JS reasonMap entry added, `'Quota exceeded'` no longer says "contact admin" for BYOK users (153-E, 4 new tests). Per-image progress bar survives page refresh via `generating_started_at` timestamp + negative CSS `animation-delay` (153-F, migration 0081, `isFirstRenderPass` flag removed, 2 new tests). Input page `I.COST_MAP` sticky-bar pricing sync with Python constants (153-F caught in Step 1 grep). 1221 tests. |
 | Session 152 | Apr 11, 2026 | Vision `detail: 'low'`→`'high'` (spatial accuracy). Direction decoupled from Vision (two-step: describe then edit). Progress bar counts generating+completed, excludes failed. Vision composition: frame-position, depth, crowd, anti-bokeh. 1213 tests. |
 | Session 151 | Apr 8–10, 2026 | Vision empty prompt validation fix. Reset→header, AI Direction→above Source/Credit. Vision text override fix (was using placeholder). Diff suppressed for Vision placeholders. "Reset to master" label. Vision prompt: "RECREATE not reinterpret", spatial accuracy. Prompt logging (300 chars). Two-layer placeholder safety (`in` not `startswith`). `data-completed-count` live DB. 1213 tests. |
@@ -496,6 +497,24 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
   words), not `'billing hard limit'` (three words) — the 153-D cleaned
   provider message is `'API billing limit reached...'` which does NOT
   contain the three-word form.
+- **Session 154 — `GeneratorModel` as admin-toggleable single source of truth:**
+  All model availability, credit costs, tier gates, aspect ratios, and
+  promotional badges live in `GeneratorModel` DB table. No hardcoded model
+  lists anywhere. Admin can disable a broken model instantly without a deploy.
+- **Session 154 — Platform mode vs BYOK architecture:** OpenAI is ALWAYS BYOK
+  (user's key, never a platform key). Replicate and xAI run in platform mode
+  (master keys from Heroku env vars). `api_key_encrypted = NULL` is valid for
+  Replicate/xAI jobs; fail hard for OpenAI jobs with no key.
+- **Session 154 — Replicate uses `aspect_ratio` not pixel dimensions:**
+  Replicate models accept strings like '1:1', '16:9' — not '1024x1024'. The
+  UI switches between pixel size buttons and aspect ratio buttons based on the
+  selected model. `getMasterDimensions()` returns whichever is active.
+- **Session 154 — Credit system is DB-only until Phase SUB:** `UserCredit` and
+  `CreditTransaction` track usage but no Stripe, no tier enforcement, no
+  top-up purchase flow yet. All deferred to Phase SUB.
+- **Session 154 — 4-tier confirmed:** Starter (free, 50 one-time credits),
+  Creator ($9, 250/mo), Pro ($19, 1000/mo), Studio ($49, 3500/mo). Annual
+  billing available at ~22% discount. Credit top-ups available on all tiers.
 - **BYOK is the only viable model for bulk generation at scale:** Platform-paid API model fails because all users share Mateo's rate limits, creating unacceptable wait times with concurrent users.
 - **Django-Q2 runs synchronously in local dev:** Tasks queued via ORM broker execute in the web process locally (either `sync=True` setting or Django-Q2 default). This means `[BULK-DEBUG] process_bulk_generation_job CALLED` appears in `runserver.log`, not `qcluster.log`. Production behavior (separate Heroku worker dyno) is unaffected.
 - **`tee` for persistent log capture:** Use `python manage.py runserver 2>&1 | tee runserver.log` and `python manage.py qcluster 2>&1 | tee qcluster.log` for reliable debug log capture. Then grep with: `grep "BULK-DEBUG\|ERROR\|Traceback" runserver.log`
@@ -1353,15 +1372,47 @@ the organic traffic that makes the platform worth monetising.
 Once content library is established and attracting organic traffic,
 introduce payment plans. The bulk generator is the premium hook.
 
-**Planned pricing tiers:**
-| Tier | Price | Includes |
-|------|-------|----------|
-| Free | $0 | Browse/discover prompts, limited downloads |
-| Pro | $19/mo | Full bulk generator access, all AI pipeline features |
-| Studio | $49/mo | Pro + Save Drafts, Replicate models (Flux, Nano Banana 2), priority |
+**Confirmed 4-tier subscription structure (decided Session 154):**
+
+| Tier | Monthly | Annual | Credits/mo | Bulk Gen | Models |
+|------|---------|--------|-----------|----------|--------|
+| Starter | Free | Free | 50 (one-time) | ❌ | — |
+| Creator | $9/mo | $7/mo ($84/yr) | 250 | ❌ | Flux Schnell, Grok |
+| Pro | $19/mo | $15/mo ($180/yr) | 1,000 | ✅ | All incl. NB2 (promo) |
+| Studio | $49/mo | $39/mo ($468/yr) | 3,500 | ✅ | All incl. NB2 |
+
+**Credit system (1 credit ≈ 1 Flux Schnell image ≈ $0.003 API cost):**
+
+| Model | Credits | Your API cost |
+|-------|---------|--------------|
+| GPT-Image-1.5 (BYOK) | 2 | ~$0 (user pays OpenAI) |
+| Flux Schnell | 1 | $0.003 |
+| Grok Imagine | 7 | $0.020 |
+| Flux Dev | 10 | $0.030 |
+| Flux 1.1 Pro | 14 | $0.040 |
+| Nano Banana 2 | 20 | ~$0.060 |
+
+**Credit top-ups (buy anytime, roll over, stack on monthly allowance):**
+250 credits = $3 | 1,000 credits = $10 | 3,500 credits = $30
+
+**Key architecture decisions (Session 154):**
+- OpenAI GPT-Image-1.5 is ALWAYS BYOK (user provides their own OpenAI key)
+- Replicate + xAI run in PLATFORM MODE by default (master keys in Heroku env vars)
+- `GeneratorModel` DB table is the single source of truth for model availability —
+  admin can toggle models on/off/promotional instantly without a deploy
+- Pricing page and tier feature cards read from `GeneratorModel` dynamically —
+  no hardcoded marketing copy to maintain
+- Scheduled promotions: `scheduled_available_from/until` fields on `GeneratorModel`
+  allow time-boxed promos (e.g. Black Friday). Periodic task enforces timing.
+- Credit enforcement deferred to Phase SUB (Stripe integration). Phase REP
+  builds the DB tracking layer only.
+- NSFW: disabled for now. Platform NSFW checker (`requires_nsfw_check=True`)
+  is set on all Replicate/xAI providers.
+- Replicate GPT-Image-1.5 wrapper: skip — direct OpenAI BYOK is better.
 
 **Revenue streams:**
 - Bulk generator access (subscription)
+- Credit top-up purchases
 - Prompt marketplace (commission on sales or premium listings)
 - API access for developers (usage-based, future)
 
@@ -1372,7 +1423,8 @@ bulk-created pages before seeding at scale.
 
 **Platform cost per user:** Minimal. Prepare-prompts pipeline (translate,
 watermark, Vision, direction) costs ~$0.001–0.01 per job (platform paid).
-Generation is BYOK — user pays OpenAI directly.
+Generation: Replicate/xAI platform-paid (credits deducted from user balance).
+OpenAI BYOK — user pays OpenAI directly.
 
 ### Key URLs
 
@@ -2155,5 +2207,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.43 (Session 153 — GPT-Image-1.5 upgrade, pricing accuracy, billing error path, progress-bar refresh accuracy; 1221 tests)
-**Last Updated:** April 12, 2026
+**Version:** 4.44 (Session 154 — Phase REP: Replicate + xAI providers, GeneratorModel registry, credit tracking, BYOK toggle, aspect ratio UI; 1227 tests)
+**Last Updated:** April 13, 2026

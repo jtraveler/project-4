@@ -783,45 +783,12 @@
         });
     }
 
-    // ─── BYOK Toggle ──────────────────────────────────────────────
-    I.byokToggle = document.getElementById('byokToggle');
-    I.apiKeySection = document.getElementById('apiKeySection');
-
-    I.handleByokToggle = function () {
-        var isOn = I.byokToggle && I.byokToggle.checked;
-        // Show/hide API key section
-        if (I.apiKeySection) {
-            I.apiKeySection.style.display = isOn ? '' : 'none';
-        }
-        // Show/hide BYOK-only model options (use disabled+hidden for cross-browser compat)
-        var byokOptions = document.querySelectorAll('.bg-model-byok-option');
-        for (var i = 0; i < byokOptions.length; i++) {
-            byokOptions[i].disabled = !isOn;
-            byokOptions[i].hidden = !isOn;
-        }
-        // If BYOK turned off and a BYOK model is selected, switch to first platform model
-        var currentOpt = I.settingModel ? I.settingModel.options[I.settingModel.selectedIndex] : null;
-        if (!isOn && currentOpt && currentOpt.dataset.byokOnly === 'true') {
-            for (var j = 0; j < I.settingModel.options.length; j++) {
-                if (I.settingModel.options[j].dataset.byokOnly !== 'true') {
-                    I.settingModel.selectedIndex = j;
-                    break;
-                }
-            }
-        }
-        I.handleModelChange();
-    };
-
-    if (I.byokToggle) {
-        I.byokToggle.addEventListener('change', I.handleByokToggle);
-        // Set initial state on page load (covers autosave restore)
-        I.handleByokToggle();
-    }
-
     // ─── Model Change Handler ─────────────────────────────────────
+    // Defined BEFORE any call site so forward references are safe.
     I.pixelSizeGroup = document.getElementById('pixelSizeGroup');
     I.aspectRatioGroup = document.getElementById('aspectRatioGroup');
     I.settingAspectRatio = document.getElementById('settingAspectRatio');
+    I.apiKeySection = document.getElementById('apiKeySection');
 
     I.handleModelChange = function () {
         if (!I.settingModel) return;
@@ -831,7 +798,13 @@
         var aspectRatios = [];
         try { aspectRatios = JSON.parse(opt.dataset.aspectRatios || '[]'); } catch (e) {}
         var supportsQuality = opt.dataset.supportsQuality === 'true';
+        var isByokModel = opt.dataset.byokOnly === 'true';
         var defaultAspect = opt.dataset.defaultAspect || '1:1';
+
+        // Show/hide API key section based on whether selected model is BYOK
+        if (I.apiKeySection) {
+            I.apiKeySection.style.display = isByokModel ? '' : 'none';
+        }
 
         // Show pixel size or aspect ratio selector
         var useAspect = aspectRatios.length > 0;
@@ -842,7 +815,7 @@
             I.aspectRatioGroup.style.display = useAspect ? '' : 'none';
         }
 
-        // Rebuild aspect ratio buttons
+        // Rebuild aspect ratio buttons when switching to a Replicate/xAI model
         if (useAspect && I.settingAspectRatio) {
             I.settingAspectRatio.innerHTML = '';
             for (var k = 0; k < aspectRatios.length; k++) {
@@ -851,16 +824,17 @@
                 btn.type = 'button';
                 btn.className = 'bg-btn-group-option' + (ar === defaultAspect ? ' active' : '');
                 btn.setAttribute('data-value', ar);
-                btn.setAttribute('aria-pressed', ar === defaultAspect ? 'true' : 'false');
+                btn.setAttribute('role', 'radio');
+                btn.setAttribute('aria-checked', ar === defaultAspect ? 'true' : 'false');
                 btn.textContent = ar;
                 btn.addEventListener('click', function () {
                     var btns = I.settingAspectRatio.querySelectorAll('.bg-btn-group-option');
                     btns.forEach(function (b) {
                         b.classList.remove('active');
-                        b.setAttribute('aria-pressed', 'false');
+                        b.setAttribute('aria-checked', 'false');
                     });
                     this.classList.add('active');
-                    this.setAttribute('aria-pressed', 'true');
+                    this.setAttribute('aria-checked', 'true');
                     I.updateCostEstimate();
                 });
                 I.settingAspectRatio.appendChild(btn);
@@ -878,8 +852,7 @@
 
     if (I.settingModel) {
         I.settingModel.addEventListener('change', I.handleModelChange);
-        // Run once on page load
-        I.handleModelChange();
+        I.handleModelChange(); // Run once on page load to set initial state
     }
 
     // ─── Character Description Preview Sync ─────────────────────────

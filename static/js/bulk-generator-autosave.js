@@ -423,6 +423,8 @@
     // ─── Autosave Initialisation ─────────────────────────────────
     createDraftIndicator();
     restorePromptsFromStorage();
-    I.updateCostEstimate();
+    // updateCostEstimate is called by the main init in bulk-generator.js
+    // after all functions are defined. Calling it here causes a race condition
+    // since handleModelChange / updateCostEstimate may not yet be defined.
     I.updateGenerateBtn();
 })();

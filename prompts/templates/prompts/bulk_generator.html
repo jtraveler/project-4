@@ -60,7 +60,7 @@
                             </option>
                             {% endif %}
                             {% endfor %}
-                            {# BYOK models rendered separately — shown only when BYOK toggle is ON #}
+                            {# BYOK models appear as normal options — model selection itself drives the API-key section #}
                             {% for model in generator_models %}
                             {% if model.is_byok_only %}
                             <option value="{{ model.model_identifier }}"
@@ -70,10 +70,8 @@
                                     data-byok-only="true"
                                     data-supports-quality="{{ model.supports_quality_tiers|yesno:'true,false' }}"
                                     data-aspect-ratios="[]"
-                                    data-default-aspect=""
-                                    class="bg-model-byok-option"
-                                    disabled hidden>
-                                {{ model.name }} (Your Key)
+                                    data-default-aspect="">
+                                {{ model.name }} (Bring Your Own Key)
                             </option>
                             {% endif %}
                             {% endfor %}
@@ -187,7 +185,7 @@
                 {# ===== Aspect Ratio Selector (Replicate/xAI models) ===== #}
                 <div class="bg-setting-group" id="aspectRatioGroup" style="display:none">
                     <span class="bg-setting-label">Aspect Ratio</span>
-                    <div class="bg-btn-group" id="settingAspectRatio" role="group"
+                    <div class="bg-btn-group" id="settingAspectRatio" role="radiogroup"
                          aria-label="Aspect ratio">
                         {# Populated dynamically by JS when model changes #}
                     </div>
@@ -279,23 +277,6 @@
 
         </div>{# /.bg-master-grid #}
     </div>{# /.bg-master-settings #}
-
-    {# ===== BYOK Toggle ===== #}
-    <div class="bg-byok-toggle-wrap">
-        <label class="bg-byok-toggle-label" for="byokToggle">
-            <input type="checkbox" id="byokToggle" class="bg-byok-toggle-input"
-                   aria-describedby="tt-byok">
-            <span class="bg-byok-toggle-text">Use my own API key (BYOK)</span>
-        </label>
-        <span class="bg-tooltip-wrap">
-            <button class="bg-tooltip-trigger" type="button"
-                    aria-describedby="tt-byok">ⓘ</button>
-            <span class="bg-tooltip" id="tt-byok" role="tooltip">
-                Advanced: provide your own OpenAI API key to use GPT-Image-1.5.
-                By default, PromptFinder uses its own key for Flux and Grok models.
-            </span>
-        </span>
-    </div>
 
     {# ===== API Key Section ===== #}
     <div class="bg-api-key-section" id="apiKeySection" style="display:none">

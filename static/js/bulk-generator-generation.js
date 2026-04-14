@@ -886,11 +886,13 @@
                         '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-sparkles"/></svg> Starting...';
                     I.generateStatus.textContent = 'Starting generation...';
 
-                    // Determine if this is a BYOK job or platform mode
-                    var isByok = I.byokToggle && I.byokToggle.checked;
+                    // Determine if this is a BYOK job or platform mode —
+                    // driven by the selected model's data-byok-only attribute now
+                    // that the separate BYOK toggle has been removed.
                     var selectedOpt = I.settingModel
                         ? I.settingModel.options[I.settingModel.selectedIndex]
                         : null;
+                    var isByok = !!(selectedOpt && selectedOpt.dataset.byokOnly === 'true');
                     var selectedModelIdentifier = selectedOpt ? selectedOpt.value : '';
                     var selectedProvider = selectedOpt
                         ? (selectedOpt.dataset.provider || 'openai')

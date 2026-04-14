@@ -3331,6 +3331,16 @@ class GeneratorModel(models.Model):
         help_text='Default aspect ratio pre-selected in the UI.',
     )
 
+    supports_reference_image = models.BooleanField(
+        default=False,
+        help_text=(
+            'If True, the Character Reference Image upload section is shown '
+            'for this model. Currently only GPT-Image-1.5 (OpenAI BYOK) '
+            'supports reference images. Replicate/xAI providers ignore the '
+            'reference image input.'
+        ),
+    )
+
     # Ordering
     sort_order = models.PositiveSmallIntegerField(
         default=0,

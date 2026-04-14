@@ -85,6 +85,7 @@ def bulk_generator_page(request):
             'credit_cost', 'is_byok_only', 'is_promotional',
             'promotional_label', 'supported_aspect_ratios',
             'supports_quality_tiers', 'default_aspect_ratio',
+            'supports_reference_image',
         )
         .order_by('sort_order')
     )

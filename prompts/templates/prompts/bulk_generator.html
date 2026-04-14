@@ -53,6 +53,7 @@
                                     data-promotional="{{ model.is_promotional|yesno:'true,false' }}"
                                     data-promotional-label="{{ model.promotional_label }}"
                                     data-supports-quality="{{ model.supports_quality_tiers|yesno:'true,false' }}"
+                                    data-supports-ref-image="{{ model.supports_reference_image|yesno:'true,false' }}"
                                     data-aspect-ratios="{{ model.supported_aspect_ratios|default:'[]' }}"
                                     data-default-aspect="{{ model.default_aspect_ratio }}"
                                     {% if forloop.first %}selected{% endif %}>
@@ -69,6 +70,7 @@
                                     data-credit-cost="{{ model.credit_cost }}"
                                     data-byok-only="true"
                                     data-supports-quality="{{ model.supports_quality_tiers|yesno:'true,false' }}"
+                                    data-supports-ref-image="{{ model.supports_reference_image|yesno:'true,false' }}"
                                     data-aspect-ratios="[]"
                                     data-default-aspect="">
                                 {{ model.name }} (Bring Your Own Key)

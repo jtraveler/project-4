@@ -880,6 +880,7 @@
             ? _modelConfig.supported_aspect_ratios
             : [];
         var supportsQuality = opt.dataset.supportsQuality === 'true';
+        var supportsRefImage = opt.dataset.supportsRefImage === 'true';
         var isByokModel = opt.dataset.byokOnly === 'true';
         var defaultAspect = opt.dataset.defaultAspect || '1:1';
 
@@ -956,6 +957,14 @@
                     }
                 }
             });
+        }
+
+        // Show/hide Character Reference Image section
+        var refImageGroup = document.getElementById('refUploadZone')
+            ? document.getElementById('refUploadZone').closest('.bg-setting-group')
+            : null;
+        if (refImageGroup) {
+            refImageGroup.style.display = supportsRefImage ? '' : 'none';
         }
 
         I.updateCostEstimate();

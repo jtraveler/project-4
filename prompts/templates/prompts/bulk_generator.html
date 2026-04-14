@@ -16,7 +16,8 @@
      data-url-validate-key="{% url 'prompts:bulk_generator_validate_key' %}"
      data-url-detect-tier="{% url 'prompts:bulk_generator_detect_tier' %}"
      data-url-prepare-prompts="{% url 'prompts:bulk_generator_prepare_prompts' %}"
-     data-cost-map="{{ cost_map_json }}">
+     data-cost-map="{{ cost_map_json }}"
+     data-models="{{ generator_models_json }}">
 
     {# ===== Page Header (centered, matches notifications) ===== #}
     <div class="bg-header">
@@ -42,8 +43,40 @@
                     <label class="bg-setting-label" for="settingModel">AI Model</label>
                     <div class="bg-select-wrapper">
                         <select class="bg-select" id="settingModel">
-                            <option value="gpt-image-1">GPT-Image-1</option>
-                            <option value="gpt-image-1.5" selected>GPT-Image-1.5</option>
+                            {% for model in generator_models %}
+                            {% if not model.is_byok_only %}
+                            <option value="{{ model.model_identifier }}"
+                                    data-slug="{{ model.slug }}"
+                                    data-provider="{{ model.provider }}"
+                                    data-credit-cost="{{ model.credit_cost }}"
+                                    data-byok-only="{{ model.is_byok_only|yesno:'true,false' }}"
+                                    data-promotional="{{ model.is_promotional|yesno:'true,false' }}"
+                                    data-promotional-label="{{ model.promotional_label }}"
+                                    data-supports-quality="{{ model.supports_quality_tiers|yesno:'true,false' }}"
+                                    data-aspect-ratios="{{ model.supported_aspect_ratios|default:'[]' }}"
+                                    data-default-aspect="{{ model.default_aspect_ratio }}"
+                                    {% if forloop.first %}selected{% endif %}>
+                                {{ model.name }}{% if model.is_promotional %} — {{ model.promotional_label }}{% endif %}
+                            </option>
+                            {% endif %}
+                            {% endfor %}
+                            {# BYOK models rendered separately — shown only when BYOK toggle is ON #}
+                            {% for model in generator_models %}
+                            {% if model.is_byok_only %}
+                            <option value="{{ model.model_identifier }}"
+                                    data-slug="{{ model.slug }}"
+                                    data-provider="{{ model.provider }}"
+                                    data-credit-cost="{{ model.credit_cost }}"
+                                    data-byok-only="true"
+                                    data-supports-quality="{{ model.supports_quality_tiers|yesno:'true,false' }}"
+                                    data-aspect-ratios="[]"
+                                    data-default-aspect=""
+                                    class="bg-model-byok-option"
+                                    disabled hidden>
+                                {{ model.name }} (Your Key)
+                            </option>
+                            {% endif %}
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
@@ -129,7 +162,7 @@
 
             {# Column 3: Dimensions + Images per Prompt + Quality #}
             <div class="bg-master-col">
-                <div class="bg-setting-group">
+                <div class="bg-setting-group" id="pixelSizeGroup">
                     <span class="bg-setting-label">Dimensions</span>
                     <div class="bg-btn-group" id="settingDimensions" role="radiogroup" aria-label="Image dimensions" aria-describedby="dimensionLabel">
                         <button type="button" class="bg-btn-group-option" data-value="1024x1024" role="radio" aria-checked="false">
@@ -151,6 +184,14 @@
                     </div>
                     <span class="bg-setting-hint" id="dimensionLabel" aria-live="polite" aria-atomic="true">2:3 Portrait</span>
                 </div>
+                {# ===== Aspect Ratio Selector (Replicate/xAI models) ===== #}
+                <div class="bg-setting-group" id="aspectRatioGroup" style="display:none">
+                    <span class="bg-setting-label">Aspect Ratio</span>
+                    <div class="bg-btn-group" id="settingAspectRatio" role="group"
+                         aria-label="Aspect ratio">
+                        {# Populated dynamically by JS when model changes #}
+                    </div>
+                </div>
                 <div class="bg-setting-group">
                     <span class="bg-setting-label">Images per Prompt</span>
                     <div class="bg-btn-group" id="settingImagesPerPrompt" role="radiogroup" aria-label="Images per prompt">
@@ -160,7 +201,7 @@
                         <button type="button" class="bg-btn-group-option" data-value="4" role="radio" aria-checked="false">4</button>
                     </div>
                 </div>
-                <div class="bg-setting-group">
+                <div class="bg-setting-group" id="qualityGroup">
                     <label class="bg-setting-label" for="settingQuality">Quality</label>
                     <div class="bg-select-wrapper">
                         <select class="bg-select" id="settingQuality">
@@ -239,8 +280,25 @@
         </div>{# /.bg-master-grid #}
     </div>{# /.bg-master-settings #}
 
+    {# ===== BYOK Toggle ===== #}
+    <div class="bg-byok-toggle-wrap">
+        <label class="bg-byok-toggle-label" for="byokToggle">
+            <input type="checkbox" id="byokToggle" class="bg-byok-toggle-input"
+                   aria-describedby="tt-byok">
+            <span class="bg-byok-toggle-text">Use my own API key (BYOK)</span>
+        </label>
+        <span class="bg-tooltip-wrap">
+            <button class="bg-tooltip-trigger" type="button"
+                    aria-describedby="tt-byok">ⓘ</button>
+            <span class="bg-tooltip" id="tt-byok" role="tooltip">
+                Advanced: provide your own OpenAI API key to use GPT-Image-1.5.
+                By default, PromptFinder uses its own key for Flux and Grok models.
+            </span>
+        </span>
+    </div>
+
     {# ===== API Key Section ===== #}
-    <div class="bg-api-key-section" id="apiKeySection">
+    <div class="bg-api-key-section" id="apiKeySection" style="display:none">
         <div class="bg-api-key-header">
             <h2 class="bg-api-key-title">OpenAI API Key</h2>
             <span class="bg-api-key-subtitle">Your key — used for generation, not stored after job completes</span>

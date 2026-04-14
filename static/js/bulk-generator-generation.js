@@ -886,19 +886,30 @@
                         '<svg class="icon" aria-hidden="true"><use href="' + I.spriteBase + '#icon-sparkles"/></svg> Starting...';
                     I.generateStatus.textContent = 'Starting generation...';
 
+                    // Determine if this is a BYOK job or platform mode
+                    var isByok = I.byokToggle && I.byokToggle.checked;
+                    var selectedOpt = I.settingModel
+                        ? I.settingModel.options[I.settingModel.selectedIndex]
+                        : null;
+                    var selectedModelIdentifier = selectedOpt ? selectedOpt.value : '';
+                    var selectedProvider = selectedOpt
+                        ? (selectedOpt.dataset.provider || 'openai')
+                        : 'openai';
+
                     var payload = {
                         prompts: finalPromptObjects,
                         source_credits: sourceCredits,
-                        provider: 'openai',
-                        model: I.settingModel.value,
+                        provider: selectedProvider,
+                        model: selectedModelIdentifier,
+                        is_byok: isByok,
                         quality: I.getMasterQuality(),
                         size: I.getMasterDimensions(),
                         images_per_prompt: I.getMasterImagesPerPrompt(),
                         visibility: I.getVisibility(),
-                        generator_category: I.MODEL_CATEGORY_MAP[I.settingModel.value] || 'ChatGPT',
+                        generator_category: I.MODEL_CATEGORY_MAP[selectedModelIdentifier] || 'AI Generated',
                         reference_image_url: I.validatedRefUrl,
                         character_description: charDesc,
-                        api_key: I.openaiApiKeyInput ? I.openaiApiKeyInput.value.trim() : '',
+                        api_key: isByok && I.openaiApiKeyInput ? I.openaiApiKeyInput.value.trim() : '',
                         openai_tier: I.settingTier ? parseInt(I.settingTier.value, 10) : 1,
                     };
 

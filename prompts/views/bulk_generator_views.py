@@ -35,7 +35,11 @@ MAX_PROMPT_LENGTH = 4000
 VALID_SIZES = frozenset(SUPPORTED_IMAGE_SIZES)  # excludes unsupported sizes (e.g. 1792x1024)
 VALID_QUALITIES = frozenset({'low', 'medium', 'high'})
 VALID_COUNTS = frozenset({1, 2, 3, 4})
-VALID_PROVIDERS = frozenset({'openai'})
+VALID_PROVIDERS = frozenset({'openai', 'replicate', 'xai'})
+VALID_ASPECT_RATIOS = frozenset([
+    '1:1', '16:9', '21:9', '3:2', '2:3', '4:5', '5:4',
+    '3:4', '4:3', '9:16', '9:21',
+])
 VALID_VISIBILITIES = frozenset({'public', 'private'})
 
 # Rate limiting for prepare-prompts (platform-paid GPT-4o-mini call)
@@ -72,9 +76,25 @@ def bulk_generator_page(request):
         for size, price in sizes.items():
             cost_map_by_size.setdefault(size, {})[quality] = price
 
+    # Build model list for the dynamic dropdown.
+    from prompts.models import GeneratorModel
+    generator_models = list(
+        GeneratorModel.objects.filter(is_enabled=True)
+        .values(
+            'slug', 'name', 'provider', 'model_identifier',
+            'credit_cost', 'is_byok_only', 'is_promotional',
+            'promotional_label', 'supported_aspect_ratios',
+            'supports_quality_tiers', 'default_aspect_ratio',
+        )
+        .order_by('sort_order')
+    )
+    generator_models_json = json.dumps(generator_models)
+
     return render(request, 'prompts/bulk_generator.html', {
         'jobs': jobs,
         'cost_map_json': json.dumps(cost_map_by_size),
+        'generator_models': generator_models,
+        'generator_models_json': generator_models_json,
     })
 
 
@@ -334,8 +354,18 @@ def api_start_generation(request):
             'error_code': 'vision_placeholder_detected',
         }, status=400)
 
-    # --- Optional fields with validation ---
-    provider = data.get('provider', 'openai')
+    # --- Model and provider resolution ---
+    model_name = data.get('model', 'black-forest-labs/flux-schnell')
+
+    # Determine provider from GeneratorModel registry
+    from prompts.models import GeneratorModel
+    gen_model = GeneratorModel.objects.filter(
+        model_identifier=model_name, is_enabled=True
+    ).first()
+    provider = gen_model.provider if gen_model else data.get('provider', 'openai')
+
+    # OpenAI is always BYOK regardless of the is_byok flag (backward compat)
+    is_byok = bool(data.get('is_byok', False)) or provider == 'openai'
     if provider not in VALID_PROVIDERS:
         return JsonResponse(
             {'error': f'Invalid provider. Must be one of: {sorted(VALID_PROVIDERS)}'},
@@ -374,9 +404,10 @@ def api_start_generation(request):
         )
 
     size = data.get('size', '1024x1024')
-    if size not in SUPPORTED_IMAGE_SIZES:
+    # Accept both pixel sizes (OpenAI) and aspect ratio strings (Replicate/xAI)
+    if size not in SUPPORTED_IMAGE_SIZES and size not in VALID_ASPECT_RATIOS:
         return JsonResponse(
-            {'error': f'Invalid size. Must be one of: {sorted(SUPPORTED_IMAGE_SIZES)}'},
+            {'error': f'Invalid size. Must be a supported pixel size or aspect ratio.'},
             status=400,
         )
 
@@ -407,11 +438,11 @@ def api_start_generation(request):
             status=400,
         )
 
-    # --- API key (required) ---
-    api_key = str(data.get('api_key', '')).strip()
-    if not api_key or not api_key.startswith('sk-'):
+    # --- API key (required for BYOK, ignored for platform mode) ---
+    api_key = str(data.get('api_key', '')).strip() if is_byok else ''
+    if is_byok and (not api_key or not api_key.startswith('sk-')):
         return JsonResponse(
-            {'error': 'A valid OpenAI API key (starting with sk-) is required to start generation.'},
+            {'error': 'A valid OpenAI API key (starting with sk-) is required for BYOK mode.'},
             status=400,
         )
 

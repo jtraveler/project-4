@@ -105,6 +105,21 @@
     // These values must match IMAGE_COST_MAP['medium']['1024x1024'] in constants.py.
     I.COST_MAP_DEFAULT = I.COST_MAP['1024x1024'] || { low: 0.009, medium: 0.034, high: 0.134 };
     I.IMAGES_PER_MINUTE = 5;
+
+    // Generator models — injected from Python at render time
+    var _rawModels = page.dataset.models;
+    I.GENERATOR_MODELS = [];
+    try {
+        I.GENERATOR_MODELS = _rawModels ? JSON.parse(_rawModels) : [];
+    } catch (e) {
+        I.GENERATOR_MODELS = [];
+    }
+    // Build slug → model config lookup for fast access
+    I.MODEL_BY_IDENTIFIER = {};
+    for (var mi = 0; mi < I.GENERATOR_MODELS.length; mi++) {
+        I.MODEL_BY_IDENTIFIER[I.GENERATOR_MODELS[mi].model_identifier] = I.GENERATOR_MODELS[mi];
+    }
+
     I.MODEL_CATEGORY_MAP = {
         'gpt-image-1': 'ChatGPT',
         'dall-e-3': 'DALL-E',
@@ -768,6 +783,105 @@
         });
     }
 
+    // ─── BYOK Toggle ──────────────────────────────────────────────
+    I.byokToggle = document.getElementById('byokToggle');
+    I.apiKeySection = document.getElementById('apiKeySection');
+
+    I.handleByokToggle = function () {
+        var isOn = I.byokToggle && I.byokToggle.checked;
+        // Show/hide API key section
+        if (I.apiKeySection) {
+            I.apiKeySection.style.display = isOn ? '' : 'none';
+        }
+        // Show/hide BYOK-only model options (use disabled+hidden for cross-browser compat)
+        var byokOptions = document.querySelectorAll('.bg-model-byok-option');
+        for (var i = 0; i < byokOptions.length; i++) {
+            byokOptions[i].disabled = !isOn;
+            byokOptions[i].hidden = !isOn;
+        }
+        // If BYOK turned off and a BYOK model is selected, switch to first platform model
+        var currentOpt = I.settingModel ? I.settingModel.options[I.settingModel.selectedIndex] : null;
+        if (!isOn && currentOpt && currentOpt.dataset.byokOnly === 'true') {
+            for (var j = 0; j < I.settingModel.options.length; j++) {
+                if (I.settingModel.options[j].dataset.byokOnly !== 'true') {
+                    I.settingModel.selectedIndex = j;
+                    break;
+                }
+            }
+        }
+        I.handleModelChange();
+    };
+
+    if (I.byokToggle) {
+        I.byokToggle.addEventListener('change', I.handleByokToggle);
+        // Set initial state on page load (covers autosave restore)
+        I.handleByokToggle();
+    }
+
+    // ─── Model Change Handler ─────────────────────────────────────
+    I.pixelSizeGroup = document.getElementById('pixelSizeGroup');
+    I.aspectRatioGroup = document.getElementById('aspectRatioGroup');
+    I.settingAspectRatio = document.getElementById('settingAspectRatio');
+
+    I.handleModelChange = function () {
+        if (!I.settingModel) return;
+        var opt = I.settingModel.options[I.settingModel.selectedIndex];
+        if (!opt) return;
+
+        var aspectRatios = [];
+        try { aspectRatios = JSON.parse(opt.dataset.aspectRatios || '[]'); } catch (e) {}
+        var supportsQuality = opt.dataset.supportsQuality === 'true';
+        var defaultAspect = opt.dataset.defaultAspect || '1:1';
+
+        // Show pixel size or aspect ratio selector
+        var useAspect = aspectRatios.length > 0;
+        if (I.pixelSizeGroup) {
+            I.pixelSizeGroup.style.display = useAspect ? 'none' : '';
+        }
+        if (I.aspectRatioGroup) {
+            I.aspectRatioGroup.style.display = useAspect ? '' : 'none';
+        }
+
+        // Rebuild aspect ratio buttons
+        if (useAspect && I.settingAspectRatio) {
+            I.settingAspectRatio.innerHTML = '';
+            for (var k = 0; k < aspectRatios.length; k++) {
+                var ar = aspectRatios[k];
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'bg-btn-group-option' + (ar === defaultAspect ? ' active' : '');
+                btn.setAttribute('data-value', ar);
+                btn.setAttribute('aria-pressed', ar === defaultAspect ? 'true' : 'false');
+                btn.textContent = ar;
+                btn.addEventListener('click', function () {
+                    var btns = I.settingAspectRatio.querySelectorAll('.bg-btn-group-option');
+                    btns.forEach(function (b) {
+                        b.classList.remove('active');
+                        b.setAttribute('aria-pressed', 'false');
+                    });
+                    this.classList.add('active');
+                    this.setAttribute('aria-pressed', 'true');
+                    I.updateCostEstimate();
+                });
+                I.settingAspectRatio.appendChild(btn);
+            }
+        }
+
+        // Show/hide quality selector
+        var qualityGroup = document.getElementById('qualityGroup');
+        if (qualityGroup) {
+            qualityGroup.style.display = supportsQuality ? '' : 'none';
+        }
+
+        I.updateCostEstimate();
+    };
+
+    if (I.settingModel) {
+        I.settingModel.addEventListener('change', I.handleModelChange);
+        // Run once on page load
+        I.handleModelChange();
+    }
+
     // ─── Character Description Preview Sync ─────────────────────────
     I.settingCharDesc.addEventListener('input', function () {
         var text = I.settingCharDesc.value.trim();
@@ -816,10 +930,17 @@
     };
 
     I.getMasterDimensions = function getMasterDimensions() {
+        // Check if aspect ratio selector is active (Replicate/xAI models)
+        if (I.aspectRatioGroup && I.aspectRatioGroup.style.display !== 'none') {
+            var activeAR = I.settingAspectRatio
+                ? I.settingAspectRatio.querySelector('.bg-btn-group-option.active')
+                : null;
+            return activeAR ? activeAR.dataset.value : '1:1';
+        }
+        // Original pixel size logic (OpenAI BYOK)
         var dimEl = document.getElementById('settingDimensions');
         var active = dimEl ? dimEl.querySelector('.bg-btn-group-option.active') : null;
         if (active && active.dataset.value) return active.dataset.value;
-        // Fallback: first available option (not hardcoded — respects template default)
         var first = dimEl ? dimEl.querySelector('.bg-btn-group-option[data-value]') : null;
         return first ? first.dataset.value : '';
     };

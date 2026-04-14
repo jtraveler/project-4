@@ -51,7 +51,7 @@ MODELS = [
         ],
         'supports_quality_tiers': False,
         'supports_reference_image': False,
-        'default_aspect_ratio': '1:1',
+        'default_aspect_ratio': '2:3',
         'sort_order': 20,
     },
     {
@@ -74,7 +74,7 @@ MODELS = [
         ],
         'supports_quality_tiers': False,
         'supports_reference_image': False,
-        'default_aspect_ratio': '1:1',
+        'default_aspect_ratio': '2:3',
         'sort_order': 30,
     },
     {
@@ -97,7 +97,7 @@ MODELS = [
         ],
         'supports_quality_tiers': False,
         'supports_reference_image': False,
-        'default_aspect_ratio': '1:1',
+        'default_aspect_ratio': '2:3',
         'sort_order': 40,
     },
     {
@@ -120,7 +120,7 @@ MODELS = [
         ],
         'supports_quality_tiers': False,
         'supports_reference_image': False,
-        'default_aspect_ratio': '1:1',
+        'default_aspect_ratio': '2:3',
         'sort_order': 50,
     },
     {
@@ -144,7 +144,7 @@ MODELS = [
         ],
         'supports_quality_tiers': False,
         'supports_reference_image': False,
-        'default_aspect_ratio': '1:1',
+        'default_aspect_ratio': '2:3',
         'sort_order': 60,
     },
 ]

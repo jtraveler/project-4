@@ -228,6 +228,23 @@ class ReplicateImageProvider(ImageProvider):
         import replicate.exceptions as replicate_exc
         error_str = str(exc).lower()
 
+        # ModelError is raised for content policy violations (NSFW etc.)
+        # It is a different class from ReplicateError — check it first.
+        try:
+            from replicate.exceptions import ModelError
+            if isinstance(exc, ModelError):
+                return GenerationResult(
+                    success=False,
+                    error_type='content_policy',
+                    error_message=(
+                        'Possible content violation. This prompt may conflict '
+                        'with the model\'s content policy — try rephrasing or '
+                        'adjusting the prompt.'
+                    ),
+                )
+        except ImportError:
+            pass
+
         if isinstance(exc, replicate_exc.ReplicateError):
             if 'unauthenticated' in error_str or 'unauthorized' in error_str or '401' in error_str:
                 return GenerationResult(

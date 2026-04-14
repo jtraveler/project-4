@@ -331,12 +331,8 @@
             visionSelect.addEventListener('change', function () {
                 var isVision = visionSelect.value === 'yes';
 
-                // Show/hide direction row — Vision=yes auto-enables direction
-                if (isVision && dirCheckbox && !dirCheckbox.checked) {
-                    dirCheckbox.checked = true;
-                    if (dirRow) dirRow.style.display = '';
-                }
-                // Vision=no does NOT hide direction row — user keeps it if they want
+                // Do NOT auto-enable AI Influence when Vision mode is selected.
+                // User must explicitly check the AI Influence checkbox themselves.
 
                 // Disable/enable prompt textarea (preserve text — Option A)
                 promptTextarea.disabled = isVision;
@@ -787,7 +783,12 @@
     // Defined BEFORE handleModelChange — which calls updateCostEstimate()
     // synchronously at init time (see handleModelChange() call below).
     I.updateGenerateBtn = function updateGenerateBtn() {
-        I.generateBtn.disabled = I.getPromptCount() === 0;
+        // Enable generate button whenever boxes exist on the page.
+        // User can generate with empty boxes (blank prompts) if they choose.
+        var hasBoxes = I.promptGrid
+            ? I.promptGrid.querySelectorAll('.bg-prompt-box').length > 0
+            : false;
+        I.generateBtn.disabled = !hasBoxes;
     };
 
     I.updateCostEstimate = function updateCostEstimate() {
@@ -884,6 +885,24 @@
         var isByokModel = opt.dataset.byokOnly === 'true';
         var defaultAspect = opt.dataset.defaultAspect || '1:1';
 
+        // Prefer to maintain current selection if available on new model,
+        // otherwise prefer 2:3, then fall back to model's own default.
+        var currentAspect = (function () {
+            if (I.settingAspectRatio) {
+                var active = I.settingAspectRatio.querySelector(
+                    '.bg-btn-group-option.active'
+                );
+                return active ? active.dataset.value : null;
+            }
+            return null;
+        })();
+        var preferredAspect = (
+            currentAspect && aspectRatios.indexOf(currentAspect) !== -1
+                ? currentAspect
+                : (aspectRatios.indexOf('2:3') !== -1 ? '2:3' : defaultAspect)
+        );
+        defaultAspect = preferredAspect;
+
         // Show/hide API key section and tier section — both only relevant for BYOK (OpenAI)
         var tierSection = document.getElementById('tierSection');
         if (I.apiKeySection) {
@@ -934,30 +953,24 @@
             qualityGroup.style.display = supportsQuality ? '' : 'none';
         }
 
-        // Sync per-box overrides to match master model capabilities.
-        // Hide quality + pixel-size override fields for non-quality-tier (Replicate/xAI)
-        // models. The containing "field" div (label + wrapper) has no class, so we
-        // target the parent of .bg-box-override-wrapper.
-        if (I.promptGrid) {
-            I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
-                var qualitySelect = box.querySelector('.bg-override-quality');
-                var sizeSelect = box.querySelector('.bg-override-size');
-                if (qualitySelect) {
-                    var qWrap = qualitySelect.closest('.bg-box-override-wrapper');
-                    var qField = qWrap ? qWrap.parentElement : null;
-                    if (qField) {
-                        qField.style.display = supportsQuality ? '' : 'none';
-                    }
-                }
-                if (sizeSelect) {
-                    var sWrap = sizeSelect.closest('.bg-box-override-wrapper');
-                    var sField = sWrap ? sWrap.parentElement : null;
-                    if (sField) {
-                        sField.style.display = supportsQuality ? '' : 'none';
-                    }
-                }
-            });
-        }
+        // Hide per-box QUALITY override for non-quality models only.
+        // Dimensions override is ALWAYS visible — users can always override
+        // per-prompt aspect ratio/size regardless of model.
+        I.promptGrid.querySelectorAll('.bg-override-quality').forEach(function (sel) {
+            var wrapper = sel.closest('.bg-box-override-wrapper');
+            var parentDiv = wrapper ? wrapper.parentElement : null;
+            if (parentDiv) {
+                parentDiv.style.display = supportsQuality ? '' : 'none';
+            }
+        });
+        // Explicitly ensure dimensions override is always visible
+        I.promptGrid.querySelectorAll('.bg-override-size').forEach(function (sel) {
+            var wrapper = sel.closest('.bg-box-override-wrapper');
+            var parentDiv = wrapper ? wrapper.parentElement : null;
+            if (parentDiv) {
+                parentDiv.style.display = '';
+            }
+        });
 
         // Show/hide Character Reference Image section
         var refImageGroup = document.getElementById('refUploadZone')

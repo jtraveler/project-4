@@ -915,7 +915,9 @@
 
     if (I.settingModel) {
         I.settingModel.addEventListener('change', I.handleModelChange);
-        I.handleModelChange(); // Run once on page load to set initial state
+        // handleModelChange() is called after addBoxes(4) at the end of init
+        // so all getter functions (getPromptCount, getMasterQuality, etc.)
+        // are defined before it fires.
     }
 
     // ─── Character Description Preview Sync ─────────────────────────
@@ -987,6 +989,8 @@
 
     // ─── Initial State ───────────────────────────────────────────
     I.addBoxes(4);
+    I.handleModelChange(); // Set initial model-dependent visibility (tier/apiKey/aspectRatio)
+                           // Called here so all getter functions are defined.
     // createDraftIndicator and restorePromptsFromStorage called from autosave module
     I.updateCostEstimate();
     I.updateGenerateBtn();

@@ -234,7 +234,9 @@ python manage.py test --verbosity=0
 
 ## Section 10 — Commits
 
-*(Commit hash filled after `git commit` below.)*
+| Hash | Message |
+|------|---------|
+| `b7f54e6` | fix(providers): Grok 400, Flux FileOutput URL, disabled cursor + 16 tests |
 
 ## Section 11 — What to Work on Next
 

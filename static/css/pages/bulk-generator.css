@@ -2044,3 +2044,16 @@
     content: '';
     flex: 1;
 }
+
+/* Disabled/unsupported model capability sections.
+   Applied via inline style (opacity + pointerEvents) from handleModelChange.
+   All major browsers serialize `element.style.pointerEvents = 'none'` as
+   `pointer-events: none` (with a space), so a single selector is sufficient.
+   The cursor rule provides visual feedback matching the disabled pattern. */
+.bg-setting-group[style*="pointer-events: none"] {
+    cursor: not-allowed;
+}
+
+.bg-setting-group[style*="pointer-events: none"] * {
+    cursor: not-allowed;
+}

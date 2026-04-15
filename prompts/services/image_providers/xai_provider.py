@@ -23,27 +23,46 @@ XAI_DEFAULT_MODEL = 'grok-imagine-image'
 # Grok Imagine supported aspect ratios (converted to pixel dimensions
 # since the API accepts width/height, not aspect_ratio strings).
 # Maps aspect_ratio → (width, height) for the API call.
+# xAI Aurora only accepts three specific sizes.
+# All aspect ratios are mapped to the nearest supported size.
 _ASPECT_TO_DIMENSIONS = {
-    '1:1': (1024, 1024),
-    '16:9': (1344, 768),
-    '3:2': (1216, 832),
-    '2:3': (832, 1216),
-    '9:16': (768, 1344),
-    '4:3': (1152, 896),
-    '3:4': (896, 1152),
+    '1:1': (1024, 1024),    # Square
+    '16:9': (1792, 1024),   # Landscape
+    '3:2': (1792, 1024),    # Landscape
+    '4:3': (1792, 1024),    # Landscape
+    '2:3': (1024, 1792),    # Portrait
+    '9:16': (1024, 1792),   # Portrait
+    '3:4': (1024, 1792),    # Portrait
+    '4:5': (1024, 1792),    # Portrait (closest match)
+    '5:4': (1792, 1024),    # Landscape (closest match)
 }
 _DEFAULT_DIMENSIONS = (1024, 1024)
+_XAI_VALID_SIZES = frozenset(['1024x1024', '1792x1024', '1024x1792'])
 
 
 def _resolve_dimensions(size: str) -> tuple[int, int]:
-    """Map aspect ratio or pixel string to (width, height) for xAI API."""
+    """Map aspect ratio or pixel string to (width, height) for xAI API.
+
+    xAI Aurora only accepts 1024x1024, 1792x1024, or 1024x1792.
+    All other sizes are snapped to the nearest valid size.
+    """
     if size in _ASPECT_TO_DIMENSIONS:
         return _ASPECT_TO_DIMENSIONS[size]
     # Parse pixel string e.g. '1024x1024'
     if 'x' in size:
         try:
             w, h = size.split('x')
-            return int(w), int(h)
+            w, h = int(w), int(h)
+            candidate = f'{w}x{h}'
+            if candidate in _XAI_VALID_SIZES:
+                return (w, h)
+            # Snap to nearest valid size based on aspect ratio
+            if w > h:
+                return (1792, 1024)
+            elif w < h:
+                return (1024, 1792)
+            else:
+                return (1024, 1024)
         except (ValueError, TypeError):
             pass
     logger.warning("xAI: unrecognised size '%s', using default 1024x1024", size)

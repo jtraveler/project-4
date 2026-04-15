@@ -155,7 +155,14 @@ class ReplicateImageProvider(ImageProvider):
             except TypeError:
                 # Direct FileOutput object (not subscriptable) — use as-is
                 first_output = output
-            image_url = str(first_output)
+
+            # Extract URL from FileOutput object.
+            # str(FileOutput) returns "FileOutput(url='https://...')" not
+            # the raw URL. Use .url attribute if available, else str().
+            if hasattr(first_output, 'url'):
+                image_url = str(first_output.url)
+            else:
+                image_url = str(first_output)
 
             # Download the image bytes from the URL
             image_data = self._download_image(image_url)

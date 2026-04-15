@@ -993,6 +993,12 @@
             // link so users can't try to interact with it.
             refImageGroup.style.opacity = supportsRefImage ? '' : '0.45';
             refImageGroup.style.pointerEvents = supportsRefImage ? '' : 'none';
+            // Disable the file input natively so browsers show
+            // cursor:not-allowed — same pattern as Character Selection.
+            var refFileInput = refImageGroup.querySelector('input[type="file"]');
+            if (refFileInput) {
+                refFileInput.disabled = !supportsRefImage;
+            }
             var uploadLink = refImageGroup.querySelector('.bg-ref-upload-link');
             if (uploadLink) {
                 uploadLink.style.display = supportsRefImage ? '' : 'none';

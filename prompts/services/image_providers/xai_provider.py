@@ -12,6 +12,7 @@ NSFW note: xAI has content policies but is more permissive than
 Google/OpenAI. Platform NSFW check still runs before this provider.
 """
 import logging
+import httpx
 
 from .base import GenerationResult, ImageProvider
 
@@ -20,53 +21,28 @@ logger = logging.getLogger(__name__)
 XAI_BASE_URL = 'https://api.x.ai/v1'
 XAI_DEFAULT_MODEL = 'grok-imagine-image'
 
-# Grok Imagine supported aspect ratios (converted to pixel dimensions
-# since the API accepts width/height, not aspect_ratio strings).
-# Maps aspect_ratio → (width, height) for the API call.
-# xAI Aurora only accepts three specific sizes.
-# All aspect ratios are mapped to the nearest supported size.
-_ASPECT_TO_DIMENSIONS = {
-    '1:1': (1024, 1024),    # Square
-    '16:9': (1792, 1024),   # Landscape
-    '3:2': (1792, 1024),    # Landscape
-    '4:3': (1792, 1024),    # Landscape
-    '2:3': (1024, 1792),    # Portrait
-    '9:16': (1024, 1792),   # Portrait
-    '3:4': (1024, 1792),    # Portrait
-    '4:5': (1024, 1792),    # Portrait (closest match)
-    '5:4': (1792, 1024),    # Landscape (closest match)
-}
-_DEFAULT_DIMENSIONS = (1024, 1024)
-_XAI_VALID_SIZES = frozenset(['1024x1024', '1792x1024', '1024x1792'])
+# xAI image API uses aspect_ratio strings natively.
+# The size/quality/style parameters are NOT supported by xAI.
+# Supported aspect ratios match our GeneratorModel seed exactly.
+_SUPPORTED_ASPECT_RATIOS = frozenset([
+    '1:1', '16:9', '3:2', '2:3', '9:16',
+])
+_DEFAULT_ASPECT_RATIO = '1:1'
 
 
-def _resolve_dimensions(size: str) -> tuple[int, int]:
-    """Map aspect ratio or pixel string to (width, height) for xAI API.
+def _resolve_aspect_ratio(size: str) -> str:
+    """Return a valid xAI aspect_ratio string.
 
-    xAI Aurora only accepts 1024x1024, 1792x1024, or 1024x1792.
-    All other sizes are snapped to the nearest valid size.
+    Accepts our internal aspect ratio format ('1:1', '16:9', etc.).
+    Falls back to '1:1' for any unrecognised value.
     """
-    if size in _ASPECT_TO_DIMENSIONS:
-        return _ASPECT_TO_DIMENSIONS[size]
-    # Parse pixel string e.g. '1024x1024'
-    if 'x' in size:
-        try:
-            w, h = size.split('x')
-            w, h = int(w), int(h)
-            candidate = f'{w}x{h}'
-            if candidate in _XAI_VALID_SIZES:
-                return (w, h)
-            # Snap to nearest valid size based on aspect ratio
-            if w > h:
-                return (1792, 1024)
-            elif w < h:
-                return (1024, 1792)
-            else:
-                return (1024, 1024)
-        except (ValueError, TypeError):
-            pass
-    logger.warning("xAI: unrecognised size '%s', using default 1024x1024", size)
-    return _DEFAULT_DIMENSIONS
+    if size in _SUPPORTED_ASPECT_RATIOS:
+        return size
+    logger.warning(
+        "xAI: unrecognised aspect ratio '%s', using default '%s'",
+        size, _DEFAULT_ASPECT_RATIO,
+    )
+    return _DEFAULT_ASPECT_RATIO
 
 
 class XAIImageProvider(ImageProvider):
@@ -107,7 +83,7 @@ class XAIImageProvider(ImageProvider):
                 error_message='No xAI API key provided.',
             )
 
-        width, height = _resolve_dimensions(size)
+        aspect_ratio = _resolve_aspect_ratio(size)
 
         try:
             from openai import OpenAI, APIConnectionError, AuthenticationError, BadRequestError, RateLimitError
@@ -117,23 +93,32 @@ class XAIImageProvider(ImageProvider):
                 base_url=XAI_BASE_URL,
             )
 
+            # xAI does not support size/quality/style parameters.
+            # Use aspect_ratio (native xAI parameter) and URL response
+            # format — download bytes via _download_image() for
+            # consistency with the Replicate provider pattern.
             response = client.images.generate(
                 model=XAI_DEFAULT_MODEL,
                 prompt=prompt,
                 n=1,
-                size=f'{width}x{height}',
-                response_format='b64_json',
+                aspect_ratio=aspect_ratio,
             )
 
-            if not response.data or not response.data[0].b64_json:
+            if not response.data or not response.data[0].url:
                 return GenerationResult(
                     success=False,
                     error_type='server_error',
                     error_message='xAI returned empty image data.',
                 )
 
-            import base64
-            image_data = base64.b64decode(response.data[0].b64_json)
+            image_url = response.data[0].url
+            image_data = self._download_image(image_url)
+            if image_data is None:
+                return GenerationResult(
+                    success=False,
+                    error_type='server_error',
+                    error_message='Failed to download generated image from xAI.',
+                )
 
             return GenerationResult(
                 success=True,
@@ -186,6 +171,30 @@ class XAIImageProvider(ImageProvider):
                 error_type='unknown',
                 error_message=f'Generation failed: {str(e)[:200]}',
             )
+
+    def _download_image(self, url: str) -> bytes | None:
+        """Download image bytes from xAI's output URL.
+
+        xAI returns temporary signed URLs for generated images.
+        Defense-in-depth: HTTPS-only, no redirects, 50 MB size cap.
+        """
+        if not url.startswith('https://'):
+            logger.error("xAI image URL is not HTTPS: %s", url[:100])
+            return None
+        MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+        try:
+            with httpx.Client(timeout=60.0, follow_redirects=False) as client:
+                response = client.get(url)
+                response.raise_for_status()
+                if len(response.content) > MAX_DOWNLOAD_BYTES:
+                    logger.error(
+                        "xAI image too large: %d bytes", len(response.content)
+                    )
+                    return None
+                return response.content
+        except Exception as e:
+            logger.error("Failed to download xAI image: %s", e)
+            return None
 
     def _generate_mock(
         self, prompt: str, size: str, quality: str

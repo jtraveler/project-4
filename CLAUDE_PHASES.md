@@ -35,6 +35,7 @@
 | **P2-B** | **Admin Log** | **🔲 Planned** | **Activity log tab — placeholder in system_notifications.html** |
 | **P2-C** | **Web Pulse** | **🔲 Planned** | **Site analytics tab — placeholder in system_notifications.html** |
 | **BG** | **Bulk AI Image Generator** | **✅ Phases 1–7 + 6E Complete — Pre-launch QA** | **Staff tool. SRC pipeline complete (Sessions 131–134). UX fixes batch (Session 134). `prompt_views.py` split into 4 domain modules. 1193 tests. 5 JS modules.** |
+| **REP** | **Replicate/xAI Provider Integration** | **🔄 ~88%** | **Multi-provider bulk gen. 6 models, credit system, BYOK UX. Ref image wiring pending for Grok + Nano Banana 2.** |
 
 ---
 
@@ -835,5 +836,114 @@ After multiple failures with big specs (CC ignores details, gives false high rat
 
 ---
 
-**Version:** 4.15 (Sessions 116–117 — Phase 6C-A complete [1098 tests], Phase 6C-B complete [~1100 tests], gallery card states, A11Y-3/5, opacity-compounding fix, Phase 6D next)
-**Last Updated:** March 13, 2026
+---
+
+## 🔄 Phase REP — Replicate/xAI Provider Integration
+
+**Status:** 🔄 ~88% Complete
+**Sessions:** 154
+**Goal:** Multi-provider bulk image generation with platform-paid credits
+
+### Completed
+- GeneratorModel DB table (single source of truth for model config)
+- UserCredit + CreditTransaction models + migration 0082
+- ReplicateImageProvider (Flux Schnell, Flux Dev, Flux 1.1 Pro, Nano
+  Banana 2) with SSRF-hardened `_download_image`
+- XAIImageProvider (Grok Imagine) with aspect_ratio via extra_body +
+  URL response + SSRF-hardened `_download_image`
+- Platform mode architecture (master API keys from Heroku env vars)
+- BYOK toggle removed — model selection drives API key section
+- Dynamic model dropdown from GeneratorModel DB
+- Aspect ratio selector (per-model supported ratios from seed)
+- Quality + Character Reference Image disable/enable per model capability
+- supports_reference_image BooleanField on GeneratorModel
+- UI shows/hides Character Reference Image section per model
+- Results page: model_display_name from GeneratorModel, gallery_aspect
+  handles both pixel and ratio formats
+- Provider-specific cost_per_image on results page (_PROVIDER_COSTS dict)
+- Credit cost display in sticky bar (TEMP: dollar mode for billing test)
+- NSFW error message for Flux 1.1 Pro (403 response handling)
+- 1245 passing tests
+
+### Pending — P1 (Blocking for full feature launch)
+
+**1. Grok reference image (154-S equivalent)**
+- Issue: `/v1/images/generations` ignores reference_image_url
+- Fix: Branch xai_provider.py to use `/v1/images/edits` when
+  reference_image_url is present
+- Request body: `{"image": {"url": ..., "type": "image_url"}}`
+- Likely requires `extra_body` pattern same as aspect_ratio
+- Models affected: Grok Imagine
+
+**2. Nano Banana 2 reference image (154-S)**
+- Issue: Spec blocked — parameter is `image_input` (ARRAY type)
+- Fix: Amend spec to use `(param, kind)` tuple in
+  `_MODEL_IMAGE_INPUT_PARAM`, wrap URL in list for array-type params
+- Confirmed param name: `image_input`
+- Models affected: Nano Banana 2
+
+**3. NSFW error UX for Replicate/xAI (new spec needed)**
+- Issue: xAI returns 400 for policy violations with no user feedback
+- Fix: Catch BadRequestError in xai_provider.py, detect content policy
+  keywords in response body, return error_type='nsfw' so frontend
+  shows "Content policy violation" banner matching other providers
+- Same pattern needed for Replicate providers
+- Models affected: All platform models (Flux family, Grok, Nano Banana 2)
+
+### Pending — P2
+
+**4. BulkGenerationJob.size type ambiguity**
+- Issue: Same `size` column stores `"1024x1024"` for OpenAI and `"2:3"`
+  for Replicate/xAI — mixed types in same field
+- Fix: Migration to add `aspect_ratio` field; or normalise all to ratio
+  format and update OpenAI provider to convert back at generation time
+- No user-facing impact currently but architectural debt
+
+**5. `.bg-ref-disabled-hint` contrast at opacity 0.45**
+- Issue: WCAG AA fail (~3.2:1) for hint text in disabled sections
+- Fix: Add `color: var(--gray-800)` explicitly to hint element
+- Origin: 154-O, flagged by @ui-visual-validator in 154-R report
+
+**6. Stale docstring in xai_provider.py:226**
+- `validate_settings` still reads "remap to nearest valid dimension"
+- Fix: One-line update to reflect aspect_ratio passthrough
+
+**7. `_download_image` duplication (P3)**
+- Issue: Near-identical SSRF-hardened method in both ReplicateImageProvider
+  and XAIImageProvider
+- Fix: Extract to `base.py` mixin or `_http_utils.py` when a third provider
+  needs the same pattern (YAGNI until then)
+
+### Models — Reference Image Support Matrix
+
+| Model | Wired | Param | Type | Notes |
+|-------|-------|-------|------|-------|
+| GPT-Image-1.5 | ✅ Yes | image (multipart) | file | Via client.images.edit() |
+| Flux Schnell | ❌ No | — | — | Official model: text-to-image only |
+| Flux Dev | ❌ No | — | — | Confirmed: no image param on official model |
+| Flux 1.1 Pro | ❌ No | — | — | No confirmed img2img support |
+| Nano Banana 2 | 🔄 Pending | image_input | array[URL] | 154-S spec, array wrapping needed |
+| Grok Imagine | 🔄 Pending | image (URL obj) | /edits endpoint | Different endpoint required |
+
+### Bulk Generator — Overall Completion Estimate
+
+**~88% complete for full feature launch**
+
+| Area | Status |
+|------|--------|
+| Core generation pipeline | ✅ 100% |
+| Model selection + BYOK | ✅ 100% |
+| Aspect ratio + quality selects | ✅ 100% |
+| Results page + cost tracking | ✅ 100% |
+| Credit system (DB models) | ✅ 100% |
+| Reference image (GPT-Image-1.5) | ✅ 100% |
+| Reference image (Replicate) | 🔄 40% (Nano Banana 2 only, pending) |
+| Reference image (xAI/Grok) | 🔄 20% (endpoint change needed) |
+| NSFW error UX (platform models) | ❌ 0% (new spec needed) |
+| Credit enforcement (subscription gate) | ❌ 0% (Phase SUB) |
+| Subscription tier UI | ❌ 0% (Phase SUB) |
+
+---
+
+**Version:** 4.16 (Session 154 — Phase REP added, 1245 tests)
+**Last Updated:** April 16, 2026

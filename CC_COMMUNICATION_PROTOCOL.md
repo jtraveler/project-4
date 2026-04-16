@@ -2,12 +2,12 @@
 
 **Purpose:** Instructions for Claude Code when executing specifications. Read this at the start of EVERY task to understand expectations and communication standards.
 
-**Version:** 2.0
-**Last Updated:** February 18, 2026
+**Version:** 2.2
+**Last Updated:** April 2026
 **Project:** PromptFinder (Django AI Prompt Sharing Platform)
 **For:** Claude Code (CC) - VS Code Extension
 **Status:** Active Reference Document
-**Changelog:** v2.1 — Added PRE-AGENT SELF-CHECK section. v2.0 added accessibility-first, exact-copy enforcement, data migration awareness, DOM structure compliance, agent rejection criteria. Updated project structure. Standardized agent reporting to Rating/10 format.
+**Changelog:** v2.2 — Minimum agents raised from 2-3 to 6. Average 8.5+ required. All agents must score 8.0+. Recommended 6-agent baseline set documented. Mandatory docs/REPORT_[SPEC_ID].md with 11 sections added. v2.1 — Added PRE-AGENT SELF-CHECK section. v2.0 added accessibility-first, exact-copy enforcement, data migration awareness, DOM structure compliance, agent rejection criteria. Updated project structure. Standardized agent reporting to Rating/10 format.
 
 ---
 
@@ -21,7 +21,7 @@
 
 The template includes:
 - ⛔ Mandatory "CRITICAL: READ FIRST" header
-- Agent usage requirements (minimum 2-3 agents)
+- Agent usage requirements (minimum 6 agents, average 8.5+, all 8.0+)
 - Quality standards (8+/10 ratings required)
 - ♿ Inline accessibility requirements (build in, not bolt on)
 - 🏗️ DOM structure tree diagrams (for layout changes)
@@ -33,21 +33,38 @@ The template includes:
 
 ### Why Use The Template
 
-Using the standardized template consistently produces:
-- Average quality scores of 9+/10
+Using the standardized template with 6 agents consistently produces:
+- Average quality scores of 8.5+/10 (target: 9+)
 - Critical bugs caught before production
+- Architectural issues surfaced before they compound
 - Zero regressions
-- Professional deliverables
+- Professional deliverables with full audit trail in docs/
 
-**The template codifies these successful patterns.**
+**Why 6 agents matters:** 154-Q ran 2 agents and scored 9.0/9.0 —
+appeared fully clean. Re-running with 6 agents caught a CSS specificity
+issue, missing test coverage, architectural debt, and tdd-orchestrator
+blocked the commit at 6.0. 2-3 agents is structurally insufficient for
+multi-file specs.
 
 ### How to Use
 
 1. Copy structure from `CC_SPEC_TEMPLATE.md`
 2. Fill in task-specific details
 3. Include all required sections
-4. Specify appropriate agents
-5. Require 8+/10 ratings
+4. Specify 6 agents minimum — one per area of concern
+   Recommended baseline set:
+   - @backend-security-coder (security, SSRF, injection)
+   - @code-reviewer (logic, edge cases, dead code)
+   - @python-pro (idioms, type annotations, docstrings)
+   - @tdd-orchestrator (test coverage, assertion quality)
+   - @django-pro (ORM, migrations, signals)
+   - @architect-review (patterns, debt, alternatives)
+   Substitute as appropriate for frontend work:
+   - @frontend-developer replaces @django-pro
+   - @ui-visual-validator replaces @architect-review
+5. Require 8.0+/10 per agent, 8.5+ average
+6. Re-run any agent that scores below 8.0 after fixing their findings
+7. Create docs/REPORT_[SPEC_ID].md with 11-section template
 
 ---
 

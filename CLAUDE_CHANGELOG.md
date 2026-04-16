@@ -23,44 +23,69 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
-### Session 154 — April 13, 2026
+### Session 154 — April 2026
 
 **Focus:** Phase REP — Replicate + xAI provider integration, credit tracking
-data layer, dynamic model selector UI
+data layer, dynamic model selector UI, provider fixes, documentation standards
 
-**Specs:** 154-A through 154-E (Batch 1)
+**Specs:** 154-A through 154-R + 2 hotfixes (Batches 1–6)
+**Tests:** 1245 passing, 0 failures, 12 skipped
+**Migration:** 0082 (GeneratorModel, UserCredit, CreditTransaction)
 
+**Batch 1 (154-A through 154-E):**
 - 154-A: Data Layer — `GeneratorModel`, `UserCredit`, `CreditTransaction` models.
   Migration 0082. Admin with list_editable toggles. Seed command (6 models).
-  Append-only `CreditTransactionAdmin` (no add/change/delete).
 - 154-B: Providers — `ReplicateImageProvider` (Flux Schnell/Dev/1.1-Pro/Nano
   Banana 2) via `replicate` SDK. `XAIImageProvider` (Grok Imagine) via OpenAI-
-  compatible xAI API. Both with mock mode, structured error handling, NSFW check
-  flag. Registry with try/except import guards.
-- 154-C: Task Layer — Platform mode key resolution in `tasks.py`. OpenAI always
-  BYOK, Replicate/xAI use master keys from env vars. `_get_platform_api_key()`
-  helper. `_deduct_generation_credits()` non-blocking credit deduction after job
-  completion. `model_name` passthrough for Replicate provider instantiation.
-- 154-D: UI Layer — Dynamic model dropdown from `GeneratorModel` DB. BYOK toggle
-  shows/hides API key section + OpenAI models. Aspect ratio selector replaces
-  pixel size buttons for Replicate/xAI models. `getMasterDimensions()` returns
-  aspect ratio or pixel size based on active selector. `is_byok` flag in API payload.
-- 154-E: Docs update — 4-tier subscription structure, credit system, key learnings,
-  CLAUDE.md + CLAUDE_CHANGELOG.md + PROJECT_FILE_STRUCTURE.md updated.
+  compatible xAI API.
+- 154-C: Task Layer — Platform mode key resolution. `_get_platform_api_key()`.
+  `_deduct_generation_credits()`.
+- 154-D: UI Layer — Dynamic model dropdown from DB. BYOK toggle. Aspect ratio
+  selector. `getMasterDimensions()`.
+- 154-E: Docs update — 4-tier subscription, credit system, key learnings.
+
+**Batch 2 (154-F through 154-I):**
+- 154-F: BYOK UX redesign — toggle removed, API key section driven by model.
+- 154-G: CSS skin — #f9f8f6 background, btn-outline-standard, reset buttons.
+- 154-H: JS init — `updateCostEstimate`/`updateGenerateBtn` moved before
+  `handleModelChange`. `tierSection` hide/show.
+- 154-I: Final JS init fix — `handleModelChange()` after `addBoxes(4)`.
+
+**Batch 3 (154-J through 154-M):**
+- 154-J: API key gate for platform models, aspect ratios from model, credits.
+- 154-K: FileOutput crash fix, per-box quality hide, TEMP dollar display.
+- 154-L: `supports_reference_image` BooleanField on GeneratorModel.
+- 154-M: CSS — aspect ratio flex-wrap, border/background updates.
+
+**Batch 4 (154-N through 154-P):**
+- 154-N: ModelError NSFW message, dimensions regression, generate button fix.
+- 154-O: Disable (opacity + pointerEvents) for Quality + Ref Image sections.
+- 154-P: Results page — `model_display_name`, `gallery_aspect` for ratios.
+
+**Batch 5 (154-Q):**
+- 154-Q: Grok 400 fix (constrain xAI sizes), Flux FileOutput URL fix, disabled
+  cursor CSS. Round 1 avg 7.3 → Round 2 avg 8.7 after fixes. 16 new tests.
+
+**Batch 6 (154-R + hotfixes):**
+- 154-R: xAI provider rewrite — `aspect_ratio` passthrough via `extra_body`,
+  URL response + `_download_image()`, disabled cursor via native `disabled`.
+  10 new tests. 6 agents avg 8.92/10.
+- Hotfix: `aspect_ratio` via `extra_body` (OpenAI SDK rejects unknown kwargs).
+- Hotfix: Provider-specific `cost_per_image` on results page.
 
 **Key decisions:**
 - OpenAI GPT-Image-1.5 is ALWAYS BYOK (no platform OpenAI key)
 - Replicate/xAI run in platform mode (master keys in Heroku env vars)
-- `GeneratorModel` is the single source of truth for model availability
+- `GeneratorModel` is single source of truth for model availability
 - Credit enforcement deferred to Phase SUB (Stripe)
-- 4-tier structure: Starter (free), Creator ($9), Pro ($19), Studio ($49)
+- 4-tier: Starter (free), Creator ($9), Pro ($19), Studio ($49)
+- Flux Dev has NO image input on official Replicate model
+- Nano Banana 2 uses `image_input` (ARRAY type, up to 14 URLs)
+- Agent minimum raised from 2-3 to 6 per spec (CC_SPEC_TEMPLATE v2.6)
 
-**Agent scores:** All specs passed 8.0+ post-fix average. Critical bugs caught
-and fixed: `_provider_kwargs` scoping (Spec C), JS syntax error in payload
-(Spec D), seed command dict mutation (Spec A), Replicate SSRF hardening (Spec B).
-
-**Tests:** 1227 passing, 12 skipped
-**Migration:** 0082 (add_generator_models_and_credit_tracking)
+**Quality notes:**
+- 154-Q: 2 agents → 3 below threshold. Lesson: 2-3 insufficient.
+- 154-R: 6 agents, all first-round pass, avg 8.92/10. Session high.
 
 ### Session 153 — April 11–12, 2026
 

@@ -279,7 +279,7 @@ verification happens post-deploy.
 
 Single commit:
 ```
-fix(providers): xAI uses aspect_ratio not size param; disabled cursor via native disabled
+d338c7e fix(providers): xAI uses aspect_ratio not size param; disabled cursor via native disabled
 
 - xai_provider.py: replace dimension mapping with aspect_ratio passthrough
   — removes _ASPECT_TO_DIMENSIONS, _XAI_VALID_SIZES, _resolve_dimensions

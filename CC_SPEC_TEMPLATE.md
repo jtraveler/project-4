@@ -1,9 +1,9 @@
 # Claude Code Specification Template
 
-**Last Updated:** March 10, 2026
+**Last Updated:** April 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
-**Changelog:** v2.5 — Added Critical Reminder #9 (paired test assertions). Recurring pattern: negative-only assertions (assertNotIn) passing vacuously in Phases 6C-A and 6D. v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
+**Changelog:** v2.6 — Minimum agents raised from 2-3 to 6. Average 8.5+ required. All agents must score 8.0+. Mandatory 11-section report added at docs/REPORT_[SPEC_ID].md. @technical-writer involvement required for reports. Evidence: 154-Q with 2 agents scored 9.0/9.0 but missed CSS specificity, missing tests, and architectural debt caught by 6-agent review. v2.5 — Added Critical Reminder #9 (paired test assertions). Recurring pattern: negative-only assertions (assertNotIn) passing vacuously in Phases 6C-A and 6D. v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
 
 ---
 
@@ -19,8 +19,15 @@ Every specification for Claude Code MUST include the following sections in this 
 
 1. **Read `CC_COMMUNICATION_PROTOCOL.md`** - Contains mandatory agent usage requirements
 2. **Read this entire specification** - Don't skip sections
-3. **Use required agents** - Minimum 2-3 agents appropriate for the task
-4. **Report agent usage** - Include ratings and findings in completion summary
+3. **Use required agents** — Minimum 6 agents. Average must be 8.5+.
+   All agents must score 8.0+. Re-run any agent that scores below 8.0.
+   Do NOT accept projected scores.
+4. **Create mandatory report** — After agents pass, create a detailed
+   report at `docs/REPORT_[SPEC_ID].md` covering all 11 required
+   sections (see AGENT REQUIREMENTS section below for the template).
+   Involve `@technical-writer` to help draft.
+5. **Report agent usage** — Include ratings and findings in completion
+   summary AND in the docs/REPORT file.
 
 **This is non-negotiable per the project's CC Communication Protocol.**
 
@@ -300,7 +307,7 @@ well-reasoned — the same verification standard as code specs.
 
 **Missing this table = incomplete report. Do not mark a spec complete without it.**
 
-### Required Agents (Minimum 2-3)
+### Required Agents (Minimum 6, average 8.5+, all 8.0+)
 
 **1. [Agent Name]** (e.g., @django-pro)
 - Task: [what to review]
@@ -414,6 +421,33 @@ After implementation, the developer MUST:
 
 ---
 
+## 📄 MANDATORY DOCS REPORT
+
+In addition to the inline completion report, CC must create a detailed
+report file at `docs/REPORT_[SPEC_ID].md`. Involve `@technical-writer`
+agent to help draft this report.
+
+The report must include ALL of the following 11 sections:
+
+1. **Overview** — what was built/fixed and why, root cause analysis
+2. **Expectations** — full checklist of what the spec required
+3. **Improvements Done** — exactly what changed in each file
+4. **Issues Encountered and Resolved** — every problem during
+   implementation and how it was resolved
+5. **Remaining Issues with Solutions** — outstanding issues with
+   specific recommended fixes (file, line, approach)
+6. **Concerns and Areas for Improvement** — exact actionable
+   improvements with file references
+7. **Detailed Agent Ratings** — all 6 agents, both rounds if
+   applicable, scores, key findings, whether findings were acted on
+8. **Additional Agents Recommended** — agents not used that would have
+   added value
+9. **How to Test** — automated commands + manual browser steps
+10. **What to Work on Next** — ordered follow-up list
+11. **Commits** — hash + message for every commit made
+
+---
+
 ## 📊 CC COMPLETION REPORT FORMAT
 
 **After implementation, Claude Code MUST provide a completion report in this format:**
@@ -468,9 +502,16 @@ Include enough detail for the next spec. If none: "None identified."]
 
 1. **Agent Testing is Mandatory**
    - Not optional
-   - Minimum 2-3 agents
-   - All must rate 8+/10
-   - Document findings
+   - Minimum 6 agents — this is a hard floor, not a guideline
+   - Average must be 8.5+ across all agents
+   - All agents must score 8.0+ individually
+   - Re-run any agent that scores below 8.0 after fixing issues
+   - Do NOT accept projected scores — re-runs must be genuine
+   - Document all findings, scores, and whether findings were acted on
+   - Evidence: 154-Q ran 2 agents, scored 9.0/9.0, appeared clean. With
+     6 agents: CSS specificity issue found, missing tests found,
+     architectural debt flagged, tdd-orchestrator blocked at 6.0.
+     2-3 agents is structurally insufficient for multi-file specs.
 
 2. **Quality Over Speed**
    - Take time to do it right

@@ -855,10 +855,23 @@
                 'black-forest-labs/flux-dev': 0.025,       // confirmed $0.025 (Replicate, April 2026)
                 'black-forest-labs/flux-1.1-pro': 0.040,
                 'black-forest-labs/flux-2-pro': 0.015,     // $0.015/MP text-to-image
-                'google/nano-banana-2': 0.067,             // 1K default (confirmed Replicate pricing)
                 'grok-imagine-image': 0.020,
             };
-            var _apiCostPerImage = _costOpt ? (_apiCosts[_costOpt.value] || 0) : 0;
+            // Nano Banana 2 per-resolution tier costs (confirmed Replicate pricing, April 2026)
+            var NB2_TIER_COSTS = {
+                'low':    0.067,   // 1K resolution
+                'medium': 0.101,   // 2K resolution
+                'high':   0.151    // 4K resolution
+            };
+            var _apiCostPerImage;
+            var _modelId = _costOpt ? _costOpt.value : '';
+            if (_modelId === 'google/nano-banana-2') {
+                var _qualityEl = document.getElementById('settingQuality');
+                var _currentQuality = _qualityEl ? _qualityEl.value : 'low';
+                _apiCostPerImage = NB2_TIER_COSTS[_currentQuality] || 0.067;
+            } else {
+                _apiCostPerImage = _apiCosts[_modelId] || 0;
+            }
             I.costDollars.textContent = '$' + (_apiCostPerImage * totalImages).toFixed(3);
         }
     };
@@ -962,6 +975,19 @@
             var qualitySelect = qualityGroup.querySelector('select');
             if (qualitySelect) qualitySelect.disabled = !supportsQuality;
         }
+        // Update quality option labels — NB2 shows resolution tiers, others show generic
+        var _qs = document.getElementById('settingQuality');
+        if (_qs) {
+            if (opt.value === 'google/nano-banana-2') {
+                if (_qs.options[0]) _qs.options[0].text = '1K';
+                if (_qs.options[1]) _qs.options[1].text = '2K';
+                if (_qs.options[2]) _qs.options[2].text = '4K';
+            } else {
+                if (_qs.options[0]) _qs.options[0].text = 'Low';
+                if (_qs.options[1]) _qs.options[1].text = 'Medium';
+                if (_qs.options[2]) _qs.options[2].text = 'High';
+            }
+        }
 
         // Disable per-box QUALITY override for non-quality models.
         // Dimensions override is ALWAYS visible — users can always override
@@ -997,6 +1023,7 @@
             var uploadZone = document.getElementById('refUploadZone');
             if (uploadZone) {
                 uploadZone.style.cursor = supportsRefImage ? '' : 'not-allowed';
+                uploadZone.classList.toggle('bg-ref-upload--disabled', !supportsRefImage);
             }
             // Disable the file input natively so browsers show
             // cursor:not-allowed — same pattern as Character Selection.

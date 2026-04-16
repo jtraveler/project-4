@@ -76,11 +76,25 @@ Note: Security reviewer's score of 7.5 reflected concerns about keyword false po
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_xai_provider --verbosity=1
+# Expected: 16 tests OK (10 aspect ratio + 3 NSFW + 3 ref image)
+
+python manage.py test --verbosity=0
+# Expected: 1254 tests, 0 failures, 12 skipped
+```
+
+**Manual browser check:**
+1. Select Grok Imagine → enter NSFW prompt → generate
+2. Verify "Content policy violation" banner appears (not raw "Bad request")
+3. Check Heroku logs for `xAI content_policy match in:` audit line
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 5bc45bb | fix(providers): expand xAI NSFW keyword detection + fix stale validate_settings docstring |
 
 ## Section 11 — What to Work on Next
 

@@ -55,11 +55,26 @@ All relevant agents were included for this CSS-only change.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py check
+# Expected: 0 issues
+
+python manage.py test --verbosity=0
+# Expected: 1254 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks (developer verifies at 127.0.0.1:8000):**
+1. Scroll to footer → all text and links are white
+2. Hover over any footer link → still white (no color change)
+3. Tab to a footer link → focus ring visible, text still white
+4. Check mobile width (375px) → footer text still white
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 3af8cf2 | fix(footer): set all footer text to white via CSS inheritance + footer a override |
 
 ## Section 11 — What to Work on Next
 

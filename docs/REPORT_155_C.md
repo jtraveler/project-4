@@ -73,11 +73,26 @@ Note: The `image=b''` concern is a documented known risk per spec. Upstream doma
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_xai_provider --verbosity=1
+# Expected: 16 tests OK
+
+python manage.py test --verbosity=0
+# Expected: 1254 tests, 0 failures, 12 skipped
+```
+
+**Manual browser check (ONLY if xAI credits confirmed available):**
+1. Select Grok Imagine → upload reference image → generate
+2. Heroku logs: `POST /v1/images/edits` (not `/v1/images/generations`)
+3. Select Grok Imagine → no reference image → generate
+4. Heroku logs: `POST /v1/images/generations`
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 242c8d8 | feat(providers): Grok reference image via /v1/images/edits endpoint |
 
 ## Section 11 — What to Work on Next
 

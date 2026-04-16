@@ -68,11 +68,25 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_replicate_provider --verbosity=1
+# Expected: 5 tests OK (2 FileOutput + 3 ref image)
+
+python manage.py test --verbosity=0
+# Expected: 1254 tests, 0 failures, 12 skipped
+```
+
+**Manual browser check:**
+1. Select Nano Banana 2 → upload reference image → generate
+2. Heroku logs: verify `image_input` key present in Replicate API inputs
+3. Image generated successfully with reference influence
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 757b4f4 | feat(providers): Nano Banana 2 reference image via image_input array param |
 
 ## Section 11 — What to Work on Next
 

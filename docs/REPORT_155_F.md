@@ -50,11 +50,23 @@ All relevant agents were included for this cleanup-only spec.
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_xai_provider prompts.tests.test_replicate_provider --verbosity=1
+# Expected: 21 tests OK (16 xAI + 5 Replicate)
+
+python manage.py test --verbosity=0
+# Expected: 1254 tests, 0 failures, 12 skipped
+```
+
+**Manual check:**
+- Trigger a Replicate model that returns an unexpected output type → verify `logger.warning` appears in Heroku logs with output type name and model name
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| 25af750 | fix(providers): drop TypeError from xAI except, add logger.warning to replicate str() fallback |
 
 ## Section 11 — What to Work on Next
 

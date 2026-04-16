@@ -90,11 +90,24 @@ All relevant agents were included. No additional agents would have added materia
 
 ## Section 9 — How to Test
 
-*(To be filled after full suite passes)*
+**Automated:**
+```bash
+python manage.py test --verbosity=0
+# Expected: 1254 tests, 0 failures, 12 skipped
+```
+
+**Manual browser checks (developer verifies at 127.0.0.1:8000):**
+1. Navigate to `/tools/bulk-ai-generator/`
+2. Select Flux Dev → hover Quality section → cursor shows 🚫 (not-allowed)
+3. Select Flux Dev → hover Ref Image section → cursor shows 🚫 (not-allowed)
+4. Select GPT-Image-1.5 → both sections → normal cursor, fully interactive
+5. Select Flux Dev → drag file onto disabled ref image zone → nothing happens (guard active)
 
 ## Section 10 — Commits
 
-*(To be filled after full suite passes)*
+| Hash | Message |
+|------|---------|
+| eb63849 | fix(bulk-gen): remove pointer-events:none from disabled setting groups, add cursor:not-allowed |
 
 ## Section 11 — What to Work on Next
 

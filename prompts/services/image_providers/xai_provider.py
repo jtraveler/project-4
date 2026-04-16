@@ -165,7 +165,11 @@ class XAIImageProvider(ImageProvider):
                 error_message=f'xAI connection error: {str(e)[:200]}',
             )
         except Exception as e:
-            logger.error("xAI generation error: %s", e, exc_info=True)
+            logger.error(
+                "xAI generation error: %s | reference_image_url=%s | aspect_ratio=%s",
+                e, reference_image_url[:50] if reference_image_url else 'None',
+                locals().get('aspect_ratio', 'unknown'), exc_info=True,
+            )
             return GenerationResult(
                 success=False,
                 error_type='unknown',

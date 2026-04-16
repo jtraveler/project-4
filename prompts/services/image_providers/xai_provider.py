@@ -29,6 +29,13 @@ _SUPPORTED_ASPECT_RATIOS = frozenset([
 ])
 _DEFAULT_ASPECT_RATIO = '1:1'
 
+# Keywords in xAI BadRequestError messages that indicate content policy rejection.
+# Checked against str(e).lower(). Broad set to catch varied xAI error phrasing.
+_POLICY_KEYWORDS = (
+    'content policy', 'safety', 'forbidden', 'violation',
+    'blocked', 'inappropriate', 'nsfw', 'not allowed',
+)
+
 
 def _resolve_aspect_ratio(size: str) -> str:
     """Return a valid xAI aspect_ratio string.
@@ -97,12 +104,34 @@ class XAIImageProvider(ImageProvider):
             # Use aspect_ratio (native xAI parameter) and URL response
             # format — download bytes via _download_image() for
             # consistency with the Replicate provider pattern.
-            response = client.images.generate(
-                model=XAI_DEFAULT_MODEL,
-                prompt=prompt,
-                n=1,
-                extra_body={"aspect_ratio": aspect_ratio},
-            )
+            if reference_image_url:
+                valid, err = self._validate_reference_url(reference_image_url)
+                if not valid:
+                    return GenerationResult(
+                        success=False,
+                        error_type='invalid_request',
+                        error_message=err,
+                    )
+                # xAI /v1/images/edits — reference image passed as URL
+                # via extra_body. The SDK's .edit() targets this endpoint;
+                # xAI accepts a URL-based image object instead of a file.
+                response = client.images.edit(
+                    model=XAI_DEFAULT_MODEL,
+                    image=b'',  # placeholder — overridden by extra_body image key
+                    prompt=prompt,
+                    n=1,
+                    extra_body={
+                        "image": {"url": reference_image_url, "type": "image_url"},
+                        "aspect_ratio": aspect_ratio,
+                    },
+                )
+            else:
+                response = client.images.generate(
+                    model=XAI_DEFAULT_MODEL,
+                    prompt=prompt,
+                    n=1,
+                    extra_body={"aspect_ratio": aspect_ratio},
+                )
 
             if not response.data or not response.data[0].url:
                 return GenerationResult(
@@ -134,7 +163,8 @@ class XAIImageProvider(ImageProvider):
             )
         except BadRequestError as e:
             error_str = str(e).lower()
-            if 'content policy' in error_str or 'safety' in error_str:
+            if any(kw in error_str for kw in _POLICY_KEYWORDS):
+                logger.info("xAI content_policy match in: %s", error_str[:100])
                 return GenerationResult(
                     success=False,
                     error_type='content_policy',
@@ -175,6 +205,23 @@ class XAIImageProvider(ImageProvider):
                 error_type='unknown',
                 error_message=f'Generation failed: {str(e)[:200]}',
             )
+
+    def _validate_reference_url(self, url: str) -> tuple[bool, str]:
+        """Return (is_valid, error_message) for reference image URL.
+
+        Validates the URL is safe to pass to xAI's API.
+        xAI's server fetches the URL — HTTPS-only to prevent SSRF.
+        Upstream domain allowlist in bulk_generator_views.py is the
+        primary security boundary; this is defense-in-depth.
+        """
+        if not url or not url.strip():
+            return False, 'Reference image URL is empty.'
+        url = url.strip()
+        if len(url) > 2048:
+            return False, 'Reference image URL exceeds maximum length.'
+        if not url.startswith('https://'):
+            return False, 'Reference image URL must use HTTPS.'
+        return True, ''
 
     def _download_image(self, url: str) -> bytes | None:
         """Download image bytes from xAI's output URL.
@@ -227,7 +274,7 @@ class XAIImageProvider(ImageProvider):
         return 300
 
     def validate_settings(self, size: str, quality: str) -> tuple[bool, str]:
-        """All sizes pass — we remap to nearest valid dimension."""
+        """All aspect ratios accepted — unknowns resolve to '1:1' via _resolve_aspect_ratio."""
         return True, ''
 
     def get_cost_per_image(

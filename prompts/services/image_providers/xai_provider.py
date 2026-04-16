@@ -101,7 +101,7 @@ class XAIImageProvider(ImageProvider):
                 model=XAI_DEFAULT_MODEL,
                 prompt=prompt,
                 n=1,
-                aspect_ratio=aspect_ratio,
+                extra_body={"aspect_ratio": aspect_ratio},
             )
 
             if not response.data or not response.data[0].url:

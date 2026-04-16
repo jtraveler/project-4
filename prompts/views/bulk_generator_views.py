@@ -108,19 +108,17 @@ def bulk_generator_job_view(request, job_id):
     """
     job = get_object_or_404(BulkGenerationJob, id=job_id, created_by=request.user)
 
-    # Use provider-specific cost if available, fall back to OpenAI cost map.
-    _PROVIDER_COSTS = {
-        'black-forest-labs/flux-schnell': 0.003,
-        'black-forest-labs/flux-dev': 0.025,     # confirmed $0.025 (live Replicate page, April 2026)
-        'black-forest-labs/flux-1.1-pro': 0.040,
-        'black-forest-labs/flux-2-pro': 0.015,   # $0.015/MP text-to-image (live Replicate, April 2026)
-        'google/nano-banana-2': 0.067,           # 1K resolution default (confirmed Replicate pricing)
-        'grok-imagine-image': 0.020,
-    }
-    cost_per_image = _PROVIDER_COSTS.get(
-        job.model_name,
-        get_image_cost(job.quality, job.size)
-    )
+    # Use provider's get_cost_per_image() for tier-aware cost (e.g. NB2 resolution pricing).
+    # Falls back to OpenAI cost map for models not registered as providers.
+    from prompts.services.image_providers.registry import get_provider
+    try:
+        _provider_kwargs = {}
+        if job.provider == 'replicate':
+            _provider_kwargs['model_name'] = job.model_name
+        _provider = get_provider(job.provider, **_provider_kwargs)
+        cost_per_image = _provider.get_cost_per_image(job.size, job.quality)
+    except Exception:
+        cost_per_image = get_image_cost(job.quality, job.size)
     total_images = job.total_prompts * job.images_per_prompt
     estimated_total_cost = total_images * cost_per_image
 

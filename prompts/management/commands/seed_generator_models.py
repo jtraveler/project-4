@@ -83,7 +83,7 @@ MODELS = [
         'description': 'Higher quality than Schnell. Better detail, composition, and prompt adherence. ~5s per image.',
         'provider': 'replicate',
         'model_identifier': 'black-forest-labs/flux-dev',
-        'credit_cost': 10,
+        'credit_cost': 8,  # $0.025 / $0.003 per credit = 8.33 ≈ 8 (confirmed Replicate, April 2026)
         'available_starter': False,
         'available_creator': False,
         'available_pro': True,
@@ -129,7 +129,7 @@ MODELS = [
         'description': 'Google\'s Gemini 3.1 Flash Image. Excellent for photorealistic scenes, accurate text rendering, and character consistency.',
         'provider': 'replicate',
         'model_identifier': 'google/nano-banana-2',
-        'credit_cost': 20,
+        'credit_cost': 22,  # 1K resolution: $0.067 / $0.003 per credit ≈ 22 (confirmed Replicate, April 2026)
         'available_starter': False,
         'available_creator': False,
         'available_pro': True,
@@ -142,10 +142,33 @@ MODELS = [
         'supported_aspect_ratios': [
             '1:1', '16:9', '3:2', '2:3', '4:5', '9:16',
         ],
-        'supports_quality_tiers': False,
+        'supports_quality_tiers': True,   # Maps to resolution tiers: 1K/2K/4K
         'supports_reference_image': True,
         'default_aspect_ratio': '2:3',
         'sort_order': 60,
+    },
+    {
+        'slug': 'flux-2-pro',
+        'name': 'FLUX 2 Pro',
+        'description': 'Black Forest Labs\' current-generation model. Supports up to 8 reference images. Excellent composition and prompt adherence.',
+        'provider': 'replicate',
+        'model_identifier': 'black-forest-labs/flux-2-pro',
+        'credit_cost': 5,  # $0.015/MP text-to-image / $0.003 per credit = 5 credits
+        'available_starter': False,
+        'available_creator': False,
+        'available_pro': True,
+        'available_studio': True,
+        'is_enabled': True,
+        'is_byok_only': False,
+        'requires_platform_key': True,
+        'is_promotional': False,
+        'supported_aspect_ratios': [
+            '1:1', '16:9', '3:2', '2:3', '4:5', '5:4', '9:16', '4:3', '3:4',
+        ],
+        'supports_quality_tiers': False,
+        'supports_reference_image': True,
+        'default_aspect_ratio': '2:3',
+        'sort_order': 55,  # Between Flux 1.1 Pro (50) and Nano Banana 2 (60)
     },
 ]
 

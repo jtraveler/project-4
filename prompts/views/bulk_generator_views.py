@@ -111,9 +111,10 @@ def bulk_generator_job_view(request, job_id):
     # Use provider-specific cost if available, fall back to OpenAI cost map.
     _PROVIDER_COSTS = {
         'black-forest-labs/flux-schnell': 0.003,
-        'black-forest-labs/flux-dev': 0.030,
+        'black-forest-labs/flux-dev': 0.025,     # confirmed $0.025 (live Replicate page, April 2026)
         'black-forest-labs/flux-1.1-pro': 0.040,
-        'google/nano-banana-2': 0.060,
+        'black-forest-labs/flux-2-pro': 0.015,   # $0.015/MP text-to-image (live Replicate, April 2026)
+        'google/nano-banana-2': 0.067,           # 1K resolution default (confirmed Replicate pricing)
         'grok-imagine-image': 0.020,
     }
     cost_per_image = _PROVIDER_COSTS.get(

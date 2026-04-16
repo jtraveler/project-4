@@ -2646,13 +2646,18 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
     return None, False  # Safety fallback (loop exited without break)
 
 
-def _apply_generation_result(job, image, result, tz):
+def _apply_generation_result(job, image, result, tz, cost_per_image=None):
     """
     Upload a successful image to B2 and update its database record.
 
     Returns (cost_delta, success_flag):
     - cost_delta: amount to add to job's actual_cost (0.0 on failure)
     - success_flag: True if completed, False if failed
+
+    Args:
+        cost_per_image: Provider-specific cost per image. When provided, this
+            takes precedence over the OpenAI-only IMAGE_COST_MAP fallback.
+            Should be set by the caller from provider.get_cost_per_image().
     """
     try:
         image_url = _upload_generated_image_to_b2(
@@ -2660,11 +2665,14 @@ def _apply_generation_result(job, image, result, tz):
             job=job,
             image=image,
         )
-        from prompts.constants import get_image_cost
-        cost = get_image_cost(
-            image.quality or job.quality or 'medium',
-            image.size or job.size,
-        )
+        if cost_per_image is not None and isinstance(cost_per_image, (int, float)):
+            cost = float(cost_per_image)
+        else:
+            from prompts.constants import get_image_cost
+            cost = get_image_cost(
+                image.quality or job.quality or 'medium',
+                image.size or job.size,
+            )
         image.status = 'completed'
         image.image_url = image_url
         image.revised_prompt = result.revised_prompt
@@ -2832,7 +2840,11 @@ def _run_generation_loop(job, provider, job_api_key, images, tz, _provider_kwarg
                     )
                 elif result.success:
                     cost, success = _apply_generation_result(
-                        job, img, result, tz
+                        job, img, result, tz,
+                        cost_per_image=provider.get_cost_per_image(
+                            img.size or job.size,
+                            img.quality or job.quality or 'medium',
+                        ),
                     )
                     if success:
                         total_cost += Decimal(str(cost))

@@ -53,7 +53,23 @@ _QUALITY_STEPS = {
 # Confirmed via Heroku schema dump (Step 0b, Session 155).
 _MODEL_IMAGE_INPUT_PARAM: dict[str, tuple[str, str]] = {
     'google/nano-banana-2': ('image_input', 'array'),
-    # Flux models excluded — no confirmed image param on official Replicate schema
+    'black-forest-labs/flux-2-pro': ('input_images', 'array'),  # Step 0b Session 156 — max 8 images
+}
+
+# Nano Banana 2 resolution tier mapping.
+# Maps quality names (from UI dropdown) to resolution parameter values.
+# 3 tiers only — confirmed from live Replicate pricing page, April 2026.
+_NANO_BANANA_RESOLUTION_MAP: dict[str, str] = {
+    'low': '1K',       # $0.067/image
+    'medium': '2K',    # $0.101/image
+    'high': '4K',      # $0.151/image
+}
+
+# Per-resolution costs for Nano Banana 2 (exact Replicate pricing, April 2026).
+_NANO_BANANA_COSTS: dict[str, float] = {
+    '1K': 0.067,
+    '2K': 0.101,
+    '4K': 0.151,
 }
 
 
@@ -144,6 +160,11 @@ class ReplicateImageProvider(ImageProvider):
         # Flux Schnell is fixed 4 steps — don't send num_inference_steps
         if 'schnell' not in self.model_name:
             input_dict['num_inference_steps'] = _QUALITY_STEPS.get(quality, 28)
+
+        # Wire resolution for Nano Banana 2 quality/resolution tiers
+        if self.model_name == 'google/nano-banana-2':
+            nb2_resolution = _NANO_BANANA_RESOLUTION_MAP.get(quality, '1K')
+            input_dict['resolution'] = nb2_resolution
 
         # Wire reference image if the model supports it
         if reference_image_url and self.model_name in _MODEL_IMAGE_INPUT_PARAM:
@@ -321,11 +342,20 @@ class ReplicateImageProvider(ImageProvider):
     def get_cost_per_image(
         self, size: str = '1:1', quality: str = 'medium'
     ) -> float:
-        """Return platform cost per image for cost tracking."""
+        """Return platform cost per image for cost tracking.
+
+        For Nano Banana 2, cost varies by resolution tier (quality param).
+        For all other models, cost is flat per-image.
+        """
+        # Nano Banana 2: resolution-tiered pricing
+        if self.model_name == 'google/nano-banana-2':
+            nb2_resolution = _NANO_BANANA_RESOLUTION_MAP.get(quality, '1K')
+            return _NANO_BANANA_COSTS.get(nb2_resolution, 0.067)
+
         cost_map = {
             'black-forest-labs/flux-schnell': 0.003,
-            'black-forest-labs/flux-dev': 0.030,
+            'black-forest-labs/flux-dev': 0.025,       # confirmed $0.025 (live Replicate, April 2026)
             'black-forest-labs/flux-1.1-pro': 0.040,
-            'google/nano-banana-2': 0.060,
+            'black-forest-labs/flux-2-pro': 0.015,     # $0.015/MP text-to-image (live Replicate, April 2026)
         }
         return cost_map.get(self.model_name, 0.003)

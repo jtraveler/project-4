@@ -108,7 +108,18 @@ def bulk_generator_job_view(request, job_id):
     """
     job = get_object_or_404(BulkGenerationJob, id=job_id, created_by=request.user)
 
-    cost_per_image = get_image_cost(job.quality, job.size)
+    # Use provider-specific cost if available, fall back to OpenAI cost map.
+    _PROVIDER_COSTS = {
+        'black-forest-labs/flux-schnell': 0.003,
+        'black-forest-labs/flux-dev': 0.030,
+        'black-forest-labs/flux-1.1-pro': 0.040,
+        'google/nano-banana-2': 0.060,
+        'grok-imagine-image': 0.020,
+    }
+    cost_per_image = _PROVIDER_COSTS.get(
+        job.model_name,
+        get_image_cost(job.quality, job.size)
+    )
     total_images = job.total_prompts * job.images_per_prompt
     estimated_total_cost = total_images * cost_per_image
 

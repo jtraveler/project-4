@@ -47,6 +47,15 @@ _QUALITY_STEPS = {
     'high': 40,
 }
 
+# Maps model_identifier -> (param_name, param_kind) for reference image.
+# 'array' -> wrap single URL in list: [reference_image_url]
+# 'single' -> pass URL as string directly
+# Confirmed via Heroku schema dump (Step 0b, Session 155).
+_MODEL_IMAGE_INPUT_PARAM: dict[str, tuple[str, str]] = {
+    'google/nano-banana-2': ('image_input', 'array'),
+    # Flux models excluded — no confirmed image param on official Replicate schema
+}
+
 
 def _resolve_aspect_ratio(size: str) -> str:
     """Resolve a size string to a valid Replicate aspect ratio.
@@ -107,7 +116,7 @@ class ReplicateImageProvider(ImageProvider):
                   for backward compatibility.
             quality: Ignored for most Replicate models (no quality tiers).
                      Used to set num_inference_steps on Flux Dev/Pro.
-            reference_image_url: Not yet supported for Replicate — ignored.
+            reference_image_url: Passed to models in _MODEL_IMAGE_INPUT_PARAM (e.g. Nano Banana 2).
             api_key: Override the instance api_key for this call.
         """
         if self.mock_mode:
@@ -136,6 +145,19 @@ class ReplicateImageProvider(ImageProvider):
         if 'schnell' not in self.model_name:
             input_dict['num_inference_steps'] = _QUALITY_STEPS.get(quality, 28)
 
+        # Wire reference image if the model supports it
+        if reference_image_url and self.model_name in _MODEL_IMAGE_INPUT_PARAM:
+            if not reference_image_url.startswith('https://'):
+                return GenerationResult(
+                    success=False,
+                    error_type='invalid_request',
+                    error_message='Reference image URL must use HTTPS.',
+                )
+            param, kind = _MODEL_IMAGE_INPUT_PARAM[self.model_name]
+            input_dict[param] = (
+                [reference_image_url] if kind == 'array' else reference_image_url
+            )
+
         try:
             client = self._get_client()
             # Replicate returns a list of URLs for image outputs
@@ -162,6 +184,11 @@ class ReplicateImageProvider(ImageProvider):
             if hasattr(first_output, 'url'):
                 image_url = str(first_output.url)
             else:
+                logger.warning(
+                    "replicate_provider: unexpected output type %s for model %s — using str() fallback",
+                    type(first_output).__name__,
+                    self.model_name,
+                )
                 image_url = str(first_output)
 
             # Download the image bytes from the URL

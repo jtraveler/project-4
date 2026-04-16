@@ -23,6 +23,32 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 157 — April 17, 2026
+
+**Focus:** NB2 cost display accuracy, quality labels, upload zone hover fix,
+progress bar fix
+
+**Specs:** 157-A (NB2 labels + JS cost), 157-B (results page cost),
+157-C (upload zone hover), 157-D (NB2 progress bar), 157-E (docs)
+
+**Tests:** 1268 passing, 0 failures, 12 skipped
+
+**Key outcomes:**
+- NB2 quality dropdown now shows 1K/2K/4K instead of Low/Medium/High.
+  Internal option values (low/medium/high) unchanged — only display text.
+- Sticky bar cost updates dynamically per NB2 quality tier:
+  $0.067 (1K) / $0.101 (2K) / $0.151 (4K). Added NB2_TIER_COSTS dict.
+- Results page replaced flat _PROVIDER_COSTS dict with
+  provider.get_cost_per_image() — single source of truth for all models.
+  NB2 now shows correct per-resolution cost on results page.
+- Upload zone hover effect suppressed when model doesn't support reference
+  images. New .bg-ref-upload--disabled CSS class toggled in handleModelChange().
+  cursor:not-allowed retained; border/background hover visual removed.
+- NB2 progress bar stall at ~85% resolved. Root cause: progress bar counted
+  only completed images, not generating ones. During download/B2-upload
+  phase, images stay in generating status. Fix: progress bar now counts
+  completed + generating images. Cost display still uses completed only.
+
 ### Session 156 — April 16, 2026
 
 **Focus:** Phase REP production readiness — Grok reference image fix,

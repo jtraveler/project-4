@@ -19,10 +19,10 @@
 
     // Click to upload
     I.refUploadZone.addEventListener('click', function () {
-        if (!I.refUploading) I.refFileInput.click();
+        if (!I.refUploading && !I.refFileInput.disabled) I.refFileInput.click();
     });
     I.refUploadZone.addEventListener('keydown', function (e) {
-        if ((e.key === 'Enter' || e.key === ' ') && !I.refUploading) {
+        if ((e.key === 'Enter' || e.key === ' ') && !I.refUploading && !I.refFileInput.disabled) {
             e.preventDefault();
             I.refFileInput.click();
         }
@@ -48,7 +48,7 @@
     I.refUploadZone.addEventListener('drop', function (e) {
         e.preventDefault();
         I.refUploadZone.classList.remove('drag-over');
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        if (!I.refFileInput.disabled && e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleRefFile(e.dataTransfer.files[0]);
         }
     });

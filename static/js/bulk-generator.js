@@ -957,8 +957,7 @@
             // Disable instead of hide — users can see it exists but understand
             // it doesn't apply to the selected model.
             qualityGroup.style.opacity = supportsQuality ? '' : '0.45';
-            qualityGroup.style.pointerEvents = supportsQuality ? '' : 'none';
-            qualityGroup.style.cursor = supportsQuality ? '' : 'default';
+            qualityGroup.style.cursor = supportsQuality ? '' : 'not-allowed';
             var qualitySelect = qualityGroup.querySelector('select');
             if (qualitySelect) qualitySelect.disabled = !supportsQuality;
         }
@@ -971,7 +970,7 @@
             var parentDiv = wrapper ? wrapper.parentElement : null;
             if (parentDiv) {
                 parentDiv.style.opacity = supportsQuality ? '' : '0.45';
-                parentDiv.style.pointerEvents = supportsQuality ? '' : 'none';
+                parentDiv.style.cursor = supportsQuality ? '' : 'not-allowed';
             }
             sel.disabled = !supportsQuality;
         });
@@ -992,7 +991,7 @@
             // Disable instead of hide. When disabled, also hide the upload
             // link so users can't try to interact with it.
             refImageGroup.style.opacity = supportsRefImage ? '' : '0.45';
-            refImageGroup.style.pointerEvents = supportsRefImage ? '' : 'none';
+            refImageGroup.style.cursor = supportsRefImage ? '' : 'not-allowed';
             // Disable the file input natively so browsers show
             // cursor:not-allowed — same pattern as Character Selection.
             var refFileInput = refImageGroup.querySelector('input[type="file"]');

@@ -23,6 +23,39 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 156 — April 16, 2026
+
+**Focus:** Phase REP production readiness — Grok reference image fix,
+cost display audit + fix, FLUX 2 Pro, Nano Banana 2 resolution tiers
+
+**Specs:** 156-A (cursor label), 156-B (Grok httpx), 156-C (cost audit),
+156-D (cost fix), 156-E (FLUX 2 Pro), 156-F (NB2 resolution tiers),
+156-G (docs)
+
+**Tests:** 1268 passing, 0 failures, 12 skipped
+
+**Key outcomes:**
+- Cursor fix: added explanatory comment documenting why cursor:not-allowed
+  is set on #refUploadZone directly, not the parent container (Session 155
+  hotfix already removed the parent cursor line).
+- Grok reference image: fixed indefinite hang by replacing
+  client.images.edit(image=b'') with direct httpx POST to /v1/images/edits.
+  Root cause: SDK multipart/extra_body encoding conflict. New
+  _call_xai_edits_api() method with full HTTP status handling.
+- Cost display audit (156-C): mapped full cost data flow across 5 layers.
+  Root cause of $0.034 for non-OpenAI models: tasks.py called
+  get_image_cost() which only has OpenAI pixel-dimension keys — aspect
+  ratio strings like '1:1' fell back to $0.034 default.
+- Cost display fix (156-D): tasks.py now uses provider.get_cost_per_image()
+  via cost_per_image parameter. Flux Dev $0.030→$0.025, NB2 $0.060→$0.067,
+  credit_cost updated (Flux Dev 10→8, NB2 20→22). JS _apiCosts synced.
+- FLUX 2 Pro: added black-forest-labs/flux-2-pro with reference image
+  support (input_images array, max 8 images). Step 0b confirmed schema.
+  5 credits ($0.015/MP text-to-image).
+- Nano Banana 2 resolution tiers: wired resolution parameter (1K/2K/4K)
+  to quality dropdown. Per-resolution costs: $0.067/$0.101/$0.151.
+  supports_quality_tiers=True in seed.
+
 ### Session 155 — April 16, 2026
 
 **Focus:** Phase REP production readiness — P1 blockers resolved

@@ -852,9 +852,10 @@
         } else {
             var _apiCosts = {
                 'black-forest-labs/flux-schnell': 0.003,
-                'black-forest-labs/flux-dev': 0.030,
+                'black-forest-labs/flux-dev': 0.025,       // confirmed $0.025 (Replicate, April 2026)
                 'black-forest-labs/flux-1.1-pro': 0.040,
-                'google/nano-banana-2': 0.060,
+                'black-forest-labs/flux-2-pro': 0.015,     // $0.015/MP text-to-image
+                'google/nano-banana-2': 0.067,             // 1K default (confirmed Replicate pricing)
                 'grok-imagine-image': 0.020,
             };
             var _apiCostPerImage = _costOpt ? (_apiCosts[_costOpt.value] || 0) : 0;
@@ -991,6 +992,8 @@
             // Disable instead of hide. When disabled, also hide the upload
             // link so users can't try to interact with it.
             refImageGroup.style.opacity = supportsRefImage ? '' : '0.45';
+            // NOTE: cursor:not-allowed is set directly on #refUploadZone below,
+            // NOT on the group container, to prevent label text inheriting it.
             var uploadZone = document.getElementById('refUploadZone');
             if (uploadZone) {
                 uploadZone.style.cursor = supportsRefImage ? '' : 'not-allowed';

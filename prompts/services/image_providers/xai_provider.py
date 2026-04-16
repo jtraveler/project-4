@@ -112,18 +112,15 @@ class XAIImageProvider(ImageProvider):
                         error_type='invalid_request',
                         error_message=err,
                     )
-                # xAI /v1/images/edits — reference image passed as URL
-                # via extra_body. The SDK's .edit() targets this endpoint;
-                # xAI accepts a URL-based image object instead of a file.
-                response = client.images.edit(
-                    model=XAI_DEFAULT_MODEL,
-                    image=b'',  # placeholder — overridden by extra_body image key
+                # Use direct httpx POST instead of client.images.edit().
+                # The SDK's images.edit() constructs multipart/form-data which
+                # conflicts with extra_body JSON injection, causing an indefinite
+                # hang. Direct httpx avoids the SDK encoding entirely.
+                return self._call_xai_edits_api(
+                    api_key=effective_key,
                     prompt=prompt,
-                    n=1,
-                    extra_body={
-                        "image": {"url": reference_image_url, "type": "image_url"},
-                        "aspect_ratio": aspect_ratio,
-                    },
+                    reference_image_url=reference_image_url,
+                    aspect_ratio=aspect_ratio,
                 )
             else:
                 response = client.images.generate(
@@ -222,6 +219,117 @@ class XAIImageProvider(ImageProvider):
         if not url.startswith('https://'):
             return False, 'Reference image URL must use HTTPS.'
         return True, ''
+
+    def _call_xai_edits_api(
+        self,
+        api_key: str,
+        prompt: str,
+        reference_image_url: str,
+        aspect_ratio: str,
+    ) -> GenerationResult:
+        """Call xAI /v1/images/edits via direct httpx JSON POST.
+
+        The OpenAI SDK's images.edit() constructs a multipart/form-data request
+        which conflicts with the extra_body JSON injection pattern — causing an
+        indefinite hang. This method bypasses the SDK entirely and sends a pure
+        JSON body directly to the xAI edits endpoint.
+
+        xAI accepts a URL-based image reference (not a file upload), so multipart
+        is unnecessary. Returns a GenerationResult with image_data bytes on success.
+        """
+        url = f'{XAI_BASE_URL}/images/edits'
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+        }
+        body = {
+            'model': XAI_DEFAULT_MODEL,
+            'prompt': prompt,
+            'n': 1,
+            'image': {'url': reference_image_url, 'type': 'image_url'},
+            'aspect_ratio': aspect_ratio,
+        }
+        try:
+            with httpx.Client(timeout=120.0) as client:
+                response = client.post(url, headers=headers, json=body)
+
+            if response.status_code == 400:
+                error_text = response.text.lower()
+                if any(kw in error_text for kw in _POLICY_KEYWORDS):
+                    logger.info(
+                        'xAI edits content_policy match: %s', response.text[:100]
+                    )
+                    return GenerationResult(
+                        success=False,
+                        error_type='content_policy',
+                        error_message='Image rejected by content policy. Try modifying the prompt.',
+                    )
+                return GenerationResult(
+                    success=False,
+                    error_type='invalid_request',
+                    error_message=f'xAI edits bad request: {response.text[:200]}',
+                )
+            if response.status_code == 401:
+                return GenerationResult(
+                    success=False,
+                    error_type='auth',
+                    error_message='Invalid xAI API key. Check your XAI_API_KEY.',
+                )
+            if response.status_code == 429:
+                return GenerationResult(
+                    success=False,
+                    error_type='rate_limit',
+                    error_message='xAI rate limit reached. Retrying shortly.',
+                    retry_after=30,
+                )
+            if response.status_code != 200:
+                return GenerationResult(
+                    success=False,
+                    error_type='server_error',
+                    error_message=f'xAI edits HTTP {response.status_code}: {response.text[:200]}',
+                )
+
+            data = response.json()
+            image_url = (data.get('data') or [{}])[0].get('url', '')
+            if not image_url:
+                return GenerationResult(
+                    success=False,
+                    error_type='server_error',
+                    error_message='xAI edits returned empty image URL.',
+                )
+
+            image_data = self._download_image(image_url)
+            if image_data is None:
+                return GenerationResult(
+                    success=False,
+                    error_type='server_error',
+                    error_message='Failed to download generated image from xAI edits.',
+                )
+
+            return GenerationResult(
+                success=True,
+                image_data=image_data,
+                revised_prompt='',
+            )
+
+        except httpx.TimeoutException:
+            return GenerationResult(
+                success=False,
+                error_type='server_error',
+                error_message='xAI edits request timed out after 120s.',
+            )
+        except Exception as e:
+            logger.error(
+                'xAI edits error: %s | reference_image_url=%s',
+                e,
+                reference_image_url[:50] if reference_image_url else 'None',
+                exc_info=True,
+            )
+            return GenerationResult(
+                success=False,
+                error_type='unknown',
+                error_message=f'xAI edits failed: {str(e)[:200]}',
+            )
 
     def _download_image(self, url: str) -> bytes | None:
         """Download image bytes from xAI's output URL.

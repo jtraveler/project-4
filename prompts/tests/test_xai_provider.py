@@ -8,8 +8,10 @@ values fall back to the default '1:1'.
 """
 from unittest.mock import patch, MagicMock
 
+import httpx
 from django.test import SimpleTestCase
 
+from prompts.services.image_providers.base import GenerationResult
 from prompts.services.image_providers.xai_provider import (
     XAIImageProvider,
     _resolve_aspect_ratio,
@@ -104,38 +106,36 @@ class XAINSFWKeywordTests(SimpleTestCase):
 
 
 class XAIReferenceImageTests(SimpleTestCase):
-    """Tests for Grok reference image via /v1/images/edits endpoint."""
+    """Tests for Grok reference image routing to _call_xai_edits_api."""
 
-    def _make_mock_response(self):
-        """Create a mock OpenAI image response."""
-        mock_image = MagicMock()
-        mock_image.url = 'https://cdn.x.ai/generated/test.png'
-        mock_resp = MagicMock()
-        mock_resp.data = [mock_image]
-        return mock_resp
-
-    def test_generate_with_reference_image_uses_edit_path(self):
-        """reference_image_url present -> edit path triggered."""
+    def test_generate_with_reference_image_calls_edits_api(self):
+        """reference_image_url present -> _call_xai_edits_api called, not images.generate."""
         provider = XAIImageProvider(api_key='test-key')
-        mock_resp = self._make_mock_response()
-        with patch('openai.OpenAI') as MockClient:
-            mock_client = MockClient.return_value
-            mock_client.images.edit.return_value = mock_resp
-            with patch.object(provider, '_download_image', return_value=b'\xff\xd8test'):
-                result = provider.generate(
-                    prompt='test',
-                    size='1:1',
-                    reference_image_url='https://example.com/ref.png',
-                )
-        self.assertTrue(result.success)
-        self.assertIsNotNone(result.image_data)
-        mock_client.images.edit.assert_called_once()
-        mock_client.images.generate.assert_not_called()
+        provider._validate_reference_url = MagicMock(return_value=(True, ''))
+        provider._call_xai_edits_api = MagicMock(
+            return_value=GenerationResult(success=True, image_data=b'bytes', revised_prompt='')
+        )
+        result = provider.generate(
+            prompt='test',
+            size='1:1',
+            reference_image_url='https://example.com/ref.png',
+        )
+        self.assertTrue(result.success)                          # positive
+        provider._call_xai_edits_api.assert_called_once_with(
+            api_key='test-key',
+            prompt='test',
+            reference_image_url='https://example.com/ref.png',
+            aspect_ratio='1:1',
+        )                                                        # positive
+        self.assertEqual(result.image_data, b'bytes')            # positive
 
     def test_generate_without_reference_image_uses_generate_path(self):
         """reference_image_url empty -> generate path (no regression)."""
         provider = XAIImageProvider(api_key='test-key')
-        mock_resp = self._make_mock_response()
+        mock_image = MagicMock()
+        mock_image.url = 'https://cdn.x.ai/generated/test.png'
+        mock_resp = MagicMock()
+        mock_resp.data = [mock_image]
         with patch('openai.OpenAI') as MockClient:
             mock_client = MockClient.return_value
             mock_client.images.generate.return_value = mock_resp
@@ -145,10 +145,9 @@ class XAIReferenceImageTests(SimpleTestCase):
                     size='1:1',
                     reference_image_url='',
                 )
-        self.assertTrue(result.success)
-        self.assertIsNotNone(result.image_data)
-        mock_client.images.generate.assert_called_once()
-        mock_client.images.edit.assert_not_called()
+        self.assertTrue(result.success)                          # positive
+        self.assertIsNotNone(result.image_data)                  # positive
+        mock_client.images.generate.assert_called_once()         # positive
 
     def test_reference_image_non_https_returns_invalid_request(self):
         """HTTP (non-HTTPS) reference URL -> invalid_request."""
@@ -159,5 +158,71 @@ class XAIReferenceImageTests(SimpleTestCase):
             reference_image_url='http://example.com/ref.png',
         )
         self.assertFalse(result.success)
-        self.assertEqual(result.error_type, 'invalid_request')
-        self.assertIn('HTTPS', result.error_message)
+        self.assertEqual(result.error_type, 'invalid_request')   # positive
+        self.assertIn('HTTPS', result.error_message)             # positive
+
+
+class XAIEditApiTests(SimpleTestCase):
+    """Tests for _call_xai_edits_api() direct httpx method."""
+
+    def _make_mock_response(self, status_code=200, image_url='https://example.com/img.jpg'):
+        mock_resp = MagicMock()
+        mock_resp.status_code = status_code
+        mock_resp.json.return_value = {
+            'data': [{'url': image_url}]
+        }
+        mock_resp.text = ''
+        return mock_resp
+
+    @patch('prompts.services.image_providers.xai_provider.httpx.Client')
+    def test_edit_api_success_returns_image_data(self, mock_client_cls):
+        """_call_xai_edits_api success path returns GenerationResult with image_data."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+        mock_client.post.return_value = self._make_mock_response(200)
+        provider = XAIImageProvider(api_key='test-key')
+        provider._download_image = MagicMock(return_value=b'fake-image-bytes')
+        result = provider._call_xai_edits_api(
+            api_key='test-key',
+            prompt='test prompt',
+            reference_image_url='https://example.com/ref.jpg',
+            aspect_ratio='1:1',
+        )
+        self.assertTrue(result.success)                          # positive
+        self.assertEqual(result.image_data, b'fake-image-bytes')  # positive
+
+    @patch('prompts.services.image_providers.xai_provider.httpx.Client')
+    def test_edit_api_400_policy_returns_content_policy(self, mock_client_cls):
+        """HTTP 400 with policy keyword returns content_policy error_type."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+        resp = MagicMock()
+        resp.status_code = 400
+        resp.text = 'content policy violation'
+        mock_client.post.return_value = resp
+        provider = XAIImageProvider(api_key='test-key')
+        result = provider._call_xai_edits_api(
+            api_key='test-key',
+            prompt='test',
+            reference_image_url='https://example.com/ref.jpg',
+            aspect_ratio='1:1',
+        )
+        self.assertEqual(result.error_type, 'content_policy')    # positive
+        self.assertFalse(result.success)                          # positive
+
+    @patch('prompts.services.image_providers.xai_provider.httpx.Client')
+    def test_edit_api_timeout_returns_server_error(self, mock_client_cls):
+        """TimeoutException returns server_error."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+        mock_client.post.side_effect = httpx.TimeoutException('timed out')
+        provider = XAIImageProvider(api_key='test-key')
+        result = provider._call_xai_edits_api(
+            api_key='test-key',
+            prompt='test',
+            reference_image_url='https://example.com/ref.jpg',
+            aspect_ratio='1:1',
+        )
+        self.assertEqual(result.error_type, 'server_error')      # positive
+        self.assertFalse(result.success)                          # positive
+        self.assertIn('timed out', result.error_message.lower())  # positive

@@ -131,11 +131,17 @@
     // ─── Update Progress (called on each poll) ────────────────────
     G.updateProgress = function (data) {
         var completed = data.completed_count || 0;
+        var generating = data.generating_count || 0;
         var total = data.actual_total_images || data.total_images || G.totalImages;
         G.totalImages = total;
         var newStatus = data.status || G.currentStatus;
 
-        G.updateProgressBar(completed, total);
+        // Include generating images in progress bar — they've been dispatched
+        // to the API and are actively being processed (download/B2 upload pending).
+        // This prevents the bar from stalling during the download phase,
+        // especially noticeable with large NB2 images (2K/4K).
+        var progressCount = completed + generating;
+        G.updateProgressBar(progressCount, total);
         G.updateCostDisplay(completed);
 
         if (G.TERMINAL_STATES.indexOf(newStatus) === -1) {

@@ -61,7 +61,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | **Bulk Gen Phase 6C-A** | ✅ COMPLETE | M2M helper extraction + publish task tests | Done — Session 116, 1098 tests |
 | **Bulk Gen Phase 6D** | ✅ COMPLETE | Per-image error recovery + retry | Done — Session 119, 1106 tests |
 | **Bulk Gen Phases 1–7** | ✅ COMPLETE | Staff bulk AI image generator — full publish flow, error recovery, retry, hardening | Production smoke test before V2 |
-| **Phase REP** | 🔄 ~88% | Multi-provider bulk generation (Replicate/xAI) | Ref image: Grok needs /edits endpoint, Nano Banana 2 needs array param. NSFW UX for platform models. |
+| **Phase REP** | 🔄 ~95% | Multi-provider bulk generation (Replicate/xAI) | `_download_image` duplication (P3). NSFW UX feedback for platform model 400s (P2). |
 
 ### What's Paused (Don't Forget!)
 
@@ -75,6 +75,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 155 | Apr 16, 2026 | Phase REP P1 blockers resolved: cursor:not-allowed on disabled groups, xAI NSFW 8-keyword detection, Grok ref image via /v1/images/edits, Nano Banana 2 ref image via image_input array, footer white text, P2/P3 cleanup. 1254 tests. |
 | Session 154 | Apr 2026 | Phase REP: Replicate/xAI providers (Flux family, Grok Imagine, Nano Banana 2). GeneratorModel DB. 4-tier credit system. BYOK UX redesign. JS init order fixes. CSS skin. xAI aspect_ratio via extra_body. Provider-specific cost display. 1245 tests. |
 | Session 153 | Apr 11–12, 2026 | GPT-Image-1.5 upgrade (153-A, migration 0080 — both `images.edit()` and `images.generate()` paths, 7 files + metadata + 2 new choice tests). IMAGE_COST_MAP updated to GPT-Image-1.5 pricing (153-C, 20% reduction across 10 files + 27 test assertions via Option B regression fix). Billing hard limit shows actionable error (153-D, new `BadRequestError` branch). Full billing chain end-to-end: `_sanitise_error_message` emits `'Billing limit reached'`, Q-filter catches billing, JS reasonMap entry added, `'Quota exceeded'` no longer says "contact admin" for BYOK users (153-E, 4 new tests). Per-image progress bar survives page refresh via `generating_started_at` timestamp + negative CSS `animation-delay` (153-F, migration 0081, `isFirstRenderPass` flag removed, 2 new tests). Input page `I.COST_MAP` sticky-bar pricing sync with Python constants (153-F caught in Step 1 grep). 1221 tests. |
 | Session 152 | Apr 11, 2026 | Vision `detail: 'low'`→`'high'` (spatial accuracy). Direction decoupled from Vision (two-step: describe then edit). Progress bar counts generating+completed, excludes failed. Vision composition: frame-position, depth, crowd, anti-bokeh. 1213 tests. |
@@ -697,9 +698,10 @@ Rebuilding upload flow to feel "instant" by:
 | **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests at time of fix; now 976 passing, 12 skipped, flake8 clean, bandit clean) | ✅ All 3 jobs green |
 
 **Phase REP Blockers:**
-- Grok reference image: needs `/v1/images/edits` endpoint (not `/v1/images/generations`)
-- Nano Banana 2 reference image: parameter is `image_input` (ARRAY), spec 154-S needs amendment
-- NSFW error UX for platform models: xAI/Replicate 400s show no user feedback
+- ~~Grok reference image: needs `/v1/images/edits` endpoint~~ — ✅ RESOLVED Session 155 (155-C)
+- ~~Nano Banana 2 reference image: parameter is `image_input` (ARRAY)~~ — ✅ RESOLVED Session 155 (155-D)
+- ~~NSFW error UX for platform models: xAI 400s show no user feedback~~ — ✅ RESOLVED Session 155 (155-B, 8-keyword detection)
+- NSFW UX feedback for Replicate platform model 400s (P2 — Replicate has only 3 keywords vs xAI's 8)
 - `_download_image` duplicated in Replicate + xAI providers (P3, defer to third provider)
 
 
@@ -2214,5 +2216,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.45 (Session 154 — Phase REP: Replicate + xAI providers, GeneratorModel registry, credit tracking, BYOK UX, aspect ratio UI, xAI aspect_ratio fix, provider-specific costs; 1245 tests)
+**Version:** 4.46 (Session 155 — Phase REP P1 blockers: cursor fix, xAI NSFW 8-keyword, Grok ref image /edits, Nano Banana 2 image_input array, footer white, P2/P3 cleanup; 1254 tests)
 **Last Updated:** April 16, 2026

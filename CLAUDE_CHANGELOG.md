@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 13, 2026 (Sessions 101–154)
+**Last Updated:** April 16, 2026 (Sessions 101–155)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,37 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 155 — April 16, 2026
+
+**Focus:** Phase REP production readiness — P1 blockers resolved
+
+**Specs:** 155-A (cursor fix), 155-B (xAI NSFW), 155-C (Grok ref image),
+155-D (Nano Banana 2 ref image), 155-E (footer white text), 155-F (P2/P3
+cleanup), 155-G (docs)
+
+**Tests:** 1254 passing, 0 failures, 12 skipped
+
+**Key outcomes:**
+- Disabled setting groups now show cursor:not-allowed on hover — removed
+  pointer-events:none from quality group, per-prompt wrappers, ref image
+  group in bulk-generator.js. Added disabled guards to ref upload zone
+  click/keydown/drop handlers in bulk-generator-autosave.js.
+- xAI NSFW keyword detection broadened to 8 keywords (forbidden, violation,
+  blocked, inappropriate, nsfw, not allowed + original 2). Module-level
+  `_POLICY_KEYWORDS` tuple with `logger.info` audit trail.
+- Grok reference image wired via /v1/images/edits endpoint — branches in
+  xai_provider.py generate() when reference_image_url is present.
+  `_validate_reference_url` with HTTPS check, strip, 2048-char length cap.
+- Nano Banana 2 reference image wired via `image_input` array parameter.
+  Confirmed via Heroku schema dump (Step 0b Case A). `_MODEL_IMAGE_INPUT_PARAM`
+  lookup dict in replicate_provider.py.
+- Footer: all text and links set to white via CSS inheritance + `footer a` override.
+  WCAG contrast: 16.4:1 (white on #202020).
+- P2/P3: TypeError confirmed absent from xai_provider.py. logger.warning
+  added to Replicate str() fallback for diagnostic visibility.
+
+---
 
 ### Session 154 — April 2026
 

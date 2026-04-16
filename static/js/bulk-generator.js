@@ -992,6 +992,10 @@
             // link so users can't try to interact with it.
             refImageGroup.style.opacity = supportsRefImage ? '' : '0.45';
             refImageGroup.style.cursor = supportsRefImage ? '' : 'not-allowed';
+            var uploadZone = document.getElementById('refUploadZone');
+            if (uploadZone) {
+                uploadZone.style.cursor = supportsRefImage ? '' : 'not-allowed';
+            }
             // Disable the file input natively so browsers show
             // cursor:not-allowed — same pattern as Character Selection.
             var refFileInput = refImageGroup.querySelector('input[type="file"]');

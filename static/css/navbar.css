@@ -42,12 +42,12 @@
 
 .pexels-navbar {
     background: var(--white);
-    border-bottom: 1px solid var(--gray-200);
-    padding: 0;
+    padding: 10px 0;
     position: sticky;
     top: 0;
     z-index: var(--z-nav);
     width: 100%;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
 }
 
 .pexels-nav-container {
@@ -1247,15 +1247,15 @@ a.profile-link:hover {
     }
 }
 
-footer { color: var(--gray-600)}
+footer { color: var(--white, #ffffff); }
 footer .footer-header {
     font-weight: 700;
     font-size: 1.1rem;
-    color: var(--text-primary);
+    color: var(--white, #ffffff);
 }
 
 footer .footer-header.logo {
-    color: var(--black);
+    color: var(--white, #ffffff);
     text-decoration: none;
     display: inline-block;
 }
@@ -1264,5 +1264,5 @@ footer .logo-text {
     width: 100%;
     margin-bottom: 15px;
     font-size: 1.8em;
-    color: var(--black);
+    color: var(--white, #ffffff);
 }

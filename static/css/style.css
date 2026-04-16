@@ -1607,6 +1607,14 @@ footer {
   background: #202020;
   box-shadow: none;
   width: 100%;
+  color: var(--white, #ffffff);
+}
+
+footer a,
+footer a:visited,
+footer a:hover,
+footer a:focus {
+  color: var(--white, #ffffff);
 }
 
 /* ===== MODALS ===== */

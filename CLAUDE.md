@@ -61,7 +61,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | **Bulk Gen Phase 6C-A** | ✅ COMPLETE | M2M helper extraction + publish task tests | Done — Session 116, 1098 tests |
 | **Bulk Gen Phase 6D** | ✅ COMPLETE | Per-image error recovery + retry | Done — Session 119, 1106 tests |
 | **Bulk Gen Phases 1–7** | ✅ COMPLETE | Staff bulk AI image generator — full publish flow, error recovery, retry, hardening | Production smoke test before V2 |
-| **Phase REP** | 🔄 ~98% | Multi-provider bulk generation (Replicate/xAI) | `_download_image` duplication (P3). NSFW UX feedback for Replicate platform model 400s (P2). |
+| **Phase REP** | 🔄 ~98% | Multi-provider bulk generation (Replicate/xAI) | `_download_image` duplication (P3). NSFW UX feedback for Replicate platform model 400s (P2). Cloudinary full removal needs migration spec (P2). |
 
 ### What's Paused (Don't Forget!)
 
@@ -75,6 +75,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 159 | Apr 2026 | Profanity filter shows triggered words. Per-prompt boxes: NB2 1K/2K/4K labels, quality hidden for non-quality models, results page actual_cost, grid layout fix. Autosave: pageshow bfcache handler, aspect ratio restore. NB2 progress bar: provider-aware CSS durations (was stalling at ~85%). Cloudinary removal blocked by CloudinaryField model fields — unused import removed, full removal needs migration spec. 1270 tests. |
 | Session 158 | Apr 17, 2026 | Opacity removed from disabled groups, per-prompt cost model-aware (NB2 tier costs per-row), autosave master header settings to localStorage (pf_ namespace). 1268 tests. |
 | Session 157 | Apr 17, 2026 | NB2 quality labels 1K/2K/4K + tier-aware sticky bar cost, results page uses provider.get_cost_per_image() (single source of truth), upload zone hover suppressed when disabled, NB2 progress bar stall fixed (counts generating+completed). 1268 tests. |
 | Session 156 | Apr 16, 2026 | Phase REP production readiness: Grok ref image httpx fix (SDK multipart hang → direct httpx POST), cost display audit + fix (all 6 models corrected, provider-aware cost in tasks.py), FLUX 2 Pro added (input_images array, 5 credits), Nano Banana 2 resolution tiers (1K/2K/4K with per-tier costs), cursor label comment. 1268 tests. |
@@ -2220,5 +2221,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.49 (Session 158 — opacity removed, per-prompt model-aware cost, autosave localStorage; 1268 tests)
-**Last Updated:** April 16, 2026
+**Version:** 4.50 (Session 159 — profanity feedback, per-prompt box fix, autosave pageshow, NB2 progress bar, Cloudinary audit; 1270 tests)
+**Last Updated:** April 17, 2026

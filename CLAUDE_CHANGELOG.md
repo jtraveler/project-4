@@ -23,6 +23,34 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 159 — April 2026
+
+**Focus:** Per-prompt box complete fix, profanity feedback, autosave restore,
+NB2 progress bar, Cloudinary audit
+
+**Specs:** 159-A through 159-F
+
+**Tests:** 1270 passing, 0 failures, 12 skipped
+
+**Key outcomes:**
+- Profanity filter now shows exact triggered words in error message (was
+  generic "Content flagged"). html.escape() for XSS defense. 2 new tests.
+- Per-prompt boxes: NB2 shows 1K/2K/4K labels (was Low/Medium/High), quality
+  hidden entirely for non-quality models (was disabled/greyed), master quality
+  group also hidden for consistency, dimensions spans full row when quality
+  hidden, results page uses actual_cost from API for per-resolution accuracy.
+- Autosave restore: pageshow event handler for bfcache back navigation,
+  aspect ratio restored after handleModelChange rebuilds buttons, quality
+  label mismatch resolved by 159-B per-box label fix.
+- NB2 progress bar stall resolved — root cause: CSS animation QUALITY_DURATIONS
+  calibrated for OpenAI (10-40s) but NB2 via Replicate takes 15-50s. Fixed
+  with provider-aware durations (data-provider template attribute).
+- Cloudinary removal blocked: CloudinaryField used by 3 model fields, 8
+  templates use cloudinary_tags, signal handlers call cloudinary.uploader.
+  Only unused top-level import in vision_moderation.py removed. Full removal
+  requires dedicated migration spec.
+- 1270 tests (2 new profanity tests from 159-A).
+
 ### Session 158 — April 17, 2026
 
 **Focus:** NB2 per-prompt cost accuracy, opacity cleanup, autosave settings

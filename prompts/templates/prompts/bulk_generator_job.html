@@ -25,6 +25,8 @@
      data-size-display="{{ display_size }}"
      data-sprite-url="{% static 'icons/sprite.svg' %}"
      data-gallery-aspect="{{ gallery_aspect }}"
+     data-model-name="{{ job.model_name }}"
+     data-provider="{{ job.provider }}"
      data-create-pages-url="{% url 'prompts:api_bulk_create_pages' job.id %}">
 
     {# ===== Job Summary Header ===== #}

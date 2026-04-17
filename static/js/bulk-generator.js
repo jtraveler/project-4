@@ -32,6 +32,13 @@
     I.apiKeyStatus = document.getElementById('apiKeyStatus');
     I.apiKeyToggle = document.getElementById('apiKeyToggle');
 
+    // localStorage key constants — pf_ prefix prevents collisions
+    var PF_STORAGE_KEYS = {
+        model:       'pf_bg_model',
+        quality:     'pf_bg_quality',
+        aspectRatio: 'pf_bg_aspect_ratio'
+    };
+
     // Master settings
     I.settingModel = document.getElementById('settingModel');
     I.settingQuality = document.getElementById('settingQuality');
@@ -823,8 +830,29 @@
             // Use per-box quality override if set, otherwise fall back to master quality
             var qualityOverride = box.querySelector('.bg-override-quality');
             var boxQuality = (qualityOverride && qualityOverride.value) ? qualityOverride.value : masterQuality;
-            var sizeMap = I.COST_MAP[boxSize] || I.COST_MAP_DEFAULT;
-            var costPerImage = sizeMap[boxQuality] || I.COST_MAP_DEFAULT[boxQuality] || 0.034;
+            // Model-aware per-box cost: NB2 uses tier costs, BYOK uses COST_MAP,
+            // other platform models use _apiCosts (looked up in sticky bar section below).
+            var _boxModelOpt = I.settingModel
+                ? I.settingModel.options[I.settingModel.selectedIndex] : null;
+            var _boxModelId = _boxModelOpt ? _boxModelOpt.value : '';
+            var _boxIsByok = !!(_boxModelOpt && _boxModelOpt.dataset.byokOnly === 'true');
+            var costPerImage;
+            if (_boxIsByok) {
+                var sizeMap = I.COST_MAP[boxSize] || I.COST_MAP_DEFAULT;
+                costPerImage = sizeMap[boxQuality] || I.COST_MAP_DEFAULT[boxQuality] || 0.034;
+            } else if (_boxModelId === 'google/nano-banana-2') {
+                var _nbTiers = { 'low': 0.067, 'medium': 0.101, 'high': 0.151 };
+                costPerImage = _nbTiers[boxQuality] || 0.067;
+            } else {
+                var _perBoxApiCosts = {
+                    'black-forest-labs/flux-schnell': 0.003,
+                    'black-forest-labs/flux-dev': 0.025,
+                    'black-forest-labs/flux-1.1-pro': 0.040,
+                    'black-forest-labs/flux-2-pro': 0.015,
+                    'grok-imagine-image': 0.020,
+                };
+                costPerImage = _perBoxApiCosts[_boxModelId] || 0;
+            }
             totalCost += imgCount * costPerImage;
         });
 
@@ -878,6 +906,7 @@
 
     I.settingQuality.addEventListener('change', I.updateCostEstimate);
     I.settingQuality.addEventListener('change', I.updateGenerateBtn);
+    I.settingQuality.addEventListener('change', function () { I.saveSettings(); });
 
     // ─── Model Change Handler ─────────────────────────────────────
     // Defined BEFORE any call site so forward references are safe.
@@ -960,6 +989,7 @@
                     this.classList.add('active');
                     this.setAttribute('aria-checked', 'true');
                     I.updateCostEstimate();
+                    I.saveSettings();
                 });
                 I.settingAspectRatio.appendChild(btn);
             }
@@ -970,7 +1000,6 @@
         if (qualityGroup) {
             // Disable instead of hide — users can see it exists but understand
             // it doesn't apply to the selected model.
-            qualityGroup.style.opacity = supportsQuality ? '' : '0.45';
             qualityGroup.style.cursor = supportsQuality ? '' : 'not-allowed';
             var qualitySelect = qualityGroup.querySelector('select');
             if (qualitySelect) qualitySelect.disabled = !supportsQuality;
@@ -996,7 +1025,6 @@
             var wrapper = sel.closest('.bg-box-override-wrapper');
             var parentDiv = wrapper ? wrapper.parentElement : null;
             if (parentDiv) {
-                parentDiv.style.opacity = supportsQuality ? '' : '0.45';
                 parentDiv.style.cursor = supportsQuality ? '' : 'not-allowed';
             }
             sel.disabled = !supportsQuality;
@@ -1017,7 +1045,6 @@
         if (refImageGroup) {
             // Disable instead of hide. When disabled, also hide the upload
             // link so users can't try to interact with it.
-            refImageGroup.style.opacity = supportsRefImage ? '' : '0.45';
             // NOTE: cursor:not-allowed is set directly on #refUploadZone below,
             // NOT on the group container, to prevent label text inheriting it.
             var uploadZone = document.getElementById('refUploadZone');
@@ -1051,7 +1078,10 @@
     };
 
     if (I.settingModel) {
-        I.settingModel.addEventListener('change', I.handleModelChange);
+        I.settingModel.addEventListener('change', function () {
+            I.handleModelChange();
+            I.saveSettings();
+        });
         // handleModelChange() is called after addBoxes(4) at the end of init
         // so all getter functions (getPromptCount, getMasterQuality, etc.)
         // are defined before it fires.
@@ -1124,10 +1154,62 @@
         return I.settingVisibility.checked ? 'public' : 'private';
     };
 
+    // ─── Settings Persistence (localStorage) ──────────────────────
+    I.saveSettings = function saveSettings() {
+        try {
+            if (I.settingModel) localStorage.setItem(PF_STORAGE_KEYS.model, I.settingModel.value);
+            if (I.settingQuality) localStorage.setItem(PF_STORAGE_KEYS.quality, I.settingQuality.value);
+            // Aspect ratio is a button group — save the active button's data-value
+            if (I.settingAspectRatio) {
+                var activeAR = I.settingAspectRatio.querySelector('.bg-btn-group-option.active');
+                if (activeAR) localStorage.setItem(PF_STORAGE_KEYS.aspectRatio, activeAR.dataset.value);
+            }
+        } catch (e) {
+            // localStorage may be unavailable in private browsing — fail silently
+        }
+    };
+
+    function restoreSettings() {
+        try {
+            var savedModel = localStorage.getItem(PF_STORAGE_KEYS.model);
+            var savedQuality = localStorage.getItem(PF_STORAGE_KEYS.quality);
+
+            if (savedModel && I.settingModel &&
+                I.settingModel.querySelector('option[value="' + savedModel + '"]')) {
+                I.settingModel.value = savedModel;
+            }
+            if (savedQuality && I.settingQuality &&
+                I.settingQuality.querySelector('option[value="' + savedQuality + '"]')) {
+                I.settingQuality.value = savedQuality;
+            }
+            // Aspect ratio is restored after handleModelChange() rebuilds the buttons
+        } catch (e) {
+            // localStorage unavailable — proceed with defaults
+        }
+    }
+
     // ─── Initial State ───────────────────────────────────────────
+    restoreSettings(); // Restore saved model+quality BEFORE handleModelChange
     I.addBoxes(4);
     I.handleModelChange(); // Set initial model-dependent visibility (tier/apiKey/aspectRatio)
                            // Called here so all getter functions are defined.
+    // Restore aspect ratio AFTER handleModelChange rebuilds the button group
+    try {
+        var savedAR = localStorage.getItem(PF_STORAGE_KEYS.aspectRatio);
+        if (savedAR && I.settingAspectRatio) {
+            var btns = I.settingAspectRatio.querySelectorAll('.bg-btn-group-option');
+            btns.forEach(function (b) {
+                if (b.dataset.value === savedAR) {
+                    btns.forEach(function (x) {
+                        x.classList.remove('active');
+                        x.setAttribute('aria-checked', 'false');
+                    });
+                    b.classList.add('active');
+                    b.setAttribute('aria-checked', 'true');
+                }
+            });
+        }
+    } catch (e) { /* localStorage unavailable */ }
     // createDraftIndicator and restorePromptsFromStorage called from autosave module
     I.updateCostEstimate();
     I.updateGenerateBtn();

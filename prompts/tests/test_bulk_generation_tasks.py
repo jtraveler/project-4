@@ -92,9 +92,48 @@ class ValidatePromptsTests(TestCase):
         self.assertFalse(result['valid'])
         self.assertEqual(len(result['errors']), 1)
         self.assertEqual(result['errors'][0]['index'], 1)
+        self.assertIn(
+            'word(s) were found: bad',
+            result['errors'][0]['message'],
+        )
+
+    @patch(
+        'prompts.services.profanity_filter.ProfanityFilterService'
+    )
+    def test_validate_prompts_profanity_multiple_words(
+        self, mock_profanity_cls
+    ):
+        """Multiple profanity words appear comma-separated in message."""
+        mock_instance = mock_profanity_cls.return_value
+        mock_instance.check_text.return_value = (
+            False,
+            [
+                {'word': 'bad', 'severity': 'high', 'count': 1},
+                {'word': 'worse', 'severity': 'medium', 'count': 1},
+            ],
+            'high',
+        )
+        result = self.service.validate_prompts(['bad and worse prompt'])
+        self.assertFalse(result['valid'])
+        self.assertIn('bad, worse', result['errors'][0]['message'])
+        self.assertTrue(
+            result['errors'][0]['message'].startswith('Content flagged')
+        )
+
+    @patch(
+        'prompts.services.profanity_filter.ProfanityFilterService'
+    )
+    def test_validate_prompts_profanity_empty_found_words(
+        self, mock_profanity_cls
+    ):
+        """Empty found_words with is_clean=False falls back gracefully."""
+        mock_instance = mock_profanity_cls.return_value
+        mock_instance.check_text.return_value = (False, [], 'high')
+        result = self.service.validate_prompts(['Some flagged prompt'])
+        self.assertFalse(result['valid'])
         self.assertEqual(
             result['errors'][0]['message'],
-            'Content flagged — please revise this prompt',
+            'Content flagged — please revise this prompt.',
         )
 
     @patch(

@@ -122,9 +122,26 @@ class BulkGenerationService:
                 profanity_service.check_text(text)
             )
             if not is_clean:
+                # Surface triggered words so user knows what to revise
+                if found_words:
+                    from django.utils.html import escape
+                    word_list = ', '.join(
+                        escape(w['word'] if isinstance(w, dict)
+                               else str(w))
+                        for w in found_words
+                    )
+                    msg = (
+                        f'Content flagged — the following word(s) '
+                        f'were found: {word_list}. '
+                        f'Please revise your prompt.'
+                    )
+                else:
+                    msg = (
+                        'Content flagged — please revise this prompt.'
+                    )
                 errors.append({
                     'index': i,
-                    'message': 'Content flagged — please revise this prompt',
+                    'message': msg,
                 })
                 continue
 

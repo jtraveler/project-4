@@ -995,12 +995,11 @@
             }
         }
 
-        // Show/hide quality selector
+        // Show/hide quality selector — hidden entirely for non-quality models.
+        // Consistent with per-box quality overrides (also hidden, not disabled).
         var qualityGroup = document.getElementById('qualityGroup');
         if (qualityGroup) {
-            // Disable instead of hide — users can see it exists but understand
-            // it doesn't apply to the selected model.
-            qualityGroup.style.cursor = supportsQuality ? '' : 'not-allowed';
+            qualityGroup.style.display = supportsQuality ? '' : 'none';
             var qualitySelect = qualityGroup.querySelector('select');
             if (qualitySelect) qualitySelect.disabled = !supportsQuality;
         }
@@ -1018,23 +1017,38 @@
             }
         }
 
-        // Disable per-box QUALITY override for non-quality models.
-        // Dimensions override is ALWAYS visible — users can always override
-        // per-prompt aspect ratio/size regardless of model.
+        // Show/hide per-box QUALITY override based on model support.
+        // Hidden entirely for non-quality models (not just disabled).
+        // Labels update to 1K/2K/4K for NB2, Low/Medium/High for others.
+        var modelIdentifier = opt.value;
         I.promptGrid.querySelectorAll('.bg-override-quality').forEach(function (sel) {
             var wrapper = sel.closest('.bg-box-override-wrapper');
             var parentDiv = wrapper ? wrapper.parentElement : null;
             if (parentDiv) {
-                parentDiv.style.cursor = supportsQuality ? '' : 'not-allowed';
+                parentDiv.style.display = supportsQuality ? '' : 'none';
             }
             sel.disabled = !supportsQuality;
+            // Update per-box quality labels to match master labels
+            // Option 0 = "Use master" — skip it (index 1,2,3 are low/medium/high)
+            if (modelIdentifier === 'google/nano-banana-2') {
+                if (sel.options[1]) sel.options[1].text = '1K';
+                if (sel.options[2]) sel.options[2].text = '2K';
+                if (sel.options[3]) sel.options[3].text = '4K';
+            } else {
+                if (sel.options[1]) sel.options[1].text = 'Low';
+                if (sel.options[2]) sel.options[2].text = 'Medium';
+                if (sel.options[3]) sel.options[3].text = 'High';
+            }
         });
-        // Explicitly ensure dimensions override is always visible
+        // Explicitly ensure dimensions override is always visible.
+        // When quality is hidden, span dimensions across both grid columns
+        // to avoid empty whitespace in the 1fr 1fr grid row.
         I.promptGrid.querySelectorAll('.bg-override-size').forEach(function (sel) {
             var wrapper = sel.closest('.bg-box-override-wrapper');
             var parentDiv = wrapper ? wrapper.parentElement : null;
             if (parentDiv) {
                 parentDiv.style.display = '';
+                parentDiv.style.gridColumn = supportsQuality ? '' : '1 / -1';
             }
         });
 
@@ -1219,6 +1233,39 @@
     if (charDescCountSpan) {
         charDescCountSpan.textContent = I.settingCharDesc.value.length;
     }
+
+    // ─── Handle back/forward navigation (bfcache) ─────────────────
+    // DOMContentLoaded does not fire when the browser restores a page from
+    // bfcache (back/forward navigation). pageshow fires in both cases;
+    // event.persisted is true only for bfcache restores.
+    // NOTE: Do NOT call restoreSettings() — the bfcache preserves the full
+    // DOM state including dropdown values. Calling restoreSettings() could
+    // overwrite user edits made after the last localStorage save.
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            // Re-evaluate model-dependent UI (labels, visibility, aspect buttons).
+            // handleModelChange() rebuilds aspect ratio buttons, so restore the
+            // saved aspect ratio afterwards — same pattern as the init sequence.
+            I.handleModelChange();
+            try {
+                var savedAR = localStorage.getItem(PF_STORAGE_KEYS.aspectRatio);
+                if (savedAR && I.settingAspectRatio) {
+                    var btns = I.settingAspectRatio.querySelectorAll('.bg-btn-group-option');
+                    btns.forEach(function (b) {
+                        if (b.dataset.value === savedAR) {
+                            btns.forEach(function (x) {
+                                x.classList.remove('active');
+                                x.setAttribute('aria-checked', 'false');
+                            });
+                            b.classList.add('active');
+                            b.setAttribute('aria-checked', 'true');
+                        }
+                    });
+                }
+            } catch (e) { /* localStorage unavailable */ }
+            I.updateCostEstimate();
+        }
+    });
 
     // ─── Initialise Paste Module ──────────────────────────────────
     if (window.BulkGenPaste) {

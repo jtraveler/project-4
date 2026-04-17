@@ -102,7 +102,9 @@
             if (G.progressBar) {
                 G.progressBar.classList.add('progress-cancelled');
             }
-            var spentCancelled = completed * G.costPerImage;
+            var spentCancelled = (data.actual_cost !== undefined && data.actual_cost !== null)
+                ? parseFloat(data.actual_cost)
+                : completed * G.costPerImage;
             if (G.statusText) {
                 G.statusText.textContent = 'Cancelled \u2014 ' + completed + ' of ' + G.totalImages + ' generated. Cost: ' + G.formatCost(spentCancelled);
             }
@@ -124,8 +126,8 @@
             }
         }
 
-        // Update cost display using actual completed count
-        G.updateCostDisplay(completed);
+        // Update cost display using actual_cost from API (handles per-image quality overrides)
+        G.updateCostDisplay(completed, data.actual_cost);
     };
 
     // ─── Update Progress (called on each poll) ────────────────────
@@ -142,7 +144,7 @@
         // especially noticeable with large NB2 images (2K/4K).
         var progressCount = completed + generating;
         G.updateProgressBar(progressCount, total);
-        G.updateCostDisplay(completed);
+        G.updateCostDisplay(completed, data.actual_cost);
 
         if (G.TERMINAL_STATES.indexOf(newStatus) === -1) {
             // Still active

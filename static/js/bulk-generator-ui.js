@@ -39,9 +39,14 @@
     };
 
     // ─── Cost Display ─────────────────────────────────────────────
-    G.updateCostDisplay = function (completedCount) {
+    G.updateCostDisplay = function (completedCount, actualCost) {
         if (!G.costSpent) return;
-        var spent = completedCount * G.costPerImage;
+        // Use actual_cost from API when available (handles per-image quality overrides
+        // e.g. NB2 where each image may have different resolution/cost).
+        // Falls back to flat estimate when actualCost is not provided.
+        var spent = (actualCost !== undefined && actualCost !== null)
+            ? parseFloat(actualCost)
+            : completedCount * G.costPerImage;
         G.costSpent.textContent = 'Spent: ' + G.formatCost(spent);
         // Update aria-label on the cost tracker parent
         var tracker = G.costSpent.closest('.cost-tracker');
@@ -165,8 +170,18 @@
         var container = slot.querySelector('.prompt-image-container');
         if (!container) return;
 
-        // Estimate duration based on quality
-        var QUALITY_DURATIONS = { low: 10, medium: 20, high: 40 };
+        // Estimate duration based on quality and provider.
+        // Replicate/xAI models take longer due to prediction polling + image
+        // download. OpenAI (BYOK) is faster.
+        // Durations are deliberately generous — CSS caps at 90% so the bar
+        // never shows near-complete for a still-generating image.
+        // Calibrated against observed times: NB2 1K ~15-25s, 2K ~20-35s,
+        // 4K ~30-50s. Flux family ~5-15s. OpenAI ~8-20s.
+        var provider = G.root ? (G.root.dataset.provider || '') : '';
+        var isSlowProvider = provider === 'replicate' || provider === 'xai';
+        var QUALITY_DURATIONS = isSlowProvider
+            ? { low: 30, medium: 45, high: 60 }
+            : { low: 10, medium: 20, high: 40 };
         var duration = QUALITY_DURATIONS[quality] || 20;
 
         var loading = document.createElement('div');

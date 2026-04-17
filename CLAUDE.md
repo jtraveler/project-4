@@ -75,6 +75,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 158 | Apr 17, 2026 | Opacity removed from disabled groups, per-prompt cost model-aware (NB2 tier costs per-row), autosave master header settings to localStorage (pf_ namespace). 1268 tests. |
 | Session 157 | Apr 17, 2026 | NB2 quality labels 1K/2K/4K + tier-aware sticky bar cost, results page uses provider.get_cost_per_image() (single source of truth), upload zone hover suppressed when disabled, NB2 progress bar stall fixed (counts generating+completed). 1268 tests. |
 | Session 156 | Apr 16, 2026 | Phase REP production readiness: Grok ref image httpx fix (SDK multipart hang → direct httpx POST), cost display audit + fix (all 6 models corrected, provider-aware cost in tasks.py), FLUX 2 Pro added (input_images array, 5 credits), Nano Banana 2 resolution tiers (1K/2K/4K with per-tier costs), cursor label comment. 1268 tests. |
 | Session 155 | Apr 16, 2026 | Phase REP P1 blockers resolved: cursor:not-allowed on disabled groups, xAI NSFW 8-keyword detection, Grok ref image via /v1/images/edits, Nano Banana 2 ref image via image_input array, footer white text, P2/P3 cleanup. 1254 tests. |
@@ -2219,5 +2220,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.48 (Session 157 — NB2 labels 1K/2K/4K, tier-aware cost, results page provider cost, hover fix, progress bar fix; 1268 tests)
+**Version:** 4.49 (Session 158 — opacity removed, per-prompt model-aware cost, autosave localStorage; 1268 tests)
 **Last Updated:** April 16, 2026

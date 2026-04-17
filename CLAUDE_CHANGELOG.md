@@ -23,6 +23,28 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 158 — April 17, 2026
+
+**Focus:** NB2 per-prompt cost accuracy, opacity cleanup, autosave settings
+
+**Specs:** 158-A (remove opacity), 158-B (per-prompt cost), 158-C (autosave),
+158-D (docs)
+
+**Tests:** 1268 passing, 0 failures, 12 skipped
+
+**Key outcomes:**
+- Removed inline opacity:0.45 from disabled ref image and quality groups —
+  sections now appear at full opacity; cursor state and disabled attrs
+  provide sufficient visual feedback (developer confirmed).
+- Per-prompt cost now model-aware: BYOK uses COST_MAP, NB2 uses tier costs
+  ($0.067/$0.101/$0.151), platform models use _apiCosts. Each prompt box
+  reads its own quality selector, not the master dropdown.
+- Master header settings (model, quality, aspect ratio) now saved to
+  localStorage on every change via PF_STORAGE_KEYS (pf_ namespace).
+  Restored on page load — back-navigation and return visits restore
+  last-used configuration. No API keys or sensitive data persisted.
+  try/catch for private browsing safety.
+
 ### Session 157 — April 17, 2026
 
 **Focus:** NB2 cost display accuracy, quality labels, upload zone hover fix,

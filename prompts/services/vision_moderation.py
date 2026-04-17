@@ -28,8 +28,6 @@ import base64
 from prompts.constants import OPENAI_TIMEOUT
 from PIL import Image
 from io import BytesIO
-import cloudinary.uploader
-
 logger = logging.getLogger(__name__)
 
 

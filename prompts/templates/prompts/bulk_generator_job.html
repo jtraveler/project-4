@@ -119,7 +119,7 @@
             <div class="cost-tracker"
                  aria-label="Cost tracking">
                 <span class="cost-spent" id="costSpent">Spent: $0.00</span>
-                <span class="cost-estimated" id="costEstimated">/ Est. total: ${{ estimated_total_cost|floatformat:2 }}</span>
+                <span class="cost-estimated" id="costEstimated">/ Est. total: ${{ estimated_total_cost|floatformat:"-3" }}</span>
             </div>
             <div class="progress-actions">
                 {% if job.status == 'pending' or job.status == 'processing' or job.status == 'validating' %}

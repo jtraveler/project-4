@@ -117,8 +117,12 @@
     };
 
     // ─── Formatters ───────────────────────────────────────────────
+    // Up to 3 decimal places, trailing zeros stripped. Shows $0.067
+    // (NB2 1K), $0.04 (Flux 1.1 Pro), $0.003 (Flux Schnell) accurately
+    // instead of $0.07 / $0.04 / $0.00 under the old toFixed(2).
     G.formatCost = function (amount) {
-        return '$' + amount.toFixed(2);
+        if (typeof amount !== 'number' || !isFinite(amount)) return '$0';
+        return '$' + parseFloat(amount.toFixed(3)).toString();
     };
 
     G.formatTime = function (seconds) {

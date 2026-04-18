@@ -73,6 +73,16 @@ class UserProfile(models.Model):
         },
         help_text='Profile avatar image'
     )
+    b2_avatar_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text=(
+            'B2/Cloudflare CDN URL for avatar (replaces Cloudinary). '
+            'Populated by migrate_cloudinary_to_b2 management command. '
+            'Templates should check this first, fallback to Cloudinary avatar.'
+        )
+    )
     twitter_url = models.URLField(
         max_length=200,
         blank=True,

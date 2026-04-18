@@ -504,16 +504,24 @@
     }
 
     function resetBoxOverrides(box) {
+        // "Reset to master" resets SETTINGS (dropdowns), never USER CONTENT.
+        // Prompt text, AI Direction toggle state, and AI Direction text
+        // are user-entered content and must survive this action — only
+        // "Clear All Prompts" clears them. The AI Direction checkbox
+        // (.bg-box-direction-checkbox) and textarea (.bg-vision-direction-input)
+        // are therefore intentionally untouched below.
         box.querySelector('.bg-override-quality').value = '';
         box.querySelector('.bg-override-size').value = '';
         box.querySelector('.bg-override-images').value = '';
 
-        // Reset Vision state
+        // Reset Vision dropdown + any Vision-induced side-effects on
+        // the prompt textarea and source-image input. The AI Direction
+        // row visibility is owned by the AI Direction checkbox (handled
+        // in createPromptBox) — not by Vision state — so we do NOT
+        // hide it here.
         var visionSel = box.querySelector('.bg-override-vision');
         if (visionSel) {
             visionSel.value = 'no';
-            var visionDir = box.querySelector('.bg-box-vision-direction');
-            if (visionDir) visionDir.style.display = 'none';
             var ta = box.querySelector('.bg-box-textarea');
             if (ta) { ta.disabled = false; ta.classList.remove('bg-box-textarea--vision-mode'); }
             var srcInput = box.querySelector('.bg-prompt-source-image-input');
@@ -522,8 +530,6 @@
                 srcInput.placeholder = 'Source image URL (optional) \u2014 .jpg, .png, .webp, .gif, .avif...';
             }
         }
-        var visionDirInput = box.querySelector('.bg-vision-direction-input');
-        if (visionDirInput) visionDirInput.value = '';
 
         box.classList.remove('has-override');
         I.updateCostEstimate();

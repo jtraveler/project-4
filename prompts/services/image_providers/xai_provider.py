@@ -264,6 +264,18 @@ class XAIImageProvider(ImageProvider):
                         error_type='content_policy',
                         error_message='Image rejected by content policy. Try modifying the prompt.',
                     )
+                # Billing / quota exhaustion arrives as a 400 with a
+                # 'billing' keyword in the error body. Must surface as
+                # error_type='quota' so tasks._apply_generation_result
+                # stops the job immediately instead of retrying with the
+                # same exhausted key. Precedes the generic invalid_request
+                # fallback so the quota signal cannot be masked.
+                if 'billing' in error_text:
+                    return GenerationResult(
+                        success=False,
+                        error_type='quota',
+                        error_message='API billing limit reached — check your xAI account.',
+                    )
                 return GenerationResult(
                     success=False,
                     error_type='invalid_request',
@@ -317,6 +329,18 @@ class XAIImageProvider(ImageProvider):
                 success=False,
                 error_type='server_error',
                 error_message='xAI edits request timed out after 120s.',
+            )
+        except httpx.TransportError as e:
+            # Connection drops (ConnectError, ReadError, WriteError,
+            # RemoteProtocolError) are all subclasses of TransportError.
+            # Must be caught BEFORE the generic Exception so they route
+            # to `server_error` for retry — not `unknown` which would
+            # permanently fail the image.
+            logger.warning('xAI edits httpx transport error: %s', e)
+            return GenerationResult(
+                success=False,
+                error_type='server_error',
+                error_message='Connection error — please retry.',
             )
         except Exception as e:
             logger.error(

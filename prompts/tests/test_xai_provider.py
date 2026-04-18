@@ -226,3 +226,48 @@ class XAIEditApiTests(SimpleTestCase):
         self.assertEqual(result.error_type, 'server_error')      # positive
         self.assertFalse(result.success)                          # positive
         self.assertIn('timed out', result.error_message.lower())  # positive
+
+    @patch('prompts.services.image_providers.xai_provider.httpx.Client')
+    def test_edit_api_400_billing_returns_quota(self, mock_client_cls):
+        """HTTP 400 with 'billing' keyword returns quota error_type so
+        tasks.py stops the job immediately instead of retrying with an
+        exhausted key. Regression guard for 161-F."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+        resp = MagicMock()
+        resp.status_code = 400
+        resp.text = 'API billing limit reached. Please top up your xAI account.'
+        mock_client.post.return_value = resp
+        provider = XAIImageProvider(api_key='test-key')
+        result = provider._call_xai_edits_api(
+            api_key='test-key',
+            prompt='test',
+            reference_image_url='https://example.com/ref.jpg',
+            aspect_ratio='1:1',
+        )
+        self.assertEqual(result.error_type, 'quota')
+        self.assertFalse(result.success)
+        self.assertIn('billing', result.error_message.lower())
+
+    @patch('prompts.services.image_providers.xai_provider.httpx.Client')
+    def test_edit_api_transport_error_returns_server_error(
+        self, mock_client_cls
+    ):
+        """httpx.TransportError (connection drop) returns server_error
+        so tasks.py retries with exponential backoff. Previously fell
+        through to the generic Exception catch and returned
+        error_type='unknown' which is a permanent failure. Regression
+        guard for 161-F."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+        mock_client.post.side_effect = httpx.ConnectError('connection refused')
+        provider = XAIImageProvider(api_key='test-key')
+        result = provider._call_xai_edits_api(
+            api_key='test-key',
+            prompt='test',
+            reference_image_url='https://example.com/ref.jpg',
+            aspect_ratio='1:1',
+        )
+        self.assertEqual(result.error_type, 'server_error')
+        self.assertFalse(result.success)
+        self.assertIn('connection', result.error_message.lower())

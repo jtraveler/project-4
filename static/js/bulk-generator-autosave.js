@@ -206,7 +206,26 @@
     }
 
     // ─── Auto-save to localStorage ────────────────────────────────
-    var STORAGE_KEY = 'bulkgen_prompts';
+    //
+    // Unified draft format (Session 160-D). Single JSON blob under
+    // `pf_bg_draft` captures ALL session state: master settings, per-box
+    // content, per-box overrides, all toggle states. Schema is designed to
+    // migrate directly to the future server-side `PromptDraft` model —
+    // `settings` dict → `settings_json` field, `prompts` array →
+    // `prompts_json` field.
+    //
+    // Legacy keys (`bulkgen_prompts`, `pf_bg_model`, `pf_bg_quality`,
+    // `pf_bg_aspect_ratio`) are read for one-shot migration on first
+    // restore, then removed. No API keys, BYOK tokens, or binary files
+    // are ever persisted.
+    var DRAFT_KEY = 'pf_bg_draft';
+    var LEGACY_KEYS = [
+        'bulkgen_prompts',
+        'pf_bg_model',
+        'pf_bg_quality',
+        'pf_bg_aspect_ratio'
+    ];
+    var DRAFT_SCHEMA_VERSION = 1;
     var saveTimer = null;
     var draftIndicator = null;
     var draftFadeTimer = null;
@@ -225,50 +244,98 @@
         title.insertAdjacentElement('afterend', draftIndicator);
     }
 
-    function savePromptsToStorage() {
-        var boxes = I.promptGrid.querySelectorAll('.bg-prompt-box');
+    function _getActiveBtnValue(groupEl) {
+        if (!groupEl) return '';
+        var active = groupEl.querySelector('.bg-btn-group-option.active');
+        return active ? (active.dataset.value || '') : '';
+    }
+
+    function _buildDraftPayload() {
+        var settings = {};
+        if (I.settingModel) settings.model = I.settingModel.value;
+        if (I.settingQuality) settings.quality = I.settingQuality.value;
+        if (I.settingAspectRatio) {
+            settings.aspect_ratio = _getActiveBtnValue(I.settingAspectRatio);
+        }
+        var dimEl = document.getElementById('settingDimensions');
+        if (dimEl) settings.pixel_size = _getActiveBtnValue(dimEl);
+        var ippEl = document.getElementById('settingImagesPerPrompt');
+        if (ippEl) settings.images_per_prompt = _getActiveBtnValue(ippEl);
+        if (I.settingCharDesc) settings.character_description = I.settingCharDesc.value;
+        if (I.settingVisibility) settings.visibility = I.settingVisibility.checked;
+        if (I.settingTranslate) settings.translate = I.settingTranslate.checked;
+        if (I.settingRemoveWatermark) {
+            settings.remove_watermark = I.settingRemoveWatermark.checked;
+        }
+        if (I.settingTier) settings.tier = I.settingTier.value;
+
         var prompts = [];
-        var sourceCredits = [];
-        var sourceImageUrls = [];
-        var visionEnabled = [];
-        var visionDirections = [];
-        var directionChecked = [];
-        boxes.forEach(function (box) {
+        I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box, i) {
             var ta = box.querySelector('.bg-box-textarea');
             var sc = box.querySelector('.bg-box-source-input');
             var si = box.querySelector('.bg-prompt-source-image-input');
             var vs = box.querySelector('.bg-override-vision');
             var vd = box.querySelector('.bg-vision-direction-input');
             var dc = box.querySelector('.bg-box-direction-checkbox');
-            prompts.push(ta ? ta.value : '');
-            sourceCredits.push(sc ? sc.value : '');
-            sourceImageUrls.push(si ? si.value : '');
-            visionEnabled.push(vs ? vs.value : 'no');
-            visionDirections.push(vd ? vd.value : '');
-            directionChecked.push(dc ? dc.checked : false);
+            var qo = box.querySelector('.bg-override-quality');
+            var so = box.querySelector('.bg-override-size');
+            var io = box.querySelector('.bg-override-images');
+            prompts.push({
+                index: i,
+                text: ta ? ta.value : '',
+                source_credit: sc ? sc.value : '',
+                source_image_url: si ? si.value : '',
+                vision_enabled: vs ? vs.value : 'no',
+                vision_direction: vd ? vd.value : '',
+                direction_checked: dc ? !!dc.checked : false,
+                quality_override: qo ? qo.value : '',
+                size_override: so ? so.value : '',
+                images_override: io ? io.value : ''
+            });
         });
 
-        var charDesc = I.settingCharDesc.value;
-        var hasContent = prompts.some(function (p) { return p.trim().length > 0; }) || charDesc.trim().length > 0;
-        if (hasContent) {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                    prompts: prompts,
-                    sourceCredits: sourceCredits,
-                    sourceImageUrls: sourceImageUrls,
-                    charDesc: charDesc,
-                    visionEnabled: visionEnabled,
-                    visionDirections: visionDirections,
-                    directionChecked: directionChecked,
-                }));
-                showDraftIndicator();
-            } catch (e) {
-                // localStorage full or unavailable — fail silently
-            }
-        } else {
-            localStorage.removeItem(STORAGE_KEY);
-        }
+        return {
+            version: DRAFT_SCHEMA_VERSION,
+            saved_at: new Date().toISOString(),
+            settings: settings,
+            prompts: prompts
+        };
     }
+
+    function _hasContent(payload) {
+        if (!payload) return false;
+        if ((payload.settings.character_description || '').trim()) return true;
+        return (payload.prompts || []).some(function (p) {
+            return (
+                (p.text || '').trim() ||
+                (p.source_credit || '').trim() ||
+                (p.source_image_url || '').trim() ||
+                (p.vision_direction || '').trim() ||
+                p.vision_enabled === 'yes' ||
+                p.direction_checked ||
+                p.quality_override ||
+                p.size_override ||
+                p.images_override
+            );
+        });
+    }
+
+    I.saveDraft = function saveDraft() {
+        try {
+            var payload = _buildDraftPayload();
+            if (_hasContent(payload)) {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+                showDraftIndicator();
+            } else {
+                localStorage.removeItem(DRAFT_KEY);
+            }
+        } catch (e) {
+            // localStorage full / unavailable / private mode — fail silently
+        }
+    };
+
+    // Backward-compat shim: existing callers use savePromptsToStorage.
+    function savePromptsToStorage() { I.saveDraft(); }
 
     function showDraftIndicator() {
         if (!draftIndicator) return;
@@ -288,141 +355,285 @@
         }, 2000);
     }
 
-    function restorePromptsFromStorage() {
+    function _loadDraft() {
+        // Prefer the unified `pf_bg_draft` blob. If absent, migrate from
+        // any legacy keys (`bulkgen_prompts` + `pf_bg_*`) so users don't
+        // lose their existing work on first upgrade.
         try {
-            var saved = localStorage.getItem(STORAGE_KEY);
-            if (!saved) return;
-
-            var data = JSON.parse(saved);
-
-            // Backward compat: old format was plain array of strings
-            var prompts, sourceCredits, sourceImageUrls, charDesc;
-            if (Array.isArray(data)) {
-                prompts = data;
-                sourceCredits = [];
-                sourceImageUrls = [];
-                charDesc = '';
-            } else {
-                prompts = data.prompts || [];
-                sourceCredits = data.sourceCredits || [];
-                sourceImageUrls = data.sourceImageUrls || [];
-                charDesc = data.charDesc || '';
+            var raw = localStorage.getItem(DRAFT_KEY);
+            if (raw) {
+                var parsed = JSON.parse(raw);
+                // Accept v1..DRAFT_SCHEMA_VERSION so a future v2 can still
+                // load v1 blobs (additive schema changes). Restore code
+                // treats missing fields as falsy — no hard migration needed.
+                if (parsed && typeof parsed.version === 'number' &&
+                    parsed.version >= 1 &&
+                    parsed.version <= DRAFT_SCHEMA_VERSION) {
+                    return parsed;
+                }
             }
+        } catch (e) { /* corrupt — fall through to legacy migration */ }
 
-            var visionEnabled = data && !Array.isArray(data) ? (data.visionEnabled || []) : [];
-            var visionDirections = data && !Array.isArray(data) ? (data.visionDirections || []) : [];
-            var directionChecked = data && !Array.isArray(data) ? (data.directionChecked || []) : [];
-
-            if (prompts.length === 0 && !charDesc) return;
-
-            // Restore character description
-            if (charDesc) {
-                I.settingCharDesc.value = charDesc;
-                var countSpan = document.getElementById('charDescCount');
-                if (countSpan) countSpan.textContent = charDesc.length;
-                var previews = I.promptGrid.querySelectorAll('.bg-box-char-preview');
-                previews.forEach(function (preview) {
-                    preview.textContent = charDesc;
-                    preview.style.display = '';
+        // Legacy migration — combine old keys into the new schema shape.
+        try {
+            var legacyPrompts = localStorage.getItem('bulkgen_prompts');
+            var legacyModel = localStorage.getItem('pf_bg_model') || '';
+            var legacyQuality = localStorage.getItem('pf_bg_quality') || '';
+            var legacyAspect = localStorage.getItem('pf_bg_aspect_ratio') || '';
+            if (!legacyPrompts && !legacyModel && !legacyQuality && !legacyAspect) {
+                return null;
+            }
+            var legacyParsed = legacyPrompts ? JSON.parse(legacyPrompts) : null;
+            var prompts = [];
+            var charDesc = '';
+            if (Array.isArray(legacyParsed)) {
+                prompts = legacyParsed.map(function (t, i) {
+                    return { index: i, text: t || '' };
+                });
+            } else if (legacyParsed) {
+                charDesc = legacyParsed.charDesc || '';
+                var plist = legacyParsed.prompts || [];
+                var creds = legacyParsed.sourceCredits || [];
+                var urls = legacyParsed.sourceImageUrls || [];
+                var vEn = legacyParsed.visionEnabled || [];
+                var vDir = legacyParsed.visionDirections || [];
+                var dChk = legacyParsed.directionChecked || [];
+                plist.forEach(function (t, i) {
+                    prompts.push({
+                        index: i,
+                        text: t || '',
+                        source_credit: creds[i] || '',
+                        source_image_url: urls[i] || '',
+                        vision_enabled: vEn[i] || 'no',
+                        vision_direction: vDir[i] || '',
+                        direction_checked: !!dChk[i]
+                    });
                 });
             }
-
-            // Create boxes if we need more than the default 4
-            var currentBoxes = I.promptGrid.querySelectorAll('.bg-prompt-box');
-            while (currentBoxes.length < prompts.length) {
-                var extraBox = I.createPromptBox('');
-                I.promptGrid.appendChild(extraBox);
-                currentBoxes = I.promptGrid.querySelectorAll('.bg-prompt-box');
-            }
-
-            // Fill in prompts and source credits
-            var boxes = I.promptGrid.querySelectorAll('.bg-prompt-box');
-            prompts.forEach(function (text, i) {
-                if (boxes[i]) {
-                    var ta = boxes[i].querySelector('.bg-box-textarea');
-                    var sc = boxes[i].querySelector('.bg-box-source-input');
-                    if (ta && text) {
-                        ta.value = text;
-                        I.autoGrowTextarea(ta);
-                    }
-                    if (sc && sourceCredits[i]) sc.value = sourceCredits[i];
-                    var si = boxes[i].querySelector('.bg-prompt-source-image-input');
-                    if (si && sourceImageUrls[i]) {
-                        si.value = sourceImageUrls[i];
-                        // Reconstruct preview thumbnail for any source image URL
-                        var preview = boxes[i].querySelector('.bg-source-paste-preview');
-                        var thumb = boxes[i].querySelector('.bg-source-paste-thumb');
-                        if (preview && thumb) {
-                            var isPasteUrl = sourceImageUrls[i].indexOf('/source-paste/') !== -1;
-                            thumb.src = sourceImageUrls[i];
-                            thumb.onerror = function() {
-                                // Hide preview gracefully if image fails to load
-                                preview.style.display = 'none';
-                                thumb.onerror = null;
-                            };
-                            preview.style.display = 'flex';
-                            if (isPasteUrl) {
-                                BulkGenUtils.lockPasteInput(si);
-                            }
-                        }
-                    }
-
-                    // Restore Vision state + apply side-effects
-                    var vs = boxes[i].querySelector('.bg-override-vision');
-                    var vd = boxes[i].querySelector('.bg-vision-direction-input');
-                    var visionRow = boxes[i].querySelector('.bg-box-vision-direction');
-
-                    var savedVision = visionEnabled[i] || 'no';
-                    if (vs && savedVision === 'yes') {
-                        vs.value = 'yes';
-
-                        // Apply Vision toggle side-effects
-                        // Note: direction row visibility is handled by the direction
-                        // checkbox restore block below — not here.
-                        if (ta) {
-                            ta.disabled = true;
-                            ta.classList.add('bg-box-textarea--vision-mode');
-                        }
-                        if (si) {
-                            si.required = true;
-                            si.placeholder =
-                                'Source image URL required for Vision mode \u2014 .jpg, .png, .webp, .gif, or .avif';
-                        }
-                    }
-
-                    // Restore direction checkbox state
-                    var dc = boxes[i].querySelector('.bg-box-direction-checkbox');
-                    var dirRowEl = boxes[i].querySelector('.bg-box-vision-direction');
-                    if (dc && directionChecked[i]) {
-                        dc.checked = true;
-                        if (dirRowEl) dirRowEl.style.display = '';
-                    }
-
-                    // Restore direction text
-                    if (vd && visionDirections[i]) {
-                        vd.value = visionDirections[i];
-                    }
+            var migrated = {
+                version: DRAFT_SCHEMA_VERSION,
+                saved_at: new Date().toISOString(),
+                settings: {
+                    model: legacyModel,
+                    quality: legacyQuality,
+                    aspect_ratio: legacyAspect,
+                    character_description: charDesc
+                },
+                prompts: prompts
+            };
+            // One-shot migration: persist as the unified blob and drop
+            // legacy keys. On subsequent loads _loadDraft reads `pf_bg_draft`
+            // directly and skips this branch.
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(migrated));
+                for (var k = 0; k < LEGACY_KEYS.length; k++) {
+                    localStorage.removeItem(LEGACY_KEYS[k]);
                 }
-            });
-
-            I.renumberBoxes();
+            } catch (e) { /* private mode — proceed with in-memory object */ }
+            return migrated;
         } catch (e) {
-            // Corrupted data — fail silently
+            return null;
         }
     }
 
-    I.clearSavedPrompts = function clearSavedPrompts() {
-        localStorage.removeItem(STORAGE_KEY);
+    function _activateBtn(groupEl, value) {
+        if (!groupEl || !value) return;
+        var btns = groupEl.querySelectorAll('.bg-btn-group-option');
+        btns.forEach(function (b) {
+            var match = b.dataset.value === value;
+            b.classList.toggle('active', match);
+            b.setAttribute('aria-checked', match ? 'true' : 'false');
+        });
+    }
+
+    I.restoreDraft = function restoreDraft() {
+        var draft = _loadDraft();
+        if (!draft) return;
+        var settings = draft.settings || {};
+        var promptsData = draft.prompts || [];
+
+        // Step 1: Restore model BEFORE calling handleModelChange — it
+        // rebuilds aspect-ratio buttons and other model-dependent UI.
+        if (settings.model && I.settingModel &&
+            I.settingModel.querySelector(
+                'option[value="' + CSS.escape(settings.model) + '"]'
+            )) {
+            I.settingModel.value = settings.model;
+        }
+
+        // Step 2: Let model-dependent UI reconfigure itself.
+        if (I.handleModelChange) I.handleModelChange();
+
+        // Step 3: Restore quality (after handleModelChange rebuilds labels).
+        if (settings.quality && I.settingQuality &&
+            I.settingQuality.querySelector(
+                'option[value="' + CSS.escape(settings.quality) + '"]'
+            )) {
+            I.settingQuality.value = settings.quality;
+        }
+
+        // Step 4: Restore aspect ratio (Replicate/xAI) OR pixel size (OpenAI).
+        if (settings.aspect_ratio && I.settingAspectRatio) {
+            _activateBtn(I.settingAspectRatio, settings.aspect_ratio);
+        }
+        if (settings.pixel_size) {
+            _activateBtn(document.getElementById('settingDimensions'), settings.pixel_size);
+            if (I.updateDimensionLabel) I.updateDimensionLabel(settings.pixel_size);
+        }
+
+        // Step 5: Images per Prompt button group.
+        if (settings.images_per_prompt) {
+            _activateBtn(document.getElementById('settingImagesPerPrompt'),
+                         settings.images_per_prompt);
+        }
+
+        // Step 6: Character description + preview sync + count.
+        if (typeof settings.character_description === 'string' &&
+            I.settingCharDesc) {
+            I.settingCharDesc.value = settings.character_description;
+            var countSpan = document.getElementById('charDescCount');
+            if (countSpan) countSpan.textContent = settings.character_description.length;
+        }
+
+        // Step 7: Toggle switches.
+        if (typeof settings.visibility === 'boolean' && I.settingVisibility) {
+            I.settingVisibility.checked = settings.visibility;
+            if (I.visibilityLabel) {
+                I.visibilityLabel.textContent = settings.visibility ? 'Public' : 'Private';
+            }
+        }
+        if (typeof settings.translate === 'boolean' && I.settingTranslate) {
+            I.settingTranslate.checked = settings.translate;
+            if (I.translateLabel) {
+                I.translateLabel.textContent = settings.translate ? 'On' : 'Off';
+            }
+        }
+        if (typeof settings.remove_watermark === 'boolean' &&
+            I.settingRemoveWatermark) {
+            I.settingRemoveWatermark.checked = settings.remove_watermark;
+            if (I.removeWatermarkLabel) {
+                I.removeWatermarkLabel.textContent =
+                    settings.remove_watermark ? 'On' : 'Off';
+            }
+        }
+        if (settings.tier && I.settingTier) {
+            I.settingTier.value = settings.tier;
+        }
+
+        // Step 8: Add extra prompt boxes to match saved prompt count.
+        var currentBoxes = I.promptGrid.querySelectorAll('.bg-prompt-box');
+        while (currentBoxes.length < promptsData.length) {
+            var extraBox = I.createPromptBox('');
+            I.promptGrid.appendChild(extraBox);
+            currentBoxes = I.promptGrid.querySelectorAll('.bg-prompt-box');
+        }
+
+        // Step 9: Fill each box with saved content.
+        var boxes = I.promptGrid.querySelectorAll('.bg-prompt-box');
+        promptsData.forEach(function (p, i) {
+            var box = boxes[i];
+            if (!box) return;
+
+            var ta = box.querySelector('.bg-box-textarea');
+            var sc = box.querySelector('.bg-box-source-input');
+            var si = box.querySelector('.bg-prompt-source-image-input');
+            var vs = box.querySelector('.bg-override-vision');
+            var vd = box.querySelector('.bg-vision-direction-input');
+            var dc = box.querySelector('.bg-box-direction-checkbox');
+            var qo = box.querySelector('.bg-override-quality');
+            var so = box.querySelector('.bg-override-size');
+            var io = box.querySelector('.bg-override-images');
+
+            if (ta && p.text) { ta.value = p.text; I.autoGrowTextarea(ta); }
+            if (sc && p.source_credit) sc.value = p.source_credit;
+            if (si && p.source_image_url) {
+                si.value = p.source_image_url;
+                var preview = box.querySelector('.bg-source-paste-preview');
+                var thumb = box.querySelector('.bg-source-paste-thumb');
+                if (preview && thumb) {
+                    var isPasteUrl = p.source_image_url.indexOf('/source-paste/') !== -1;
+                    thumb.src = p.source_image_url;
+                    thumb.onerror = function () {
+                        preview.style.display = 'none';
+                        thumb.onerror = null;
+                    };
+                    preview.style.display = 'flex';
+                    if (isPasteUrl && window.BulkGenUtils) {
+                        BulkGenUtils.lockPasteInput(si);
+                    }
+                }
+            }
+
+            // Vision state — apply side-effects (disables textarea, placeholder)
+            if (vs && p.vision_enabled === 'yes') {
+                vs.value = 'yes';
+                if (ta) {
+                    ta.disabled = true;
+                    ta.classList.add('bg-box-textarea--vision-mode');
+                }
+                if (si) {
+                    si.required = true;
+                    si.placeholder =
+                        'Source image URL required for Vision mode \u2014 .jpg, .png, .webp, .gif, or .avif';
+                }
+            }
+            if (dc && p.direction_checked) {
+                dc.checked = true;
+                var dirRow = box.querySelector('.bg-box-vision-direction');
+                if (dirRow) dirRow.style.display = '';
+            }
+            if (vd && p.vision_direction) vd.value = p.vision_direction;
+
+            // Per-box overrides — skip '' (falls back to master).
+            if (qo && p.quality_override) qo.value = p.quality_override;
+            if (so && p.size_override) so.value = p.size_override;
+            if (io && p.images_override) io.value = p.images_override;
+        });
+
+        // Step 10: Re-apply model capability UI to any new per-box
+        // selects and refresh cost/generate state.
+        if (I.handleModelChange) I.handleModelChange();
+        I.renumberBoxes();
+        if (I.updateCostEstimate) I.updateCostEstimate();
+        if (I.updateGenerateBtn) I.updateGenerateBtn();
+
+        // Character-description preview sync across all boxes.
+        if (typeof settings.character_description === 'string') {
+            var cd = settings.character_description;
+            var previews = I.promptGrid.querySelectorAll('.bg-box-char-preview');
+            previews.forEach(function (pv) {
+                if (cd) { pv.textContent = cd; pv.style.display = ''; }
+                else { pv.textContent = ''; pv.style.display = 'none'; }
+            });
+        }
     };
+
+    // Backward-compat shim for old name.
+    function restorePromptsFromStorage() { I.restoreDraft(); }
+
+    // Clear EVERYTHING — unified draft + any legacy keys. Used by
+    // "Clear All" button and by any explicit reset flow. NOTE: the
+    // submit-success path no longer calls this — drafts persist
+    // after generation.
+    I.clearSavedPrompts = function clearSavedPrompts() {
+        try {
+            localStorage.removeItem(DRAFT_KEY);
+            for (var k = 0; k < LEGACY_KEYS.length; k++) {
+                localStorage.removeItem(LEGACY_KEYS[k]);
+            }
+        } catch (e) { /* private mode — noop */ }
+    };
+    // Public alias — future "Clear Draft" UI can bind to this name.
+    I.clearDraft = I.clearSavedPrompts;
 
     I.scheduleSave = function scheduleSave() {
         clearTimeout(saveTimer);
-        saveTimer = setTimeout(savePromptsToStorage, 500);
+        saveTimer = setTimeout(function () { I.saveDraft(); }, 500);
     };
 
     // ─── Autosave Initialisation ─────────────────────────────────
     createDraftIndicator();
-    restorePromptsFromStorage();
+    I.restoreDraft();
     // updateCostEstimate and updateGenerateBtn are both called by the main
     // init in bulk-generator.js after all functions are defined. Calling
     // them here causes a race condition since those functions may not yet

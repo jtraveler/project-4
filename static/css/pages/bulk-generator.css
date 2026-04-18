@@ -69,6 +69,27 @@
 
 }
 
+/* Disabled state for quality group when the selected model does not
+ * support quality tiers. Visible but greyed; select is locked to "High"
+ * via JS. Label kept readable at 0.75 to stay above WCAG AA on white. */
+.bg-setting-group--disabled .bg-setting-label,
+.bg-setting-group--disabled .bg-select-wrapper {
+    opacity: 0.75;
+}
+.bg-setting-group--disabled .bg-select-wrapper,
+.bg-setting-group--disabled .bg-select,
+.bg-setting-group--disabled select {
+    cursor: not-allowed;
+}
+/* Same disabled treatment for per-prompt-box quality override wrappers */
+.bg-box-override--disabled {
+    opacity: 0.75;
+}
+.bg-box-override--disabled .bg-box-override-wrapper,
+.bg-box-override--disabled .bg-box-override-select {
+    cursor: not-allowed;
+}
+
 /* Last column of the Bulk Image Generator Mastr Settings */
 .bg-master-col:last-child {
     height: 100%;

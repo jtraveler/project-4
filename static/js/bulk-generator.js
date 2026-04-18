@@ -32,12 +32,8 @@
     I.apiKeyStatus = document.getElementById('apiKeyStatus');
     I.apiKeyToggle = document.getElementById('apiKeyToggle');
 
-    // localStorage key constants — pf_ prefix prevents collisions
-    var PF_STORAGE_KEYS = {
-        model:       'pf_bg_model',
-        quality:     'pf_bg_quality',
-        aspectRatio: 'pf_bg_aspect_ratio'
-    };
+    // localStorage persistence is owned by bulk-generator-autosave.js as
+    // of Session 160-D. See I.saveDraft / I.restoreDraft there.
 
     // Master settings
     I.settingModel = document.getElementById('settingModel');
@@ -672,6 +668,7 @@
             if (box) {
                 updateBoxOverrideState(box);
                 I.updateCostEstimate();
+                if (I.scheduleSave) I.scheduleSave();
             }
         }
     });
@@ -720,6 +717,7 @@
             if (typeof onActivate === 'function') {
                 onActivate(btn.dataset.value);
             }
+            if (I.scheduleSave) I.scheduleSave();
         }
 
         groupEl.addEventListener('click', function (e) {
@@ -771,6 +769,7 @@
     I.settingVisibility.addEventListener('change', function () {
         I.visibilityLabel.textContent = I.settingVisibility.checked ? 'Public' : 'Private';
         I.updateGenerateBtn();
+        if (I.scheduleSave) I.scheduleSave();
     });
 
     // ─── Remove Watermarks Toggle ────────────────────────────────────
@@ -779,6 +778,7 @@
             I.removeWatermarkLabel.textContent =
                 I.settingRemoveWatermark.checked ? 'On' : 'Off';
             I.updateGenerateBtn();
+            if (I.scheduleSave) I.scheduleSave();
         });
     }
 
@@ -787,6 +787,7 @@
         I.settingTranslate.addEventListener('change', function () {
             I.translateLabel.textContent = I.settingTranslate.checked ? 'On' : 'Off';
             I.updateGenerateBtn();
+            if (I.scheduleSave) I.scheduleSave();
         });
     }
 
@@ -852,6 +853,11 @@
                     'grok-imagine-image': 0.020,
                 };
                 costPerImage = _perBoxApiCosts[_boxModelId] || 0;
+                // Surface missing cost mapping during dev so new models
+                // added via GeneratorModel admin don't silently display $0.
+                if (!costPerImage && _boxModelId && window.console) {
+                    console.warn('[BulkGen] No cost mapping for model:', _boxModelId);
+                }
             }
             totalCost += imgCount * costPerImage;
         });
@@ -869,39 +875,12 @@
               '<span class="bg-cost-value">' + totalImages + '</span> image' +
               (totalImages !== 1 ? 's' : '');
         I.costTime.innerHTML = '~<span class="bg-cost-value">' + timeMinutes + '</span> min';
-        // TEMP: show actual API cost in dollars for all models during billing testing.
-        // TODO: revert to credits display after Replicate billing is verified.
-        var _costOpt = I.settingModel
-            ? I.settingModel.options[I.settingModel.selectedIndex]
-            : null;
-        var _isByokCost = !!(_costOpt && _costOpt.dataset.byokOnly === 'true');
-        if (_isByokCost) {
-            I.costDollars.textContent = '$' + totalCost.toFixed(2);
-        } else {
-            var _apiCosts = {
-                'black-forest-labs/flux-schnell': 0.003,
-                'black-forest-labs/flux-dev': 0.025,       // confirmed $0.025 (Replicate, April 2026)
-                'black-forest-labs/flux-1.1-pro': 0.040,
-                'black-forest-labs/flux-2-pro': 0.015,     // $0.015/MP text-to-image
-                'grok-imagine-image': 0.020,
-            };
-            // Nano Banana 2 per-resolution tier costs (confirmed Replicate pricing, April 2026)
-            var NB2_TIER_COSTS = {
-                'low':    0.067,   // 1K resolution
-                'medium': 0.101,   // 2K resolution
-                'high':   0.151    // 4K resolution
-            };
-            var _apiCostPerImage;
-            var _modelId = _costOpt ? _costOpt.value : '';
-            if (_modelId === 'google/nano-banana-2') {
-                var _qualityEl = document.getElementById('settingQuality');
-                var _currentQuality = _qualityEl ? _qualityEl.value : 'low';
-                _apiCostPerImage = NB2_TIER_COSTS[_currentQuality] || 0.067;
-            } else {
-                _apiCostPerImage = _apiCosts[_modelId] || 0;
-            }
-            I.costDollars.textContent = '$' + (_apiCostPerImage * totalImages).toFixed(3);
-        }
+        // Use the per-box totalCost computed above — that loop correctly
+        // reads each box's quality override (NB2 tiers, BYOK size/quality,
+        // or flat cost for other platform models). Full precision (up to
+        // 3 decimals, trailing zeros stripped) so $0.067, $0.003, $0.04
+        // all display accurately.
+        I.costDollars.textContent = '$' + parseFloat(totalCost.toFixed(3)).toString();
     };
 
     I.settingQuality.addEventListener('change', I.updateCostEstimate);
@@ -995,13 +974,21 @@
             }
         }
 
-        // Show/hide quality selector — hidden entirely for non-quality models.
-        // Consistent with per-box quality overrides (also hidden, not disabled).
+        // Quality section: always visible. For non-quality models it is
+        // disabled/greyed and locked to "high" so the grid layout stays
+        // stable and per-prompt model switching can re-enable it without
+        // layout shift.
         var qualityGroup = document.getElementById('qualityGroup');
         if (qualityGroup) {
-            qualityGroup.style.display = supportsQuality ? '' : 'none';
+            qualityGroup.style.display = '';
+            qualityGroup.classList.toggle(
+                'bg-setting-group--disabled', !supportsQuality
+            );
             var qualitySelect = qualityGroup.querySelector('select');
-            if (qualitySelect) qualitySelect.disabled = !supportsQuality;
+            if (qualitySelect) {
+                qualitySelect.disabled = !supportsQuality;
+                if (!supportsQuality) qualitySelect.value = 'high';
+            }
         }
         // Update quality option labels — NB2 shows resolution tiers, others show generic
         var _qs = document.getElementById('settingQuality');
@@ -1017,17 +1004,24 @@
             }
         }
 
-        // Show/hide per-box QUALITY override based on model support.
-        // Hidden entirely for non-quality models (not just disabled).
+        // Per-box QUALITY override: always visible. Disabled + locked to
+        // "high" for non-quality models so the grid stays stable and the
+        // per-prompt model swap (future) can re-enable without layout shift.
         // Labels update to 1K/2K/4K for NB2, Low/Medium/High for others.
         var modelIdentifier = opt.value;
         I.promptGrid.querySelectorAll('.bg-override-quality').forEach(function (sel) {
             var wrapper = sel.closest('.bg-box-override-wrapper');
             var parentDiv = wrapper ? wrapper.parentElement : null;
             if (parentDiv) {
-                parentDiv.style.display = supportsQuality ? '' : 'none';
+                parentDiv.style.display = '';
+                parentDiv.classList.toggle(
+                    'bg-box-override--disabled', !supportsQuality
+                );
             }
             sel.disabled = !supportsQuality;
+            if (!supportsQuality) {
+                sel.value = 'high';
+            }
             // Update per-box quality labels to match master labels
             // Option 0 = "Use master" — skip it (index 1,2,3 are low/medium/high)
             if (modelIdentifier === 'google/nano-banana-2') {
@@ -1040,15 +1034,14 @@
                 if (sel.options[3]) sel.options[3].text = 'High';
             }
         });
-        // Explicitly ensure dimensions override is always visible.
-        // When quality is hidden, span dimensions across both grid columns
-        // to avoid empty whitespace in the 1fr 1fr grid row.
+        // Dimensions override is always visible in its natural grid column —
+        // no gridColumn stretch needed since quality stays in the row.
         I.promptGrid.querySelectorAll('.bg-override-size').forEach(function (sel) {
             var wrapper = sel.closest('.bg-box-override-wrapper');
             var parentDiv = wrapper ? wrapper.parentElement : null;
             if (parentDiv) {
                 parentDiv.style.display = '';
-                parentDiv.style.gridColumn = supportsQuality ? '' : '1 / -1';
+                parentDiv.style.gridColumn = '';
             }
         });
 
@@ -1169,62 +1162,22 @@
     };
 
     // ─── Settings Persistence (localStorage) ──────────────────────
+    // Session 160-D: settings persistence is consolidated into a single
+    // `pf_bg_draft` JSON blob owned by bulk-generator-autosave.js via
+    // `I.saveDraft()`. This function remains as a stable shim so existing
+    // change-handlers (`I.settingQuality.change`, `I.settingModel.change`,
+    // aspect-ratio button click, etc.) continue to work without edits.
     I.saveSettings = function saveSettings() {
-        try {
-            if (I.settingModel) localStorage.setItem(PF_STORAGE_KEYS.model, I.settingModel.value);
-            if (I.settingQuality) localStorage.setItem(PF_STORAGE_KEYS.quality, I.settingQuality.value);
-            // Aspect ratio is a button group — save the active button's data-value
-            if (I.settingAspectRatio) {
-                var activeAR = I.settingAspectRatio.querySelector('.bg-btn-group-option.active');
-                if (activeAR) localStorage.setItem(PF_STORAGE_KEYS.aspectRatio, activeAR.dataset.value);
-            }
-        } catch (e) {
-            // localStorage may be unavailable in private browsing — fail silently
-        }
+        if (I.saveDraft) I.saveDraft();
     };
 
-    function restoreSettings() {
-        try {
-            var savedModel = localStorage.getItem(PF_STORAGE_KEYS.model);
-            var savedQuality = localStorage.getItem(PF_STORAGE_KEYS.quality);
-
-            if (savedModel && I.settingModel &&
-                I.settingModel.querySelector('option[value="' + savedModel + '"]')) {
-                I.settingModel.value = savedModel;
-            }
-            if (savedQuality && I.settingQuality &&
-                I.settingQuality.querySelector('option[value="' + savedQuality + '"]')) {
-                I.settingQuality.value = savedQuality;
-            }
-            // Aspect ratio is restored after handleModelChange() rebuilds the buttons
-        } catch (e) {
-            // localStorage unavailable — proceed with defaults
-        }
-    }
-
     // ─── Initial State ───────────────────────────────────────────
-    restoreSettings(); // Restore saved model+quality BEFORE handleModelChange
+    // Initial model is whatever the <select> renders. The autosave module
+    // (loaded after this one) calls `I.restoreDraft()` on init which
+    // overrides the defaults with any saved draft and re-runs
+    // handleModelChange() + updateCostEstimate().
     I.addBoxes(4);
-    I.handleModelChange(); // Set initial model-dependent visibility (tier/apiKey/aspectRatio)
-                           // Called here so all getter functions are defined.
-    // Restore aspect ratio AFTER handleModelChange rebuilds the button group
-    try {
-        var savedAR = localStorage.getItem(PF_STORAGE_KEYS.aspectRatio);
-        if (savedAR && I.settingAspectRatio) {
-            var btns = I.settingAspectRatio.querySelectorAll('.bg-btn-group-option');
-            btns.forEach(function (b) {
-                if (b.dataset.value === savedAR) {
-                    btns.forEach(function (x) {
-                        x.classList.remove('active');
-                        x.setAttribute('aria-checked', 'false');
-                    });
-                    b.classList.add('active');
-                    b.setAttribute('aria-checked', 'true');
-                }
-            });
-        }
-    } catch (e) { /* localStorage unavailable */ }
-    // createDraftIndicator and restorePromptsFromStorage called from autosave module
+    I.handleModelChange();
     I.updateCostEstimate();
     I.updateGenerateBtn();
 
@@ -1238,31 +1191,13 @@
     // DOMContentLoaded does not fire when the browser restores a page from
     // bfcache (back/forward navigation). pageshow fires in both cases;
     // event.persisted is true only for bfcache restores.
-    // NOTE: Do NOT call restoreSettings() — the bfcache preserves the full
-    // DOM state including dropdown values. Calling restoreSettings() could
-    // overwrite user edits made after the last localStorage save.
+    // bfcache normally preserves DOM state, but we re-run handleModelChange
+    // to re-synchronise model-dependent labels and refresh the cost total.
+    // We do NOT call I.restoreDraft() here because that could overwrite
+    // edits the user made since the last save — bfcache already keeps them.
     window.addEventListener('pageshow', function (event) {
         if (event.persisted) {
-            // Re-evaluate model-dependent UI (labels, visibility, aspect buttons).
-            // handleModelChange() rebuilds aspect ratio buttons, so restore the
-            // saved aspect ratio afterwards — same pattern as the init sequence.
             I.handleModelChange();
-            try {
-                var savedAR = localStorage.getItem(PF_STORAGE_KEYS.aspectRatio);
-                if (savedAR && I.settingAspectRatio) {
-                    var btns = I.settingAspectRatio.querySelectorAll('.bg-btn-group-option');
-                    btns.forEach(function (b) {
-                        if (b.dataset.value === savedAR) {
-                            btns.forEach(function (x) {
-                                x.classList.remove('active');
-                                x.setAttribute('aria-checked', 'false');
-                            });
-                            b.classList.add('active');
-                            b.setAttribute('aria-checked', 'true');
-                        }
-                    });
-                }
-            } catch (e) { /* localStorage unavailable */ }
             I.updateCostEstimate();
         }
     });

@@ -2433,3 +2433,38 @@ class JobDetailViewContextTests(TestCase):
             self._get_context(job)['model_display_name'],
             'unknown-legacy-model-id',
         )
+
+    def test_estimated_total_cost_prefers_stored_job_field(self):
+        """
+        When `job.estimated_cost` is set at job creation (accounts for
+        resolved per-prompt count overrides) and `job.actual_total_images`
+        is populated, the view prefers both over master-level
+        recalculation. Regression guard for 161-D.
+        """
+        from decimal import Decimal
+        job = self._make_job()
+        # Simulate a job with per-prompt count overrides: 3 prompts where
+        # box 1 has 3 images and boxes 2-3 have 1 image each → 5 total
+        # images, not 3 × 1 = 3. Master cost is $0.034 so master-only
+        # recalc would yield $0.102 — the stored estimate is the truth.
+        job.actual_total_images = 5
+        job.estimated_cost = Decimal('0.170')
+        job.save(update_fields=['actual_total_images', 'estimated_cost'])
+
+        ctx = self._get_context(job)
+        self.assertEqual(ctx['total_images'], 5)
+        self.assertEqual(ctx['estimated_total_cost'], Decimal('0.170'))
+
+    def test_estimated_total_cost_falls_back_for_legacy_jobs(self):
+        """
+        Legacy jobs without `estimated_cost` or `actual_total_images`
+        (both zero/unset) fall back to the master-level recalculation
+        so the page still renders a sensible number.
+        """
+        job = self._make_job()
+        # Default _make_job leaves estimated_cost=0 and actual_total_images=0
+        # (both DB defaults). total_prompts=1, images_per_prompt=1 → 1 image.
+        ctx = self._get_context(job)
+        self.assertEqual(ctx['total_images'], 1)
+        # cost_per_image for medium/1024x1024 = 0.034
+        self.assertAlmostEqual(float(ctx['estimated_total_cost']), 0.034, places=4)

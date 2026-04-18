@@ -119,8 +119,25 @@ def bulk_generator_job_view(request, job_id):
         cost_per_image = _provider.get_cost_per_image(job.size, job.quality)
     except Exception:
         cost_per_image = get_image_cost(job.quality, job.size)
-    total_images = job.total_prompts * job.images_per_prompt
-    estimated_total_cost = total_images * cost_per_image
+
+    # Use `actual_total_images` (populated at job creation with resolved
+    # per-prompt count overrides) instead of master `total_prompts *
+    # images_per_prompt`, which would under-count jobs that have per-prompt
+    # count overrides.
+    total_images = job.actual_total_images or (job.total_prompts * job.images_per_prompt)
+
+    # Prefer the stored `job.estimated_cost` value — it is computed at job
+    # creation using the fully resolved per-prompt counts, so it is accurate
+    # even when individual prompts override images-per-prompt. Only fall back
+    # to the master-only recalculation for legacy jobs that have no stored
+    # estimate (zero/unset Decimal). Keep the Decimal type end-to-end —
+    # Django's `floatformat` filter renders Decimal natively without the
+    # IEEE-754 rounding artefacts a `float(Decimal)` conversion would
+    # introduce on monetary values.
+    if job.estimated_cost and job.estimated_cost > 0:
+        estimated_total_cost = job.estimated_cost
+    else:
+        estimated_total_cost = total_images * cost_per_image
 
     # Format size for display (e.g. "1024x1024" → "1024×1024")
     display_size = job.size.replace('x', '×')

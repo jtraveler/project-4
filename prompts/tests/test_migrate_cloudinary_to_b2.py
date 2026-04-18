@@ -110,8 +110,8 @@ class MigrateCloudinaryToB2FailFastTests(TestCase):
 
     def test_missing_b2_credentials_raises(self):
         with self.settings(
-            B2_APPLICATION_KEY_ID='',
-            B2_APPLICATION_KEY='',
+            B2_ACCESS_KEY_ID='',
+            B2_SECRET_ACCESS_KEY='',
         ):
             with self.assertRaises(CommandError):
                 call_command('migrate_cloudinary_to_b2')
@@ -120,8 +120,8 @@ class MigrateCloudinaryToB2FailFastTests(TestCase):
         """--dry-run bypasses the credential check because no upload
         is attempted."""
         with self.settings(
-            B2_APPLICATION_KEY_ID='',
-            B2_APPLICATION_KEY='',
+            B2_ACCESS_KEY_ID='',
+            B2_SECRET_ACCESS_KEY='',
         ):
             # Should complete without raising.
             call_command('migrate_cloudinary_to_b2', '--dry-run')

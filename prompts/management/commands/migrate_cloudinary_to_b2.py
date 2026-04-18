@@ -142,11 +142,11 @@ class Command(BaseCommand):
         if not prompt.featured_image:
             return "no-cloudinary-image"
 
-        # featured_image.public_id is the Cloudinary identifier
-        try:
-            public_id = str(prompt.featured_image.public_id)
-        except Exception:
-            public_id = str(prompt.featured_image)
+        # featured_image.public_id is the Cloudinary identifier.
+        # Never str(featured_image) — CloudinaryResource.__str__ returns
+        # the object repr, not the public_id, which silently produces
+        # bogus download URLs.
+        public_id = getattr(prompt.featured_image, "public_id", "") or ""
 
         if not public_id:
             return "no-public-id"
@@ -213,10 +213,8 @@ class Command(BaseCommand):
         if not prompt.featured_video:
             return "no-cloudinary-video"
 
-        try:
-            public_id = str(prompt.featured_video.public_id)
-        except Exception:
-            public_id = str(prompt.featured_video)
+        # Same CloudinaryResource.public_id rule as images — never str().
+        public_id = getattr(prompt.featured_video, "public_id", "") or ""
 
         if not public_id:
             return "no-public-id"
@@ -282,15 +280,15 @@ class Command(BaseCommand):
         from django.conf import settings as django_settings
 
         if not dry_run:
-            b2_key = getattr(django_settings, "B2_APPLICATION_KEY_ID", "")
+            b2_key = getattr(django_settings, "B2_ACCESS_KEY_ID", "")
             b2_secret = getattr(
-                django_settings, "B2_APPLICATION_KEY", ""
+                django_settings, "B2_SECRET_ACCESS_KEY", ""
             )
             if not (b2_key and b2_secret):
                 raise CommandError(
                     "B2 credentials missing from settings — "
-                    "set B2_APPLICATION_KEY_ID and "
-                    "B2_APPLICATION_KEY before running without --dry-run."
+                    "set B2_ACCESS_KEY_ID and "
+                    "B2_SECRET_ACCESS_KEY before running without --dry-run."
                 )
 
         self.stdout.write(

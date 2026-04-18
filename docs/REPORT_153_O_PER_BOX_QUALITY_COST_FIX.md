@@ -70,7 +70,7 @@ python manage.py test --verbosity=0
 
 | Hash | Message |
 |------|---------|
-| *(pending)* | fix(bulk-gen): sticky bar cost estimate now respects per-box quality overrides |
+| 8642223 | fix(bulk-gen): sticky bar cost estimate now respects per-box quality overrides |
 
 ## Section 11 — What to Work on Next
 

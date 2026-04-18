@@ -223,7 +223,7 @@ heroku run "python manage.py migrate_cloudinary_to_b2" \
 
 | Hash | Message |
 |------|---------|
-| *(commit pending)* | feat(migration): Cloudinary → B2 migration management command |
+| 027f80d | feat(migration): Cloudinary → B2 migration management command |
 
 ---
 

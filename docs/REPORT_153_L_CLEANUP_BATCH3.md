@@ -97,7 +97,7 @@ grep -n "loading-spinner.*animation" static/css/pages/bulk-generator-job.css
 
 | Hash | Message |
 |------|---------|
-| *(pending browser verification for Spec K)* | refactor(bulk-gen): cleanup batch 3 — dead IMAGE_COST_MAP param, dynamic fallback, CSS dedup, tests |
+| 77017f3 | refactor(bulk-gen): cleanup batch 3 — dead IMAGE_COST_MAP param, dynamic fallback, CSS dedup, tests |
 
 ## Section 11 — What to Work on Next
 

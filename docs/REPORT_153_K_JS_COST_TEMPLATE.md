@@ -93,7 +93,7 @@ python manage.py test --verbosity=0
 
 | Hash | Message |
 |------|---------|
-| *(pending browser verification)* | feat(bulk-gen): inject IMAGE_COST_MAP into template context — JS pricing never drifts from Python |
+| e0472bc | feat(bulk-gen): inject IMAGE_COST_MAP into template context — JS pricing never drifts from Python |
 
 ## Section 11 — What to Work on Next
 

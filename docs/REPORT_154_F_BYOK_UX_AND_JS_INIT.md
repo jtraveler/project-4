@@ -230,7 +230,7 @@ python manage.py test
 
 | Hash | Message |
 |------|---------|
-| (pending) | fix(bulk-gen): BYOK UX redesign + JS init order errors |
+| f3bfd5f | fix(bulk-gen): BYOK UX redesign + JS init order errors |
 
 ---
 

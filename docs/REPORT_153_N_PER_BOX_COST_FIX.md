@@ -76,7 +76,7 @@ python manage.py test --verbosity=0
 
 | Hash | Message |
 |------|---------|
-| *(pending browser verification)* | fix(bulk-gen): sticky bar cost estimate now respects per-box size overrides |
+| 8be4b5f | fix(bulk-gen): sticky bar cost estimate now respects per-box size overrides |
 
 ## Section 11 — What to Work on Next
 

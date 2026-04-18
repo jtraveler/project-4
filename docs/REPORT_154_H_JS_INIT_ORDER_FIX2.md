@@ -228,7 +228,7 @@ or hard refresh):
 
 | Hash | Message |
 |------|---------|
-| (pending) | fix(bulk-gen): move updateCostEstimate/updateGenerateBtn before handleModelChange |
+| ef51f7c | fix(bulk-gen): move updateCostEstimate/updateGenerateBtn before handleModelChange |
 
 ---
 

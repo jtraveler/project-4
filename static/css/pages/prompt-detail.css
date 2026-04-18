@@ -1358,8 +1358,8 @@ a.model-name:hover {
 /* Tag badge styling for dynamically added tags */
 .tags-container .tag-badge {
     display: inline-block;
-    background: var(--gray-100, #f3f4f6);
-    color: var(--gray-700, #374151);
+    background: #4d4d4d;
+    color: white;
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
     font-size: 0.8rem;

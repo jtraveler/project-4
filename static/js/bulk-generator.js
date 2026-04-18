@@ -600,7 +600,8 @@
             if (I.scheduleSave) I.scheduleSave();
         }
         if (e.target.classList.contains('bg-box-source-input') ||
-            e.target.classList.contains('bg-prompt-source-image-input')) {
+            e.target.classList.contains('bg-prompt-source-image-input') ||
+            e.target.classList.contains('bg-vision-direction-input')) {
             if (I.scheduleSave) I.scheduleSave();
         }
     });

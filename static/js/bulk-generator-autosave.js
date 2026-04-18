@@ -615,7 +615,12 @@
     // "Clear All" button and by any explicit reset flow. NOTE: the
     // submit-success path no longer calls this — drafts persist
     // after generation.
+    // Also cancels any pending debounced save so a timer fired
+    // between a pre-reset keystroke and the clear call cannot
+    // re-persist the stale state.
     I.clearSavedPrompts = function clearSavedPrompts() {
+        clearTimeout(saveTimer);
+        saveTimer = null;
         try {
             localStorage.removeItem(DRAFT_KEY);
             for (var k = 0; k < LEGACY_KEYS.length; k++) {

@@ -474,6 +474,12 @@
             defaultImg.setAttribute('tabindex', '0');
         }
 
+        // Reset must also clear the localStorage draft — otherwise a
+        // page refresh would restore the pre-reset settings, defeating
+        // the user's intent. Clear AFTER all DOM mutations above so
+        // no subsequent scheduleSave re-persists the old state.
+        if (I.clearDraft) I.clearDraft();
+
         hideModal(I.resetMasterModal);
         I.updateCostEstimate();
     });

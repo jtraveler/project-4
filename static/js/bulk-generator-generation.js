@@ -265,6 +265,7 @@
                 showTierConfirmPanel(val);
                 tierConfirmed = false;
             }
+            if (I.scheduleSave) I.scheduleSave();
         });
     }
 
@@ -551,15 +552,19 @@
         // Inject content BEFORE making visible so role="alert" fires reliably in all browsers
         I.validationBannerList.innerHTML = '';
         errors.forEach(function (err) {
+            // Accept either promptNum (frontend-built) or prompt_num (backend) —
+            // read into a local instead of mutating the caller's object.
+            var promptNum = err.promptNum || err.prompt_num;
+
             var li = document.createElement('li');
             // Build clickable anchor link if promptNum is provided
-            if (err.promptNum) {
+            if (promptNum) {
                 var allBoxes = I.promptGrid.querySelectorAll('.bg-prompt-box');
                 var box = allBoxes[err.index];
                 var link = document.createElement('a');
                 link.href = '#';
-                link.textContent = 'Prompt ' + err.promptNum;
-                link.setAttribute('aria-label', 'Go to Prompt ' + err.promptNum);
+                link.textContent = 'Prompt ' + promptNum;
+                link.setAttribute('aria-label', 'Go to Prompt ' + promptNum);
                 link.style.cssText = 'color:inherit;font-weight:600;text-decoration:underline;cursor:pointer;';
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -578,11 +583,31 @@
                     }
                 });
                 li.appendChild(link);
-                // Strip "Source image URL for prompt N" prefix since link covers it
-                var suffix = err.message.replace(
-                    'Source image URL for prompt ' + err.promptNum, ''
-                );
-                li.appendChild(document.createTextNode(suffix));
+
+                var srcPrefix = 'Source image URL for prompt ' + err.promptNum;
+                if (err.flagged_words_display) {
+                    // Profanity error — render triggered word(s) as <strong><em>
+                    li.appendChild(document.createTextNode(
+                        ' \u2014 content flagged. The following word(s) were found: '
+                    ));
+                    var strong = document.createElement('strong');
+                    var emEl = document.createElement('em');
+                    emEl.textContent = err.flagged_words_display;
+                    strong.appendChild(emEl);
+                    li.appendChild(strong);
+                    li.appendChild(document.createTextNode(
+                        '. Please revise your prompt.'
+                    ));
+                } else if (err.message && err.message.indexOf(srcPrefix) === 0) {
+                    // Source URL error — strip prefix since link covers it
+                    var suffix = err.message.replace(srcPrefix, '');
+                    li.appendChild(document.createTextNode(suffix));
+                } else {
+                    // Generic backend error with prompt_num — prepend em-dash
+                    li.appendChild(document.createTextNode(
+                        ' \u2014 ' + (err.message || '')
+                    ));
+                }
             } else {
                 li.textContent = err.message || err;
             }
@@ -953,7 +978,8 @@
                             resetGenerateBtn();
                             return;
                         }
-                        if (I.clearSavedPrompts) I.clearSavedPrompts();
+                        // Session 160-D: draft persists after generation —
+                        // cleared only on explicit reset (Clear All button).
                         window.location.href = '/tools/bulk-ai-generator/job/' + startData.job_id + '/';
                     });
                 });

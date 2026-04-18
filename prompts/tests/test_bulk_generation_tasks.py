@@ -139,6 +139,100 @@ class ValidatePromptsTests(TestCase):
     @patch(
         'prompts.services.profanity_filter.ProfanityFilterService'
     )
+    def test_validate_prompts_errors_include_prompt_num(
+        self, mock_profanity_cls
+    ):
+        """All error types include `prompt_num` (1-based) for frontend link."""
+        mock_instance = mock_profanity_cls.return_value
+
+        def side_effect(text):
+            if 'bad' in text.lower():
+                return (
+                    False,
+                    [{'word': 'bad', 'severity': 'high', 'count': 1}],
+                    'high',
+                )
+            return (True, [], 'low')
+
+        mock_instance.check_text.side_effect = side_effect
+
+        result = self.service.validate_prompts([
+            '',                 # empty -> index 0, prompt_num 1
+            'Bad word here',    # profanity -> index 1, prompt_num 2
+            'Dup prompt',
+            'Dup prompt',       # duplicate -> index 3, prompt_num 4
+        ])
+
+        self.assertFalse(result['valid'])
+        # Every error has prompt_num = index + 1
+        for err in result['errors']:
+            self.assertIn('prompt_num', err)
+            self.assertEqual(err['prompt_num'], err['index'] + 1)
+
+    @patch(
+        'prompts.services.profanity_filter.ProfanityFilterService'
+    )
+    def test_validate_prompts_profanity_includes_flagged_words_display(
+        self, mock_profanity_cls
+    ):
+        """Profanity error exposes `flagged_words_display` for bold/italic rendering."""
+        mock_instance = mock_profanity_cls.return_value
+        mock_instance.check_text.return_value = (
+            False,
+            [
+                {'word': 'bad', 'severity': 'high', 'count': 1},
+                {'word': 'worse', 'severity': 'medium', 'count': 1},
+            ],
+            'high',
+        )
+        result = self.service.validate_prompts(['bad and worse prompt'])
+        self.assertFalse(result['valid'])
+        err = result['errors'][0]
+        self.assertEqual(err['flagged_words_display'], 'bad, worse')
+        # Empty-words fallback omits flagged_words_display entirely
+        mock_instance.check_text.return_value = (False, [], 'high')
+        result2 = self.service.validate_prompts(['something'])
+        self.assertNotIn('flagged_words_display', result2['errors'][0])
+
+    @patch(
+        'prompts.services.profanity_filter.ProfanityFilterService'
+    )
+    def test_validate_prompts_profanity_bare_string_word(
+        self, mock_profanity_cls
+    ):
+        """`found_words` bare-string items fall back via `str(w)` path."""
+        mock_instance = mock_profanity_cls.return_value
+        mock_instance.check_text.return_value = (
+            False,
+            [{'word': 'bad', 'severity': 'high', 'count': 1}, 'rawstring'],
+            'high',
+        )
+        result = self.service.validate_prompts(['x'])
+        err = result['errors'][0]
+        self.assertIn('rawstring', err['flagged_words_display'])
+        self.assertIn('bad', err['flagged_words_display'])
+
+    @patch(
+        'prompts.services.profanity_filter.ProfanityFilterService'
+    )
+    def test_validate_prompts_profanity_escapes_html_chars(
+        self, mock_profanity_cls
+    ):
+        """HTML-special chars in words are escaped in `flagged_words_display`."""
+        mock_instance = mock_profanity_cls.return_value
+        mock_instance.check_text.return_value = (
+            False,
+            [{'word': '<script>', 'severity': 'high', 'count': 1}],
+            'high',
+        )
+        result = self.service.validate_prompts(['x'])
+        display = result['errors'][0]['flagged_words_display']
+        self.assertNotIn('<script>', display)
+        self.assertIn('&lt;script&gt;', display)
+
+    @patch(
+        'prompts.services.profanity_filter.ProfanityFilterService'
+    )
     def test_validate_prompts_duplicates(self, mock_profanity_cls):
         """Duplicate prompts caught (case-insensitive, whitespace-normalized)."""
         mock_instance = mock_profanity_cls.return_value

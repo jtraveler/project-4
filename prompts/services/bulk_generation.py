@@ -99,7 +99,12 @@ class BulkGenerationService:
         Returns:
             dict with:
                 'valid': bool - True if all prompts pass
-                'errors': list of dicts - [{index: int, message: str}, ...]
+                'errors': list of dicts - each contains
+                    index (int, 0-based),
+                    prompt_num (int, 1-based, used by frontend link),
+                    message (str),
+                    flagged_words_display (str, profanity errors only
+                        with non-empty found_words).
         """
         from prompts.services.profanity_filter import ProfanityFilterService
 
@@ -113,6 +118,7 @@ class BulkGenerationService:
             if not text:
                 errors.append({
                     'index': i,
+                    'prompt_num': i + 1,
                     'message': 'Prompt cannot be empty',
                 })
                 continue
@@ -135,14 +141,24 @@ class BulkGenerationService:
                         f'were found: {word_list}. '
                         f'Please revise your prompt.'
                     )
+                    errors.append({
+                        'index': i,
+                        'prompt_num': i + 1,
+                        'message': msg,
+                        # Structured field lets the frontend render the
+                        # triggered word(s) in <strong><em>…</em></strong>
+                        # without embedding HTML in `message` (frontend
+                        # uses textContent, not innerHTML).
+                        'flagged_words_display': word_list,
+                    })
                 else:
-                    msg = (
-                        'Content flagged — please revise this prompt.'
-                    )
-                errors.append({
-                    'index': i,
-                    'message': msg,
-                })
+                    errors.append({
+                        'index': i,
+                        'prompt_num': i + 1,
+                        'message': (
+                            'Content flagged — please revise this prompt.'
+                        ),
+                    })
                 continue
 
             # Duplicate check
@@ -150,6 +166,7 @@ class BulkGenerationService:
             if normalized in seen:
                 errors.append({
                     'index': i,
+                    'prompt_num': i + 1,
                     'message': (
                         f'Duplicate of prompt {seen[normalized] + 1}'
                     ),

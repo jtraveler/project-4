@@ -310,7 +310,7 @@ heroku run "python manage.py migrate_cloudinary_to_b2" --app mj-project-4
 
 | Hash | Message |
 |------|---------|
-| TBD (filled in 161-G) | feat(models): b2_avatar_url field + avatar migration support |
+| c67d2cd | feat(models): b2_avatar_url field + avatar migration support |
 
 ---
 

@@ -203,7 +203,7 @@ Pure-JS event-handler change — no Django tests touched.
 
 | Hash | Message |
 |------|---------|
-| TBD (filled in 161-G) | fix(ui): Reset to master preserves AI Direction text and toggle state |
+| 585fd5f | fix(ui): Reset to master preserves AI Direction text and toggle state |
 
 ---
 

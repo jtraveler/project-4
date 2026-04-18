@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 18, 2026 (Sessions 101–160)
+**Last Updated:** April 18, 2026 (Sessions 101–161)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,90 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 161 — April 18, 2026
+
+**Focus:** Cloudinary migration command fix + avatar support, autosave
+AI Direction save/restore + reset clears draft, Reset to master
+preserves user content, results page pricing accuracy, Grok httpx
+billing + transport error routing.
+
+**Specs:** 161-A through 161-G (5 code specs + 1 migration spec + 1
+docs spec).
+
+**Tests:** 1286 passing (1278 + 8 new across 161-A/D/E/F), 0 failures,
+12 skipped.
+
+**Key outcomes:**
+
+- **161-A — Cloudinary migration command fix:** B2 credential check
+  now uses `B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` (the actual
+  Django settings names), not the non-existent
+  `B2_APPLICATION_KEY_ID`/`B2_APPLICATION_KEY`. `CloudinaryResource`
+  public_id extraction changed from `str(featured_image.public_id)`
+  with `str(featured_image)` fallback (returns object repr!) to
+  `getattr(..., "public_id", "") or ""`. Dry-run now correctly
+  identifies ~36 records on Heroku. Agents avg 8.75/10. Commit
+  `220337b`.
+
+- **161-B — Autosave AI Direction + Reset clears draft:** the 160-D
+  autosave correctly captured `vision_direction` text but the input
+  event listener only fired `scheduleSave` for three specific
+  classes — `.bg-vision-direction-input` was missing, so typing
+  into AI Direction never triggered a save. Fix adds it to the
+  OR-chain. Separately, the master Reset button now calls
+  `I.clearDraft()` before hiding the modal so refreshing after
+  Reset no longer restores pre-reset settings. Hardened
+  `clearSavedPrompts()` to also cancel any pending debounce timer
+  (TOCTOU fix). Agents avg 9.12/10. Commit `c0595af`.
+
+- **161-C — Reset to master preserves AI Direction:** the per-box
+  Reset button was clearing AI Direction checkbox state, row
+  visibility, AND textarea text. AI Direction is user-entered
+  content and must survive a settings-only reset (same contract as
+  prompt text). `resetBoxOverrides()` no longer hides the AI
+  Direction row or clears its textarea. Added a 6-line doc comment
+  explaining the settings/user-content boundary. Agents avg
+  9.12/10. Commit `585fd5f`.
+
+- **161-D — Results page pricing for all models:** root cause was
+  the view recalculating `estimated_total_cost` from master-level
+  `(total_prompts × images_per_prompt) × master_cost_per_image`
+  while ignoring `job.actual_total_images` (the resolved per-prompt
+  count) AND the stored Decimal `job.estimated_cost` (computed at
+  job creation with resolved counts). Fix uses both stored fields
+  with fallback for legacy jobs. Kept Decimal type end-to-end — no
+  `float()` conversion, Django `floatformat` renders Decimal
+  natively. 2 new regression tests. Agents avg 8.83/10. Commit
+  `dbd329c`.
+
+- **161-E — b2_avatar_url field + avatar migration support:** added
+  `b2_avatar_url = URLField(max_length=500, blank=True, default='')`
+  to `UserProfile` alongside the existing `CloudinaryField('avatar',
+  ...)`. Migration 0084 (AddField — PG11+ fast-path, no table
+  rewrite). Extended `migrate_cloudinary_to_b2` with
+  `_migrate_avatar()` method + `--model userprofile` choice.
+  `handle()` refactored into `run_prompts`/`run_profiles` branches.
+  Summary now shows Avatars counts. 4 new regression tests. Agents
+  avg 8.78/10. Commit `c67d2cd`.
+
+- **161-F — Grok httpx billing + TransportError catch:** the
+  httpx-direct edits path (`_call_xai_edits_api`) missed two
+  critical error routings. 400 with 'billing' keyword now returns
+  `error_type='quota'` (routes to `tasks.py:2617` job-stop logic
+  — billing exhaustion is not retryable). `httpx.TransportError`
+  (parent of `ConnectError`/`ReadError`/`WriteError`/
+  `RemoteProtocolError`) now caught before generic `Exception` and
+  returns `error_type='server_error'` for retry via
+  `_run_generation_with_retry`. 2 new regression tests. Agents avg
+  9.03/10. Commit `f88cccc`.
+
+**Deferred (P2):** The SDK-path billing branch at
+`xai_provider.py:173` still uses `error_type='billing'` (not
+`'quota'`). Aligning it with the httpx path is a narrow follow-up
+spec — noted in REPORT_161_F Section 6.
+
+---
 
 ### Session 160 — April 18, 2026
 

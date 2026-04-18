@@ -230,7 +230,7 @@ surface.
 
 | Hash | Message |
 |------|---------|
-| TBD (filled in 161-G) | fix(ui): autosave saves AI Direction + reset button clears draft |
+| c0595af | fix(ui): autosave saves AI Direction + reset button clears draft |
 
 ---
 

@@ -205,7 +205,7 @@ heroku run "python manage.py migrate_cloudinary_to_b2" --app mj-project-4
 
 | Hash | Message |
 |------|---------|
-| TBD (filled in 161-G) | fix(migration): Cloudinary migration — correct B2 creds + use .public_id |
+| 220337b | fix(migration): Cloudinary migration — correct B2 creds + use .public_id |
 
 ---
 

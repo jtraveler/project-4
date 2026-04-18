@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** April 18, 2026
+**Last Updated:** April 18, 2026 (Session 161)
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Phase REP (Replicate + xAI providers — Session 154). Bulk AI Image Generator (Phases 1–7 + 6E complete). Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1278 passing, 12 skipped (Session 160)
+**Total Tests:** 1286 passing, 12 skipped (Session 161)
 
 ---
 
@@ -16,13 +16,14 @@
 | **CSS Files** | 12 | static/css/ |
 | **JavaScript Files** | 19 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121, bulk-generator-gallery.js added Session 122, bulk-generator.js split +2 modules Session 143) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 84 | prompts/migrations/ (82, latest 0082 `add_generator_models_and_credit_tracking`), about/migrations/ (2) |
+| **Migrations** | 86 | prompts/migrations/ (84, latest 0084 `add_b2_avatar_url_to_userprofile` — Session 161), about/migrations/ (2) |
 | **Test Files** | 24 | prompts/tests/ |
-| **Management Commands** | 29 | prompts/management/commands/ |
+| **Management Commands** | 30 | prompts/management/commands/ (migrate_cloudinary_to_b2 fixed in Session 161-A, avatar support added in 161-E) |
 | **Services** | 15 | prompts/services/ |
 | **View Modules** | 13 | prompts/views/ |
 | **CI/CD Config Files** | 5 | .github/workflows/, .github/, root |
-| **Documentation (MD)** | 96 | Root (30), docs/ (60), archive/ (6) |
+| **Documentation (MD)** | 103 | Root (30), docs/ (67 — 7 new 161 reports), archive/ (6) |
+| **UserProfile fields (notable)** | | `avatar` (CloudinaryField, legacy) + `b2_avatar_url` (URLField, Session 161-E) — B2-first/Cloudinary-fallback dual-field pattern |
 
 ---
 

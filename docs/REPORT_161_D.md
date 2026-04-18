@@ -244,7 +244,7 @@ Full suite at session end: 1286 tests, 0 failures, 12 skipped.
 
 | Hash | Message |
 |------|---------|
-| TBD (filled in 161-G) | fix(results): estimated pricing correct for all models |
+| dbd329c | fix(results): estimated pricing correct for all models |
 
 ---
 

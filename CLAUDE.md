@@ -75,6 +75,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 161 | Apr 18, 2026 | Cloudinary migration command bugs fixed: B2 credential check now uses `B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` (actual Django setting names), CloudinaryResource public_id extraction via `getattr(..., "public_id", "") or ""` (was falling back to `str()` which returned object repr) — dry-run now correctly identifies ~36 records (161-A). Autosave: `.bg-vision-direction-input` added to input listener so typing into AI Direction triggers save; master Reset button now calls `I.clearDraft()` to remove `pf_bg_draft` from localStorage; `clearSavedPrompts()` cancels pending debounce timer (TOCTOU fix) (161-B). "Reset to master" (per-box) now preserves AI Direction checkbox state, row visibility, and textarea text — AI Direction is user content, not a setting (161-C). Results page pricing: view uses stored `job.actual_total_images` and Decimal `job.estimated_cost` (accurate to per-prompt count overrides) instead of master-only recalculation; Decimal preserved end-to-end for precision (161-D). New `UserProfile.b2_avatar_url` URLField + migration 0084; `migrate_cloudinary_to_b2` extended with `_migrate_avatar()` and `--model userprofile` choice (161-E). Grok httpx-direct edits path: 400 with 'billing' keyword returns `error_type='quota'` (stops job); `httpx.TransportError` caught and returns `error_type='server_error'` for retry (161-F). 1286 tests. |
 | Session 160 | Apr 18, 2026 | Profanity error UX: triggered word bold/italic + clickable "Prompt N" link built via DOM API (no innerHTML); empty/duplicate errors also get the link. Quality section restored to disabled/greyed (not hidden) with "High" locked for non-quality models; two-column grid layout restored (160-B). Per-prompt cost fix: sticky-bar total now uses per-box `totalCost` accumulator for all models (previously non-BYOK recomputed from master quality, ignoring per-box overrides); console.warn for unmapped models (160-C). Full draft autosave: single `pf_bg_draft` JSON blob (version 1) captures ALL master settings + per-prompt box content + toggles + overrides; replaces 4 legacy keys via one-shot migration; draft persists after generation, cleared only by Clear All; schema maps cleanly to future `PromptDraft` server model (160-D). Pricing accuracy: `floatformat:"-3"` on results page + `parseFloat(x.toFixed(3)).toString()` in JS — $0.067 no longer rounds to $0.07, $0.003 no longer to $0.00 (160-E). Cloudinary → B2 migration command: `migrate_cloudinary_to_b2` with `--dry-run`, `--limit`, idempotency, fail-fast credential check, 50MB streaming size cap, `res.cloudinary.com` hostname allow-list (160-F). 1278 tests. |
 | Session 159 | Apr 2026 | Profanity filter shows triggered words. Per-prompt boxes: NB2 1K/2K/4K labels, quality hidden for non-quality models, results page actual_cost, grid layout fix. Autosave: pageshow bfcache handler, aspect ratio restore. NB2 progress bar: provider-aware CSS durations (was stalling at ~85%). Cloudinary removal blocked by CloudinaryField model fields — unused import removed, full removal needs migration spec. 1270 tests. |
 | Session 158 | Apr 17, 2026 | Opacity removed from disabled groups, per-prompt cost model-aware (NB2 tier costs per-row), autosave master header settings to localStorage (pf_ namespace). 1268 tests. |
@@ -766,8 +767,31 @@ Rebuilding upload flow to feel "instant" by:
 - ~~Nano Banana 2 reference image: parameter is `image_input` (ARRAY)~~ — ✅ RESOLVED Session 155 (155-D)
 - ~~NSFW error UX for platform models: xAI 400s show no user feedback~~ — ✅ RESOLVED Session 155 (155-B, 8-keyword detection)
 - ~~Cost display incorrect for non-OpenAI models~~ — ✅ RESOLVED Session 156 (156-C audit, 156-D fix)
+- ~~Grok billing 400 not routed to job-stop~~ — ✅ RESOLVED Session 161 (161-F, httpx path now returns `error_type='quota'`)
+- ~~Grok connection drop returns `error_type='unknown'`~~ — ✅ RESOLVED Session 161 (161-F, `httpx.TransportError` caught → `server_error` for retry)
 - NSFW UX feedback for Replicate platform model 400s (P2 — Replicate has only 3 keywords vs xAI's 8)
 - `_download_image` duplicated in Replicate + xAI providers (P3, defer to third provider)
+- Primary SDK handler at `xai_provider.py:173` still uses `error_type='billing'` (not `'quota'`). Out of scope for 161-F; one-line follow-up spec (P2).
+
+#### Rate Limiting Audit — Replicate + xAI (Deferred to Session 162+)
+
+Current `_TIER_RATE_PARAMS` in `tasks.py` covers OpenAI tiers only.
+Replicate and xAI have no provider-specific concurrency or delay config —
+they rely on the global `BULK_GEN_MAX_CONCURRENT=1` ceiling only.
+
+**Investigation required:**
+- Read current `_run_generation_loop()` rate parameter lookup
+- Add Replicate-specific concurrency config (safe default: 3 concurrent,
+  Replicate free tier = 5 concurrent predictions)
+- Add xAI-specific concurrency config (conservative default: 1–2)
+- Wire provider-aware limits alongside existing OpenAI tier system
+
+**Why this matters:** Flux Schnell generates in ~2 seconds. At
+MAX_CONCURRENT=1 you generate ~30 images/minute — well under Replicate's
+limits. Higher concurrency is safe and would significantly speed up
+content seeding. Currently leaving performance on the table.
+
+**Status:** Deferred — do not spec until Session 162 or later.
 
 
 **Resolved in Session 69:** SEO score regression (92→100) fixed via robots.txt + preconnect cleanup + font optimization.
@@ -1555,18 +1579,34 @@ Some older prompts still have images stored on **Cloudinary**. New uploads go to
 {{ prompt.b2_image_url|default:prompt.cloudinary_url }}
 ```
 
-#### Cloudinary Migration Status (Session 160)
+#### Cloudinary Migration Status (Updated Session 161)
 
-Management command: `migrate_cloudinary_to_b2` was created in
-Session 160-F. Run sequence (developer runs manually on Heroku):
+Management command `migrate_cloudinary_to_b2` was created in
+Session 160-F and fixed in Session 161-A (correct
+`B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` credential names;
+CloudinaryResource public_id via `.public_id` attribute, not `str()`
+which returned the object repr). Dry-run now correctly identifies
+~36 records.
+
+Avatar migration support was added in Session 161-E:
+`UserProfile.b2_avatar_url` URLField (migration 0084) + new
+`_migrate_avatar()` method + `--model userprofile` choice. Run
+`python manage.py migrate` before executing the command.
+
+Run sequence (developer runs manually on Heroku):
 
 1. `heroku run "python manage.py migrate_cloudinary_to_b2 --dry-run"` —
-   preview what would be migrated. No DB changes.
+   preview what would be migrated (prompts + avatars). No DB changes.
 2. `heroku run "python manage.py migrate_cloudinary_to_b2 --limit 3"` —
    migrate 3 records as a test batch. Verify images load on the
    live site.
 3. `heroku run "python manage.py migrate_cloudinary_to_b2"` — full
-   migration.
+   migration (prompts + avatars).
+
+Scoped variants:
+- `--model prompt` — images + videos on Prompt only.
+- `--model userprofile` — avatars only.
+- `--model all` (default) — everything.
 
 After confirmed working on Heroku, these follow-up specs should run
 in order:
@@ -1575,13 +1615,15 @@ in order:
   every prompt has a populated `b2_image_url`. Requires data
   migration to preserve stored public_ids.
 - **Cloudinary code + package removal** — after field migration.
+  Must include a Step 0 check confirming no `CloudinaryField`
+  references remain in any model AND all migration history has been
+  squashed or the field-type migration is already applied (per
+  @architect-review note in REPORT_161_E Section 6).
 - **Remove `CLOUDINARY_URL` from Heroku config vars** — after code
   removal.
 
 Cloud name: `dj0uufabo` (corrected — old typo in some historical
-specs was `dj0uufabot`). Avatar migration is deferred: `UserProfile`
-lacks a `b2_avatar_url` field; adding it requires a dedicated spec
-with a model migration.
+specs was `dj0uufabot`).
 
 ---
 
@@ -2309,5 +2351,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.51 (Session 160 — profanity UX link/bold, quality disabled/grid, per-prompt cost fix, unified pf_bg_draft autosave, pricing full precision, Cloudinary→B2 migration command; 1278 tests)
+**Version:** 4.52 (Session 161 — Cloudinary migration creds + public_id fix, AI Direction autosave + Reset clears draft, Reset to master preserves AI Direction, results pricing via stored Decimal, b2_avatar_url field + avatar migration, Grok httpx billing/TransportError; 1286 tests)
 **Last Updated:** April 18, 2026

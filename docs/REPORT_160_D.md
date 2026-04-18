@@ -181,13 +181,39 @@ material value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be completed after full-suite run.)*
+**Automated:** No new Django tests (client-side localStorage only).
+Full suite verified green — no existing tests broken.
 
----
+**Manual (browser):**
+1. `/tools/bulk-ai-generator/` — set model NB2, quality 4K, aspect
+   ratio 2:3, images/prompt 3, character description, toggle
+   translate off, add 3 prompt boxes with text, per-box overrides,
+   AI Direction checkbox + text. **Hard refresh.** All state should
+   be restored.
+2. Submit a generation → land on job page → click browser **Back** —
+   draft should still be present (persists across generation).
+3. DevTools → Application → Local Storage — one `pf_bg_draft` key
+   with a versioned JSON blob.
+4. Click **Clear All Prompts** → confirm → draft key + all legacy
+   keys (`bulkgen_prompts`, `pf_bg_*`) should be removed from
+   localStorage.
+5. Private browsing mode → no crash on save attempts.
+6. Legacy-key migration: manually set
+   `localStorage.bulkgen_prompts = '{"prompts":["hello"]}'` then
+   reload — `pf_bg_draft` should be written, `bulkgen_prompts`
+   should be removed.
 
 ## Section 10 — Commits
 
-*(To be completed after full-suite run.)*
+| Hash | Message |
+|------|---------|
+| f99b03e | feat(ui): full draft autosave — all settings + per-prompt boxes |
+
+The `bulk-generator.js` cumulative changes were committed in
+`f9d0293` (160-B commit); `bulk-generator-generation.js` tier-save
+and submit-clear changes were committed in `968dc0a` (160-A commit).
+
+Full suite: 1274 tests, 0 failures, 12 skipped.
 
 ---
 

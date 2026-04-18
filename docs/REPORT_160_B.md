@@ -140,13 +140,30 @@ material value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be completed after full-suite run.)*
+**Automated:** No new Django tests needed — the change is client-side
+UI state. Full suite verified green.
 
----
+**Manual (browser):**
+1. Go to `/tools/bulk-ai-generator/`, select **Flux Dev** model.
+   Master Quality dropdown should be **visible, greyed, not clickable**,
+   value shown as **"High"**.
+2. Add a couple of prompt boxes — each box's **Quality override**
+   should also appear greyed and non-interactive.
+3. Two-column grid: Quality and Dimensions should occupy the same
+   row (no full-width Dimensions stretch).
+4. Switch to **Nano Banana 2** — Quality becomes **interactive** with
+   1K/2K/4K labels. Per-prompt-box Quality also interactive.
+5. Switch back to Flux Dev — Quality returns to greyed+locked.
+6. Switch to **GPT-Image-1.5** — Quality interactive with
+   Low/Medium/High labels.
 
 ## Section 10 — Commits
 
-*(To be completed after full-suite run.)*
+| Hash | Message |
+|------|---------|
+| f9d0293 | fix(ui): quality section disabled/greyed with High locked, grid fixed |
+
+Full suite: 1274 tests, 0 failures, 12 skipped.
 
 ---
 

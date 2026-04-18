@@ -132,13 +132,32 @@ material value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be completed after full-suite run.)*
+**Automated:** No new Django tests. Full suite verified green.
 
----
+**Manual (browser):**
+1. Go to `/tools/bulk-ai-generator/`, select **Nano Banana 2**, add
+   3 prompt boxes with text.
+2. Set box 1 Quality override = 1K, box 2 = 2K, box 3 = 4K.
+3. The sticky-bar total should show **$0.319** (= 0.067 + 0.101 + 0.151).
+4. Change box 2 from 2K → 4K — total should **update to $0.369** within
+   the same tick (no reload needed).
+5. Switch model to **Flux Schnell** — cost should recompute as
+   `$0.003 × totalImages` via the per-box accumulator.
+
+**Console check:** Switch to a model ID not in the `_perBoxApiCosts`
+map (hypothetical future model) — a `[BulkGen] No cost mapping for
+model: <id>` warning should appear.
 
 ## Section 10 — Commits
 
-*(To be completed after full-suite run.)*
+| Hash | Message |
+|------|---------|
+| 7f1ff8c | fix(ui): per-prompt cost updates on quality change |
+
+The `bulk-generator.js` code change was committed as part of
+`f9d0293` (160-B commit) due to shared-file overlap.
+
+Full suite: 1274 tests, 0 failures, 12 skipped.
 
 ---
 

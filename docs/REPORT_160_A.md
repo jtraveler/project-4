@@ -157,13 +157,35 @@ material value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be completed after full-suite run.)*
+**Automated:**
+```bash
+python manage.py test prompts.tests.test_bulk_generation_tasks \
+    --verbosity=1
+# Expected: 78 tests, 0 failures. Includes the 4 new 160-A tests.
+```
 
----
+**Manual (browser):**
+1. Go to `/tools/bulk-ai-generator/`, type a known profanity word in
+   Prompt 1's textarea and press Generate.
+2. The validation banner should show a **clickable "Prompt 1" link**
+   followed by `— content flagged. The following word(s) were found:`
+   with the triggered word rendered in **bold italic**, then
+   `. Please revise your prompt.`
+3. Click the "Prompt 1" link → page should scroll to the prompt box
+   and focus its textarea.
+4. Trigger an empty-prompt error (leave Prompt 2 blank) — banner
+   should show `Prompt 2 — Prompt cannot be empty` with the
+   clickable link.
+5. Trigger a duplicate error — banner should show
+   `Prompt N — Duplicate of prompt M` with the clickable link.
 
 ## Section 10 — Commits
 
-*(To be completed after full-suite run.)*
+| Hash | Message |
+|------|---------|
+| 968dc0a | fix(validation): profanity error — bold/italic word, link to prompt box |
+
+Full suite: 1274 tests, 0 failures, 12 skipped.
 
 ---
 

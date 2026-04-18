@@ -119,13 +119,29 @@ material value for this spec.
 
 ## Section 9 — How to Test
 
-*(To be completed after full-suite run.)*
+**Automated:** No new Django tests; existing suite asserts numeric
+cost context values, not rendered strings. Full suite verified green.
 
----
+**Manual (browser):**
+1. Generate NB2 at 1K → job page → "Est. total" should show
+   **$0.067** (not $0.07).
+2. Generate Flux Schnell → Est. total should show **$0.003**
+   (not $0.00).
+3. On the input page, add 1 prompt, select NB2 1K → sticky-bar
+   Cost should show **$0.067**.
+4. Select Flux 1.1 Pro → sticky-bar should show **$0.04** (not $0.040).
+5. Select NB2 4K → **$0.151**.
 
 ## Section 10 — Commits
 
-*(To be completed after full-suite run.)*
+| Hash | Message |
+|------|---------|
+| 4db7edd | fix(results): pricing shows full precision, no rounding |
+
+`bulk-generator.js` line 883 change is in commit `f9d0293` (160-B
+shared-file overlap).
+
+Full suite: 1274 tests, 0 failures, 12 skipped.
 
 ---
 

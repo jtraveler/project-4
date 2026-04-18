@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** April 13, 2026
+**Last Updated:** April 18, 2026
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Phase REP (Replicate + xAI providers — Session 154). Bulk AI Image Generator (Phases 1–7 + 6E complete). Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1227 passing, 12 skipped (Session 154)
+**Total Tests:** 1278 passing, 12 skipped (Session 160)
 
 ---
 
@@ -163,7 +163,7 @@ live-working-project/
 │   └── js/                       # 19 JavaScript files
 │       ├── bulk-generator.js         # Bulk generator frontend: form UI, prompt boxes, DOM init (725 lines, split Session 143)
 │       ├── bulk-generator-generation.js  # NEW Session 143 — API key validation, modals, generation flow (625 lines)
-│       ├── bulk-generator-autosave.js    # NEW Session 143 — reference image upload, auto-save to localStorage (376 lines)
+│       ├── bulk-generator-autosave.js    # Reference image upload, unified pf_bg_draft localStorage (641 lines — expanded Session 160-D)
 │       ├── bulk-generator-paste.js   # 78 lines — clipboard paste upload handler (Session 136)
 │       ├── bulk-generator-utils.js   # 89 lines — BulkGenUtils: URL validation, paste helpers (Sessions 130, 136)
 │       ├── bulk-generator-config.js  # 156 lines — BulkGen namespace + config (Session 121 JS-SPLIT-1)
@@ -192,7 +192,7 @@ live-working-project/
 
 ---
 
-## Management Commands (28 total)
+## Management Commands (29 total)
 
 | Command | Purpose | Schedule |
 |---------|---------|----------|
@@ -217,6 +217,7 @@ live-working-project/
 | `test_api_latency` | Test B2 and OpenAI API response times | Manual |
 | `test_django_q` | Test Django-Q2 background task processing | Manual |
 | `regenerate_video_thumbnails` | Regenerate Cloudinary video thumbnails with correct aspect ratio | Manual |
+| `migrate_cloudinary_to_b2` | Migrate 36 legacy prompts' Cloudinary images + videos to Backblaze B2. Supports `--dry-run`, `--limit N`, `--model {prompt,all}`. Idempotent. Fail-fast on missing B2 credentials. (Session 160-F) | Manual — run on Heroku |
 | `minify_assets` | Minify CSS/JS files in STATIC_ROOT (run after collectstatic) | Manual / CI |
 | `backfill_categories` | Backfill subject categories for existing prompts (superseded by backfill_ai_content) | Manual |
 | `backfill_ai_content` | Regenerate ALL AI content (title, description, tags, categories, descriptors, slug) for existing prompts. Supports `--tags-only`, `--under-tag-limit`, `--published-only` | Manual |
@@ -524,7 +525,7 @@ static/css/
 static/js/
 ├── bulk-generator.js     # 725 lines - Bulk generator frontend: form UI, prompt boxes, DOM init (Sessions 92-143, split Session 143)
 ├── bulk-generator-generation.js  # 625 lines - API key validation, modals, generation flow (NEW Session 143)
-├── bulk-generator-autosave.js    # 376 lines - Reference image upload, auto-save to localStorage (NEW Session 143)
+├── bulk-generator-autosave.js    # 641 lines - Reference image upload + unified pf_bg_draft localStorage (Session 143; expanded Session 160-D)
 ├── bulk-generator-paste.js     # 78 lines   - Clipboard paste upload handler (Session 136)
 ├── bulk-generator-utils.js     # 89 lines   - BulkGenUtils: URL validation, paste helpers (Sessions 130, 136-137)
 ├── bulk-generator-config.js     # 156 lines  - Namespace init, constants (POLL_INTERVAL, TERMINAL_STATES, STATUS_HEADINGS), state variable declarations, utility functions (getCookie, formatCost, formatTime, gcd, getAspectLabel) (Session 121 JS-SPLIT-1)
@@ -551,7 +552,7 @@ static/js/
 |------|-------|---------|
 | **bulk-generator.js** | 725 | Bulk generator frontend: form UI, prompt boxes, DOM init (Sessions 92-143, split Session 143) |
 | **bulk-generator-generation.js** | 625 | API key validation, modals, validation + generation flow (NEW Session 143) |
-| **bulk-generator-autosave.js** | 376 | Reference image upload, auto-save to localStorage (NEW Session 143) |
+| **bulk-generator-autosave.js** | 641 | Reference image upload + unified pf_bg_draft localStorage (Session 143; expanded Session 160-D) |
 | **bulk-generator-paste.js** | 78 | Clipboard paste upload handler for source images (Session 136) |
 | **bulk-generator-utils.js** | 89 | BulkGenUtils: URL validation, paste lock/unlock helpers (Sessions 130, 136) |
 | **bulk-generator-config.js** | 156 | Bulk generator constants, state declarations, utility functions — shared namespace init (Session 121 JS-SPLIT-1) |

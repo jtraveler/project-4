@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 16, 2026 (Sessions 101–155)
+**Last Updated:** April 18, 2026 (Sessions 101–160)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,90 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 160 — April 18, 2026
+
+**Focus:** Profanity error UX polish, quality section disabled/greyed
+restoration, per-prompt cost fix, full draft autosave unification,
+pricing accuracy, Cloudinary → B2 migration command.
+
+**Specs:** 160-A through 160-G (5 code specs + 1 data-migration spec
++ 1 docs spec).
+
+**Tests:** 1278 passing (1274 + 4 new 160-F tests), 0 failures, 12 skipped.
+
+**Key outcomes:**
+
+- **160-A — Profanity error UX:** backend `validate_prompts()` now
+  attaches `prompt_num` (1-based) to every error dict AND
+  `flagged_words_display` (escaped, comma-joined) to profanity errors
+  with non-empty `found_words`. Frontend `showValidationErrors()`
+  renders a clickable "Prompt N" anchor for every backend error
+  (empty / profanity / duplicate) and wraps triggered word(s) in
+  `<strong><em>` via DOM API — no `innerHTML`. Agents avg 8.7/10.
+  4 new tests. Commit `968dc0a`.
+
+- **160-B — Quality section disabled + grid fix:** non-quality models
+  (Flux Schnell/Dev/Pro, Grok) now show the Quality dropdown visible
+  but disabled, greyed, locked to "High". Two-column grid layout
+  restored (no gridColumn stretch on Dimensions). CSS classes
+  `bg-setting-group--disabled` and `bg-box-override--disabled` apply
+  `opacity: 0.75` + `cursor: not-allowed`. Future-proofs per-prompt
+  model selection. Agents avg 8.58/10. Commit `f9d0293`.
+
+- **160-C — Per-prompt cost fix:** root cause was `updateCostEstimate`
+  had two cost computations — a per-box accumulator respecting
+  per-box quality, and a final display block that discarded the
+  accumulator for non-BYOK models (NB2) and recomputed from master
+  quality. Fix: totalCost accumulator is now the single source of
+  truth for all model types. Added `console.warn` for unmapped
+  models. Agents avg 8.83/10. Commit `7f1ff8c`.
+
+- **160-D — Full draft autosave:** unified all session state (master
+  settings + per-prompt content + overrides + all toggle states)
+  into a single versioned JSON blob under `pf_bg_draft`. Replaces
+  4 legacy keys (`bulkgen_prompts` and three `pf_bg_*` keys) via
+  one-shot migration. Draft persists across page refresh AND after
+  generation submit (cleared only by "Clear All Prompts"). Schema
+  maps cleanly to future `PromptDraft` server-side model:
+  `settings` → `settings_json`, `prompts` → `prompts_json`. Version
+  check accepts `>=1 && <=current` for forward-compat. Tier, button
+  groups, and all toggles now trigger `scheduleSave`. Agents avg
+  8.92/10. Commit `f99b03e`.
+
+- **160-E — Pricing accuracy:** `{{ cost|floatformat:"-3" }}` on the
+  results page + `parseFloat(amount.toFixed(3)).toString()` in JS.
+  $0.067 now displays as $0.067 (not $0.07); $0.003 as $0.003 (not
+  $0.00); $0.04 as $0.04 (trailing zero stripped). Unified input
+  page sticky-bar format — dropped the 2-vs-3-decimal split.
+  Agents avg 9.0/10. Commit `4db7edd`.
+
+- **160-F — Cloudinary → B2 migration command:** new
+  `migrate_cloudinary_to_b2` management command handles 36 legacy
+  prompts' featured_image + featured_video fields via existing
+  `upload_image` / `upload_video` services. Flags: `--dry-run`,
+  `--limit N`, `--model {prompt,all}`. Idempotent, per-record error
+  handling, fail-fast B2 credential check, 50MB streaming size cap,
+  `res.cloudinary.com` hostname allow-list for SSRF defence. Cloud
+  name confirmed `dj0uufabo` (corrected from historical
+  `dj0uufabot` typo). Avatar migration deferred — UserProfile lacks
+  `b2_avatar_url` field. Developer runs manually on Heroku:
+  `--dry-run` → `--limit 3` → full. Agents avg 8.45/10. 4 tests.
+  Commit `027f80d`.
+
+- **160-G — Docs update:** This entry + CLAUDE.md Version 4.51 +
+  Feature 4 localStorage ↔ server-side section + Draft Versioning
+  tier table + Cloudinary Migration Status run sequence +
+  PROJECT_FILE_STRUCTURE.md refreshes.
+
+**Blockers / follow-ups:**
+- Developer must run the migration command on Heroku and verify
+  B2 images load before any Cloudinary code removal.
+- Avatar migration requires a future spec to add `b2_avatar_url`
+  field + model migration before the command can be extended.
+- B2 path prefix (`migrated/` vs interleaved with fresh uploads) is
+  a P3 discoverability concern for the eventual Cloudinary audit —
+  not a correctness blocker.
 
 ### Session 159 — April 2026
 

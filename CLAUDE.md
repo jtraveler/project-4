@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** April 11, 2026
+**Last Updated:** April 18, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -75,6 +75,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 160 | Apr 18, 2026 | Profanity error UX: triggered word bold/italic + clickable "Prompt N" link built via DOM API (no innerHTML); empty/duplicate errors also get the link. Quality section restored to disabled/greyed (not hidden) with "High" locked for non-quality models; two-column grid layout restored (160-B). Per-prompt cost fix: sticky-bar total now uses per-box `totalCost` accumulator for all models (previously non-BYOK recomputed from master quality, ignoring per-box overrides); console.warn for unmapped models (160-C). Full draft autosave: single `pf_bg_draft` JSON blob (version 1) captures ALL master settings + per-prompt box content + toggles + overrides; replaces 4 legacy keys via one-shot migration; draft persists after generation, cleared only by Clear All; schema maps cleanly to future `PromptDraft` server model (160-D). Pricing accuracy: `floatformat:"-3"` on results page + `parseFloat(x.toFixed(3)).toString()` in JS — $0.067 no longer rounds to $0.07, $0.003 no longer to $0.00 (160-E). Cloudinary → B2 migration command: `migrate_cloudinary_to_b2` with `--dry-run`, `--limit`, idempotency, fail-fast credential check, 50MB streaming size cap, `res.cloudinary.com` hostname allow-list (160-F). 1278 tests. |
 | Session 159 | Apr 2026 | Profanity filter shows triggered words. Per-prompt boxes: NB2 1K/2K/4K labels, quality hidden for non-quality models, results page actual_cost, grid layout fix. Autosave: pageshow bfcache handler, aspect ratio restore. NB2 progress bar: provider-aware CSS durations (was stalling at ~85%). Cloudinary removal blocked by CloudinaryField model fields — unused import removed, full removal needs migration spec. 1270 tests. |
 | Session 158 | Apr 17, 2026 | Opacity removed from disabled groups, per-prompt cost model-aware (NB2 tier costs per-row), autosave master header settings to localStorage (pf_ namespace). 1268 tests. |
 | Session 157 | Apr 17, 2026 | NB2 quality labels 1K/2K/4K + tier-aware sticky bar cost, results page uses provider.get_cost_per_image() (single source of truth), upload zone hover suppressed when disabled, NB2 progress bar stall fixed (counts generating+completed). 1268 tests. |
@@ -430,6 +431,65 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 **Risks:** Paste image pinning conflicts with orphan cleanup logic (must coordinate). Premium feature requires subscription/tier gating.
 **Priority:** Medium — valuable but complex. Build after features 1-3.
 **Status:** Deferred — do not spec until other new features are stable.
+
+#### localStorage ↔ Server-Side Draft Relationship (Session 160)
+
+The Session 160-D full draft autosave (localStorage) is the
+anonymous/pre-login foundation of the named draft system. The JSON
+schema stored under `pf_bg_draft` was designed to be directly
+serialisable to the `PromptDraft` model:
+
+- `settings` dict → `settings_json` field
+- `prompts` array → `prompts_json` field
+
+When Feature 4 ships, logged-in users will have their localStorage
+draft automatically offered for promotion to a named server-side
+draft. Logged-out users continue to use localStorage only.
+
+**Schema (pf_bg_draft) — version 1:**
+
+```json
+{
+  "version": 1,
+  "saved_at": "ISO timestamp",
+  "settings": {
+    "model", "quality", "aspect_ratio", "pixel_size",
+    "images_per_prompt", "character_description",
+    "visibility", "translate", "remove_watermark", "tier"
+  },
+  "prompts": [
+    {
+      "index", "text", "source_credit", "source_image_url",
+      "vision_enabled", "vision_direction", "direction_checked",
+      "quality_override", "size_override", "images_override"
+    }
+  ]
+}
+```
+
+**Version strategy:** The loader accepts `version >= 1 &&
+version <= DRAFT_SCHEMA_VERSION` so future v2 fields are additive
+(no breaking migration). Restore code treats missing fields as
+falsy.
+
+**Migration coercion at promotion:** Boolean `settings.visibility`
+→ `'public'`/`'private'` CharField on the server model (one-line
+transformation, done at promotion time).
+
+#### Draft Versioning — Tier Design Decision (Session 160)
+
+Draft versioning (save history) is a premium tier differentiator:
+
+| Tier | Named Drafts | Version History | Sharing |
+|------|--------------|-----------------|---------|
+| Free | 1 (overwrite only) | No | No |
+| Creator | 5 named drafts | No | No |
+| Pro | Unlimited | Yes (last 10 versions) | No |
+| Studio | Unlimited | Yes (unlimited) | Yes (team) |
+
+**Status:** Design decision confirmed. Do not spec until Phase SUB
+(Stripe subscription tiers) ships. Tier names and limits subject to
+change based on pricing strategy.
 
 #### Combined "Prepare Prompts" Architecture — ✅ LIVE (Session 147)
 
@@ -1495,6 +1555,34 @@ Some older prompts still have images stored on **Cloudinary**. New uploads go to
 {{ prompt.b2_image_url|default:prompt.cloudinary_url }}
 ```
 
+#### Cloudinary Migration Status (Session 160)
+
+Management command: `migrate_cloudinary_to_b2` was created in
+Session 160-F. Run sequence (developer runs manually on Heroku):
+
+1. `heroku run "python manage.py migrate_cloudinary_to_b2 --dry-run"` —
+   preview what would be migrated. No DB changes.
+2. `heroku run "python manage.py migrate_cloudinary_to_b2 --limit 3"` —
+   migrate 3 records as a test batch. Verify images load on the
+   live site.
+3. `heroku run "python manage.py migrate_cloudinary_to_b2"` — full
+   migration.
+
+After confirmed working on Heroku, these follow-up specs should run
+in order:
+
+- **CloudinaryField → CharField migration** — future session after
+  every prompt has a populated `b2_image_url`. Requires data
+  migration to preserve stored public_ids.
+- **Cloudinary code + package removal** — after field migration.
+- **Remove `CLOUDINARY_URL` from Heroku config vars** — after code
+  removal.
+
+Cloud name: `dj0uufabo` (corrected — old typo in some historical
+specs was `dj0uufabot`). Avatar migration is deferred: `UserProfile`
+lacks a `b2_avatar_url` field; adding it requires a dedicated spec
+with a model migration.
+
 ---
 
 ## 💰 Current Costs
@@ -2221,5 +2309,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.50 (Session 159 — profanity feedback, per-prompt box fix, autosave pageshow, NB2 progress bar, Cloudinary audit; 1270 tests)
-**Last Updated:** April 17, 2026
+**Version:** 4.51 (Session 160 — profanity UX link/bold, quality disabled/grid, per-prompt cost fix, unified pf_bg_draft autosave, pricing full precision, Cloudinary→B2 migration command; 1278 tests)
+**Last Updated:** April 18, 2026

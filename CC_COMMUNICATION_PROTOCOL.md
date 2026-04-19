@@ -2,12 +2,12 @@
 
 **Purpose:** Instructions for Claude Code when executing specifications. Read this at the start of EVERY task to understand expectations and communication standards.
 
-**Version:** 2.2
+**Version:** 2.3
 **Last Updated:** April 2026
 **Project:** PromptFinder (Django AI Prompt Sharing Platform)
 **For:** Claude Code (CC) - VS Code Extension
 **Status:** Active Reference Document
-**Changelog:** v2.2 — Minimum agents raised from 2-3 to 6. Average 8.5+ required. All agents must score 8.0+. Recommended 6-agent baseline set documented. Mandatory docs/REPORT_[SPEC_ID].md with 11 sections added. v2.1 — Added PRE-AGENT SELF-CHECK section. v2.0 added accessibility-first, exact-copy enforcement, data migration awareness, DOM structure compliance, agent rejection criteria. Updated project structure. Standardized agent reporting to Rating/10 format.
+**Changelog:** v2.3 — References CC_SPEC_TEMPLATE v2.7 (Session 162): Queryset Integration Test Rule (real ORM rows mandatory for queryset tests), Cross-Spec Bug Absorption Policy (<5-line agent-flagged same-file bugs must be absorbed), Stale Narrative Text Step 0 Grep (prose describing old behavior must be updated in same commit). v2.2 — Minimum agents raised from 2-3 to 6. Average 8.5+ required. All agents must score 8.0+. Recommended 6-agent baseline set documented. Mandatory docs/REPORT_[SPEC_ID].md with 11 sections added. v2.1 — Added PRE-AGENT SELF-CHECK section. v2.0 added accessibility-first, exact-copy enforcement, data migration awareness, DOM structure compliance, agent rejection criteria. Updated project structure. Standardized agent reporting to Rating/10 format.
 
 ---
 
@@ -15,7 +15,7 @@
 
 **IMPORTANT:** All CC specifications must follow the standardized template.
 
-**Template Location:** `CC_SPEC_TEMPLATE.md` (in root directory)
+**Template Location:** `CC_SPEC_TEMPLATE.md` (in root directory, currently v2.7)
 
 ### Template Structure
 

@@ -3,7 +3,7 @@
 **Last Updated:** April 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
-**Changelog:** v2.6 — Minimum agents raised from 2-3 to 6. Average 8.5+ required. All agents must score 8.0+. Mandatory 11-section report added at docs/REPORT_[SPEC_ID].md. @technical-writer involvement required for reports. Evidence: 154-Q with 2 agents scored 9.0/9.0 but missed CSS specificity, missing tests, and architectural debt caught by 6-agent review. v2.5 — Added Critical Reminder #9 (paired test assertions). Recurring pattern: negative-only assertions (assertNotIn) passing vacuously in Phases 6C-A and 6D. v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
+**Changelog:** v2.7 — Added three rules codifying Session 161 retrospective findings. (1) **Queryset Integration Test Rule** — specs touching ORM queryset filters must include at least one integration test that exercises the filter against a real model instance persisted to the DB; `SimpleNamespace(public_id=...)` / `MagicMock()` mocks are explicitly disallowed for queryset tests. Added to PRE-AGENT SELF-CHECK. Evidence: 160-F → 161-A → 162-A queryset bug chain (`.filter(b2_image_url__in=('', None))` silently missed NULL rows in SQL) survived ~12 agent reviews because SimpleNamespace mocks bypassed the queryset. (2) **Cross-Spec Bug Absorption Policy** — if an agent flags a related bug during spec review AND the fix is <5 lines in a file the spec is already editing AND no new test scaffolding/migration/dependency is required, the fix MUST be absorbed into the current spec. Do not defer. Added as new section near Self-Identified Issues Policy. Evidence: xAI SDK billing→quota fix was flagged in Session 156, deferred, re-flagged in 161-F, deferred again — 5 sessions and credits wasted on a 1-line fix that 162-D finally shipped. (3) **Stale Narrative Text Grep Rule** — any spec that changes existing behavior must grep for narrative text describing the old behavior before writing any code. Added as Step 0 research section. Evidence: 161-E shipped with a stale "avatar NOT supported" docstring after avatar support was added; caught at 9.0/10 agent review requiring a docstring-only fix. v2.6 — Minimum agents raised from 2-3 to 6. Average 8.5+ required. All agents must score 8.0+. Mandatory 11-section report added at docs/REPORT_[SPEC_ID].md. @technical-writer involvement required for reports. Evidence: 154-Q with 2 agents scored 9.0/9.0 but missed CSS specificity, missing tests, and architectural debt caught by 6-agent review. v2.5 — Added Critical Reminder #9 (paired test assertions). Recurring pattern: negative-only assertions (assertNotIn) passing vacuously in Phases 6C-A and 6D. v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
 
 ---
 
@@ -60,6 +60,68 @@ Clear statement of what success looks like.
 - ✅ Specific, measurable outcomes
 - ✅ Quality requirements
 - ✅ Testing requirements
+
+---
+
+## 🔎 STEP 0 — MANDATORY RESEARCH GREPS (v2.7 — Session 162)
+
+⛔ **Before writing ANY code, every spec must complete these greps.
+Findings from Step 0 drive the implementation plan — they are not an
+afterthought to a "what I should have done" list.**
+
+Every spec author and every CC executing the spec must perform Step 0.
+The greps establish what already exists, what pattern is already in
+use, and where narrative text (comments, docstrings, docs) describes
+the behavior being changed.
+
+### Stale Narrative Text Grep (v2.7)
+
+Any spec that changes existing behavior MUST grep for narrative text
+describing the OLD behavior. Every match is a potential prose update
+that must be applied in the same commit as the code change.
+
+Canonical commands (adapt the keyword to the spec's scope):
+
+```bash
+# Look for prose describing the behavior being changed
+grep -rn "<behavior_keyword>" prompts/ docs/ CLAUDE.md CLAUDE_CHANGELOG.md 2>/dev/null
+
+# Look for module/function docstrings describing the behavior
+grep -rn "NOT supported\|deprecated\|legacy\|fallback\|silent" \
+    prompts/<target_file>
+
+# Look for inline comments that might be stale
+grep -n "# " <target_file> | grep -i "<old_behavior_keyword>"
+```
+
+Every match in files the spec IS editing must be updated in the same
+commit. Every match in files the spec is NOT editing must be evaluated
+— if the narrative is now wrong, it is either absorbed per the
+Cross-Spec Bug Absorption Policy (if <5 lines, same file already in
+scope, etc.) or filed as a deferred concern in the completion report.
+
+**Evidence:** Session 161-E added `b2_avatar_url` support to the
+migration command but left the module docstring saying "Avatar /
+UserProfile migration is NOT supported." `@django-pro` caught it at
+9.0/10 review; CC had to come back for a docstring-only fix. A Step 0
+grep for "NOT supported" would have surfaced it before any code was
+written.
+
+### Pattern-Research Grep
+
+Before writing new code, grep for existing similar implementations.
+Never write new code cold — understand the pattern first.
+
+```bash
+# If adding a new ORM filter, see how similar filters are expressed:
+grep -rn "\.filter(Q(" prompts/ | head -20
+
+# If adding a new template three-branch pattern, see existing ones:
+grep -rn "{% if.*b2_.*_url %}" prompts/templates/
+```
+
+This is codified in CC_MULTI_SPEC_PROTOCOL.md's Universal Rules —
+Step 0 is the enforcement gate.
 
 ---
 
@@ -252,6 +314,38 @@ RIGHT: .column-3 as a sibling of .column-2
 
 **Why this matters:** Agents consistently rate 6-7 on first pass when these items are missed, then require a fix-and-rerun cycle. Catching them before the agent run saves an entire iteration.
 
+**— Queryset Integration Test Rule (v2.7 — Session 162) —**
+
+Any spec that touches a Django queryset filter MUST include at least
+one integration test that:
+
+- [ ] Creates a real model instance via `ModelClass.objects.create(...)`
+      — NOT a `SimpleNamespace`, `MagicMock`, or other stand-in
+- [ ] Persists the instance to the test database (at minimum `.save()`)
+- [ ] Exercises the queryset against the persisted instance —
+      either directly (`qs = ...; self.assertIn(instance, qs)`) or via
+      the command/view/service that consumes it
+- [ ] Asserts POSITIVE presence of the expected rows in the queryset
+- [ ] Where a "broken" counterpart queryset would regress the fix,
+      asserts `assertNotIn(instance, broken_qs)` as the negative
+      counterpart (paired with CC_SPEC_TEMPLATE Critical Reminder #9)
+
+Mock-only tests via `SimpleNamespace(public_id=...)`, `MagicMock()`,
+or equivalent are acceptable for pure-logic functions but NOT for
+queryset filters. ORM quirks (CloudinaryField coercion,
+NULL-vs-empty-string semantics, `__in` with NULL values, CharField
+default differences) only surface against real DB rows.
+
+**Evidence:** Session 160-F's `migrate_cloudinary_to_b2` command
+shipped with a broken queryset filter —
+`.filter(b2_image_url__in=('', None))` never matches NULL rows
+because SQL `col IN (NULL)` returns UNKNOWN not TRUE. The tests used
+`SimpleNamespace(public_id=...)` to exercise `_migrate_prompt_image`
+directly, bypassing the queryset entirely. The bug survived 6 agents
+in 160-F, 6 agents in 161-A, and only surfaced during production
+diagnostics in Session 162 pre-investigation. A real-instance
+integration test would have failed immediately.
+
 **If any check fails, fix the issue FIRST, then run agents.**
 
 ---
@@ -279,6 +373,49 @@ or touches files outside this spec's scope:**
 diagnosing a problem, providing the exact fix with effort estimated at
 2–5 minutes, and then not applying it — leaving it to accumulate across
 sessions. If you can see the fix and it fits in scope, close it now.
+
+---
+
+## 🔁 CROSS-SPEC BUG ABSORPTION POLICY (v2.7 — Session 162)
+
+This policy is narrower than the Self-Identified Issues Policy above.
+It applies specifically to bugs **flagged by an agent during review of
+this spec** that are not in the spec's scope but are trivially
+fixable.
+
+If an agent flags a related bug during spec review, and ALL of the
+following are true:
+
+- The fix is **< 5 lines of code change** (not counting new comments or tests)
+- The bug is in a **file the current spec is already editing**
+- The fix does **not require new test scaffolding** (can be tested with an
+  extension of existing spec tests)
+- The fix does **not require a migration, new model field, or new dependency**
+
+Then the fix MUST be absorbed into the current spec. Do NOT defer.
+
+Include the absorbed fix in:
+- The same commit as the current spec
+- A dedicated subsection in the completion report's Section 3 (Changes
+  Made) titled "Cross-Spec Absorption"
+- A short note in the commit message body
+
+If any of the four conditions are not met, defer to a future spec and
+document in Section 6 (Concerns) per the existing policy. Scope
+discipline remains the default; this policy is the narrow exception
+for trivially-fixable, same-file, agent-confirmed bugs.
+
+**Evidence:** The xAI primary SDK path `error_type='billing'` bug was
+flagged in Session 156, then again in 161-F (both `@code-reviewer`
+and `@architect-review` scored it). 161-F deferred as "out of scope."
+The fix was 1 line of code. 5 sessions later, 162-D shipped the same
+1-line fix — during which time every xAI billing exhaustion event
+wasted credits on unnecessary retries.
+
+**Relationship to Self-Identified Issues Policy:** Self-Identified
+covers issues CC spots during its own implementation work.
+Cross-Spec Absorption covers issues AGENTS spot during review. Both
+policies push toward "close small stuff now, don't let it drift."
 
 ---
 

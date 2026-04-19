@@ -262,7 +262,7 @@ Confirm no malformed-URL or 404 errors from CloudinaryImage construction.
 
 | Hash | Message |
 |------|---------|
-| TBD (filled post-commit) | fix(moderation): use .public_id not str() on CloudinaryResource |
+| d3b92dd | fix(moderation): use .public_id not str() on CloudinaryResource |
 
 ## Section 11 — What to Work on Next
 

@@ -209,7 +209,7 @@ heroku run "python manage.py migrate_cloudinary_to_b2 --dry-run" \
 
 | Hash | Message |
 |------|---------|
-| TBD (filled post-commit) | fix(migration): Cloudinary migration command — filter NULL rows correctly |
+| 67aa0ad | fix(migration): Cloudinary migration command — filter NULL rows correctly |
 
 ## Section 11 — What to Work on Next
 

@@ -586,7 +586,17 @@
     <div class="profile-identity">
         <!-- Avatar Container -->
         <div class="profile-avatar-container">
-            {% if profile.avatar.url %}
+            {% if profile.b2_avatar_url %}
+                <img src="{{ profile.b2_avatar_url }}"
+                     alt="{{ profile_user.username }}'s avatar"
+                     class="profile-avatar"
+                     width="120"
+                     height="120"
+                     onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="profile-avatar profile-avatar-placeholder avatar-color-{{ profile.get_avatar_color_index }}" style="display: none;">
+                    {{ profile_user.username|slice:":1"|upper }}
+                </div>
+            {% elif profile.avatar and profile.avatar.url %}
                 <img src="{{ profile.avatar.url }}"
                      alt="{{ profile_user.username }}'s avatar"
                      class="profile-avatar"
@@ -625,13 +635,13 @@
                         <i class="fab fa-twitter"></i>
                     </a>
                 {% endif %}
-                
+
                 {% if profile.instagram_url %}
                     <a href="{{ profile.instagram_url }}" target="_blank" rel="noopener noreferrer" class="social-link" style="color: #E4405F; font-size: 24px;" title="Instagram">
                         <i class="fab fa-instagram"></i>
                     </a>
                 {% endif %}
-                
+
                 {% if profile.website_url %}
                     <a href="{{ profile.website_url }}" target="_blank" rel="noopener noreferrer" class="social-link" style="color: #6b7280; font-size: 24px;" title="Website">
                         <i class="fas fa-globe"></i>

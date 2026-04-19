@@ -349,7 +349,15 @@
     <div class="profile-identity">
         <!-- Avatar -->
         <div class="profile-avatar-container">
-            {% if profile.avatar.url %}
+            {% if profile.b2_avatar_url %}
+                <img src="{{ profile.b2_avatar_url }}"
+                     alt="{{ profile_user.username }}'s avatar"
+                     class="profile-avatar"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="profile-avatar profile-avatar-placeholder avatar-color-{{ profile.get_avatar_color_index }}" style="display: none;">
+                    {{ profile_user.username|first|upper }}
+                </div>
+            {% elif profile.avatar and profile.avatar.url %}
                 <img src="{{ profile.avatar.url }}"
                      alt="{{ profile_user.username }}'s avatar"
                      class="profile-avatar"

@@ -167,11 +167,19 @@ class XAIImageProvider(ImageProvider):
                     error_type='content_policy',
                     error_message='Image rejected by content policy. Try modifying the prompt.',
                 )
+            # Align with httpx-direct edits path (161-F): billing
+            # exhaustion must return error_type='quota' to route through
+            # the tasks.py:~2617 job-stop branch. 'billing' has no
+            # handler in _apply_generation_result, so returning it here
+            # would let the scheduler retry on an exhausted account and
+            # waste credits. Static error message (no f-string
+            # interpolation of the raw exception) mirrors 161-F's
+            # decision not to leak account details.
             if 'billing' in error_str:
                 return GenerationResult(
                     success=False,
-                    error_type='billing',
-                    error_message='API billing limit reached. Check your xAI account.',
+                    error_type='quota',
+                    error_message='API billing limit reached — check your xAI account.',
                 )
             return GenerationResult(
                 success=False,

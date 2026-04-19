@@ -105,6 +105,72 @@ class XAINSFWKeywordTests(SimpleTestCase):
         self.assertNotEqual(result.error_type, 'content_policy')
 
 
+class XAISDKBillingToQuotaTests(SimpleTestCase):
+    """Regression guard for 162-D.
+
+    When xAI's SDK path raises BadRequestError with a 'billing' keyword,
+    the provider must return error_type='quota' (not 'billing') so
+    tasks.py:~2617 stops the job immediately. Aligns the primary SDK
+    path with the httpx-direct edits path fixed in 161-F.
+    """
+
+    def test_sdk_path_400_billing_returns_quota(self):
+        """BadRequestError with 'billing' in message -> error_type='quota'."""
+        from openai import BadRequestError
+        provider = XAIImageProvider(api_key='test-key')
+        message = 'Your xAI account has hit its billing limit.'
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.json.return_value = {'error': {'message': message}}
+        mock_response.headers = {}
+        err = BadRequestError(
+            message=message,
+            response=mock_response,
+            body={'error': {'message': message}},
+        )
+        with patch('openai.OpenAI') as MockClient:
+            MockClient.return_value.images.generate.side_effect = err
+            result = provider.generate(prompt='test', size='1:1')
+
+        self.assertFalse(result.success)                              # positive
+        self.assertEqual(
+            result.error_type, 'quota',
+            f"Expected error_type='quota' to route to tasks.py:~2617 "
+            f"job-stop; got {result.error_type!r}. See 162-D.",
+        )                                                             # positive
+        self.assertIn('billing', result.error_message.lower())        # positive
+        self.assertNotEqual(result.error_type, 'billing')             # paired negative
+
+    def test_sdk_path_static_error_message_no_raw_exception_leak(self):
+        """Error message is static (no f-string of the raw exception).
+
+        Matches 161-F's decision not to leak raw exception details
+        (account IDs, internal error codes) to the user-facing message.
+        """
+        from openai import BadRequestError
+        provider = XAIImageProvider(api_key='test-key')
+        # Include a secret-looking token in the raw message; if the code
+        # regressed to `f'Billing: {e}'`, it would bleed through.
+        secret = 'account_id=acct_SECRET_LEAK_123'
+        message = f'billing exhausted. debug: {secret}'
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        mock_response.json.return_value = {'error': {'message': message}}
+        mock_response.headers = {}
+        err = BadRequestError(
+            message=message,
+            response=mock_response,
+            body={'error': {'message': message}},
+        )
+        with patch('openai.OpenAI') as MockClient:
+            MockClient.return_value.images.generate.side_effect = err
+            result = provider.generate(prompt='test', size='1:1')
+
+        self.assertEqual(result.error_type, 'quota')                  # positive
+        self.assertNotIn('acct_SECRET_LEAK_123', result.error_message)  # paired negative
+        self.assertNotIn('debug:', result.error_message)              # paired negative
+
+
 class XAIReferenceImageTests(SimpleTestCase):
     """Tests for Grok reference image routing to _call_xai_edits_api."""
 

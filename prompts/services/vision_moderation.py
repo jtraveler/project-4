@@ -671,9 +671,21 @@ Respond with JSON:
                 width=800,
             )
         else:
-            # If it's a string, build URL manually using cloudinary
+            # Plain-string fallback path. Never use `str()` on a
+            # CloudinaryField/CloudinaryResource — rely on explicit
+            # `.public_id` access where available (matches 161-A /
+            # 162-C pattern). For an already-plain string, use the
+            # value directly. Empty/None falls through to an empty
+            # public_id, which produces a safe empty-URL outcome
+            # rather than a bogus `None`-interpolated URL.
             import cloudinary
-            frame_url = cloudinary.CloudinaryImage(str(prompt_obj.featured_video)).build_url(
+            public_id = (
+                getattr(prompt_obj.featured_video, 'public_id', None)
+                or (prompt_obj.featured_video if isinstance(
+                    prompt_obj.featured_video, str
+                ) else '')
+            )
+            frame_url = cloudinary.CloudinaryImage(public_id).build_url(
                 resource_type='video',
                 start_offset=f'{middle_time}',
                 format='jpg',

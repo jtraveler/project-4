@@ -69,7 +69,19 @@ class Command(BaseCommand):
 
         for profile in all_profiles:
             if profile.avatar:
-                avatar_str = str(profile.avatar)
+                # Use .public_id for consistency with 161-A / 162-C
+                # pattern. For plain-string CloudinaryField values,
+                # fall back to the string itself. Avoids `str()` on
+                # a CloudinaryResource which ties behavior to the
+                # SDK's `__str__` implementation.
+                avatar_str = (
+                    getattr(profile.avatar, 'public_id', None)
+                    or (
+                        profile.avatar
+                        if isinstance(profile.avatar, str)
+                        else ''
+                    )
+                )
 
                 # Check for problematic ID OR missing cloud_name
                 if problem_id in avatar_str or (
@@ -107,7 +119,16 @@ class Command(BaseCommand):
 
             # Check featured_image
             if prompt.featured_image:
-                image_str = str(prompt.featured_image)
+                # .public_id for CloudinaryResource, string fallback
+                # otherwise — matches 161-A / 162-C pattern.
+                image_str = (
+                    getattr(prompt.featured_image, 'public_id', None)
+                    or (
+                        prompt.featured_image
+                        if isinstance(prompt.featured_image, str)
+                        else ''
+                    )
+                )
 
                 # Check for problematic ID OR missing cloud_name
                 if problem_id in image_str or (
@@ -128,7 +149,16 @@ class Command(BaseCommand):
 
             # Check featured_video
             if prompt.featured_video:
-                video_str = str(prompt.featured_video)
+                # .public_id for CloudinaryResource, string fallback
+                # otherwise — matches 161-A / 162-C pattern.
+                video_str = (
+                    getattr(prompt.featured_video, 'public_id', None)
+                    or (
+                        prompt.featured_video
+                        if isinstance(prompt.featured_video, str)
+                        else ''
+                    )
+                )
 
                 # Check for problematic ID OR missing cloud_name
                 if problem_id in video_str or (

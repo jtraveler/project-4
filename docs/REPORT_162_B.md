@@ -239,7 +239,7 @@ no rendered change should occur until F1 populates `b2_avatar_url`.
 
 | Hash | Message |
 |------|---------|
-| TBD (filled post-commit) | feat(templates): avatar templates prefer b2_avatar_url over Cloudinary |
+| ad94533 | feat(templates): avatar templates prefer b2_avatar_url over Cloudinary |
 
 ## Section 11 — What to Work on Next
 

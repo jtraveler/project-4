@@ -117,7 +117,27 @@ def bulk_generator_job_view(request, job_id):
             _provider_kwargs['model_name'] = job.model_name
         _provider = get_provider(job.provider, **_provider_kwargs)
         cost_per_image = _provider.get_cost_per_image(job.size, job.quality)
-    except Exception:
+    except (ValueError, ImportError, AttributeError, KeyError) as e:
+        # Narrowed from bare `except Exception` in 162-E. These are the
+        # expected provider-registry failure modes:
+        #   - ValueError: provider name not registered (raised by
+        #     registry.get_provider for unknown names)
+        #   - ImportError: provider module moved/deleted
+        #   - AttributeError: provider class missing get_cost_per_image
+        #   - KeyError: provider's internal cost lookup misses a key
+        # Any OTHER exception (TypeError from a refactor, etc.)
+        # propagates to the request handler's 500 path where it belongs —
+        # those are real bugs, not the "provider missing, use OpenAI
+        # fallback" case. Fallback behavior is intentionally unchanged;
+        # the logger.warning added here surfaces the registry failure in
+        # Heroku logs instead of swallowing it silently. See
+        # REPORT_161_D Section 6 (@architect-review concern).
+        logger.warning(
+            'Provider registry lookup failed for job_id=%s provider=%r '
+            'model_name=%r — falling back to OpenAI cost map. '
+            'Exception: %s: %s',
+            job.id, job.provider, job.model_name, type(e).__name__, e,
+        )
         cost_per_image = get_image_cost(job.quality, job.size)
 
     # Use `actual_total_images` (populated at job creation with resolved

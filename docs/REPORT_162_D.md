@@ -203,7 +203,7 @@ python manage.py check
 
 | Hash | Message |
 |------|---------|
-| TBD (filled post-commit) | fix(providers): xAI primary SDK path — billing → quota alignment |
+| 18a918e | fix(providers): xAI primary SDK path — billing → quota alignment |
 
 ## Section 11 — What to Work on Next
 

@@ -2468,3 +2468,101 @@ class JobDetailViewContextTests(TestCase):
         self.assertEqual(ctx['total_images'], 1)
         # cost_per_image for medium/1024x1024 = 0.034
         self.assertAlmostEqual(float(ctx['estimated_total_cost']), 0.034, places=4)
+
+    def test_cost_calculation_uses_provider_for_registered_job(self):
+        """
+        Regression guard for 162-E. When the provider registry returns a
+        valid provider, the view uses `provider.get_cost_per_image()` —
+        not the OpenAI fallback cost map. Guards against a future
+        regression where the fallback becomes the default path for
+        non-OpenAI jobs.
+        """
+        from decimal import Decimal
+        # Legacy-style job (no stored estimated_cost) so the view must
+        # compute cost_per_image * total_images live from the provider.
+        job = self._make_job(size='2:3', model_name='black-forest-labs/flux-dev')
+        job.provider = 'replicate'
+        job.save(update_fields=['provider'])
+
+        mock_provider = MagicMock()
+        # Distinctive value that cannot collide with any OpenAI fallback.
+        mock_provider.get_cost_per_image.return_value = 0.101
+        with patch(
+            'prompts.services.image_providers.registry.get_provider',
+            return_value=mock_provider,
+        ):
+            ctx = self._get_context(job)
+
+        self.assertAlmostEqual(
+            float(ctx['estimated_total_cost']), 0.101, places=4,
+        )                                                             # positive
+        # Paired negative: proves we did NOT take the OpenAI fallback
+        # for medium/2:3 (which would surface a very different figure).
+        self.assertNotAlmostEqual(
+            float(ctx['estimated_total_cost']), 0.034, places=4,
+        )                                                             # paired negative
+        mock_provider.get_cost_per_image.assert_called_once_with(
+            '2:3', 'medium',
+        )                                                             # positive
+
+    def test_cost_calculation_logs_warning_when_provider_missing(self):
+        """
+        Regression guard for 162-E. When the provider registry raises a
+        narrowed-tuple exception (ValueError is the real-world case —
+        `registry.get_provider` raises ValueError for unknown provider
+        names), the view logs a warning and falls back to OpenAI cost
+        map. Prior to 162-E the failure was silently swallowed by a
+        bare `except Exception` with no log signal.
+        """
+        job = self._make_job(size='1024x1024', model_name='unknown-model')
+        job.provider = 'not-a-real-provider'
+        job.save(update_fields=['provider'])
+
+        with patch(
+            'prompts.services.image_providers.registry.get_provider',
+            side_effect=ValueError("Unknown provider: 'not-a-real-provider'"),
+        ), self.assertLogs(
+            'prompts.views.bulk_generator_views', level='WARNING',
+        ) as log_ctx:
+            ctx = self._get_context(job)
+
+        # Fallback to OpenAI cost for medium/1024x1024 = 0.034.
+        self.assertAlmostEqual(
+            float(ctx['estimated_total_cost']), 0.034, places=4,
+        )                                                             # positive
+
+        log_output = '\n'.join(log_ctx.output)
+        self.assertIn('Provider registry lookup failed', log_output)  # positive
+        self.assertIn(str(job.id), log_output)                        # positive
+        self.assertIn('not-a-real-provider', log_output)              # positive
+        # Absorbed per Session 162 Rule 2 (@tdd-orchestrator feedback):
+        # also assert model_name is logged — the warning format logs
+        # both provider AND model_name and both should be verifiable.
+        self.assertIn('unknown-model', log_output)                    # positive
+        self.assertIn('ValueError', log_output)                       # positive
+
+    def test_cost_calculation_does_not_swallow_unexpected_exceptions(self):
+        """
+        Regression guard for 162-E. The narrowed except catches
+        (ValueError, ImportError, AttributeError, KeyError) — NOT every
+        Exception. A TypeError (e.g., from a refactor bug) must propagate
+        to the 500 handler, not be silently masked as a provider-missing
+        case. Negative assertion on status_code is the proof the
+        narrowing works.
+        """
+        job = self._make_job(size='1024x1024', model_name='gpt-image-1')
+
+        url = reverse(
+            'prompts:bulk_generator_job', kwargs={'job_id': job.id},
+        )
+        with patch(
+            'prompts.services.image_providers.registry.get_provider',
+            side_effect=TypeError('refactor bug: unexpected kwarg'),
+        ):
+            # Django's test client by default re-raises uncaught view
+            # exceptions (client.raise_request_exception is True). We
+            # want to assert the TypeError reaches the handler layer —
+            # i.e. is NOT masked as a provider-missing fallback. The
+            # simplest proof is that the context manager catches it.
+            with self.assertRaises(TypeError):
+                self.client.get(url)

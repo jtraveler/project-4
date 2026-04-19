@@ -231,7 +231,7 @@ python manage.py check
 
 | Hash | Message |
 |------|---------|
-| TBD (filled post-commit) | fix(views): narrow bare except in bulk generator job view |
+| a872a11 | fix(views): narrow bare except in bulk generator job view |
 
 ## Section 11 — What to Work on Next
 

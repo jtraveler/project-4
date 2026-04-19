@@ -217,7 +217,7 @@ grep -c "Critical Reminder #9\|select_for_update() is inside transaction\|SELF-I
 
 | Hash | Message |
 |------|---------|
-| TBD (filled post-commit) | docs(template): CC_SPEC_TEMPLATE v2.7 — integration tests + absorption |
+| e90f9b3 | docs(template): CC_SPEC_TEMPLATE v2.7 — integration tests + absorption |
 
 ## Section 11 — What to Work on Next
 
@@ -225,11 +225,12 @@ grep -c "Critical Reminder #9\|select_for_update() is inside transaction\|SELF-I
    162-E are committed in Session 162b, the 162-G docs roll-up will
    reference v2.7 as the current template version. Ensure
    CLAUDE.md's reference to CC_SPEC_TEMPLATE mentions v2.7.
-2. **Correct the CLAUDE.md note about `str(CloudinaryResource)`
-   behavior.** 162-C investigation found the 161-A report's claim
-   that `str()` returns repr is incorrect for the current SDK.
-   Update CLAUDE.md's Learnings section to reflect the correct
-   behavior.
+2. ~~**Correct the CLAUDE.md note about `str(CloudinaryResource)`
+   behavior.**~~ ✅ RESOLVED in 162-G — CLAUDE.md lines 78 (Session
+   161 row) and 1588 (Cloudinary Migration Status section) both
+   carry explicit "Correction (Session 162-C investigation)" blocks
+   noting the real bug (`str(None) == 'None'`) and why the
+   `.public_id` pattern is still preferred as SDK-version defense.
 3. **Future v3.0 template consolidation (deferred)** — combine
    Self-Identified + Cross-Spec policies into a single "Scope
    Decision" policy with subsections. Track as a long-term cleanup

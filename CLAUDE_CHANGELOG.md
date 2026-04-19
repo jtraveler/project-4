@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 18, 2026 (Sessions 101–161)
+**Last Updated:** April 19, 2026 (Sessions 101–162)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,192 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 162 — April 19, 2026
+
+**Focus:** Close Session 161's Cloudinary migration cleanup. Ship the
+xAI SDK billing→quota alignment that has been deferred five sessions
+since 156. Codify Session 161 retrospective findings into
+CC_SPEC_TEMPLATE v2.7. Ran as a two-batch session (162a: specs A, B,
+C, H; 162b: specs D, E, G).
+
+**Specs:** 162-A (queryset filter), 162-B (avatar templates B2-first),
+162-C (vision_moderation public_id), 162-D (xAI SDK billing→quota),
+162-E (narrow bare except), 162-H (template v2.7), 162-G (this docs
+update).
+
+**Tests:** 1321 passing (1286 + 35 new across 162-A/B/C/D/E — 9 in
+162-A, 23 in 162-B, 4 in 162-C, 2 in 162-D, 3 in 162-E; 162 total
+delta accounts for test-scaffolding consolidations during review),
+0 failures, 12 skipped.
+
+**Migrations:** No new migrations in Session 162.
+
+**Key outcomes:**
+
+- **162-A — Cloudinary migration queryset filter fix:** root cause
+  was SQL `WHERE col IN ('', NULL)` returning UNKNOWN for NULL rows
+  (three-valued logic). Broken queryset reported 0 migratable
+  records despite production holding 36 legacy images + 14 legacy
+  videos. Fixed via Q-objects:
+  `Q(b2_image_url='') | Q(b2_image_url__isnull=True)` across image,
+  video, and avatar filters. Integration tests use real ORM rows
+  (Rule 1) — the original SimpleNamespace mocks in 160-F/161-A were
+  what let this survive 12 agent reviews across two sessions.
+  Absorbed a cross-spec print-condition fix (Rule 2) so dry-run
+  batches <10 records now surface "would-migrate" status to stdout.
+  Agents avg 9.07/10. Commit `67aa0ad`.
+
+- **162-B — Avatar templates B2-first:** six avatar-rendering
+  templates now use the three-branch B2-first pattern
+  (`b2_avatar_url` → Cloudinary `avatar.url` → letter placeholder),
+  preparing the rendering layer for Session 163 F1's upload pipeline
+  switch. `edit_profile.html` explicitly reserved for Session 164 F2
+  — its `{% cloudinary %}` face-crop transform has no direct B2
+  equivalent until the upload pipeline lands. 23 tests (7 structure
+  + 16 render). Agents avg 9.0/10. Commit `ad94533`.
+
+- **162-C — vision_moderation public_id pattern:** four call sites
+  across `vision_moderation.py` and `fix_cloudinary_urls.py` moved
+  from `str(CloudinaryField_value)` to explicit
+  `getattr(..., 'public_id', ...) or (...)` three-branch extraction.
+  **Key discovery during implementation:** the spec's premise — that
+  `str(CloudinaryResource)` returns an object repr — is FACTUALLY
+  INCORRECT for the current cloudinary SDK. A direct test showed
+  `str(CloudinaryResource(public_id='legacy/foo')) == 'legacy/foo'`.
+  The earlier 161-A claim that `str()` returned repr was wrong. The
+  fix is still independently justified: the real latent bug is
+  `str(None) == 'None'` producing `'legacy/None.jpg'` URLs when the
+  field is null; the new pattern resolves to `''` instead. 4 tests.
+  Agents avg 8.58/10. Commit `d3b92dd`.
+
+- **162-D — xAI primary SDK path billing→quota alignment:** one-line
+  fix closing a gap deferred since Session 156. The SDK path
+  returned `error_type='billing'` which had no handler in
+  `tasks._apply_generation_result`, so billing exhaustion fell into
+  the generic retry loop and wasted credits. Now returns
+  `error_type='quota'` matching the httpx-direct edits path fixed in
+  161-F. Static error message (no f-string interpolation of raw
+  exception) mirrors 161-F's no-leak decision. 2 regression tests:
+  paired positive/negative routing assertion, and a secret-leak
+  regression guard. Agents avg 8.83/10. Commit `18a918e`.
+
+- **162-E — Narrow bare except in bulk generator job view:** the
+  `except Exception:` around provider-registry cost lookup was
+  swallowing all failures silently and falling back to OpenAI cost
+  map — visible as wrong prices on Replicate/xAI job pages with no
+  log signal. Narrowed to
+  `except (ValueError, ImportError, AttributeError, KeyError) as e:`
+  with `logger.warning(...)` added. Step 0 grep of
+  `image_providers/registry.py:39` confirmed `get_provider` raises
+  `ValueError` (not `KeyError` as the spec draft assumed) — tuple
+  adjusted accordingly. Fallback behavior intentionally unchanged
+  — this is purely observability hardening. 3 regression tests
+  (happy path, ValueError + 5 log-content assertions, TypeError
+  propagation proving the narrowing works). Agents avg 9.03/10.
+  Commit `a872a11`.
+
+- **162-H — CC_SPEC_TEMPLATE v2.7:** three new rules codifying
+  Session 161's retrospective findings. (1) Queryset Integration
+  Test Rule — SimpleNamespace mocks are explicitly disallowed for
+  queryset tests; must use real ORM rows with refresh_from_db.
+  Evidence: 160-F → 161-A → 162-A queryset bug chain. (2)
+  Cross-Spec Bug Absorption Policy — agent-flagged bugs under 5
+  lines in files already being edited must be absorbed, not
+  deferred. Evidence: xAI SDK billing→quota was flagged in Session
+  156, re-flagged in 161-F, and finally shipped in 162-D — five
+  sessions carrying a one-line fix. (3) Stale Narrative Text Grep
+  Rule — any spec changing existing behavior must grep for
+  narrative text describing the old behavior before writing code.
+  Evidence: 161-E shipped with an "avatar NOT supported" docstring
+  caught by @django-pro at 9.0/10 requiring a follow-up.
+  `CC_COMMUNICATION_PROTOCOL.md` version bumped to match. Agents
+  avg 9.2/10. Commit `e90f9b3`.
+
+**Documentation correction (161-A claim):** CLAUDE.md and
+REPORT_161_A had stated that `str(CloudinaryResource)` returned the
+object repr. Per 162-C direct test evidence, the current cloudinary
+SDK's `CloudinaryResource.__str__` returns `self.public_id`.
+CLAUDE.md lines 78 and 1588 corrected in 162-G. The underlying bug
+that 161-A fixed remains real — `str(None)` returning `'None'` for
+NULL CloudinaryField values — but the "repr" framing was incorrect.
+
+**Process lessons captured in template v2.7:**
+
+- Agent reviews pass vacuously when test scaffolding bypasses the
+  code path under test. `SimpleNamespace(public_id=...)` mocks must
+  be rejected for queryset tests.
+- Over-rigid scope discipline carries costs. Deferring an
+  obviously-right 1-line fix for 5 sessions wasted real money every
+  time xAI billing exhausted.
+- Specs that describe old behavior in prose need a Step 0 grep for
+  that prose before implementation — otherwise comments/docstrings
+  drift into saying one thing while code does another.
+
+**Commits (chronological, Session 162 total = 7):**
+
+| Spec | Hash | Message |
+|------|------|---------|
+| 162-A | `67aa0ad` | fix(migration): Cloudinary migration command — filter NULL rows correctly |
+| 162-B | `ad94533` | feat(templates): avatar templates prefer b2_avatar_url over Cloudinary |
+| 162-C | `d3b92dd` | fix(moderation): use .public_id not str() on CloudinaryResource |
+| 162-H | `e90f9b3` | docs(template): CC_SPEC_TEMPLATE v2.7 — integration tests + absorption |
+| 162-D | `18a918e` | fix(providers): xAI primary SDK path — billing → quota alignment |
+| 162-E | `a872a11` | fix(views): narrow bare except in bulk generator job view |
+| 162-G | (this commit) | END OF SESSION DOCS UPDATE |
+
+**Deferred to Session 163:**
+
+- **F1 — Avatar upload pipeline Cloudinary → B2 (P1).** 162-B
+  prepared the rendering layer; F1 is the upload-side switch.
+  Investigation prerequisite confirmed via grep on April 19 2026:
+  zero writes to `b2_avatar_url` exist in `prompts/*.py` outside the
+  migration command and its tests — the `edit_profile` form still
+  writes to Cloudinary. F1 is a high-risk session; gets its own
+  isolated run.
+
+**Deferred to Session 164:**
+
+- **F2 — edit_profile.html B2-aware avatar display with CSS
+  `object-fit: cover` (Option 2 cropping).** Depends on F1 landing
+  in production. Reserved from 162-B as out-of-scope.
+
+**Deferred to later sessions:**
+
+- 8 other bare `except Exception:` blocks in `bulk_generator_views.py`
+  (lines 783, 847, 988, 1154, 1356, 1445, 1550, 1569) — structural
+  audit pass flagged by @architect-review in 162-E. P2.
+- `_download_image` TransportError catch in xAI provider (P3, 161-F
+  Section 6).
+- `_download_image` deduplication between Replicate/xAI providers
+  (P3, pre-existing).
+- 6 remaining f-string leak paths in `xai_provider.py` at lines 187,
+  200, 211, 290, 309, 363 — would need dedicated regression tests;
+  too large to absorb in 162-D. P2.
+- `fix_admin_avatar.py` `str(CloudinaryResource)` cleanup (P3,
+  diagnostic logs only, 162-C scope excluded).
+- SSRF hardening of `_fetch()` — `urllib.parse.quote(public_id,
+  safe='/')` + stricter host match (P3, 161-A Section 6).
+- `create_job()` mixed-tier QUALITY/SIZE cost accounting for NB2
+  jobs (P2, 161-D Section 5).
+- Rate Limiting Audit for Replicate + xAI (P2, carried forward
+  from 161-G backlog).
+- Non-OpenAI semantic fallback correctness in
+  `bulk_generator_job_view` — wrong cost displayed when
+  registry.get_provider fails for a Replicate/xAI job. 162-E fixed
+  observability only; semantic fix (pull cost from
+  GeneratorModel.credit_cost as secondary fallback) deferred. P2.
+- Field-type migration: `UserProfile.avatar` CloudinaryField →
+  CharField; `Prompt.featured_image` / `featured_video`
+  CloudinaryField → CharField (after F1 + F2 confirmed in
+  production).
+- Cloudinary package removal from `requirements.txt` (after
+  field-type migration).
+- CC_SPEC_TEMPLATE v3.0 consolidation pass — the template is now
+  700+ lines; PRE-AGENT SELF-CHECK and policy sections could be
+  deduplicated. Noted by @docs-architect in 162-H. P3.
+
+---
 
 ### Session 161 — April 18, 2026
 

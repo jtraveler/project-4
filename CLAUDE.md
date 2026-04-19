@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** April 18, 2026
+**Last Updated:** April 19, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -75,7 +75,8 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Session 161 | Apr 18, 2026 | Cloudinary migration command bugs fixed: B2 credential check now uses `B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` (actual Django setting names), CloudinaryResource public_id extraction via `getattr(..., "public_id", "") or ""` (was falling back to `str()` which returned object repr) — dry-run now correctly identifies ~36 records (161-A). Autosave: `.bg-vision-direction-input` added to input listener so typing into AI Direction triggers save; master Reset button now calls `I.clearDraft()` to remove `pf_bg_draft` from localStorage; `clearSavedPrompts()` cancels pending debounce timer (TOCTOU fix) (161-B). "Reset to master" (per-box) now preserves AI Direction checkbox state, row visibility, and textarea text — AI Direction is user content, not a setting (161-C). Results page pricing: view uses stored `job.actual_total_images` and Decimal `job.estimated_cost` (accurate to per-prompt count overrides) instead of master-only recalculation; Decimal preserved end-to-end for precision (161-D). New `UserProfile.b2_avatar_url` URLField + migration 0084; `migrate_cloudinary_to_b2` extended with `_migrate_avatar()` and `--model userprofile` choice (161-E). Grok httpx-direct edits path: 400 with 'billing' keyword returns `error_type='quota'` (stops job); `httpx.TransportError` caught and returns `error_type='server_error'` for retry (161-F). 1286 tests. |
+| Session 162 | Apr 19, 2026 | Cloudinary migration queryset filter fix — SQL `IN (NULL)` returns UNKNOWN, so `.filter(b2_*_url__in=('', None))` silently missed all legacy NULL rows; replaced with `Q(field='') \| Q(field__isnull=True)` across image/video/avatar branches. Dry-run now identifies 36 prompt images + 14 videos (162-A). Six avatar templates now prefer `b2_avatar_url` over Cloudinary `avatar.url` via three-branch B2-first pattern; `edit_profile.html` reserved for Session 164 F2 pending upload pipeline switch in 163 F1 (162-B). `vision_moderation.py` video-fallback path + three `fix_cloudinary_urls` branches moved from `str(CloudinaryField)` to explicit `.public_id` extraction — latent `str(None) == 'None'` bug fixed; investigation showed the 161-A claim that `str(CloudinaryResource)` returns object repr was wrong, current SDK's `__str__` returns `self.public_id` (162-C). xAI primary SDK path billing exhaustion now returns `error_type='quota'` (was `'billing'` — no handler in tasks.py, fell into retry loop). Matches 161-F httpx-path fix, static error message (162-D). `except Exception:` narrowed to `(ValueError, ImportError, AttributeError, KeyError)` around provider-registry cost lookup with `logger.warning`; fallback behavior unchanged, observability added (162-E). CC_SPEC_TEMPLATE v2.7 codifies three retrospective rules: Queryset Integration Test Rule (no SimpleNamespace mocks), Cross-Spec Bug Absorption Policy (absorb <5-line fixes, don't defer), Stale Narrative Text Grep Rule (Step 0 check before writing code) (162-H). 1321 tests. |
+| Session 161 | Apr 18, 2026 | Cloudinary migration command bugs fixed: B2 credential check now uses `B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` (actual Django setting names), CloudinaryResource public_id extraction via `getattr(..., "public_id", "") or ""` — dry-run now correctly identifies ~36 records (161-A). **Correction (Session 162-C investigation):** the original 161-A report claimed the pre-fix code fell back to `str(CloudinaryResource)` which returned object repr; direct SDK test shows `str(CloudinaryResource)` returns `self.public_id` in the current version. The real latent bug was `str(None) == 'None'` producing malformed URLs when the field was NULL — the `.public_id` pattern still fixes that and is preferred for SDK-version defense. Autosave: `.bg-vision-direction-input` added to input listener so typing into AI Direction triggers save; master Reset button now calls `I.clearDraft()` to remove `pf_bg_draft` from localStorage; `clearSavedPrompts()` cancels pending debounce timer (TOCTOU fix) (161-B). "Reset to master" (per-box) now preserves AI Direction checkbox state, row visibility, and textarea text — AI Direction is user content, not a setting (161-C). Results page pricing: view uses stored `job.actual_total_images` and Decimal `job.estimated_cost` (accurate to per-prompt count overrides) instead of master-only recalculation; Decimal preserved end-to-end for precision (161-D). New `UserProfile.b2_avatar_url` URLField + migration 0084; `migrate_cloudinary_to_b2` extended with `_migrate_avatar()` and `--model userprofile` choice (161-E). Grok httpx-direct edits path: 400 with 'billing' keyword returns `error_type='quota'` (stops job); `httpx.TransportError` caught and returns `error_type='server_error'` for retry (161-F). 1286 tests. |
 | Session 160 | Apr 18, 2026 | Profanity error UX: triggered word bold/italic + clickable "Prompt N" link built via DOM API (no innerHTML); empty/duplicate errors also get the link. Quality section restored to disabled/greyed (not hidden) with "High" locked for non-quality models; two-column grid layout restored (160-B). Per-prompt cost fix: sticky-bar total now uses per-box `totalCost` accumulator for all models (previously non-BYOK recomputed from master quality, ignoring per-box overrides); console.warn for unmapped models (160-C). Full draft autosave: single `pf_bg_draft` JSON blob (version 1) captures ALL master settings + per-prompt box content + toggles + overrides; replaces 4 legacy keys via one-shot migration; draft persists after generation, cleared only by Clear All; schema maps cleanly to future `PromptDraft` server model (160-D). Pricing accuracy: `floatformat:"-3"` on results page + `parseFloat(x.toFixed(3)).toString()` in JS — $0.067 no longer rounds to $0.07, $0.003 no longer to $0.00 (160-E). Cloudinary → B2 migration command: `migrate_cloudinary_to_b2` with `--dry-run`, `--limit`, idempotency, fail-fast credential check, 50MB streaming size cap, `res.cloudinary.com` hostname allow-list (160-F). 1278 tests. |
 | Session 159 | Apr 2026 | Profanity filter shows triggered words. Per-prompt boxes: NB2 1K/2K/4K labels, quality hidden for non-quality models, results page actual_cost, grid layout fix. Autosave: pageshow bfcache handler, aspect ratio restore. NB2 progress bar: provider-aware CSS durations (was stalling at ~85%). Cloudinary removal blocked by CloudinaryField model fields — unused import removed, full removal needs migration spec. 1270 tests. |
 | Session 158 | Apr 17, 2026 | Opacity removed from disabled groups, per-prompt cost model-aware (NB2 tier costs per-row), autosave master header settings to localStorage (pf_ namespace). 1268 tests. |
@@ -771,7 +772,8 @@ Rebuilding upload flow to feel "instant" by:
 - ~~Grok connection drop returns `error_type='unknown'`~~ — ✅ RESOLVED Session 161 (161-F, `httpx.TransportError` caught → `server_error` for retry)
 - NSFW UX feedback for Replicate platform model 400s (P2 — Replicate has only 3 keywords vs xAI's 8)
 - `_download_image` duplicated in Replicate + xAI providers (P3, defer to third provider)
-- Primary SDK handler at `xai_provider.py:173` still uses `error_type='billing'` (not `'quota'`). Out of scope for 161-F; one-line follow-up spec (P2).
+- ~~Primary SDK handler at `xai_provider.py:173` still uses `error_type='billing'`~~ — ✅ RESOLVED Session 162 (162-D, now returns `error_type='quota'` with static error message, matching 161-F's httpx-path pattern).
+- ~~Bulk gen job view silent fallback~~ — ✅ RESOLVED Session 162 (162-E, `except Exception:` narrowed to `(ValueError, ImportError, AttributeError, KeyError)` + `logger.warning` — observability only; non-OpenAI semantic fallback correctness deferred as P2).
 
 #### Rate Limiting Audit — Replicate + xAI (Deferred to Session 162+)
 
@@ -1579,14 +1581,27 @@ Some older prompts still have images stored on **Cloudinary**. New uploads go to
 {{ prompt.b2_image_url|default:prompt.cloudinary_url }}
 ```
 
-#### Cloudinary Migration Status (Updated Session 161)
+#### Cloudinary Migration Status (Updated Session 162)
 
 Management command `migrate_cloudinary_to_b2` was created in
-Session 160-F and fixed in Session 161-A (correct
-`B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` credential names;
-CloudinaryResource public_id via `.public_id` attribute, not `str()`
-which returned the object repr). Dry-run now correctly identifies
-~36 records.
+Session 160-F, credential-fixed in Session 161-A (correct
+`B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` setting names;
+`CloudinaryResource` public_id via `.public_id` attribute not
+`str()`), and queryset-fixed in Session 162-A (Q-object replacement
+for SQL `IN (NULL)` three-valued-logic bug). Dry-run now correctly
+identifies 36 prompt images + 14 videos + 0 legacy avatars
+(no avatars migrated yet — avatar upload pipeline switch is Session
+163 F1).
+
+**Correction (162-C investigation):** the 161-A narrative claimed
+that pre-fix code fell back to `str(CloudinaryResource)` which
+"returned object repr". A direct SDK test at current cloudinary
+version shows `str(CloudinaryResource(public_id='legacy/foo'))`
+returns `'legacy/foo'` (the public_id, not the repr). The real
+latent bug was `str(None) == 'None'` producing `'legacy/None.jpg'`
+URLs when the CloudinaryField was NULL. The `.public_id` pattern
+still resolves this (falls back to empty string via `or ''`) and
+is preferred as defense against future SDK behavior changes.
 
 Avatar migration support was added in Session 161-E:
 `UserProfile.b2_avatar_url` URLField (migration 0084) + new
@@ -2351,5 +2366,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.52 (Session 161 — Cloudinary migration creds + public_id fix, AI Direction autosave + Reset clears draft, Reset to master preserves AI Direction, results pricing via stored Decimal, b2_avatar_url field + avatar migration, Grok httpx billing/TransportError; 1286 tests)
-**Last Updated:** April 18, 2026
+**Version:** 4.53 (Session 162 — Cloudinary migration queryset Q-object fix + avatar templates B2-first + vision_moderation public_id pattern + xAI SDK billing→quota alignment + narrow bare except in bulk gen view + CC_SPEC_TEMPLATE v2.7 with three retrospective rules; 1321 tests)
+**Last Updated:** April 19, 2026

@@ -4,6 +4,10 @@ Tests for `migrate_cloudinary_to_b2` management command.
 Exercises the primary safety contract (`--dry-run` makes no DB
 changes) and the idempotency/fail-fast branches. External I/O is
 mocked — no network calls and no CloudinaryField wiring needed.
+
+Queryset-level regression tests (162-A) exercise the command against
+real ORM rows to catch NULL-vs-empty-string semantics that mock-only
+tests cannot reach.
 """
 
 from __future__ import annotations
@@ -14,10 +18,11 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.management import CommandError, call_command
+from django.db.models import Q
 from django.test import TestCase
 
 from prompts.management.commands.migrate_cloudinary_to_b2 import Command
-from prompts.models import Prompt
+from prompts.models import Prompt, UserProfile
 
 
 class MigrateCloudinaryToB2DryRunTests(TestCase):
@@ -254,3 +259,182 @@ class MigrateCloudinaryToB2AvatarTests(TestCase):
             self.profile.b2_avatar_url,
             'https://media.promptfinder.net/avatars/new.jpg',
         )
+
+
+class MigrateCloudinaryToB2QuerysetNullTests(TestCase):
+    """
+    Regression tests for 162-A. Prior filter
+    `b2_*_url__in=('', None)` silently excluded rows where the field
+    IS NULL (SQL `IN (NULL)` returns UNKNOWN, not TRUE). These tests
+    create real ORM rows with NULL/empty b2_*_url values and exercise
+    the command's queryset against them.
+
+    Session 162 Rule 1 (queryset integration test rule): these tests
+    MUST NOT use SimpleNamespace mocks — the bug they guard against
+    only surfaces against real DB rows.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='querysetuser',
+            email='querysetuser@example.com',
+            password='x',
+        )
+
+    @patch(
+        'prompts.management.commands.migrate_cloudinary_to_b2.'
+        '_fetch',
+        return_value=b'fake-bytes',
+    )
+    def test_image_queryset_matches_null_b2_image_url(self, mock_fetch):
+        """
+        Real Prompt with featured_image populated and b2_image_url=None
+        must be identified by the command queryset.
+
+        Prior `.filter(b2_image_url__in=('', None))` missed NULL rows;
+        the fixed `.filter(Q(b2_image_url='') | Q(b2_image_url__isnull=True))`
+        correctly matches them.
+        """
+        prompt = Prompt.objects.create(
+            title='Regression 162-A image',
+            slug='regression-162a-image',
+            content='test',
+            author=self.user,
+            ai_generator='midjourney',
+            featured_image='legacy/regression_162a_image',
+        )
+        # Confirm the field is actually NULL in DB, not coerced to ''
+        prompt.refresh_from_db()
+        self.assertIsNone(
+            prompt.b2_image_url,
+            (
+                'Test setup failure: b2_image_url is not NULL after '
+                'create(). Spec assumption invalid — field may have '
+                'gained a default since 162-A was written.'
+            ),
+        )
+
+        # Direct queryset proof — exact filter the command uses
+        image_qs = (
+            Prompt.all_objects.exclude(featured_image='')
+            .filter(Q(b2_image_url='') | Q(b2_image_url__isnull=True))
+        )
+        self.assertIn(prompt, image_qs)
+        # Negative pairing: broken filter `__in=('', None)` does NOT
+        # match — this is the bug 162-A closes.
+        broken_qs = (
+            Prompt.all_objects.exclude(featured_image='')
+            .filter(b2_image_url__in=('', None))
+        )
+        self.assertNotIn(prompt, broken_qs)
+
+        # Command-level dispatch: dry-run exercises the queryset and
+        # produces a `would-migrate` status for this prompt.
+        out = StringIO()
+        call_command(
+            'migrate_cloudinary_to_b2',
+            '--dry-run',
+            '--limit', '5',
+            '--model', 'prompt',
+            stdout=out,
+        )
+        output = out.getvalue()
+        self.assertIn(str(prompt.id), output)
+        self.assertIn('would-migrate', output)
+
+    @patch(
+        'prompts.management.commands.migrate_cloudinary_to_b2.'
+        '_fetch',
+        return_value=b'fake-video-bytes',
+    )
+    def test_video_queryset_matches_null_b2_video_url(self, mock_fetch):
+        """
+        Real Prompt with featured_video populated and b2_video_url=None
+        must be identified by the video queryset.
+        """
+        prompt = Prompt.objects.create(
+            title='Regression 162-A video',
+            slug='regression-162a-video',
+            content='test',
+            author=self.user,
+            ai_generator='midjourney',
+            featured_video='legacy/regression_162a_video',
+        )
+        prompt.refresh_from_db()
+        self.assertIsNone(
+            prompt.b2_video_url,
+            (
+                'Test setup failure: b2_video_url is not NULL after '
+                'create(). Spec assumption invalid.'
+            ),
+        )
+
+        video_qs = (
+            Prompt.all_objects.exclude(featured_video='')
+            .filter(Q(b2_video_url='') | Q(b2_video_url__isnull=True))
+        )
+        self.assertIn(prompt, video_qs)
+        broken_qs = (
+            Prompt.all_objects.exclude(featured_video='')
+            .filter(b2_video_url__in=('', None))
+        )
+        self.assertNotIn(prompt, broken_qs)
+
+        out = StringIO()
+        call_command(
+            'migrate_cloudinary_to_b2',
+            '--dry-run',
+            '--limit', '5',
+            '--model', 'prompt',
+            stdout=out,
+        )
+        output = out.getvalue()
+        self.assertIn(str(prompt.id), output)
+        self.assertIn('would-migrate-video', output)
+
+    @patch(
+        'prompts.management.commands.migrate_cloudinary_to_b2.'
+        '_fetch',
+        return_value=b'fake-avatar-bytes',
+    )
+    def test_avatar_queryset_matches_empty_b2_avatar_url(
+        self, mock_fetch
+    ):
+        """
+        Real UserProfile with avatar populated and b2_avatar_url=''
+        (the default for this field — it has no `null=True`) must be
+        identified by the avatar queryset.
+
+        b2_avatar_url cannot be NULL at the DB level (migration 0084
+        set `default=''` with no `null=True`), so this test exercises
+        the empty-string branch of the Q filter. The `__isnull=True`
+        branch is still defensively present in case the field gains
+        `null=True` later; the pattern is symmetric with the prompt
+        image/video querysets.
+        """
+        profile = self.user.userprofile
+        profile.avatar = 'legacy/regression_162a_avatar'
+        profile.save()
+        profile.refresh_from_db()
+        self.assertEqual(profile.b2_avatar_url, '')
+
+        avatar_qs = (
+            UserProfile.objects.exclude(avatar='')
+            .exclude(avatar=None)
+            .filter(
+                Q(b2_avatar_url='') | Q(b2_avatar_url__isnull=True)
+            )
+        )
+        self.assertIn(profile, avatar_qs)
+
+        out = StringIO()
+        call_command(
+            'migrate_cloudinary_to_b2',
+            '--dry-run',
+            '--limit', '5',
+            '--model', 'userprofile',
+            stdout=out,
+        )
+        output = out.getvalue()
+        self.assertIn(str(profile.pk), output)
+        self.assertIn('would-migrate-avatar', output)

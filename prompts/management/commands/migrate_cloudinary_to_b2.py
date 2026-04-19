@@ -39,6 +39,7 @@ from io import BytesIO
 import requests
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Q
 
 from prompts.models import Prompt, UserProfile
 from prompts.services.b2_upload_service import upload_image, upload_video
@@ -380,9 +381,12 @@ class Command(BaseCommand):
 
         if run_prompts:
             # Images first — Prompts with a Cloudinary image but no B2 image.
+            # NULL-safe filter: `__in=('', None)` silently excludes NULL rows
+            # because SQL `col IN (NULL)` returns UNKNOWN, not TRUE.
+            # `__isnull=True` correctly translates to `IS NULL`. See 162-A.
             image_qs = (
                 Prompt.all_objects.exclude(featured_image="")
-                .filter(b2_image_url__in=("", None))
+                .filter(Q(b2_image_url="") | Q(b2_image_url__isnull=True))
                 .order_by("id")
             )
             if limit:
@@ -407,16 +411,26 @@ class Command(BaseCommand):
                         )
                     )
                     continue
-                if i % 10 == 0 or status.startswith("migrated"):
+                # Cross-spec absorption (162-A Rule 2): include
+                # `would-migrate` statuses so dry-run with <10 records
+                # produces visible per-record output. Previously only
+                # every-10th or "migrated" statuses printed, hiding
+                # proof of queryset matches during dry-run.
+                if (
+                    i % 10 == 0
+                    or status.startswith("migrated")
+                    or status.startswith("would-migrate")
+                ):
                     self.stdout.write(f"  [{prompt.pk}] {status}")
                 # Gentle throttle so Cloudinary doesn't rate-limit.
                 if not dry_run:
                     time.sleep(0.2)
 
             # Videos — Prompts with a Cloudinary video but no B2 video.
+            # Same NULL-safe Q-object pattern as the image queryset (162-A).
             video_qs = (
                 Prompt.all_objects.exclude(featured_video="")
-                .filter(b2_video_url__in=("", None))
+                .filter(Q(b2_video_url="") | Q(b2_video_url__isnull=True))
                 .order_by("id")
             )
             if limit:
@@ -447,10 +461,13 @@ class Command(BaseCommand):
 
         if run_profiles:
             # Avatars — UserProfile with a Cloudinary avatar but no B2 avatar.
+            # Same NULL-safe Q-object pattern as the image queryset (162-A).
             avatar_qs = (
                 UserProfile.objects.exclude(avatar="")
                 .exclude(avatar=None)
-                .filter(b2_avatar_url__in=("", None))
+                .filter(
+                    Q(b2_avatar_url="") | Q(b2_avatar_url__isnull=True)
+                )
                 .order_by("id")
             )
             if limit:
@@ -475,7 +492,13 @@ class Command(BaseCommand):
                         )
                     )
                     continue
-                if i % 10 == 0 or status.startswith("migrated"):
+                # Same observability absorption as the image loop
+                # (162-A Rule 2) — include `would-migrate` statuses.
+                if (
+                    i % 10 == 0
+                    or status.startswith("migrated")
+                    or status.startswith("would-migrate")
+                ):
                     self.stdout.write(
                         f"  [avatar {profile.pk}] {status}"
                     )

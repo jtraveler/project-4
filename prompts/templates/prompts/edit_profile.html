@@ -78,6 +78,26 @@
                                 </div>
                             </div>
 
+                            {# 163-E — Sync-from-provider buttons.
+                               Rendered only when the user has at
+                               least one linked SocialAccount. #}
+                            {% if user.socialaccount_set.exists %}
+                            <div class="avatar-sync-section mt-3 p-3 border rounded bg-light">
+                                <h6 class="mb-2">Sync avatar from a linked account</h6>
+                                <small class="text-muted d-block mb-2">
+                                    Pulls the current profile photo from your
+                                    provider and replaces your current avatar.
+                                </small>
+                                {% for account in user.socialaccount_set.all %}
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-sm avatar-sync-btn me-2 mb-2"
+                                        data-provider="{{ account.provider }}">
+                                    Sync from {{ account.provider|capfirst }}
+                                </button>
+                                {% endfor %}
+                                <div id="avatar-sync-status" class="mt-2" aria-live="polite" aria-atomic="true"></div>
+                            </div>
+                            {% endif %}
                         </div>
 
                         <hr class="my-4">
@@ -292,4 +312,79 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- 163-C avatar upload flow (async, separate from main form submit) -->
 <script src="{% static 'js/avatar-upload.js' %}"></script>
 
+{# 163-E — sync-from-provider button handler. Inline because it's a
+   one-off per-page interaction; extracting into a shared module adds
+   coupling with no reuse benefit. #}
+{% if user.socialaccount_set.exists %}
+<script>
+(function () {
+    'use strict';
+    const syncButtons = document.querySelectorAll('.avatar-sync-btn');
+    const statusEl = document.getElementById('avatar-sync-status');
+    const previewImg = document.getElementById('avatar-preview-img');
+    const placeholderDiv = document.getElementById('avatar-placeholder');
+
+    function getCookie(name) {
+        const match = document.cookie.match(
+            new RegExp('(^|; )' + name + '=([^;]+)')
+        );
+        return match ? decodeURIComponent(match[2]) : null;
+    }
+
+    syncButtons.forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            const provider = btn.dataset.provider;
+            if (!statusEl) return;
+            statusEl.textContent = 'Syncing from ' + provider + '...';
+            statusEl.className = 'text-info mt-2';
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/avatar/sync-from-provider/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ provider: provider }),
+                });
+                if (!resp.ok) {
+                    // Surface the HTTP status explicitly (429, 400, etc.)
+                    // rather than a vague "Sync failed" from JSON parse
+                    // of an HTML error page.
+                    let errText = 'Sync failed: HTTP ' + resp.status;
+                    try {
+                        const errData = await resp.json();
+                        if (errData && errData.error) {
+                            errText = 'Sync failed: ' + errData.error;
+                        }
+                    } catch (_) { /* non-JSON body */ }
+                    throw new Error(errText);
+                }
+                const data = await resp.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Sync failed');
+                }
+
+                statusEl.textContent = 'Avatar synced from ' + provider + '!';
+                statusEl.className = 'text-success mt-2';
+                if (previewImg && data.avatar_url) {
+                    // Cache-bust: deterministic B2 key returns the same URL
+                    // on re-sync, so browsers would otherwise serve the
+                    // stale cached image.
+                    previewImg.src = data.avatar_url + '?t=' + Date.now();
+                    previewImg.style.display = 'block';
+                }
+                if (placeholderDiv) placeholderDiv.style.display = 'none';
+            } catch (err) {
+                statusEl.textContent = err.message;
+                statusEl.className = 'text-danger mt-2';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -1254,3 +1254,81 @@ def avatar_upload_complete(request):
         'success': True,
         'avatar_url': cdn_url,
     })
+
+
+@login_required
+@require_http_methods(["POST"])
+def avatar_sync_from_provider(request):
+    """163-E — Re-sync avatar from the user's linked social provider.
+
+    POST /api/avatar/sync-from-provider/
+    Body: optional `{"provider": "google"}` — required if user has
+          multiple linked providers.
+
+    Rate limit is SHARED with direct upload (`b2_avatar_upload_rate`)
+    to prevent bypass via alternating direct+sync flows.
+    """
+    cache_key = f"b2_avatar_upload_rate:{request.user.id}"
+    count = cache.get(cache_key, 0)
+    if count >= AVATAR_UPLOAD_RATE_LIMIT:
+        return JsonResponse({
+            'success': False,
+            'error': (
+                f'Too many avatar updates. '
+                f'Limit {AVATAR_UPLOAD_RATE_LIMIT}/hour.'
+            ),
+        }, status=429)
+
+    try:
+        body = json.loads(request.body or b'{}')
+    except (ValueError, json.JSONDecodeError):
+        body = {}
+    requested_provider = (body.get('provider') or '').strip().lower()
+
+    accounts = request.user.socialaccount_set.all()
+    if not accounts.exists():
+        return JsonResponse({
+            'success': False,
+            'error': 'No linked social account.',
+        }, status=400)
+
+    if requested_provider:
+        account = accounts.filter(provider=requested_provider).first()
+        if not account:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    f'No linked account for provider: '
+                    f'{requested_provider}'
+                ),
+            }, status=400)
+    else:
+        if accounts.count() > 1:
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    'Multiple linked accounts — specify provider '
+                    'in request body.'
+                ),
+            }, status=400)
+        account = accounts.first()
+
+    from prompts.services.social_avatar_capture import (
+        capture_from_social_account,
+    )
+    result = capture_from_social_account(
+        user=request.user, socialaccount=account, force=True,
+    )
+
+    if result.get('success'):
+        cache.set(cache_key, count + 1, timeout=B2_UPLOAD_RATE_WINDOW)
+        return JsonResponse({
+            'success': True,
+            'avatar_url': result.get('avatar_url'),
+            'provider': account.provider,
+        })
+
+    return JsonResponse({
+        'success': False,
+        'error': result.get('reason') or 'Sync failed. Please try again.',
+    }, status=400)

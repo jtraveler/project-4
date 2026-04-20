@@ -107,6 +107,13 @@ urlpatterns = [
          upload_api_views.avatar_upload_complete,
          name='avatar_upload_complete'),
 
+    # Avatar Sync-from-Provider (Session 163-E)
+    # Shares avatar rate-limit bucket with direct upload to prevent
+    # bypass via alternating flows.
+    path('api/avatar/sync-from-provider/',
+         upload_api_views.avatar_sync_from_provider,
+         name='avatar_sync_from_provider'),
+
     # NSFW Moderation API (Step 1 Blocking)
     path('api/upload/b2/moderate/', views.b2_moderate_upload, name='b2_moderate_upload'),
     path('api/upload/b2/delete/', views.b2_delete_upload, name='b2_delete_upload'),

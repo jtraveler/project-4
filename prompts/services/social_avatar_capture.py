@@ -24,6 +24,7 @@ Safety notes:
   sync button passes `force=True` to override.
 """
 import logging
+import types
 
 import httpx
 
@@ -209,3 +210,41 @@ def capture_social_avatar(user, sociallogin, force=False):
         'skipped': False,
         'reason': result.get('error'),
     }
+
+
+def capture_from_social_account(user, socialaccount, force=False):
+    """163-E — Re-capture avatar from an already-linked SocialAccount.
+
+    Unlike `capture_social_avatar` (takes a SocialLogin, used during
+    the allauth signal flow), this takes a SocialAccount directly
+    because the user is already authenticated and the provider
+    linkage is persistent. Used by the "Sync from provider" button
+    (163-E).
+
+    Args:
+        user: Django User instance (must own the SocialAccount)
+        socialaccount: allauth SocialAccount instance
+        force: if True, override the direct-upload guard. 163-E
+            passes True (the whole point of the sync button is to
+            overwrite).
+
+    Returns:
+        dict: same shape as `capture_social_avatar`.
+    """
+    # Ownership check — the endpoint should already ensure this, but
+    # defense in depth. Matters if this helper is ever called from a
+    # less-trusted path.
+    if socialaccount.user_id != user.id:
+        return {
+            'success': False, 'avatar_url': None, 'skipped': False,
+            'reason': 'SocialAccount does not belong to user',
+        }
+
+    # Construct a minimal SocialLogin-shaped object so we can reuse
+    # capture_social_avatar's logic without duplicating it.
+    # types.SimpleNamespace is the idiomatic Python way to build a
+    # lightweight duck-typed object — no ad-hoc class needed (163-E
+    # agent review, architect-review + python-pro).
+    fake = types.SimpleNamespace(account=socialaccount, user=user)
+
+    return capture_social_avatar(user, fake, force=force)

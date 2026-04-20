@@ -155,6 +155,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',  # 163-D
     'django_summernote',
     'crispy_forms',
     'crispy_bootstrap5',
@@ -287,6 +288,43 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 # Temporarily close registration (bot prevention)
 # Remove this line to re-enable public signup
 ACCOUNT_ADAPTER = 'prompts.adapters.ClosedAccountAdapter'
+
+# 163-D — Social login plumbing. Activates when the developer adds
+# Google OAuth client credentials via Heroku config vars or a
+# SocialApp row in admin. Signals registered in
+# prompts/social_signals.py are inert until then.
+#
+# AUTHENTICATION_BACKENDS: ModelBackend handles username/password +
+# admin; allauth's AuthenticationBackend handles social-account
+# callbacks. Without the second entry, social-login callbacks fail
+# silently (163-A Gotcha 2).
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# SOCIALACCOUNT_PROVIDERS: Google entry. No client IDs here — the
+# developer supplies credentials via a SocialApp admin row or env
+# vars when ready to enable OAuth. PKCE hardens the authorization
+# code exchange.
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+    },
+}
+
+# SOCIALACCOUNT_ADAPTER — separate from ACCOUNT_ADAPTER so the
+# password-signup freeze (ClosedAccountAdapter.is_open_for_signup
+# returning False) is preserved while social signup is permitted
+# (163-A Gotcha 1).
+SOCIALACCOUNT_ADAPTER = 'prompts.adapters.OpenSocialAccountAdapter'
 
 # Email backend (for development)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

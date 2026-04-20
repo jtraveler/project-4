@@ -12,6 +12,7 @@ import uuid
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django_ratelimit.decorators import ratelimit
 from django_q.tasks import async_task
@@ -25,6 +26,7 @@ from prompts.services.b2_upload_service import (
 from prompts.services.b2_presign_service import (
     generate_presigned_upload_url,
     verify_upload_exists,
+    AVATAR_MAX_SIZE,
 )
 
 # =============================================================================
@@ -65,6 +67,10 @@ from prompts.services.b2_presign_service import (
 # Rate limiting constants for B2 uploads
 B2_UPLOAD_RATE_LIMIT = 20  # Max uploads per hour per user
 B2_UPLOAD_RATE_WINDOW = 3600  # 1 hour in seconds
+
+# Avatar-specific rate limit (163-C, per 163-A Gotcha 4 — distinct
+# from prompt upload counter to prevent cross-flow bypass).
+AVATAR_UPLOAD_RATE_LIMIT = 5  # Max avatar uploads per hour per user
 
 # Rate limiting constants for thumbnail proxy
 PROXY_RATE_LIMIT = 60   # Max proxy requests per minute per staff user
@@ -1112,3 +1118,139 @@ def proxy_image_thumbnail(request):
     except Exception as exc:
         logger.warning("[IMAGE-PROXY] Failed to fetch %s: %s (user %s)", url, exc, request.user.pk)
         return HttpResponseBadRequest('Failed to fetch image.')
+
+
+# ============================================================
+# 163-C — Avatar Direct Upload Endpoints
+# ============================================================
+# Separate session key (`pending_avatar_upload`) and cache key
+# (`b2_avatar_upload_rate:{user.id}`) from the prompt-upload flow
+# per 163-A Gotcha 4. Avatar rate limit is 5/hour, 3 MB cap.
+
+
+@login_required
+@require_http_methods(["GET"])
+def avatar_upload_presign(request):
+    """163-C — Generate presigned URL for direct avatar upload to B2.
+
+    Endpoint: GET /api/upload/avatar/presign/
+    Query params: content_type, content_length, filename (optional)
+
+    Distinct from b2_presign_upload: uses `pending_avatar_upload`
+    session key and `b2_avatar_upload_rate:{user.id}` cache key so
+    the two flows can be used concurrently without clobbering.
+    """
+    cache_key = f"b2_avatar_upload_rate:{request.user.id}"
+    count = cache.get(cache_key, 0)
+    if count >= AVATAR_UPLOAD_RATE_LIMIT:
+        return JsonResponse({
+            'success': False,
+            'error': (
+                f'Too many avatar uploads. '
+                f'Limit {AVATAR_UPLOAD_RATE_LIMIT}/hour.'
+            ),
+        }, status=429)
+
+    content_type = request.GET.get('content_type', '')
+    try:
+        content_length = int(request.GET.get('content_length', 0))
+    except (ValueError, TypeError):
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid content_length',
+        }, status=400)
+
+    # Avatars accept image MIMEs only (subset of prompt-upload types
+    # — GIF excluded for UX reasons, only profile-appropriate formats).
+    if content_type not in ('image/jpeg', 'image/png', 'image/webp'):
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid content type. Use JPEG, PNG, or WebP.',
+        }, status=400)
+
+    original_filename = request.GET.get('filename', '')
+
+    result = generate_presigned_upload_url(
+        content_type=content_type,
+        content_length=content_length,
+        original_filename=original_filename,
+        folder='avatars',
+        user_id=request.user.id,
+        source='direct',
+        max_size=AVATAR_MAX_SIZE,
+    )
+
+    if not result.get('success'):
+        return JsonResponse(result, status=400)
+
+    # Stash metadata for the complete endpoint — distinct session
+    # key prevents collision with prompt-upload flow.
+    request.session['pending_avatar_upload'] = {
+        'key': result['key'],
+        'cdn_url': result['cdn_url'],
+        'content_type': content_type,
+    }
+    request.session.modified = True
+
+    cache.set(cache_key, count + 1, timeout=B2_UPLOAD_RATE_WINDOW)
+    return JsonResponse(result)
+
+
+@login_required
+@require_http_methods(["POST"])
+def avatar_upload_complete(request):
+    """163-C — Verify avatar B2 upload and persist to profile.
+
+    Endpoint: POST /api/upload/avatar/complete/
+    """
+    pending = request.session.get('pending_avatar_upload')
+    if not pending:
+        return JsonResponse({
+            'success': False,
+            'error': 'No pending avatar upload. Please re-upload.',
+        }, status=400)
+
+    key = pending.get('key')
+    cdn_url = pending.get('cdn_url')
+
+    # Confirm the browser actually completed the PUT to B2.
+    verification = verify_upload_exists(key)
+    if not verification.get('exists'):
+        return JsonResponse({
+            'success': False,
+            'error': 'Upload verification failed.',
+        }, status=400)
+
+    # Persist avatar_url + avatar_source='direct' on the profile.
+    # Call full_clean before save so avatar_source choices are
+    # enforced at ORM level — matches the avatar_upload_service
+    # pattern (single audit point for field validation).
+    # 'direct' is a constant valid choice so this is a no-op today,
+    # but keeps the endpoint consistent with the service-layer
+    # contract if the source ever becomes dynamic.
+    profile = request.user.userprofile
+    profile.avatar_url = cdn_url
+    profile.avatar_source = 'direct'
+    try:
+        profile.full_clean(exclude=['user'])
+    except ValidationError as e:
+        logger.warning(
+            'Avatar complete endpoint full_clean failed user_id=%s: %s',
+            request.user.id, e,
+        )
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid avatar state.',
+        }, status=400)
+    profile.save(update_fields=[
+        'avatar_url', 'avatar_source', 'updated_at',
+    ])
+
+    # Clear the pending session state so the endpoint is
+    # single-shot — subsequent calls without a fresh presign will 400.
+    del request.session['pending_avatar_upload']
+
+    return JsonResponse({
+        'success': True,
+        'avatar_url': cdn_url,
+    })

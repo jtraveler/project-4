@@ -35,6 +35,10 @@ ALLOWED_VIDEO_TYPES = [
     'video/quicktime',
 ]
 
+# Avatar-specific constant — 163-C
+# Avatars use a 3 MB cap to keep profile photos lightweight.
+AVATAR_MAX_SIZE = 3 * 1024 * 1024
+
 # Module-level cache for B2 client (boto3 clients are thread-safe)
 _b2_client_cache = None
 
@@ -74,17 +78,45 @@ def get_b2_client():
     return _b2_client_cache
 
 
-def generate_upload_key(content_type, original_filename=None):
+def generate_upload_key(content_type, original_filename=None,
+                        folder=None, user_id=None, source='direct'):
     """
-    Generate a unique S3 key (path) for the upload.
+    Generate a B2 upload key (path).
+
+    For avatars (163-C: `folder='avatars'`): returns a deterministic key
+    `avatars/<source>_<user_id>.<ext>` so re-uploads overwrite rather
+    than orphan. `user_id` is required when `folder='avatars'`.
+
+    For prompts (default path, no `folder` kwarg): preserves the
+    legacy behavior — `media/{images|videos}/<YYYY>/<MM>/original/...`
+    with a random UUID. Signature is backward-compatible for all
+    existing prompt-upload callers.
 
     Args:
         content_type: MIME type of the file
         original_filename: Original filename (optional, for extension)
+        folder: 'avatars' for the deterministic avatar path (163-C).
+            None (default) preserves legacy prompt behavior.
+        user_id: Required when folder='avatars'.
+        source: Avatar origin — one of 'direct', 'google', 'facebook',
+            'apple'. Used to construct the deterministic avatar key.
+            Ignored when folder is None.
 
     Returns:
         tuple: (key, filename) where key is the full S3 path
+
+    Raises:
+        ValueError: If folder='avatars' but user_id is not provided.
     """
+    # Avatar path (163-C) — deterministic key, overwrites on re-upload
+    if folder == 'avatars':
+        if not user_id:
+            raise ValueError("user_id required for avatars folder")
+        ext = _extension_for_content_type(content_type, original_filename)
+        filename = f"{source}_{user_id}.{ext}"
+        return f"avatars/{filename}", filename
+
+    # Legacy path — unchanged for prompt uploads
     now = datetime.now()
     year = now.strftime('%Y')
     month = now.strftime('%m')
@@ -109,28 +141,68 @@ def generate_upload_key(content_type, original_filename=None):
         if ext not in valid_ext:
             ext = 'mp4'
         prefix = 'v'  # Video prefix
-        folder = 'videos'
+        folder_legacy = 'videos'
     else:
         valid_ext = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
         if ext not in valid_ext:
             ext = 'jpg'
         prefix = ''
-        folder = 'images'
+        folder_legacy = 'images'
 
     filename = f"{prefix}{unique_id}.{ext}"
-    key = f"media/{folder}/{year}/{month}/original/{filename}"
+    key = f"media/{folder_legacy}/{year}/{month}/original/{filename}"
 
     return key, filename
 
 
-def generate_presigned_upload_url(content_type, content_length, original_filename=None):
+def _extension_for_content_type(content_type, original_filename=None):
+    """Determine file extension for avatar keys (163-C).
+
+    Prefers the original filename's extension when valid; otherwise
+    falls back to a MIME-to-ext map. Returns a lowercase string
+    without the leading dot.
+    """
+    if original_filename and '.' in original_filename:
+        ext = original_filename.rsplit('.', 1)[1].lower()
+        if ext in ('jpg', 'jpeg', 'png', 'webp', 'gif',
+                   'mp4', 'webm', 'mov'):
+            return ext
+    mime_to_ext = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif',
+        'video/mp4': 'mp4',
+        'video/webm': 'webm',
+        'video/quicktime': 'mov',
+    }
+    return mime_to_ext.get(content_type, 'bin')
+
+
+def generate_presigned_upload_url(content_type, content_length,
+                                  original_filename=None,
+                                  folder=None, user_id=None, source='direct',
+                                  max_size=None):
     """
     Generate a presigned URL for direct browser upload to B2.
+
+    163-C added `folder`, `user_id`, `source`, and `max_size` kwargs.
+    All default to values that preserve the pre-163-C prompt-upload
+    behavior — legacy callers pass none of the new kwargs and see no
+    change.
 
     Args:
         content_type: MIME type of the file being uploaded
         content_length: Size of the file in bytes
         original_filename: Original filename (optional)
+        folder: 'avatars' for the deterministic avatar key pattern
+            (163-C). None (default) preserves legacy prompt path.
+        user_id: Required when folder='avatars'.
+        source: Avatar origin — direct/google/facebook/apple.
+            Ignored when folder is None.
+        max_size: Override default size cap (bytes). None (default)
+            uses 15 MB for videos, 3 MB for images. Avatar callers
+            should pass AVATAR_MAX_SIZE explicitly.
 
     Returns:
         dict: {
@@ -154,20 +226,24 @@ def generate_presigned_upload_url(content_type, content_length, original_filenam
             'error': f'Invalid content type: {content_type}',
         }
 
-    # Validate file size
+    # Validate file size — parameterizable for avatar vs prompt paths
     is_video = content_type in ALLOWED_VIDEO_TYPES
-    max_size = 15 * 1024 * 1024 if is_video else 3 * 1024 * 1024
+    if max_size is None:
+        max_size = 15 * 1024 * 1024 if is_video else 3 * 1024 * 1024
 
     if content_length > max_size:
-        size_limit = '15MB' if is_video else '3MB'
+        size_limit_mb = max_size // (1024 * 1024)
         return {
             'success': False,
-            'error': f'File too large. Maximum size is {size_limit}.',
+            'error': f'File too large. Maximum size is {size_limit_mb}MB.',
         }
 
     try:
         client = get_b2_client()
-        key, filename = generate_upload_key(content_type, original_filename)
+        key, filename = generate_upload_key(
+            content_type, original_filename,
+            folder=folder, user_id=user_id, source=source,
+        )
 
         # Generate presigned URL for PUT operation
         # CRITICAL: B2 requires PUT, not POST

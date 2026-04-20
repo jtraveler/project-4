@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load cloudinary %}
+{% load static %}
 
 {% block title %}Edit Profile - {{ request.user.username }}{% endblock %}
 
@@ -37,35 +37,47 @@
                     <form method="post" enctype="multipart/form-data" id="edit-profile-form">
                         {% csrf_token %}
 
-                        <!-- Avatar Section -->
-                        <div class="mb-4">
-                            <label class="form-label fw-bold">
+                        <!-- Avatar Section — 163-C rebuild
+                             Upload flow is async (B2 direct via
+                             avatar-upload.js), NOT part of this form's
+                             submit cycle. The form below only saves
+                             bio + social URLs. -->
+                        <div class="mb-4 avatar-edit-section">
+                            <label for="avatar-file-input" class="form-label fw-bold">
                                 <i class="fas fa-image me-1"></i> Profile Avatar
                             </label>
 
-                            <!-- Current Avatar Preview -->
-                            <div class="mb-3">
-                                {% if profile.avatar.url %}
-                                    {% cloudinary profile.avatar width=150 height=150 crop="fill" gravity="face" quality="auto" fetch_format="auto" class="rounded-circle border border-3 border-light shadow-sm" alt="{{ request.user.username }}'s avatar" %}
-                                {% else %}
-                                    <div class="avatar-placeholder d-inline-flex align-items-center justify-content-center bg-secondary text-white rounded-circle" style="width: 150px; height: 150px; font-size: 3rem;">
-                                        {{ request.user.username|slice:":1"|upper }}
-                                    </div>
-                                {% endif %}
+                            <!-- Avatar Preview Container -->
+                            <div class="avatar-preview-container mb-3"
+                                 style="width: 150px; height: 150px; position: relative;">
+                                <img id="avatar-preview-img"
+                                     src="{% if profile.avatar_url %}{{ profile.avatar_url }}{% endif %}"
+                                     alt="{{ request.user.username }}'s avatar"
+                                     class="rounded-circle border border-3 border-light shadow-sm"
+                                     style="{% if not profile.avatar_url %}display: none; {% endif %}width: 150px; height: 150px; object-fit: cover;">
+                                <div id="avatar-placeholder"
+                                     class="avatar-placeholder rounded-circle border border-3 border-light shadow-sm"
+                                     style="{% if profile.avatar_url %}display: none; {% endif %}width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; font-size: 48px; color: white; font-weight: bold;">
+                                    {{ request.user.username|slice:":1"|upper }}
+                                </div>
                             </div>
 
-                            <!-- Avatar Upload Input -->
-                            {{ form.avatar }}
-                            {% if form.avatar.errors %}
-                                <div class="text-danger mt-2">
-                                    {% for error in form.avatar.errors %}
-                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small><br>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            <!-- Avatar Upload Input (async, separate from main form submit) -->
+                            <input type="file"
+                                   id="avatar-file-input"
+                                   accept="image/jpeg,image/png,image/webp"
+                                   class="form-control">
                             <small class="form-text text-muted d-block mt-2">
-                                <i class="fas fa-info-circle me-1"></i>{{ form.avatar.help_text }}
+                                <i class="fas fa-info-circle me-1"></i>
+                                JPG, PNG, or WebP. Max 3 MB. Uploads immediately when selected.
                             </small>
+                            <div id="avatar-upload-status" class="mt-2"></div>
+                            <div id="avatar-upload-progress" class="mt-2" style="display: none;">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Uploading...</span>
+                                </div>
+                            </div>
+
                         </div>
 
                         <hr class="my-4">
@@ -276,4 +288,8 @@ document.addEventListener('DOMContentLoaded', function() {
     font-weight: 500;
 }
 </style>
+
+<!-- 163-C avatar upload flow (async, separate from main form submit) -->
+<script src="{% static 'js/avatar-upload.js' %}"></script>
+
 {% endblock %}

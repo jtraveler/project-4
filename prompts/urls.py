@@ -97,6 +97,16 @@ urlpatterns = [
     path('api/upload/b2/presign/', views.b2_presign_upload, name='b2_presign_upload'),
     path('api/upload/b2/complete/', views.b2_upload_complete, name='b2_upload_complete'),
 
+    # Avatar Direct Upload API (Session 163-C)
+    # Distinct session + rate-limit keys from prompt-upload flow per
+    # 163-A Gotcha 4. 5/hour limit, 3 MB cap, JPEG/PNG/WebP only.
+    path('api/upload/avatar/presign/',
+         upload_api_views.avatar_upload_presign,
+         name='avatar_upload_presign'),
+    path('api/upload/avatar/complete/',
+         upload_api_views.avatar_upload_complete,
+         name='avatar_upload_complete'),
+
     # NSFW Moderation API (Step 1 Blocking)
     path('api/upload/b2/moderate/', views.b2_moderate_upload, name='b2_moderate_upload'),
     path('api/upload/b2/delete/', views.b2_delete_upload, name='b2_delete_upload'),

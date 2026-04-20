@@ -2,8 +2,7 @@
 
 **Spec:** CC_SPEC_163_C_DIRECT_UPLOAD_PIPELINE.md (v2)
 **Date:** 2026-04-20
-**Status:** Partial (Sections 1–8, 11). HOLD state. Sections 9–10
-filled after full suite at 163-D gate.
+**Status:** Complete. All sections filled. Committed 785ffa7.
 
 ---
 
@@ -284,14 +283,21 @@ the better check.
 
 ## Section 9 — How to Test
 
-**Pending full suite gate (after 163-D).**
+Verification (completed 2026-04-20):
 
-Partial Phase 1 evidence:
-- `python manage.py test prompts.tests.test_avatar_upload`
-  → 19 tests, 0 failures
-- `python manage.py check` → 0 issues
-- `python manage.py showmigrations prompts | tail -1` → `[X] 0085_...`
-  (no new migrations, schema unchanged during 163-C)
+```
+$ python manage.py test prompts.tests.test_avatar_upload
+Ran 19 tests — OK
+
+$ python manage.py check
+System check identified no issues (0 silenced).
+
+$ python manage.py showmigrations prompts | tail -1
+ [X] 0085_drop_cloudinary_avatar_add_avatar_source
+
+$ python manage.py test prompts --verbosity=1
+Ran 1364 tests — OK (skipped=12)
+```
 
 Manual browser verification is a developer step after deploy:
 - Log in, visit `/settings/profile/`
@@ -305,9 +311,13 @@ Manual browser verification is a developer step after deploy:
 
 ## Section 10 — Commits
 
-**AWAITING FULL SUITE GATE — no commit yet.** 163-C is on HOLD per
-the v2 run instructions. Commit hash will be filled after the full
-suite passes at end of Session 163 (after 163-D, optionally 163-E).
+Committed `785ffa7` — `feat(avatars): direct upload pipeline — B2
+presign + edit_profile rebuild`.
+
+Verified via `git log --oneline -1 785ffa7`:
+```
+785ffa7 feat(avatars): direct upload pipeline — B2 presign + edit_profile rebuild
+```
 
 ## Section 11 — What to Work on Next
 

@@ -2,8 +2,7 @@
 
 **Spec:** CC_SPEC_163_E_SYNC_FROM_PROVIDER.md (v2)
 **Date:** 2026-04-20
-**Status:** Partial (Sections 1–8, 11). HOLD state. Sections 9–10
-filled after full suite gate + commit.
+**Status:** Complete. All sections filled. Committed 76951b5.
 
 ---
 
@@ -271,14 +270,21 @@ for the end-to-end OAuth flow check.
 
 ## Section 9 — How to Test
 
-**Pending full suite gate.**
+Verification (completed 2026-04-20):
 
-Partial evidence (this report):
-- `python manage.py test prompts.tests.test_avatar_sync` →
-  9 tests, 0 failures (19.562s)
-- `python manage.py check` → 0 issues expected
-- `python manage.py showmigrations prompts | tail -1` →
-  `[X] 0085_...` (schema unchanged during 163-E)
+```
+$ python manage.py test prompts.tests.test_avatar_sync
+Ran 9 tests — OK
+
+$ python manage.py check
+System check identified no issues (0 silenced).
+
+$ python manage.py showmigrations prompts | tail -1
+ [X] 0085_drop_cloudinary_avatar_add_avatar_source
+
+$ python manage.py test prompts --verbosity=1
+Ran 1364 tests — OK (skipped=12)
+```
 
 Post-deploy verification (requires live Google OAuth client):
 1. Link a Google account via `/accounts/login/` (uses 163-D flow)
@@ -293,9 +299,13 @@ Post-deploy verification (requires live Google OAuth client):
 
 ## Section 10 — Commits
 
-**AWAITING FULL SUITE GATE — no commit yet.** 163-E is on HOLD per
-the v2 run instructions. Commit hash filled after the full suite
-passes at end of Session 163 (before 163-F).
+Committed `76951b5` — `feat(avatars): "Sync from provider" button
+on edit_profile`.
+
+Verified via `git log --oneline -1 76951b5`:
+```
+76951b5 feat(avatars): "Sync from provider" button on edit_profile
+```
 
 ## Section 11 — What to Work on Next
 

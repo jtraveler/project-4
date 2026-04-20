@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** April 19, 2026
+**Last Updated:** April 20, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -75,6 +75,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 163 | Apr 20, 2026 | Avatar pipeline rebuild (Phase F1 complete). Migration 0085 drops `CloudinaryField` avatar, renames `b2_avatar_url`→`avatar_url`, adds `avatar_source` CharField with 5 choices (`default`/`direct`/`google`/`facebook`/`apple`). UserProfileForm `clean_avatar` + `store_old_avatar_reference`/`delete_old_avatar_after_save` signal handlers removed. Six templates simplified three-branch→two-branch. UserProfileAdmin fieldset rewritten + `has_avatar` reads `avatar_url` (prevents /admin 500) (163-B). B2 direct upload pipeline: `b2_presign_service` extended with avatars folder + deterministic key `avatars/<source>_<user_id>.<ext>`; new `avatar_upload_service.py` (shared entry for direct/social/sync); new endpoints `/api/upload/avatar/presign/` + `/api/upload/avatar/complete/` (distinct session key `pending_avatar_upload` + cache key `b2_avatar_upload_rate:{user.id}`, 5/hour, 3 MB cap); new `static/js/avatar-upload.js`; `edit_profile.html` rewritten (`<img object-fit: cover>` replaces `{% cloudinary %}`) (163-C). Social-login plumbing: `AUTHENTICATION_BACKENDS` set, `SOCIALACCOUNT_PROVIDERS` Google config (no client IDs), `OpenSocialAccountAdapter` alongside `ClosedAccountAdapter` preserving password-freeze; new `social_avatar_capture.py` (SSRF-guarded HTTPS-only + 10s + 3 MB + content-type allowlist + `follow_redirects=False`); new `social_signals.py` with both `user_signed_up` + `social_account_added` receivers; PyJWT==2.9.0 added (Google provider dep) (163-D). "Sync from provider" button on edit_profile with shared rate-limit bucket (prevents bypass); `capture_from_social_account` wrapper with ownership guard + `types.SimpleNamespace` (163-E). **2026-04-19 incident**: v1 163-B applied migration 0085 to production via `env.py` DATABASE_URL — ~30min outage, 0 data loss; recovery + env.py neutralised; v2 spec redesign with env.py safety gate + no-migrate-by-CC rule + three-phase migration handoff (see CLAUDE_CHANGELOG). 1364 tests. |
 | Session 162 | Apr 19, 2026 | Cloudinary migration queryset filter fix — SQL `IN (NULL)` returns UNKNOWN, so `.filter(b2_*_url__in=('', None))` silently missed all legacy NULL rows; replaced with `Q(field='') \| Q(field__isnull=True)` across image/video/avatar branches. Dry-run now identifies 36 prompt images + 14 videos (162-A). Six avatar templates now prefer `b2_avatar_url` over Cloudinary `avatar.url` via three-branch B2-first pattern; `edit_profile.html` reserved for Session 164 F2 pending upload pipeline switch in 163 F1 (162-B). `vision_moderation.py` video-fallback path + three `fix_cloudinary_urls` branches moved from `str(CloudinaryField)` to explicit `.public_id` extraction — latent `str(None) == 'None'` bug fixed; investigation showed the 161-A claim that `str(CloudinaryResource)` returns object repr was wrong, current SDK's `__str__` returns `self.public_id` (162-C). xAI primary SDK path billing exhaustion now returns `error_type='quota'` (was `'billing'` — no handler in tasks.py, fell into retry loop). Matches 161-F httpx-path fix, static error message (162-D). `except Exception:` narrowed to `(ValueError, ImportError, AttributeError, KeyError)` around provider-registry cost lookup with `logger.warning`; fallback behavior unchanged, observability added (162-E). CC_SPEC_TEMPLATE v2.7 codifies three retrospective rules: Queryset Integration Test Rule (no SimpleNamespace mocks), Cross-Spec Bug Absorption Policy (absorb <5-line fixes, don't defer), Stale Narrative Text Grep Rule (Step 0 check before writing code) (162-H). 1321 tests. |
 | Session 161 | Apr 18, 2026 | Cloudinary migration command bugs fixed: B2 credential check now uses `B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` (actual Django setting names), CloudinaryResource public_id extraction via `getattr(..., "public_id", "") or ""` — dry-run now correctly identifies ~36 records (161-A). **Correction (Session 162-C investigation):** the original 161-A report claimed the pre-fix code fell back to `str(CloudinaryResource)` which returned object repr; direct SDK test shows `str(CloudinaryResource)` returns `self.public_id` in the current version. The real latent bug was `str(None) == 'None'` producing malformed URLs when the field was NULL — the `.public_id` pattern still fixes that and is preferred for SDK-version defense. Autosave: `.bg-vision-direction-input` added to input listener so typing into AI Direction triggers save; master Reset button now calls `I.clearDraft()` to remove `pf_bg_draft` from localStorage; `clearSavedPrompts()` cancels pending debounce timer (TOCTOU fix) (161-B). "Reset to master" (per-box) now preserves AI Direction checkbox state, row visibility, and textarea text — AI Direction is user content, not a setting (161-C). Results page pricing: view uses stored `job.actual_total_images` and Decimal `job.estimated_cost` (accurate to per-prompt count overrides) instead of master-only recalculation; Decimal preserved end-to-end for precision (161-D). New `UserProfile.b2_avatar_url` URLField + migration 0084; `migrate_cloudinary_to_b2` extended with `_migrate_avatar()` and `--model userprofile` choice (161-E). Grok httpx-direct edits path: 400 with 'billing' keyword returns `error_type='quota'` (stops job); `httpx.TransportError` caught and returns `error_type='server_error'` for retry (161-F). 1286 tests. |
 | Session 160 | Apr 18, 2026 | Profanity error UX: triggered word bold/italic + clickable "Prompt N" link built via DOM API (no innerHTML); empty/duplicate errors also get the link. Quality section restored to disabled/greyed (not hidden) with "High" locked for non-quality models; two-column grid layout restored (160-B). Per-prompt cost fix: sticky-bar total now uses per-box `totalCost` accumulator for all models (previously non-BYOK recomputed from master quality, ignoring per-box overrides); console.warn for unmapped models (160-C). Full draft autosave: single `pf_bg_draft` JSON blob (version 1) captures ALL master settings + per-prompt box content + toggles + overrides; replaces 4 legacy keys via one-shot migration; draft persists after generation, cleared only by Clear All; schema maps cleanly to future `PromptDraft` server model (160-D). Pricing accuracy: `floatformat:"-3"` on results page + `parseFloat(x.toFixed(3)).toString()` in JS — $0.067 no longer rounds to $0.07, $0.003 no longer to $0.00 (160-E). Cloudinary → B2 migration command: `migrate_cloudinary_to_b2` with `--dry-run`, `--limit`, idempotency, fail-fast credential check, 50MB streaming size cap, `res.cloudinary.com` hostname allow-list (160-F). 1278 tests. |
@@ -759,6 +760,8 @@ Rebuilding upload flow to feel "instant" by:
 
 | Issue | Description | Impact |
 |-------|-------------|--------|
+| **Google OAuth credentials not yet configured** | Session 163-D built the allauth social-login plumbing but it is inert until the developer adds `GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET` to Heroku config vars OR creates a Google `SocialApp` row in admin. No end-to-end OAuth test is possible until then. | Developer action — next step for avatar pipeline full activation. |
+| **env.py no longer sets DATABASE_URL (Session 163 incident)** | Local dev MUST use SQLite via settings.py fallback. Any local command that needs production data must inline `DATABASE_URL=<url>` for that specific command. Migration commands are developer-only; CC never runs `python manage.py migrate`. | Structural safeguard — see CLAUDE_CHANGELOG Session 163 incident section. |
 | **`needs_seo_review` on bulk pages** | `create_prompt_pages_from_job` creates `Prompt` objects without `needs_seo_review=True`. Bulk-created pages silently bypass the SEO review queue. Priority blocker before large-scale content seeding. | Fix in 153-H (Session 153 Batch 2). |
 | **~~N4h rename (upload-flow)~~** | ✅ RESOLVED Session 122 (commit a9acbc4). Guard changed from `is_b2_upload and prompt.pk` to `prompt.b2_image_url`. | Resolved — upload-flow prompts now trigger rename task |
 | **~~CI/CD pipeline failing~~** | ~~All 3 jobs failing~~ — **RESOLVED Session 89** (691 tests at time of fix; now 976 passing, 12 skipped, flake8 clean, bandit clean) | ✅ All 3 jobs green |
@@ -1605,8 +1608,16 @@ is preferred as defense against future SDK behavior changes.
 
 Avatar migration support was added in Session 161-E:
 `UserProfile.b2_avatar_url` URLField (migration 0084) + new
-`_migrate_avatar()` method + `--model userprofile` choice. Run
-`python manage.py migrate` before executing the command.
+`_migrate_avatar()` method + `--model userprofile` choice.
+
+**Session 163-B update (2026-04-20):** Avatar `CloudinaryField` has
+been dropped entirely (migration 0085). `b2_avatar_url` was renamed
+to `avatar_url` and `avatar_source` CharField added. The
+`_migrate_avatar` method was removed from `migrate_cloudinary_to_b2`
+since no avatar data ever existed in production (April 19 diagnostic
+confirmed 0 legacy avatars). UserProfile is now fully Cloudinary-free.
+`Prompt` still has CloudinaryField (image + video) — those remain
+in scope for a future `CloudinaryField → CharField` migration spec.
 
 Run sequence (developer runs manually on Heroku):
 
@@ -2366,5 +2377,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.53 (Session 162 — Cloudinary migration queryset Q-object fix + avatar templates B2-first + vision_moderation public_id pattern + xAI SDK billing→quota alignment + narrow bare except in bulk gen view + CC_SPEC_TEMPLATE v2.7 with three retrospective rules; 1321 tests)
-**Last Updated:** April 19, 2026
+**Version:** 4.54 (Session 163 — avatar pipeline rebuild: migration 0085 drops CloudinaryField from UserProfile, rename b2_avatar_url→avatar_url, add avatar_source CharField; B2 direct upload pipeline (presign+complete endpoints, avatar_upload_service, avatar-upload.js); social-login plumbing (allauth Google provider, OpenSocialAccountAdapter, social_signals, social_avatar_capture with SSRF guards); "Sync from provider" button on edit_profile; 2026-04-19 production incident + v2 spec redesign with env.py safety gate + no-migrate-by-CC rule; 1364 tests)
+**Last Updated:** April 20, 2026

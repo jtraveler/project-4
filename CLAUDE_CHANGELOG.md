@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 19, 2026 (Sessions 101–162)
+**Last Updated:** April 20, 2026 (Sessions 101–163)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -22,6 +22,236 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 163 — April 20, 2026 (Avatar Pipeline Rebuild)
+
+**Focus:** Drop Cloudinary from UserProfile entirely. Rebuild avatar
+upload with B2 direct flow. Add social-login avatar capture plumbing
+(Google scope). Session ran as v2 after a 2026-04-19 production
+incident — see incident section below.
+
+**Specs:** 163-A (read-only investigation, committed pre-v2 redesign),
+163-B (model cleanup + migration 0085), 163-C (B2 direct upload
+pipeline), 163-D (social-login signal plumbing), 163-E (sync-from-
+provider button), 163-F (this docs rollup).
+
+**Migrations:** 1 new — `0085_drop_cloudinary_avatar_add_avatar_source`
+(three atomic operations: RemoveField avatar, RenameField
+`b2_avatar_url`→`avatar_url`, AddField `avatar_source`
+CharField with 5 choices).
+
+---
+
+#### ⚠️ 2026-04-19 Production Incident
+
+During the first (v1) attempt at 163-B, migration 0085 was
+inadvertently applied to the production Heroku Postgres database by a
+local `python manage.py migrate prompts` command.
+
+**Root cause:** `env.py` (gitignored, local-dev config) contained
+`os.environ.setdefault("DATABASE_URL", "postgres://...")` pointing at
+the production cluster. The line had been there for a long time with
+an innocuous comment ("production database for local testing"). No
+local `migrate` had ever been run while it was active, so the loaded
+gun went unnoticed. When 163-B's Phase 2 developer-run migration fired
+locally, Django followed the `DATABASE_URL` env var straight to prod
+— migrating the live cluster instead of SQLite.
+
+**Impact:**
+- Production schema drifted from deployed code (v757 still expected
+  `avatar` column; DB had `avatar_url` + `avatar_source` instead)
+- Every page that loaded a UserProfile returned 500
+- ~30 minutes of outage before recovery completed
+- **Zero data loss** — no avatars existed in production (the April 19
+  diagnostic run had already confirmed 0 legacy avatars on production)
+
+**Recovery:**
+- Manual SQL on the production cluster restored the 0084 schema: ADD
+  COLUMN `avatar` (Cloudinary field), RENAME `avatar_url` back to
+  `b2_avatar_url`, DROP `avatar_source`
+- Deleted the stale 0085 row from production's `django_migrations`
+  table so Heroku redeploys would see 0084 as the head
+- 163-B code rolled back on the local branch (migration file, test
+  file, partial report deleted; working tree reverted)
+
+**Remediation — structural, not just procedural:**
+- `env.py` edited: the `DATABASE_URL` line commented out with a
+  deactivation block citing this incident. Local dev now falls
+  through to `settings.py`'s SQLite fallback (`db.sqlite3`)
+- `settings.py` verified — when `DATABASE_URL` is unset, Django uses
+  SQLite. Confirmed via `python -c "import env; ..."`
+- Session 163 specs redesigned as v2:
+  - **env.py safety gate** added at the top of every code spec (a
+    pre-work grep + Python check that `DATABASE_URL` is unset)
+  - Migration commands explicitly marked **DEVELOPER RUNS THIS** with
+    a prohibition note in every spec header
+  - 163-B restructured into three phases: **CC prepares**, developer
+    runs migration, **CC verifies** (Phase 1/2/3 handoff)
+  - Run instructions redesigned with check-ins at migration
+    boundaries
+
+**Lesson:** Gitignored config files can contain loaded guns that
+don't surface until the right (wrong) command fires. Investigation
+specs should explicitly read and flag config file contents as a
+risk surface. The 163-A investigation DID read env.py but treated
+it as a reference, not a risk.
+
+Future sessions: if the v2 safety pattern (env.py gate, no-migrate-by-
+CC, three-phase migration handoff) proves durable, it may be codified
+into CC_SPEC_TEMPLATE. For now it lives in Session 163's run
+instructions and the per-spec safety gates. Decision deferred per
+163-F Section 4.
+
+---
+
+#### Specs
+
+| Spec | Commit | Scope | Agent Avg | Agents ≥ 8.0 |
+|------|--------|-------|-----------|--------------|
+| 163-A | `a0b99e2` | Read-only avatar pipeline investigation (pre-incident) | 9.3/10 | 2/2 |
+| 163-B | `de75e9c` | Migration 0085: drop CloudinaryField, rename → `avatar_url`, add `avatar_source`. Admin + 6 templates updated. Three-phase protocol. | 8.8/10 | 6/6 |
+| 163-C | `785ffa7` | B2 direct upload pipeline: new presign endpoints, `avatar_upload_service`, `avatar-upload.js`, `edit_profile.html` rewrite. | 8.7/10 | 6/6 (one round 2 to re-pass ≥ 8.0) |
+| 163-D | `b4069ad` | Social-login plumbing: `AUTHENTICATION_BACKENDS`, `SOCIALACCOUNT_PROVIDERS['google']`, `OpenSocialAccountAdapter`, `social_signals.py`, `social_avatar_capture.py`. PyJWT dep added. | 8.76/10 | 7/7 |
+| 163-E | `76951b5` | "Sync from provider" button on `edit_profile`. Shared rate bucket prevents bypass. Ownership guard + `types.SimpleNamespace`. | 8.57/10 | 7/7 |
+| 163-F | (this) | End-of-session docs rollup (including incident section). | — | 2/2 |
+
+#### Key decisions
+
+- **Single migration 0085** holding three atomic operations rather
+  than three separate migrations — simpler rollback, Django
+  transaction wraps all ops atomically on Postgres.
+- **Rename `b2_avatar_url` → `avatar_url`** (not kept as dual field)
+  — April 19 confirmed 0 avatar data in production, so a clean rename
+  is safe. Future avatar systems will just use `avatar_url`.
+- **`avatar_source` CharField with 5 choices** (default/direct/google/
+  facebook/apple) — db_index=True; enables filtering
+  `UserProfile.objects.filter(avatar_source='direct')` for admin
+  reporting.
+- **Extend `b2_presign_service`** (not fork) — `generate_upload_key`
+  accepts `folder`/`user_id`/`source`; avatars folder returns
+  deterministic key `avatars/<source>_<user_id>.<ext>` so re-uploads
+  overwrite rather than orphan.
+- **BOTH allauth signals** (`user_signed_up` AND `social_account_added`)
+  — per 163-A R5. First-time signup uses one; existing password user
+  linking Google uses the other. Neither alone covers both cases.
+- **Google-first, extensible later.** Facebook + Apple providers not
+  configured in settings; their URL extractors exist but return None.
+  Adding a new provider is a trivial settings diff when ready.
+- **`force=False` default** preserves user-uploaded avatars. 163-E's
+  sync button is the only call site that passes `force=True`.
+- **Distinct session + cache keys for avatar upload** per 163-A Gotcha
+  4: `pending_avatar_upload` session key, `b2_avatar_upload_rate:{user.id}`
+  cache key. Prevents cross-contamination with prompt-upload flow.
+- **Shared cache key between 163-C direct and 163-E sync** — both
+  flows count against the same 5/hour bucket to prevent bypass via
+  alternating.
+
+#### v2 protocol decisions (new)
+
+- **Migration handoff protocol:** CC prepares migration file + code
+  changes (Phase 1), developer runs `python manage.py migrate`
+  (Phase 2), CC verifies schema + runs tests (Phase 3). This is the
+  post-incident pattern.
+- **env.py safety gate** at the top of every code spec — grep +
+  Python check that `DATABASE_URL` is NOT SET.
+- **Explicit prohibition on CC running `migrate` commands.** Even
+  when tests pass locally. Even when the developer has "already run
+  it." CC verifies with `showmigrations`, never `migrate`.
+
+#### Absorbed cross-spec fixes (Rule 2)
+
+- **163-C** — `presignResp.ok` check in `avatar-upload.js` (flagged
+  by `@frontend-developer`); `<label for="avatar-file-input">` for
+  a11y; `profile.full_clean(exclude=['user'])` in
+  `avatar_upload_complete` view (architect-review); removed unused
+  `_extension_for_content_type` import.
+- **163-D** — `follow_redirects=False` on `httpx.Client` (SSRF
+  hardening, flagged by both `@backend-security-coder` and
+  `@architect-review`); happy-path test for `_download_provider_photo`
+  added (tdd-orchestrator).
+- **163-E** — `types.SimpleNamespace` replaces ad-hoc `_FakeSocialLogin`
+  local class (python-pro + architect-review); `aria-live="polite"
+  aria-atomic="true"` on `#avatar-sync-status` (frontend-developer).
+
+#### Deferred items (see individual REPORT_163_* Section 5 for detail)
+
+- **Google OAuth credentials** — developer must configure
+  `GOOGLE_OAUTH_CLIENT_ID` + `_CLIENT_SECRET` on Heroku OR create a
+  Google `SocialApp` admin row before the social-login path
+  activates end-to-end.
+- **Facebook + Apple providers** — extractor stubs exist; add
+  entries to `SOCIALACCOUNT_PROVIDERS` when ready.
+- **`AvatarChangeLog` rename** — schema unchanged per 163-A Gotcha 8.
+  Field still named `cloudinary_url` even though avatars are now B2.
+  Cosmetic; defer.
+- **CloudinaryField → CharField migration on Prompt** — separate spec
+  after every prompt has `b2_image_url` populated. Requires data
+  migration to preserve stored public_ids.
+- **Bare `except Exception:` audit** (carried forward from Session
+  162-E) — narrow to specific exceptions where safe.
+- **Admin CAPTCHA** and **Google Authenticator for admin 2FA** —
+  carried forward.
+- **Streaming download for provider photo size cap** (163-D Section
+  5, P3) — use `client.stream('GET', url)` + running byte counter.
+- **Avatar rate-limit helper consolidation** (163-E Section 5, P3)
+  — DRY the 163-C + 163-E atomic `cache.add`/`cache.incr` pattern.
+
+#### Files added
+
+- `prompts/migrations/0085_drop_cloudinary_avatar_add_avatar_source.py` (163-B)
+- `prompts/services/avatar_upload_service.py` (163-C)
+- `static/js/avatar-upload.js` (163-C)
+- `prompts/services/social_avatar_capture.py` (163-D, 163-E extended)
+- `prompts/social_signals.py` (163-D)
+- `prompts/tests/test_userprofile_163b_schema.py` (163-B, 7 tests)
+- `prompts/tests/test_avatar_upload.py` (163-C, 19 tests)
+- `prompts/tests/test_social_avatar_capture.py` (163-D, 26 tests)
+- `prompts/tests/test_avatar_sync.py` (163-E, 9 tests)
+- `docs/REPORT_163_A.md` through `docs/REPORT_163_F.md`
+
+#### Files removed (content, not files)
+
+- `UserProfileForm.clean_avatar()` method (163-B)
+- `UserProfileForm.avatar` ImageField (163-B)
+- `store_old_avatar_reference` + `delete_old_avatar_after_save`
+  signal handlers in `prompts/signals.py` (163-B — Option A, no
+  B2 cleanup needed because deterministic keys overwrite)
+- `_migrate_avatar` method in `migrate_cloudinary_to_b2` (163-B
+  follow-up — no avatar data existed in production)
+- `fix_admin_avatar.py` management command + its README (163-B —
+  Cloudinary-specific, obsolete)
+- `test_edit_profile_html_not_modified_by_163b` (163-F suite gate —
+  obsolete scope-bleed guard; 163-C legitimately owns the template)
+- `env.py` `DATABASE_URL` production setting (2026-04-19 incident
+  remediation; kept as commented deactivation block with context)
+
+#### Commits (chronological, Session 163 total = 5)
+
+| Commit | Message |
+|--------|---------|
+| `a0b99e2` | docs(investigation): 163-A avatar pipeline investigation report |
+| `de75e9c` | feat(models): drop CloudinaryField from UserProfile + avatar_url + avatar_source |
+| `785ffa7` | feat(avatars): direct upload pipeline — B2 presign + edit_profile rebuild |
+| `b4069ad` | feat(avatars): social-login avatar capture — allauth signal plumbing |
+| `76951b5` | feat(avatars): "Sync from provider" button on edit_profile |
+| (163-F hash) | END OF SESSION DOCS UPDATE: session 163 — avatar pipeline rebuild |
+
+#### Test count
+
+1321 → 1364 (+43 net). 61 new tests added across four new files:
+7 schema (`test_userprofile_163b_schema.py`), 19 upload
+(`test_avatar_upload.py`), 26 social capture
+(`test_social_avatar_capture.py`), 9 sync (`test_avatar_sync.py`).
+Offset by ~18 tests removed / consolidated in the 163-B cleanup —
+`test_avatar_templates_b2_first.py` rewritten (23 → 10 tests: the
+3-branch pattern had more permutations to cover than the 2-branch
+replacement), `test_migrate_cloudinary_to_b2.py` avatar class
+removed (11 → 6 tests), and one obsolete scope-guard test
+(`test_edit_profile_html_not_modified_by_163b`) deleted in 163-F's
+suite gate after 163-C legitimately took ownership of the template.
+12 skipped unchanged. Full suite OK.
+
+---
 
 ### Session 162 — April 19, 2026
 

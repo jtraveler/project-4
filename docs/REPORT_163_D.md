@@ -2,8 +2,7 @@
 
 **Spec:** CC_SPEC_163_D_SOCIAL_LOGIN_CAPTURE.md (v2)
 **Date:** 2026-04-20
-**Status:** Partial (Sections 1–8, 11). HOLD state. Sections 9–10
-filled after full suite gate.
+**Status:** Complete. All sections filled. Committed b4069ad.
 
 ---
 
@@ -251,14 +250,21 @@ the correct forum for that.
 
 ## Section 9 — How to Test
 
-**Pending full suite gate.**
+Verification (completed 2026-04-20):
 
-Partial Phase 1 evidence:
-- `python manage.py test prompts.tests.test_social_avatar_capture`
-  → 26 tests, 0 failures
-- `python manage.py check` → 0 issues
-- `python manage.py showmigrations prompts | tail -1` →
-  `[X] 0085_...` (schema unchanged during 163-D)
+```
+$ python manage.py test prompts.tests.test_social_avatar_capture
+Ran 26 tests — OK
+
+$ python manage.py check
+System check identified no issues (0 silenced).
+
+$ python manage.py showmigrations prompts | tail -1
+ [X] 0085_drop_cloudinary_avatar_add_avatar_source
+
+$ python manage.py test prompts --verbosity=1
+Ran 1364 tests — OK (skipped=12)
+```
 
 Post-deploy, developer should:
 1. Add `SocialApp` row (Google, client_id, secret) via admin OR
@@ -274,9 +280,13 @@ Post-deploy, developer should:
 
 ## Section 10 — Commits
 
-**AWAITING FULL SUITE GATE — no commit yet.** 163-D is on HOLD per
-the v2 run instructions. Commit hash filled after the full suite
-passes at end of Session 163 (after 163-E if run, then 163-F).
+Committed `b4069ad` — `feat(avatars): social-login avatar capture
+— allauth signal plumbing`.
+
+Verified via `git log --oneline -1 b4069ad`:
+```
+b4069ad feat(avatars): social-login avatar capture — allauth signal plumbing
+```
 
 ## Section 11 — What to Work on Next
 

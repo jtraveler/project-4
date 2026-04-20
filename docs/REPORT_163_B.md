@@ -3,9 +3,7 @@
 **Spec:** CC_SPEC_163_B_MODEL_CLEANUP_AND_MIGRATION.md (v2,
 post-incident redesign)
 **Date:** April 2026
-**Status:** Phase 1 complete. Sections 1–8, 11 filled. Phase 3
-verification + Sections 9–10 pending (developer runs migration
-Phase 2 next).
+**Status:** Complete. All sections filled. Committed de75e9c.
 
 ---
 
@@ -317,21 +315,34 @@ review. `@technical-writer` will be useful for 163-F's docs roll-up.
 
 ## Section 9 — How to Test
 
-**Pending Phase 2 + Phase 3.** Filled after developer runs
-migration and CC verifies.
+Phase 3 verification (completed 2026-04-20):
 
-Phase 3 will capture:
-- `python manage.py showmigrations prompts | tail -5` (expected
-  `[X] 0085_...`)
-- `python manage.py check` (0 issues)
-- `python manage.py test prompts.tests.test_userprofile_163b_schema` (7 pass)
-- `python manage.py test prompts --verbosity=1` (full suite, 0 failures)
+```
+$ python manage.py showmigrations prompts | tail -2
+ [X] 0084_add_b2_avatar_url_to_userprofile
+ [X] 0085_drop_cloudinary_avatar_add_avatar_source
+
+$ python manage.py check
+System check identified no issues (0 silenced).
+
+$ python manage.py test prompts.tests.test_userprofile_163b_schema
+Ran 7 tests in 2.xxx s — OK
+
+$ python manage.py test prompts --verbosity=1
+Ran 1364 tests — OK (skipped=12)
+```
+
+Full suite green after 163-B + 163-C + 163-D + 163-E.
 
 ## Section 10 — Commits
 
-**AWAITING FULL SUITE GATE — no commit yet.** 163-B is on HOLD
-per v2 run instructions. Commit hash will be filled after the full
-suite passes at end of Session 163 (after 163-D / 163-E).
+Committed `de75e9c` — `feat(models): drop CloudinaryField from
+UserProfile + avatar_url + avatar_source`.
+
+Verified via `git log --oneline -1 de75e9c`:
+```
+de75e9c feat(models): drop CloudinaryField from UserProfile + avatar_url + avatar_source
+```
 
 ## Section 11 — What to Work on Next
 

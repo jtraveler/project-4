@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** April 19, 2026 (Session 162)
+**Last Updated:** April 20, 2026 (Session 163)
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Phase REP (Replicate + xAI providers — Session 154). Bulk AI Image Generator (Phases 1–7 + 6E complete). Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1321 passing, 12 skipped (Session 162)
+**Current Phase:** Phase REP (Replicate + xAI providers — Session 154). Bulk AI Image Generator (Phases 1–7 + 6E complete). Avatar pipeline rebuilt B2-native (Session 163). Phase N4 (~100%), Phase K (~96%)
+**Total Tests:** 1364 passing, 12 skipped (Session 163)
 
 ---
 
@@ -11,19 +11,19 @@
 
 | Category | Count | Location |
 |----------|-------|----------|
-| **Python Files** | 96 | Various directories |
+| **Python Files** | 99 | Various directories (+3 new in Session 163: `avatar_upload_service.py` and `social_avatar_capture.py` under `prompts/services/`, plus `social_signals.py` at the `prompts/` app root) |
 | **HTML Templates** | 45 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 12 | static/css/ |
-| **JavaScript Files** | 19 | static/js/ (2 deleted in Session 61, 2 added in Session 86, 1 added Session 93, 1 added Session 98, bulk-generator-job.js split into 4 modules Session 121, bulk-generator-gallery.js added Session 122, bulk-generator.js split +2 modules Session 143) |
+| **JavaScript Files** | 20 | static/js/ (+1 added in Session 163: `avatar-upload.js`. Earlier: 2 deleted in 61, 2 added in 86, 1 in 93, 1 in 98, job.js split in 121, gallery added in 122, bulk-generator.js split +2 in 143) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 86 | prompts/migrations/ (84, latest 0084 `add_b2_avatar_url_to_userprofile` — Session 161), about/migrations/ (2) |
-| **Test Files** | 24 | prompts/tests/ |
-| **Management Commands** | 30 | prompts/management/commands/ (migrate_cloudinary_to_b2 credential fix in 161-A, avatar support in 161-E, queryset Q-object fix in 162-A; `fix_cloudinary_urls` public_id pattern in 162-C) |
-| **Services** | 15 | prompts/services/ |
+| **Migrations** | 87 | prompts/migrations/ (85, latest `0085_drop_cloudinary_avatar_add_avatar_source` — Session 163-B), about/migrations/ (2) |
+| **Test Files** | 28 | prompts/tests/ (+4 new in Session 163: schema, avatar upload, social capture, sync) |
+| **Management Commands** | 29 | prompts/management/commands/ (-1 in 163-B: `fix_admin_avatar` deleted — Cloudinary-specific, obsolete. `migrate_cloudinary_to_b2` credential fix in 161-A, avatar support 161-E + _migrate_avatar removed 163-B, queryset Q-object fix in 162-A; `fix_cloudinary_urls` public_id pattern in 162-C) |
+| **Services** | 15 | prompts/services/ (+2 new in Session 163: `avatar_upload_service.py`, `social_avatar_capture.py`. Standalone .py modules, excluding `__init__.py` and the `image_providers/` subpackage) |
 | **View Modules** | 13 | prompts/views/ |
 | **CI/CD Config Files** | 5 | .github/workflows/, .github/, root |
-| **Documentation (MD)** | 110 | Root (30), docs/ (74 — +7 new 162 reports: 162-A/B/C/D/E/G/H), archive/ (6) |
-| **UserProfile fields (notable)** | | `avatar` (CloudinaryField, legacy) + `b2_avatar_url` (URLField, Session 161-E) — B2-first/Cloudinary-fallback dual-field pattern |
+| **Documentation (MD)** | 116 | Root (30), docs/ (80 — +6 new 163 reports: 163-A/B/C/D/E/F), archive/ (6) |
+| **UserProfile fields (notable)** | | `avatar_url` (URLField, was `b2_avatar_url` pre-163-B) + `avatar_source` (CharField with 5 choices: default/direct/google/facebook/apple) — fully B2-native, no CloudinaryField. |
 
 ---
 
@@ -231,15 +231,17 @@ live-working-project/
 
 ---
 
-## Service Layer Architecture (12 modules)
+## Service Layer Architecture (15 modules + image_providers subpackage)
 
 ```
 prompts/services/
 ├── __init__.py              # Service exports
-├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT)
+├── avatar_upload_service.py # Shared entry point for avatar upload to B2 (Session 163-C) — used by direct upload, social capture, sync. Calls profile.full_clean before save.
+├── b2_presign_service.py    # B2 presigned URL generation (Phase L8-DIRECT). Extended Session 163-C to support avatars folder with deterministic key `avatars/<source>_<user_id>.<ext>`.
 ├── b2_rename.py             # B2 file renaming via copy-verify-delete (Phase N4h)
 ├── b2_upload_service.py     # B2 upload orchestration (Phase L)
 ├── bulk_generation.py       # BulkGenerationService: job creation, scheduling, rate limiting, per-image status, encrypt/decrypt/clear_api_key helpers (~300 lines, Sessions 92-101)
+├── social_avatar_capture.py # Social-login avatar capture (Session 163-D). SSRF-safe httpx download (HTTPS-only, 10s, 3 MB, content-type allowlist, follow_redirects=False) + `capture_social_avatar` + `capture_from_social_account` (163-E wrapper via types.SimpleNamespace).
 ├── vision_moderation.py     # OpenAI Vision moderation for images and videos (renamed Session 125)
 ├── content_generation.py    # GPT-4o content generation for uploads
 ├── image_processor.py       # Pillow image optimization (Phase L)
@@ -270,9 +272,11 @@ prompts/utils/
 
 | Service | Description | Cost |
 |---------|-------------|------|
-| **b2_presign_service** | Generates presigned URLs for direct browser-to-B2 uploads (L8-DIRECT) | N/A |
+| **avatar_upload_service** | `upload_avatar_to_b2(user, bytes, source, content_type)` — shared entry point for direct, social-capture, and sync flows (Session 163-C). | N/A |
+| **b2_presign_service** | Generates presigned URLs for direct browser-to-B2 uploads (L8-DIRECT). Avatar support added Session 163-C (folder='avatars' → deterministic key). | N/A |
 | **b2_rename** | Renames B2 files from UUID to SEO slugs via copy-verify-delete (Phase N4h) | N/A |
 | **b2_upload_service** | Orchestrates B2 uploads with optimization | ~$0.005/GB |
+| **social_avatar_capture** | Social-login avatar capture (Session 163-D): `extract_provider_avatar_url`, SSRF-safe `_download_provider_photo`, `capture_social_avatar`, `capture_from_social_account` (163-E wrapper). | N/A |
 | **bulk_generation** | BulkGenerationService: create jobs, schedule image generation, rate limiting (Session 92) | N/A |
 | **image_providers** | Provider abstraction for AI image generation — ImageProvider base class + OpenAI GPT-Image-1 adapter (Session 92) | N/A |
 | **vision_moderation** | OpenAI Vision moderation for images and videos | ~$5-10/1000 images |
@@ -433,10 +437,26 @@ prompts/views/
 
 | File | Purpose |
 |------|---------|
-| `settings.py` | Django settings (database, Cloudinary, middleware) |
+| `settings.py` | Django settings (database, Cloudinary, middleware). Session 163-D added `AUTHENTICATION_BACKENDS`, `SOCIALACCOUNT_PROVIDERS['google']` (no client IDs in code), `SOCIALACCOUNT_ADAPTER='prompts.adapters.OpenSocialAccountAdapter'`. SQLite fallback in `DATABASES` dict is the local-dev default (see env.py note below). |
 | `urls.py` | Root URL configuration |
 | `wsgi.py` | WSGI application entry point |
 | `asgi.py` | ASGI application entry point |
+
+### env.py (gitignored)
+
+Holds non-secret environment defaults for local dev. As of
+2026-04-19 (Session 163 incident), `env.py` does **NOT** set
+`DATABASE_URL` — the production DSN line was commented out with a
+deactivation block citing the incident. Local dev uses SQLite via
+`settings.py`'s fallback. Production connections use Heroku's own
+`DATABASE_URL` at runtime. For one-off local reads against prod,
+inline `DATABASE_URL=<url>` for that specific command only.
+
+**Migration commands are developer-only.** CC never runs
+`python manage.py migrate`. CC prepares the migration file + code
+changes (Phase 1), developer runs the migration (Phase 2), CC
+verifies with `showmigrations` + tests (Phase 3). See
+CLAUDE_CHANGELOG Session 163 incident section for full context.
 
 ### Main Application (prompts/)
 
@@ -447,7 +467,9 @@ prompts/views/
 | `admin.py` | ~2,300 | Django admin (PromptAdmin with two-button system, SEO Review + Rebuild actions, M2M ordering) |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
-| `signals.py` | ~100 | Django signals (auto-create profiles) |
+| `signals.py` | ~100 | Django signals (auto-create profiles). Session 163-B removed `store_old_avatar_reference` + `delete_old_avatar_after_save` Cloudinary cleanup handlers (B2 deterministic keys overwrite, no cleanup needed). |
+| `social_signals.py` | ~100 | Session 163-D — `@receiver(user_signed_up)` + `@receiver(social_account_added)`. Both call `capture_social_avatar` with `force=False`. Inert until Google OAuth credentials configured. |
+| `adapters.py` | ~50 | `ClosedAccountAdapter` (blocks email/password signup) + `OpenSocialAccountAdapter` (permits social signup, Session 163-D). |
 | `middleware.py` | ~67 | RatelimitMiddleware |
 | `constants.py` | ~270 | AI generator metadata, OPENAI_TIMEOUT, IMAGE_COST_MAP (GPT-Image-1 pricing — moved from bulk_generator_views.py, Session 101), SUPPORTED_IMAGE_SIZES + ALL_IMAGE_SIZES (P1/P2 DRY-1, Sessions 101–107) |
 | `email_utils.py` | ~100 | Email helper functions |

@@ -23,6 +23,113 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 164 — April 20, 2026 (Monetization Strategy Restructure)
+
+**Focus:** Complete monetization strategy documentation for Phase
+SUB launch. Restructure tier pricing (supersedes Session 154 4-tier
+framework), document upgrade psychology, capture reasoning for
+future decisions.
+
+**Documentation changes:**
+
+- **CLAUDE.md** — "Business Model & Monetisation Plan" subsection
+  rewritten with 3-tier launch structure. Four new H2 sections
+  added: "Monetization Strategy & Upgrade Psychology",
+  "Profitability Targets & Market Context", "Credit System Design
+  Principles", "Post-Launch Recommendations". Net addition
+  approximately 860 lines.
+- **CLAUDE_CHANGELOG.md** — this entry.
+- **Session 154 changelog entry** not modified; stays frozen as
+  historical record of original 4-tier decision.
+
+**Key decisions (supersedes Session 154 where conflicting):**
+
+- **3 tiers at launch** (Free + Pro + Studio), not 4. Creator tier
+  ($9) deferred to Month 4–6 pending signal data. Reasoning: no
+  user data yet to validate 4-tier segmentation; choice paralysis
+  hurts conversion; Creator tier strategically weakest without
+  bulk generator; learning priority favors cleaner data.
+- **Launch pricing:** Pro $14/mo (~~$19~~), Studio $39/mo (~~$49~~)
+  with annual discount of ~18%. Regular pricing: Pro $19/mo,
+  Studio $49/mo.
+- **Grandfather launch pricing to annual subscribers forever**
+  (while subscription continuously active); monthly subscribers
+  get 3 months at launch rate then auto-transition.
+- **Launch pricing ends** after first 200 annual subscribers OR
+  6 months post-launch, whichever first.
+- **Credit system: 100:1 internal ratio** (never exposed to
+  users). Markup 14–27% per model above raw API cost with
+  psychological rounding.
+- **Model lineup corrected:** Flux Schnell, GPT-Image-1.5 (BYOK),
+  Flux Dev, Flux 1.1 Pro, FLUX 2 Pro, Grok Imagine, Nano Banana 2
+  (1K/2K/4K), FLUX 2 Pro 4MP HD. Studio-only access for 4K and
+  HD variants.
+- **Free tier:** 100 one-time signup credits, Flux Schnell only.
+  No recurring free credits.
+- **No trial at launch.** Free tier IS the trial. Re-evaluate
+  trials Month 2–3 based on conversion data.
+- **Stripe metadata tracking required at launch** for conversion
+  attribution (trigger_feature, trigger_source, previous_tier,
+  time_on_free_tier_days, generations_consumed_pre_upgrade,
+  launch_pricing_applied).
+- **Welcome email sequence** (Day 1, 3, 7, 14, 28) required at
+  launch, regardless of trial structure.
+- **Visible cap counters** in UI rather than hidden. Color-coded
+  (neutral → amber → red → block).
+- **Countdown timer** during last 7 days of launch pricing only.
+  Real deadline, no resetting, tiered urgency, dismissible but
+  reappears after 24 hours.
+- **Studio priority processing** for bulk generation jobs (Studio
+  jobs dequeue before Pro jobs).
+- **Anonymous browsing:** 100 views before login wall, modal
+  every 50 views. Logged-in Free: 200 views/day.
+
+**Deferred items (timing noted):**
+
+- Creator tier ($9) — Month 4–6 pending 4 specific signals
+- Formal trial period (CC-required) — Month 2–3 pending
+  conversion data
+- Referral program — Month 3+ post-launch (after conversion
+  mechanics validated)
+- Advanced search filter tier gating — after filter feature ships
+- Visible cap counter UI implementation — during Phase SUB
+  frontend work
+
+**Supersedes (from Session 154):**
+
+- 4-tier structure (Starter/Creator/Pro/Studio)
+- Original credit pricing table (some credit costs changed)
+- Annual discount of ~22% (now 18% standard; 22% reserved for
+  promotional campaigns)
+
+**Does NOT supersede:**
+
+- OpenAI BYOK architecture (Session 154)
+- Replicate/xAI platform mode (Session 154)
+- `GeneratorModel` as single source of truth (Session 154)
+- Scheduled promotions via `scheduled_available_from/until`
+  (Session 154)
+- Content seeding before monetisation sequencing (Session 154)
+
+**Agents:**
+
+| Agent | Score | Key Findings |
+|---|---|---|
+| @technical-writer | 8.9/10 | Institutional-memory writing textbook-quality. Voice matches existing CLAUDE.md. H2 emoji pattern integrates. Worked examples (NB2, Grok, Flux Schnell margin floor) concrete and useful. Minor non-blocking nits on unsourced benchmarks and word repetition. |
+| @code-reviewer | 9.2/10 | All 8 factual-accuracy checks PASS. Pricing reconciles across all sections. All 10 credit-cost rows match canonical lineup. Markup arithmetic verified. Annual discount math verified (17.9%/17.1%/17.9%/18.4%). Scale milestone at 500 subs verified. Session 154 preserved. |
+
+**Avg:** 9.05/10. **Both ≥ 8.0.**
+
+**Next steps:**
+
+- Phase SUB implementation spec (Stripe integration, credit
+  enforcement, cap logic, hover-to-run teaser, welcome email
+  sequence, Stripe metadata tracking)
+- Single generator implementation (prerequisite for hover-to-run)
+- Social login activation (independent track)
+
+---
+
 ### Session 163 — April 20, 2026 (Avatar Pipeline Rebuild)
 
 **Focus:** Drop Cloudinary from UserProfile entirely. Rebuild avatar

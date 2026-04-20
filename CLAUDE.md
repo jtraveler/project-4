@@ -581,9 +581,13 @@ The UI shows a single "Preparing prompts…" status rather than separate spinner
 - **Session 154 — Credit system is DB-only until Phase SUB:** `UserCredit` and
   `CreditTransaction` track usage but no Stripe, no tier enforcement, no
   top-up purchase flow yet. All deferred to Phase SUB.
-- **Session 154 — 4-tier confirmed:** Starter (free, 50 one-time credits),
-  Creator ($9, 250/mo), Pro ($19, 1000/mo), Studio ($49, 3500/mo). Annual
-  billing available at ~22% discount. Credit top-ups available on all tiers.
+- **Session 154 — 4-tier framework (superseded Session 164):** Originally
+  confirmed Starter/Creator/Pro/Studio at $0/$9/$19/$49 with ~22% annual
+  discount. **Superseded by Session 164's 3-tier launch structure** (Free
+  + Pro + Studio). Creator tier ($9) deferred to Month 4–6 post-launch
+  pending signal data. See "Monetization Strategy & Upgrade Psychology"
+  H2 section for current pricing and reasoning. Credit top-ups available
+  on all tiers.
 - **BYOK is the only viable model for bulk generation at scale:** Platform-paid API model fails because all users share Mateo's rate limits, creating unacceptable wait times with concurrent users.
 - **Django-Q2 runs synchronously in local dev:** Tasks queued via ORM broker execute in the web process locally (either `sync=True` setting or Django-Q2 default). This means `[BULK-DEBUG] process_bulk_generation_job CALLED` appears in `runserver.log`, not `qcluster.log`. Production behavior (separate Heroku worker dyno) is unaffected.
 - **`tee` for persistent log capture:** Use `python manage.py runserver 2>&1 | tee runserver.log` and `python manage.py qcluster 2>&1 | tee qcluster.log` for reliable debug log capture. Then grep with: `grep "BULK-DEBUG\|ERROR\|Traceback" runserver.log`
@@ -1468,66 +1472,160 @@ Options for `initOverflowTabs()`:
 
 **Phase 1 — Content seeding (current):**
 Use the bulk generator internally to populate PromptFinder with
-high-quality prompt pages at scale. Builds the SEO content library and
-the organic traffic that makes the platform worth monetising.
+high-quality prompt pages at scale. Builds the SEO content library
+and organic traffic that makes the platform worth monetising.
 
-**Phase 2 — Subscription launch:**
-Once content library is established and attracting organic traffic,
-introduce payment plans. The bulk generator is the premium hook.
+**Phase 2 — Subscription launch (Phase SUB):**
+Once content library is established, introduce subscription plans.
+Bulk generator is the premium hook.
 
-**Confirmed 4-tier subscription structure (decided Session 154):**
+---
 
-| Tier | Monthly | Annual | Credits/mo | Bulk Gen | Models |
-|------|---------|--------|-----------|----------|--------|
-| Starter | Free | Free | 50 (one-time) | ❌ | — |
-| Creator | $9/mo | $7/mo ($84/yr) | 250 | ❌ | Flux Schnell, Grok |
-| Pro | $19/mo | $15/mo ($180/yr) | 1,000 | ✅ | All incl. NB2 (promo) |
-| Studio | $49/mo | $39/mo ($468/yr) | 3,500 | ✅ | All incl. NB2 |
+#### Three-Tier Launch Structure (supersedes Session 154's 4-tier)
 
-**Credit system (1 credit ≈ 1 Flux Schnell image ≈ $0.003 API cost):**
+| Tier | Launch Monthly | Launch Annual | Regular Monthly | Regular Annual | Credits/mo | Models |
+|---|---|---|---|---|---|---|
+| Free | $0 | — | $0 | — | 100 (one-time signup) | Flux Schnell only |
+| **Pro** | **$14** ~~$19~~ | **$138/yr** ~~$189~~ | $19 | $189/yr | 800 | All except 4MP HD and 4K variants |
+| **Studio** | **$39** ~~$49~~ | **$384/yr** ~~$480~~ | $49 | $480/yr | 3000 | All models incl. FLUX 2 Pro 4MP HD + Nano Banana 2 4K |
 
-| Model | Credits | Your API cost |
-|-------|---------|--------------|
-| GPT-Image-1.5 (BYOK) | 2 | ~$0 (user pays OpenAI) |
-| Flux Schnell | 1 | $0.003 |
-| Grok Imagine | 7 | $0.020 |
-| Flux Dev | 10 | $0.030 |
-| Flux 1.1 Pro | 14 | $0.040 |
-| Nano Banana 2 | 20 | ~$0.060 |
+**Launch pricing availability:**
+- Available to the first 200 annual subscribers OR first 6 months
+  post-launch, whichever comes first
+- Annual subscribers at launch pricing are grandfathered at that
+  rate for the lifetime of their continuously-active subscription
+  (cancel and resubscribe = new pricing applies)
+- Monthly subscribers get launch pricing for their first 3 months,
+  then auto-transition to regular pricing via Stripe subscription
+  schedule
 
-**Credit top-ups (buy anytime, roll over, stack on monthly allowance):**
-250 credits = $3 | 1,000 credits = $10 | 3,500 credits = $30
+**Why 3 tiers not 4 at launch (reasoning — do not remove):**
 
-**Key architecture decisions (Session 154):**
-- OpenAI GPT-Image-1.5 is ALWAYS BYOK (user provides their own OpenAI key)
-- Replicate + xAI run in PLATFORM MODE by default (master keys in Heroku env vars)
-- `GeneratorModel` DB table is the single source of truth for model availability —
-  admin can toggle models on/off/promotional instantly without a deploy
-- Pricing page and tier feature cards read from `GeneratorModel` dynamically —
-  no hardcoded marketing copy to maintain
-- Scheduled promotions: `scheduled_available_from/until` fields on `GeneratorModel`
-  allow time-boxed promos (e.g. Black Friday). Periodic task enforces timing.
-- Credit enforcement deferred to Phase SUB (Stripe integration). Phase REP
-  builds the DB tracking layer only.
-- NSFW: disabled for now. Platform NSFW checker (`requires_nsfw_check=True`)
-  is set on all Replicate/xAI providers.
-- Replicate GPT-Image-1.5 wrapper: skip — direct OpenAI BYOK is better.
+Session 154 specified 4 tiers (Starter/Creator/Pro/Studio). The
+Creator tier ($9) is deferred to Month 4–6 post-launch because:
 
-**Revenue streams:**
-- Bulk generator access (subscription)
-- Credit top-up purchases
-- Prompt marketplace (commission on sales or premium listings)
-- API access for developers (usage-based, future)
+1. **No user data to validate 4-tier segmentation yet.** Every paid
+   tier adds Stripe complexity, pricing page decisions, feature
+   gating logic, test coverage, upgrade/downgrade flow edge cases.
+   Four tiers means ~4× the pricing-related bugs of two paid tiers.
+2. **Choice paralysis hurts conversion.** SaaS pricing research
+   consistently shows conversion drops past 3 total options
+   including free. Two paid options is a cleaner cognitive decision.
+3. **Creator tier strategically weakest.** Creator would not include
+   the bulk generator — the platform's core differentiator. Creator
+   users would pay $9/mo for commodity features. Anyone wanting
+   bulk generation upgrades to Pro; anyone not wanting it is better
+   served by Free. Creator serves no clear audience at launch.
+4. **Discovery-cap upgrades mostly hit Free → first paid tier.**
+   With Creator and Pro competing for the same conversion event,
+   Creator wins because it's cheaper, cannibalizing Pro revenue.
+5. **Learning priority.** 3 tiers = 3 meaningful transitions to
+   analyze (Free→Pro, Free→Studio, Pro→Studio). 4 tiers = 6.
+   Cleaner data, faster iteration.
 
-**Key sequencing note:** Content seeding must happen BEFORE monetisation
-launch. The chicken-and-egg problem of needing content before users is
-solved by using the internal tool first. Fix `needs_seo_review` for
-bulk-created pages before seeding at scale.
+**When to add Creator tier ($9) back (Month 4–6 post-launch):**
 
-**Platform cost per user:** Minimal. Prepare-prompts pipeline (translate,
-watermark, Vision, direction) costs ~$0.001–0.01 per job (platform paid).
-Generation: Replicate/xAI platform-paid (credits deducted from user balance).
-OpenAI BYOK — user pays OpenAI directly.
+Add if ANY of these signals emerge:
+
+- **Signal 1:** >70% of Free users hitting discovery caps churn
+  rather than upgrade (price resistance)
+- **Signal 2:** ≥3 organic mentions in exit surveys/support/social
+  of "I'd pay something but $14/19 is too much"
+- **Signal 3:** Direct competitor launches sub-$10 tier pulling users
+- **Signal 4:** Promotional campaigns (Black Friday, education,
+  referral) need a $9 discount anchor
+
+**Not reasons to add Creator:**
+- Gut feeling that "more tiers = more revenue"
+- Copying competitors who have 4 tiers
+- Wanting to hit subscriber count faster without evidence
+
+**Minimum criteria before launching Creator:** ≥100 paying
+subscribers, ≥30 days of churn data, month 4–6 window, survey
+feedback requesting lower tier.
+
+---
+
+#### Model Lineup and Credit Costs (April 2026)
+
+| Model | Raw API Cost | Credits | Markup | Free | Pro | Studio |
+|---|---|---|---|---|---|---|
+| Flux Schnell | ~$0.003 | 1 | Margin floor | ✅ | ✅ | ✅ |
+| GPT-Image-1.5 (BYOK) | $0 (user pays) | 2 | Platform fee | ❌ | ✅ | ✅ |
+| Flux Dev | ~$0.025 | 3 | +20% | ❌ | ✅ | ✅ |
+| Flux 1.1 Pro | ~$0.04 | 5 | +25% | ❌ | ✅ | ✅ |
+| FLUX 2 Pro | ~$0.055 | 7 | +27% | ❌ | ✅ | ✅ |
+| Grok Imagine | ~$0.07 | 8 | +14% | ❌ | ✅ | ✅ |
+| Nano Banana 2 1K (Limited Time) | ~$0.067 | 8 | +19% | ❌ | ✅ | ✅ |
+| Nano Banana 2 2K | ~$0.101 | 12 | +19% | ❌ | ✅ | ✅ |
+| FLUX 2 Pro 4MP HD | ~$0.11 | 13 | +18% | ❌ | ❌ | ✅ |
+| Nano Banana 2 4K | ~$0.151 | 18 | +19% | ❌ | ❌ | ✅ |
+
+**`GeneratorModel.credit_cost` database field is live source of
+truth.** Admin can adjust without deploy. This table is
+informational; if it disagrees with the database, the database is
+correct and this document needs refresh.
+
+---
+
+#### Top-Up Credit Packs
+
+| Pack | Price | Per-credit | Positioning |
+|---|---|---|---|
+| 200 credits | $3 | $0.015 | Slightly worse than monthly sub — nudges toward subscription |
+| 1000 credits | $12 | $0.012 | Same rate as monthly sub — convenience buy |
+| 3500 credits | $35 | $0.010 | Matches annual sub rate — rewards heavy users |
+
+Top-ups roll over monthly. Stack on top of subscription credits.
+Mature credit-based SaaS products typically earn 40–60% of revenue
+from top-ups rather than subscriptions.
+
+---
+
+#### Architecture Decisions (preserved from Session 154)
+
+- **OpenAI GPT-Image-1.5 is ALWAYS BYOK** (user provides their own
+  OpenAI key). No platform OpenAI key for image generation.
+- **Replicate + xAI run in PLATFORM MODE** by default (master keys
+  in Heroku env vars)
+- **`GeneratorModel` DB table is single source of truth** for model
+  availability — admin can toggle on/off/promotional instantly
+- Pricing page and tier feature cards read from `GeneratorModel`
+  dynamically — no hardcoded marketing copy
+- Scheduled promotions: `scheduled_available_from/until` fields
+  enable time-boxed promos (e.g., Nano Banana 2 "Limited Time")
+- NSFW: platform NSFW checker (`requires_nsfw_check=True`) on all
+  Replicate/xAI providers
+- Replicate GPT-Image-1.5 wrapper skipped — direct OpenAI BYOK is
+  better
+
+---
+
+#### Revenue Streams
+
+1. **Subscription fees** (Pro, Studio; future Creator)
+2. **Credit top-up purchases** — significant revenue stream, often
+   40–60% of total
+3. **Future: Prompt marketplace** — commission on sales or premium
+   listings
+4. **Future: API access for developers** — usage-based pricing
+
+---
+
+**Sequencing note:** Content seeding must happen BEFORE monetisation
+launch. The bulk generator solves the chicken-and-egg problem —
+internal tool populates the platform before real users arrive. Fix
+`needs_seo_review` for bulk-created pages before seeding at scale.
+
+**Platform cost per user:** Low but nonzero. Prepare-prompts pipeline
+(translate, watermark, Vision, direction) costs ~$0.001–0.01 per
+job (platform paid). Generation: Replicate/xAI platform-paid
+(credits deducted from user balance). OpenAI BYOK — user pays
+OpenAI directly.
+
+**Detailed monetization strategy, upgrade psychology, profitability
+math, credit system design, and post-launch items: see the four
+dedicated sections that follow.**
 
 ### Key URLs
 
@@ -1541,6 +1639,799 @@ OpenAI BYOK — user pays OpenAI directly.
 - Users = "**Prompt Finders**"
 - Community = "**Finder Community**"  
 - Tagline = "**Find. Create. Share.**"
+
+---
+
+## 💰 Monetization Strategy & Upgrade Psychology
+
+> This section is the strategic companion to the "Business Model &
+> Monetisation Plan" subsection above. It documents *why* pricing
+> decisions were made, *how* upgrade triggers work, and *what*
+> principles guide feature gating. Treat this as institutional
+> memory — future sessions can consult it without re-deriving the
+> reasoning.
+
+### Two Independent Revenue Engines
+
+PromptFinder has two parallel revenue engines. Understanding the
+distinction informs every feature and pricing decision.
+
+**Revenue Engine 1: Generation-driven upgrades.** Users upgrade
+when they hit credit caps or want premium models. Every upgrade
+has real dollar cost to the platform (API fees to OpenAI/Google/
+xAI). Margin comes from credit markup plus fixed subscription fees.
+
+**Revenue Engine 2: Discovery-driven upgrades.** Users upgrade
+when they hit view caps, upload limits, collection caps, or want
+access to hover-to-run. Near-zero marginal cost per user. These
+upgrades are essentially pure margin after fixed platform costs.
+
+Different personas (active creator vs. casual browser). Capturing
+both expands the total addressable market meaningfully. Pricing
+and feature gates are designed to activate both engines.
+
+---
+
+### Discovery Caps Table (launch values)
+
+| Feature | Free | Pro | Studio |
+|---|---|---|---|
+| Prompt views/day (logged in) | 200 | Unlimited | Unlimited |
+| Prompts uploaded/month | 5 | 100 | Unlimited |
+| Saved/bookmarked prompts | 50 | 500 | Unlimited |
+| Prompt drafts (unpublished) | 3 | 25 | Unlimited |
+| Public collections | 5 | 50 | Unlimited |
+| Private collections | 1 | 20 | Unlimited |
+| Prompts per collection | 25 | Unlimited | Unlimited |
+| Hover-to-run from gallery | Teaser (greyed, upgrade CTA on click) | 10/day | Unlimited |
+| Advanced search filters (when built) | Basic | Full | Full |
+| Download prompt metadata (JSON/CSV) | ❌ | ✅ | ✅ |
+| Priority bulk generation processing | ❌ | ❌ | ✅ Studio only |
+| Bulk generator access | ❌ | ✅ | ✅ |
+
+**These are launch starting points. Validate with first 60 days of
+data and adjust via Stripe metadata analysis (see Tracking section
+below).**
+
+---
+
+### Cap Reasoning (why each number)
+
+**Prompt views/day (Free: 200):** Casual browsers don't hit 200
+daily. Active users will. Cap hits the right audience — users
+engaged enough to browse heavily are the users closest to
+conversion. Cap is a conversion opportunity at peak engagement,
+not a punishment.
+
+**Prompts uploaded/month (Free: 5):** Creators have different use
+patterns than browsers. A user uploading 6+ prompts/month
+demonstrates creator intent — they're building presence on the
+platform. Pro's 100/month is generous for individuals; Studio
+unlimited serves agencies and high-volume producers.
+
+**Saved/bookmarked prompts (Free: 50):** 50 saved prompts
+represents real investment. A user with 50+ saves has switching
+cost — migrating elsewhere means losing curated collection. Cap
+creates upgrade pressure at maximum engagement.
+
+**Prompt drafts (Free: 3):** Drafts represent work-in-progress.
+Users working on multiple drafts simultaneously are power users.
+Tight cap (3) is deliberately restrictive because draft workflow
+is Pro-tier-and-above behavior.
+
+**Collections (Free: 5 public, 1 private, 25 prompts each):**
+Collections are a lightly-used feature for most users but
+critical for power users. Tight Free caps quickly exceeded by
+power users, invisible to casual users.
+
+**Hover-to-run:** Highest-value feature in the design. See
+dedicated subsection below.
+
+---
+
+### The Hover-to-Run Feature as Premium Anchor
+
+Hover-to-run is a gallery interaction: users hovering over any
+prompt image see a button appear that opens a modal letting them
+run the prompt on a generator of their choice.
+
+**Why it's the strongest upgrade lever:**
+
+1. **Converts browsing into generation.** Users browsing galleries
+   are in inspiration-seeking mode. Removing friction between
+   "this looks cool" and "let me make my own version" converts
+   browsing (low revenue) into generation (high revenue).
+2. **Demonstrates value at point of denial.** Free users see the
+   greyed button, understand what it does, feel the friction.
+   Desire created exactly at the point of encountering the limit.
+3. **Hard for competitors to copy convincingly.** PromptHero
+   doesn't have it. PromptBase doesn't either. Once experienced,
+   alternatives feel clunky.
+
+**Implementation:**
+- Free and Pro users see button greyed with tooltip: "Generate
+  this prompt — upgrade to [next tier] to unlock." Click opens
+  short upgrade CTA.
+- Pro gets functional hover-to-run, capped at 10/day.
+- Studio gets unlimited hover-to-run.
+
+**Dependency:** Requires single generator to be deployed. Bulk
+generator is too heavy for a hover modal. Sequencing: single
+generator ships → hover-to-run launches as Pro/Studio feature.
+
+---
+
+### Anonymous Browsing Strategy
+
+**Anonymous visitor flow:**
+
+- First 100 prompt views: uninterrupted browsing
+- Every 50 views: persistent modal suggesting login ("Log in to
+  continue discovering" / "Create a free account to save prompts
+  you love")
+- After 100 total views: hard login wall
+
+**Logged-in Free tier:** 200 views/day (resets UTC midnight)
+
+**Logged-in paid tiers:** Unlimited
+
+**Why this structure:**
+
+- **Anonymous cap protects SEO.** Google/crawlers complete their
+  work before any wall appears.
+- **Modal every 50 creates pressure without blocking.** Truly
+  engaged users see multiple modals, normalizing signup.
+- **Hard wall at 100 is non-negotiable.** Beyond this, continued
+  free browsing is infrastructure cost without conversion path.
+- **Daily reset (not per-session) prevents gaming.** Counter tied
+  to IP + day minimum, better if session/device fingerprint.
+
+---
+
+### Launch Pricing Strategy with Countdown Urgency
+
+**Launch pricing display:**
+- Shown with strikethrough on regular price for visual contrast:
+  "$14 ~~$19~~"
+- Banner at top of homepage + pricing page during launch period
+- Plain language: "Launch pricing. Limited to first 200 annual
+  subscribers or 6 months."
+
+**Grandfathering rules (recap):**
+- Annual subscribers at launch pricing: locked forever while
+  subscription continuously active
+- Monthly subscribers: 3 months at launch rate, then
+  auto-transition to regular
+
+**Why annual-only permanent grandfathering:**
+
+- **Cash flow:** Annual subscribers commit $138/$384 upfront —
+  meaningful runway for a pre-launch business
+- **Conversion signal:** Annual sign-ups self-select for conviction.
+  These are customers worth rewarding with permanent rates
+- **Scarcity psychology:** "Grandfathered forever — annual only"
+  creates commitment-gated scarcity (more attractive to right
+  customers) rather than mere time-gated scarcity
+
+**Countdown timer mechanics (last 7 days of launch pricing only):**
+
+- Sticky banner at top of homepage + pricing page (not every page)
+- Real deadline. No resetting. No "extended by popular demand."
+- Tiered urgency messaging:
+  - Days 7–4: "Launch pricing ends in X days — lock in your rate now"
+  - Days 3–1: Red accent + "Final [X] days to lock in launch pricing"
+  - Final 24 hours: Animated pulse + countdown HH:MM:SS
+- Dismissible per session, reappears after 24 hours, never modal-blocking
+- Tracked in analytics: impressions vs. clicks vs. conversions.
+  Conversion rate during countdown days should be ≥1.5× preceding
+  week to justify the pattern
+- Reserve this pattern for genuinely significant moments (launch
+  end, Black Friday, milestones). Rare = powerful
+
+**Price increase communication:**
+- Announce price increase 30 days before it happens
+- Creates conversion surge: "Prices go up [date], lock in $14 now"
+- Plan pricing-increase campaign specifically to drive conversions
+
+---
+
+### Free Tier Strategy
+
+**Free tier IS the trial at launch.** No formal trial period. Free
+users get:
+
+- 100 one-time signup credits (no monthly recurring)
+- Flux Schnell model access only
+- Full prompt discovery (capped per table above)
+- Hover-to-run teaser (greyed button with upgrade CTA)
+- Basic saving/bookmarking (50 prompt cap)
+- Prompt creation (5/month cap)
+
+**Why no recurring free credits:**
+
+Every free image generation has real dollar cost to the platform.
+Monthly recurring free credits = users who never convert but cost
+real money indefinitely. One-time signup credits cap exposure — if
+a free user converts, platform earns back the $1 of API cost many
+times over. If they don't convert, loss is bounded.
+
+**Why Flux Schnell only:**
+
+At $0.003/image it has smallest dollar exposure per free
+generation. Gating expensive models (Nano Banana 2 at $0.067, Grok
+Imagine at $0.07) behind paid tiers protects margin. Flux Schnell
+is genuinely usable for evaluation — not a crippled free product,
+the most affordable full product.
+
+**Why 100 signup credits specifically:**
+
+100 credits at 100:1 internal ratio = ~$1 of real API cost per
+signup. Enough for ~100 Flux Schnell images — a genuine product
+taste. $1 acquisition cost per signup is low compared to paid
+advertising CAC (typically $10–50 per paying customer, meaning
+$1–5 per signup at 5–20% conversion rate).
+
+---
+
+### Trial Approach
+
+**At launch: no formal trial period.** Free tier serves as the trial.
+
+**Re-evaluate trials at Month 2–3 post-launch if:**
+
+- Conversion rate from Free → Pro is below 2% after 60 days
+- Exit surveys indicate "I didn't know if it was worth it" as
+  common response
+- Baseline conversion data exists to measure trial impact
+
+**If trials are added later, structure:**
+
+- 7-day trial to Pro tier only (not Studio)
+- Credit card required — conversion rates 3–4× higher than
+  no-CC trials
+- Mandatory email reminder sequence:
+  - Day 0: Welcome + trial-end date + "you'll be charged $X unless
+    you cancel"
+  - Day 3: Progress check-in + "trial ends in 4 days"
+  - Day 5: "2 days left" with easy cancel link
+  - Day 6: "Trial ends tomorrow" — subject line that actually
+    gets read
+  - Day 7 morning (6 hours before charge): "Your trial ends today"
+  - Day 7 post-charge: Receipt + "you've been charged, cancel
+    anytime"
+
+**Why not launch with trials:**
+
+- Adds Stripe complexity when stability matters most
+- Trial abandonment, dunning flows, trial-end notifications need
+  to work perfectly day 1 — large surface for bugs
+- No baseline conversion data; impossible to measure trial impact
+- Chargeback risk damages Stripe account health early when
+  payment reputation is still being established
+- Without email reminders, trial chargeback rates become
+  unacceptable (2–5% vs. 0.5–1% with reminders)
+
+**Note on chargebacks:** Terms of Service CANNOT prevent
+chargebacks. Card networks give cardholders dispute rights
+regardless of ToS. What DOES reduce chargebacks:
+- Clear billing descriptors ("PROMPTFINDER.NET" not "MJ-PROJECT-4")
+- Visible 2-click cancellation (no dark patterns)
+- Pre-charge notifications (email 3 days before renewal)
+- Responsive refund policy (easier to get refund = fewer disputes)
+- Solid receipt emails with usage summary and cancellation link
+
+---
+
+### Welcome Email Sequence (required at launch)
+
+First-month welcome sequence, required regardless of trial
+structure:
+
+- **Day 1 (signup):** Welcome email + onboarding checklist + first
+  generation tutorial
+- **Day 3:** "Here's what you've made so far" with their generated
+  images + engagement prompts
+- **Day 7:** "Pro tip" email demonstrating advanced feature they
+  haven't tried yet
+- **Day 14:** "Halfway through your first month — here's what
+  people like you are doing" (social proof + aspirational framing)
+- **Day 28 (before first renewal, if paid):** Usage summary +
+  receipt preview + "You'll be charged $X on [date], cancel
+  anytime"
+
+**Why Day 28 email is critical:**
+
+Addresses "forgot they signed up" problem directly. Reminds users
+of upcoming charge, shows value received, gives clean exit path.
+Dramatically reduces chargebacks and refund requests. Users who
+stay after this email are intentional paying customers.
+
+---
+
+### Stripe Metadata Tracking (required at launch)
+
+Every Stripe subscription creation and upgrade event must populate
+custom metadata. Free data, compounds in value.
+
+**Required metadata fields:**
+
+- `trigger_feature` — specific cap/feature that prompted upgrade.
+  Values: `prompt_view_cap`, `upload_cap`, `collection_cap`,
+  `hover_to_run_teaser`, `bulk_generator_gate`,
+  `premium_model_gate`, `saved_prompts_cap`, `draft_cap`,
+  `organic` (no specific trigger)
+- `trigger_source` — where upgrade UI was presented. Values:
+  `pricing_page`, `feature_modal`, `settings_page`,
+  `countdown_banner`, `email_campaign`, `onboarding_flow`
+- `previous_tier` — `free`, `pro`
+- `time_on_free_tier_days` — days between signup and upgrade
+- `generations_consumed_pre_upgrade` — image count before paying
+- `launch_pricing_applied` — boolean, whether subscriber got
+  launch rate
+
+**Implementation:** Frontend sends trigger context to backend on
+"Upgrade" button click. Backend includes metadata in Stripe
+checkout session creation. Retrievable via Stripe Dashboard or API.
+
+**What this unlocks at Month 3–6:**
+
+- Which feature drives the most conversions? → double down
+- Which caps do users hit but NOT upgrade from? → caps wrong or
+  feature not valued enough
+- Do collection-cap upgrades convert higher than upload-cap? →
+  informs cap tightening
+- Average time from signup to upgrade? → informs email timing
+- Do countdown-banner conversions differ from feature-modal? →
+  informs UI investment
+
+**Most founders skip this setup and regret it six months later
+when pricing decisions need signal. Set up at launch.**
+
+---
+
+### Visible Cap Counters UI Pattern
+
+Caps should be visible, not hidden. "27/30 prompt views today"
+sitting in the corner of every page is more conversion-effective
+than surprise blocking.
+
+**Why visible counters work:**
+
+- Create anticipatory upgrade behavior — users upgrade *before*
+  hitting the wall, feels like their choice not a forced decision
+- Reduce the "angry wall" moment generating support tickets and
+  negative sentiment
+- Provide continuous ambient awareness vs. discrete disruptive
+  events
+- Seeing "495/500 saved prompts" creates more urgency than
+  suddenly being blocked at #501
+
+**Counter placement:**
+- Account menu dropdown: full breakdown of all tier caps
+- Header bar (compact): most-relevant current cap based on page
+  context
+- Relevant feature pages: inline next to feature being used
+
+**Color coding:**
+- 0–70% of cap: neutral/muted
+- 70–90%: amber/warning
+- 90–100%: red/urgent + soft upgrade CTA
+- 100%: block + clear upgrade modal
+
+---
+
+### Positioning and Marketing Language
+
+**Sell time saved, not credits or images.** Price anchors matter.
+The $19 Pro tier positions against Midjourney ($30) and ChatGPT
+Plus ($20) — not against raw API cost.
+
+**Good marketing copy examples:**
+
+- "Generate 200 publish-ready AI images in 20 minutes"
+- "Turn your prompt library into indexed pages automatically"
+- "Skip the setup — one subscription, six image models"
+- "Your prompt feed, organized and searchable"
+- "Bulk generate, moderate, and publish — all in one tool"
+
+**Bad marketing copy (avoid):**
+
+- "$0.048 per image" — invites unit-cost comparison to raw APIs
+- "1000 credits for $19" — invites math that reveals margin
+- "X% cheaper than Midjourney" — positions as budget alternative
+- "Same quality as [expensive competitor]" — leaves price as only
+  differentiator
+- "Credits never expire" — if true, say it differently ("Unused
+  credits roll over")
+
+**Why this matters:**
+
+Users who can do unit math and compare to raw API access aren't
+the target customer. They're developers who should use APIs
+directly. Target customer values their time at any reasonable
+hourly rate and wants convenience + workflow + SEO automation.
+For them, $14–19/mo is cheap. Anchor isn't "how much does an
+image cost" — it's "how much is my time worth."
+
+---
+
+## 📊 Profitability Targets & Market Context
+
+> Break-even math, scale milestones, market advantages, disadvantages,
+> and risks. Uses conservative assumptions so numbers are floor
+> estimates, not aspirational.
+
+### Fixed Monthly Cost Baseline
+
+| Category | Estimated cost |
+|---|---|
+| Heroku dynos + Postgres + add-ons | $50–100 |
+| Backblaze B2 storage + Cloudflare CDN | $10–30 (current scale) |
+| Domain, email, misc SaaS tooling | $30 |
+| OpenAI baseline (vision moderation, AI content) | $20 |
+| **Total fixed monthly** | **~$150–200** |
+
+Fixed costs must be covered regardless of subscriber count. Grow
+sub-linearly with users — doubling subscribers doesn't double
+Heroku costs.
+
+---
+
+### Per-Subscriber Unit Economics (approximate)
+
+| Tier | Avg monthly revenue | Est variable cost | Net per sub |
+|---|---|---|---|
+| Free | $0 | $0.10–0.30 | -$0.10 to -$0.30 (acquisition loss) |
+| Pro launch ($14) | $14 | $4–8 | $6–10 |
+| Pro regular ($19) | $19 | $4–8 | $11–15 |
+| Studio launch ($39) | $39 | $12–25 | $14–27 |
+| Studio regular ($49) | $49 | $12–25 | $24–37 |
+
+Plus top-up pack revenue: industry typical 40–60% of total
+subscription revenue from mature credit-based SaaS.
+
+**Actual unit economics vary based on model-mix used by each
+subscriber. Update this table with real data at Month 3.**
+
+---
+
+### Scale Milestones
+
+| Milestone | Paying subscribers | What it means |
+|---|---|---|
+| Fixed-cost break-even | ~15 | Platform costs covered |
+| Side-project viable | 50–100 | Covers costs + modest income |
+| Minimum-wage equivalent | 200–300 | Hourly-equivalent solo income |
+| Real business | 500+ | Sustainable full-time income |
+| Strong business | 1,000+ | Room for reinvestment, contractors |
+| Scale business | 5,000+ | Justifies full-time team |
+
+**Example calculation at 500 paying subscribers** (conservative
+Pro/Studio mix, average ARPU ~$22/mo factoring top-ups):
+- Gross revenue: ~$11,000/mo
+- Variable costs (API, vision moderation): ~$2,500/mo
+- Fixed costs: ~$200/mo
+- Stripe fees (2.9% + $0.30 per transaction): ~$350/mo
+- **Net: ~$7,950/mo** (~$95,400/yr)
+
+---
+
+### Market Advantages (PromptFinder's structural strengths)
+
+1. **SEO flywheel.** Content seeding (Phase 1) creates organic
+   traffic that compounds monthly. Unlike paid acquisition that
+   stops when budget stops, SEO traffic grows until actively
+   damaged. First-mover advantage in narrow niche (AI prompt
+   discovery + bulk generation) is real.
+2. **Bulk generator differentiation.** Competitors (PromptHero,
+   PromptBase, Civitai) offer discovery without bulk generation.
+   AI image generation platforms (Midjourney, Ideogram) offer
+   generation without discovery. Combining both is unusual and
+   defensible.
+3. **Credit system scalability.** Credit-based pricing allows
+   shifting between models as provider prices change without
+   repricing subscriptions. If Nano Banana 2 drops 50% next
+   quarter, reflected in `GeneratorModel.credit_cost` without
+   subscription changes.
+4. **Multi-provider integration.** Users don't have to manage API
+   keys across three providers. Real convenience worth paying for.
+5. **Content seeding head start.** By Phase SUB launch, platform
+   already has meaningful content — not an empty shell begging
+   for uploads.
+6. **BYOK option for power users.** Users who want to pay OpenAI
+   directly bring their own key, keeping platform relevant for
+   cost-sensitive segment without hurting margin (they pay for
+   tooling, not API).
+7. **Two independent revenue engines.** Most competitors have
+   only one.
+
+---
+
+### Market Disadvantages and Risks
+
+1. **Crowded competitive landscape.** PromptHero, PromptBase,
+   Civitai, Lexica, Leonardo, OpenArt, and others already exist.
+   Users have habits. Displacing an incumbent requires clear
+   differentiation (which PromptFinder has) but must be actively
+   marketed.
+2. **AI image generation commoditizing.** New models launch
+   monthly, most cheaper than previous. Differentiation on "best
+   model" is impossible; differentiation on workflow, SEO, and
+   convenience is the strategy. User expectations around model
+   quality will outpace what cheap models deliver, creating
+   constant pressure.
+3. **Three-provider reliability risk.** Dependency on OpenAI,
+   Replicate (Flux variants), and xAI (Grok) = three points of
+   billing failure, rate limit issues, potential outages. Any
+   provider down degrades product. Mitigation: queue retry logic,
+   clear user messaging, alternative provider fallback where
+   reasonable.
+4. **Free tier costs real dollars.** Unlike content-based free
+   tiers where "free" means a few cents of compute, every free
+   image costs real money to Google/xAI/BFL. One-time signup
+   credits cap exposure; indefinite monthly free credits would
+   bleed out. This is why launch uses one-time credits only.
+5. **Hype-driven market volatility.** AI market sentiment shifts
+   quickly. Regulatory changes, company pivots, scandals — all
+   reshape user acquisition costs overnight. Unlike stable SaaS
+   categories, AI tools don't have predictable demand curves yet.
+6. **Solo founder bandwidth.** Building, marketing, supporting,
+   iterating — all one person. At launch focus is core; at scale
+   something gives. Plan for contractor/freelance help at 1,000
+   subscribers ("Strong business" milestone).
+7. **Solo founder single point of failure.** If founder
+   incapacitated, platform dies. Document everything. Secure
+   credentials in password manager. Consider dead-man's switch
+   for critical credentials at scale.
+
+---
+
+### Success Signals to Watch
+
+**Leading indicators of product-market fit (Month 1–3):**
+
+- Organic signup rate trending up (not just stable)
+- Time-to-first-generation < 5 minutes post-signup
+- Day-30 retention (% of signups returning in month 2): industry
+  benchmark 40%+ for consumer-ish products
+- Free → Pro conversion rate: target 2–5% at Month 3
+- Average generations per paid user per week: if growing, value
+  is landing
+- Unsolicited word-of-mouth mentions (Twitter, Reddit, Discord):
+  qualitative but important
+
+**Red flags requiring strategy adjustment:**
+
+- Free signups without any generations (product isn't clicking)
+- Pro users churning within first 30 days (onboarding or value
+  delivery problem)
+- High refund/chargeback rate (>2%, likely billing trust issue)
+- Support tickets about pricing confusion (tier structure or copy
+  needs clarification)
+- No users hitting any caps (caps too loose, not generating
+  upgrade pressure)
+
+---
+
+## 🪙 Credit System Design Principles
+
+> Why credits, not dollars. Why 100:1 ratio. Why markup 14–27% per
+> model. Why psychological rounding matters. Internal vs. external
+> credit pricing.
+
+### Why Credits, Not Dollar-Per-Image
+
+Credits abstract the real cost in ways that benefit both platform
+and users.
+
+**For users:**
+- Simpler mental model than tracking different model prices
+- "I have 800 credits this month" easier to reason about than
+  "I have $6.40 of API budget"
+- Buying top-ups feels like buying capability, not spending money
+- Round credit numbers feel abundant ("800 credits") more than
+  decimal dollar amounts ("$6.40 in credits")
+
+**For the platform:**
+- Insulates subscription price from provider price changes
+- Enables model-mix flexibility — if users shift from expensive
+  to cheap models, revenue stays stable even though costs drop
+- Credit cost per model adjustable server-side without repricing
+  subscriptions
+
+---
+
+### The 100:1 Internal Ratio
+
+**Internal reference: 100 credits ≈ $1 of raw API cost.**
+
+**This ratio exists for platform planning. It is NEVER exposed
+to users anywhere in the product, pricing page, or marketing
+copy.**
+
+**Why 100:1 specifically:**
+
+- Abstract enough that users can't easily reverse-engineer markup.
+  User doing quick math on "8 credits for one image" at "$14/mo
+  for 800 credits" computes "$0.14 per image" — this obscures
+  actual API cost ($0.067 for Nano Banana 2) and prevents direct
+  comparison to raw API access
+- "You have 800 credits" reads as abundance vs. "You have 8
+  images" which feels scarce
+- Whole-number credit costs per image feel clean ("8 credits per
+  Nano Banana 2 image" vs. "67 credits") without sacrificing
+  granularity
+- Top-up pack math stays readable (200 credits/$3, 1000/$12,
+  3500/$35)
+
+**Why NOT 1:1 ratio (1 credit = $0.01):**
+
+Too easy for users to calculate true cost by multiplying and
+comparing. Destroys margin-preserving obfuscation.
+
+**Why NOT 1000:1 ratio:**
+
+Numbers become inflated and meaningless ("80,000 credits for
+$14/mo"). Users stop feeling value of individual credits.
+Marketing copy becomes awkward.
+
+---
+
+### Markup Strategy (14–27% per model)
+
+Every credit cost is set 14–27% above raw API cost, with
+psychological rounding to whole credits.
+
+**Rationale for the markup range:**
+
+- Covers platform overhead (vision moderation ~$0.003/image,
+  storage, compute, support infrastructure)
+- Builds layered margin beyond subscription fee
+- Allows absorbing small provider price increases without
+  immediate tier repricing
+
+**Rationale for psychological rounding:**
+
+Credit costs rounded to whole numbers feel cleaner than precise
+decimals. "8 credits" is intuitive; "7.14 credits" breaks mental
+model. Rounding up slightly builds margin without users noticing.
+
+**Worked example: Nano Banana 2 1K at $0.067**
+
+- Raw cost at 100:1 ratio = 6.7 credits
+- Round up to 7 credits = slight margin + cleaner number
+- **Round up to 8 credits = +19% markup, round number, meaningful
+  margin** ← chosen
+- Rationale: 8 credits preserves margin floor + matches other
+  premium models (Grok Imagine at 8 credits) for tier consistency
+
+**Worked example: Grok Imagine at $0.07**
+
+- Raw cost at 100:1 ratio = 7 credits exactly
+- 7 credits = 0% markup, no margin
+- **8 credits = +14% markup, matches Nano Banana 2 tier
+  positioning** ← chosen
+
+**Worked example: Flux Schnell at $0.003 (outlier)**
+
+- Raw cost at 100:1 ratio = 0.3 credits
+- Rounded up to 1 credit = massive percentage markup (+233%),
+  but in absolute terms still tiny
+- **1 credit serves as "margin floor"** — ensures Flux Schnell
+  doesn't become a loss leader while keeping it the clear
+  "cheapest option" for users
+
+---
+
+### Credit Costs as Living Values
+
+**`GeneratorModel.credit_cost` database field is the live source
+of truth.** Admin can adjust without a deploy. CLAUDE.md
+documentation is informational snapshot.
+
+**If CLAUDE.md and database disagree, database is correct and
+this document needs updating.**
+
+**When to adjust credit costs:**
+
+- Provider raises/lowers raw API cost materially (±10%)
+- Usage patterns shift in ways affecting margin (users heavily
+  favoring a model that's underpriced)
+- Promotional adjustments (Nano Banana 2 "Limited Time" pricing
+  could include temporary credit reduction to drive trial)
+
+**When NOT to adjust:**
+
+- Short-term provider price volatility (<10% swing)
+- Temporary usage spikes on specific models
+- Competitor repricing (they'll keep moving; react to durable
+  trends not single events)
+
+---
+
+### User-Facing Credit Communication
+
+Users see credits, never the ratio or underlying cost. Acceptable
+user-facing copy:
+
+- "You have 800 credits this month"
+- "This image costs 8 credits"
+- "Need more? Top-up packs start at $3"
+- "Upgrade to Studio for 3,000 credits/month"
+
+Unacceptable user-facing copy:
+
+- "Credits are worth about $0.01 each"
+- "That image costs us $0.067"
+- "Our markup on this model is 19%"
+
+---
+
+## 🔮 Post-Launch Recommendations
+
+> Items to revisit once real usage data exists. Timeline phased
+> by expected data availability.
+
+### Month 1–3 (first real-usage window)
+
+- **Validate conversion rate assumptions.** If Free → Pro is
+  below 2% after 60 days, evaluate trial structure (CC-required
+  7-day Pro trial).
+- **Measure which discovery caps trigger the most upgrades** via
+  Stripe metadata. Tighten caps that don't convert; loosen caps
+  causing bounce.
+- **Monitor actual model-mix usage.** If users heavily favor
+  expensive models, adjust credit costs or tier allocations.
+- **Track chargeback rate.** Above 1% = investigate; above 2% =
+  urgent intervention.
+- **Measure Day-28 email effectiveness.** Compare chargeback and
+  refund rates between users who opened the Day-28 email and
+  those who didn't.
+
+### Month 3–6 (pattern recognition window)
+
+- **Reassess 4th tier (Creator at $9)** based on signal patterns
+  documented in "Monetization Strategy" section. Four specific
+  signals; none = don't add; any = consider adding.
+- **Evaluate launch pricing phase-out.** If 200 annual
+  subscribers hit quickly, consider controlled extension (e.g.,
+  "first 500") vs. ending on schedule.
+- **Consider referral program** if organic conversion mechanics
+  are validated. Suggested: referrer gets 200 credits, referee
+  gets +50 signup credits bonus. Don't launch at initial release
+  — needs baseline conversion data first.
+- **Review GPT-Image-1.5 BYOK usage.** If minimal, consider
+  deprecating or repositioning.
+
+### Month 6+ (scale and expansion window)
+
+- **Build out prompt marketplace** (revenue stream 3).
+- **Evaluate Phase 2 features:** Content Intelligence Agent,
+  CLIP visual similarity, POD (Printify/Printful) integration.
+- **Consider API access tier for developers** (usage-based
+  pricing).
+- **Reassess fixed costs** — scaling may justify infrastructure
+  upgrades or migration.
+- **Hiring consideration** at 1,000 subscribers milestone —
+  contractor help for marketing, customer support, content
+  moderation.
+
+### Documentation Visibility Note
+
+CLAUDE.md is currently a private strategy document, readable only
+by the project owner and Claude Code. If the repository ever gets
+shared with contributors, investors, or open-sourced partially,
+CLAUDE.md becomes readable by them.
+
+**Before any repository share event:**
+
+- Review CLAUDE.md for content that should stay private (specific
+  revenue targets, competitor critique, candid risk inventory)
+- Create a shareable abridged version if appropriate
+- Consider splitting into public + private strategy docs
+
+This is not a current concern — all project work is solo — but
+worth revisiting at scale milestones or before external sharing.
 
 ---
 

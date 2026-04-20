@@ -78,17 +78,8 @@
             <!-- Avatar -->
             <div class="notif-avatar-wrapper">
                 {% if notification.sender %}
-                    {% if notification.sender.userprofile.b2_avatar_url %}
-                    <img src="{{ notification.sender.userprofile.b2_avatar_url }}"
-                         alt="{{ notification.sender.username }}'s avatar"
-                         class="notif-avatar"
-                         loading="lazy"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="notif-avatar-placeholder" style="display: none; background: var(--avatar-gradient-{{ notification.sender.userprofile.get_avatar_color_index }}, var(--main-blue));" role="img" aria-label="{{ notification.sender.username }}'s avatar">
-                        {{ notification.sender.username|first|upper }}
-                    </div>
-                    {% elif notification.sender.userprofile.avatar and notification.sender.userprofile.avatar.url %}
-                    <img src="{{ notification.sender.userprofile.avatar.url }}"
+                    {% if notification.sender.userprofile.avatar_url %}
+                    <img src="{{ notification.sender.userprofile.avatar_url }}"
                          alt="{{ notification.sender.username }}'s avatar"
                          class="notif-avatar"
                          loading="lazy"

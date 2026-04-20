@@ -14,12 +14,11 @@ USAGE
     python manage.py migrate_cloudinary_to_b2 --dry-run
     python manage.py migrate_cloudinary_to_b2 --limit 3
     python manage.py migrate_cloudinary_to_b2
-    python manage.py migrate_cloudinary_to_b2 --model userprofile
-    python manage.py migrate_cloudinary_to_b2 --model prompt
 
-    # Avatar migration: supported via `--model userprofile` or `--model
-    # all` (default). UserProfile.b2_avatar_url was added in migration
-    # 0084 — run `python manage.py migrate` before using this command.
+163-B NOTE: the avatar branch (`--model userprofile`) was removed
+when UserProfile.avatar (CloudinaryField) was dropped in migration
+0085. The command now only migrates `Prompt.featured_image` and
+`Prompt.featured_video`.
 
 DEVELOPER NOTES
     - Cloud name is `dj0uufabo` (NOT `dj0uufabot` — a historical typo
@@ -41,7 +40,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Q
 
-from prompts.models import Prompt, UserProfile
+from prompts.models import Prompt
 from prompts.services.b2_upload_service import upload_image, upload_video
 
 logger = logging.getLogger(__name__)
@@ -130,8 +129,10 @@ class Command(BaseCommand):
             default="all",
             help=(
                 "Which target(s) to migrate. `prompt` covers both "
-                "images and videos on Prompt. `userprofile` covers "
-                "avatar images on UserProfile. `all` covers both."
+                "images and videos on Prompt. `userprofile` and `all` "
+                "are retained for backwards CLI compatibility but the "
+                "UserProfile branch is a no-op after 163-B (avatar "
+                "field dropped in migration 0085)."
             ),
         )
 
@@ -271,69 +272,6 @@ class Command(BaseCommand):
         return f"migrated-video: id={prompt.pk}"
 
     # ------------------------------------------------------------------
-    #  Avatar migration (UserProfile)
-    # ------------------------------------------------------------------
-    def _migrate_avatar(
-        self, profile: UserProfile, dry_run: bool
-    ) -> str:
-        if profile.b2_avatar_url:
-            return "skipped-already-b2"
-        if not profile.avatar:
-            return "no-cloudinary-avatar"
-
-        # Same CloudinaryResource.public_id rule as prompt images.
-        public_id = getattr(profile.avatar, "public_id", "") or ""
-
-        if not public_id:
-            return "no-public-id"
-
-        content = None
-        resolved_ext = "jpg"
-        for ext in ("jpg", "png", "webp"):
-            url = f"{CLOUDINARY_IMAGE_BASE}/{public_id}.{ext}"
-            data = _fetch(url)
-            if data:
-                content = data
-                resolved_ext = ext
-                break
-
-        if content is None:
-            return f"download-failed: {public_id}"
-
-        if dry_run:
-            return (
-                f"would-migrate-avatar: profile id={profile.pk} "
-                f"bytes={len(content)} ext=.{resolved_ext}"
-            )
-
-        try:
-            image_file = BytesIO(content)
-            image_file.name = f"avatar_{profile.pk}.{resolved_ext}"
-            result = upload_image(
-                image_file,
-                original_filename=image_file.name,
-            )
-        except Exception as exc:
-            return f"upload-exception: {exc}"
-
-        if not result.get("success"):
-            return f"upload-failed: {result.get('error')}"
-
-        urls = result.get("urls", {}) or {}
-        # Prefer the 'original' URL — templates can use CDN-side resizing
-        # or the thumb URL directly if they need a smaller variant. The
-        # 'original' variant is always present even in quick_mode.
-        b2_url = urls.get("original", "") or urls.get("thumb", "")
-        if not b2_url:
-            return "upload-no-url"
-
-        with transaction.atomic():
-            profile.refresh_from_db()
-            profile.b2_avatar_url = b2_url
-            profile.save(update_fields=["b2_avatar_url"])
-        return f"migrated-avatar: profile_id={profile.pk}"
-
-    # ------------------------------------------------------------------
     #  Orchestration
     # ------------------------------------------------------------------
     def handle(self, *args, **options):
@@ -341,7 +279,10 @@ class Command(BaseCommand):
         limit = max(int(options["limit"] or 0), 0)
         model = options.get("model", "all")
         run_prompts = model in ("prompt", "all")
-        run_profiles = model in ("userprofile", "all")
+        # 163-B: avatar migration branch removed when
+        # UserProfile.avatar CloudinaryField was dropped in migration
+        # 0085. `--model userprofile` is now a no-op.
+        run_profiles = False
 
         # Upfront B2 config sanity check — fail fast instead of
         # wasting Cloudinary bandwidth + retry delay per record.
@@ -459,51 +400,10 @@ class Command(BaseCommand):
                 if not dry_run:
                     time.sleep(0.5)
 
-        if run_profiles:
-            # Avatars — UserProfile with a Cloudinary avatar but no B2 avatar.
-            # Same NULL-safe Q-object pattern as the image queryset (162-A).
-            avatar_qs = (
-                UserProfile.objects.exclude(avatar="")
-                .exclude(avatar=None)
-                .filter(
-                    Q(b2_avatar_url="") | Q(b2_avatar_url__isnull=True)
-                )
-                .order_by("id")
-            )
-            if limit:
-                avatar_qs = avatar_qs[:limit]
-
-            for i, profile in enumerate(avatar_qs.iterator(chunk_size=50), 1):
-                status = self._migrate_avatar(profile, dry_run)
-                avatar_processed += 1
-                if status.startswith("migrated") or status.startswith(
-                    "would-migrate"
-                ):
-                    avatar_succeeded += 1
-                elif status.startswith("skipped") or status.startswith(
-                    "no-"
-                ):
-                    avatar_skipped += 1
-                else:
-                    avatar_failed += 1
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f"  [avatar {profile.pk}] {status}"
-                        )
-                    )
-                    continue
-                # Same observability absorption as the image loop
-                # (162-A Rule 2) — include `would-migrate` statuses.
-                if (
-                    i % 10 == 0
-                    or status.startswith("migrated")
-                    or status.startswith("would-migrate")
-                ):
-                    self.stdout.write(
-                        f"  [avatar {profile.pk}] {status}"
-                    )
-                if not dry_run:
-                    time.sleep(0.2)
+        # 163-B: avatar migration orchestration removed when
+        # UserProfile.avatar was dropped. Avatar counters below stay
+        # in the summary as `0/0/0/0` for backwards compatibility with
+        # downstream log parsers.
 
         # ── Summary ──────────────────────────────────────────────
         self.stdout.write("")

@@ -1,19 +1,10 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
-from django.core.files.uploadedfile import UploadedFile, InMemoryUploadedFile, TemporaryUploadedFile
 from taggit.forms import TagWidget
 from .models import Comment, CollaborateRequest, Prompt, UserProfile, PromptReport, EmailPreferences
 from .services import ProfanityFilterService
 import re
-
-# Import CloudinaryResource for explicit type checking (security hardening)
-try:
-    from cloudinary import CloudinaryResource
-    CLOUDINARY_AVAILABLE = True
-except ImportError:
-    CloudinaryResource = None
-    CLOUDINARY_AVAILABLE = False
 
 
 class CommentForm(forms.ModelForm):
@@ -120,7 +111,7 @@ class PromptForm(forms.ModelForm):
         self.fields['ai_generator'].help_text = (
             'Select the AI tool used to create this image/video'
         )
-    
+
     def clean(self):
         cleaned_data = super().clean()
         featured_media = cleaned_data.get('featured_media')
@@ -231,29 +222,21 @@ class UserProfileForm(forms.ModelForm):
     """
     ModelForm for editing user profile information.
 
+    163-B: avatar upload is NO LONGER a form-managed field. Direct
+    avatar uploads are handled by the B2 direct-upload flow (163-C)
+    via async JS, not ModelForm. This form only manages bio + social
+    URLs.
+
     Features:
     - Bio with 500 character limit and live counter
-    - Avatar upload with Cloudinary integration
     - Social media URL validation
     - User-friendly error messages
     - Proper placeholders and help text
     """
 
-    # Override avatar to use ClearableFileInput for better UX
-    avatar = forms.ImageField(
-        required=False,
-        label='Profile Avatar',
-        help_text='Upload a profile picture (JPG, PNG, WebP - Max 5MB)',
-        widget=forms.ClearableFileInput(attrs={
-            'accept': 'image/jpeg,image/png,image/webp',
-            'class': 'form-control-file avatar-upload-input',
-            'id': 'id_avatar'
-        })
-    )
-
     class Meta:
         model = UserProfile
-        fields = ['bio', 'avatar', 'twitter_url', 'instagram_url', 'website_url']
+        fields = ['bio', 'twitter_url', 'instagram_url', 'website_url']
         widgets = {
             'bio': forms.Textarea(attrs={
                 'class': 'form-control modern-textarea',
@@ -286,7 +269,6 @@ class UserProfileForm(forms.ModelForm):
         }
         labels = {
             'bio': 'Bio',
-            'avatar': 'Profile Avatar',
             'twitter_url': 'Twitter/X URL',
             'instagram_url': 'Instagram URL',
             'website_url': 'Website URL',
@@ -322,85 +304,10 @@ class UserProfileForm(forms.ModelForm):
 
         return bio
 
-    def clean_avatar(self):
-        """
-        Validate avatar upload with explicit type checking for security.
-
-        Handles three cases:
-        1. No new file uploaded (avatar is None or False) - keep existing
-        2. Existing CloudinaryResource object - return as-is (no re-validation)
-        3. New file upload (Django UploadedFile) - validate size, type, dimensions
-
-        Security: Uses isinstance() instead of hasattr() to prevent spoofed objects
-        from bypassing validation by simply having a 'public_id' attribute.
-        """
-        avatar = self.cleaned_data.get('avatar')
-
-        # Case 1: No new file uploaded - keep existing avatar
-        if not avatar:
-            return self.instance.avatar if self.instance else None
-
-        # Case 2: Explicit type check for CloudinaryResource
-        # More secure than hasattr() - ensures it's actually a Cloudinary object
-        if CLOUDINARY_AVAILABLE and CloudinaryResource is not None:
-            if isinstance(avatar, CloudinaryResource):
-                return avatar
-        else:
-            # Fallback: Check class name if Cloudinary import failed
-            # Still more secure than hasattr() as it checks the actual type
-            avatar_type = type(avatar).__name__
-            if avatar_type in ('CloudinaryResource', 'CloudinaryImage', 'CloudinaryField'):
-                return avatar
-
-        # Case 3: Explicit type check for Django file uploads
-        # UploadedFile is base class for InMemoryUploadedFile and TemporaryUploadedFile
-        if not isinstance(avatar, (UploadedFile, InMemoryUploadedFile, TemporaryUploadedFile)):
-            # Unknown type - reject for security
-            raise ValidationError('Invalid file type. Please upload an image file.')
-
-        # Validate file size (5MB limit for avatars)
-        if hasattr(avatar, 'size') and avatar.size > 5 * 1024 * 1024:
-            raise ValidationError('Avatar file size must be under 5MB.')
-
-        # Validate file type by extension
-        if hasattr(avatar, 'name'):
-            filename = avatar.name.lower()
-            valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
-            if not any(filename.endswith(ext) for ext in valid_extensions):
-                raise ValidationError(
-                    'Invalid file format. Please upload JPG, PNG, or WebP.'
-                )
-
-        # Validate dimensions using Pillow
-        try:
-            from PIL import Image
-            image = Image.open(avatar)
-            width, height = image.size
-
-            # Minimum dimensions (100x100)
-            if width < 100 or height < 100:
-                raise ValidationError(
-                    'Avatar must be at least 100x100 pixels.'
-                )
-
-            # Maximum dimensions (4000x4000 - prevents huge uploads)
-            if width > 4000 or height > 4000:
-                raise ValidationError(
-                    'Avatar dimensions cannot exceed 4000x4000 pixels.'
-                )
-
-            # Reset file pointer after reading for subsequent processing
-            avatar.seek(0)
-        except ImportError:
-            # Pillow not installed, skip dimension validation
-            pass
-        except ValidationError:
-            # Re-raise our own validation errors
-            raise
-        except Exception as e:
-            raise ValidationError(f'Unable to process image file: {str(e)}')
-
-        return avatar
+    # 163-B: clean_avatar() deleted. Avatar upload is no longer
+    # ModelForm-managed — the B2 direct-upload flow (163-C) handles
+    # size/type/dimension validation via the presign service + JS
+    # client.
 
     def clean_twitter_url(self):
         """Auto-add Twitter domain if user just provides username"""
@@ -522,18 +429,6 @@ class UserProfileForm(forms.ModelForm):
     def clean(self):
         """Overall form validation"""
         cleaned_data = super().clean()
-
-        # Optional: Ensure at least one field is filled
-        # (Remove if you want to allow completely empty profiles)
-        # has_content = any([
-        #     cleaned_data.get('bio'),
-        #     cleaned_data.get('avatar'),
-        #     cleaned_data.get('twitter_url'),
-        #     cleaned_data.get('instagram_url'),
-        #     cleaned_data.get('website_url'),
-        # ])
-        # if not has_content:
-        #     raise ValidationError('Please fill in at least one field.')
 
         return cleaned_data
 

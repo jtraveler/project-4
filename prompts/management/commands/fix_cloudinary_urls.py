@@ -2,11 +2,14 @@
 Django management command to fix malformed Cloudinary URLs in the database.
 
 This command:
-- Scans UserProfile avatars for malformed URLs (MOST LIKELY 404 SOURCE)
 - Scans Prompt featured_image and featured_video for malformed URLs
 - Identifies URLs missing cloud_name or containing problematic IDs
 - Clears malformed URLs (sets to None) so they regenerate correctly
 - Reports number of fixes made
+
+163-B NOTE: the UserProfile avatar scan was removed when the
+CloudinaryField on UserProfile was dropped in migration 0085. Only
+Prompt fields remain on CloudinaryField.
 
 Usage:
     python manage.py fix_cloudinary_urls                    # Fix all malformed URLs
@@ -15,7 +18,7 @@ Usage:
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from prompts.models import Prompt, UserProfile
+from prompts.models import Prompt
 import logging
 
 logger = logging.getLogger(__name__)
@@ -54,55 +57,17 @@ class Command(BaseCommand):
         self.stdout.write(f'Looking for problematic ID: {problem_id[:40]}...')
         self.stdout.write('')
 
-        # Track fixes
+        # Track fixes — avatar counter kept for backwards-compatible
+        # summary output but always zero after 163-B.
         fixed_avatars = 0
         fixed_images = 0
         fixed_videos = 0
         fixed_users = []
         fixed_prompts = []
 
-        # ============================================================
-        # SCAN USER AVATARS (MOST LIKELY SOURCE OF 404)
-        # ============================================================
-        self.stdout.write('🔍 Scanning user avatars...')
-        all_profiles = UserProfile.objects.select_related('user').all()
-
-        for profile in all_profiles:
-            if profile.avatar:
-                # Use .public_id for consistency with 161-A / 162-C
-                # pattern. For plain-string CloudinaryField values,
-                # fall back to the string itself. Avoids `str()` on
-                # a CloudinaryResource which ties behavior to the
-                # SDK's `__str__` implementation.
-                avatar_str = (
-                    getattr(profile.avatar, 'public_id', None)
-                    or (
-                        profile.avatar
-                        if isinstance(profile.avatar, str)
-                        else ''
-                    )
-                )
-
-                # Check for problematic ID OR missing cloud_name
-                if problem_id in avatar_str or (
-                    'cloudinary' in avatar_str and cloud_name not in avatar_str
-                ):
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f'  ⚠️  User {profile.user.username}: Malformed avatar URL'
-                        )
-                    )
-                    self.stdout.write(f'     Before: {avatar_str[:80]}...')
-
-                    if not dry_run:
-                        # Clear the malformed URL
-                        profile.avatar = None
-                        profile.save()
-                        fixed_avatars += 1
-                        fixed_users.append(profile.user.username)
-                        self.stdout.write(
-                            self.style.SUCCESS(f'     ✓ Fixed avatar for {profile.user.username}')
-                        )
+        # 163-B: UserProfile avatar scan removed when CloudinaryField
+        # was dropped from the model in migration 0085. No avatars
+        # exist on UserProfile to scan.
 
         # ============================================================
         # SCAN PROMPT IMAGES AND VIDEOS

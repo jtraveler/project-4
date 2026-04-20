@@ -29,7 +29,11 @@ class UserProfile(models.Model):
     Attributes:
         user (OneToOneField): Link to Django User model
         bio (TextField): User's biography (max 500 characters, optional)
-        avatar (CloudinaryField): Profile avatar image (optional)
+        avatar_url (URLField): B2/Cloudflare CDN URL for avatar image
+            (optional). Written by the direct-upload flow (163-C) and
+            by social-login capture (163-D).
+        avatar_source (CharField): Origin of the avatar_url value —
+            default / direct / google / facebook / apple.
         twitter_url (URLField): Twitter profile URL (optional)
         instagram_url (URLField): Instagram profile URL (optional)
         website_url (URLField): Personal website URL (optional)
@@ -59,29 +63,36 @@ class UserProfile(models.Model):
         blank=True,
         help_text='Short biography (max 500 characters)'
     )
-    avatar = CloudinaryField(
-        'avatar',
-        blank=True,
-        null=True,
-        transformation={
-            'width': 300,
-            'height': 300,
-            'crop': 'fill',
-            'gravity': 'face',
-            'quality': 'auto',
-            'fetch_format': 'auto'
-        },
-        help_text='Profile avatar image'
-    )
-    b2_avatar_url = models.URLField(
+    # 163-B: CloudinaryField dropped in migration 0085. b2_avatar_url
+    # renamed to avatar_url in the same migration. Avatar images now
+    # live on B2 only — Cloudinary is out of the UserProfile path
+    # entirely. Prompt.featured_image / featured_video still use
+    # CloudinaryField (separate scope).
+    AVATAR_SOURCE_CHOICES = [
+        ('default', 'Default (letter gradient)'),
+        ('direct', 'Direct upload'),
+        ('google', 'Google social sign-in'),
+        ('facebook', 'Facebook social sign-in'),
+        ('apple', 'Apple social sign-in'),
+    ]
+
+    avatar_url = models.URLField(
         max_length=500,
         blank=True,
         default='',
         help_text=(
-            'B2/Cloudflare CDN URL for avatar (replaces Cloudinary). '
-            'Populated by migrate_cloudinary_to_b2 management command. '
-            'Templates should check this first, fallback to Cloudinary avatar.'
+            'B2/Cloudflare CDN URL for avatar. Empty string means the '
+            'user has no uploaded avatar; the letter-placeholder is '
+            'rendered instead. Written by the direct-upload flow '
+            '(163-C) and social-login capture (163-D).'
         )
+    )
+    avatar_source = models.CharField(
+        max_length=20,
+        choices=AVATAR_SOURCE_CHOICES,
+        default='default',
+        db_index=True,
+        help_text='Origin of the avatar_url value.',
     )
     twitter_url = models.URLField(
         max_length=200,

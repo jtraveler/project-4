@@ -1567,14 +1567,14 @@ class UserProfileAdmin(admin.ModelAdmin):
     Admin interface for UserProfile model.
 
     Features:
-    - List view with bio preview, avatar status
+    - List view with bio preview, avatar status, avatar_source
     - Search by username, email, bio
-    - Filter by creation date
-    - Organized fieldsets (User, Profile Info, Social Media, Timestamps)
+    - Filter by creation date, avatar_source
+    - Organized fieldsets (User, Profile Info, Avatar, Social Media, Timestamps)
     - Read-only timestamps
     """
-    list_display = ["user", "bio_preview", "has_avatar", "created_at"]
-    list_filter = ["created_at", "updated_at"]
+    list_display = ["user", "bio_preview", "has_avatar", "avatar_source", "created_at"]
+    list_filter = ["avatar_source", "created_at", "updated_at"]
     search_fields = ["user__username", "user__email", "bio"]
     readonly_fields = ["created_at", "updated_at"]
     list_per_page = 50
@@ -1584,7 +1584,10 @@ class UserProfileAdmin(admin.ModelAdmin):
             "fields": ("user",)
         }),
         ("Profile Information", {
-            "fields": ("bio", "avatar")
+            "fields": ("bio",)
+        }),
+        ("Avatar", {
+            "fields": ("avatar_url", "avatar_source")
         }),
         ("Social Media", {
             "fields": ("twitter_url", "instagram_url", "website_url")
@@ -1603,8 +1606,8 @@ class UserProfileAdmin(admin.ModelAdmin):
     bio_preview.short_description = "Bio"
 
     def has_avatar(self, obj):
-        """Show if user has uploaded avatar"""
-        return bool(obj.avatar)
+        """Show if user has an avatar (163-B: checks avatar_url)."""
+        return bool(obj.avatar_url)
     has_avatar.boolean = True
     has_avatar.short_description = "Avatar"
 

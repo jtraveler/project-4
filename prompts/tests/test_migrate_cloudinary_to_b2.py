@@ -132,133 +132,12 @@ class MigrateCloudinaryToB2FailFastTests(TestCase):
             call_command('migrate_cloudinary_to_b2', '--dry-run')
 
 
-class MigrateCloudinaryToB2AvatarTests(TestCase):
-    """_migrate_avatar must follow the same safety contract as the
-    prompt image method: dry-run makes no DB changes, idempotent skip
-    when b2_avatar_url is already populated."""
-
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='avataruser',
-            email='avataruser@example.com',
-            password='x',
-        )
-        # UserProfile is auto-created by signal; refresh to get the instance.
-        self.profile = self.user.userprofile
-
-    @patch(
-        'prompts.management.commands.migrate_cloudinary_to_b2.'
-        '_fetch',
-        return_value=b'fake-avatar-bytes',
-    )
-    @patch(
-        'prompts.management.commands.migrate_cloudinary_to_b2.'
-        'upload_image'
-    )
-    def test_avatar_dry_run_method_makes_no_db_changes(
-        self, mock_upload, mock_fetch
-    ):
-        """Directly exercise `_migrate_avatar(..., dry_run=True)`."""
-        self.profile.avatar = SimpleNamespace(
-            public_id='legacy/avatar_abc123'
-        )
-
-        cmd = Command()
-        cmd.stdout = StringIO()
-        cmd.stderr = StringIO()
-        status = cmd._migrate_avatar(self.profile, dry_run=True)
-
-        self.assertTrue(status.startswith('would-migrate'))
-        mock_upload.assert_not_called()
-
-        # DB must remain untouched.
-        self.profile.refresh_from_db()
-        self.assertEqual(self.profile.b2_avatar_url or '', '')
-
-    @patch(
-        'prompts.management.commands.migrate_cloudinary_to_b2.'
-        '_fetch'
-    )
-    def test_avatar_already_on_b2_is_skipped(self, mock_fetch):
-        """Profiles with an existing b2_avatar_url are skipped — no
-        network call, no upload."""
-        self.profile.b2_avatar_url = (
-            'https://media.promptfinder.net/avatars/existing.jpg'
-        )
-        self.profile.save(update_fields=['b2_avatar_url'])
-        self.profile.avatar = SimpleNamespace(
-            public_id='legacy/avatar_skip'
-        )
-
-        cmd = Command()
-        cmd.stdout = StringIO()
-        cmd.stderr = StringIO()
-        status = cmd._migrate_avatar(self.profile, dry_run=False)
-
-        self.assertEqual(status, 'skipped-already-b2')
-        mock_fetch.assert_not_called()
-
-    @patch(
-        'prompts.management.commands.migrate_cloudinary_to_b2.'
-        '_fetch',
-        return_value=None,
-    )
-    def test_avatar_download_failure_returns_download_failed(
-        self, mock_fetch
-    ):
-        """If every extension attempt fails, the method returns
-        `download-failed:<public_id>` and does NOT touch the DB."""
-        self.profile.avatar = SimpleNamespace(
-            public_id='legacy/avatar_missing'
-        )
-
-        cmd = Command()
-        cmd.stdout = StringIO()
-        cmd.stderr = StringIO()
-        status = cmd._migrate_avatar(self.profile, dry_run=False)
-
-        self.assertTrue(status.startswith('download-failed'))
-        self.assertIn('legacy/avatar_missing', status)
-        self.profile.refresh_from_db()
-        self.assertEqual(self.profile.b2_avatar_url, '')
-
-    @patch(
-        'prompts.management.commands.migrate_cloudinary_to_b2.'
-        '_fetch',
-        return_value=b'fake-avatar-bytes',
-    )
-    @patch(
-        'prompts.management.commands.migrate_cloudinary_to_b2.'
-        'upload_image',
-        return_value={
-            'success': True,
-            'urls': {
-                'original': 'https://media.promptfinder.net/avatars/new.jpg',
-                'thumb': 'https://media.promptfinder.net/avatars/thumb.jpg',
-            },
-        },
-    )
-    def test_avatar_happy_path_writes_b2_avatar_url(
-        self, mock_upload, mock_fetch
-    ):
-        """Successful migration writes the B2 URL to the profile and
-        returns `migrated-avatar`."""
-        self.profile.avatar = SimpleNamespace(
-            public_id='legacy/avatar_ok'
-        )
-
-        cmd = Command()
-        cmd.stdout = StringIO()
-        cmd.stderr = StringIO()
-        status = cmd._migrate_avatar(self.profile, dry_run=False)
-
-        self.assertTrue(status.startswith('migrated-avatar'))
-        mock_upload.assert_called_once()
-        self.profile.refresh_from_db()
-        self.assertEqual(
-            self.profile.b2_avatar_url,
-            'https://media.promptfinder.net/avatars/new.jpg',
-        )
+# 163-B: MigrateCloudinaryToB2AvatarTests class removed. The
+# `_migrate_avatar` method was deleted when `UserProfile.avatar`
+# CloudinaryField was dropped in migration 0085. Zero avatars
+# existed in production at time of removal — no data preservation
+# concerns. Avatar regression coverage for the new B2-direct flow
+# is in `prompts/tests/test_avatar_upload.py` (Session 163-C).
 
 
 class MigrateCloudinaryToB2QuerysetNullTests(TestCase):
@@ -392,49 +271,7 @@ class MigrateCloudinaryToB2QuerysetNullTests(TestCase):
         self.assertIn(str(prompt.id), output)
         self.assertIn('would-migrate-video', output)
 
-    @patch(
-        'prompts.management.commands.migrate_cloudinary_to_b2.'
-        '_fetch',
-        return_value=b'fake-avatar-bytes',
-    )
-    def test_avatar_queryset_matches_empty_b2_avatar_url(
-        self, mock_fetch
-    ):
-        """
-        Real UserProfile with avatar populated and b2_avatar_url=''
-        (the default for this field — it has no `null=True`) must be
-        identified by the avatar queryset.
-
-        b2_avatar_url cannot be NULL at the DB level (migration 0084
-        set `default=''` with no `null=True`), so this test exercises
-        the empty-string branch of the Q filter. The `__isnull=True`
-        branch is still defensively present in case the field gains
-        `null=True` later; the pattern is symmetric with the prompt
-        image/video querysets.
-        """
-        profile = self.user.userprofile
-        profile.avatar = 'legacy/regression_162a_avatar'
-        profile.save()
-        profile.refresh_from_db()
-        self.assertEqual(profile.b2_avatar_url, '')
-
-        avatar_qs = (
-            UserProfile.objects.exclude(avatar='')
-            .exclude(avatar=None)
-            .filter(
-                Q(b2_avatar_url='') | Q(b2_avatar_url__isnull=True)
-            )
-        )
-        self.assertIn(profile, avatar_qs)
-
-        out = StringIO()
-        call_command(
-            'migrate_cloudinary_to_b2',
-            '--dry-run',
-            '--limit', '5',
-            '--model', 'userprofile',
-            stdout=out,
-        )
-        output = out.getvalue()
-        self.assertIn(str(profile.pk), output)
-        self.assertIn('would-migrate-avatar', output)
+    # 163-B: test_avatar_queryset_matches_empty_b2_avatar_url removed.
+    # `UserProfile.avatar` CloudinaryField and the `_migrate_avatar`
+    # orchestration both deleted in migration 0085 / 163-B. Avatar
+    # queryset coverage is no longer applicable.

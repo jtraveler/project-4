@@ -154,9 +154,9 @@ class FixCloudinaryUrlsSmokeTests(TestCase):
             email='fixurls@example.com',
             password='x',
         )
-        # Profile auto-created; set an avatar that triggers the scan.
-        self.user.userprofile.avatar = 'legacy/fix_avatar_id'
-        self.user.userprofile.save()
+        # 163-B: avatar field dropped from UserProfile; the
+        # fix_cloudinary_urls avatar scan was also removed. Only
+        # Prompt featured_image/video scans remain.
         Prompt.objects.create(
             title='fix urls prompt',
             slug='fix-urls-prompt',

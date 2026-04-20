@@ -376,8 +376,10 @@ def edit_profile(request):
 
     Features:
     - Only allows users to edit their own profile
-    - Handles avatar upload with Cloudinary
-    - Validates form data with UserProfileForm
+    - 163-B: avatar upload is handled separately by the B2 async flow
+      (163-C: /api/upload/avatar/presign/ + complete). Not managed by
+      this view or UserProfileForm.
+    - Validates bio + social URL form data with UserProfileForm
     - Success message with redirect to profile
     - Error handling for form validation and database issues
 
@@ -400,12 +402,16 @@ def edit_profile(request):
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
     if request.method == 'POST':
-        form = UserProfileForm(request.POST, request.FILES, instance=profile)
+        # 163-B: avatar is no longer a ModelForm field — no file upload
+        # via the form. Direct avatar uploads go through the B2 async
+        # flow (163-C: /api/upload/avatar/presign/ + complete).
+        form = UserProfileForm(request.POST, instance=profile)
 
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # Save profile with Cloudinary upload handled automatically
+                    # 163-B: Save bio + social URLs. Avatar upload is
+                    # out of band via the B2 async flow.
                     profile = form.save(commit=False)
                     profile.user = request.user  # Ensure ownership
                     profile.save()
@@ -626,5 +632,3 @@ This is an automated notification from PromptFinder.
             'error': 'Please correct the errors in your report.',
             'form_errors': errors
         }, status=400)
-
-

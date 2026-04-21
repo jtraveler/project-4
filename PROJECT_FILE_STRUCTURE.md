@@ -16,7 +16,7 @@
 | **CSS Files** | 12 | static/css/ |
 | **JavaScript Files** | 20 | static/js/ (+1 added in Session 163: `avatar-upload.js`. Earlier: 2 deleted in 61, 2 added in 86, 1 in 93, 1 in 98, job.js split in 121, gallery added in 122, bulk-generator.js split +2 in 143) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 87 | prompts/migrations/ (85, latest `0085_drop_cloudinary_avatar_add_avatar_source` — Session 163-B), about/migrations/ (2) |
+| **Migrations** | 88 | prompts/migrations/ (86, latest `0086_alter_userprofile_avatar_url` — Session 165-B, no-op help_text realignment), about/migrations/ (2) |
 | **Test Files** | 28 | prompts/tests/ (+4 new in Session 163: schema, avatar upload, social capture, sync) |
 | **Management Commands** | 29 | prompts/management/commands/ (-1 in 163-B: `fix_admin_avatar` deleted — Cloudinary-specific, obsolete. `migrate_cloudinary_to_b2` credential fix in 161-A, avatar support 161-E + _migrate_avatar removed 163-B, queryset Q-object fix in 162-A; `fix_cloudinary_urls` public_id pattern in 162-C) |
 | **Services** | 15 | prompts/services/ (+2 new in Session 163: `avatar_upload_service.py`, `social_avatar_capture.py`. Standalone .py modules, excluding `__init__.py` and the `image_providers/` subpackage) |

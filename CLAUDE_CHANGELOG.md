@@ -23,11 +23,27 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
-### Session 165 — April 21, 2026 (Procfile Release Phase)
+### Session 165 — April 21, 2026 (Deployment Safety Hardening)
 
-**Objective:** Add `release: python manage.py migrate --noinput`
-to Procfile so future deploys apply pending migrations
-automatically before new code starts serving traffic.
+**Two-spec session.** 165-A added the Procfile release phase so
+future deploys apply pending migrations automatically. 165-B
+resolved the first model-vs-migration drift that the newly-active
+release phase surfaced on its first deploy — structural deployment
+safety doing its job on day one.
+
+**Specs:**
+- **165-A** (commit `4d874d4`): Procfile release phase +
+  CLAUDE.md note + CLAUDE_CHANGELOG entry
+- **165-B** (commit `<hash>`): Migration 0086 aligning
+  `UserProfile.avatar_url` migration state with current model
+  definition (no-op SQL)
+
+---
+
+**165-A — Procfile Release Phase.** Adds `release: python
+manage.py migrate --noinput` to Procfile so future deploys apply
+pending migrations automatically before new code starts serving
+traffic.
 
 #### ⚠️ 2026-04-20 Production Near-Miss
 
@@ -74,11 +90,12 @@ for years before a schema change exposes the gap. New Heroku apps
 should add `release: python manage.py migrate --noinput` from day
 one, even when they have no migrations yet.
 
-#### Spec
+#### Specs (Session 165 combined)
 
 | Spec | Commit | Scope | Agent Avg | Agents ≥ 8.0 |
 |------|--------|-------|-----------|--------------|
-| 165-A | <hash> | Procfile release phase + CLAUDE.md note + CLAUDE_CHANGELOG entry | 9.02/10 | 6/6 |
+| 165-A | `4d874d4` | Procfile release phase + CLAUDE.md note + CLAUDE_CHANGELOG entry | 9.18/10 | 6/6 |
+| 165-B | `<hash>` | Migration 0086 aligning `UserProfile.avatar_url` field-state with model (no-op SQL) | 9.XX/10 | 6/6 |
 
 #### Key decisions
 
@@ -117,7 +134,155 @@ next deploy that includes a pending migration — but the developer
 should not deploy a synthetic migration just to test this. Trust
 the Heroku release-phase mechanism (well-documented, widely used).
 
-#### Deferred items (carried forward from prior sessions)
+---
+
+**165-B — UserProfile.avatar_url field-state drift fix.**
+Adds migration 0086 aligning migration state with the current
+model definition. No-op SQL at the PostgreSQL level.
+
+#### 2026-04-21 — Post-Deploy Drift Discovery (165-B)
+
+When 165-A deployed (v759, 2026-04-21) and the newly-active
+release phase ran its first `manage.py migrate`, Django reported:
+
+```
+No migrations to apply.
+Your models in app(s): 'django_summernote', 'prompts' have changes
+that are not yet reflected in a migration, and so won't be applied.
+```
+
+Local diagnosis via `makemigrations --dry-run prompts`:
+
+```
+Migrations for 'prompts':
+  prompts/migrations/0086_alter_userprofile_avatar_url.py
+    ~ Alter field avatar_url on userprofile
+```
+
+**Root cause:** `UserProfile.avatar_url` in `prompts/models.py`
+has an updated `help_text` (set in Session 163-B, commit
+`de75e9c`), but migration 0084 (`0084_add_b2_avatar_url_to_user
+profile.py`) recorded the ORIGINAL help_text from when the field
+was named `b2_avatar_url`:
+
+- **0084 help_text (stale):** "B2/Cloudflare CDN URL for avatar
+  (replaces Cloudinary). Populated by migrate_cloudinary_to_b2
+  management command. Templates should check this first, fallback
+  to Cloudinary avatar."
+- **Model help_text (current, 163-B):** "B2/Cloudflare CDN URL
+  for avatar. Empty string means the user has no uploaded avatar;
+  the letter-placeholder is rendered instead. Written by the
+  direct-upload flow (163-C) and social-login capture (163-D)."
+
+Migration 0085 renamed `b2_avatar_url` → `avatar_url` but did NOT
+update the help_text. The field class remained `URLField`
+throughout (spec's original diagnosis was slightly off — the drift
+is help_text-only, not field class — but the fix mechanism
+is identical).
+
+Both values are `varchar(500)` in PostgreSQL, and help_text is a
+Django introspection concern, not a database concern. `sqlmigrate`
+confirms the migration is a pure no-op at the PostgreSQL column
+level.
+
+**Drift origin:** single commit `de75e9c` ("feat(models): drop
+CloudinaryField from UserProfile + avatar_url + avatar_source",
+Session 163-B). Both the model help_text change and migration
+0085 were in the same commit, but 0085 only renames the field —
+it does not re-declare field metadata (Django's `RenameField`
+operation preserves the field class and metadata from the previous
+migration).
+
+**Resolution:** Migration 0086 generated via
+`python manage.py makemigrations prompts`. Contains a single
+`AlterField` operation realigning migration state to the current
+model's help_text (field class URLField unchanged). Verified via
+`python manage.py sqlmigrate prompts 0086` that SQL is a no-op
+(`BEGIN; -- (no-op) COMMIT;`). Behavioral effect on runtime:
+none. The migration is a metadata-only record update for Django's
+migration state tracker.
+
+**django_summernote drift:** out of scope. Known upstream package
+quirk, not our code. Added to Deferred items below.
+
+#### Why 165-B is in Session 165 (not its own session)
+
+165-A's release-phase work *surfaced* this drift on the first
+deploy after activation. Keeping both specs in Session 165
+documents the complete "we added release phase → release phase
+surfaced a pre-existing drift → we fixed the drift" arc as a
+single narrative. Structural deployment safety doing its job on
+day one.
+
+#### Key decisions (165-B)
+
+- **Generated via makemigrations, not hand-authored** — Django's
+  autogeneration is the correct tool; hand-authoring invites
+  subtle divergences from actual model state
+- **Dry-run first, then real generation** — spec-mandated guard
+  against unexpected additional drift surfacing during file
+  generation. Dry-run output matched exact expected pattern
+  (one migration, one AlterField, avatar_url only) before real
+  generation ran
+- **`sqlmigrate` verification before trusting the fix** —
+  confirms PostgreSQL sees no column change, so production
+  migration will be a metadata-only update to the
+  `django_migrations` table
+- **No data migration** — every existing avatar_url value is
+  either a valid URL (from Session 163-C's direct-upload
+  pipeline) or an empty string (field default). No data touched
+- **No hand edits to the generated migration** — Django's
+  autogeneration produces canonical output; editing would
+  invalidate the sqlmigrate verification
+- **Kept in Session 165 rather than 166** — 165-A surfaced this
+  drift; narrative cohesion matters for institutional memory
+- **Diagnosis discrepancy noted, not papered over** — spec
+  diagnosed "CharField vs URLField" drift; actual drift is
+  help_text-only. Fix mechanism is the same (autogenerated
+  `AlterField`). Documented in completion report Section 6 so
+  future readers know the spec's diagnosis ran slightly ahead
+  of the evidence
+
+#### Files changed (165-B)
+
+- `prompts/migrations/0086_alter_userprofile_avatar_url.py` (new,
+  autogenerated)
+- `CLAUDE_CHANGELOG.md` (this 165-B subsection added, Session
+  165 heading + preamble updated to two-spec scope, 165-A
+  commit hash filled in, Specs table expanded)
+- `PROJECT_FILE_STRUCTURE.md` (migration count + latest-migration
+  reference updated from 0085 → 0086)
+
+#### Test count (165-B)
+
+Unchanged (1364). No new tests required — the change is migration
+state alignment, not behavior. Existing `UserProfile` tests
+continue to pass because the field-class change (help_text) does
+not affect runtime read/write behavior on existing data.
+
+#### What happens on next deploy
+
+When developer next runs `git push heroku main`, release phase
+will run `manage.py migrate` and apply migration 0086. Expected
+release log:
+
+```
+Operations to perform:
+  Apply all migrations: ...
+Running migrations:
+  Applying prompts.0086_alter_userprofile_avatar_url... OK
+```
+
+The `django_summernote` drift warning will continue to appear
+(out of scope). The `prompts` app warning will disappear.
+
+**This is also the first real test of release-phase auto-applying
+a migration** (165-A's deploy had "No migrations to apply").
+Expected duration: 2–5 seconds on the release dyno.
+
+---
+
+#### Deferred items (Session 165 combined, carried forward from prior sessions)
 
 - Google OAuth credentials configuration (Session 163-D plumbing
   inert until done)
@@ -129,6 +294,10 @@ the Heroku release-phase mechanism (well-documented, widely used).
 - Non-atomic rate-limit increment (Session 163-C P3)
 - AvatarChangeLog model rename (Session 163-A Gotcha 8)
 - Prompt model CloudinaryField → B2 migration
+- **django_summernote migration drift** — upstream package quirk
+  surfaced by 165-A's release phase. Third-party, not our code.
+  Will continue to show a "changes not yet reflected" warning on
+  every deploy. No action unless it starts causing actual issues
 
 ---
 

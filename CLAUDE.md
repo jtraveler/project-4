@@ -1232,6 +1232,49 @@ Options for `initOverflowTabs()`:
   - JS Detections: On
   - Triggered by PHP probe scan observed in Heroku logs from IP 4.232.84.11
 
+### Heroku Release Phase (added Session 165, 2026-04-21)
+
+The Procfile declares a `release` process type that runs
+`python manage.py migrate --noinput` on every deploy, before the
+new web dynos start serving traffic. This means:
+
+- Migrations apply automatically when `git push heroku main` runs
+  the release phase
+- The new code never sees a stale schema (no recurrence of the
+  2026-04-20 near-miss where v758 deployed with code expecting
+  `avatar_url` 12 minutes before the column existed)
+- If a migration fails, the release fails — Heroku does not
+  promote the new dynos and traffic continues serving the previous
+  release
+- Developers no longer need to run
+  `heroku run python manage.py migrate --app mj-project-4` after
+  deploys
+
+This complements the env.py policy documented in the Current
+Blockers table (Session 163 incident row) and CLAUDE_CHANGELOG
+Session 163 incident section. env.py prevents migrations from
+leaking onto production from a developer machine; the release
+phase ensures migrations DO apply on production via the proper
+release-phase channel. Two complementary pieces of deployment
+infrastructure — one negative (prevents wrong-channel application),
+one positive (guarantees right-channel application).
+
+**Important operational notes:**
+
+- `--noinput` flag is mandatory — prevents `migrate` from hanging
+  on destructive-operation confirmation prompts in the non-
+  interactive release-dyno context
+- `collectstatic` is NOT in the release phase. The Heroku Python
+  buildpack already runs `collectstatic --noinput` during the
+  build phase. Adding it to release would duplicate work and slow
+  every deploy
+- If a migration must be skipped for a deploy (emergency rollback
+  of code without rolling back the migration), the developer can
+  temporarily comment out the release line before pushing — this
+  should be exceedingly rare
+- Procfile change affects Heroku only. Local `python manage.py
+  runserver` does not read Procfile and is unaffected
+
 ### Uncommitted Changes (Do Not Revert)
 
 | File | Change |

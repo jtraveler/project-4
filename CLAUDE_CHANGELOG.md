@@ -23,6 +23,115 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 165 — April 21, 2026 (Procfile Release Phase)
+
+**Objective:** Add `release: python manage.py migrate --noinput`
+to Procfile so future deploys apply pending migrations
+automatically before new code starts serving traffic.
+
+#### ⚠️ 2026-04-20 Production Near-Miss
+
+After Session 163's avatar pipeline rebuild was deployed (v758),
+production served 500s for ~12 minutes because migration 0085
+did not run automatically on deploy. Root cause: the Procfile
+declared only `web` and `worker` process types — no `release`
+phase was defined, so Heroku skipped the migration step entirely.
+
+Heroku's build output confirmed: `Procfile declares types -> web,
+worker`. v758 code expected `prompts_userprofile.avatar_url` and
+`prompts_userprofile.avatar_source` columns; the production
+schema still had the pre-0085 columns (`avatar`, `b2_avatar_url`).
+Every page that loaded a UserProfile failed with
+`django.db.utils.ProgrammingError: column
+prompts_userprofile.avatar_url does not exist`.
+
+**Impact:**
+- 12 minutes of 500s on UserProfile-touching pages
+- 1 visible 500 in the log tail (AhrefsBot crawler hitting the
+  homepage with a tag filter)
+- Real users essentially unaffected — low-traffic window,
+  affected only crawlers
+- Recovery: developer ran
+  `heroku run python manage.py migrate prompts --app mj-project-4`
+  manually after noticing the missing release-phase line
+
+**Why this matters:** The 2026-04-19 incident applied a migration
+to production accidentally (via env.py's DATABASE_URL). The
+2026-04-20 near-miss FAILED to apply a migration to production
+when it should have (via the missing release phase). Mirror-image
+failure modes around the same migration. Together they justify
+structural deployment safety, not just procedural discipline.
+
+**Remediation — structural:** This session's Procfile change. Every
+future `git push heroku main` will run `python manage.py migrate
+--noinput` during release phase before web dynos start serving
+the new code. If migration fails, release fails, traffic stays on
+the previous release. The schema-vs-code window cannot occur.
+
+**Lesson:** Heroku's release phase is opt-in. Repos that have never
+needed it can drift into production with no migration automation
+for years before a schema change exposes the gap. New Heroku apps
+should add `release: python manage.py migrate --noinput` from day
+one, even when they have no migrations yet.
+
+#### Spec
+
+| Spec | Commit | Scope | Agent Avg | Agents ≥ 8.0 |
+|------|--------|-------|-----------|--------------|
+| 165-A | <hash> | Procfile release phase + CLAUDE.md note + CLAUDE_CHANGELOG entry | 9.02/10 | 6/6 |
+
+#### Key decisions
+
+- **`--noinput` flag** — required to prevent migrate from prompting
+  for confirmation on destructive operations in non-interactive
+  release-dyno context
+- **`python` (no version suffix)** — matches the existing `worker`
+  line's convention. Heroku's Python buildpack pins the version
+  via `.python-version`
+- **No collectstatic in release** — Heroku Python buildpack already
+  runs `collectstatic --noinput` during build. Adding to release
+  would be redundant work and slow every deploy
+- **No `--check` before migrate** — would add latency without
+  benefit; if migrations fail, the release fails either way
+- **Separate from env.py policy** — env.py prevents migrations from
+  leaking onto production from a developer machine; release phase
+  ensures migrations DO apply on production via the proper channel.
+  Complementary, not overlapping
+- **Existing `web` + `worker` lines preserved byte-for-byte** — no
+  tidying, no flag changes. Only the new `release` line was
+  appended
+
+#### Files changed
+
+- `Procfile` — appended one line
+- `CLAUDE.md` — new `### Heroku Release Phase` subsection added
+  after `### Production Infrastructure Notes`, cross-referencing
+  the env.py policy note
+- `CLAUDE_CHANGELOG.md` — this entry
+
+#### Test count
+
+Unchanged (1364). Procfile is not testable via Django's test
+suite (Heroku reads it, Django doesn't). The real test is the
+next deploy that includes a pending migration — but the developer
+should not deploy a synthetic migration just to test this. Trust
+the Heroku release-phase mechanism (well-documented, widely used).
+
+#### Deferred items (carried forward from prior sessions)
+
+- Google OAuth credentials configuration (Session 163-D plumbing
+  inert until done)
+- Single generator implementation (Phase SUB prerequisite)
+- Phase SUB implementation (Stripe + credit enforcement)
+- Extension-mismatch B2 orphan keys (Session 163-C P2)
+- CDN cache staleness for OTHER viewers post avatar update
+  (Session 163-C P3)
+- Non-atomic rate-limit increment (Session 163-C P3)
+- AvatarChangeLog model rename (Session 163-A Gotcha 8)
+- Prompt model CloudinaryField → B2 migration
+
+---
+
 ### Session 164 — April 20, 2026 (Monetization Strategy Restructure)
 
 **Focus:** Complete monetization strategy documentation for Phase

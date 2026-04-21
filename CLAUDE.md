@@ -2631,6 +2631,271 @@ also corrected on the same day — the extra `t` had been causing
 
 ---
 
+## 🧠 Claude Memory System & Process Safeguards
+
+**Last reviewed:** April 21, 2026 (Session 167-A)
+**Source discussion:** Session 166-A follow-up conversation
+
+This section documents how Claude's memory system works in this
+project, what memory rules are currently active, why they were
+added, and what was considered but deferred. It exists so future
+Mateo and future Claude can reason about the memory system
+itself — not just operate within it.
+
+### How Claude's memory works
+
+Claude's memory is a set of user-specific rules ("memory edits")
+stored by the Anthropic platform and loaded into Claude's context
+window at the start of every conversation. Key mechanics:
+
+- **Persistence:** Edits persist across all future conversations
+  on Mateo's Claude account until explicitly removed or replaced
+- **Loading:** All active edits are loaded at the start of every
+  new conversation, adding ~150–200 tokens per edit to the
+  baseline context
+- **Firing:** Every rule is "active" in every conversation — a
+  rule about credential handling fires even during a frontend
+  CSS chat, though it remains inert unless relevant
+- **Capacity:** 30 slots maximum. Currently 9 used (as of Session
+  167-A). Overstuffing causes contradictions and cognitive noise
+- **Cost:** Each edit adds to per-message token cost. 9 edits
+  adds roughly 1,300–1,800 tokens per message. For a 40-message
+  session, that's 52,000–72,000 extra tokens of context overhead
+- **Value threshold:** An edit earns its slot by preventing a
+  proven failure mode, codifying a consistently-stated preference,
+  or formalizing a cadence that silent drift would erode
+
+### Why memory rules matter for this project
+
+PromptFinder has experienced three production incidents in April
+2026 — April 18 (credentials exposure), April 19 (env.py migration
+leak), April 20 (Procfile release-phase near-miss). All three
+were dev-prod boundary failures that could have been prevented
+by consistent application of structural safeguards. Memory rules
+are the mechanism for making those safeguards consistent rather
+than "remember to do this" reminders that drift.
+
+### Active memory rules (9 of 30)
+
+The following rules fire in every Claude conversation for this
+project. Listed in slot order.
+
+#### 1. Future-feature tracker: notification link tracking
+Track clicks on embedded Quill links in system notification
+message body HTML (planned feature).
+
+#### 2. Context verification on artifact-only starts
+When Mateo shares CC reports, specs, or work artifacts at the
+start of a session without a context block, Claude uses
+`recent_chats` or `conversation_search` to verify project state
+and protocol version before producing analysis. Never infer
+project context solely from artifact content.
+
+**Rationale:** Session 164 context-verification issue — Claude
+reviewed 161-series reports without proper context block,
+pattern-matching from artifacts alone. Protocol had drifted
+from v2.2 to v2.7 between sessions; 161-A claim was later
+corrected in 162-C.
+
+#### 3. ⚠️ Pre-flight warnings on credential-output commands
+Before providing commands whose output could expose credentials,
+secrets, or PII (heroku config, env inspection, DB queries with
+user data, API responses with keys, curl with auth headers,
+git diff on env.py), Claude prefixes with a `⚠️` warning naming
+the specific data type, explains running is fine but redaction
+before pasting back is required, and suggests safer alternatives
+when they exist (`heroku config:get --shell`, hash comparison,
+schema-only queries).
+
+**Rationale:** 2026-04-18 rotation incident — credentials
+accidentally exposed in terminal output during Cloudinary
+debugging; SECRET_KEY, FERNET_KEY, OPENAI_API_KEY rotated.
+Cost: hours of rotation work + real security exposure. This
+rule's pre-execution safeguard prevents recurrence.
+
+#### 4. No credential echo in outputs
+When debugging or inspecting code involving credentials
+(SECRET_KEY, FERNET_KEY, DATABASE_URL, B2 keys, OAuth secrets,
+BYOK keys), Claude never echoes credential values in specs,
+reports, or chat responses. If Mateo shares a value inadvertently,
+Claude flags the exposure and recommends rotation rather than
+proceeding silently. Specs reference env var names, never values.
+
+**Rationale:** Reinforces rule #3 from Claude's side. #3 warns
+Mateo; #4 ensures Claude doesn't perpetuate exposures once
+they're in context.
+
+#### 5. Dev-prod boundary discipline
+Dev-prod boundary is PromptFinder's dominant security concern.
+Claude treats any command, setting, or config that could cross
+it (`DATABASE_URL`, `CLOUDINARY_URL`, `heroku run migrate`,
+manual schema edits, production shell) as requiring explicit
+developer confirmation — never CC-autonomous. When drafting
+infrastructure specs, Claude explicitly asks: "what could apply
+to production unintentionally" and adds guards.
+
+**Rationale:** All three April 2026 incidents were boundary
+failures. This rule generalizes the pattern that the env.py
+safety gate (Session 163 v2 protocol) and the Procfile release
+phase (Session 165-A) address structurally.
+
+#### 6. Pause for significant issues
+When Claude detects a significant issue mid-task, Claude pauses
+current work and surfaces immediately rather than completing
+the task first. "Significant" = (1) user-visible harm risk,
+(2) credential or sensitive data exposure, (3) contradicts a
+factual claim the task depends on, (4) echoes past incident
+patterns. Lower-severity issues flag at task end. When in doubt,
+surface sooner — missed escalations cost more than extra
+confirmations.
+
+**Rationale:** Addresses calibration gap where task-completion
+bias could delay surfacing real problems. Codifies behavior
+that was previously implicit and inconsistent.
+
+#### 7. Audit before answering "any outstanding issues"
+When Mateo asks about outstanding issues, pending work, or
+project state, Claude runs an audit before answering — not just
+recall from recent-session context. Check critical-tier docs
+(CLAUDE.md, CLAUDE_CHANGELOG.md, PROJECT_FILE_STRUCTURE.md)
+for stale entries, version footers, missing session rows,
+placeholder tokens like `<hash>`. Scope audit to recent changes,
+not the entire document.
+
+**Rationale:** Session 166 morning audit surfaced 11 unaddressed
+items in core docs after Claude had answered "nothing to fix"
+the previous evening. Memory-based recall missed the broader
+project state.
+
+#### 8. Read target files in full before spec drafting
+Before drafting specs touching migrations, code, or models,
+Claude reads target files in full, not just greps. For migration
+specs, read the chain back to the most recent relevant
+`AddField` — `RenameField` and `AlterField` inherit metadata
+from prior operations. Speculative "likely format" examples
+in specs are forbidden; use "whatever Grep A returns" framing.
+
+**Rationale:** Session 165-B CharField-vs-URLField diagnostic
+error was surface-signal reasoning. Reading migration 0085 in
+full would have caught that the field was already `URLField`
+and the drift was `help_text`-only.
+
+#### 9. Phase-completion security audits
+At the completion of major phases (Phase REP production-ready,
+Phase SUB launch, POD integration MVP, bulk uploader MVP,
+content intelligence agent MVP, etc.), Claude proactively
+proposes a security audit pass before moving to the next phase.
+Audit covers: new attack surfaces, interaction with existing
+guards, credential handling in new paths, SSRF/outbound
+request exposure, user-input boundaries, rate-limiting coverage,
+dev-prod boundary considerations, past incident-pattern echoes.
+Separate spec with `@backend-security-coder` + `@security-auditor`
+minimum.
+
+**Rationale:** Per-spec security review catches per-spec issues.
+Phase-level audit catches emergent interactions between
+independently-shipped components — a different failure class.
+Security debt compounds silently; proactive cadence addresses
+this.
+
+### Deferred memory candidates
+
+The following candidates were considered during the Session
+167-A discussion but not added, for stated reasons. Documented
+so future additions are deliberate, not re-derived.
+
+| Candidate | Status | Reason for deferral |
+|---|---|---|
+| SSRF guards on outbound requests | Deferred | Already practiced naturally; no incident history. Add if a future spec introduces a new outbound path without guards |
+| Double security-agent review for security-primary specs | Deferred (relocated) | Will be codified in CC_SPEC_TEMPLATE.md instead — one-time edit, no recurring token cost |
+| Default to higher-rigor path / flag shortcuts | Deferred | Intrinsic to Claude's engagement style with Mateo. Memorizing risks mechanical application |
+| Proactive docs catch-up cadence every 3–5 sessions | Deferred (relocated) | Will be added to CLAUDE.md Quick Start Checklist in a future spec. Placement there has same enforcement power at zero recurring cost |
+| Pre-commit commit-message factual verification | Deferred | Good habit but niche firing; can add if incident occurs |
+| Diagnostic-by-evidence vs. pattern-match discipline | Deferred | Overlaps with rule #8 (read target files in full); effectively subsumed |
+| Test count tracking as health signal | Deferred | Low firing frequency; specialized. Add if a session surfaces test regression |
+| Context-switch discipline between tracks | Deferred | Covered naturally when Claude is being careful; memorizing adds noise |
+| Active listening for process hints | Deferred | Meta-habit that should be intrinsic. Memorizing risks mechanizing it |
+| Confidence-level flagging for low-evidence claims | Deferred | Part of honest engagement; intrinsic rather than rule-based |
+| Recognize when out of depth and say so | Deferred | Same as above — intrinsic |
+| Explicit trade-off framing on option presentation | Deferred | Can revisit if Claude reverts to neutral-menu option presentation |
+
+### How to add, remove, or modify memory rules
+
+Memory edits are managed via Claude's `memory_user_edits` tool
+(invoked during conversation, not via CLAUDE.md). To request a
+change:
+
+- **Add:** Describe the proposed rule with rationale. Claude
+  will evaluate using the three-criteria framework below,
+  propose final wording, and action via `memory_user_edits` on
+  confirmation
+- **Remove:** Reference the slot number or the rule content;
+  Claude will confirm and remove
+- **Modify:** Describe the current rule and the desired change;
+  Claude will propose revised wording and replace
+
+After any change, update this section of CLAUDE.md via a new
+spec. Memory changes without doc updates create drift between
+actual Claude behavior and documented expectations.
+
+### Three-criteria framework for future memory additions
+
+A memory edit earns a slot if it meets at least one of:
+
+1. **Prevents a failure mode that has already occurred** (not
+   hypothetical)
+2. **Captures a consistently-stated preference** (not inferred
+   from limited evidence)
+3. **Formalizes a cadence or protocol that silent drift would
+   erode** (not a one-time rule)
+
+Edits that don't meet any criterion become noise: they fire
+every conversation while providing no marginal value, and they
+contribute to the "running with hand brakes partially engaged"
+cognitive overhead.
+
+### Token cost trade-off
+
+With 9 active memory edits, the per-message token overhead is
+approximately 1,300–1,800 tokens. For a typical 40-message
+session, that's 52,000–72,000 extra tokens of context processed
+over the session's lifetime.
+
+At current pricing, this adds roughly $0.30–$1.00 per session
+beyond the baseline. Over 20 sessions per month, $6–$20 of
+additional cost.
+
+This cost is justified if the memory edits prevent even one
+incident requiring credential rotation, recovery from a
+production issue, or a wasted spec cycle. The April 2026
+incidents each consumed hours of real-time recovery work —
+incident cost vastly exceeds memory-edit token cost.
+
+### Related safeguards (non-memory)
+
+Memory is one tool among several for enforcing consistent
+behavior. Related safeguards live in other files:
+
+- **env.py safety gate:** Session 163 v2 protocol. Mandatory
+  in every code-touching CC spec
+- **Heroku release phase:** Session 165-A. Auto-applies
+  migrations before web dynos start serving traffic
+- **No-migrate-by-CC rule:** Session 163 v2 protocol. CC never
+  runs `python manage.py migrate`
+- **Fernet-encrypted BYOK storage:** Pre-existing. BYOK API
+  keys encrypted at rest
+- **SSRF guards (`social_avatar_capture.py`):** Session 163-D.
+  Canonical pattern for outbound HTTP to user-supplied URLs
+- **`_sanitise_error_message` security boundary:** Pre-existing
+  `tasks.py` pattern. Prevents error-message data leaks to users
+- **6-agent minimum code spec review** (2-minimum for docs):
+  `CC_COMMUNICATION_PROTOCOL.md` / `CC_SPEC_TEMPLATE.md` v2.7
+- **v2.7 spec format:** STOP banners, DO/DO NOT lists, exact
+  response tables — enforcement mechanisms built into the spec
+  template itself
+
+---
+
 ## 💰 Current Costs
 
 | Service | Monthly Cost | Notes |

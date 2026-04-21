@@ -3118,6 +3118,16 @@ prompts/views/
 └── utility_views.py         # Utility/helper views
 ```
 
+### CSS directory convention
+
+`static/css/` has three subdirectories with distinct roles:
+
+- **`partials/`** — Core site styles split by theme (design tokens, components, trash, collections). Imported by `style.css` via `@import` (Session 168-C).
+- **`components/`** — Shared UI components with their own scope (e.g., `profile-tabs.css`). Included on specific pages that need them.
+- **`pages/`** — Page-scoped styles (e.g., `bulk-generator.css`). Included only on the page they style.
+
+Adding new CSS: if it's a shared base style, extend the relevant `partials/` file. If it's a reusable component, add to `components/`. If it's page-specific, add to `pages/`.
+
 ---
 
 ## 🔄 How Upload Works

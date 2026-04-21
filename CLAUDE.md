@@ -61,7 +61,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 | **Bulk Gen Phase 6C-A** | ✅ COMPLETE | M2M helper extraction + publish task tests | Done — Session 116, 1098 tests |
 | **Bulk Gen Phase 6D** | ✅ COMPLETE | Per-image error recovery + retry | Done — Session 119, 1106 tests |
 | **Bulk Gen Phases 1–7** | ✅ COMPLETE | Staff bulk AI image generator — full publish flow, error recovery, retry, hardening | Production smoke test before V2 |
-| **Phase REP** | 🔄 ~98% | Multi-provider bulk generation (Replicate/xAI) | `_download_image` duplication (P3). NSFW UX feedback for Replicate platform model 400s (P2). Cloudinary full removal needs migration spec (P2). |
+| **Phase REP** | 🔄 ~98% | Multi-provider bulk generation (Replicate/xAI) | `_download_image` duplication (P3). NSFW UX feedback for Replicate platform model 400s (P2). Cloudinary full removal: `UserProfile` avatar done in Session 163; `Prompt.featured_image` + `Prompt.featured_video` CloudinaryField → CharField migration still pending (P2). Rate limiting audit for Replicate/xAI: only global `BULK_GEN_MAX_CONCURRENT=1` ceiling currently — provider-specific concurrency config deferred (P2, detail at §Phase REP Blockers). |
 
 ### What's Paused (Don't Forget!)
 
@@ -75,7 +75,9 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Session 163 | Apr 20, 2026 | Avatar pipeline rebuild (Phase F1 complete). Migration 0085 drops `CloudinaryField` avatar, renames `b2_avatar_url`→`avatar_url`, adds `avatar_source` CharField with 5 choices (`default`/`direct`/`google`/`facebook`/`apple`). UserProfileForm `clean_avatar` + `store_old_avatar_reference`/`delete_old_avatar_after_save` signal handlers removed. Six templates simplified three-branch→two-branch. UserProfileAdmin fieldset rewritten + `has_avatar` reads `avatar_url` (prevents /admin 500) (163-B). B2 direct upload pipeline: `b2_presign_service` extended with avatars folder + deterministic key `avatars/<source>_<user_id>.<ext>`; new `avatar_upload_service.py` (shared entry for direct/social/sync); new endpoints `/api/upload/avatar/presign/` + `/api/upload/avatar/complete/` (distinct session key `pending_avatar_upload` + cache key `b2_avatar_upload_rate:{user.id}`, 5/hour, 3 MB cap); new `static/js/avatar-upload.js`; `edit_profile.html` rewritten (`<img object-fit: cover>` replaces `{% cloudinary %}`) (163-C). Social-login plumbing: `AUTHENTICATION_BACKENDS` set, `SOCIALACCOUNT_PROVIDERS` Google config (no client IDs), `OpenSocialAccountAdapter` alongside `ClosedAccountAdapter` preserving password-freeze; new `social_avatar_capture.py` (SSRF-guarded HTTPS-only + 10s + 3 MB + content-type allowlist + `follow_redirects=False`); new `social_signals.py` with both `user_signed_up` + `social_account_added` receivers; PyJWT==2.9.0 added (Google provider dep) (163-D). "Sync from provider" button on edit_profile with shared rate-limit bucket (prevents bypass); `capture_from_social_account` wrapper with ownership guard + `types.SimpleNamespace` (163-E). **2026-04-19 incident**: v1 163-B applied migration 0085 to production via `env.py` DATABASE_URL — ~30min outage, 0 data loss; recovery + env.py neutralised; v2 spec redesign with env.py safety gate + no-migrate-by-CC rule + three-phase migration handoff (see CLAUDE_CHANGELOG). 1364 tests. |
+| Session 165 | Apr 21, 2026 | Deployment safety hardening (two-spec session). 165-A: Procfile `release: python manage.py migrate --noinput` added — future deploys auto-apply migrations before web dynos serve traffic. Fail-closed semantics. Addresses 2026-04-20 near-miss (12min of 500s post-v758 because Procfile had no release phase). Commit `4d874d4`. 165-B: Migration 0086 aligns `UserProfile.avatar_url` migration state with current model definition — help_text-only drift surfaced by release-phase activation. SQL no-op verified via `sqlmigrate`. Commit `a457da2`. Agent avg 9.18 (165-A), 9.23 (165-B). 1364 tests. |
+| Session 164 | Apr 20, 2026 | Monetization strategy restructure. 3-tier launch (Free $0, Pro $14/mo launch / $19 regular, Studio $39/mo launch / $49 regular) — supersedes Session 154's 4-tier framework. Launch pricing scarcity: first 200 annual OR 6 months whichever first. 100:1 credit system (internal, never exposed to users); 10-model lineup with per-model credit costs; top-up packs 200/$3, 1000/$12, 3500/$35. Discovery caps, anonymous browsing wall (100 views), welcome email sequence Day 1/3/7/14/28, Stripe metadata tracking. ~860 lines added to CLAUDE.md across 4 new H2 sections. Docs-only. Agent avg 9.05. |
+| Session 163 | Apr 20, 2026 | Avatar pipeline rebuild (Phase F1 complete). Migration 0085: `CloudinaryField avatar` dropped, `b2_avatar_url` renamed to `avatar_url`, new `avatar_source` CharField (163-B). B2 direct upload pipeline: `b2_presign_service` extended to avatars, new `avatar_upload_service.py`, new endpoints `/api/upload/avatar/presign/` + `complete/`, new `avatar-upload.js`, `edit_profile.html` rewritten (163-C). Social-login plumbing: allauth Google provider config, `OpenSocialAccountAdapter`, `social_avatar_capture.py` (SSRF-guarded), `social_signals.py`, PyJWT dep (163-D). "Sync from provider" button with shared rate-limit bucket (163-E). **2026-04-19 production incident:** v1 163-B applied migration to production via `env.py` DATABASE_URL — ~30min outage, 0 data loss; env.py neutralised + v2 spec redesign with safety gate + no-migrate-by-CC rule + three-phase migration handoff (full detail in CLAUDE_CHANGELOG Session 163). 1364 tests. |
 | Session 162 | Apr 19, 2026 | Cloudinary migration queryset filter fix — SQL `IN (NULL)` returns UNKNOWN, so `.filter(b2_*_url__in=('', None))` silently missed all legacy NULL rows; replaced with `Q(field='') \| Q(field__isnull=True)` across image/video/avatar branches. Dry-run now identifies 36 prompt images + 14 videos (162-A). Six avatar templates now prefer `b2_avatar_url` over Cloudinary `avatar.url` via three-branch B2-first pattern; `edit_profile.html` reserved for Session 164 F2 pending upload pipeline switch in 163 F1 (162-B). `vision_moderation.py` video-fallback path + three `fix_cloudinary_urls` branches moved from `str(CloudinaryField)` to explicit `.public_id` extraction — latent `str(None) == 'None'` bug fixed; investigation showed the 161-A claim that `str(CloudinaryResource)` returns object repr was wrong, current SDK's `__str__` returns `self.public_id` (162-C). xAI primary SDK path billing exhaustion now returns `error_type='quota'` (was `'billing'` — no handler in tasks.py, fell into retry loop). Matches 161-F httpx-path fix, static error message (162-D). `except Exception:` narrowed to `(ValueError, ImportError, AttributeError, KeyError)` around provider-registry cost lookup with `logger.warning`; fallback behavior unchanged, observability added (162-E). CC_SPEC_TEMPLATE v2.7 codifies three retrospective rules: Queryset Integration Test Rule (no SimpleNamespace mocks), Cross-Spec Bug Absorption Policy (absorb <5-line fixes, don't defer), Stale Narrative Text Grep Rule (Step 0 check before writing code) (162-H). 1321 tests. |
 | Session 161 | Apr 18, 2026 | Cloudinary migration command bugs fixed: B2 credential check now uses `B2_ACCESS_KEY_ID`/`B2_SECRET_ACCESS_KEY` (actual Django setting names), CloudinaryResource public_id extraction via `getattr(..., "public_id", "") or ""` — dry-run now correctly identifies ~36 records (161-A). **Correction (Session 162-C investigation):** the original 161-A report claimed the pre-fix code fell back to `str(CloudinaryResource)` which returned object repr; direct SDK test shows `str(CloudinaryResource)` returns `self.public_id` in the current version. The real latent bug was `str(None) == 'None'` producing malformed URLs when the field was NULL — the `.public_id` pattern still fixes that and is preferred for SDK-version defense. Autosave: `.bg-vision-direction-input` added to input listener so typing into AI Direction triggers save; master Reset button now calls `I.clearDraft()` to remove `pf_bg_draft` from localStorage; `clearSavedPrompts()` cancels pending debounce timer (TOCTOU fix) (161-B). "Reset to master" (per-box) now preserves AI Direction checkbox state, row visibility, and textarea text — AI Direction is user content, not a setting (161-C). Results page pricing: view uses stored `job.actual_total_images` and Decimal `job.estimated_cost` (accurate to per-prompt count overrides) instead of master-only recalculation; Decimal preserved end-to-end for precision (161-D). New `UserProfile.b2_avatar_url` URLField + migration 0084; `migrate_cloudinary_to_b2` extended with `_migrate_avatar()` and `--model userprofile` choice (161-E). Grok httpx-direct edits path: 400 with 'billing' keyword returns `error_type='quota'` (stops job); `httpx.TransportError` caught and returns `error_type='server_error'` for retry (161-F). 1286 tests. |
 | Session 160 | Apr 18, 2026 | Profanity error UX: triggered word bold/italic + clickable "Prompt N" link built via DOM API (no innerHTML); empty/duplicate errors also get the link. Quality section restored to disabled/greyed (not hidden) with "High" locked for non-quality models; two-column grid layout restored (160-B). Per-prompt cost fix: sticky-bar total now uses per-box `totalCost` accumulator for all models (previously non-BYOK recomputed from master quality, ignoring per-box overrides); console.warn for unmapped models (160-C). Full draft autosave: single `pf_bg_draft` JSON blob (version 1) captures ALL master settings + per-prompt box content + toggles + overrides; replaces 4 legacy keys via one-shot migration; draft persists after generation, cleared only by Clear All; schema maps cleanly to future `PromptDraft` server model (160-D). Pricing accuracy: `floatformat:"-3"` on results page + `parseFloat(x.toFixed(3)).toString()` in JS — $0.067 no longer rounds to $0.07, $0.003 no longer to $0.00 (160-E). Cloudinary → B2 migration command: `migrate_cloudinary_to_b2` with `--dry-run`, `--limit`, idempotency, fail-fast credential check, 50MB streaming size cap, `res.cloudinary.com` hostname allow-list (160-F). 1278 tests. |
@@ -1274,6 +1276,27 @@ one positive (guarantees right-channel application).
   should be exceedingly rare
 - Procfile change affects Heroku only. Local `python manage.py
   runserver` does not read Procfile and is unaffected
+
+### Known deploy warning: `django_summernote`
+
+Every Heroku deploy's release-phase output will include this line:
+
+```
+Your models in app(s): 'django_summernote' have changes that are not
+yet reflected in a migration, and so won't be applied.
+```
+
+This is a known upstream package quirk (the `django-summernote`
+package's model state is not fully captured by its bundled
+migrations). It is NOT our code and NOT actionable. The `prompts`
+app drift of this class was resolved in Session 165-B (migration
+0086); `django_summernote` remains as a cosmetic deploy-log
+warning only.
+
+If the warning ever upgrades to an actual migration failure
+(release fails, v`<n>` doesn't promote), investigate an upstream
+package version bump or contribute a fix upstream. Until then:
+ignore.
 
 ### Uncommitted Changes (Do Not Revert)
 
@@ -2585,6 +2608,27 @@ in order:
 Cloud name: `dj0uufabo` (corrected — old typo in some historical
 specs was `dj0uufabot`).
 
+### 2026-04-18 credentials rotation
+
+During Cloudinary debugging on 2026-04-18, several production
+credentials were accidentally exposed in terminal output and
+subsequently rotated:
+
+- `SECRET_KEY` — rotated
+- `FERNET_KEY` — rotated. BYOK API keys encrypted with the old
+  key are no longer decryptable. No real users had BYOK keys
+  stored at rotation time, so no user-facing impact.
+- `OPENAI_API_KEY` (the developer-BYOK test key, not a platform
+  key) — rotated
+- `DATABASE_URL` — Heroku rotates this automatically on the
+  essential-0 plan; no manual action required
+- Replicate and xAI keys — not rotated at the time (low-risk
+  exposure scenario); if future exposure occurs, rotate both
+
+The Cloudinary cloud name typo (`dj0uufabot` → `dj0uufabo`) was
+also corrected on the same day — the extra `t` had been causing
+404s on historical Cloudinary image URLs.
+
 ---
 
 ## 💰 Current Costs
@@ -2919,6 +2963,27 @@ Videos get 3 frames extracted at 25%, 50%, 75% of duration using FFmpeg. Each fr
 - Hate symbols
 - Satanic/occult imagery
 - Medical/graphic content
+
+### Profanity filter word list — April 2026 policy decisions
+
+Several words were manually deactivated in the ProfanityWord
+admin panel (`/admin/prompts/profanityword/`) in April 2026
+because they blocked legitimate artistic/fashion/fantasy prompts:
+
+- **Occultic / fantasy vocabulary (deactivated):** demon,
+  demonic, demons, devil, devilish, devils, hellfire, satan,
+  satanic, satanism, occult, occultism, pentagram, baphomet,
+  beelzebub, antichrist, lucifer. Standard in artistic / fantasy
+  AI prompts, not genuinely offensive in context
+- **Anatomical terms (reviewed, kept or deactivated case-by-case):**
+  vagina, vulva — clinical medical terms acceptable in artistic
+  prompts; slut, whore, bitch — previously reviewed, handling
+  varies by context
+- **High-severity sexual slurs and violence words retained**
+
+If re-adding or auditing this list, this is the rationale for
+why those words are not blocking. Manage the list at
+`/admin/prompts/profanityword/`.
 
 ---
 
@@ -3304,12 +3369,13 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 1. ☐ Read this document for overall context
 2. ☐ Check **CLAUDE_PHASES.md** for current phase details and unfinished work
 3. ☐ Check **CLAUDE_CHANGELOG.md** for what was done in recent sessions
-4. ☐ Create micro-specs (not big specs) for any new work
-5. ☐ Get 8+/10 agent ratings before committing
-6. ☐ Don't let CC edit files > 1000 lines
-7. ☐ Update CLAUDE_CHANGELOG.md at end of session
+4. ☐ Before running any migration commands: verify env.py safety gate (`grep -n DATABASE_URL env.py` — must show the `os.environ.setdefault("DATABASE_URL", ...)` line as commented out; second command `python -c "import os; import env; print(os.environ.get('DATABASE_URL','NOT SET'))"` must print `NOT SET`). This gate is mandatory in every CC code spec post-2026-04-19 incident.
+5. ☐ Create micro-specs (not big specs) for any new work
+6. ☐ Get 8+/10 agent ratings before committing
+7. ☐ Don't let CC edit files > 1000 lines
+8. ☐ Update CLAUDE_CHANGELOG.md at end of session
 
 ---
 
-**Version:** 4.54 (Session 163 — avatar pipeline rebuild: migration 0085 drops CloudinaryField from UserProfile, rename b2_avatar_url→avatar_url, add avatar_source CharField; B2 direct upload pipeline (presign+complete endpoints, avatar_upload_service, avatar-upload.js); social-login plumbing (allauth Google provider, OpenSocialAccountAdapter, social_signals, social_avatar_capture with SSRF guards); "Sync from provider" button on edit_profile; 2026-04-19 production incident + v2 spec redesign with env.py safety gate + no-migrate-by-CC rule; 1364 tests)
-**Last Updated:** April 20, 2026
+**Version:** 4.56 (Session 165 — deployment safety hardening: Procfile release phase auto-applies migrations on deploy (165-A, addresses 2026-04-20 12-minute near-miss); migration 0086 aligns `UserProfile.avatar_url` field-state with model — help_text-only drift, SQL no-op, surfaced by release-phase activation on first deploy (165-B); 1364 tests)
+**Last Updated:** April 21, 2026

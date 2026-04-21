@@ -34,7 +34,7 @@ safety doing its job on day one.
 **Specs:**
 - **165-A** (commit `4d874d4`): Procfile release phase +
   CLAUDE.md note + CLAUDE_CHANGELOG entry
-- **165-B** (commit `<hash>`): Migration 0086 aligning
+- **165-B** (commit `a457da2`): Migration 0086 aligning
   `UserProfile.avatar_url` migration state with current model
   definition (no-op SQL)
 
@@ -95,7 +95,7 @@ one, even when they have no migrations yet.
 | Spec | Commit | Scope | Agent Avg | Agents ≥ 8.0 |
 |------|--------|-------|-----------|--------------|
 | 165-A | `4d874d4` | Procfile release phase + CLAUDE.md note + CLAUDE_CHANGELOG entry | 9.18/10 | 6/6 |
-| 165-B | `<hash>` | Migration 0086 aligning `UserProfile.avatar_url` field-state with model (no-op SQL) | 9.XX/10 | 6/6 |
+| 165-B | `a457da2` | Migration 0086 aligning `UserProfile.avatar_url` field-state with model (no-op SQL) | 9.23/10 | 6/6 |
 
 #### Key decisions
 
@@ -848,6 +848,15 @@ docs spec).
   `getattr(..., "public_id", "") or ""`. Dry-run now correctly
   identifies ~36 records on Heroku. Agents avg 8.75/10. Commit
   `220337b`.
+
+  **Correction (Session 162-C investigation):** The pre-fix
+  code's `str(featured_image)` was later shown to return
+  `self.public_id` in the current cloudinary SDK — NOT object
+  repr as originally claimed. The real latent bug the 161-A
+  change fixed was `str(None) == 'None'` producing malformed
+  URLs when the field was NULL. The `getattr(..., "public_id",
+  "") or ""` pattern remains the correct fix regardless
+  (defends against both NULL values and future SDK changes).
 
 - **161-B — Autosave AI Direction + Reset clears draft:** the 160-D
   autosave correctly captured `vision_direction` text but the input

@@ -2684,6 +2684,11 @@ project. Listed in slot order.
 Track clicks on embedded Quill links in system notification
 message body HTML (planned feature).
 
+*Note: Rule #1 predates the April 2026 discussion. It is a
+forward-reference tracker for a planned feature, not an
+incident-response rule. The rationale-paragraph format used by
+rules 2-9 is therefore intentionally omitted.*
+
 #### 2. Context verification on artifact-only starts
 When Mateo shares CC reports, specs, or work artifacts at the
 start of a session without a context block, Claude uses
@@ -2798,15 +2803,33 @@ independently-shipped components — a different failure class.
 Security debt compounds silently; proactive cadence addresses
 this.
 
+### Three-criteria framework for future memory additions
+
+A memory edit earns a slot if it meets at least one of:
+
+1. **Prevents a failure mode that has already occurred** (not
+   hypothetical)
+2. **Captures a consistently-stated preference** (not inferred
+   from limited evidence)
+3. **Formalizes a cadence or protocol that silent drift would
+   erode** (not a one-time rule)
+
+Edits that don't meet any criterion become noise: they fire
+every conversation while providing no marginal value, and they
+contribute to the "running with hand brakes partially engaged"
+cognitive overhead.
+
 ### Deferred memory candidates
 
 The following candidates were considered during the Session
-167-A discussion but not added, for stated reasons. Documented
-so future additions are deliberate, not re-derived.
+167-A discussion but did not meet the three-criteria framework
+above strongly enough to warrant a slot. Documented so future
+additions are deliberate, not re-derived.
 
 | Candidate | Status | Reason for deferral |
 |---|---|---|
 | SSRF guards on outbound requests | Deferred | Already practiced naturally; no incident history. Add if a future spec introduces a new outbound path without guards |
+| User-content sanitization at rendering boundaries | Deferred | Django auto-escape + `bleach` for Quill HTML provide most protection today; explicit memory rule would reinforce but is not currently preventing a known failure. Add if a future spec introduces a new user-content rendering surface |
 | Double security-agent review for security-primary specs | Deferred (relocated) | Will be codified in CC_SPEC_TEMPLATE.md instead — one-time edit, no recurring token cost |
 | Default to higher-rigor path / flag shortcuts | Deferred | Intrinsic to Claude's engagement style with Mateo. Memorizing risks mechanical application |
 | Proactive docs catch-up cadence every 3–5 sessions | Deferred (relocated) | Will be added to CLAUDE.md Quick Start Checklist in a future spec. Placement there has same enforcement power at zero recurring cost |
@@ -2826,7 +2849,7 @@ Memory edits are managed via Claude's `memory_user_edits` tool
 change:
 
 - **Add:** Describe the proposed rule with rationale. Claude
-  will evaluate using the three-criteria framework below,
+  will evaluate using the three-criteria framework above,
   propose final wording, and action via `memory_user_edits` on
   confirmation
 - **Remove:** Reference the slot number or the rule content;
@@ -2837,22 +2860,6 @@ change:
 After any change, update this section of CLAUDE.md via a new
 spec. Memory changes without doc updates create drift between
 actual Claude behavior and documented expectations.
-
-### Three-criteria framework for future memory additions
-
-A memory edit earns a slot if it meets at least one of:
-
-1. **Prevents a failure mode that has already occurred** (not
-   hypothetical)
-2. **Captures a consistently-stated preference** (not inferred
-   from limited evidence)
-3. **Formalizes a cadence or protocol that silent drift would
-   erode** (not a one-time rule)
-
-Edits that don't meet any criterion become noise: they fire
-every conversation while providing no marginal value, and they
-contribute to the "running with hand brakes partially engaged"
-cognitive overhead.
 
 ### Token cost trade-off
 
@@ -2887,7 +2894,10 @@ behavior. Related safeguards live in other files:
 - **SSRF guards (`social_avatar_capture.py`):** Session 163-D.
   Canonical pattern for outbound HTTP to user-supplied URLs
 - **`_sanitise_error_message` security boundary:** Pre-existing
-  `tasks.py` pattern. Prevents error-message data leaks to users
+  pattern defined in `prompts/services/bulk_generation.py`,
+  imported locally in `tasks.py` to avoid circular import
+  (see CLAUDE.md line 537 for the circular-import note). Prevents
+  error-message data leaks to users
 - **6-agent minimum code spec review** (2-minimum for docs):
   `CC_COMMUNICATION_PROTOCOL.md` / `CC_SPEC_TEMPLATE.md` v2.7
 - **v2.7 spec format:** STOP banners, DO/DO NOT lists, exact

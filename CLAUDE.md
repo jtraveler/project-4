@@ -3636,6 +3636,7 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | Phase 2B category taxonomy revamp design |
 | `docs/PHASE_2B_AGENDA.md` | Phase 2B execution roadmap (7 phases) |
 | `docs/PHASE_2B1_COMPLETION_REPORT.md` - `PHASE_2B6_COMPLETION_REPORT.md` | Phase 2B sub-phase completion reports |
+| `archive/` (all contents) | **Historical materials.** Contains `changelog-sessions-13-99.md` (CLAUDE_CHANGELOG entries for Sessions 13 through 99, archived in Session 168-B), `PHASE_N4_UPLOAD_FLOW_REPORT.md` (completion report for the N4 upload flow, moved from `docs/` in Session 168-B), plus older archived specs and protocols. Reach for archive contents when answering "why was X done that way?" about pre-Session-100 work. Most sessions do not need to consult the archive. |
 
 ---
 
@@ -3644,11 +3645,12 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 1. ☐ Read this document for overall context
 2. ☐ Check **CLAUDE_PHASES.md** for current phase details and unfinished work
 3. ☐ Check **CLAUDE_CHANGELOG.md** for what was done in recent sessions
-4. ☐ Before running any migration commands: verify env.py safety gate (`grep -n DATABASE_URL env.py` — must show the `os.environ.setdefault("DATABASE_URL", ...)` line as commented out; second command `python -c "import os; import env; print(os.environ.get('DATABASE_URL','NOT SET'))"` must print `NOT SET`). This gate is mandatory in every CC code spec post-2026-04-19 incident.
-5. ☐ Create micro-specs (not big specs) for any new work
-6. ☐ Get 8+/10 agent ratings before committing
-7. ☐ Don't let CC edit files > 1000 lines
-8. ☐ Update CLAUDE_CHANGELOG.md at end of session
+4. ☐ **Archives exist but are not usually required.** If you need to understand a decision made before Session 100, see `archive/changelog-sessions-13-99.md`. For day-to-day work, CLAUDE.md + CLAUDE_PHASES.md + active CLAUDE_CHANGELOG.md cover ~80-90% of needs.
+5. ☐ Before running any migration commands: verify env.py safety gate (`grep -n DATABASE_URL env.py` — must show the `os.environ.setdefault("DATABASE_URL", ...)` line as commented out; second command `python -c "import os; import env; print(os.environ.get('DATABASE_URL','NOT SET'))"` must print `NOT SET`). This gate is mandatory in every CC code spec post-2026-04-19 incident.
+6. ☐ Create micro-specs (not big specs) for any new work
+7. ☐ Get 8+/10 agent ratings before committing
+8. ☐ Don't let CC edit files > 1000 lines
+9. ☐ Update CLAUDE_CHANGELOG.md at end of session
 
 ---
 

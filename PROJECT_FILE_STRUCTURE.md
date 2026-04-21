@@ -1193,7 +1193,7 @@ python manage.py test -v 2
 
 ```
 docs/
-└── PHASE_N4_UPLOAD_FLOW_REPORT.md    # Comprehensive planning document ✅
+└── PHASE_N4_UPLOAD_FLOW_REPORT.md    # Comprehensive planning document ✅ (moved to archive/ in Session 168-B — N4 shipped)
 ```
 
 ### Files Deleted (Session 61 Cleanup)
@@ -1693,7 +1693,8 @@ prompts/templates/prompts/
 | UI_STYLE_GUIDE.md | design-references/ | UI/UX standards |
 | PROJECT_FILE_STRUCTURE_AUDIT_REPORT.md | docs/reports/ | Latest audit findings |
 | L8_TIMEOUT_COMPLETION_REPORT.md | docs/reports/ | L8-TIMEOUT implementation details |
-| PHASE_N4_UPLOAD_FLOW_REPORT.md | docs/ | Phase N4 comprehensive planning |
+| PHASE_N4_UPLOAD_FLOW_REPORT.md | archive/ | Phase N4 completion report — moved from docs/ in Session 168-B (N4 shipped) |
+| changelog-sessions-13-99.md | archive/ | Archived CLAUDE_CHANGELOG entries for Sessions 13–99 (Dec 2025 – Mar 2026). Moved here in Session 168-B to reduce active CHANGELOG size (~41% reduction) |
 | DESIGN_RELATED_PROMPTS.md | docs/ | Related Prompts system reference (Phase 2B-9 complete) |
 | DESIGN_CATEGORY_TAXONOMY_REVAMP.md | docs/ | Phase 2B category taxonomy revamp (Session 74) |
 | PHASE_2B_AGENDA.md | docs/ | Phase 2B execution roadmap (Session 74) |

@@ -21,6 +21,15 @@ This is a running log of development sessions. Each session entry includes:
 
 ---
 
+> **📦 Looking for Sessions ≤ 99?** They live in
+> [`archive/changelog-sessions-13-99.md`](archive/changelog-sessions-13-99.md).
+> This active CHANGELOG contains **Sessions 100 onward**.
+> Most contribution work does not require consulting the
+> archive — reach for it only when tracing the history of
+> a pre-Session-100 decision.
+
+---
+
 ## February–April 2026 Sessions
 
 ### Session 165 — April 21, 2026 (Deployment Safety Hardening)

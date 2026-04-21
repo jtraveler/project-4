@@ -598,7 +598,7 @@ DJANGO-Q TASK: generate_ai_content
 setInterval(async () => {
     const response = await fetch(`/api/prompt/status/${uuid}/`);
     const data = await response.json();
-    
+
     if (data.processing_complete) {
         showCompletionModal(data);
     }
@@ -734,10 +734,10 @@ def generate_presigned_url(filename, content_type, file_size):
     # Validate
     if file_size > MAX_SIZE:
         raise ValidationError("File too large")
-    
+
     # Generate unique key
     file_key = f"uploads/{uuid4()}/{filename}"
-    
+
     # Create presigned URL (valid for 1 hour)
     presigned_url = b2_client.generate_presigned_url(
         bucket=BUCKET_NAME,
@@ -745,7 +745,7 @@ def generate_presigned_url(filename, content_type, file_size):
         expires_in=3600,
         content_type=content_type
     )
-    
+
     return presigned_url, file_key
 ```
 
@@ -786,7 +786,7 @@ def check_nsfw(image_url):
             ]
         }]
     )
-    
+
     result = json.loads(response.choices[0].message.content)
     return {
         'severity': result['severity'],  # 'none', 'low', 'medium', 'high', 'critical'
@@ -821,22 +821,22 @@ def check_nsfw(image_url):
 # image_processor.py (simplified)
 def process_upload(image_file):
     results = {}
-    
+
     for size_name, (max_w, max_h) in SIZES.items():
         img = Image.open(image_file)
         img.thumbnail((max_w, max_h), Image.LANCZOS)
-        
+
         buffer = BytesIO()
         img.save(buffer, format='JPEG', quality=85)
         results[size_name] = buffer.getvalue()
-    
+
     # WebP version
     img = Image.open(image_file)
     img.thumbnail((600, 600), Image.LANCZOS)
     buffer = BytesIO()
     img.save(buffer, format='WEBP', quality=80)
     results['webp'] = buffer.getvalue()
-    
+
     return results
 ```
 
@@ -938,11 +938,11 @@ Only the author. This is enforced in the view:
 ```python
 def processing_page(request, processing_uuid):
     prompt = get_object_or_404(Prompt, processing_uuid=processing_uuid)
-    
+
     # Only author can view processing page
     if prompt.author != request.user:
         raise Http404("Not found")
-    
+
     return render(request, 'prompts/processing.html', {'prompt': prompt})
 ```
 
@@ -1040,12 +1040,12 @@ def _generate_filename(title, ai_generator):
     # Remove stop words
     stop_words = ['the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of']
     words = [w for w in title.lower().split() if w not in stop_words]
-    
+
     # Take first 2-3 keywords (max 30 chars)
     keywords = '-'.join(words[:3])
     ai_slug = ai_generator.lower().replace(' ', '-')
     timestamp = int(time.time())
-    
+
     return f"{keywords}-{ai_slug}-prompt-{timestamp}.jpg"
 
 
@@ -1055,12 +1055,12 @@ def _generate_alt_tag(title, ai_generator):
     Example: "Vintage Fashion Against Urban Backdrop - Midjourney Prompt - AI-generated image"
     """
     alt = f"{title} - {ai_generator} Prompt - AI-generated image"
-    
+
     if len(alt) > 125:
         # Truncate title, keep rest
         max_title = 125 - len(f" - {ai_generator} Prompt - AI-generated image")
         alt = f"{title[:max_title]}... - {ai_generator} Prompt - AI-generated image"
-    
+
     return alt
 ```
 
@@ -1218,11 +1218,11 @@ def handle_ai_response(response, prompt):
     # Use AI values if present, fallback otherwise
     prompt.title = response.get('title') or prompt.content[:50]
     prompt.excerpt = response.get('description') or ''
-    
+
     tags = response.get('suggested_tags') or []
     if not tags:
         prompt.needs_seo_review = True  # Flag for admin
-    
+
     # Always mark complete so user isn't stuck
     prompt.processing_complete = True
     prompt.save()
@@ -1284,15 +1284,15 @@ def handle_ai_response(response, prompt):
 ```python
 def delete_prompt(request, prompt_id):
     prompt = get_object_or_404(Prompt, id=prompt_id, author=request.user)
-    
+
     # Soft delete (move to trash)
     prompt.is_deleted = True
     prompt.deleted_at = timezone.now()
     prompt.save()
-    
+
     # AI task will check this and exit early
     # (see Django-Q task section)
-    
+
     messages.success(request, "Upload cancelled. You can restore it from trash within 5 days.")
     return redirect('prompts:upload_step1')
 ```
@@ -1302,12 +1302,12 @@ def delete_prompt(request, prompt_id):
 ```python
 def generate_ai_content_task(prompt_id):
     prompt = Prompt.objects.get(id=prompt_id)
-    
+
     # CHECK FIRST: Did user cancel?
     if prompt.is_deleted:
         logger.info(f"Prompt {prompt_id} was deleted, skipping AI generation")
         return  # Exit early, don't process
-    
+
     # Continue with normal processing...
 ```
 
@@ -1449,14 +1449,14 @@ class Command(BaseCommand):
         # Find prompts in trash past retention period
         cutoff_free = timezone.now() - timedelta(days=5)
         cutoff_premium = timezone.now() - timedelta(days=30)
-        
+
         prompts_to_delete = Prompt.objects.filter(
             is_deleted=True
         ).filter(
             Q(author__is_premium=False, deleted_at__lt=cutoff_free) |
             Q(author__is_premium=True, deleted_at__lt=cutoff_premium)
         )
-        
+
         for prompt in prompts_to_delete:
             # Delete B2 files
             delete_b2_files(prompt)
@@ -1491,12 +1491,12 @@ IMPLEMENTATION:
 class Command(BaseCommand):
     def handle(self, *args, **options):
         cutoff = timezone.now() - timedelta(minutes=30)
-        
+
         stuck = Prompt.objects.filter(
             processing_complete=False,
             created_at__lt=cutoff
         )
-        
+
         for prompt in stuck:
             logger.warning(f"Recovering stuck prompt {prompt.id}")
             # Apply fallback
@@ -1615,16 +1615,16 @@ from prompts.models import Prompt
 class PromptSitemap(Sitemap):
     changefreq = "weekly"
     priority = 0.8
-    
+
     def items(self):
         return Prompt.objects.filter(
             status=1,  # Published only
             is_deleted=False
         ).order_by('-created_on')
-    
+
     def lastmod(self, obj):
         return obj.updated_on
-    
+
     def location(self, obj):
         return f'/prompt/{obj.slug}/'
 ```
@@ -1962,13 +1962,13 @@ def generate_ai_content(prompt_id):
     """
     from prompts.models import Prompt
     from prompts.services.content_generation import ContentGenerationService
-    
+
     prompt = Prompt.objects.get(id=prompt_id)
-    
+
     # Check if cancelled
     if prompt.is_deleted:
         return {'status': 'cancelled'}
-    
+
     # Generate content
     service = ContentGenerationService()
     result = service.generate_content(
@@ -1976,7 +1976,7 @@ def generate_ai_content(prompt_id):
         prompt_text=prompt.content,
         ai_generator=prompt.get_ai_generator_display()
     )
-    
+
     # Update prompt
     if result.get('success', True):
         prompt.title = result['title']
@@ -1986,10 +1986,10 @@ def generate_ai_content(prompt_id):
         # Fallback mode
         prompt.title = prompt.content[:50] + "..."
         prompt.needs_seo_review = True
-    
+
     prompt.processing_complete = True
     prompt.save()
-    
+
     return {'status': 'success', 'title': prompt.title}
 ```
 
@@ -2001,14 +2001,14 @@ from django_q.tasks import async_task
 
 def upload_submit(request):
     # ... create prompt ...
-    
+
     # Queue AI generation task
     async_task(
         'prompts.tasks.generate_ai_content',
         prompt.id,
         task_name=f'ai_content_{prompt.id}'
     )
-    
+
     return redirect('prompts:processing_page', uuid=prompt.processing_uuid)
 ```
 
@@ -2020,16 +2020,16 @@ from django_q.tasks import async_task, async_chain
 # After AI generation completes, queue rename task
 def generate_ai_content(prompt_id):
     # ... AI generation ...
-    
+
     prompt.processing_complete = True
     prompt.save()
-    
+
     # Queue rename as follow-up task
     async_task(
         'prompts.tasks.rename_b2_files_for_seo',
         prompt.id
     )
-    
+
     return {'status': 'success'}
 ```
 
@@ -2065,9 +2065,9 @@ async function pollForCompletion(uuid) {
     try {
         const response = await fetch(`/api/prompt/status/${uuid}/`);
         const data = await response.json();
-        
+
         pollCount++;
-        
+
         if (data.processing_complete) {
             if (data.success) {
                 showSuccessModal(data);
@@ -2076,22 +2076,22 @@ async function pollForCompletion(uuid) {
             }
             return;  // Stop polling
         }
-        
+
         // Check for timeout
         const elapsed = Date.now() - pollStartTime;
-        
+
         if (elapsed > MAX_POLL_TIME) {
             showErrorState();
             return;  // Stop polling
         }
-        
+
         if (elapsed > WARNING_TIME) {
             showWarningState();
         }
-        
+
         // Continue polling
         setTimeout(() => pollForCompletion(uuid), POLL_INTERVAL);
-        
+
     } catch (error) {
         console.error('Poll error:', error);
         setTimeout(() => pollForCompletion(uuid), POLL_INTERVAL);
@@ -2123,13 +2123,13 @@ def prompt_processing_status(request, uuid):
         )
     except Prompt.DoesNotExist:
         return JsonResponse({'error': 'Not found'}, status=404)
-    
+
     if not prompt.processing_complete:
         return JsonResponse({
             'processing_complete': False,
             'elapsed_seconds': (timezone.now() - prompt.created_on).total_seconds()
         })
-    
+
     # Processing complete
     return JsonResponse({
         'processing_complete': True,
@@ -2279,7 +2279,7 @@ import uuid
 
 class Prompt(models.Model):
     # ... existing fields ...
-    
+
     # Phase N4: Processing page support
     processing_uuid = models.UUIDField(
         default=uuid.uuid4,

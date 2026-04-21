@@ -2,7 +2,7 @@
 
 **Document:** `docs/BULK_IMAGE_GENERATOR_PLAN.md`
 **Created:** February 4, 2026
-**Status:** Planning Complete, Ready for Implementation
+**Status:** ✅ SHIPPED — Phases 1–7 complete (Sessions 100+). This document is preserved as the original planning reference; implementation evolved from this baseline. See CLAUDE.md Quick Status Dashboard for current bulk generator state and CLAUDE_CHANGELOG.md for shipped session entries.
 **Priority:** #3 in Post-Phase N Roadmap
 **Estimated Effort:** 2 weeks
 

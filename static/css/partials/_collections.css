@@ -1,0 +1,1219 @@
+/* ========================================
+   COLLECTIONS
+   Extracted from style.css in Session 168-C
+   Source lines: 2263-3477
+======================================== */
+
+/* =============================================================================
+   TRASH COLLECTIONS - Footer styles (card uses existing .collection-card)
+   ============================================================================= */
+
+/* Trash-specific footer below the standard collection card content */
+.trash-collection-footer {
+    padding-top: 12px;
+    border-top: 1px solid var(--gray-200);
+}
+
+/* Meta row: "Deleted X ago" and "X days left" */
+.trash-collection-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--gray-500);
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.trash-collection-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.trash-collection-meta .icon {
+    width: 14px;
+    height: 14px;
+}
+
+.trash-collection-meta .meta-delete {
+    flex: 200px 0;
+
+}
+
+/* Action buttons - two column layout */
+.trash-collection-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.btn-trash-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--gray-300);
+    background: transparent;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+}
+
+.btn-trash-action .icon {
+    width: 18px;
+    height: 18px;
+}
+
+.btn-trash-action:hover {
+    border-color: var(--gray-400);
+    color: var(--gray-800);
+    background: var(--gray-50);
+}
+
+
+.btn-delete {
+    flex: 1;
+}
+
+/* Restore button - subtle emphasis on hover */
+.btn-restore:hover {
+    border-color: var(--gray-900);
+    color: var(--gray-900);
+}
+
+/* Delete button - red on hover */
+.btn-delete:hover {
+    border-color: #dc2626;
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.05);
+}
+
+/* Trash collection card animation */
+.trash-collection-card.removing {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Trash collection thumbnails are not clickable */
+.trash-collection-card .collection-card-thumbnail {
+    cursor: default;
+}
+
+/* Responsive: Stack buttons on mobile */
+@media (max-width: 360px) {
+    .trash-collection-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   TRASH ACTION BAR
+   ============================================ */
+
+/* Main flex container: sub-tabs left, controls right */
+.trash-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+/* Right-side controls group */
+.trash-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Empty Trash button: same dimensions as .profile-sort-dropdown-btn but RED */
+.trash-btn-empty-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #ffffff;
+    background-color: var(--error);
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.trash-btn-empty-inline:hover {
+    background-color: var(--error-hover);
+    border-color: var(--error-hover);
+}
+
+.trash-btn-empty-inline:focus-visible {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
+}
+
+.trash-btn-empty-inline .icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   TRASH ACTION BAR - MOBILE RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .trash-action-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .trash-controls {
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .trash-sub-tabs {
+        width: 100%;
+        overflow-x: auto;
+        padding: 10px;;
+    }
+
+    .trash-btn-empty-inline {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+}
+
+/* ============================================
+   TRASH PROMPTS - CSS columns grid (no JS required)
+   ============================================ */
+
+/* Grid container using CSS columns for masonry effect */
+.trash-prompts-grid {
+    column-count: 4;
+    column-gap: var(--grid-gap, 15px);
+    column-fill: balance;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* Responsive breakpoints aligned with Bootstrap 5 */
+@media (max-width: 1199.98px) {
+    .trash-prompts-grid { column-count: 3; }
+}
+
+@media (max-width: 991.98px) {
+    .trash-prompts-grid { column-count: 2; }
+}
+
+@media (max-width: 575.98px) {
+    .trash-prompts-grid { column-count: 1; }
+}
+
+/* Wrapper holds card + footer together as single column item */
+.trash-prompt-wrapper {
+    display: inline-block;
+    width: 100%;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    overflow: hidden;
+    margin-bottom: var(--grid-gap, 15px);
+}
+
+/* No-media placeholder for trash cards */
+.trash-media-placeholder {
+    min-height: 200px;
+    background: var(--gray-200, #e9ecef);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+}
+
+.trash-media-placeholder .icon {
+    width: 3rem;
+    height: 3rem;
+    color: var(--gray-500, #adb5bd);
+}
+
+/* Animation for removing items */
+.trash-prompt-wrapper.removing {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Disable card link on trash cards — deleted items are not browseable */
+.trash-prompt-wrapper .card-link {
+    pointer-events: none;
+    cursor: default;
+}
+
+/* Footer below each prompt card */
+.trash-prompt-footer {
+    padding: 10px 0 0 0;
+    background: none;
+}
+
+/* Meta info row */
+.trash-prompt-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--gray-500);
+}
+
+.trash-prompt-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.trash-prompt-meta .icon {
+    width: 14px;
+    height: 14px;
+}
+
+/* Expiring warning state */
+.trash-prompt-warning {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--error);
+    padding: 6px 10px;
+    background-color: rgba(220, 53, 69, 0.1);
+    border-radius: var(--radius-sm);
+}
+
+/* Action buttons row */
+.trash-prompt-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Responsive: Stack buttons on very small screens */
+@media (max-width: 360px) {
+    .trash-prompt-actions {
+        flex-direction: column;
+    }
+}
+
+/* Trash video styling - default for videos without dimensions */
+.trash-prompt-wrapper video.trash-video {
+    border-radius: var(--radius-lg);
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+}
+
+/* Videos WITH dimensions: wrapper has inline aspect-ratio, video fills it */
+.trash-prompt-wrapper .image-wrapper[style*="aspect-ratio"] video.trash-video {
+    height: 100%;
+}
+
+/* Desktop: hide play icon when video is autoplaying */
+.trash-video-play {
+    display: none;
+}
+
+/* Mobile: show play icon, video is paused */
+@media (max-width: 768px) {
+    /* Specificity 0,2,0 beats masonry-grid.css's .video-play-icon (0,1,0) which sets pointer-events: none */
+    .trash-prompt-wrapper .trash-video-play {
+        display: flex;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        pointer-events: auto;
+        cursor: pointer;
+        font-size: 3rem;
+        color: white;
+        opacity: 0.85;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    /* On mobile, disable overlay interaction on trash cards - contains only visual elements
+       (bookmark icon, like count), allows taps to pass through to video element for play/pause */
+    .trash-prompt-wrapper .card-overlay {
+        pointer-events: none;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LEADERBOARD PAGE STYLES (Phase G Part C)
+   ═══════════════════════════════════════════════════════════════ */
+
+.leaderboard-page {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    padding: 0;
+    padding-top: calc(var(--space-12) + var(--space-4));  /* Match About/Contact pages: mt-5 pt-4 = 3rem + 1.5rem */
+}
+
+.leaderboard-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+}
+
+.leaderboard-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+.leaderboard-subtitle {
+    font-size: 1rem;
+    color: var(--gray-500);
+    margin-bottom: 0;
+}
+
+/* Controls Row (Tabs + Filter) */
+.leaderboard-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+    gap: var(--space-4);
+}
+
+.leaderboard-tabs {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.leaderboard-tab {
+    padding: var(--tab-padding);
+    border-radius: var(--tab-border-radius);
+    background: var(--tab-bg);
+    color: var(--tab-text);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: var(--font-size-small);
+    transition: all var(--transition-fast);
+}
+
+.leaderboard-tab:hover {
+    background: var(--tab-bg-active);
+    color: var(--tab-text-active);
+}
+
+.leaderboard-tab.active {
+    background: var(--tab-bg-active);
+    color: var(--tab-text-active);
+}
+
+.leaderboard-tab:focus {
+    outline: 2px solid var(--link-color);
+    outline-offset: 2px;
+}
+
+.period-select {
+    /* Pexels-style dropdown */
+    position: relative;
+    padding: 10px 44px 10px 16px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    background: var(--white);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    /* Custom dropdown arrow */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 12px 12px;
+}
+
+.period-select:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.period-select:focus {
+    outline: 2px solid var(--link-color);
+    outline-offset: 2px;
+}
+
+.period-select:active {
+    transform: scale(0.98);
+}
+
+/* Period Dropdown (Custom Pexels-style) */
+.period-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.period-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--text-primary);
+    background-color: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.period-dropdown-btn:hover {
+    border-color: var(--gray-500);
+}
+
+.period-dropdown-btn:focus {
+    outline: none;
+    border-color: var(--gray-800);
+    box-shadow: 0 0 0 2px rgba(38, 38, 38, 0.1);
+}
+
+.period-dropdown-chevron {
+    transition: transform var(--transition-fast);
+}
+
+.period-dropdown.open .period-dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+.period-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 140px;
+    padding: var(--space-2) 0;
+    background-color: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all var(--transition-fast);
+    z-index: 1000;
+}
+
+.period-dropdown.open .period-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.period-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-small);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: background-color var(--transition-fast);
+}
+
+.period-dropdown-item:hover {
+    background-color: var(--gray-100);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.period-dropdown-item:focus {
+    outline: 2px solid var(--gray-800);
+    outline-offset: -2px;
+    background-color: var(--gray-100);
+}
+
+.period-dropdown-item.active {
+    font-weight: 600;
+}
+
+.period-check-icon {
+    color: var(--gray-800);
+    flex-shrink: 0;
+}
+
+/* Leaderboard List Container */
+.leaderboard-list {
+    border: 1px solid var(--leaderboard-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--leaderboard-bg);
+}
+
+/* Leaderboard Row */
+.leaderboard-row {
+    display: flex;
+    align-items: center;
+    padding: var(--leaderboard-row-padding);
+    background: var(--leaderboard-row-bg);
+    border-bottom: 1px solid var(--leaderboard-border);
+    gap: var(--space-4);
+    transition: background var(--transition-fast);
+}
+
+.leaderboard-row:last-child {
+    border-bottom: none;
+}
+
+.leaderboard-row:hover {
+    background: var(--leaderboard-row-hover);
+}
+
+/* Rank Number */
+.leaderboard-rank {
+    font-size: var(--leaderboard-rank-size);
+    font-weight: 500;
+    color: var(--leaderboard-rank-color);
+    min-width: 48px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* User Info Section */
+.leaderboard-user {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.leaderboard-avatar,
+.leaderboard-avatar-placeholder {
+    width: var(--leaderboard-avatar-size);
+    height: var(--leaderboard-avatar-size);
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.leaderboard-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--main-blue);
+    color: var(--white);
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.leaderboard-user-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Task 8: Username with truncation for long names */
+.leaderboard-username {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px; /* Task 8: Truncate long usernames */
+    display: block;
+}
+
+.leaderboard-username:hover {
+    text-decoration: underline;
+}
+
+.leaderboard-stats {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--black);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Actions Section */
+.leaderboard-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+.leaderboard-follow-btn {
+    padding: var(--space-2) var(--space-4);
+    border-radius: 9999px;
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 1px solid var(--gray-900);
+    background: var(--gray-900);
+    color: var(--white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    min-width: 90px;
+}
+
+.leaderboard-follow-btn:hover {
+    background: var(--gray-800);
+    border-color: var(--gray-800);
+}
+
+.leaderboard-follow-btn.following {
+    background: var(--white);
+    color: var(--gray-700);
+    border-color: var(--gray-300);
+}
+
+.leaderboard-follow-btn.following:hover,
+.leaderboard-follow-btn.hover-unfollow {
+    background: var(--error-light);
+    color: var(--error);
+    border-color: var(--error);
+}
+
+.leaderboard-follow-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.leaderboard-follow-btn:focus {
+    outline: 2px solid var(--link-color);
+    outline-offset: 2px;
+}
+
+/* Thumbnails Section */
+.leaderboard-thumbnails {
+    display: flex;
+    flex-wrap: nowrap; /* Fix 4: CRITICAL - prevents wrapping, enables scrolling */
+    gap: var(--leaderboard-thumbnail-gap);
+    align-items: center;
+    /* Round 6: REMOVED flex-shrink: 0 - not needed, can cause issues */
+    padding-bottom: 20px; /* Round 5 Fix 1: Space for scrollbar */
+    /* Round 6: REMOVED justify-content: right - BREAKS HORIZONTAL SCROLL */
+}
+
+/* Single Link Wrapper for All Thumbnails */
+.leaderboard-thumbnails-link {
+    text-decoration: none;
+    display: block;
+    /* Round 4 Fix 2: REMOVED flex-shrink: 0 - was preventing scrollbar! */
+    overflow: hidden;  /* Clips content, enables child scrollbar */
+    min-width: 0;      /* Allows flex child to shrink below content size */
+    flex: 1 480px;     /* Final Fix: Increased from 380px to 480px for wider thumbnails */
+}
+
+.leaderboard-thumbnails-link:focus {
+    outline: 2px solid var(--link-color);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
+}
+
+.leaderboard-thumbnail {
+    width: var(--leaderboard-thumbnail-size);
+    height: var(--leaderboard-thumbnail-size);
+    object-fit: cover;
+    border-radius: var(--radius-md);
+}
+
+/* Thumbnail Wrapper for Hover Overlay */
+.leaderboard-thumbnail-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    width: var(--leaderboard-thumbnail-size);
+    height: var(--leaderboard-thumbnail-size);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+/* Group Hover Overlay (appears on all thumbnails when parent link is hovered) */
+.thumbnail-hover-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0);
+    transition: background-color var(--transition-fast);
+    pointer-events: none;
+}
+
+/* Fix 8: Hover overlay set to 60% opacity */
+.leaderboard-thumbnails-link:hover .thumbnail-hover-overlay,
+.leaderboard-thumbnails-link:focus .thumbnail-hover-overlay {
+    background-color: rgba(0, 0, 0, 0.60);
+}
+
+/* Thumbnail Overlay Container (5th thumbnail with +X more) */
+.thumbnail-overlay-container {
+    position: relative;
+    width: var(--leaderboard-thumbnail-size);
+    height: var(--leaderboard-thumbnail-size);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.thumbnail-overlay-container .leaderboard-thumbnail {
+    width: 100%;
+    height: 100%;
+}
+
+/* Permanent Overlay on 5th Thumbnail */
+.thumbnail-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast);
+}
+
+.leaderboard-thumbnails-link:hover .thumbnail-overlay,
+.leaderboard-thumbnails-link:focus .thumbnail-overlay {
+    background: rgba(0, 0, 0, 0.75);
+}
+
+/* Overlay Content Container */
+.thumbnail-overlay-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.thumbnail-overlay-text {
+    color: var(--white);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Task 10: Overlay subtext increased to 14px */
+.thumbnail-overlay-subtext {
+    color: var(--white);
+    font-size: var(--font-size-small); /* 14px */
+    font-weight: 400;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    opacity: 0.9;
+}
+
+/* Empty State */
+.leaderboard-empty {
+    padding: var(--space-12);
+    text-align: center;
+    color: var(--gray-500);
+}
+
+.leaderboard-empty i {
+    font-size: 3rem;
+    margin-bottom: var(--space-4);
+    color: var(--gray-300);
+}
+
+.leaderboard-empty p {
+    margin-bottom: var(--space-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LEADERBOARD RESPONSIVE STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Final Scrollbar Fix: ALWAYS visible with custom styling */
+.leaderboard-thumbnails {
+    overflow-x: scroll;  /* Forces scrollbar to always show */
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-400) var(--gray-200);
+    scrollbar-gutter: stable;  /* Reserve space for scrollbar */
+    /* macOS fix: ensure scrollbar track is visible */
+    background-image: linear-gradient(to top, var(--gray-200) 10px, transparent 10px);
+    background-position: bottom;
+    background-repeat: no-repeat;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) - Custom scrollbar styling */
+.leaderboard-thumbnails::-webkit-scrollbar {
+    height: 10px;
+    background: var(--gray-200);  /* Fallback background */
+    -webkit-appearance: none;  /* Override system overlay scrollbar */
+}
+
+.leaderboard-thumbnails::-webkit-scrollbar-track {
+    background: var(--gray-200);
+    border-radius: 10px;
+    -webkit-appearance: none;
+}
+
+.leaderboard-thumbnails::-webkit-scrollbar-thumb {
+    background-color: var(--gray-400);
+    border-radius: 10px;
+    min-width: 40px;
+    border: 2px solid var(--gray-200);  /* Creates visual gap between thumb and track */
+    -webkit-appearance: none;
+}
+
+.leaderboard-thumbnails::-webkit-scrollbar-thumb:hover {
+    background-color: var(--gray-500);
+}
+
+/* Fix 4: Ensure thumbnail wrappers don't shrink */
+.leaderboard-thumbnail-wrapper,
+.leaderboard-thumbnail-wrapper.thumbnail-overlay-container {
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Round 8 Fix 3: Responsive 4th/5th thumbnail behavior
+   - Default (<1700px): 4 thumbnails, 4th has overlay if more exist
+   - Wide (>1700px): 5 thumbnails, 5th has overlay
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Default: 5th thumbnail hidden */
+.leaderboard-thumbnail-wrapper.thumbnail-5th {
+    display: none;
+}
+
+/* Default: 4th thumbnail shows overlay when has more content */
+.leaderboard-thumbnail-wrapper.thumbnail-4th .thumbnail-overlay-4th {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    z-index: 2;
+}
+
+/* Default: Hide hover overlay on 4th when it has the permanent overlay */
+.leaderboard-thumbnail-wrapper.thumbnail-4th.has-more .thumbnail-hover-overlay {
+    display: none;
+}
+
+/* Wide desktop (>1700px): Show 5th thumbnail, hide 4th overlay */
+@media (min-width: 1701px) {
+    /* Show 5th thumbnail */
+    .leaderboard-thumbnail-wrapper.thumbnail-5th {
+        display: block;
+    }
+
+    /* Hide overlay on 4th thumbnail (5th now has it) */
+    .leaderboard-thumbnail-wrapper.thumbnail-4th .thumbnail-overlay-4th {
+        display: none;
+    }
+
+    /* 4th thumbnail shows normal hover overlay instead */
+    .leaderboard-thumbnail-wrapper.thumbnail-4th.has-more .thumbnail-hover-overlay {
+        display: block;
+    }
+}
+
+/* Task 9: Desktop spacing between user info and thumbnails */
+@media (min-width: 993px) {
+    .leaderboard-user {
+        margin-right: var(--space-12); /* 48px - closest to 50px */
+    }
+}
+
+@media (max-width: 992px) {
+    /* Round 3 Fix 1: Removed all border declarations - using default styles */
+    .leaderboard-row {
+        flex-wrap: wrap;
+    }
+
+    /* Round 3 Fix 4 & 8: Mobile thumbnails - adds padding, inherits scrollbar from global styles */
+    .leaderboard-thumbnails {
+        width: 100%;
+        margin-top: var(--space-3);
+        padding-left: var(--space-12); /* 48px - closest to 50px */
+        padding-bottom: 20px; /* Round 7 Fix 3: Changed from var(--space-2) to 20px */
+        -webkit-overflow-scrolling: touch; /* Round 3 Fix 6: Deprecated but kept for iOS <13 */
+        border-radius: var(--radius-md); /* Round 7 Fix 5: Rounded corners on mobile */
+    }
+    /* Round 3 Fix 8: Duplicate scrollbar styles removed - inherited from global rules above */
+
+    /* Round 3 Fix 7: Mobile helper text - styled as visible subheader */
+    .leaderboard-thumbnails-hint {
+        display: block !important; /* Round 3 Fix 4: Override desktop display:none with !important */
+        width: 100%; /* Full width - own row */
+        font-size: var(--font-size-small);
+        font-weight: 600; /* Semi-bold for subheader look */
+        color: var(--gray-700); /* Darker for visibility */
+        margin-top: var(--space-4); /* 16px */
+        /* Round 7 Fix 1: Removed margin-bottom */
+        padding-left: var(--space-12); /* Round 3 Fix 3: 48px to match thumbnails */
+        text-align: left;
+        letter-spacing: 0.3px;
+    }
+
+    .leaderboard-user {
+        min-width: 150px;
+        flex: 1;
+    }
+
+    /* Round 3 Fix 2: Mobile layout - user info becomes row with follow button at end */
+    .leaderboard-user-info {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        width: 100%;
+        flex-wrap: wrap; /* Round 4 Fix 1: Allow wrapping if needed */
+    }
+
+    /* Round 3 Fix 2: Wrapper groups username + stats together */
+    .user-name-and-stats {
+        display: flex;
+        flex-direction: column;
+        flex: 120px 1; /* Round 4 Fix 1: Minimum 120px, can grow */
+        min-width: 0; /* Allow text truncation */
+    }
+
+    /* Round 3 Fix 6: Mobile follow button - compact styling, aligned right */
+    .leaderboard-follow-btn {
+        padding: 6px 16px;
+        font-size: var(--font-size-sm, 14px);
+        flex-shrink: 0; /* Don't shrink the button */
+    }
+}
+
+/* Round 3 Fix 4: Desktop helper text hidden - overridden by !important in mobile media query */
+.leaderboard-thumbnails-hint {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .leaderboard-page {
+        padding: var(--space-4);
+    }
+
+    .leaderboard-title {
+        font-size: 1.5rem;
+    }
+
+    .leaderboard-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .leaderboard-tabs {
+        justify-content: center;
+    }
+
+    .leaderboard-filter {
+        text-align: center;
+    }
+
+    .period-select {
+        width: 100%;
+    }
+
+    .leaderboard-row {
+        padding: var(--space-3) var(--space-4);
+        gap: var(--space-3);
+    }
+
+    .leaderboard-rank {
+        font-size: 1.5rem;
+        min-width: 32px;
+    }
+
+    .leaderboard-avatar,
+    .leaderboard-avatar-placeholder {
+        width: 56px;
+        height: 56px;
+    }
+
+    .leaderboard-user {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .leaderboard-username {
+        font-size: 1.1em;
+        max-width: 150px; /* Task 8: Smaller on mobile */
+    }
+
+    .leaderboard-stats {
+        font-size: var(--font-size-small);
+    }
+
+    .leaderboard-follow-btn {
+        padding: var(--space-1) var(--space-3);
+        font-size: var(--font-size-xs);
+    }
+}
+
+@media (max-width: 480px) {
+    .leaderboard-actions {
+        display: none;
+    }
+}
+
+/* ============================================
+   TEMPORARILY HIDDEN FOR PUBLIC LAUNCH
+   Remove these rules when features are ready
+   Search for "hidden from public for now" to find all
+   ============================================ */
+
+/* hidden from public for now */
+.nav-link-discover-collections {
+    display: none !important;
+}
+
+/* hidden from public for now */
+.nav-link-blog {
+    display: none !important;
+}
+
+/* hidden from public for now */
+.pexels-icon-btn.three-dots {
+    display: none !important;
+}
+
+/* hidden from public for now */
+.footer-social-section {
+    display: none !important;
+}
+
+/* hidden from public for now - Prompts dropdown in main navigation */
+.nav-dropdown-prompts {
+    display: none !important;
+}
+
+/* ========================================
+   GENERATOR DROPDOWN COMPONENT
+   Shared across homepage and generator pages
+   ======================================== */
+.gen-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.gen-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--gray-900);
+    background-color: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gen-dropdown-btn:hover {
+    border-color: var(--gray-900);
+    background-color: var(--gray-50);
+}
+
+.gen-dropdown-chevron {
+    transition: transform 0.2s ease;
+}
+
+.gen-dropdown.show .gen-dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+/* Dropdown menu - hidden by default with pointer-events: none */
+.gen-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 180px;
+    background: var(--white);
+    border: 2px solid var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-dropdown);
+    z-index: var(--z-dropdown);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+/* Dropdown menu - visible state */
+.gen-dropdown.show .gen-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.gen-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    font-size: var(--font-size-small);
+    color: var(--gray-900);
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.gen-dropdown-item:hover {
+    background-color: var(--gray-100);
+    text-decoration: none;
+    color: var(--gray-900);
+}
+
+.gen-dropdown-item.active {
+    background-color: var(--gray-200);
+    font-weight: 600;
+}
+
+.gen-dropdown-divider {
+    height: 1px;
+    background-color: var(--gray-200);
+    margin: 4px 0;
+}
+
+/* Platform dropdown wider width for generator names */
+.platform-dropdown .gen-dropdown-menu {
+    min-width: 220px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .gen-dropdown-btn {
+        padding: 8px 12px;
+        font-size: var(--font-size-small);
+    }
+}

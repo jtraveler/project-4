@@ -1,0 +1,1007 @@
+/* ========================================
+   COLLECTIONS MODAL
+   Extracted from style.css in Session 168-C
+   Source lines: 3478-4479
+======================================== */
+/* =============================================================================
+   COLLECTIONS MODAL (Phase K)
+   ============================================================================= */
+
+/* Backdrop - covers entire screen with dark overlay - Micro-Spec #8.5b */
+.collection-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1050;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;  /* Micro-Spec #12: Consistent top alignment */
+    padding: 5vh 1rem 1rem;   /* Micro-Spec #12: Consistent top spacing */
+    overflow: auto;
+    /* Pure opacity fade - no transform */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease-out, visibility 0.15s ease-out;
+}
+
+.collection-modal-backdrop.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Modal container */
+.collection-modal {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 950px;
+    height: fit-content;
+    margin: 0 auto;  /* Micro-Spec #12: Horizontal center only, no vertical centering */
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    padding: 2em 3em 3em;
+    transition: height 0.2s ease-out;  /* Micro-Spec #12: Smooth height changes */
+}
+
+/* Close button row - positions X button to the right */
+.collection-modal-close-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0;
+    margin-bottom: 0.5rem;
+}
+
+/* Modal header - now just contains title */
+.collection-modal-header {
+    display: block;
+    padding: 0;
+    padding-bottom: 1.5em;
+}
+
+.collection-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: #111;
+}
+
+/* Close button */
+.collection-modal-close {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--gray-400);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.collection-modal-close:hover {
+    color: var(--gray-800);
+}
+
+/* Close button icon - uses parent selector for specificity (no !important) */
+.collection-modal-close .icon {
+    width: var(--collection-icon-size-sm);
+    height: var(--collection-icon-size-sm);
+    color: inherit;
+}
+
+/* Modal body */
+.collection-modal-body {
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+    /* Micro-Spec #12: Removed min-height - natural height based on content */
+    /* Transition for smooth view switching */
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Hidden state for main view (slides left when create panel opens) */
+.collection-modal-body.is-hidden {
+    opacity: 0;
+    transform: translateX(-20px);
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
+}
+
+/* Collection grid - 4 columns on desktop, 3 tablet, 2 mobile */
+/* Micro-Spec #11.8: Container styles moved from inline to CSS */
+.collection-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.875rem;
+    align-items: start; /* Prevent cards from stretching to match tallest sibling */
+    /* Container layout (moved from inline styles) */
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+@media (max-width: 1199px) {
+    .collection-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .collection-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Micro-Spec #11.6: Animation for newly created collection cards */
+@keyframes collection-card-appear {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Micro-Spec #11.7: Jiggle animation for attention */
+@keyframes collection-card-jiggle {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+.collection-card-new {
+    animation: collection-card-appear 0.3s ease-out, collection-card-jiggle 0.4s ease-out 0.35s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .collection-card-new {
+        animation: none;
+    }
+}
+
+/* Micro-Spec #11.9: Fade-in animation for Load More cards */
+@keyframes collectionFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.collection-card-fade-in {
+    animation: collectionFadeIn 0.3s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .collection-card-fade-in {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Collection card - Micro-Spec #9.8: Card is now a div, only thumbnail is clickable */
+.collection-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Create new collection card */
+.collection-card-create {
+    order: -1;  /* Micro-Spec #9.3: Keep "Create new" card first regardless of DOM order */
+}
+
+/* Card thumbnail area - Micro-Spec #9.8: Now a button (only clickable part of card) */
+.collection-card-thumbnail {
+    /* Button reset styles */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    /* Layout styles - Micro-Spec #11.4: Consistent square aspect ratio for all cards */
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-color: var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden; /* Contain overlay within thumbnail bounds */
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+
+/* Focus styles for accessibility */
+.collection-card-thumbnail:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Thumbnail images - fill and crop to fit square */
+.collection-card-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* =============================================================================
+   THUMBNAIL GRID LAYOUTS (Dynamic based on item count)
+   ============================================================================= */
+
+/* Full-width container for 0-1 items */
+.thumb-full {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.thumb-full img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Grid base styles */
+.thumb-grid {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    gap: var(--collection-thumb-gap);
+}
+
+.thumb-grid img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 2 items: 50/50 side-by-side split */
+.thumb-grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* 3+ items: Tall left (50%) + stacked right (50%) */
+.thumb-grid-3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;  /* Explicit equal row heights */
+}
+
+.thumb-grid-3 .thumb-tall {
+    grid-row: span 2;
+}
+
+.thumb-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--collection-thumb-gap);
+    grid-row: span 2;  /* Span both rows like thumb-tall */
+    /* Micro-Spec #11.5 Fix #1: Remove height: 100% - let grid handle sizing */
+    min-height: 0;     /* Allow shrinking within grid cell */
+    overflow: hidden;  /* Prevent content breaking out of aspect-ratio container */
+}
+
+.thumb-stack img {
+    flex: 1;           /* Equal flex growth */
+    width: 100%;
+    min-height: 0;     /* Allow shrinking below content size */
+    object-fit: cover;
+}
+
+.collection-card-thumbnail-dashed {
+    background-color: var(--gray-50);
+}
+
+/* Icon inside thumbnail - uses CSS variables for consistent sizing */
+.collection-card-thumbnail .icon {
+    color: var(--gray-400);
+    width: var(--collection-icon-size);
+    height: var(--collection-icon-size);
+}
+
+/* Simple background for create card thumbnail */
+.collection-card-thumbnail-create {
+    background-color: var(--gray-50);
+    border-radius: var(--radius-md);
+}
+
+/* Card title - truncated with ellipsis for orderly appearance */
+.collection-card-title {
+    display: block;
+    color: var(--gray-700);
+    text-align: left;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: var(--font-size-medium);
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+/* Card item count */
+.collection-card-count {
+    display: block;
+    padding: 0 0.5rem 0.5rem 0;
+    font-size: var(--font-size-sm);
+    color: var(--gray-400);
+    text-align: left;
+}
+
+/* Meta container: item count + visibility icon (Micro-Spec #9) */
+.collection-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 0.5rem 0.5rem 0;
+}
+
+.collection-card-meta .collection-card-count {
+    padding: 0;  /* Reset padding when inside meta container */
+    flex: 70px 0;
+}
+
+/* Visibility icon (public/private) */
+.collection-card-visibility-icon {
+    display: flex;
+    align-items: center;
+    justify-content: left;
+}
+
+.collection-card-visibility-icon .icon {
+    width: 20px;
+    height: 20px;
+    color: var(--gray-400);
+    stroke: var(--gray-400);
+    fill: none;
+}
+
+/* Staggered fade-in animation (Micro-Spec #9) */
+.collection-card-animate {
+    animation: collectionCardFadeIn 0.5s ease-out forwards;
+    animation-delay: calc(var(--card-index, 0) * 80ms);
+    opacity: 0;
+}
+
+@keyframes collectionCardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .collection-card-animate {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Overlay states (saved/hover) - uses opacity for smooth transitions */
+.collection-card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;  /* Always flex, use opacity to hide */
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    z-index: 2;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+/* Icons inside overlay - WHITE and properly sized using variables */
+.collection-card-overlay .icon {
+    width: var(--collection-icon-size);
+    height: var(--collection-icon-size);
+    color: var(--white);
+    stroke: var(--white);
+    fill: none;
+}
+
+/* All overlay icons hidden by default */
+.collection-card-overlay .icon-plus,
+.collection-card-overlay .icon-check,
+.collection-card-overlay .icon-minus {
+    display: none;
+}
+
+/* ============================================
+   STATE 1: Card does NOT have prompt (default)
+   - Overlay hidden
+   - On thumbnail hover: show dark overlay with PLUS icon
+   Micro-Spec #9.8: Hover is now on thumbnail (button), not card
+   ============================================ */
+
+/* Show overlay with plus on thumbnail hover for cards WITHOUT prompt */
+.collection-card:not(.has-prompt):not(.collection-card-create) .collection-card-thumbnail:hover .collection-card-overlay {
+    opacity: 1;
+    pointer-events: auto;
+    background-color: var(--collection-overlay-add);
+}
+
+.collection-card:not(.has-prompt):not(.collection-card-create) .collection-card-thumbnail:hover .collection-card-overlay .icon-plus {
+    display: block;
+}
+
+/* ============================================
+   STATE 2: Card HAS prompt (saved)
+   - Show green overlay with CHECK icon
+   - On thumbnail hover: show red overlay with MINUS icon
+   Micro-Spec #9.8: Hover is now on thumbnail (button), not card
+   ============================================ */
+
+/* Show overlay when card has the prompt */
+.collection-card.has-prompt .collection-card-overlay {
+    opacity: 1;
+    pointer-events: auto;
+    background-color: var(--collection-overlay-saved);
+}
+
+/* Show check icon when saved (not hovering) */
+.collection-card.has-prompt .collection-card-overlay .icon-check {
+    display: block;
+}
+
+/* Thumbnail hover: switch to minus icon and red overlay */
+.collection-card.has-prompt .collection-card-thumbnail:hover .collection-card-overlay {
+    background-color: var(--collection-overlay-remove);
+}
+
+.collection-card.has-prompt .collection-card-thumbnail:hover .collection-card-overlay .icon-check {
+    display: none;
+}
+
+.collection-card.has-prompt .collection-card-thumbnail:hover .collection-card-overlay .icon-minus {
+    display: block;
+}
+
+/* ============================================
+   Collection Card Link (Profile page - NOT modal)
+   Simple dimmed overlay on hover, no icons
+   ============================================ */
+.collection-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.collection-card-link:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Simple dimmed overlay on hover for profile page collection cards */
+.collection-card-link .collection-card-thumbnail::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0);
+    border-radius: var(--radius-md, 8px);
+    transition: background 0.15s ease;
+    pointer-events: none;
+}
+
+.collection-card-link:hover .collection-card-thumbnail::after {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Collection card actions (visibility icon + delete button) */
+.collection-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.collection-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.collection-delete-btn:hover {
+    color: var(--danger, #dc3545);
+    background: rgba(220, 53, 69, 0.08);
+}
+
+.collection-delete-btn .icon {
+    width: 18px;
+    height: 18px;
+}
+
+.collection-delete-btn:focus-visible {
+    outline: 2px solid var(--danger, #dc3545);
+    outline-offset: 2px;
+}
+
+.collection-card.removing {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .collection-card.removing {
+        transition: none;
+    }
+}
+
+/* Mobile icon labels - hidden on desktop */
+.collection-icon-label {
+    display: none;
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    margin-left: 4px;
+}
+
+/* Show labels on mobile */
+@media (max-width: 767.98px) {
+
+    .collection-card-actions {
+        width: 100%;
+    }
+
+    .collection-icon-label {
+        display: inline;
+    }
+
+    .collection-card-meta {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .collection-card-visibility-icon,
+    .collection-delete-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .collection-card-visibility-icon {
+        flex: 1;
+    }
+}
+
+/* Modal footer */
+.collection-modal-footer {
+    padding: 0;
+    padding-top: 1rem;
+    display: flex;
+    justify-content: center;
+    /* Transition for smooth view switching */
+    opacity: 1;
+    transition: opacity 0.25s ease;
+}
+
+/* Hidden state for footer (fades out when create panel opens) */
+.collection-modal-footer.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
+}
+
+/* "Your collections" link button - now uses global .btn-dark-pill */
+
+/* Loading state */
+.collection-modal-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+/* Empty state */
+.collection-modal-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+}
+
+/* Error state */
+.collection-modal-error {
+    padding: 1rem 0;
+}
+
+/* Create collection panel - Micro-Spec #8.5b compact layout */
+.collection-create-panel {
+    padding: 0;
+    /* Micro-Spec #12: Natural height - no min-height needed */
+    display: flex;
+    flex-direction: column;
+    /* Transition for smooth view switching */
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Hidden state for create panel (slides right when going back) */
+.collection-create-panel.is-hidden {
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
+}
+
+.collection-create-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.collection-create-back {
+    background: none;
+    border: none;
+    padding: 0.5rem 0.5rem 0.5rem 0;
+    cursor: pointer;
+    color: var(--gray-500);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collection-create-back:hover {
+    background-color: var(--gray-100);
+    color: var(--gray-900);
+}
+
+/* Create-only mode: Hide back buttons when opened from collections profile page
+   The createOnly mode opens directly to create panel with no way to go back
+   NOTE: .create-only-mode is added to .collection-modal-backdrop (the modal variable in JS) */
+.collection-modal-backdrop.create-only-mode .collection-create-back,
+.collection-modal-backdrop.create-only-mode .btn-collection-back {
+    display: none !important;
+}
+
+.collection-create-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* ================================================
+   COLLECTIONS MODAL ENHANCEMENTS (Micro-Spec #8.5)
+   Green accent colors, custom form styling
+   ================================================ */
+
+/* Create panel form styling - Micro-Spec #8.5b compact */
+.collection-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex: 1;  /* Micro-Spec #9.2: Expand to fill available space */
+}
+
+.collection-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.collection-form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+/* Input with GREEN focus state */
+.collection-form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.collection-form-input:focus {
+    outline: none;
+    border-color: #16ba31;
+    box-shadow: 0 0 0 3px rgba(22, 186, 49, 0.15);
+}
+
+.collection-form-input::placeholder {
+    color: var(--gray-400);
+}
+
+.collection-form-hint {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+/* Visibility radio group */
+.collection-visibility-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1em;
+}
+
+.collection-visibility-options {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.collection-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    color: var(--gray-700);
+}
+
+/* Custom GREEN radio buttons - Micro-Spec #8.5b (16px) */
+.collection-radio-input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--gray-300);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.collection-radio-input:checked {
+    border-color: #16ba31;
+    background-color: #16ba31;
+}
+
+.collection-radio-input:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    background-color: white;
+    border-radius: 50%;
+}
+
+.collection-radio-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(22, 186, 49, 0.15);
+}
+
+/* Visibility helper text */
+.collection-visibility-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+}
+
+.collection-visibility-hint .icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* Two-button footer layout - Micro-Spec #8.5b */
+.collection-create-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    /* Micro-Spec #9.4: Removed margin-top: auto - form content flows naturally */
+}
+
+/* Micro-Spec #9.6: Shake animation for duplicate name error */
+@keyframes inputShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+.collection-form-input.shake {
+    animation: inputShake 0.4s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .collection-form-input.shake {
+        animation: none;
+    }
+}
+
+/* Micro-Spec #9.4: Duplicate name validation styles */
+.collection-form-input.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+}
+
+/* Micro-Spec #9.5: Error message with icon and bold text */
+.collection-name-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.375rem;
+    color: #dc3545;
+    font-weight: 600;
+    margin-top: 0.375rem;
+    font-size: var(--font-size-small);
+}
+
+.collection-name-error::before {
+    content: "⚠";
+    flex-shrink: 0;
+    margin-right: 5px;
+    font-size: 19px;
+}
+
+/* Micro-Spec #9.6: Warning with same-row flexbox layout */
+.collection-name-warning {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 0.625rem 0.75rem;
+    margin-top: 0.5rem;
+    color: #856404;
+}
+
+.collection-warning-text {
+    flex: 1;
+    flex-basis: auto;
+    min-width: 150px;
+    font-size: var(--font-size-small);
+}
+
+.collection-warning-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.collection-warning-cancel {
+    background: transparent;
+    border: 1px solid #856404;
+    border-radius: 4px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    color: #856404;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s ease;
+}
+
+.collection-warning-cancel:hover {
+    background: rgba(133, 100, 4, 0.1);
+}
+
+.collection-warning-confirm {
+    background: #856404;
+    border: 1px solid #856404;
+    border-radius: 4px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s ease;
+}
+
+.collection-warning-confirm:hover {
+    background: #6d5303;
+    border-color: #6d5303;
+}
+
+.btn-collection-back {
+    flex: 0 0 auto;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    background-color: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-collection-back:hover {
+    background-color: var(--gray-100);
+    border-color: var(--gray-400);
+}
+
+.btn-collection-create {
+    flex: 0 1 auto;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--white);
+    background-color: #16ba31;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-collection-create:hover {
+    background-color: #14a82c;
+}
+
+.btn-collection-create:disabled {
+    background-color: var(--gray-400);
+    cursor: not-allowed;
+}
+
+/* ================================================
+   COLLECTIONS MODAL - RESPONSIVE STYLES
+   ================================================ */
+
+/* Tablets and smaller (768px and below) */
+@media (max-width: 768px) {
+    .collection-modal-backdrop {
+        padding: 1.8rem 0;
+    }
+
+    .collection-modal {
+        margin-bottom: 50px;
+    }
+}
+
+/* Very small screens (below 370px) */
+@media (max-width: 480px) {
+    .collection-grid {
+        grid-template-columns: minmax(0, 1fr);  /* Single column */
+    }
+}
+
+/* Wide-viewport container override — moved from lightbox.css Session 144 */
+@media (min-width: 1700px) {
+    .container { max-width: 1600px !important; }
+}

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 20, 2026 (Sessions 101–163)
+**Last Updated:** April 22, 2026 (Sessions 101–168)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -31,6 +31,615 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 168-D — April 22, 2026 (models.py Split)
+
+**Focus:** Third code refactor from the 168-A audit. Split the
+3,517-line `prompts/models.py` into a `prompts/models/` package
+with 9 submodules (8 domain + 1 constants) and a re-export shim
+preserving backward compatibility.
+
+**Package structure:**
+
+- `prompts/models/__init__.py` — re-export shim (all 34 public
+  names: 28 classes + 6 constants)
+- `prompts/models/constants.py` — shared module constants
+  (`STATUS`, `MODERATION_STATUS`, `MODERATION_SERVICE`,
+  `AI_GENERATOR_CHOICES`, `DELETION_REASONS`,
+  `NOTIFICATION_TYPE_CATEGORY_MAP`, `_BULK_SIZE_DISPLAY`)
+- `prompts/models/users.py` — UserProfile, AvatarChangeLog,
+  EmailPreferences, Follow
+- `prompts/models/taxonomy.py` — TagCategory, SubjectCategory,
+  SubjectDescriptor
+- `prompts/models/prompt.py` — PromptManager, Prompt,
+  SlugRedirect, DeletedPrompt, PromptView (largest submodule at
+  ~1,382 lines)
+- `prompts/models/interactions.py` — Comment, Collection,
+  CollectionItem, Notification
+- `prompts/models/moderation.py` — PromptReport, ModerationLog,
+  ProfanityWord, ContentFlag, NSFWViolation
+- `prompts/models/bulk_gen.py` — BulkGenerationJob,
+  GeneratedImage, GeneratorModel
+- `prompts/models/credits.py` — UserCredit, CreditTransaction
+- `prompts/models/site.py` — SiteSettings, CollaborateRequest
+
+**Key decisions:**
+
+- `delete_cloudinary_assets` signal handler relocated from the
+  former `models.py:2247` to `prompts/signals.py` with
+  string-reference sender `sender='prompts.Prompt'`. Consistent
+  with `notification_signals.py` convention
+- Cross-package imports within `prompts/models/` use in-function
+  lazy imports (e.g., `from .moderation import ContentFlag`
+  inside `Prompt.get_critical_flags`) to avoid circular imports
+- Shim re-exports 34 names (28 classes + 6 constants). The
+  additional class beyond the prep-report estimate of 27 is
+  `PromptManager`, defensively re-exported
+- Absorbed one dead import (`from django.db.models import Q`
+  inside `Prompt.get_recent_engagement`) removed during the
+  split — the `Q` symbol was imported but never used. Caught by
+  flake8 pre-commit on the new submodule. No behavior change
+- `Follow.Meta.db_table = 'prompts_follow'` override preserved
+  verbatim; `BulkGenerationJob.SIZE_CHOICES` still yields
+  4 entries post-split
+
+**Verified post-split:**
+
+- `python manage.py check`: 0 issues
+- `python manage.py makemigrations --dry-run`: "No changes
+  detected" (no accidental schema drift)
+- Full test suite: **1364 tests passing / 12 skipped** (exact
+  match to pre-split baseline)
+- All 34 public names resolve via `from prompts.models import X`
+- `admin.py` 24-name import line (HIGH-severity blocker from
+  prep report) works unchanged
+- Zero modifications to `admin.py`, `tasks.py`, `views/`,
+  `notification_signals.py`, `social_signals.py`, `tests/`,
+  `apps.py`, `templatetags/`
+- Signal registered exactly once (`post_delete._live_receivers`
+  returns one sync receiver: `delete_cloudinary_assets`)
+- 88 migrations unchanged; 0086 still `[ ]`
+
+**Agents (4 reviewed, minimum for largest code refactor in repo):**
+
+| Agent | Score |
+|---|---|
+| @code-reviewer | 9.2/10 |
+| @architect-review | 9.2/10 |
+| @test-automator (sub @test-engineer) | 10.0/10 |
+| @backend-security-coder | 9.5/10 |
+| **Average** | **9.475/10** |
+
+All ≥ 8.0 ✅ Average ≥ 8.5 ✅
+
+**Files:**
+
+- `prompts/models.py` (DELETED — content migrated to package)
+- `prompts/models/` (NEW package — 10 files)
+- `prompts/signals.py` (MODIFIED — absorbs
+  `delete_cloudinary_assets`)
+- `docs/REPORT_168_D.md` (new completion report)
+
+**Commit:** `56cad16`.
+
+---
+
+### Session 168-D-prep — April 21, 2026 (models.py Import Graph Analysis)
+
+**Focus:** Read-only prep work for 168-D. Analyzed the
+3,517-line `prompts/models.py` + `signals.py` + all external
+import sites to produce the concrete evidence needed to design
+the models/ package split and `__init__.py` re-export shim
+without speculation.
+
+**Analysis deliverables (`docs/REPORT_168_D_PREP_MODELS_IMPORT_GRAPH.md`):**
+
+- Complete inventory of 28 top-level class definitions (27
+  models + 1 Manager) with line ranges, LOC sizes, and proposed
+  8-domain grouping
+- Relationship map (FK, OneToOne, M2M, string references) with
+  file:line evidence for every relationship
+- All 10 `@receiver` signal handlers across 4 signal files
+  (`prompts/signals.py`, `models.py`,
+  `notification_signals.py`, `social_signals.py`) — 3
+  direct-class senders, 5 string-reference senders, 2 allauth
+  signals
+- All external import sites enumerated (`admin.py` 25 names,
+  `tasks.py` 16 in-function imports,
+  `notification_signals.py` 4 imports, `templatetags/` 1
+  import, 25 test files with ~70 imports)
+- 2 in-function lazy imports inside `models.py`
+  (`UserProfile.is_following` / `is_followed_by` referencing
+  `Follow`)
+- 168-D blockers and risks with severity ratings: **1 HIGH
+  (admin.py 24-name import line blocker), 4 MEDIUM, 7 LOW, 2
+  UNKNOWN** (migration RunPython, test patches — later
+  resolved as LOW in 168-D)
+
+**Absorbed during this spec (per Cross-Spec Bug Absorption
+Policy, Session 162-H):**
+
+- taggit signal-registration ordering risk added to Section 11
+  at MEDIUM severity (TaggableManager triggers internal signal
+  handlers at class-definition time)
+- `db_table='prompts_follow'` override on Follow added at LOW
+  severity (table name hardcoded, survives file move)
+- CollaborateRequest placement ambiguity (site.py vs
+  interactions.py) called out in Section 10 for 168-D explicit
+  decision
+- 10-line CLAUDE.md addition documenting the three CSS
+  subdirectories' distinct roles (`partials/` vs `components/`
+  vs `pages/`) — closes the 168-C @architect-review implicit
+  decision boundary
+
+**Agents (2 reviewed, docs-only minimum):**
+
+| Agent | Score |
+|---|---|
+| @code-reviewer | 9.5/10 |
+| @architect-review | 8.7/10 |
+| **Average** | **9.1/10** |
+
+**Files:**
+
+- `CLAUDE.md` (10-line CSS directory convention in Key File
+  Locations)
+- `docs/REPORT_168_D_PREP_MODELS_IMPORT_GRAPH.md` (new)
+
+**Commit:** `a905de3`.
+
+---
+
+### Session 168-C — April 21, 2026 (style.css Split into 5 Modular Partials)
+
+**Focus:** First code refactor from the 168-A audit. Reduced
+the largest single text file in the repo (`static/css/style.css`
+at 4,479 lines) to a 17-line `@import` index plus 5 focused
+partial files under `static/css/partials/`.
+
+**Approach:** `@import`-based index. `style.css` remains the
+entry point (no base-template changes needed) and imports 5
+partials in cascade order.
+
+**Partial splits:**
+
+- `partials/_design-tokens.css` (lines 1–327) — custom
+  properties, brand colors, typography
+- `partials/_components.css` (lines 328–1708) — filters, hero,
+  sidebar, masonry, buttons, forms, modals, responsive
+- `partials/_trash.css` (lines 1709–2262) — alert, toggle,
+  trash card / modal / action bar
+- `partials/_collections.css` (lines 2263–3477) — trash
+  collection footer, unified button, generator dropdown
+- `partials/_collections-modal.css` (lines 3478–4479) —
+  collections modal, thumbnail grid, card states, responsive
+
+**Pre-commit hook interaction:** Byte-level diff was empty
+(4,479 = 4,479 lines). The `end-of-file-fixer` hook then
+stripped 2 trailing blank lines from `_design-tokens.css` and
+`_collections.css` during staging. Post-hook content: 4,477
+lines reassembled vs 4,479 original — 2 trailing blank lines
+stripped at module boundaries. Zero semantic CSS impact (EOF
+whitespace has no parsing effect; each partial is `@imported`
+independently). Accepted the hook's modification rather than
+bypassing repo hygiene policy via `--no-verify`.
+
+**Verification:**
+
+- `python manage.py check` clean pre + post
+- `collectstatic --dry-run`: 17 files staged, 0 missing
+- All selectors, properties, and values preserved
+  byte-identically
+- Zero Python / HTML / JS / migration changes
+
+**Agents (3 reviewed):**
+
+| Agent | Score |
+|---|---|
+| @code-reviewer | 9.5/10 |
+| @frontend-developer | 9.0/10 |
+| @architect-review | 8.1/10 |
+| **Average** | **8.87/10** |
+
+**Non-blocking findings (deferred per Section 6):**
+
+- `@import` runtime fetch cost (future perf concern)
+- Underscore prefix + potential SCSS toolchain silent-skip
+  risk (future-proofing)
+- `partials/` vs `components/` naming overlap (later closed by
+  168-D-prep's CLAUDE.md addition)
+- `_components.css` still large at 1,381 lines (future
+  sub-split candidate)
+- `style.css` name no longer matches its role (cosmetic;
+  renaming would require base.html template change, out of
+  scope)
+
+**Files:**
+
+- `static/css/style.css` (4,479 → 17 lines — now an import
+  index)
+- `static/css/partials/_design-tokens.css` (new)
+- `static/css/partials/_components.css` (new)
+- `static/css/partials/_trash.css` (new)
+- `static/css/partials/_collections.css` (new)
+- `static/css/partials/_collections-modal.css` (new)
+- `docs/REPORT_168_C.md` (new completion report)
+
+**Commit:** `213f604`.
+
+---
+
+### Session 168-B-discovery — April 21, 2026 (Archive Discoverability Pass)
+
+**Focus:** Close the onboarding gap introduced by 168-B's
+archive move. Add discoverability surfaces so new readers
+(human or AI) can find archived content without scrolling to
+the bottom of `CLAUDE_CHANGELOG.md`.
+
+**Four additive edits:**
+
+1. `CLAUDE.md` Related Documents table — new row pointing to
+   `archive/` contents with framing that tells readers
+   archives are for "why was X done" questions about
+   pre-Session-100 work, not routine contribution needs.
+2. `CLAUDE.md` Quick Start Checklist — new item #4 explicitly
+   stating "Archives exist but are not usually required" with
+   guidance on when they are. Existing items renumbered
+   (env.py gate shifted from #4 to #5).
+3. `CLAUDE_CHANGELOG.md` — top banner ("Looking for
+   Sessions ≤ 99?") inserted between title / preamble and first
+   session heading, pointing to archive. Complements the
+   168-B footer pointer note — top + bottom coverage for
+   readers who scan from either end.
+4. `PROJECT_FILE_STRUCTURE.md` — file-location table updated:
+   `PHASE_N4` entry redirected from `docs/` to `archive/`
+   with session attribution; new entry added for
+   `changelog-sessions-13-99.md`. Plus one absorbed fix
+   (per Cross-Spec Bug Absorption Policy, Session 162-H):
+   PFS "Files Created" tree for `PHASE_N4` gained an inline
+   relocation note preserving historical context while
+   signaling current archive location.
+
+**Key framing:** New readers are told that the archive
+contains historical context but is not required for routine
+work. Prevents both (a) skipping archives entirely when
+pre-Session-100 context matters, and (b) reading all archives
+unnecessarily when they don't.
+
+**Agents (2 reviewed):**
+
+| Agent | Score |
+|---|---|
+| @technical-writer (sub via general-purpose — 9th consecutive) | 8.9/10 |
+| @code-reviewer | 9.2/10 |
+| **Average** | **9.05/10** |
+
+**Files:**
+
+- `CLAUDE.md` (2 targeted additive edits)
+- `CLAUDE_CHANGELOG.md` (top banner added; footer pointer
+  preserved)
+- `PROJECT_FILE_STRUCTURE.md` (archive entries added/updated
+  + absorbed tree-listing fix)
+- `docs/REPORT_168_B_DISCOVERY.md` (new completion report)
+
+**Commit:** `e554fa6`.
+
+---
+
+### Session 168-B — April 21, 2026 (Archive Old Changelog Sessions)
+
+**Focus:** First refactor from the 168-A audit. Docs-only
+file moves and one in-place status header update. Reduced
+active `CLAUDE_CHANGELOG.md` by ~40% (4,704 → 2,839 lines).
+
+**Changes:**
+
+1. `CLAUDE_CHANGELOG` sessions 13–99 (December 2025 – March
+   2026) moved verbatim to `archive/changelog-sessions-13-99.md`.
+   Active CHANGELOG retains sessions 100+ (60 heading entries)
+   plus a new pointer note at the file footer.
+2. `BULK_IMAGE_GENERATOR_PLAN.md` line 5 status header updated
+   from "Planning Complete, Ready for Implementation" to
+   "SHIPPED — Phases 1–7 complete (Sessions 100+)…" Document
+   body preserved unchanged; it remains a useful historical
+   planning reference.
+3. `PHASE_N4_UPLOAD_FLOW_REPORT.md` moved from `docs/` to
+   `archive/` via `git mv` (history preserved via R status at
+   `find-renames=50`). Phase N4 is fully shipped per
+   CLAUDE.md. Pre-commit hook applied whitespace cleanup
+   during staging (trailing-whitespace removal only, no
+   content change).
+
+**Session heading conservation:**
+
+- Pre-edit: 97 headings in `CLAUDE_CHANGELOG.md` (git HEAD)
+- Post-edit: 60 active + 37 archive = 97 total
+- Byte-identical content verified for Sessions 99, 50, 13
+
+**Agents (2 reviewed):**
+
+| Agent | Score |
+|---|---|
+| @technical-writer (sub via general-purpose — 7th consecutive) | 8.7/10 |
+| @code-reviewer | 9.2/10 |
+| **Average** | **8.95/10** |
+
+**Files:**
+
+- `CLAUDE_CHANGELOG.md` (sessions 99–13 removed; pointer note
+  added)
+- `docs/BULK_IMAGE_GENERATOR_PLAN.md` (line 5 status updated)
+- `archive/changelog-sessions-13-99.md` (new, 1,889 lines)
+- `archive/PHASE_N4_UPLOAD_FLOW_REPORT.md` (moved from
+  `docs/`, whitespace-cleaned)
+- `docs/REPORT_168_B.md` (new completion report)
+
+**Commit:** `b45ecdd`.
+
+---
+
+### Session 168-A — April 21, 2026 (Full Repository Refactoring Audit)
+
+**Focus:** Read-only analysis identifying refactoring
+opportunities across the entire PromptFinder codebase before
+Phase SUB / POD work adds significant new surface area.
+
+**Audit methodology:** 10 categories analyzed with metric
+evidence:
+
+- Python file line-count census (12 files ≥ 1,000 lines;
+  68.3% of Python LOC concentrated in 4.4% of files)
+- Code duplication detection (1 confirmed: `_download_image`
+  across Replicate + xAI providers — P3 from CLAUDE.md)
+- Complexity hotspots (12 `C901` functions; 3 HIGH priority at
+  complexity 15, all orchestration)
+- Test file sizes (6 monolithic files; `tests/` package
+  structure is correct, individual file splits recommended)
+- Template fragment duplication (top 4 templates > 1,000 lines)
+- Static asset audit (`style.css` at 4,479 lines is the #1
+  single-file concern in the entire codebase)
+- Settings / config file audit (676 lines, near-RED)
+- Markdown file audit (521 MD files, 362,952 LOC;
+  `CLAUDE_CHANGELOG` sessions 13–99 archive candidate;
+  `BULK_IMAGE_GENERATOR_PLAN.md` status label stale)
+- Deprecated code detection (206 Cloudinary refs pending
+  Prompt migration; 4 N4-Cleanup deprecation markers)
+- Cross-file reference integrity (20/20 spot-check refs
+  resolve)
+
+**Executive Summary — top 5 refactoring opportunities ranked:**
+
+1. `style.css` split (→ Session 168-C)
+2. `tasks.py` split (→ future 168-E)
+3. `models.py` split (→ Session 168-D)
+4. `admin.py` split (→ future 168-F)
+5. Docs archive pass (→ Session 168-B)
+
+**Proposed Refactoring Sequence:** 10 candidates with
+dependencies (estimated 13–16 sessions total; minimum viable
+sequence before Phase SUB is #1–#4, 6–8 sessions).
+
+**Non-Recommendations:** 20 items that look refactorable but
+should NOT be refactored (env.py, migrations, archive,
+cohesive YELLOW files, `orchestrator.py`, etc.).
+
+**Absorbed (per Cross-Spec Bug Absorption Policy, Session
+162-H):** 5 refinements from agent reviews:
+
+- Executive Summary intro note clarifying ranking vs.
+  execution order
+- #3 `models.py` Risk discussion extended with signal handler
+  circular-import risk post-split + `models/__init__.py`
+  re-export shim requirement
+- Sequence row 8 (168-I template extraction) annotated with
+  Known Risk Pattern call-out referencing CLAUDE.md Session
+  86 inline-JS IIFE extraction precedent
+- Non-Rec #10 (`orchestrator.py`) annotated with line count
+
+**Agents (3 reviewed):**
+
+| Agent | Score |
+|---|---|
+| @technical-writer (sub via general-purpose) | — |
+| @code-reviewer | — |
+| @architect-review | — |
+| **Average** | **8.80/10** |
+
+(Individual scores not recovered from commit message; header
+says "3 reviewed, all >= 8.0, avg 8.80/10".)
+
+**Files:**
+
+- `docs/REPORT_168_A_REFACTORING_AUDIT.md` (new)
+
+**Commit:** `5b7b26d`.
+
+---
+
+### Session 167-B — April 21, 2026 (Polish Claude Memory System Section)
+
+**Focus:** Four targeted edits to the Claude Memory System &
+Process Safeguards section added in 167-A, addressing review
+findings.
+
+**Edits:**
+
+1. Add 13th deferred candidate: user-content sanitization at
+   rendering boundaries (S6 from Session 166-A/167 discussion
+   was missing from the original table, causing a 12-vs-13
+   count mismatch with the spec's narrative claim).
+2. Correct `_sanitise_error_message` location in Related
+   Safeguards bullet: defined in
+   `prompts/services/bulk_generation.py`, imported locally in
+   `tasks.py` to avoid circular import (per CLAUDE.md canonical
+   note — original 167-A text said "pre-existing tasks.py
+   pattern" which was location-imprecise).
+3. Add inline italic note to Rule #1 explaining its rationale
+   asymmetry with rules 2–9: Rule #1 predates the April 2026
+   discussion and is a forward-reference tracker rather than
+   an incident-response rule. The omitted rationale is
+   intentional, not editorial oversight.
+4. Reorder: move Three-criteria framework subsection to
+   precede Deferred memory candidates. The framework is
+   applied BY the deferred reasons, so framework should come
+   first. Bridging sentence added to Deferred intro to
+   forward-reference the framework now above it.
+
+**Absorbed fix (per Cross-Spec Bug Absorption Policy, Session
+162-H):** "How to add, remove, or modify memory rules"
+subsection referenced "three-criteria framework below" —
+stale after Edit 4 moved the framework above. Changed to
+"framework above". One-word fix, well under the 5-line
+absorption threshold. Flagged by @technical-writer review.
+
+**Agents (2 reviewed):**
+
+| Agent | Score |
+|---|---|
+| @technical-writer (sub via general-purpose — 8th consecutive) | 8.7/10 |
+| @code-reviewer | 9.2/10 |
+| **Average** | **8.95/10** |
+
+**Files:**
+
+- `CLAUDE.md` (4 targeted edits + 1 absorbed fix within
+  Memory System H2)
+- `docs/REPORT_167_B.md` (new completion report)
+
+**Commit:** `606f3c6`.
+
+---
+
+### Session 167-A — April 21, 2026 (Claude Memory System + Security Safeguards)
+
+**Focus:** Add new H2 section "🧠 Claude Memory System &
+Process Safeguards" to CLAUDE.md documenting how Claude's
+memory works in this project, the 9 currently active memory
+rules, deferred candidates, and the three-criteria framework
+for future additions.
+
+**Content added:**
+
+- How Claude's memory mechanically works (context loading,
+  token cost, firing behavior, 30-slot capacity)
+- All 9 currently active memory rules with rationale for each
+- 12 deferred memory candidates with documented reasons for
+  deferral (expanded to 13 in 167-B)
+- Three-criteria framework for future memory additions
+- Token cost vs. incident-prevention ROI analysis
+- Related non-memory safeguards (env.py gate, release phase,
+  SSRF patterns, etc.)
+
+**Context:** Mateo and Claude had an extended Session 166-A
+follow-up discussion about enhancing Claude's memory to
+elevate project quality. Seven new memory edits were added
+as a result, bringing total active memory to 9 of 30 slots.
+This spec documents the discussion, rules, and reasoning so
+future sessions (human or AI) can reason about the memory
+system itself rather than just operating within it.
+
+**Memory rules added during the discussion (rules 3–9):**
+
+1. Pre-flight warnings on credential-output commands
+2. No credential echo in specs / reports / chat
+3. Dev-prod boundary discipline
+4. Pause for significant issues (four-condition threshold)
+5. Audit before answering "any outstanding issues"
+6. Read target files in full before spec drafting
+7. Phase-completion security audit cadence
+
+Rationale for each rule ties to specific April 2026 incidents
+(April 18 credentials leak, April 19 env.py migration, April
+20 Procfile near-miss) or past spec-level failures (Session
+165-B diagnostic error, Session 166-A morning audit surprise).
+
+**Agents (3 reviewed):**
+
+| Agent | Score |
+|---|---|
+| @technical-writer (sub via general-purpose) | 8.7/10 |
+| @code-reviewer | 9.2/10 |
+| @architect-review | 8.5/10 |
+| **Average** | **8.8/10** |
+
+**Files:**
+
+- `CLAUDE.md` (new H2 section added before Current Costs)
+- `docs/REPORT_167_A.md` (new completion report)
+
+**Commit:** `a2843fa`.
+
+---
+
+### Session 166 — April 21, 2026 (Sessions 164–165 Consolidated Catch-Up)
+
+**Focus:** Bundled 11 documentation fixes identified in the
+2026-04-21 handoff review, catching up CLAUDE.md /
+CLAUDE_CHANGELOG.md documentation after Sessions 164–165.
+
+**P1 (must-fix):**
+
+- Fill in 165-B commit hash (`<hash>` → `a457da2`, 2
+  occurrences in CLAUDE_CHANGELOG Session 165 entry);
+  agent-avg placeholder `9.XX/10` → `9.23/10`
+- Add Session 164 and 165 rows to CLAUDE.md Recently
+  Completed (table stopped at Session 163)
+- Bump version footer 4.54 → 4.56, date April 20 → April 21
+
+**P2 (should-fix):**
+
+- Phase REP dashboard row: split "Cloudinary full removal"
+  into "UserProfile done" + "Prompt fields pending"; surface
+  rate-limiting audit summary with pointer to detail section
+- Append correction note to Session 161 CHANGELOG entry —
+  original 161-A paragraph claimed `str(CloudinaryResource)`
+  returns object repr; Session 162-C investigation showed
+  current SDK returns `self.public_id`. CLAUDE.md Recently
+  Completed row already had this correction; CHANGELOG now
+  matches
+
+**P3 (worth-fixing):**
+
+- Document `django_summernote` drift as known upstream
+  warning, not actionable. Sited near Heroku Release Phase
+  subsection
+- Condense Session 163 Recently Completed entry (was single
+  ~800-word paragraph, now terse 2–4 line summary matching
+  style of surrounding rows; every factual claim preserved)
+- Document 2026-04-18 credentials rotation (SECRET_KEY,
+  FERNET_KEY, OPENAI_API_KEY) sited near existing Cloudinary
+  typo correction note
+- Document April 2026 profanity word list policy decision
+  (occultic / fantasy vocabulary deactivated for artistic
+  prompts)
+- Add env.py safety gate to Quick Start Checklist as item 4
+  (between CLAUDE_CHANGELOG check and micro-spec creation) —
+  ensures future sessions see the gate before migration work
+
+**Docs-only.** Zero code changes. Zero new migrations.
+`python manage.py check` clean pre and post.
+
+**Agents (3 reviewed):**
+
+| Agent | Score |
+|---|---|
+| @technical-writer (sub via general-purpose) | 8.8/10 |
+| @code-reviewer | 9.4/10 |
+| @architect-review | 9.0/10 |
+| **Average** | **9.07/10** |
+
+**Files:**
+
+- `CLAUDE.md` (11 targeted edits across dashboard, Phase REP,
+  infrastructure, Quick Start Checklist, version footer)
+- `CLAUDE_CHANGELOG.md` (165-B hash fill + Session 161
+  correction appended)
+- `docs/REPORT_166_A.md` (new completion report)
+
+**Commit:** `82a8541`.
+
+---
 
 ### Session 165 — April 21, 2026 (Deployment Safety Hardening)
 

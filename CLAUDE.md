@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** April 20, 2026
+**Last Updated:** April 22, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -343,6 +343,7 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 
 | Item | File | Notes |
 |------|------|-------|
+| Preload-warning observation on async stylesheet link | `prompts/templates/prompts/prompt_detail.html` (line 99) | `<link rel="preload" href="…prompt-detail.css" as="style" onload="this.onload=null;this.rel='stylesheet'">` can emit a Chrome DevTools "resource was preloaded using link preload but not used within a few seconds" warning on some page loads. After 168-C's `@import`-based `style.css`, the timing window widened because the browser now serially fetches 5 partials before the async stylesheet is consumed. Non-blocking (cosmetic console warning; no functional impact). Candidate fix: replace preload-then-swap-rel with direct `<link rel="stylesheet">`, or add explicit `media` attribute to gate application. Verify under Lighthouse before changing — the preload was added for LCP optimization in Session 68. |
 | `prompt_list_views.py` growth monitor | `prompts/views/prompt_list_views.py` | 620 lines, `prompt_detail` is ~320 lines — watch for growth |
 | ~~`__init__.py` imports through shim~~ | `prompts/views/__init__.py` | ✅ RESOLVED Session 138 — imports directly from domain modules |
 | `int(content_length)` no try/except | `prompts/tasks.py` | Pre-existing in both download functions — safe but opaque error on malformed header |
@@ -3664,5 +3665,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.56 (Session 165 — deployment safety hardening: Procfile release phase auto-applies migrations on deploy (165-A, addresses 2026-04-20 12-minute near-miss); migration 0086 aligns `UserProfile.avatar_url` field-state with model — help_text-only drift, SQL no-op, surfaced by release-phase activation on first deploy (165-B); 1364 tests)
-**Last Updated:** April 21, 2026
+**Version:** 4.64 (Session 168-catchup — consolidated CHANGELOG catch-up for Sessions 166 through 168-D: 166 fixed 11 docs items from 2026-04-21 handoff review (commit `82a8541`, avg 9.07); 167-A added Claude Memory System H2 section (commit `a2843fa`, avg 8.8); 167-B polished that section (commit `606f3c6`, avg 8.95); 168-A full repo refactoring audit (commit `5b7b26d`, avg 8.80); 168-B archived CLAUDE_CHANGELOG sessions 13–99 to `archive/` (commit `b45ecdd`, avg 8.95); 168-B-discovery added archive discoverability surfaces (commit `e554fa6`, avg 9.05); 168-C split `style.css` into 5 partials (commit `213f604`, avg 8.87); 168-D-prep models.py import-graph analysis (commit `a905de3`, avg 9.1); 168-D split `prompts/models.py` into 9-submodule package with 34-name shim (commit `56cad16`, avg 9.475); 1364 tests)
+**Last Updated:** April 22, 2026

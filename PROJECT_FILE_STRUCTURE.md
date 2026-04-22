@@ -1,6 +1,6 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** April 20, 2026 (Session 163)
+**Last Updated:** April 22, 2026 (Sessions 163–168)
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Phase REP (Replicate + xAI providers — Session 154). Bulk AI Image Generator (Phases 1–7 + 6E complete). Avatar pipeline rebuilt B2-native (Session 163). Phase N4 (~100%), Phase K (~96%)
 **Total Tests:** 1364 passing, 12 skipped (Session 163)
@@ -11,9 +11,9 @@
 
 | Category | Count | Location |
 |----------|-------|----------|
-| **Python Files** | 99 | Various directories (+3 new in Session 163: `avatar_upload_service.py` and `social_avatar_capture.py` under `prompts/services/`, plus `social_signals.py` at the `prompts/` app root) |
+| **Python Files** | 108 | Various directories (+3 new in Session 163: `avatar_upload_service.py` and `social_avatar_capture.py` under `prompts/services/`, plus `social_signals.py` at the `prompts/` app root; +9 in Session 168-D: `prompts/models/` package — `__init__.py` + 9 submodules replace the former single-file `prompts/models.py`) |
 | **HTML Templates** | 45 | templates/, prompts/templates/, about/templates/ |
-| **CSS Files** | 12 | static/css/ |
+| **CSS Files** | 17 | static/css/ (+5 in Session 168-C: `partials/` directory — `_design-tokens.css`, `_components.css`, `_trash.css`, `_collections.css`, `_collections-modal.css` replace the monolithic `style.css` content) |
 | **JavaScript Files** | 20 | static/js/ (+1 added in Session 163: `avatar-upload.js`. Earlier: 2 deleted in 61, 2 added in 86, 1 in 93, 1 in 98, job.js split in 121, gallery added in 122, bulk-generator.js split +2 in 143) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
 | **Migrations** | 88 | prompts/migrations/ (86, latest `0086_alter_userprofile_avatar_url` — Session 165-B, no-op help_text realignment), about/migrations/ (2) |
@@ -94,6 +94,17 @@ live-working-project/
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
 │   ├── migrations/               # 81 migrations + __init__.py (latest: 0081_add_generating_started_at_to_generated_image — Session 153-F)
+│   ├── models/                   # 10-file package — split from single-file prompts/models.py in Session 168-D
+│   │   ├── __init__.py           # Re-export shim (34 public names: 28 classes + 6 constants)
+│   │   ├── constants.py          # STATUS, MODERATION_STATUS, MODERATION_SERVICE, AI_GENERATOR_CHOICES, DELETION_REASONS, NOTIFICATION_TYPE_CATEGORY_MAP (+ private _BULK_SIZE_DISPLAY)
+│   │   ├── users.py              # UserProfile, AvatarChangeLog, EmailPreferences, Follow
+│   │   ├── taxonomy.py           # TagCategory, SubjectCategory, SubjectDescriptor
+│   │   ├── prompt.py             # PromptManager, Prompt, SlugRedirect, DeletedPrompt, PromptView (largest submodule)
+│   │   ├── interactions.py       # Comment, Collection, CollectionItem, Notification
+│   │   ├── moderation.py         # PromptReport, ModerationLog, ProfanityWord, ContentFlag, NSFWViolation
+│   │   ├── bulk_gen.py           # BulkGenerationJob, GeneratedImage, GeneratorModel
+│   │   ├── credits.py            # UserCredit, CreditTransaction
+│   │   └── site.py               # SiteSettings, CollaborateRequest
 │   ├── services/                 # 12 service modules
 │   │   └── notifications.py      # Notification service (create, count, mark-read) (Session 86)
 │   ├── signals/                   # Signal handlers (Session 86)
@@ -144,7 +155,7 @@ live-working-project/
 ├── static_root/                  # Root-level files served by WhiteNoise (no hashing)
 │   └── robots.txt                # Search engine crawl directives (Session 69)
 ├── static/                       # Source static files
-│   ├── css/                      # 9 CSS files (~105KB total)
+│   ├── css/                      # 14 CSS files (~105KB total)
 │   │   ├── components/
 │   │   │   ├── icons.css         # SVG icon system styles
 │   │   │   ├── lightbox.css      # Shared lightbox component (Session 141 — extracted from page CSS)
@@ -156,9 +167,15 @@ live-working-project/
 │   │   │   ├── prompt-detail.css # Prompt detail page styles (1,515 lines, includes related prompts section)
 │   │   │   ├── prompt-list.css
 │   │   │   └── system-notifications.css # System notifications admin dashboard styles (Phase P2-A, Sessions 90-91)
+│   │   ├── partials/             # 5 partials loaded by style.css via @import (Session 168-C — split from the monolithic style.css)
+│   │   │   ├── _design-tokens.css      # ~327 lines — custom properties, brand colors, typography
+│   │   │   ├── _components.css         # ~1,381 lines — filters, hero, sidebar, masonry, buttons, forms, modals, responsive
+│   │   │   ├── _trash.css              # ~553 lines — alert, toggle, trash card / modal / action bar
+│   │   │   ├── _collections.css        # ~1,214 lines — trash collection footer, unified button, generator dropdown
+│   │   │   └── _collections-modal.css  # ~1,001 lines — collections modal, thumbnail grid, card states, responsive
 │   │   ├── navbar.css
 │   │   ├── upload.css            # Upload page styles (~920 lines, rewritten Session 66)
-│   │   └── style.css
+│   │   └── style.css             # 17-line @import index (Session 168-C — was 4,479 lines monolithic)
 │   ├── icons/                    # SVG icon sprite (Phase J.2)
 │   │   └── sprite.svg            # 33 icons from Lucide Icons
 │   └── js/                       # 19 JavaScript files
@@ -463,7 +480,7 @@ CLAUDE_CHANGELOG Session 163 incident section for full context.
 | File | Lines | Purpose |
 |------|-------|---------|
 | `views/` | ~3,929 | View package (21 modules) ✅ REFACTORED |
-| `models.py` | ~2,200 | Database models (Prompt, UserProfile, SubjectCategory, SubjectDescriptor, SlugRedirect, Notification, BulkGenerationJob, GeneratedImage, etc.) + `seo_pass2_at` field + `ordered_tags()` method + `api_key_encrypted` (BinaryField, Fernet) + `api_key_hint` fields (Session 100) |
+| `models/` | ~3,600 (package) | 10-file package (Session 168-D split). `__init__.py` re-exports 34 public names (28 classes + 6 constants). Submodules: `constants.py`, `users.py` (UserProfile, AvatarChangeLog, EmailPreferences, Follow), `taxonomy.py` (TagCategory, SubjectCategory, SubjectDescriptor), `prompt.py` (PromptManager, Prompt, SlugRedirect, DeletedPrompt, PromptView — largest submodule at ~1,382 lines), `interactions.py` (Comment, Collection, CollectionItem, Notification), `moderation.py` (PromptReport, ModerationLog, ProfanityWord, ContentFlag, NSFWViolation), `bulk_gen.py` (BulkGenerationJob, GeneratedImage, GeneratorModel), `credits.py` (UserCredit, CreditTransaction), `site.py` (SiteSettings, CollaborateRequest). `delete_cloudinary_assets` signal handler relocated to `prompts/signals.py` with string-ref sender. |
 | `admin.py` | ~2,300 | Django admin (PromptAdmin with two-button system, SEO Review + Rebuild actions, M2M ordering) |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
@@ -481,12 +498,18 @@ CLAUDE_CHANGELOG Session 163 incident section for full context.
 ```
 static/css/
 ├── navbar.css           # 1,136 lines - Extracted navbar styles + notification badge (Session 86)
-├── style.css            # ~1,800 lines - Main stylesheet + shared media container component (Session 66)
+├── style.css            # 17 lines - @import index (Session 168-C — was 4,479-line monolith; content moved to partials/)
 ├── upload.css           # ~880 lines - Upload page styles, warning toast, error card (rewritten S66, expanded S68)
 ├── components/
 │   ├── icons.css        # ~250 lines - SVG icon system (Phase J.2)
 │   ├── masonry-grid.css # 255 lines - Masonry grid component
 │   └── profile-tabs.css # ~200 lines - Shared tab component (Session 86)
+├── partials/            # NEW Session 168-C — 5 partials loaded by style.css via @import in cascade order
+│   ├── _design-tokens.css     # ~327 lines - custom properties, brand colors, typography
+│   ├── _components.css        # ~1,381 lines - filters, hero, sidebar, masonry, buttons, forms, modals, responsive
+│   ├── _trash.css             # ~553 lines - alert, toggle, trash card/modal/action bar
+│   ├── _collections.css       # ~1,214 lines - trash collection footer, unified button, generator dropdown
+│   └── _collections-modal.css # ~1,001 lines - collections modal, thumbnail grid, card states, responsive
 └── pages/
     ├── bulk-generator.css # ~1,100 lines - Bulk generator page styles (Sessions 92-93)
     ├── bulk-generator-job.css # ~820 lines - Job progress page + gallery styles (Sessions 98-99, audit fixes: --error-hover variable, 480px breakpoint, reduced-motion expansion)
@@ -496,7 +519,7 @@ static/css/
     └── system-notifications.css # ~250 lines - System notifications admin dashboard styles (Phase P2-A, Sessions 90-91)   # 304 lines - Prompt list page styles
 ```
 
-**Total CSS:** ~7,790 lines across 11 files
+**Total CSS:** ~7,790 lines across 16 files (style.css 1,800 + 17 = still ~4,479 content lines redistributed into 5 partials; net content unchanged, file count +5)
 
 **Shared CSS Components (Session 66):**
 - `.media-container-shell` / `.media-container` - Shared image/video container used by upload preview and prompt detail

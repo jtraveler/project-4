@@ -87,6 +87,33 @@ migration changes. `python manage.py check` clean pre + post.
   2. 9 new session entries inserted between the `## February–April
      2026 Sessions` heading and the existing `### Session 165`
      heading, in reverse chronological order
+- **`PROJECT_FILE_STRUCTURE.md`** — additive catch-up for
+  Sessions 168-C and 168-D structural changes (Step 6, added in
+  a follow-up commit after the initial 168-catchup commit):
+  1. `**Last Updated:**` April 20 (Session 163) → April 22
+     (Sessions 163–168)
+  2. Quick Statistics "Python Files" count 99 → 108 with +9
+     Session 168-D attribution note
+  3. Quick Statistics "CSS Files" count 12 → 17 with +5
+     Session 168-C attribution note
+  4. Main directory tree `prompts/` — new `models/` package
+     tree added alongside `services/`, `signals/`, `utils/`
+     (10 files listed with brief submodule descriptions)
+  5. Main directory tree `static/css/` — new `partials/`
+     subdirectory tree added alongside `components/`, `pages/`
+     (5 files listed with brief descriptions + line counts);
+     `style.css` inline comment updated to reflect its new
+     role as the 17-line `@import` index
+  6. "Main Application (prompts/)" file table row:
+     `models.py | ~2,200 | …` replaced with `models/ | ~3,600
+     (package) | …` with the 9-submodule breakdown and
+     signal-relocation note
+  7. "CSS Architecture" section diagram: `style.css` row
+     updated to "17 lines - @import index" and a new
+     `partials/` subtree added with all 5 partials + their
+     line counts and descriptions. Total-CSS summary line
+     updated to reflect 16 files (was "11 files") with net
+     content unchanged notation
 
 ### Created
 

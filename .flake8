@@ -64,6 +64,9 @@ per-file-ignores =
     # Admin has complex inline imports and long lines
     */admin.py: E402, E501, F401, F841, W291, W292, W293, W391, E261, E302, E303
 
+    # Admin package (Session 168-F split) — same ignores as monolithic admin.py
+    */admin/*.py: E402, E501, F401, F841, W291, W292, W293, W391, E261, E302, E303
+
     # Forms can have complex validation with unused vars
     */forms.py: F841, W291, W292, W293
 

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 22, 2026 (Sessions 101–168)
+**Last Updated:** April 23, 2026 (Sessions 101–168)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -31,6 +31,75 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 168-F — April 23, 2026 (admin.py Split into Package)
+
+**Fourth code refactor from the 168-A audit.** The 2,459-line
+`prompts/admin.py` replaced by a `prompts/admin/` package with
+12 submodules (forms, inlines, 8 domain-admin files, custom
+views, orchestration `__init__.py`) plus backward-compat
+re-exports preserving the public import contract for
+`PromptAdmin` and `trash_dashboard`.
+
+**Structure:**
+- `__init__.py` — import orchestration (submodule order
+  matters; taxonomy_admin BEFORE other admin modules that might
+  reference Tag; users_admin internally unregisters User before
+  CustomUserAdmin registers; index_template set last) +
+  backward-compat re-exports for PromptAdmin, PromptAdminForm,
+  RESERVED_SLUGS, trash_dashboard
+- `forms.py` — PromptAdminForm + RESERVED_SLUGS (104 lines)
+- `inlines.py` — 4 inline classes (56 lines)
+- `prompt_admin.py` — PromptAdmin (952 LOC largest),
+  PromptViewAdmin, SlugRedirectAdmin (1,023 lines)
+- `moderation_admin.py` — ModerationLog, ContentFlag,
+  ProfanityWord (incl. bulk-import view), PromptReport,
+  NSFWViolation admins (573 lines)
+- `users_admin.py` — UserProfile, AvatarChangeLog,
+  EmailPreferences, CustomUserAdmin (+ User unregister) (324
+  lines)
+- `interactions_admin.py` — Comment, Collection,
+  CollectionItem, Notification admins (153 lines)
+- `bulk_gen_admin.py` — BulkGenerationJob, GeneratorModel
+  admins (92 lines)
+- `taxonomy_admin.py` — TagCategory, SubjectCategory,
+  SubjectDescriptor admins (+ Tag unregister) (110 lines)
+- `site_admin.py` — SiteSettings, CollaborateRequest admins
+  (69 lines)
+- `credits_admin.py` — UserCredit, CreditTransaction admins
+  (46 lines)
+- `custom_views.py` — trash_dashboard standalone view (81
+  lines)
+
+**Two external consumers discovered during Step 0** and
+resolved via backward-compat re-exports (not consumer-file
+edits): `prompts/tests/test_admin_actions.py:16` imports
+PromptAdmin; `prompts_manager/urls.py:8` imports
+trash_dashboard. Both work post-split without changes.
+
+**Verified:**
+- `python manage.py check`: 0 issues
+- `makemigrations --dry-run`: "No changes detected"
+- Test suite: 1,364 tests pass pre AND post (exact match, 12
+  skipped preserved)
+- `admin.site._registry`: 37 models post-split, IDENTICAL
+  Model→AdminClass mapping to pre-split baseline (forensic
+  verification — decorators all fired at the correct order)
+- Module-level side effects preserved: Tag unregister in
+  taxonomy_admin.py, User unregister in users_admin.py,
+  `index_template = 'admin/custom_index.html'` in __init__.py
+- Zero consumer file modifications
+
+**Flake8:** `.flake8` gained one line — `*/admin/*.py` per-file
+ignore list, mirroring the existing `*/admin.py` rule that
+silenced the same codes (E402/E501/F401/F841/W-series/E261/
+E302/E303) in the monolithic file. Same mechanical move as
+the earlier `*/views/*.py` addition after the views split.
+No body-code style changes.
+
+**Commit:** `16a95cf`. Agent average **9.30/10**
+(@code-reviewer 9.2, @architect-review 9.5, @test-automator
+9.2 — sub for @test-engineer).
 
 ### Session 168-D — April 22, 2026 (models.py Split)
 

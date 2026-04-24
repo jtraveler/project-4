@@ -1,6 +1,6 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** April 22, 2026 (Sessions 163–168)
+**Last Updated:** April 23, 2026 (Sessions 163–168)
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Phase REP (Replicate + xAI providers — Session 154). Bulk AI Image Generator (Phases 1–7 + 6E complete). Avatar pipeline rebuilt B2-native (Session 163). Phase N4 (~100%), Phase K (~96%)
 **Total Tests:** 1364 passing, 12 skipped (Session 163)
@@ -11,7 +11,7 @@
 
 | Category | Count | Location |
 |----------|-------|----------|
-| **Python Files** | 108 | Various directories (+3 new in Session 163: `avatar_upload_service.py` and `social_avatar_capture.py` under `prompts/services/`, plus `social_signals.py` at the `prompts/` app root; +9 in Session 168-D: `prompts/models/` package — `__init__.py` + 9 submodules replace the former single-file `prompts/models.py`) |
+| **Python Files** | 119 | Various directories (+3 new in Session 163: `avatar_upload_service.py` and `social_avatar_capture.py` under `prompts/services/`, plus `social_signals.py` at the `prompts/` app root; +9 in Session 168-D: `prompts/models/` package — `__init__.py` + 9 submodules replace the former single-file `prompts/models.py`; +11 in Session 168-F: `prompts/admin/` package — `__init__.py` + 11 submodules replace the former single-file `prompts/admin.py`) |
 | **HTML Templates** | 45 | templates/, prompts/templates/, about/templates/ |
 | **CSS Files** | 17 | static/css/ (+5 in Session 168-C: `partials/` directory — `_design-tokens.css`, `_components.css`, `_trash.css`, `_collections.css`, `_collections-modal.css` replace the monolithic `style.css` content) |
 | **JavaScript Files** | 20 | static/js/ (+1 added in Session 163: `avatar-upload.js`. Earlier: 2 deleted in 61, 2 added in 86, 1 in 93, 1 in 98, job.js split in 121, gallery added in 122, bulk-generator.js split +2 in 143) |
@@ -91,6 +91,19 @@ live-working-project/
 │   ├── REPORT_BULK_GEN_6D_HOTFIX.md                    # Phase 6D Hotfix completion report
 │   └── REPORT_BULK_GEN_PHASE_7.md                      # Phase 7 completion report
 ├── prompts/                      # Main Django app (100+ files)
+│   ├── admin/                    # 12-file package (Session 168-F split — was single 2,459-line file)
+│   │   ├── __init__.py           # Import orchestration + backward-compat re-exports + index_template
+│   │   ├── forms.py              # PromptAdminForm + RESERVED_SLUGS
+│   │   ├── inlines.py            # 4 inline classes (SlugRedirect, ContentFlag, CollectionItem, GeneratedImage)
+│   │   ├── prompt_admin.py       # PromptAdmin (952 LOC), PromptViewAdmin, SlugRedirectAdmin
+│   │   ├── moderation_admin.py   # ModerationLog, ContentFlag, ProfanityWord, PromptReport, NSFWViolation
+│   │   ├── users_admin.py        # UserProfile, AvatarChangeLog, EmailPreferences, CustomUserAdmin (+ User unregister)
+│   │   ├── interactions_admin.py # Comment, Collection, CollectionItem, Notification
+│   │   ├── bulk_gen_admin.py     # BulkGenerationJob, GeneratorModel
+│   │   ├── taxonomy_admin.py     # TagCategory, SubjectCategory, SubjectDescriptor (+ Tag unregister)
+│   │   ├── site_admin.py         # SiteSettings, CollaborateRequest
+│   │   ├── credits_admin.py      # UserCredit, CreditTransaction
+│   │   └── custom_views.py       # trash_dashboard standalone view
 │   ├── management/
 │   │   └── commands/             # 28 management commands + __init__.py
 │   ├── migrations/               # 81 migrations + __init__.py (latest: 0081_add_generating_started_at_to_generated_image — Session 153-F)
@@ -481,7 +494,7 @@ CLAUDE_CHANGELOG Session 163 incident section for full context.
 |------|-------|---------|
 | `views/` | ~3,929 | View package (21 modules) ✅ REFACTORED |
 | `models/` | ~3,600 (package) | 10-file package (Session 168-D split). `__init__.py` re-exports 34 public names (28 classes + 6 constants). Submodules: `constants.py`, `users.py` (UserProfile, AvatarChangeLog, EmailPreferences, Follow), `taxonomy.py` (TagCategory, SubjectCategory, SubjectDescriptor), `prompt.py` (PromptManager, Prompt, SlugRedirect, DeletedPrompt, PromptView — largest submodule at ~1,382 lines), `interactions.py` (Comment, Collection, CollectionItem, Notification), `moderation.py` (PromptReport, ModerationLog, ProfanityWord, ContentFlag, NSFWViolation), `bulk_gen.py` (BulkGenerationJob, GeneratedImage, GeneratorModel), `credits.py` (UserCredit, CreditTransaction), `site.py` (SiteSettings, CollaborateRequest). `delete_cloudinary_assets` signal handler relocated to `prompts/signals.py` with string-ref sender. |
-| `admin.py` | ~2,300 | Django admin (PromptAdmin with two-button system, SEO Review + Rebuild actions, M2M ordering) |
+| `admin/` | ~2,500 (package) | Django admin — 12-file package after Session 168-F split. Includes PromptAdmin (952 LOC with two-button system, SEO Review + Rebuild actions, M2M ordering) in `prompt_admin.py`, plus 9 other domain-admin submodules, forms, inlines, custom views. Module-level side effects (Tag unregister, User unregister, index_template) preserved in correct load order via `__init__.py` orchestration. |
 | `forms.py` | ~300 | Django forms |
 | `urls.py` | ~200 | URL routing |
 | `signals.py` | ~100 | Django signals (auto-create profiles). Session 163-B removed `store_old_avatar_reference` + `delete_old_avatar_after_save` Cloudinary cleanup handlers (B2 deterministic keys overwrite, no cleanup needed). |

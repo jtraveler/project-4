@@ -1300,6 +1300,25 @@ class PublishTaskTests(TestCase):
         # Seed a tag so available_tags is non-empty in test_publish_available_tags_*
         # (makes the test self-contained; does not rely on migration-seeded data)
         Tag.objects.get_or_create(name='fixture-tag')
+        # Session 169-C: GeneratorModel fixture so the concurrent
+        # publish_prompt_pages_from_job path's call to
+        # _resolve_ai_generator_slug(job) returns 'gpt-image-1-5-byok'
+        # (matching production GeneratorModel.slug for OpenAI BYOK)
+        # rather than falling back silently to 'other'. Mirrors the
+        # fixture pattern added to ContentGenerationAlignmentTests.setUp
+        # in 169-B for the sequential create_prompt_pages_from_job path.
+        # _make_job's defaults are (provider='openai', model_name='gpt-image-1-5');
+        # the helper looks up by (provider, model_identifier).
+        from prompts.models import GeneratorModel
+        GeneratorModel.objects.get_or_create(
+            slug='gpt-image-1-5-byok',
+            defaults={
+                'name': 'GPT-Image-1.5 (test fixture)',
+                'provider': 'openai',
+                'model_identifier': 'gpt-image-1-5',
+                'credit_cost': 2,
+            },
+        )
 
     # ── 1. Happy path ────────────────────────────────────────────────────────
 
@@ -1312,6 +1331,31 @@ class PublishTaskTests(TestCase):
         self.assertEqual(result['skipped_count'], 0)
         self.assertEqual(result['errors'], [])
         self.assertEqual(Prompt.objects.count(), 1)
+
+    @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
+    def test_publish_sets_ai_generator_from_registry(self, _mock_vision):
+        """169-C regression — the concurrent publish_prompt_pages_from_job
+        path must resolve ai_generator from the GeneratorModel registry
+        via _resolve_ai_generator_slug(job), not write a hardcoded
+        literal. Pre-169-B all four call sites in tasks.py wrote
+        'gpt-image-1.5' regardless of provider; 169-B fixed both the
+        sequential and concurrent call sites with the helper. The
+        sequential path is covered by ContentGenerationAlignmentTests'
+        equivalent assertion; this is the concurrent counterpart."""
+        self.publish(str(self.job.id), [str(self.img.id)])
+
+        self.img.refresh_from_db()
+        self.assertIsNotNone(self.img.prompt_page)
+        # The setUp's GeneratorModel fixture has slug='gpt-image-1-5-byok',
+        # provider='openai', model_identifier='gpt-image-1-5'. _make_job's
+        # defaults match (provider='openai', model_name='gpt-image-1-5'),
+        # so the helper resolves to the fixture's slug.
+        self.assertEqual(
+            self.img.prompt_page.ai_generator, 'gpt-image-1-5-byok',
+            'Concurrent publish path must derive ai_generator from '
+            'GeneratorModel registry; if this fails the helper has '
+            'regressed or _make_job defaults drifted from the fixture.',
+        )
 
     @patch('prompts.tasks._call_openai_vision', return_value=MOCK_AI_CONTENT)
     def test_publish_sets_needs_seo_review_true(self, _mock_vision):

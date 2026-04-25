@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 24, 2026 (Sessions 101–168)
+**Last Updated:** April 25, 2026 (Sessions 101–169)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -31,6 +31,183 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 169-C — April 25, 2026 (Cleanup Pass — P2/P3 Follow-ups + Working-Tree Hygiene + Docs Catch-up)
+
+**Outcome:** consolidated cleanup commit closing the 169-B
+deferred items, removing 12 stale spec files from the working
+tree, and bringing CLAUDE.md / CLAUDE_CHANGELOG.md current.
+
+**169-B follow-ups closed:**
+
+- **`DeletedPrompt.ai_generator` validator added.** 169-B
+  added `RegexValidator(GENERATOR_SLUG_REGEX)` to
+  `Prompt.ai_generator` and `BulkGenerationJob.generator_category`
+  but missed the sibling `DeletedPrompt.ai_generator` field
+  (line ~1086 of `prompts/models/prompt.py`). Latent risk:
+  if a future restoration path resurrected pre-169-B
+  `DeletedPrompt` rows with dotted values, no validator would
+  block them at create-time. Migration 0088 adds the same
+  validator. Schema-only — no `RunPython`, no data migration
+  (production has 0 dotted values per 169-A audit).
+
+- **`AI_GENERATORS['other']` stub entry added.** Closes the
+  silent-fallback hole in `_resolve_ai_generator_slug`: when
+  the helper falls back to `'other'` (no GeneratorModel match),
+  `/prompts/other/` previously 404d. The new entry serves a
+  content-thin landing page with generic descriptive copy. The
+  `logger.warning` 169-B added to the helper's fallback branch
+  remains as the operator-side drift signal.
+
+- **`PublishTaskTests` GeneratorModel fixture + `ai_generator`
+  assertion added.** 169-B's `ContentGenerationAlignmentTests`
+  covered the sequential `create_prompt_pages_from_job` path's
+  helper integration; the concurrent
+  `publish_prompt_pages_from_job` (Phase 6B) path lacked
+  parallel coverage. New `test_publish_sets_ai_generator_from_registry`
+  test asserts the fixture's slug `'gpt-image-1-5-byok'`
+  resolves correctly through the concurrent path.
+
+**Working-tree hygiene:** 12 stale `CC_SPEC_*.md` files
+removed from the repo root (7 already-staged-deleted
+`CC_SPEC_163_*.md` + `CC_SPEC_168_F_ADMIN_SPLIT.md` from
+prior sessions; 3 already removed before 169-C
+[`CC_SPEC_168_E_POSTMORTEM`, `CC_SPEC_169_A`, `CC_SPEC_169_B`];
+2 untracked drafts removed in 169-C — `MONETIZATION_STRATEGY_DOCS_UPDATE`,
+`PROCFILE_RELEASE_PHASE_v2`).
+
+**Docs catch-up:** CLAUDE_CHANGELOG.md gained 169-A, 169-B,
+and 169-C entries; CLAUDE.md gained 3 Recently Completed rows
++ version footer bump 4.66 → 4.67 + Last Updated synced to
+April 25, 2026. PROJECT_FILE_STRUCTURE.md unchanged
+(structural additions are at granularities PFS doesn't
+enumerate — individual migrations and individual test files).
+
+**Files:** 5 modified (prompt.py, constants.py,
+test_bulk_page_creation.py, CLAUDE.md, CLAUDE_CHANGELOG.md);
+2 new (migration 0088, REPORT_169_C); 12 deletions. Test
+count: 1385 → 1386 (+1 PublishTaskTests addition).
+
+**Explicitly deferred (NOT in 169-C):**
+- Real SEO copy for the 7 model-specific `AI_GENERATORS`
+  entries from 169-B (needs Mateo's marketing input)
+- Formalize `@technical-writer` substitution in
+  CC_SPEC_TEMPLATE (now 13+ consecutive sessions)
+- Cloudinary video preload warning (memory rule #11)
+- Recover Session 168-A individual agent scores
+- `prompt_list_views.py` growth monitor (passive)
+- 168-F `.flake8` retroactive note (git history captures)
+
+**Agents:** 3 reviewed (`@code-reviewer`, `@architect-review`,
+`@test-automator` — sub for `@test-engineer`). Scores filled
+post-review.
+
+---
+
+### Session 169-B — April 25, 2026 (Generator Slug Permanent Fix — commit `a37d2d8`)
+
+**Outcome:** P0 fix for production 500 on prompt detail pages
+with dotted `ai_generator` values, plus permanent dot-character
+class defense per the 169-A diagnostic.
+
+**Root cause:** four hardcoded `ai_generator='gpt-image-1.5'`
+literals at `tasks.py:3387, 3424, 3636, 3693` wrote dotted
+values regardless of which AI model actually ran. A Grok job
+(provider=`xai`, model_identifier=`grok-imagine-image`)
+produced 7 prompts, all mis-tagged. The dotted value crashed
+`prompt_detail.html`'s `{% url 'ai_generator_category' %}`
+because Django's `<slug:>` URL converter rejects dots. All 7
+dotted-`ai_generator` rows on production came from this single
+bug.
+
+**Six categories of change in one coordinated fix:**
+
+1. **Helper function** `_resolve_ai_generator_slug(job)`
+   replaces the four hardcoded literals. Pulls slug from
+   `GeneratorModel` registry by `(provider, model_identifier)`.
+   Intentionally does NOT filter by `is_enabled` (would mis-
+   tag historical jobs whose model is later disabled). Logs
+   `logger.warning` with structured fields when falling back
+   to `'other'` for observability (post-agent-review fix).
+
+2. **`RegexValidator(r'^[a-z0-9][a-z0-9-]*$|^$')`** added to
+   `Prompt.ai_generator` and `BulkGenerationJob.generator_category`.
+   Default values changed from `'gpt-image-1.5'` to
+   `'gpt-image-1-5'`. `BulkGenerationJob.model_name`
+   intentionally exempt — Replicate vendor strings
+   (`'black-forest-labs/flux-1.1-pro'`) contain dots by design.
+
+3. **Bidirectional data migration 0087** retags 7 mis-tagged
+   Grok prompts: `ai_generator='gpt-image-1.5'` → `'grok-imagine'`
+   (correct attribution, not just URL-safe form). Defensive
+   sweep on `BulkGenerationJob.generator_category` (expected
+   0 rows per 169-A Query D).
+
+4. **Taxonomy update** — `AI_GENERATOR_CHOICES` updated:
+   `'gpt-image-1.5'` → `'gpt-image-1-5'` (display string
+   unchanged). 7 new entries added matching `GeneratorModel.slug`
+   values. `AI_GENERATORS` dict gained matching entries with
+   placeholder SEO copy (real marketing copy deferred).
+
+5. **Defensive fallback** — `get_generator_url_slug()` returns
+   `None` on no-match. Template wraps `{% url %}` call in
+   `{% with %}{% if %}{% else %}{% endif %}` guard with
+   no-link `<span>` fallback that preserves visual layout.
+
+6. **Regression test suite** — new file
+   `prompts/tests/test_generator_slug_validation.py` (21 tests,
+   7 classes) enforces the canonical rule across all four
+   taxonomies + helper + explicit `model_name` exemption test.
+
+**Verified post-deploy:** production has 0 dotted
+`ai_generator`, 7 `'grok-imagine'`, 0 original
+`'gpt-image-1.5'`. Previously-failing URL renders 200 OK with
+"Model Used: Grok Imagine" linking to `/prompts/grok-imagine/`.
+
+**Files:** 8 modified, 3 new (migration 0087, test file,
+report). Test count: 1364 → 1385 (+21).
+
+**Agents:** 4 reviewed (`@code-reviewer` 9.3,
+`@architect-review` 8.3, `@test-automator` 9.1,
+`@backend-security-coder` 9.0). Average 8.925/10.
+
+---
+
+### Session 169-A — April 25, 2026 (Generator Slug Diagnostic — commit `2106eb9`)
+
+**Outcome:** read-only diagnostic for production 500 on prompt
+detail pages + permanent-fix plan for the dot-character class
+of issue.
+
+**Three bugs confirmed:**
+
+- **Bug C (P0):** 4 hardcoded `ai_generator='gpt-image-1.5'`
+  literals at `tasks.py:3387, 3424, 3636, 3693` (the user-
+  visible cause)
+- **Bug A (P2):** Migration 0080 (Session 153) reintroduced
+  dotted defaults on `BulkGenerationJob.model_name` /
+  `generator_category`
+- **Bug B (P1):** Three identifier taxonomies disagree
+  (`AI_GENERATOR_CHOICES`, `AI_GENERATORS` dict,
+  `GeneratorModel.slug`) — only the last is URL-clean
+
+**Scope:** 7 of 64 prompts (10.9%) — trivial data migration.
+All 7 dotted prompts came from a single Grok job, mis-tagged
+by the hardcoded literal.
+
+**Section 9 of the report** prescribed the permanent-fix plan
+addressing the dot-character class at every layer (validator,
+choice, dict, URL converter, helper, template, test). Settled
+on canonical rule `^[a-z0-9][a-z0-9-]*$` with defense-in-depth.
+Recommended sequence: 169-B (consolidated fix), 169-D deferred.
+
+**Files:** 1 new (`docs/REPORT_169_A_GENERATOR_SLUG_DIAGNOSTIC.md`,
+708 lines). Zero code changes. Zero production DB writes.
+
+**Agents:** 2 reviewed (`@code-reviewer` 9.0, `@architect-review`
+9.0 after fix-cycle from initial 7.5). Average 9.0/10.
+
+---
 
 ### Session 168-E — April 24, 2026 (tasks.py Refactor — Abandoned)
 

@@ -1086,6 +1086,7 @@ class DeletedPrompt(models.Model):
     ai_generator = models.CharField(
         max_length=50,
         choices=AI_GENERATOR_CHOICES,
+        validators=[GENERATOR_SLUG_REGEX],
         help_text='AI tool used for the deleted prompt'
     )
     likes_count = models.IntegerField(

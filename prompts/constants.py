@@ -430,6 +430,24 @@ AI_GENERATORS = {
         'supports_images': True,
         'supports_video': False,
     },
+    # Catch-all entry (Session 169-C). Reached via _resolve_ai_generator_slug's
+    # safe-fallback branch when a job's (provider, model_identifier) does not
+    # match any GeneratorModel row. Without this entry, /prompts/other/ would
+    # 404 even though 'other' is a valid AI_GENERATOR_CHOICES value. Generic
+    # descriptive copy is appropriate for a catch-all category — the
+    # logger.warning fired by the helper makes operator-side drift visible.
+    'other': {
+        'name': 'Other',
+        'slug': 'other',
+        'seo_subheader': 'Browse prompts for unspecified AI generators',
+        'seo_description': 'Discover prompts created with various AI image generation tools on PromptFinder.',
+        'description': '<p>Prompts whose specific AI generator is not categorized.</p>',
+        'website': '',
+        'icon': 'fa-robot',
+        'choice_value': 'other',
+        'supports_images': True,
+        'supports_video': False,
+    },
 }
 
 # Filter validation lists for ai_generator_category view

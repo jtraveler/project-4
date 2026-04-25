@@ -14,6 +14,7 @@ import uuid
 from prompts.constants import ALL_IMAGE_SIZES
 
 from .constants import _BULK_SIZE_DISPLAY
+from .prompt import GENERATOR_SLUG_REGEX
 
 
 class BulkGenerationJob(models.Model):
@@ -60,7 +61,15 @@ class BulkGenerationJob(models.Model):
         choices=OPENAI_TIER_CHOICES,
         help_text="User's OpenAI API tier, used to set per-job concurrency and delay.",
     )
-    model_name = models.CharField(max_length=100, default='gpt-image-1.5')
+    # DOT-CHARACTER EXEMPTION: model_name accepts dotted values by design —
+    # Replicate vendor strings like 'black-forest-labs/flux-1.1-pro' contain
+    # dots and slashes in version numbers. This field is an OUTBOUND API
+    # STRING, NOT a URL identifier. Do NOT add validators=[GENERATOR_SLUG_REGEX]
+    # here. The default value still uses dash form for canonical-rule
+    # consistency, but the field accepts non-canonical runtime values.
+    # Test: prompts/tests/test_generator_slug_validation.py
+    #       BulkGenerationJobModelNameDocumentedExempt
+    model_name = models.CharField(max_length=100, default='gpt-image-1-5')
     quality = models.CharField(
         max_length=10, choices=QUALITY_CHOICES, default='medium'
     )
@@ -71,7 +80,11 @@ class BulkGenerationJob(models.Model):
     visibility = models.CharField(
         max_length=10, choices=VISIBILITY_CHOICES, default='public'
     )
-    generator_category = models.CharField(max_length=50, default='gpt-image-1.5')
+    generator_category = models.CharField(
+        max_length=50,
+        default='gpt-image-1-5',
+        validators=[GENERATOR_SLUG_REGEX],
+    )
 
     # Optional: reference image and character description
     reference_image_url = models.URLField(blank=True)

@@ -46,6 +46,48 @@ MAX_IMAGE_SIZE = 5 * 1024 * 1024
 MAX_CONCURRENT_IMAGE_REQUESTS = getattr(settings, 'BULK_GEN_MAX_CONCURRENT', 4)
 
 
+def _resolve_ai_generator_slug(job):
+    """
+    Map a BulkGenerationJob to the slug that should be written to
+    Prompt.ai_generator. Pulls from the GeneratorModel registry
+    (single source of truth) when possible; falls back to a safe
+    'other' sentinel.
+
+    Returns a string matching ^[a-z0-9][a-z0-9-]*$.
+
+    NOTE: this lookup intentionally does NOT filter by `is_enabled=True`.
+    `is_enabled` gates whether a model can accept NEW jobs. It is
+    irrelevant to what a historical job already ran on. A Grok job
+    run in April 2026 whose model is later disabled by an admin
+    must still publish prompts tagged 'grok-imagine', not 'other'.
+    Filtering by `is_enabled` would mis-tag retrospective publishes —
+    the same silent-corruption problem this fix is meant to solve,
+    with a different wrong value.
+
+    Lookup strategy: match by (provider, model_identifier).
+    """
+    from prompts.models import GeneratorModel
+    gm = GeneratorModel.objects.filter(
+        provider=job.provider,
+        model_identifier=job.model_name,
+    ).first()
+    if gm:
+        return gm.slug
+    # Defensive fallback — tag as 'other' rather than mis-tag.
+    # Emit a warning so an operator can detect drift (e.g., a new
+    # model added without a matching GeneratorModel row, or a row
+    # later deleted) before it pollutes data silently. Without this
+    # warning, the only signal would be an eventual content audit.
+    logger.warning(
+        "_resolve_ai_generator_slug: no GeneratorModel match for "
+        "provider=%s model_name=%s (job_id=%s); falling back to 'other'. "
+        "This indicates either a missing GeneratorModel row or a "
+        "renamed/deleted model_identifier.",
+        job.provider, job.model_name, job.id,
+    )
+    return 'other'
+
+
 def _fire_bulk_gen_job_notification(job, succeeded, failed=False):
     """Fire a notification to the job owner at terminal state."""
     from prompts.services.notifications import create_notification
@@ -3358,6 +3400,11 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
     from taggit.models import Tag
     available_tags = list(Tag.objects.order_by('id').values_list('name', flat=True)[:200])
 
+    # Resolve the canonical generator slug for this job once (Session 169-B).
+    # Replaces the four hardcoded 'gpt-image-1.5' literals that mis-tagged
+    # every published prompt regardless of which model actually ran.
+    ai_generator_slug = _resolve_ai_generator_slug(job)
+
     # Mark unselected images
     unselected = job.images.exclude(id__in=selected_image_ids)
     discarded = unselected.filter(
@@ -3384,7 +3431,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
             ai_content = _call_openai_vision(
                 image_url=gen_image.image_url,
                 prompt_text=gen_image.prompt_text,
-                ai_generator='gpt-image-1.5',
+                ai_generator=ai_generator_slug,
                 available_tags=available_tags,
             )
 
@@ -3421,7 +3468,7 @@ def create_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901 — 
                 author=job.created_by,
                 content=gen_image.prompt_text,
                 excerpt=ai_content.get('description', ''),
-                ai_generator='gpt-image-1.5',
+                ai_generator=ai_generator_slug,
                 status=1 if job.visibility == 'public' else 0,
                 moderation_status='approved',  # staff-created; GPT-Image-1.5 content policy applied at generation time
                 processing_complete=True,      # bulk-gen prompts are fully processed at creation time
@@ -3622,6 +3669,11 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
     from taggit.models import Tag
     available_tags = list(Tag.objects.order_by('id').values_list('name', flat=True)[:200])
 
+    # Resolve the canonical generator slug for this job once (Session 169-B).
+    # Captured by the worker-thread closure below; the helper itself runs
+    # one ORM query against GeneratorModel before any worker dispatches.
+    ai_generator_slug = _resolve_ai_generator_slug(job)
+
     # ── Worker function (I/O only — NO ORM writes) ────────────────────────────
     def _call_vision_for_image(gen_image):
         """
@@ -3633,7 +3685,7 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
             ai_content = _call_openai_vision(
                 image_url=gen_image.image_url,
                 prompt_text=gen_image.prompt_text,
-                ai_generator='gpt-image-1.5',
+                ai_generator=ai_generator_slug,
                 available_tags=available_tags,
             )
             return gen_image, ai_content, None
@@ -3690,7 +3742,7 @@ def publish_prompt_pages_from_job(job_id, selected_image_ids):  # noqa: C901
                 author=job.created_by,
                 content=gen_image.prompt_text,
                 excerpt=ai_content.get('description', ''),
-                ai_generator='gpt-image-1.5',
+                ai_generator=ai_generator_slug,
                 status=1 if job.visibility == 'public' else 0,
                 moderation_status='approved',  # staff-created; GPT-Image-1.5 content policy applied at generation time
                 processing_complete=True,      # bulk-gen prompts are fully processed at creation time

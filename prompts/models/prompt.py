@@ -9,6 +9,7 @@ Public classes are re-exported by __init__.py — import from
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import RegexValidator
 from django.utils.text import slugify
 from django.core.cache import cache
 from cloudinary.models import CloudinaryField
@@ -29,6 +30,24 @@ from .constants import (
 from prompts.constants import BOT_USER_AGENT_PATTERNS, DEFAULT_VIEW_RATE_LIMIT
 
 logger = logging.getLogger(__name__)
+
+
+# Canonical generator-slug rule (Session 169-B).
+# Every URL identifier in the generator taxonomy must match this rule:
+# lowercase letters, digits, and dashes; starts with a letter or digit;
+# no dots, underscores, slashes, or whitespace. Display names live
+# separately ('GPT-Image-1.5' is a display string; 'gpt-image-1-5' is
+# the URL identifier). The trailing |^$ allows blank=True / default=''
+# fields. Imported by bulk_gen.py to validate generator_category.
+GENERATOR_SLUG_REGEX = RegexValidator(
+    regex=r'^[a-z0-9][a-z0-9-]*$|^$',
+    message=(
+        "Generator slug must contain only lowercase letters, digits, "
+        "and dashes (no dots, underscores, slashes, or whitespace). "
+        "Display names live separately."
+    ),
+    code='invalid_generator_slug',
+)
 
 
 class PromptManager(models.Manager):
@@ -146,6 +165,7 @@ class Prompt(models.Model):
         max_length=50,
         choices=AI_GENERATOR_CHOICES,
         default='midjourney',
+        validators=[GENERATOR_SLUG_REGEX],
         help_text='Select the AI tool used to generate this image/video'
     )
 
@@ -560,8 +580,12 @@ class Prompt(models.Model):
             if data.get('choice_value', '').lower() == self.ai_generator.lower():
                 return key
 
-        # Last resort: return slugified version
-        return self.ai_generator.lower().replace(' ', '-')
+        # Last resort: return None rather than a possibly-dotted value (Session 169-B).
+        # Caller (template) must guard with {% if prompt.get_generator_url_slug %}.
+        # Returning None is safer than returning a value the URL converter would
+        # reject — a None return produces a graceful "Model Used" link absence;
+        # a dotted return crashes the entire page render via NoReverseMatch.
+        return None
 
     def is_video(self):
         """

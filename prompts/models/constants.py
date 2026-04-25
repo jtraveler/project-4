@@ -24,8 +24,17 @@ MODERATION_SERVICE = (
     ('openai_vision', 'OpenAI Vision API'),
 )
 
-# AI Generator choices
+# AI Generator choices.
+#
+# Canonical rule (Session 169-B): every key MUST match
+# ^[a-z0-9][a-z0-9-]*$ — lowercase letters, digits, dashes only. No
+# dots, underscores, slashes, or whitespace. Display strings (second
+# tuple position) can be anything including dots and uppercase.
+# Enforced by prompts/tests/test_generator_slug_validation.py and by
+# RegexValidator on Prompt.ai_generator. See
+# docs/REPORT_169_A_GENERATOR_SLUG_DIAGNOSTIC.md for the rationale.
 AI_GENERATOR_CHOICES = [
+    # Legacy entries (kept for backward compatibility):
     ('midjourney', 'Midjourney'),
     ('dall-e-3', 'DALL-E 3'),
     ('stable-diffusion', 'Stable Diffusion'),
@@ -36,7 +45,16 @@ AI_GENERATOR_CHOICES = [
     ('ideogram', 'Ideogram'),
     ('runwayml', 'RunwayML'),
     ('gpt-image-1', 'GPT-Image-1'),
-    ('gpt-image-1.5', 'GPT-Image-1.5'),
+    ('gpt-image-1-5', 'GPT-Image-1.5'),  # CHANGED 169-B: dash form (was 'gpt-image-1.5')
+    # GeneratorModel-derived entries (Session 169-B — match GeneratorModel.slug values):
+    ('gpt-image-1-5-byok', 'GPT-Image-1.5 (BYOK)'),
+    ('flux-schnell', 'Flux Schnell'),
+    ('flux-dev', 'Flux Dev'),
+    ('flux-1-1-pro', 'Flux 1.1 Pro'),
+    ('flux-2-pro', 'FLUX 2 Pro'),
+    ('grok-imagine', 'Grok Imagine'),
+    ('nano-banana-2', 'Nano Banana 2'),
+    # Catch-all:
     ('other', 'Other'),
 ]
 

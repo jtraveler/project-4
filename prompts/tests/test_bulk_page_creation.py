@@ -742,12 +742,32 @@ class ContentGenerationAlignmentTests(TestCase):
         )
         # Seed a tag so available_tags pre-fetch returns a non-empty list
         Tag.objects.get_or_create(name='fixture-tag')
+        # Session 169-B: _resolve_ai_generator_slug() looks up
+        # GeneratorModel by (provider, model_identifier). _make_job's
+        # default values are (provider='openai', model_name='gpt-image-1-5').
+        # Without a matching GeneratorModel fixture, the helper falls back
+        # to 'other'. Create the fixture using a slug that is also present
+        # in AI_GENERATOR_CHOICES so the resolved value passes the
+        # Prompt.ai_generator choices validator.
+        from prompts.models import GeneratorModel
+        GeneratorModel.objects.get_or_create(
+            slug='gpt-image-1-5-byok',
+            defaults={
+                'name': 'GPT-Image-1.5 (test fixture)',
+                'provider': 'openai',
+                'model_identifier': 'gpt-image-1-5',
+                'credit_cost': 2,
+            },
+        )
 
     # --- ai_generator field ---
 
     @patch('prompts.tasks._call_openai_vision')
     def test_created_prompt_has_gpt_image_1_generator(self, mock_vision):
-        """Created Prompt pages must have ai_generator='gpt-image-1.5'."""
+        """Created Prompt pages must have ai_generator resolved from
+        GeneratorModel registry (Session 169-B). Pre-169-B behaviour was
+        a hardcoded literal 'gpt-image-1.5'; now derived from
+        (job.provider, job.model_name) → GeneratorModel.slug."""
         mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
@@ -755,7 +775,7 @@ class ContentGenerationAlignmentTests(TestCase):
         create_prompt_pages_from_job(str(job.id), [str(img.id)])
 
         img.refresh_from_db()
-        self.assertEqual(img.prompt_page.ai_generator, 'gpt-image-1.5')
+        self.assertEqual(img.prompt_page.ai_generator, 'gpt-image-1-5-byok')
 
     @patch('prompts.tasks._call_openai_vision')
     def test_ai_generator_not_chatgpt(self, mock_vision):
@@ -787,7 +807,10 @@ class ContentGenerationAlignmentTests(TestCase):
 
     @patch('prompts.tasks._call_openai_vision')
     def test_vision_called_with_gpt_image_15(self, mock_vision):
-        """_call_openai_vision must be called with ai_generator='gpt-image-1.5'."""
+        """_call_openai_vision must be called with ai_generator resolved
+        from GeneratorModel (Session 169-B). Pre-169-B behaviour was a
+        hardcoded literal 'gpt-image-1.5'; the helper now resolves to
+        the fixture's slug 'gpt-image-1-5-byok'."""
         mock_vision.return_value = MOCK_AI_CONTENT
         job = _make_job(self.staff_user)
         img = _make_image(job)
@@ -796,7 +819,7 @@ class ContentGenerationAlignmentTests(TestCase):
 
         call_kwargs = mock_vision.call_args
         ai_gen = call_kwargs.kwargs.get('ai_generator')
-        self.assertEqual(ai_gen, 'gpt-image-1.5')
+        self.assertEqual(ai_gen, 'gpt-image-1-5-byok')
 
     @patch('prompts.tasks._call_openai_vision')
     def test_vision_called_with_available_tags_list(self, mock_vision):
@@ -1033,16 +1056,28 @@ class ContentGenerationAlignmentTests(TestCase):
         self.assertEqual(choices_dict.get('gpt-image-1'), 'GPT-Image-1')
 
     def test_gpt_image_15_in_ai_generator_choices(self):
-        """'gpt-image-1.5' must be present in AI_GENERATOR_CHOICES."""
+        """'gpt-image-1-5' must be present in AI_GENERATOR_CHOICES.
+
+        Session 169-B: key changed from 'gpt-image-1.5' (dotted regression
+        from migration 0080) to dashed form 'gpt-image-1-5'. Display
+        string 'GPT-Image-1.5' remains unchanged.
+        """
         from prompts.models import AI_GENERATOR_CHOICES
         valid_values = [c[0] for c in AI_GENERATOR_CHOICES]
-        self.assertIn('gpt-image-1.5', valid_values)
+        self.assertIn('gpt-image-1-5', valid_values)
+        # Defense-in-depth: assert the dotted form is GONE so a future
+        # migration cannot silently re-add it.
+        self.assertNotIn('gpt-image-1.5', valid_values)
 
     def test_gpt_image_15_choice_display_label(self):
-        """'gpt-image-1.5' choice must have display label 'GPT-Image-1.5'."""
+        """'gpt-image-1-5' choice must have display label 'GPT-Image-1.5'.
+
+        Session 169-B: only the key is dash-form; the display string keeps
+        its dotted marketing name.
+        """
         from prompts.models import AI_GENERATOR_CHOICES
         choices_dict = dict(AI_GENERATOR_CHOICES)
-        self.assertEqual(choices_dict.get('gpt-image-1.5'), 'GPT-Image-1.5')
+        self.assertEqual(choices_dict.get('gpt-image-1-5'), 'GPT-Image-1.5')
 
 
 # =============================================================================
@@ -1192,12 +1227,17 @@ class TransactionHardeningTests(TestCase):
     # ── Fix 7: generator_category default ───────────────────────────────────
 
     def test_generator_category_default_is_gpt_image_1(self):
-        """BulkGenerationJob created without explicit generator_category uses 'gpt-image-1.5'."""
+        """BulkGenerationJob created without explicit generator_category uses 'gpt-image-1-5'.
+
+        Session 169-B: dashed form replaces the dotted 'gpt-image-1.5'
+        default introduced by migration 0080. Test name kept for git
+        blame continuity.
+        """
         job = BulkGenerationJob.objects.create(
             created_by=self.user,
             total_prompts=1,
         )
-        self.assertEqual(job.generator_category, 'gpt-image-1.5')
+        self.assertEqual(job.generator_category, 'gpt-image-1-5')
 
     def test_existing_chatgpt_jobs_migrated(self):
         """

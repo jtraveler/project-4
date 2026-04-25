@@ -40,10 +40,14 @@ def make_user(username='testuser', password='testpass123'):
 
 
 def make_job(user, **kwargs):
-    """Create a BulkGenerationJob with sensible defaults."""
+    """Create a BulkGenerationJob with sensible defaults.
+
+    Session 169-B: model_name updated from dotted 'gpt-image-1.5' to
+    dashed 'gpt-image-1-5' to match the new model default.
+    """
     defaults = {
         'provider': 'openai',
-        'model_name': 'gpt-image-1.5',
+        'model_name': 'gpt-image-1-5',
         'quality': 'medium',
         'size': '1024x1024',
         'total_prompts': 5,
@@ -68,12 +72,14 @@ class TestBulkGenerationJobModel(TestCase):
         job = make_job(self.user)
         self.assertEqual(job.status, 'pending')
         self.assertEqual(job.provider, 'openai')
-        self.assertEqual(job.model_name, 'gpt-image-1.5')
+        # Defaults updated to dash form in Session 169-B (migration 0087);
+        # 'gpt-image-1.5' was the dotted regression introduced by migration 0080.
+        self.assertEqual(job.model_name, 'gpt-image-1-5')
         self.assertEqual(job.quality, 'medium')
         self.assertEqual(job.size, '1024x1024')
         self.assertEqual(job.images_per_prompt, 2)
         self.assertEqual(job.visibility, 'public')
-        self.assertEqual(job.generator_category, 'gpt-image-1.5')  # default changed in migration 0080
+        self.assertEqual(job.generator_category, 'gpt-image-1-5')
         self.assertEqual(job.completed_count, 0)
         self.assertEqual(job.failed_count, 0)
         self.assertEqual(job.reference_image_url, '')

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 23, 2026 (Sessions 101–168)
+**Last Updated:** April 24, 2026 (Sessions 101–168)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -31,6 +31,56 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 168-E — April 24, 2026 (tasks.py Refactor — Abandoned)
+
+**Outcome:** refactor abandoned after a Phase 1 attempt
+revealed an architectural constraint that changes the
+cost/benefit. tasks.py remains at 3,822 lines on origin/main.
+**See `docs/POSTMORTEM_168_E_TASKS_SPLIT.md` for full
+analysis.**
+
+**168-E-prep — committed:** read-only import-graph + Django-Q
+contract analysis. Catalogued all 49 functions, 15 module-
+level constants, 34 in-function lazy imports, and a 41-name
+shim contract (7 Django-Q string-reference entry points + 12
+public + 20 private + 9 constants). Repo-wide grep confirmed
+0 DB-stored Schedule rows, 0 schedule() calls. Found 14
+blockers across the split, severity-ranked. Commit `aa13ed7`.
+Agent avg 9.75/10 (@code-reviewer, @architect-review).
+
+**168-E-A — attempted, REVERTED before commit:** Phase 1
+extraction targeted 4 low-risk submodules (notifications,
+nsfw_moderation, b2_storage, placeholders) plus a transitional
+`_remainder.py` for Phase 2 targets. CC's execution passed all
+acceptance gates (1,364 tests OK, 4-agent avg 9.625/10) but
+required inlining `b2_storage` back into `__init__.py` after
+4 progressive test-fix iterations because `@patch('prompts.
+tasks.X')` mocks fail to propagate when call sites live in
+sibling submodules. Net file-size reduction: ~4% (3,822 →
+3,667 in `__init__.py`); aggregate package larger than
+original due to header overhead. User concluded cost-benefit
+didn't justify shipping; reverted local working tree to
+`aa13ed7`. No commit on origin.
+
+**Key learning (full detail in postmortem):** Python's
+`@patch(name)` replaces the name in the patched module's
+namespace, but `from .submodule import X` in sibling
+submodules already bound to the underlying function at import
+time. Heavily-mocked modules cannot be naively split into
+submodules without either (a) updating test patch paths, or
+(b) routing all sibling-submodule imports through the package
+shim. The 168-E-prep report did not anticipate this — future
+prep specs for similar refactors should include a `@patch`
+audit explicitly.
+
+**Status of tasks.py:** stays as-is on origin/main. Future
+revisit gated by thresholds documented in postmortem Section
+10. The 6 `noqa: C901` complexity-flagged functions remain as
+candidate targets for a different refactoring approach
+(reduce complexity rather than restructure files).
+
+---
 
 ### Session 168-F — April 23, 2026 (admin.py Split into Package)
 

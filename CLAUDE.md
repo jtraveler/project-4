@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** April 23, 2026
+**Last Updated:** April 24, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -75,6 +75,7 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 168-E | Apr 24, 2026 | tasks.py refactor abandoned. 168-E-prep committed (`aa13ed7`, agent avg 9.75/10) — produced comprehensive import-graph + 41-name shim contract + Django-Q registration map. 168-E-A attempted Phase 1 extraction of 4 low-risk submodules; passed all acceptance gates (1,364 tests OK, 4-agent avg 9.625/10) but required inlining `b2_storage` back into `__init__.py` because `@patch` mocks fail to propagate across submodule boundaries — net 4% file-size reduction insufficient to justify shipping. Reverted local working tree, no commit on origin. tasks.py remains at 3,822 lines. **Full architectural analysis + future-attempt thresholds in `docs/POSTMORTEM_168_E_TASKS_SPLIT.md`.** Session 168-A audit's #2 ranked refactor closes as Won't Fix until threshold conditions met. |
 | Session 168-F | Apr 23, 2026 | Fourth code refactor from 168-A audit. Split 2,459-line `prompts/admin.py` into `prompts/admin/` package with 12 submodules (forms, inlines, 8 domain admins, custom views, orchestration `__init__.py`). Module-level side effects preserved in correct order: Tag unregister, User unregister, index_template. Backward-compat re-exports for PromptAdmin + trash_dashboard — zero consumer-file changes. `.flake8` gained `*/admin/*.py` per-file-ignore line mirroring the pre-existing `*/admin.py` rule (same codes silenced in the monolithic file). Commit `16a95cf`. Agent avg 9.30/10. 1364 tests (identical to pre-split, 12 skipped preserved). |
 | Session 168-D | Apr 22, 2026 | Third code refactor from 168-A audit. Split 3,517-line `prompts/models.py` into `prompts/models/` package — 9 submodules (8 domain + 1 constants) with 34-name re-export shim preserving backward compatibility. `delete_cloudinary_assets` signal relocated from models.py to signals.py with string-reference sender. `makemigrations --dry-run` → "No changes detected" (no schema drift). Commit `56cad16`. Agent avg 9.475/10 (@code-reviewer 9.2, @architect-review 9.2, @test-automator 10.0, @backend-security-coder 9.5). 1364 tests (exact match pre/post, 12 skipped preserved). |
 | Session 168-D-prep | Apr 21, 2026 | Read-only analysis producing the concrete evidence 168-D needed to design the models.py split correctly. Catalogued all 28 top-level classes, 53+ relationships, 10 @receiver handlers across 4 signal files (including 2 previously unknown to Claude.ai: notification_signals.py and social_signals.py), ~110 external import sites, 2 in-function lazy imports inside models.py. Proposed 8-domain grouping verified against evidence. 168-D blockers: 1 HIGH + 4 MEDIUM + 7 LOW + 2 UNKNOWN with mitigation outlines. Plus absorbed ~10-line CLAUDE.md addition documenting the three CSS subdirectories (`partials/`, `components/`, `pages/`). First spec to apply memory rule #10 (request current files before drafting). Commit `a905de3`. Agent avg 9.1/10. |
@@ -353,6 +354,7 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 
 | Item | File | Notes |
 |------|------|-------|
+| tasks.py modular split (`prompts/tasks.py`, 3,822 lines) | `prompts/tasks.py` | Refactor attempted Session 168-E and abandoned — `@patch` mock semantics across submodule boundaries make naive extraction yield only ~4% file-size reduction. Future revisit gated by thresholds in `docs/POSTMORTEM_168_E_TASKS_SPLIT.md` Section 10. |
 | Preload-warning observation on async stylesheet link | `prompts/templates/prompts/prompt_detail.html` (line 99) | `<link rel="preload" href="…prompt-detail.css" as="style" onload="this.onload=null;this.rel='stylesheet'">` can emit a Chrome DevTools "resource was preloaded using link preload but not used within a few seconds" warning on some page loads. After 168-C's `@import`-based `style.css`, the timing window widened because the browser now serially fetches 5 partials before the async stylesheet is consumed. Non-blocking (cosmetic console warning; no functional impact). Candidate fix: replace preload-then-swap-rel with direct `<link rel="stylesheet">`, or add explicit `media` attribute to gate application. Verify under Lighthouse before changing — the preload was added for LCP optimization in Session 68. |
 | `prompt_list_views.py` growth monitor | `prompts/views/prompt_list_views.py` | 620 lines, `prompt_detail` is ~320 lines — watch for growth |
 | ~~`__init__.py` imports through shim~~ | `prompts/views/__init__.py` | ✅ RESOLVED Session 138 — imports directly from domain modules |
@@ -3657,6 +3659,7 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 | `docs/DESIGN_CATEGORY_TAXONOMY_REVAMP.md` | Phase 2B category taxonomy revamp design |
 | `docs/PHASE_2B_AGENDA.md` | Phase 2B execution roadmap (7 phases) |
 | `docs/PHASE_2B1_COMPLETION_REPORT.md` - `PHASE_2B6_COMPLETION_REPORT.md` | Phase 2B sub-phase completion reports |
+| `docs/POSTMORTEM_168_E_TASKS_SPLIT.md` | Architectural postmortem of the abandoned tasks.py modular split (Session 168-E). Documents what was attempted, why it failed, candidate solutions, investigations to perform first, and threshold conditions for any future revisit. |
 | `archive/` (all contents) | **Historical materials.** Contains `changelog-sessions-13-99.md` (CLAUDE_CHANGELOG entries for Sessions 13 through 99, archived in Session 168-B), `PHASE_N4_UPLOAD_FLOW_REPORT.md` (completion report for the N4 upload flow, moved from `docs/` in Session 168-B), plus older archived specs and protocols. Reach for archive contents when answering "why was X done that way?" about pre-Session-100 work. Most sessions do not need to consult the archive. |
 
 ---
@@ -3675,5 +3678,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.65 (Session 168-F — split `prompts/admin.py` (2,459 lines) into `prompts/admin/` package with 12 submodules (commit `16a95cf`, avg 9.30/10, 1364 tests unchanged, admin.site._registry identical to pre-split baseline). Closes 168-catchup's missed Recently Completed table rows for Sessions 166 through 168-D in one additive pass.)
-**Last Updated:** April 23, 2026
+**Version:** 4.66 (Session 168-E — tasks.py refactor abandoned after Phase 1 attempt revealed `@patch` mock-propagation constraint; 168-E-prep committed (`aa13ed7`, avg 9.75/10) but 168-E-A reverted before commit. tasks.py remains at 3,822 lines on origin/main. See `docs/POSTMORTEM_168_E_TASKS_SPLIT.md` for full analysis + future-attempt threshold conditions.)
+**Last Updated:** April 24, 2026

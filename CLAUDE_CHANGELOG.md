@@ -32,6 +32,140 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 169-D — April 25, 2026 (Comprehensive 169-cluster Docs Catch-up — commit `<HASH>`)
+
+**Outcome:** Closes 9 documentation gaps that emerged during
+the 169 cluster (169-A/B/C) but were not absorbed into the
+cluster's session entries. Additive across 4 docs files +
+1 new completion report.
+
+**Why this spec exists:**
+
+The 169 cluster shipped successfully and is documented at
+the session-row granularity in CLAUDE.md's Recently Completed
+table and in CLAUDE_CHANGELOG.md (169-A/B/C entries). However,
+the work surfaced **system-level patterns and concepts** that
+had no doc home: the `_resolve_ai_generator_slug` helper
+architecture, the `/prompts/other/` page's rationale as
+defensive infrastructure, memory rules drift (CLAUDE.md said
+"9 of 30" while actual count was 13), the silent-fallback
+observability principle as a CC_SPEC_TEMPLATE Critical
+Reminder, agent substitution formalization, PFS top-line
+count drift, and several P3 follow-ups from 169-C agent
+review.
+
+**Files modified (4 + 1 new):**
+
+1. **CLAUDE.md** — most extensive edits:
+   - New `#### Generator Slug Resolution Helper (Sessions
+     169-A/B/C)` H3 inside the Bulk AI Image Generator
+     section. Explains the `_resolve_ai_generator_slug(job)`
+     helper architecture, why `/prompts/other/` exists
+     (defensive infrastructure for silent-fallback path),
+     sequential vs concurrent publish-path test coverage
+     (`ContentGenerationAlignmentTests` and
+     `PublishTaskTests.test_publish_sets_ai_generator_from_registry`),
+     and operator-side drift signal via `logger.warning`.
+   - "Active memory rules (9 of 30)" → "(13 of 30)" header
+     bump.
+   - 4 new memory rule entries inserted after rule #9:
+     #10 (read current versions of files before drafting
+     specs — 168-D-prep evidence), #11 (Cloudinary video
+     preload warning observation — first observed during
+     168-D smoke test), #12 (tasks.py refactor postmortem
+     reference — gates future 168-E reattempts), #13
+     (silent-fallback observability — 162-E and 169-B
+     evidence).
+   - Token-cost trade-off math updated: 9 rules → 13 rules,
+     1,300–1,800 → 1,900–2,600 tokens per message,
+     $0.30–$1.00 → $0.45–$1.45 per session.
+   - 4 new Deferred P3 rows: `EndToEndPublishFlowTests`
+     `GeneratorModel` fixture gap, broader PFS stale-counts
+     audit, `@technical-writer` registry formalization, real
+     SEO copy for 7 `AI_GENERATORS` model entries.
+   - 169-C Recently Completed row: `Commit pending` →
+     `Commit \`d9fcda7\``, `Agent avg pending` → `Agent avg
+     9.1/10`. Surgical replacement; rest of row
+     unchanged.
+   - New 169-D Recently Completed row at top of table.
+   - Version footer 4.67 → 4.68 with summary covering all
+     169-D additions plus closing the 169 cluster recap.
+
+2. **CC_SPEC_TEMPLATE.md** — two additions:
+   - **Critical Reminder #10 — Silent-Fallback
+     Observability**: any safe-fallback code path that
+     writes data must emit `logger.warning` with structured
+     fields. Examples: 162-E (`except Exception` narrowing
+     around provider-registry cost lookup), 169-B
+     (`_resolve_ai_generator_slug` fallback to `'other'`).
+     Pattern test: if you removed the warning, would
+     production drift be detectable? If not, warning is
+     required.
+   - **Agent Substitution Convention** subsection inside
+     AGENT REQUIREMENTS: formalizes `@technical-writer` →
+     `general-purpose + persona` (13+ consecutive sessions)
+     and `@test-engineer` → `@test-automator` (since 168-A)
+     as canonical substitutions. Disclosure required in
+     every spec's agent ratings table.
+   - Changelog header v2.7 → v2.8 with summary of these
+     two additions.
+
+3. **PROJECT_FILE_STRUCTURE.md** — 4 top-line surgical edits:
+   - Last Updated April 24 → April 25, 2026 (Sessions 163–169)
+   - Total Tests 1364 → 1386
+   - Migrations 88 → 90 (169-B's `0087_retag_grok_prompts`
+     + 169-C's `0088_alter_deletedprompt_ai_generator`)
+   - Test Files 28 → 29 (169-B's
+     `test_generator_slug_validation.py`)
+   - Broader PFS stale-counts audit deferred via the new P3
+     row added to CLAUDE.md in this spec.
+
+4. **CLAUDE_CHANGELOG.md** — two edits:
+   - **This entry** (new at top of active sessions block).
+   - **168-A entry surgical fix:** em-dash individual agent
+     scores replaced with real per-agent scores from
+     `docs/REPORT_168_A_REFACTORING_AUDIT.md` (@technical-writer
+     sub 9.0, @code-reviewer 8.8, @architect-review 8.6,
+     average 8.80). Trivial recovery; was flagged in
+     168-catchup as deferred and again in 169-C deferred
+     list.
+
+**Files NOT modified:**
+
+- All `.py`, `.html`, `.js`, `.css` files
+- Any migration file
+- `CLAUDE_PHASES.md` (separate concern, not drifted)
+- `CC_COMMUNICATION_PROTOCOL.md` (no changes needed for
+  this catch-up)
+- `prompts/constants.py` real SEO copy (deferred to Phase
+  SUB launch prep — needs Mateo's marketing input)
+
+**Explicitly deferred (NOT in 169-D):**
+- Real SEO copy for the 7 model-specific `AI_GENERATORS`
+  entries from 169-B (P3 row added; needs Mateo's marketing
+  input)
+- Master "Outstanding Issues" tracker section (bigger
+  restructure — separate future spec)
+- Cloudinary video preload warning fix (memory rule #11 is
+  observation-only)
+- 168-F `.flake8` retroactive note (git history captures)
+
+**Verified:**
+- `python manage.py check`: 0 issues pre + post
+- Test suite: 1386 tests pass (no change — docs-only spec)
+- `git status`: only 4 docs files modified + 1 new report
+- Migration directory unchanged (no new migrations)
+
+**Agents:** 2 reviewed (`@code-reviewer` 9.2/10,
+`@technical-writer` 8.7/10 — substituted via `general-purpose +
+persona`, **14th consecutive session of substitution**;
+formalized in this spec's CC_SPEC_TEMPLATE addition). Both
+≥ 8.0. Avg 8.95/10.
+
+**Commit:** `<HASH>`. 1386 tests (no change).
+
+---
+
 ### Session 169-C — April 25, 2026 (Cleanup Pass — P2/P3 Follow-ups + Working-Tree Hygiene + Docs Catch-up)
 
 **Outcome:** consolidated cleanup commit closing the 169-B
@@ -737,13 +871,13 @@ cohesive YELLOW files, `orchestrator.py`, etc.).
 
 | Agent | Score |
 |---|---|
-| @technical-writer (sub via general-purpose) | — |
-| @code-reviewer | — |
-| @architect-review | — |
+| @technical-writer (sub via general-purpose) | 9.0/10 |
+| @code-reviewer | 8.8/10 |
+| @architect-review | 8.6/10 |
 | **Average** | **8.80/10** |
 
-(Individual scores not recovered from commit message; header
-says "3 reviewed, all >= 8.0, avg 8.80/10".)
+(Individual scores recovered from `docs/REPORT_168_A_REFACTORING_AUDIT.md`
+agent ratings table during Session 169-D docs catch-up.)
 
 **Files:**
 

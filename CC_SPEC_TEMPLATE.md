@@ -3,7 +3,7 @@
 **Last Updated:** April 2026
 **Purpose:** Standard template for all Claude Code (CC) specifications
 **Status:** Active - Use for all CC work
-**Changelog:** v2.7 — Added three rules codifying Session 161 retrospective findings. (1) **Queryset Integration Test Rule** — specs touching ORM queryset filters must include at least one integration test that exercises the filter against a real model instance persisted to the DB; `SimpleNamespace(public_id=...)` / `MagicMock()` mocks are explicitly disallowed for queryset tests. Added to PRE-AGENT SELF-CHECK. Evidence: 160-F → 161-A → 162-A queryset bug chain (`.filter(b2_image_url__in=('', None))` silently missed NULL rows in SQL) survived ~12 agent reviews because SimpleNamespace mocks bypassed the queryset. (2) **Cross-Spec Bug Absorption Policy** — if an agent flags a related bug during spec review AND the fix is <5 lines in a file the spec is already editing AND no new test scaffolding/migration/dependency is required, the fix MUST be absorbed into the current spec. Do not defer. Added as new section near Self-Identified Issues Policy. Evidence: xAI SDK billing→quota fix was flagged in Session 156, deferred, re-flagged in 161-F, deferred again — 5 sessions and credits wasted on a 1-line fix that 162-D finally shipped. (3) **Stale Narrative Text Grep Rule** — any spec that changes existing behavior must grep for narrative text describing the old behavior before writing any code. Added as Step 0 research section. Evidence: 161-E shipped with a stale "avatar NOT supported" docstring after avatar support was added; caught at 9.0/10 agent review requiring a docstring-only fix. v2.6 — Minimum agents raised from 2-3 to 6. Average 8.5+ required. All agents must score 8.0+. Mandatory 11-section report added at docs/REPORT_[SPEC_ID].md. @technical-writer involvement required for reports. Evidence: 154-Q with 2 agents scored 9.0/9.0 but missed CSS specificity, missing tests, and architectural debt caught by 6-agent review. v2.5 — Added Critical Reminder #9 (paired test assertions). Recurring pattern: negative-only assertions (assertNotIn) passing vacuously in Phases 6C-A and 6D. v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
+**Changelog:** v2.8 — Two additions codifying patterns from the 169 cluster. (1) **Critical Reminder #10 — Silent-Fallback Observability** — any safe-fallback code path that writes data must emit `logger.warning` at the fallback branch with structured fields. Silent fallbacks that succeed without observability are forbidden. Evidence: 162-E (`except Exception` narrowing with `logger.warning` around provider-registry cost lookup) and 169-B (`_resolve_ai_generator_slug` fallback to `'other'`). (2) **Agent Substitution Convention** — formalizes the `@technical-writer` → `general-purpose + persona` substitution (13+ consecutive sessions) and `@test-engineer` → `@test-automator` substitution (since 168-A) as canonical. Disclosure required in every spec that uses a substitution. v2.7 — Added three rules codifying Session 161 retrospective findings. (1) **Queryset Integration Test Rule** — specs touching ORM queryset filters must include at least one integration test that exercises the filter against a real model instance persisted to the DB; `SimpleNamespace(public_id=...)` / `MagicMock()` mocks are explicitly disallowed for queryset tests. Added to PRE-AGENT SELF-CHECK. Evidence: 160-F → 161-A → 162-A queryset bug chain (`.filter(b2_image_url__in=('', None))` silently missed NULL rows in SQL) survived ~12 agent reviews because SimpleNamespace mocks bypassed the queryset. (2) **Cross-Spec Bug Absorption Policy** — if an agent flags a related bug during spec review AND the fix is <5 lines in a file the spec is already editing AND no new test scaffolding/migration/dependency is required, the fix MUST be absorbed into the current spec. Do not defer. Added as new section near Self-Identified Issues Policy. Evidence: xAI SDK billing→quota fix was flagged in Session 156, deferred, re-flagged in 161-F, deferred again — 5 sessions and credits wasted on a 1-line fix that 162-D finally shipped. (3) **Stale Narrative Text Grep Rule** — any spec that changes existing behavior must grep for narrative text describing the old behavior before writing any code. Added as Step 0 research section. Evidence: 161-E shipped with a stale "avatar NOT supported" docstring after avatar support was added; caught at 9.0/10 agent review requiring a docstring-only fix. v2.6 — Minimum agents raised from 2-3 to 6. Average 8.5+ required. All agents must score 8.0+. Mandatory 11-section report added at docs/REPORT_[SPEC_ID].md. @technical-writer involvement required for reports. Evidence: 154-Q with 2 agents scored 9.0/9.0 but missed CSS specificity, missing tests, and architectural debt caught by 6-agent review. v2.5 — Added Critical Reminder #9 (paired test assertions). Recurring pattern: negative-only assertions (assertNotIn) passing vacuously in Phases 6C-A and 6D. v2.4 — Added select_for_update() transaction rule, M2M atomicity rule, and IntegrityError retry rule to PRE-AGENT SELF-CHECK and MINIMUM REJECTION CRITERIA (patterns recurring across Phases 6A–6B). Added Critical Reminder #7 (Transaction Atomicity). v2.3 — Added Self-Identified Issues Policy (mandatory closure of in-scope rough edges found during implementation). v2.2 — Added FULL SUITE GATE to testing checklist. v2.1 added PRE-AGENT SELF-CHECK section. v2 added 5 sections: inline accessibility, DOM structure diagrams, exact-copy enforcement, data migration, agent rejection criteria
 
 ---
 
@@ -497,6 +497,29 @@ Recommendations Implemented: [Number]
 Overall Assessment: [APPROVED/NEEDS REVIEW]
 ```
 
+### Agent Substitution Convention (v2.8 — Session 169-D)
+
+Some specialty agents may not be available in the active
+agent registry at execution time. The following substitutions
+are **canonical** and do not need re-justification per spec:
+
+| Required agent | Substitute via | Notes |
+|---|---|---|
+| `@technical-writer` | `general-purpose` + persona focused on narrative coherence and documentation voice | Substitution active since Session 156. 13+ consecutive sessions as of 169-D. Disclose explicitly in the spec's agent table ("sub for `@technical-writer` — Nth consecutive session"). |
+| `@test-engineer` | `@test-automator` | Substitution active since Session 168-A. Same domain (test design + assertion quality), different naming. Disclose explicitly. |
+
+**Disclosure requirement:** Every spec using a canonical
+substitution MUST surface the substitution in its agent
+ratings table — do not hide it. The disclosure is what
+prevents this convention from drifting into "anything goes"
+territory.
+
+**De-formalization trigger:** If a substitution is used <2
+times across 5 consecutive specs, it should be removed from
+this table to keep the convention list current. If a new
+substitution recurs across 3+ specs, propose adding it via
+a future spec.
+
 ---
 
 ## 🖥️ TEMPLATE / UI CHANGE DETECTION
@@ -700,6 +723,32 @@ Include enough detail for the next spec. If none: "None identified."]
    - This pattern has caused false-confidence test passes in Phases 6C-A
      and 6D. Agents must reject any sanitisation test that lacks a
      positive assertion.
+
+10. **Silent-Fallback Observability**
+    - Any safe-fallback code path that writes data (sentinel
+      values, retry-with-default, "other" tags, exception
+      swallows returning a default) MUST emit `logger.warning`
+      at the fallback branch with structured fields identifying
+      what was missing (`provider`, `model_name`, `job_id`,
+      etc.)
+    - Silent fallbacks that succeed without observability are
+      forbidden — they make production drift invisible until
+      a downstream constraint (validator, URL converter,
+      foreign key) breaks days or weeks later
+    - Examples of correct usage:
+      - 162-E: narrowing `except Exception` around provider-
+        registry cost lookup with `logger.warning` + structured
+        fields
+      - 169-B: `_resolve_ai_generator_slug(job)` helper's
+        fallback to `'other'` with
+        `logger.warning('ai_generator_slug_unknown', extra={
+        'provider': ..., 'model_name': ..., 'job_id': ...})`
+    - Pattern test: if you removed the fallback's `logger.warning`,
+      would production drift be detectable? If not, the warning
+      is required.
+    - Pattern signal: a `# noqa: E722` or bare `except:` near
+      a writable code path is a strong indicator this rule
+      applies.
 
 ---
 

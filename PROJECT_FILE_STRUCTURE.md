@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** April 24, 2026 (Sessions 163–168)
+**Last Updated:** April 25, 2026 (Sessions 163–169)
 **Project:** PromptFinder (Django 5.2.11)
 **Current Phase:** Phase REP (Replicate + xAI providers — Session 154). Bulk AI Image Generator (Phases 1–7 + 6E complete). Avatar pipeline rebuilt B2-native (Session 163). Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1364 passing, 12 skipped (Session 163)
+**Total Tests:** 1386 passing, 12 skipped (Session 169)
 
 ---
 
@@ -16,8 +16,8 @@
 | **CSS Files** | 17 | static/css/ (+5 in Session 168-C: `partials/` directory — `_design-tokens.css`, `_components.css`, `_trash.css`, `_collections.css`, `_collections-modal.css` replace the monolithic `style.css` content) |
 | **JavaScript Files** | 20 | static/js/ (+1 added in Session 163: `avatar-upload.js`. Earlier: 2 deleted in 61, 2 added in 86, 1 in 93, 1 in 98, job.js split in 121, gallery added in 122, bulk-generator.js split +2 in 143) |
 | **SVG Icons** | 33 | static/icons/sprite.svg |
-| **Migrations** | 88 | prompts/migrations/ (86, latest `0086_alter_userprofile_avatar_url` — Session 165-B, no-op help_text realignment), about/migrations/ (2) |
-| **Test Files** | 28 | prompts/tests/ (+4 new in Session 163: schema, avatar upload, social capture, sync) |
+| **Migrations** | 90 | prompts/migrations/ (88, latest `0088_alter_deletedprompt_ai_generator` — Session 169-C, schema-only RegexValidator addition; 169-B added `0087_retag_grok_prompts` data migration retagging 7 mis-tagged Grok prompts to `grok-imagine`), about/migrations/ (2) |
+| **Test Files** | 29 | prompts/tests/ (+4 new in Session 163: schema, avatar upload, social capture, sync; +1 in Session 169-B: `test_generator_slug_validation.py` — 21 tests across 7 classes enforcing `GENERATOR_SLUG_REGEX` canonical rule across validator/choice/dict/URL/helper/template/test layers) |
 | **Management Commands** | 29 | prompts/management/commands/ (-1 in 163-B: `fix_admin_avatar` deleted — Cloudinary-specific, obsolete. `migrate_cloudinary_to_b2` credential fix in 161-A, avatar support 161-E + _migrate_avatar removed 163-B, queryset Q-object fix in 162-A; `fix_cloudinary_urls` public_id pattern in 162-C) |
 | **Services** | 15 | prompts/services/ (+2 new in Session 163: `avatar_upload_service.py`, `social_avatar_capture.py`. Standalone .py modules, excluding `__init__.py` and the `image_providers/` subpackage) |
 | **View Modules** | 13 | prompts/views/ |

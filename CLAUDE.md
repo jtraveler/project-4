@@ -75,7 +75,8 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Session 169-C | Apr 25, 2026 | Cleanup pass closing 169-B P2/P3 follow-ups + working-tree hygiene + 169-cluster docs catch-up. (1) `RegexValidator(GENERATOR_SLUG_REGEX)` added to `DeletedPrompt.ai_generator` (latent risk closed — 169-B added the validator to `Prompt.ai_generator` and `BulkGenerationJob.generator_category` but missed the sibling field). Migration 0088 schema-only — no `RunPython`, no data migration. (2) `AI_GENERATORS['other']` stub entry added so `/prompts/other/` serves a content-thin landing page rather than 404 when the helper's silent-fallback path fires; 169-B's `logger.warning` remains as the operator-side drift signal. (3) `PublishTaskTests.setUp` gained a `GeneratorModel` fixture + new `test_publish_sets_ai_generator_from_registry` test asserting the concurrent `publish_prompt_pages_from_job` path resolves correctly through the helper (mirrors 169-B's `ContentGenerationAlignmentTests` coverage of the sequential path). (4) Working-tree hygiene: 12 stale `CC_SPEC_*.md` files removed (7 staged-deleted + 3 already-gone + 2 untracked drafts). (5) Docs catch-up: 3 new `CLAUDE_CHANGELOG.md` entries + 3 new "Recently Completed" rows + version bump 4.66 → 4.67 + April 25 date sync. PROJECT_FILE_STRUCTURE.md NOT modified — structural additions are at granularities PFS doesn't enumerate. **Real SEO copy for the 7 169-B model entries explicitly deferred** (needs Mateo's marketing input). Commit pending. Agent avg pending. 1386 tests (+1 PublishTaskTests addition). |
+| Session 169-D | Apr 25, 2026 | Comprehensive 169-cluster docs catch-up. Closes 9 documentation gaps that emerged from 169-A/B/C but were not absorbed into the cluster's session entries: (1) new `#### Generator Slug Resolution Helper` H3 in Bulk AI Image Generator section explaining the `_resolve_ai_generator_slug` helper architecture, `/prompts/other/` rationale as defensive infrastructure for silent-fallback path, sequential vs concurrent path coverage, and operator drift signal; (2) `Active memory rules (9 of 30)` → `(13 of 30)` plus 4 new rule entries (#10 read current files, #11 Cloudinary video preload observation, #12 tasks.py postmortem reference, #13 silent-fallback observability) plus token-cost math update from 9 rules to 13; (3) 4 new Deferred P3 rows (`EndToEndPublishFlowTests` fixture gap caught by @test-automator in 169-C, PFS broader stale-counts audit, `@technical-writer` substitution formalization, real SEO copy for 7 `AI_GENERATORS` model entries); (4) 169-C row placeholders `Commit pending`/`Agent avg pending` filled with actual values; (5) CC_SPEC_TEMPLATE Critical Reminder #10 (Silent-Fallback Observability) added with 162-E and 169-B as evidence; (6) CC_SPEC_TEMPLATE new "Agent Substitution Convention" subsection codifying 13+ consecutive `@technical-writer → general-purpose + persona` substitution; (7) PFS top-line counts: Last Updated April 24 → April 25, Tests 1364 → 1386, Migrations 88 → 90, Test Files 28 → 29; (8) `CLAUDE_CHANGELOG.md` 168-A entry em-dash individual agent scores → real per-agent scores from `docs/REPORT_168_A_REFACTORING_AUDIT.md`; (9) version footer 4.67 → 4.68. Commit `<HASH>`. Agent avg 8.95/10. 1386 tests (no change). |
+| Session 169-C | Apr 25, 2026 | Cleanup pass closing 169-B P2/P3 follow-ups + working-tree hygiene + 169-cluster docs catch-up. (1) `RegexValidator(GENERATOR_SLUG_REGEX)` added to `DeletedPrompt.ai_generator` (latent risk closed — 169-B added the validator to `Prompt.ai_generator` and `BulkGenerationJob.generator_category` but missed the sibling field). Migration 0088 schema-only — no `RunPython`, no data migration. (2) `AI_GENERATORS['other']` stub entry added so `/prompts/other/` serves a content-thin landing page rather than 404 when the helper's silent-fallback path fires; 169-B's `logger.warning` remains as the operator-side drift signal. (3) `PublishTaskTests.setUp` gained a `GeneratorModel` fixture + new `test_publish_sets_ai_generator_from_registry` test asserting the concurrent `publish_prompt_pages_from_job` path resolves correctly through the helper (mirrors 169-B's `ContentGenerationAlignmentTests` coverage of the sequential path). (4) Working-tree hygiene: 12 stale `CC_SPEC_*.md` files removed (7 staged-deleted + 3 already-gone + 2 untracked drafts). (5) Docs catch-up: 3 new `CLAUDE_CHANGELOG.md` entries + 3 new "Recently Completed" rows + version bump 4.66 → 4.67 + April 25 date sync. PROJECT_FILE_STRUCTURE.md NOT modified — structural additions are at granularities PFS doesn't enumerate. **Real SEO copy for the 7 169-B model entries explicitly deferred** (needs Mateo's marketing input). Commit `d9fcda7`. Agent avg 9.1/10. 1386 tests (+1 PublishTaskTests addition). |
 | Session 169-B | Apr 25, 2026 | Generator slug permanent fix. P0 production 500 on prompt detail pages caused by 4 hardcoded `ai_generator='gpt-image-1.5'` literals at `tasks.py:3387, 3424, 3636, 3693` mis-tagging Grok prompts. Six categories of change: `_resolve_ai_generator_slug` helper from `GeneratorModel` registry (with `logger.warning` for unknown providers), `RegexValidator(r'^[a-z0-9][a-z0-9-]*$\|^$')` on `Prompt.ai_generator` and `BulkGenerationJob.generator_category` (`model_name` exempt for Replicate vendor strings), bidirectional migration 0087 retagging 7 mis-tagged Grok prompts to `'grok-imagine'`, taxonomy alignment across `AI_GENERATOR_CHOICES`/`AI_GENERATORS`/`GeneratorModel.slug`, defensive `None` return in `get_generator_url_slug` + template `{% if %}{% else %}` guard, 21-test regression suite enforcing canonical rule. Agents @code-reviewer 9.3, @architect-review 8.3, @test-automator 9.1, @backend-security-coder 9.0. Avg 8.925/10. Commit `a37d2d8`. 1385 tests. |
 | Session 169-A | Apr 25, 2026 | Generator slug diagnostic + permanent-fix plan. Read-only investigation of production 500 on prompt detail pages — confirmed 3 bugs (Bug C P0: 4 hardcoded literals causing Grok mis-tagging; Bug A P2: dotted defaults from migration 0080; Bug B P1: three identifier taxonomies disagree). Scope: 7 of 64 prompts (10.9%) — trivial data migration. Section 9 prescribes canonical rule `^[a-z0-9][a-z0-9-]*$` with defense at validator + choice + dict + URL + helper + template + test layers. Recommended sequence: 169-B (consolidated fix), 169-D deferred. Zero code changes. Zero production DB writes. Agents @code-reviewer 9.0, @architect-review 9.0. Avg 9.0/10. Commit `2106eb9`. 1364 tests. |
 | Session 168-E | Apr 24, 2026 | tasks.py refactor abandoned. 168-E-prep committed (`aa13ed7`, agent avg 9.75/10) — produced comprehensive import-graph + 41-name shim contract + Django-Q registration map. 168-E-A attempted Phase 1 extraction of 4 low-risk submodules; passed all acceptance gates (1,364 tests OK, 4-agent avg 9.625/10) but required inlining `b2_storage` back into `__init__.py` because `@patch` mocks fail to propagate across submodule boundaries — net 4% file-size reduction insufficient to justify shipping. Reverted local working tree, no commit on origin. tasks.py remains at 3,822 lines. **Full architectural analysis + future-attempt thresholds in `docs/POSTMORTEM_168_E_TASKS_SPLIT.md`.** Session 168-A audit's #2 ranked refactor closes as Won't Fix until threshold conditions met. |
@@ -339,6 +340,76 @@ directly. Do not add this via Replicate.
 | **Video B2 rename** | ✅ CLOSED — audit confirmed `b2_video_url` already handled in `tasks.py` lines 1936–1944. Stale entry. |
 | **Debug print() statements** | ✅ FIXED — 13 print() statements removed from `upload_views.py` (Session 127). |
 
+#### Generator Slug Resolution Helper (Sessions 169-A/B/C)
+
+Every prompt published via the bulk AI image generator —
+whether through the **sequential** `create_prompt_pages_from_job`
+path or the **concurrent** `publish_prompt_pages_from_job`
+path — sets `Prompt.ai_generator` via the
+`_resolve_ai_generator_slug(job)` helper in `prompts/tasks.py`.
+
+**The helper:**
+
+1. Reads the `BulkGenerationJob`'s `provider` + `model_name`
+   fields
+2. Looks up the matching `GeneratorModel` registry row
+3. Returns that row's `slug` value (e.g., `'gpt-image-1-5'`,
+   `'grok-imagine'`, `'flux-pro-1-1'`)
+4. **On no match** — provider+model combination missing from
+   `GeneratorModel` — returns `'other'` AND emits
+   `logger.warning` with structured fields (`provider`,
+   `model_name`, `job_id`)
+
+This replaces the previous pattern of 4 hardcoded
+`ai_generator='gpt-image-1.5'` literals at `tasks.py:3387,
+3424, 3636, 3693` (Bug C in 169-A's diagnostic) which caused
+every prompt published from any provider — including Grok —
+to be tagged GPT-Image. The fix shipped in 169-B (commit
+`a37d2d8`).
+
+**Why `/prompts/other/` exists:**
+
+The `'other'` fallback path is **defensive infrastructure**
+for the case where a new `GeneratorModel` row is added to
+the registry but its `slug` doesn't match any current
+`AI_GENERATORS` dict entry — e.g., a future provider or a
+typo. Without this fallback:
+- The publish would `IntegrityError` on the
+  `RegexValidator(GENERATOR_SLUG_REGEX)` constraint added in
+  169-B, OR
+- The detail page URL `/prompts/<slug>/` would 404 because
+  no listing page exists at `/prompts/other/`
+
+The `AI_GENERATORS['other']` stub entry added in 169-C
+ensures the listing page renders (content-thin landing page
+rather than 404). Combined with the `logger.warning`, this
+gives the system **defense-in-depth** plus an **operator-side
+drift signal** — the warning fires whenever the helper
+silently falls back, so drift is visible in logs even though
+the publish succeeds.
+
+**Test coverage of both paths:**
+
+| Path | Test class | Spec |
+|------|------------|------|
+| Sequential (`create_prompt_pages_from_job`) | `ContentGenerationAlignmentTests` | 169-B |
+| Concurrent (`publish_prompt_pages_from_job`) | `PublishTaskTests.test_publish_sets_ai_generator_from_registry` | 169-C |
+
+Both paths must continue to resolve via the helper. Any
+future bulk-generator change touching publish logic must
+preserve this contract or re-test both classes.
+
+**Operational note:**
+
+If `/prompts/other/` ever shows actual content (a Grok image,
+a Flux image, etc.), it means the fallback fired. Check
+production logs for the `logger.warning` and either:
+1. Add the missing `AI_GENERATORS` dict entry for the new
+   provider+model combination, OR
+2. Backfill the affected `Prompt.ai_generator` values via a
+   data migration similar to migration 0087 (169-B's Grok
+   retag pattern)
+
 ### Recommended Build Sequence — Remaining Safety Infrastructure
 
 | Step | Item | Status |
@@ -357,6 +428,10 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 
 | Item | File | Notes |
 |------|------|-------|
+| EndToEndPublishFlowTests `GeneratorModel` fixture gap | `prompts/tests/test_bulk_page_creation.py` | 169-C closed the parallel gap in `PublishTaskTests` (added `GeneratorModel` fixture in `setUp`) but `EndToEndPublishFlowTests` from Phase 7 has the same risk pattern — its `setUp` does not create a `GeneratorModel` row, so any future test relying on the `_resolve_ai_generator_slug` helper would fall through to `'other'` instead of the expected slug. Caught by @test-automator during 169-C review (8.5/10 score). Trivial fix — copy the fixture from `PublishTaskTests`. P3 because no current test in `EndToEndPublishFlowTests` exercises the resolution path; latent risk only. |
+| PROJECT_FILE_STRUCTURE.md broader stale-counts audit | `PROJECT_FILE_STRUCTURE.md` | 169-D updated 4 top-line counts (Last Updated, Tests, Migrations, Test Files) but the file has additional stale entries inside per-session historical tree snapshots and inline LOC values. A comprehensive PFS audit pass would catch these but is out of scope for incremental docs catch-up specs. Defer until cumulative drift becomes large enough to justify a dedicated PFS audit spec. |
+| Formalize `@technical-writer` substitution in agent registry | `CC_SPEC_TEMPLATE.md` (already partial via 169-D), agent registry config | 169-D added an "Agent Substitution Convention" subsection acknowledging the substitution as canonical. The deeper question — whether `general-purpose + persona` should be added as a first-class agent in the wshobson/agents registry, OR whether a custom `@technical-writer-personality` should be authored — remains open. 13+ consecutive sessions of substitution suggests yes; defer the decision until at least one session attempts a custom-agent author. |
+| Real SEO copy for the 7 169-B `AI_GENERATORS` model entries | `prompts/constants.py` | 169-B added placeholder SEO copy for the 7 new model-specific entries (`gpt-image-1-5`, `grok-imagine`, `flux-pro-1-1`, `flux-1-1-pro-ultra`, `nano-banana-2`, `flux-pro-1-1-ultra`, `imagen-4`). Real marketing-quality copy needs Mateo's direct input — generated copy at the SEO-meaningful level requires brand voice judgment. Tracked since 169-B (April 25); defer until Phase SUB launch prep (when SEO content becomes a launch blocker). |
 | tasks.py modular split (`prompts/tasks.py`, 3,822 lines) | `prompts/tasks.py` | Refactor attempted Session 168-E and abandoned — `@patch` mock semantics across submodule boundaries make naive extraction yield only ~4% file-size reduction. Future revisit gated by thresholds in `docs/POSTMORTEM_168_E_TASKS_SPLIT.md` Section 10. |
 | Preload-warning observation on async stylesheet link | `prompts/templates/prompts/prompt_detail.html` (line 99) | `<link rel="preload" href="…prompt-detail.css" as="style" onload="this.onload=null;this.rel='stylesheet'">` can emit a Chrome DevTools "resource was preloaded using link preload but not used within a few seconds" warning on some page loads. After 168-C's `@import`-based `style.css`, the timing window widened because the browser now serially fetches 5 partials before the async stylesheet is consumed. Non-blocking (cosmetic console warning; no functional impact). Candidate fix: replace preload-then-swap-rel with direct `<link rel="stylesheet">`, or add explicit `media` attribute to gate application. Verify under Lighthouse before changing — the preload was added for LCP optimization in Session 68. |
 | `prompt_list_views.py` growth monitor | `prompts/views/prompt_list_views.py` | 620 lines, `prompt_detail` is ~320 lines — watch for growth |
@@ -2691,7 +2766,7 @@ by consistent application of structural safeguards. Memory rules
 are the mechanism for making those safeguards consistent rather
 than "remember to do this" reminders that drift.
 
-### Active memory rules (9 of 30)
+### Active memory rules (13 of 30)
 
 The following rules fire in every Claude conversation for this
 project. Listed in slot order.
@@ -2819,6 +2894,81 @@ independently-shipped components — a different failure class.
 Security debt compounds silently; proactive cadence addresses
 this.
 
+#### 10. Read current versions of files before drafting specs
+Before drafting any spec referencing specific file contents,
+line numbers, function bodies, or migration chains, Claude
+asks Mateo to upload the current versions of every file the
+spec touches. The project's core docs (`CLAUDE.md`,
+`PROJECT_FILE_STRUCTURE.md`, `CLAUDE_CHANGELOG.md`) and any
+target source files referenced by the spec must be uploaded
+or read in full before draft begins. Speculation about
+"likely" file state is forbidden.
+
+**Rationale:** Session 168-D-prep was the first session where
+this rule fired — it surfaced two signal files
+(`notification_signals.py`, `social_signals.py`) that stale
+project knowledge had missed. Without the rule, the 168-D
+models split would have shipped with broken signal handlers.
+Generalises rule #8 (read files in full) by making the
+"current state" condition explicit before reading begins.
+
+#### 11. Cloudinary video preload warning observation
+On prompt detail pages with videos, browsers emit a console
+warning that a preloaded video URL was not used within the
+load event. Likely cause: incorrect `as=` attribute on
+`<link rel="preload">` or video rendered inside a lazy-loaded
+modal. Tracked as a non-blocking observation; not a memory
+rule that fires preventatively but a reminder that this
+specific console warning is **expected behavior under
+investigation**, not a regression introduced by recent work.
+
+**Rationale:** First observed during the 168-D smoke test;
+rule serves as a noise filter so future sessions don't
+repeatedly investigate the same warning as a new bug.
+Resolution is deferred until the Cloudinary `featured_image`/
+`featured_video` CharField migration ships (Phase REP P2
+item).
+
+#### 12. tasks.py refactor postmortem reference
+If Mateo or any session raises the question of refactoring
+`prompts/tasks.py`, Claude first checks
+`docs/POSTMORTEM_168_E_TASKS_SPLIT.md` Section 10 (threshold
+conditions) before suggesting any approach. The 168-E split
+attempt was abandoned because `@patch` mock semantics fail
+to propagate across submodule boundaries, yielding only ~4%
+file-size reduction. Re-attempt requires one of the
+threshold conditions in Section 10 to be met — Claude does
+not propose alternative approaches (function-level
+extraction, decorator wrappers, AST rewriting, etc.) without
+explicitly checking the postmortem first.
+
+**Rationale:** Without this rule, future sessions would
+likely re-derive and re-attempt the same refactor pattern
+that already failed. The postmortem captures hours of
+investigation; ignoring it wastes that work.
+
+#### 13. Silent-fallback observability rule
+Any safe-fallback code path that writes data (sentinel
+values, retry-with-default, "other" tags, exception swallows
+returning a default) MUST emit `logger.warning` at the
+fallback branch with structured fields identifying what
+information was missing (`provider`, `model_name`, `job_id`,
+etc.). Silent fallbacks that succeed without observability
+are forbidden — they make production drift invisible.
+
+**Rationale:** Established in Session 162-E (narrowing
+`except Exception` around provider-registry cost lookup with
+`logger.warning`) and reinforced in Session 169-B (the
+`_resolve_ai_generator_slug` helper's fallback to `'other'`).
+Without operator-side drift signals, missing registry
+entries silently corrupt downstream data — exactly the
+production 500 pattern that 169-B resolved. The
+`/prompts/other/` page was added in 169-C as defensive
+infrastructure for this fallback; the `logger.warning` is
+the signal that makes the defensive path *observable*.
+Codified as CC_SPEC_TEMPLATE Critical Reminder #10 in this
+spec.
+
 ### Three-criteria framework for future memory additions
 
 A memory edit earns a slot if it meets at least one of:
@@ -2879,13 +3029,13 @@ actual Claude behavior and documented expectations.
 
 ### Token cost trade-off
 
-With 9 active memory edits, the per-message token overhead is
-approximately 1,300–1,800 tokens. For a typical 40-message
-session, that's 52,000–72,000 extra tokens of context processed
+With 13 active memory edits, the per-message token overhead is
+approximately 1,900–2,600 tokens. For a typical 40-message
+session, that's 76,000–104,000 extra tokens of context processed
 over the session's lifetime.
 
-At current pricing, this adds roughly $0.30–$1.00 per session
-beyond the baseline. Over 20 sessions per month, $6–$20 of
+At current pricing, this adds roughly $0.45–$1.45 per session
+beyond the baseline. Over 20 sessions per month, $9–$29 of
 additional cost.
 
 This cost is justified if the memory edits prevent even one
@@ -3681,5 +3831,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.67 (Session 169 cluster — generator slug permanent fix and cleanup pass: 169-A diagnostic identified 3 bugs (4 hardcoded literals, dotted defaults from migration 0080, taxonomy disagreement) commit `2106eb9` avg 9.0; 169-B P0 fix with `_resolve_ai_generator_slug` helper + `RegexValidator(GENERATOR_SLUG_REGEX)` + bidirectional migration 0087 retagging 7 Grok prompts + 21-test regression suite commit `a37d2d8` avg 8.925; 169-C closed P2/P3 follow-ups (`DeletedPrompt.ai_generator` validator via migration 0088, `AI_GENERATORS['other']` stub, `PublishTaskTests` fixture) + working-tree cleanup of 12 stale spec files + 169-cluster docs catch-up; 1386 tests.)
+**Version:** 4.68 (Session 169-D — comprehensive 169-cluster docs catch-up: new `#### Generator Slug Resolution Helper` H3 in Bulk AI Image Generator section, memory rules 9→13 with 4 new entries plus token-cost math update, 4 new Deferred P3 rows, 169-C row placeholders filled, CC_SPEC_TEMPLATE Critical Reminder #10 (Silent-Fallback Observability) and Agent Substitution Convention codified, PFS top-line counts synced, CHANGELOG 168-A em-dash scores recovered. Closes the 169 cluster: 169-A `2106eb9` avg 9.0, 169-B `a37d2d8` avg 8.925, 169-C `d9fcda7` avg 9.1, 169-D `<HASH>` avg 8.95. 1386 tests.)
 **Last Updated:** April 25, 2026

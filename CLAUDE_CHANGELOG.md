@@ -32,7 +32,7 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
-### Session 169-D — April 25, 2026 (Comprehensive 169-cluster Docs Catch-up — commit `<HASH>`)
+### Session 169-D — April 25, 2026 (Comprehensive 169-cluster Docs Catch-up — commit `a6e3140`)
 
 **Outcome:** Closes 9 documentation gaps that emerged during
 the 169 cluster (169-A/B/C) but were not absorbed into the
@@ -162,7 +162,7 @@ persona`, **14th consecutive session of substitution**;
 formalized in this spec's CC_SPEC_TEMPLATE addition). Both
 ≥ 8.0. Avg 8.95/10.
 
-**Commit:** `<HASH>`. 1386 tests (no change).
+**Commit:** `a6e3140`. 1386 tests (no change).
 
 ---
 

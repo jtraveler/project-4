@@ -2607,12 +2607,32 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
     """
     Generate one image with retry logic for rate limits and server errors.
 
+    Retry policy by error_type:
+      auth / content_policy / quota -> no retry (stop or fail)
+      rate_limit / server_error     -> up to ``max_retries`` retries with
+                                       exponential backoff (30s/60s/120s base)
+      unknown                       -> up to UNKNOWN_MAX_RETRIES retries
+                                       with 10s/30s backoff (Session 170-A)
+
     Returns:
         (result, stop_job) where result is GenerationResult on success or
         None on any failure, and stop_job is True when an auth failure
         should halt the entire job.
     """
+    # Bounded retry budget for the unknown bucket. Kept small because we
+    # have no signal that the call will succeed on retry — unlike rate
+    # limit / server_error which the provider has explicitly classified.
+    UNKNOWN_MAX_RETRIES = 2
+    # Explicit backoff schedule for the unknown bucket. Two entries because
+    # UNKNOWN_MAX_RETRIES=2; index 0 is the wait BEFORE the first retry.
+    _UNKNOWN_BACKOFF_SECONDS = [10, 30]
+
     retry_count = 0
+    unknown_retry_count = 0
+    # Initialise to 'unknown' so the observability signal at exhaustion
+    # carries a meaningful value even when the very first attempt is the
+    # one that exhausts the budget (architect-review observation).
+    last_exception_type = 'unknown'
     while retry_count <= max_retries:
         try:
             result = provider.generate(
@@ -2627,10 +2647,13 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
                 "Image generation exception for %s: %s", image.id, e
             )
             image.status = 'failed'
+            image.error_type = 'unknown'
             image.error_message = str(e)[:500]
+            image.retry_count = retry_count + unknown_retry_count
             return None, False
 
         if result.success:
+            image.retry_count = retry_count + unknown_retry_count
             return result, False
 
         error_type = result.error_type
@@ -2644,14 +2667,18 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
                 job.id, image.id,
             )
             image.status = 'failed'
+            image.error_type = 'auth'
             image.error_message = result.error_message
+            image.retry_count = retry_count + unknown_retry_count
             job.status = 'failed'
             return None, True
 
         # Content policy — fail this image only, continue job
         if error_type == 'content_policy':
             image.status = 'failed'
+            image.error_type = 'content_policy'
             image.error_message = result.error_message
+            image.retry_count = retry_count + unknown_retry_count
             return None, False
 
         # Quota exhaustion — stop the entire job immediately.
@@ -2662,7 +2689,9 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
                 job.id, image.id,
             )
             image.status = 'failed'
+            image.error_type = 'quota'
             image.error_message = result.error_message
+            image.retry_count = retry_count + unknown_retry_count
             job.status = 'failed'
             return None, True  # stop_job=True
 
@@ -2676,13 +2705,54 @@ def _run_generation_with_retry(provider, image, job, job_api_key, max_retries=3)
             )
             time.sleep(wait_time)
             retry_count += 1
+            last_exception_type = error_type
             continue
 
-        # Exhausted retries or unknown error
+        # Unknown bucket — bounded retry with 10s/30s backoff.
+        # Almost certainly the cause of the April 25 Grok-Imagine incident:
+        # transient network failures previously fell through to fail-no-retry.
+        if error_type == 'unknown' and unknown_retry_count < UNKNOWN_MAX_RETRIES:
+            wait_time = _UNKNOWN_BACKOFF_SECONDS[unknown_retry_count]
+            logger.info(
+                "Retrying image %s on unknown error (attempt %d) after %ds",
+                image.id, unknown_retry_count + 1, wait_time,
+            )
+            time.sleep(wait_time)
+            unknown_retry_count += 1
+            last_exception_type = 'unknown'
+            continue
+
+        # Exhausted retries OR unhandled error_type.
+        # Note: error_type='invalid_request' is terminal by design — invalid
+        # requests should not retry, they should fail and be reported. It
+        # falls through to this branch with no observability log because it
+        # is an expected, classified terminal state (vs. unknown which is
+        # a "we don't know what happened" signal worth logging at exhaust).
+        # Critical Reminder #10 (Silent-Fallback Observability): emit a
+        # structured logger.warning whenever the unknown bucket exhausts so
+        # production drift on transient failures is observable in logs.
+        if error_type == 'unknown' and unknown_retry_count >= UNKNOWN_MAX_RETRIES:
+            logger.warning(
+                "[bulk-gen] unknown-retry exhausted",
+                extra={
+                    'provider': type(provider).__name__,
+                    'model_name': getattr(job, 'model_name', '') or '',
+                    'job_id': str(job.id),
+                    'image_id': str(image.id),
+                    'attempts_taken': unknown_retry_count + 1,
+                    'last_exception_type': last_exception_type or 'unknown',
+                    'last_error_message_truncated': (
+                        result.error_message or ''
+                    )[:200],
+                },
+            )
+
         image.status = 'failed'
+        image.error_type = error_type or 'unknown'
         image.error_message = (
             result.error_message or 'Generation failed after retries.'
         )[:500]
+        image.retry_count = retry_count + unknown_retry_count
         return None, False
 
     return None, False  # Safety fallback (loop exited without break)
@@ -2751,8 +2821,11 @@ def _apply_generation_result(job, image, result, tz, cost_per_image=None):
     except Exception as e:
         logger.error("B2 upload failed for image %s: %s", image.id, e)
         image.status = 'failed'
+        image.error_type = 'server_error'
         image.error_message = f'Generated but upload failed: {str(e)}'[:500]
-        image.save(update_fields=['status', 'error_message'])
+        image.save(update_fields=[
+            'status', 'error_type', 'error_message',
+        ])
         return 0.0, False
 
 
@@ -2851,8 +2924,11 @@ def _run_generation_loop(job, provider, job_api_key, images, tz, _provider_kwarg
                         img.id, exc,
                     )
                     img.status = 'failed'
+                    img.error_type = 'unknown'
                     img.error_message = str(exc)[:500]
-                    img.save(update_fields=['status', 'error_message'])
+                    img.save(update_fields=[
+                        'status', 'error_type', 'error_message', 'retry_count',
+                    ])
                     failed_count += 1
                     BulkGenerationJob.objects.filter(pk=job.pk).update(
                         failed_count=F('failed_count') + 1
@@ -2864,7 +2940,9 @@ def _run_generation_loop(job, provider, job_api_key, images, tz, _provider_kwarg
                     failed_count += 1
                     # Worker set img.status='failed' and job.status='failed'
                     # in memory; persist in main thread, then clear the key.
-                    img.save(update_fields=['status', 'error_message'])
+                    img.save(update_fields=[
+                        'status', 'error_type', 'error_message', 'retry_count',
+                    ])
                     job.save(update_fields=['status'])
                     BulkGenerationService.clear_api_key(job)
                     BulkGenerationJob.objects.filter(pk=job.pk).update(
@@ -2876,7 +2954,9 @@ def _run_generation_loop(job, provider, job_api_key, images, tz, _provider_kwarg
                     failed_count += 1
                     # Worker set img.status='failed' in memory; save here.
                     if img.status == 'failed':
-                        img.save(update_fields=['status', 'error_message'])
+                        img.save(update_fields=[
+                            'status', 'error_type', 'error_message', 'retry_count',
+                        ])
                     BulkGenerationJob.objects.filter(pk=job.pk).update(
                         failed_count=F('failed_count') + 1
                     )

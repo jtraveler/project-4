@@ -232,6 +232,38 @@ class GeneratedImage(models.Model):
     )
     error_message = models.TextField(blank=True)
 
+    # Structured error tracking (Session 170-A)
+    # Mirrors GenerationResult.error_type from the provider layer so the
+    # frontend can render typed error chips without re-parsing free text.
+    ERROR_TYPE_CHOICES = [
+        ('', ''),
+        ('auth', 'Auth'),
+        ('rate_limit', 'Rate limit'),
+        ('content_policy', 'Content policy'),
+        ('quota', 'Quota'),
+        ('invalid_request', 'Invalid request'),
+        ('server_error', 'Server error'),
+        ('unknown', 'Unknown'),
+    ]
+    error_type = models.CharField(
+        max_length=20,
+        choices=ERROR_TYPE_CHOICES,
+        blank=True,
+        default='',
+        help_text=(
+            'Structured error category from the provider. Mirrors '
+            'GenerationResult.error_type. Empty when image is not failed.'
+        ),
+    )
+    retry_count = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            'Number of retry attempts consumed by '
+            '_run_generation_with_retry before this image reached its '
+            'current state. 0 if no retries occurred.'
+        ),
+    )
+
     # Selection (for gallery review)
     is_selected = models.BooleanField(default=True)
 

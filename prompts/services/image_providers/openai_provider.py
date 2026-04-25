@@ -1,6 +1,9 @@
 import base64
 import logging
+import socket
+import ssl
 
+import httpx
 from django.conf import settings
 
 from prompts.constants import SUPPORTED_IMAGE_SIZES
@@ -244,6 +247,28 @@ class OpenAIImageProvider(ImageProvider):
                 success=False,
                 error_type='unknown',
                 error_message=f'API error ({e.status_code}): {str(e)}',
+            )
+        # Session 170-A: reclassify transient network failures from
+        # 'unknown' (no retry) to 'server_error' (retried with backoff).
+        # httpx.TransportError covers ConnectError, ReadError, WriteError,
+        # RemoteProtocolError, and TimeoutException (which is a subclass).
+        # MUST appear BEFORE the generic Exception so the more-specific
+        # branch wins.
+        except httpx.TransportError as e:
+            logger.warning("OpenAI httpx transient error: %s", e)
+            return GenerationResult(
+                success=False,
+                error_type='server_error',
+                error_message='Connection error — please retry.',
+                retry_after=30,
+            )
+        except (ssl.SSLError, socket.timeout, ConnectionError) as e:
+            logger.warning("OpenAI socket/SSL transient error: %s", e)
+            return GenerationResult(
+                success=False,
+                error_type='server_error',
+                error_message='Connection error — please retry.',
+                retry_after=30,
             )
         except Exception as e:
             logger.error("OpenAI image generation failed: %s", e)

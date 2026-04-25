@@ -403,6 +403,11 @@ class BulkGenerationService:
 
         # Fetch individual image details for gallery rendering.
         # select_related('prompt_page') avoids N+1 for prompt_page_url (Phase 6B).
+        # Session 170-A: per-image entries gain `error_type` (raw provider
+        # category) and `retry_state` (idle / retrying / exhausted) so the
+        # frontend can render typed error chips without re-parsing
+        # error_message. Backward-compat: older rows have error_type=''
+        # which clients should treat as the legacy "string-match" path.
         images_data = [
             {
                 'id': str(img.id),
@@ -417,6 +422,8 @@ class BulkGenerationService:
                     if img.generating_started_at else None
                 ),
                 'error_message': _sanitise_error_message(img.error_message or ''),
+                'error_type': img.error_type or '',
+                'retry_state': self._derive_retry_state(img),
                 'size': img.size or job.size,
                 'quality': img.quality or getattr(job, 'quality', None) or 'medium',
                 'target_count': img.target_count or job.images_per_prompt,
@@ -450,6 +457,16 @@ class BulkGenerationService:
                 int((job.completed_at - job.started_at).total_seconds()),
             )
 
+        # Session 170-A: publish_failed_count exposes how many images
+        # selected for publish failed, so the frontend can render
+        # "8 of 9 published — 1 failed" without re-deriving from images.
+        # Derived from the in-memory images_data list — no extra DB query.
+        publish_failed_count = sum(
+            1 for img_dict in images_data
+            if img_dict['status'] == 'failed'
+            and img_dict['prompt_page_id'] is None
+        )
+
         return {
             'job_id': str(job.id),
             'status': job.status,
@@ -462,6 +479,7 @@ class BulkGenerationService:
             'queued_count': status_counts.get('queued', 0),
             'failed_count': status_counts.get('failed', 0),
             'published_count': job.published_count,  # Phase 6B: pages published from this job
+            'publish_failed_count': publish_failed_count,
             'progress_percent': job.progress_percent,
             'estimated_cost': str(job.estimated_cost),
             'actual_cost': str(job.actual_cost),
@@ -469,6 +487,27 @@ class BulkGenerationService:
             'error_reason': job_error_reason,
             'duration_seconds': duration_seconds,
         }
+
+    @staticmethod
+    def _derive_retry_state(img) -> str:
+        """Derive retry_state from a GeneratedImage row.
+
+        - 'idle'      — no retries consumed yet (default state for queued /
+                        completed images)
+        - 'retrying'  — currently between retries (status='generating' AND
+                        retry_count > 0)
+        - 'exhausted' — retries used up and finally failed
+                        (status='failed' AND retry_count > 0)
+        """
+        retry_count = getattr(img, 'retry_count', 0) or 0
+        status = img.status
+        if retry_count <= 0:
+            return 'idle'
+        if status == 'generating':
+            return 'retrying'
+        if status == 'failed':
+            return 'exhausted'
+        return 'idle'
 
     def validate_reference_image(self, image_url: str) -> dict:
         """

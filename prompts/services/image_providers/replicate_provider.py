@@ -15,6 +15,9 @@ NSFW note: Replicate has no built-in content filtering. The platform
 NSFW check must run BEFORE calling this provider.
 """
 import logging
+import socket
+import ssl
+
 import httpx
 
 from .base import GenerationResult, ImageProvider
@@ -299,6 +302,29 @@ class ReplicateImageProvider(ImageProvider):
                 )
         except ImportError:
             pass
+
+        # Session 170-A: reclassify transient network failures from
+        # 'unknown' (no retry) to 'server_error' (retried with backoff).
+        # httpx.TransportError covers TimeoutException and the connection-
+        # drop subclasses. Checked AFTER ModelError (content policy) but
+        # BEFORE the ReplicateError ladder so generic transport faults
+        # route to retry rather than into the unknown bucket.
+        if isinstance(exc, httpx.TransportError):
+            logger.warning("Replicate httpx transient error: %s", exc)
+            return GenerationResult(
+                success=False,
+                error_type='server_error',
+                error_message='Connection error — please retry.',
+                retry_after=30,
+            )
+        if isinstance(exc, (ssl.SSLError, socket.timeout, ConnectionError)):
+            logger.warning("Replicate socket/SSL transient error: %s", exc)
+            return GenerationResult(
+                success=False,
+                error_type='server_error',
+                error_message='Connection error — please retry.',
+                retry_after=30,
+            )
 
         if isinstance(exc, replicate_exc.ReplicateError):
             if 'unauthenticated' in error_str or 'unauthorized' in error_str or '401' in error_str:

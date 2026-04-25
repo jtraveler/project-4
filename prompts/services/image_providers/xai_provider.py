@@ -12,6 +12,9 @@ NSFW note: xAI has content policies but is more permissive than
 Google/OpenAI. Platform NSFW check still runs before this provider.
 """
 import logging
+import socket
+import ssl
+
 import httpx
 
 from .base import GenerationResult, ImageProvider
@@ -198,6 +201,29 @@ class XAIImageProvider(ImageProvider):
                 success=False,
                 error_type='server_error',
                 error_message=f'xAI connection error: {str(e)[:200]}',
+            )
+        # Session 170-A: reclassify transient network failures from
+        # 'unknown' (no retry) to 'server_error' (retried with backoff).
+        # APIConnectionError (above) wraps most SDK-level transport errors,
+        # but raw httpx/socket exceptions can still escape on certain
+        # SDK paths — catch them explicitly BEFORE the generic Exception
+        # handler so the retry helper can re-attempt. httpx.TransportError
+        # already covers TimeoutException and connection-drop subclasses.
+        except httpx.TransportError as e:
+            logger.warning("xAI httpx transient error: %s", e)
+            return GenerationResult(
+                success=False,
+                error_type='server_error',
+                error_message='Connection error — please retry.',
+                retry_after=30,
+            )
+        except (ssl.SSLError, socket.timeout, ConnectionError) as e:
+            logger.warning("xAI socket/SSL transient error: %s", e)
+            return GenerationResult(
+                success=False,
+                error_type='server_error',
+                error_message='Connection error — please retry.',
+                retry_after=30,
             )
         except Exception as e:
             logger.error(

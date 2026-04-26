@@ -92,8 +92,78 @@
         }
     };
 
-    // ─── Mark Card as Publish-Failed (Phase 6D) ─────────────────
-    G.markCardFailed = function (imageId, reason) {
+    // ─── Error Chip Helper (Session 170-B) ──────────────────────
+    // Routes (errorType, retryState) → (cssClass, label). Designed
+    // to satisfy WCAG 1.4.11 — color is never the only signal; every
+    // chip has a text label that conveys the same meaning.
+    //
+    // Returns { cssClass, label } or null if no chip should render.
+    G._classifyErrorChip = function (errorType, retryState, errorMessage) {
+        if (!errorType && !errorMessage) {
+            return null;
+        }
+        // No-retry blocked errors: red chip, plain text label
+        if (errorType === 'content_policy') {
+            return { cssClass: 'error-chip--blocked', label: 'Content blocked' };
+        }
+        if (errorType === 'quota') {
+            return { cssClass: 'error-chip--blocked', label: 'Quota exhausted' };
+        }
+        if (errorType === 'auth') {
+            return { cssClass: 'error-chip--blocked', label: 'Auth failed' };
+        }
+        if (errorType === 'invalid_request') {
+            return { cssClass: 'error-chip--blocked', label: 'Invalid request' };
+        }
+        // Transient bucket — branches on retry_state
+        if (errorType === 'rate_limit' || errorType === 'server_error' || errorType === 'unknown') {
+            if (retryState === 'retrying') {
+                return { cssClass: 'error-chip--retrying', label: 'Retrying…' };
+            }
+            return { cssClass: 'error-chip--exhausted', label: 'Failed after retries' };
+        }
+        // Backward-compat: legacy rows have errorType='' but errorMessage may
+        // be present. Fall back to a generic chip so the card still gets a
+        // typed visual signal rather than no chip at all.
+        return { cssClass: 'error-chip--exhausted', label: 'Generation failed' };
+    };
+
+    // Renders or replaces the chip element on the given container.
+    // Idempotent — repeated calls update in place.
+    G._renderErrorChip = function (container, classification, fullMessage) {
+        if (!container) return;
+        // Remove any existing chip first (idempotency)
+        var existing = container.querySelector('.error-chip');
+        if (existing) existing.parentNode.removeChild(existing);
+
+        if (!classification) return;
+
+        var chip = document.createElement('span');
+        chip.className = 'error-chip ' + classification.cssClass;
+        if (fullMessage) {
+            chip.title = fullMessage; // Hover/focus reveals full text
+        }
+        if (classification.cssClass === 'error-chip--retrying') {
+            // Add a visually-hidden "retrying" cue alongside the spinner
+            // so screen readers get the same signal sighted users see.
+            var spinner = document.createElement('span');
+            spinner.className = 'error-chip__spinner';
+            spinner.setAttribute('aria-hidden', 'true');
+            chip.appendChild(spinner);
+        }
+        var labelEl = document.createElement('span');
+        labelEl.className = 'error-chip__label';
+        labelEl.textContent = classification.label;
+        chip.appendChild(labelEl);
+        container.appendChild(chip);
+    };
+
+    // ─── Mark Card as Publish-Failed (Phase 6D / Session 170-B) ─
+    // Session 170-B: extended to optionally accept errorType + retryState
+    // so the per-card chip can distinguish content_policy (blocked) from
+    // transient (retrying / exhausted). Both new params are optional —
+    // legacy callers continue to work without modification.
+    G.markCardFailed = function (imageId, reason, errorType, retryState) {
         if (!G.galleryContainer) return;
         // Find the slot by its btn-select data-image-id attribute
         var selectBtn = G.galleryContainer.querySelector(
@@ -109,6 +179,18 @@
         var reasonEl = slot.querySelector('.failed-badge-reason');
         if (reasonEl) {
             reasonEl.textContent = reason || 'Page creation failed';
+        }
+
+        // Session 170-B: render typed error chip if error_type is present.
+        // Mounts the chip inside .failed-badge so it sits near the existing
+        // failed-badge-reason text and gets the same .is-failed visibility.
+        var failedBadge = slot.querySelector('.failed-badge');
+        if (failedBadge && (errorType || reason)) {
+            G._renderErrorChip(
+                failedBadge,
+                G._classifyErrorChip(errorType, retryState, reason),
+                reason
+            );
         }
 
         // Track failed IDs for retry
@@ -309,7 +391,11 @@
         groupData.slots[slotIndex] = image.id;
     };
 
-    G.fillFailedSlot = function (groupIndex, slotIndex, errorMessage, promptText, groupSize) {
+    // Session 170-B: errorType + retryState are optional — when supplied
+    // (Spec A polling payload), a typed error chip is rendered alongside
+    // the existing reason text. Legacy callers (no extra args) get the
+    // existing rendering plus a generic chip via the fallback branch.
+    G.fillFailedSlot = function (groupIndex, slotIndex, errorMessage, promptText, groupSize, errorType, retryState) {
         var groupData = G.renderedGroups[groupIndex];
         if (!groupData) return;
 
@@ -336,9 +422,14 @@
         failed.className = 'placeholder-failed';
         failed.style.aspectRatio = slotAspect;
         failed.setAttribute('role', 'alert');
+        // Session 170-B: pass errorType + retryState so the accessible
+        // name matches the visible reason text (consistency between AT
+        // announcement and what sighted users see).
         var ariaLabel = 'Image generation failed';
         if (errorMessage) {
-            ariaLabel += ': ' + G._getReadableErrorReason(errorMessage);
+            ariaLabel += ': ' + G._getReadableErrorReason(
+                errorMessage, errorType, retryState
+            );
         }
         failed.setAttribute('aria-label', ariaLabel);
 
@@ -347,11 +438,26 @@
         failedText.textContent = 'Failed';
         failed.appendChild(failedText);
 
-        // Error reason line
+        // Session 170-B: typed error chip from error_type + retry_state.
+        // Falls back to a generic chip when only errorMessage is supplied
+        // (legacy callers / older jobs without payload). The chip carries
+        // its label as text — color is never the only signal (WCAG 1.4.11).
+        var chipClassification = G._classifyErrorChip(
+            errorType, retryState, errorMessage
+        );
+        if (chipClassification) {
+            G._renderErrorChip(failed, chipClassification, errorMessage);
+        }
+
+        // Error reason line — Session 170-B: pass errorType + retryState
+        // through to _getReadableErrorReason so it can choose the typed
+        // mapping when available.
         if (errorMessage) {
             var reasonText = document.createElement('span');
             reasonText.className = 'failed-reason';
-            reasonText.textContent = G._getReadableErrorReason(errorMessage);
+            reasonText.textContent = G._getReadableErrorReason(
+                errorMessage, errorType, retryState
+            );
             failed.appendChild(reasonText);
         }
 

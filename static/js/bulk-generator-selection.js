@@ -168,6 +168,240 @@
         }, 4000);
     };
 
+    // ─── Sticky Toast (Session 170-B) ────────────────────────────
+    // Variant of showToast with NO auto-dismiss timer. Used by the
+    // publish modal when user dismisses mid-publish — keeps the live
+    // progress visible at bottom-right until the publish completes or
+    // the user explicitly closes it. Updates in-place if already shown.
+    //
+    // Idempotency: each call updates count + percent in-place.
+    // Caller is responsible for calling G.hideStickyToast() on terminal.
+    G.showStickyToast = function (count, total, opts) {
+        opts = opts || {};
+        var toast = document.getElementById('publish-sticky-toast');
+        var fillEl = document.getElementById('publish-sticky-toast-fill');
+        var countEl = document.getElementById('publish-sticky-toast-count');
+        var reopenBtn = document.getElementById('publish-sticky-reopen');
+        var dismissBtn = document.getElementById('publish-sticky-dismiss');
+
+        if (!toast) return;
+
+        // Fill in count + percent
+        var pct = total > 0 ? Math.min(Math.round((count / total) * 100), 100) : 0;
+        if (fillEl) fillEl.style.width = pct + '%';
+        if (countEl) {
+            countEl.textContent = count + ' of ' + total + ' published';
+        }
+
+        // Reopen button visibility — hide once publish has terminated
+        if (reopenBtn) {
+            reopenBtn.style.display = opts.terminal ? 'none' : '';
+        }
+
+        // Show the toast (idempotent — class checks before adding)
+        toast.removeAttribute('hidden');
+        toast.classList.remove('publish-sticky-toast--hidden');
+        toast.classList.add('publish-sticky-toast--visible');
+
+        // Wire handlers ONCE (data-flag prevents duplicate listeners across
+        // multiple showStickyToast calls within a single publish cycle).
+        if (reopenBtn && reopenBtn.dataset.wired !== '1') {
+            reopenBtn.addEventListener('click', function () {
+                G.openPublishModal();
+                G.hideStickyToast();
+            });
+            reopenBtn.dataset.wired = '1';
+        }
+        if (dismissBtn && dismissBtn.dataset.wired !== '1') {
+            dismissBtn.addEventListener('click', function () {
+                G.hideStickyToast();
+            });
+            dismissBtn.dataset.wired = '1';
+        }
+    };
+
+    G.hideStickyToast = function () {
+        var toast = document.getElementById('publish-sticky-toast');
+        if (!toast) return;
+        toast.classList.remove('publish-sticky-toast--visible');
+        toast.classList.add('publish-sticky-toast--hidden');
+        toast.setAttribute('hidden', '');
+    };
+
+    // ─── Publish Modal Lifecycle (Session 170-B) ─────────────────
+    // openPublishModal / closePublishModal manage the modal container.
+    // Polling drives count + bar + links via updatePublishModal helpers.
+    //
+    // Focus management: on open, focus moves to the close button. On
+    // close (via × or Escape), focus returns to whatever opened it
+    // (Create Pages button or Sticky Toast Reopen) — tracked in
+    // G._publishModalLastTrigger.
+    G._publishModalLastTrigger = null;
+    G._publishModalKeydownHandler = null;
+
+    G.openPublishModal = function () {
+        var modal = document.getElementById('publish-modal');
+        var closeBtn = document.getElementById('publish-modal-close');
+        if (!modal) return;
+
+        // Idempotency guard: if the modal is already visible, skip the
+        // focus + trigger-tracking dance entirely. Re-firing focus on an
+        // already-open modal would (a) overwrite _publishModalLastTrigger
+        // with a now-hidden element (e.g. the sticky toast Reopen button)
+        // and (b) reset focus to the close button mid-interaction.
+        if (modal.getAttribute('aria-hidden') === 'false') return;
+
+        // Track focus origin for restoration on close
+        if (document.activeElement && document.activeElement !== document.body) {
+            G._publishModalLastTrigger = document.activeElement;
+        }
+
+        modal.removeAttribute('hidden');
+        modal.classList.remove('publish-modal--hidden');
+        modal.classList.add('publish-modal--visible');
+        modal.setAttribute('aria-hidden', 'false');
+
+        // Move focus to close button (WCAG 2.4.3)
+        if (closeBtn) closeBtn.focus();
+
+        // Wire Escape + focus-trap. Listener attached to document
+        // because focus may live anywhere within the modal.
+        // Intentionally never removed — the handler is reused across
+        // open/close cycles for the page lifetime. It guards itself
+        // via aria-hidden so it goes inert when the modal is closed.
+        // Single-attach is enforced by the falsy-check below; replacing
+        // the handler reference would orphan the previous listener on
+        // document, so we keep one stable reference.
+        if (!G._publishModalKeydownHandler) {
+            G._publishModalKeydownHandler = function (e) {
+                if (e.key !== 'Escape' && e.key !== 'Tab') return;
+                var modalEl = document.getElementById('publish-modal');
+                if (!modalEl || modalEl.getAttribute('aria-hidden') === 'true') return;
+
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    G.closePublishModal();
+                    return;
+                }
+
+                // Tab key — trap focus inside modal
+                var focusable = modalEl.querySelectorAll(
+                    'button:not([disabled]), [href], input:not([disabled]), ' +
+                    'select:not([disabled]), textarea:not([disabled]), ' +
+                    '[tabindex]:not([tabindex="-1"])'
+                );
+                if (focusable.length === 0) return;
+                var first = focusable[0];
+                var last = focusable[focusable.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            };
+            document.addEventListener('keydown', G._publishModalKeydownHandler);
+        }
+    };
+
+    G.closePublishModal = function (opts) {
+        opts = opts || {};
+        var modal = document.getElementById('publish-modal');
+        if (!modal) return;
+
+        modal.classList.remove('publish-modal--visible');
+        modal.classList.add('publish-modal--hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.setAttribute('hidden', '');
+
+        // Restore focus to whatever opened the modal
+        if (opts.restoreFocus !== false && G._publishModalLastTrigger
+            && document.body.contains(G._publishModalLastTrigger)) {
+            try { G._publishModalLastTrigger.focus(); } catch (e) { /* ignore */ }
+        }
+
+        // If a poll is in flight AND the user dismissed (not terminal),
+        // surface the sticky toast with the current state so progress
+        // remains visible. Polling continues — DO NOT cancel.
+        if (!opts.terminal && G.publishPollTimer) {
+            G.showStickyToast(
+                G._publishModalLastCount || 0,
+                G.totalPublishTarget || 0,
+                { terminal: false }
+            );
+        }
+    };
+
+    // Helpers used by the polling loop to update modal contents.
+    // Kept separate so the polling code stays readable.
+    G.updatePublishModalCount = function (count, total) {
+        G._publishModalLastCount = count;
+        var countEl = document.getElementById('publish-modal-count');
+        var totalEl = document.getElementById('publish-modal-total');
+        var fillEl = document.getElementById('publish-modal-fill');
+        if (countEl) countEl.textContent = count;
+        if (totalEl) totalEl.textContent = total;
+        if (fillEl) {
+            var pct = total > 0 ? Math.min(Math.round((count / total) * 100), 100) : 0;
+            fillEl.style.width = pct + '%';
+        }
+        // Mirror to sticky toast if it's currently visible (modal-dismissed mode).
+        var toast = document.getElementById('publish-sticky-toast');
+        if (toast && !toast.hasAttribute('hidden')) {
+            G.showStickyToast(count, total);
+        }
+    };
+
+    G.appendPublishModalLink = function (promptPageUrl, labelText) {
+        var linksEl = document.getElementById('publish-modal-links');
+        if (!linksEl) return;
+        // Validate URL is relative (starts with /) before using —
+        // mirrors the Phase 7 pattern at line 508 of prior code.
+        var href = (promptPageUrl && promptPageUrl.indexOf('/') === 0)
+            ? promptPageUrl
+            : '#';
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = href;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = 'View: ' + labelText;
+        li.appendChild(a);
+        linksEl.appendChild(li);
+    };
+
+    G.setPublishModalTerminal = function (failedCount, publishedCount, total) {
+        var titleEl = document.getElementById('publish-modal-title');
+        var doneBtn = document.getElementById('publish-modal-done');
+        var closeBtn = document.getElementById('publish-modal-close');
+
+        if (titleEl) {
+            titleEl.textContent = failedCount > 0
+                ? 'Published with errors'
+                : 'Published!';
+        }
+        if (doneBtn) {
+            doneBtn.removeAttribute('hidden');
+            // Wire Done button — close modal AND hide sticky toast (terminal)
+            if (doneBtn.dataset.wired !== '1') {
+                doneBtn.addEventListener('click', function () {
+                    G.closePublishModal({ terminal: true });
+                    G.hideStickyToast();
+                });
+                doneBtn.dataset.wired = '1';
+            }
+            // Move focus to Done button so keyboard users can dismiss easily
+            if (closeBtn !== document.activeElement) doneBtn.focus();
+        }
+
+        // Mirror terminal state to sticky toast if present
+        var toast = document.getElementById('publish-sticky-toast');
+        if (toast && !toast.hasAttribute('hidden')) {
+            G.showStickyToast(publishedCount, total, { terminal: true });
+        }
+    };
+
     // ─── Publish Bar (Phase 6B) ───────────────────────────────────
     G.updatePublishBar = function () {
         var count = Object.keys(G.selections).length;
@@ -418,17 +652,52 @@
         });
     };
 
-    // ─── Publish Progress Polling (Phase 6B / Phase 7) ───────────
+    // ─── Publish Progress Polling (Phase 6B / Phase 7 / Session 170-B) ──
+    // Drives the publish modal as the primary surface; the legacy inline
+    // #publish-progress element is still updated for backward compat
+    // (kept hidden by default since 170-B). The modal can be dismissed
+    // mid-publish — polling continues into a sticky toast bottom-right;
+    // Reopen restores the modal idempotently from current G state.
+    //
     // Phase 7: uses module-level totalPublishTarget for cumulative display.
-    // The `total` param reflects the current batch size (used only for context;
-    // all percentage + stop-condition logic uses totalPublishTarget).
-    G.startPublishProgressPolling = function (total) {
+    G.startPublishProgressPolling = function (total) {  // eslint-disable-line no-unused-vars
+        // Session 170-B: open the publish modal as the primary surface.
+        // The close button uses the dataset.wired guard because it is
+        // wired exactly once for the page lifetime (no per-cycle reset
+        // needed — its handler closure is stable).
+        var modalCloseBtn = document.getElementById('publish-modal-close');
+        if (modalCloseBtn && modalCloseBtn.dataset.wired !== '1') {
+            modalCloseBtn.addEventListener('click', function () {
+                G.closePublishModal();
+            });
+            modalCloseBtn.dataset.wired = '1';
+        }
+        // Reset modal for this cycle (clears links, resets title, hides Done).
+        // Done button is recreated via cloneNode+replaceWith so the previous
+        // cycle's listener is dropped cleanly — the dataset.wired flag alone
+        // wouldn't shed the old listener (only block re-attachment), and a
+        // future change to setPublishModalTerminal's handler would silently
+        // double-wire across retries.
+        var modalTitleEl = document.getElementById('publish-modal-title');
+        var modalDoneBtn = document.getElementById('publish-modal-done');
+        var modalLinksEl = document.getElementById('publish-modal-links');
+        if (modalTitleEl) modalTitleEl.textContent = 'Publishing your prompts';
+        if (modalDoneBtn && modalDoneBtn.parentNode) {
+            var freshDone = modalDoneBtn.cloneNode(true);
+            freshDone.setAttribute('hidden', '');
+            modalDoneBtn.parentNode.replaceChild(freshDone, modalDoneBtn);
+        }
+        if (modalLinksEl) modalLinksEl.innerHTML = '';
+        G.updatePublishModalCount(0, G.totalPublishTarget);
+        G.openPublishModal();
+
+        // Legacy inline progress element — present but hidden after 170-B.
+        // Variables retained because the existing terminal-state code path
+        // still writes statusTextEl for backward compat.
         var progressEl = document.getElementById('publish-progress');
         var fillEl = document.getElementById('publish-progress-fill');
         var linksEl = document.getElementById('publish-progress-links');
         var statusTextEl = document.getElementById('publish-status-text');
-
-        if (!progressEl) return;
 
         // Phase 7: Restore the live count/total spans on every new polling cycle
         // (a previous cycle's final-state text may have replaced them).
@@ -440,9 +709,10 @@
         var countEl = document.getElementById('publish-progress-count');
         var totalEl = document.getElementById('publish-progress-total');
 
-        // Show cumulative target in the total slot
+        // Show cumulative target in the total slot (legacy inline path)
         if (totalEl) totalEl.textContent = G.totalPublishTarget;
-        progressEl.classList.remove('publish-progress--hidden');
+        // 170-B: legacy element stays hidden — modal is the visible surface
+        if (progressEl) progressEl.setAttribute('hidden', '');
 
         // Stop any existing publish poll before starting a new one
         if (G.publishPollTimer) {
@@ -471,8 +741,34 @@
                 // Phase 7: percentage uses cumulative totalPublishTarget
                 var pct = G.totalPublishTarget > 0 ? Math.min(Math.round((published / G.totalPublishTarget) * 100), 100) : 0;
 
+                // Legacy inline progress element (hidden in 170-B but
+                // updated for backward compat in case any other code
+                // references the IDs).
                 if (countEl) countEl.textContent = published;
                 if (fillEl) fillEl.style.width = pct + '%';
+
+                // Session 170-B: drive the modal (and mirror to sticky
+                // toast if it is currently visible).
+                G.updatePublishModalCount(published, G.totalPublishTarget);
+
+                // Session 170-B: backend exposes data.publish_failed_count
+                // (Spec A). Frontend uses G.failedImageIds.size as the
+                // user-visible failure count because that includes
+                // frontend-only failures (stale-detection timeouts, retry
+                // network errors via _restoreRetryCardsToFailed) which the
+                // backend hasn't observed. We consume publish_failed_count
+                // only as a drift signal — if the backend reports more
+                // failures than the frontend has tracked, log a warning so
+                // future investigation can reconcile the divergence.
+                var backendFailed = data.publish_failed_count;
+                if (typeof backendFailed === 'number'
+                    && backendFailed > G.failedImageIds.size) {
+                    console.warn(
+                        '[bulk-gen-job] backend publish_failed_count (' +
+                        backendFailed + ') exceeds frontend failedImageIds (' +
+                        G.failedImageIds.size + ') — drift signal'
+                    );
+                }
 
                 // Stale detection: only start counting after first publish,
                 // allowing 10 warmup polls (~30s) before treating zero progress as stale.
@@ -518,6 +814,13 @@
                                 li.appendChild(a);
                                 linksEl.appendChild(li);
                             }
+                            // Session 170-B: mirror to publish modal links list
+                            G.appendPublishModalLink(
+                                img.prompt_page_url || '',
+                                img.prompt_text
+                                    ? img.prompt_text.substring(0, 40)
+                                    : 'Prompt page'
+                            );
                         }
                     }
                 }
@@ -530,7 +833,18 @@
                     var failedAny = false;
                     G.submittedPublishIds.forEach(function (imageId) {
                         if (!publishedImageIds.has(imageId) && !G.failedImageIds.has(imageId)) {
-                            G.markCardFailed(imageId, 'Page creation timed out');
+                            // Session 170-B: pass synthetic error_type +
+                            // retry_state so the per-card chip renders as
+                            // "Failed after retries" via the new chip-routing
+                            // path. Publish-phase timeouts have no provider
+                            // error_type so we synthesize one consistent with
+                            // the transient-exhausted bucket.
+                            G.markCardFailed(
+                                imageId,
+                                'Page creation timed out',
+                                'server_error',
+                                'exhausted'
+                            );
                             failedAny = true;
                         }
                     });
@@ -549,6 +863,11 @@
                                 ' page' + (G.totalPublishTarget === 1 ? '' : 's') + ' created';
                         }
                     }
+
+                    // Session 170-B: switch the modal to terminal phase
+                    G.setPublishModalTerminal(
+                        finalFailed, published, G.totalPublishTarget
+                    );
 
                     if (failedAny) {
                         G.showToast(
@@ -573,6 +892,10 @@
                             published + ' of ' + G.totalPublishTarget +
                             ' page' + (G.totalPublishTarget === 1 ? '' : 's') + ' created';
                     }
+                    // Session 170-B: terminal phase on modal
+                    G.setPublishModalTerminal(
+                        0, published, G.totalPublishTarget
+                    );
                     G.showToast('All ' + G.totalPublishTarget + ' page' + (G.totalPublishTarget === 1 ? '' : 's') + ' published!', 'success');
                 }
             })

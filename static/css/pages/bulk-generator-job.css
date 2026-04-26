@@ -1200,3 +1200,337 @@ a.published-badge:focus-visible {
     .prompt-image-slot.is-failed .prompt-image-container img { transition: none; }
     .publish-bar__retry-btn { transition: none; }
 }
+
+/* ============================================================
+ * Session 170-B — Publish Modal + Sticky Toast + Per-Card Chips
+ * ============================================================
+ *
+ * The publish modal replaces the inline #publish-progress as the
+ * primary surface. Modal can be dismissed mid-publish, transitioning
+ * to a sticky toast bottom-right; Reopen restores modal idempotently.
+ *
+ * Per-card error chips distinguish content_policy / quota / auth
+ * (red, "blocked") from rate_limit / server_error / unknown
+ * (amber + spinner if retrying, red if exhausted). Color is never
+ * the sole signal — every chip carries a text label (WCAG 1.4.11).
+ */
+
+/* ─── Publish Modal Overlay ─────────────────────────────────── */
+.publish-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Stack: 250 modal > 220 sticky toast > 100 sticky bar (set in
+     * the page template's inline <style>). Modal opens over toast,
+     * toast appears over sticky bar — both confirmed in Step 0. */
+    z-index: 250;
+    padding: 16px;
+    transition: opacity 0.2s ease;
+}
+
+.publish-modal-overlay.publish-modal--hidden {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.publish-modal-overlay.publish-modal--visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.publish-modal-dialog {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* WCAG 1.4.11: 1px solid border on white background gives the
+     * dialog a 3:1 boundary against the dimmed backdrop. */
+    border: 1px solid var(--gray-200, #e5e5e5);
+}
+
+.publish-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gray-200, #e5e5e5);
+}
+
+.publish-modal-header__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-800, #262626);
+}
+
+.publish-modal-header__close-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--gray-700, #404040);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.publish-modal-header__close-btn:hover {
+    background: var(--gray-100, #f5f5f5);
+    border-color: var(--gray-400, #a3a3a3);
+}
+
+.publish-modal-header__close-btn:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px #fff,
+        0 0 0 4px var(--gray-700, #404040);
+}
+
+.publish-modal-progress {
+    padding: 16px 20px;
+}
+
+.publish-modal-progress__count {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    color: var(--gray-700, #404040);
+}
+
+.publish-modal-progress__bar {
+    background: var(--gray-200, #e5e5e5);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.publish-modal-progress__fill {
+    background: #166534;            /* green-800 */
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.publish-modal-links {
+    list-style: none;
+    margin: 0;
+    padding: 0 20px 8px;
+    overflow-y: auto;
+    max-height: 240px;
+}
+
+.publish-modal-links li {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--gray-100, #f5f5f5);
+    font-size: 0.9rem;
+}
+
+.publish-modal-links li:last-child {
+    border-bottom: none;
+}
+
+.publish-modal-links a {
+    color: #166534;
+    text-decoration: none;
+}
+
+.publish-modal-links a:hover,
+.publish-modal-links a:focus-visible {
+    text-decoration: underline;
+}
+
+.publish-modal-footer {
+    padding: 12px 20px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--gray-100, #f5f5f5);
+}
+
+.publish-modal-footer__done {
+    min-width: 80px;
+}
+
+.publish-modal-footer__done:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px #fff,
+        0 0 0 4px var(--gray-700, #404040);
+}
+
+/* ─── Publish Sticky Toast (background variant) ──────────────── */
+.publish-sticky-toast {
+    position: fixed;
+    bottom: 90px;             /* above sticky bar */
+    right: 16px;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    background: #fff;
+    border: 1px solid var(--gray-300, #d4d4d4);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 220;
+    transform: translateX(20px);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.publish-sticky-toast.publish-sticky-toast--hidden {
+    pointer-events: none;
+}
+
+.publish-sticky-toast.publish-sticky-toast--visible {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.publish-sticky-toast__progress {
+    background: var(--gray-200, #e5e5e5);
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.publish-sticky-toast__fill {
+    background: #166534;
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.publish-sticky-toast__count {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--gray-700, #404040);
+}
+
+.publish-sticky-toast__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.publish-sticky-toast__reopen {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #166534;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.publish-sticky-toast__reopen:hover {
+    text-decoration: underline;
+    background: var(--gray-100, #f5f5f5);
+}
+
+.publish-sticky-toast__reopen:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px #fff,
+        0 0 0 3px #166534;
+}
+
+.publish-sticky-toast__dismiss {
+    background: transparent;
+    border: 1px solid transparent;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--gray-700, #404040);
+    font-size: 1rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.publish-sticky-toast__dismiss:hover {
+    background: var(--gray-100, #f5f5f5);
+    border-color: var(--gray-400, #a3a3a3);
+}
+
+.publish-sticky-toast__dismiss:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px #fff,
+        0 0 0 3px var(--gray-700, #404040);
+}
+
+/* ─── Per-Card Error Chips (Session 170-B) ───────────────────── */
+.error-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+    /* Border provides WCAG 1.4.11 contrast against any background
+     * (including images behind the failed slot). */
+    border: 1px solid currentColor;
+}
+
+/* Red variants — content_policy / quota / auth / invalid_request /
+ * transient-exhausted. Dark-red background so white text passes 4.5:1. */
+.error-chip--blocked,
+.error-chip--exhausted {
+    background: #991b1b;            /* red-800 */
+    color: #fff;
+    border-color: #7f1d1d;          /* red-900 — visible boundary */
+}
+
+/* Amber variant — transient/retrying with spinner. */
+.error-chip--retrying {
+    background: #b45309;            /* amber-700 — passes 4.5:1 vs white text */
+    color: #fff;
+    border-color: #92400e;          /* amber-800 — visible boundary */
+}
+
+.error-chip__spinner {
+    width: 10px;
+    height: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: error-chip-spin 0.8s linear infinite;
+}
+
+@keyframes error-chip-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .publish-modal-overlay { transition: none; }
+    .publish-modal-progress__fill { transition: none; }
+    .publish-sticky-toast { transition: none; transform: none; }
+    .publish-sticky-toast__fill { transition: none; }
+    .error-chip__spinner {
+        animation: none;
+        /* Keep static visible state — chip text label still
+         * conveys the "retrying" meaning. */
+        border-top-color: rgba(255, 255, 255, 0.7);
+    }
+}

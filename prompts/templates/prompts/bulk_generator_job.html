@@ -147,12 +147,16 @@
 
     </div>{# /.job-progress-section #}
 
-    {# ===== Publish Progress Bar (Phase 6B) ===== #}
+    {# ===== Publish Progress Bar (Phase 6B — kept for backward compat,
+            now hidden-by-default; modal below is the active surface.
+            Session 170-B retains markup so any legacy code path that
+            populates these IDs stays valid.) ===== #}
     <div id="publish-progress"
          class="publish-progress publish-progress--hidden"
          role="status"
          aria-live="polite"
-         aria-label="Publish progress">
+         aria-label="Publish progress"
+         hidden>
         <div class="publish-progress__text">
             <span id="publish-status-text">
                 <span id="publish-progress-count">0</span> of
@@ -163,6 +167,92 @@
             <div id="publish-progress-fill" class="publish-progress__fill" style="width: 0%"></div>
         </div>
         <ul id="publish-progress-links" class="publish-progress__links" aria-label="Published pages"></ul>
+    </div>
+
+    {# ===== Publish Modal (Session 170-B) =====
+       Opens on Create Pages click. Dismissible via × — transitions
+       to sticky toast bottom-right. Reopen restores idempotently from
+       current G state. Rendered in DOM at page load (static aria-live)
+       so screen readers reliably pick up updates. #}
+    <div id="publish-modal"
+         class="publish-modal-overlay publish-modal--hidden"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="publish-modal-title"
+         aria-describedby="publish-modal-status"
+         aria-hidden="true">
+        <div class="publish-modal-dialog" role="document">
+            <header class="publish-modal-header">
+                <h2 class="publish-modal-header__title" id="publish-modal-title">
+                    Publishing your prompts
+                </h2>
+                <button type="button"
+                        class="publish-modal-header__close-btn"
+                        id="publish-modal-close"
+                        aria-label="Dismiss to background">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </header>
+
+            <div class="publish-modal-progress">
+                <p class="publish-modal-progress__count" id="publish-modal-status">
+                    <span id="publish-modal-count">0</span> of
+                    <span id="publish-modal-total">0</span> published
+                </p>
+                <div class="publish-modal-progress__bar" aria-hidden="true">
+                    <div class="publish-modal-progress__fill"
+                         id="publish-modal-fill"
+                         style="width: 0%"></div>
+                </div>
+            </div>
+
+            <ul id="publish-modal-links"
+                class="publish-modal-links"
+                aria-label="Published pages"></ul>
+
+            <footer class="publish-modal-footer">
+                <button type="button"
+                        class="btn publish-modal-footer__done"
+                        id="publish-modal-done"
+                        hidden>
+                    Done
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    {# ===== Publish Sticky Toast (Session 170-B) =====
+       Activated when modal is dismissed mid-publish. Persists at
+       bottom-right; updates live; "Reopen" restores the modal. No
+       auto-dismiss — explicit close required (status="status" plus
+       explicit dismiss button). #}
+    <div id="publish-sticky-toast"
+         class="publish-sticky-toast publish-sticky-toast--hidden"
+         role="status"
+         aria-live="polite"
+         aria-label="Publish progress (background)"
+         hidden>
+        <div class="publish-sticky-toast__progress" aria-hidden="true">
+            <div class="publish-sticky-toast__fill"
+                 id="publish-sticky-toast-fill"
+                 style="width: 0%"></div>
+        </div>
+        <p class="publish-sticky-toast__count" id="publish-sticky-toast-count">
+            0 of 0 published
+        </p>
+        <div class="publish-sticky-toast__actions">
+            <button type="button"
+                    class="btn btn-link publish-sticky-toast__reopen"
+                    id="publish-sticky-reopen">
+                Reopen
+            </button>
+            <button type="button"
+                    class="publish-sticky-toast__dismiss"
+                    id="publish-sticky-dismiss"
+                    aria-label="Dismiss publish progress toast">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
     </div>
 
     {# ===== Gallery Section ===== #}

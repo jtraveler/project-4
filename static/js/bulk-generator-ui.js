@@ -127,10 +127,14 @@
                 if (image.status === 'completed' && image.image_url) {
                     G.fillImageSlot(groupIndex, slotIndex, image);
                 } else if (image.status === 'failed') {
+                    // Session 170-B: pass error_type + retry_state through
+                    // so the typed error chip renders alongside the reason.
                     G.fillFailedSlot(groupIndex, slotIndex,
                         image.error_message || '',
                         image.prompt_text || '',
-                        groupImages[0].size || '');
+                        groupImages[0].size || '',
+                        image.error_type || '',
+                        image.retry_state || '');
                 } else if (image.status === 'generating') {
                     var imgQuality = image.quality || G.jobQuality || 'medium';
                     G.updateSlotToGenerating(

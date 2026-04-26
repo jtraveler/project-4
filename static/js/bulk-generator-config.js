@@ -97,11 +97,45 @@
         return cookieValue;
     };
 
-    // ─── Error Reason Formatter ───────────────────────────────────
-    G._getReadableErrorReason = function (errorMessage) {
-        if (!errorMessage) return '';
+    // ─── Error Reason Formatter (Session 170-B) ───────────────────
+    // Now switches on error_type first (Spec A polling payload contract),
+    // and falls back to error_message string-match for older jobs without
+    // error_type. Backward-compatible: legacy callers passing only
+    // errorMessage still get the existing exact-match path.
+    G._getReadableErrorReason = function (errorMessage, errorType, retryState) {
+        // Primary path: error_type-keyed mapping. Distinguishes "retrying"
+        // vs "exhausted" for transient buckets so the reason text matches
+        // the chip rendered alongside it.
+        if (errorType) {
+            var typedMap = {
+                'auth':            'Authentication failed \u2014 update your API key.',
+                'content_policy':  'Content blocked \u2014 try modifying the prompt.',
+                'quota':           'API quota exhausted \u2014 top up your account.',
+                'invalid_request': 'Invalid request \u2014 check your prompt or settings.',
+            };
+            if (typedMap[errorType]) return typedMap[errorType];
+            if (errorType === 'rate_limit') {
+                return retryState === 'retrying'
+                    ? 'Rate limited \u2014 retrying\u2026'
+                    : 'Rate limit retries exhausted.';
+            }
+            if (errorType === 'server_error') {
+                return retryState === 'retrying'
+                    ? 'Provider hiccup \u2014 retrying\u2026'
+                    : 'Provider failed after retries.';
+            }
+            if (errorType === 'unknown') {
+                return retryState === 'retrying'
+                    ? 'Unexpected error \u2014 retrying\u2026'
+                    : 'Failed after retries \u2014 try again.';
+            }
+            // Fall through to legacy path on unrecognised error_type
+        }
+
+        // Legacy backward-compat path: error_type missing (older jobs).
         // Receives only the 8 fixed sanitised strings from the backend —
-        // use exact-match map so JS and backend can never silently drift.
+        // exact-match map so JS and backend never silently drift.
+        if (!errorMessage) return '';
         var reasonMap = {
             'Authentication error':     'Invalid API key \u2014 check your key and try again.',
             'Invalid request':          'Invalid request \u2014 check your prompt or settings.',

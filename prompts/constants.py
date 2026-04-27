@@ -370,6 +370,18 @@ AI_GENERATORS = {
         'supports_images': True,
         'supports_video': False,
     },
+    'gpt-image-2-byok': {
+        'name': 'GPT Image 2 (BYOK)',
+        'slug': 'gpt-image-2-byok',
+        'seo_subheader': 'GPT Image 2 BYOK AI Image Examples',
+        'seo_description': 'Browse GPT Image 2 BYOK prompts on PromptFinder.',
+        'description': '<p>GPT Image 2 is OpenAI\'s next-generation image model — adds reasoning, 2K resolution, and improved text rendering. Accessed via Bring-Your-Own-Key. Released April 21, 2026.</p>',
+        'website': 'https://developers.openai.com/api/docs/models/gpt-image-2',
+        'icon': 'images/generators/dalle3-icon.png',  # Placeholder — Mateo can supply gpt-image-2-icon.png in a future asset commit
+        'choice_value': 'gpt-image-2-byok',
+        'supports_images': True,
+        'supports_video': False,
+    },
     'flux-schnell': {
         'name': 'Flux Schnell',
         'slug': 'flux-schnell',

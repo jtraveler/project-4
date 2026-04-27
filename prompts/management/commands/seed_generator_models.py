@@ -32,6 +32,28 @@ MODELS = [
         'sort_order': 10,
     },
     {
+        'slug': 'gpt-image-2-byok',
+        'name': 'GPT Image 2',
+        'description': 'OpenAI\'s next-generation image model. Adds reasoning, 2K resolution, and dramatically improved text rendering. Released April 21, 2026. Requires your own OpenAI API key (BYOK).',
+        'provider': 'openai',
+        'model_identifier': 'gpt-image-2',
+        'credit_cost': 2,  # Platform overhead only — BYOK billed by OpenAI directly
+        'available_starter': False,
+        'available_creator': True,
+        'available_pro': True,
+        'available_studio': True,
+        'is_enabled': True,
+        'is_byok_only': True,
+        'requires_platform_key': False,
+        'is_promotional': True,
+        'promotional_label': 'New',
+        'supported_aspect_ratios': [],
+        'supports_quality_tiers': True,
+        'supports_reference_image': True,
+        'default_aspect_ratio': '',
+        'sort_order': 15,  # Between GPT-Image-1.5 (10) and Flux Schnell (20)
+    },
+    {
         'slug': 'flux-schnell',
         'name': 'Flux Schnell',
         'description': 'Fastest generation. Great for rapid prototyping and high-volume content. ~2s per image.',

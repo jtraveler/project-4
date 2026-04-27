@@ -3061,7 +3061,7 @@ def _deduct_generation_credits(job, completed_count: int) -> None:
         )
 
 
-def process_bulk_generation_job(job_id: str) -> None:
+def process_bulk_generation_job(job_id: str) -> None:  # noqa: C901 — orchestrator function, complexity inherent to multi-provider job dispatch with per-provider validation and key-handling branches
     """
     Orchestrate image generation for a bulk job.
 
@@ -3129,11 +3129,15 @@ def process_bulk_generation_job(job_id: str) -> None:
             _fire_bulk_gen_job_notification(job, succeeded=0, failed=True)
             return
 
-    # Pass model_name for providers that support multiple models (Replicate).
-    # OpenAI and xAI providers ignore model_name (they have one model each).
+    # Pass model_name for providers that support multiple models.
+    # Session 171-C: OpenAI now also supports model_name threading
+    # (gpt-image-1.5, gpt-image-2). xAI still has one model — ignored.
+    # Defaults match each provider's __init__ default for backward compat.
     _provider_kwargs = {'mock_mode': False}
     if job.provider == 'replicate':
         _provider_kwargs['model_name'] = job.model_name or 'black-forest-labs/flux-schnell'
+    elif job.provider == 'openai':
+        _provider_kwargs['model_name'] = job.model_name or 'gpt-image-1.5'
     provider = get_provider(job.provider, **_provider_kwargs)
 
     images = job.images.filter(

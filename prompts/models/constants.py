@@ -48,6 +48,7 @@ AI_GENERATOR_CHOICES = [
     ('gpt-image-1-5', 'GPT-Image-1.5'),  # CHANGED 169-B: dash form (was 'gpt-image-1.5')
     # GeneratorModel-derived entries (Session 169-B — match GeneratorModel.slug values):
     ('gpt-image-1-5-byok', 'GPT-Image-1.5 (BYOK)'),
+    ('gpt-image-2-byok', 'GPT Image 2 (BYOK)'),
     ('flux-schnell', 'Flux Schnell'),
     ('flux-dev', 'Flux Dev'),
     ('flux-1-1-pro', 'Flux 1.1 Pro'),

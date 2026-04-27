@@ -40,6 +40,7 @@ class OpenAIImageProvider(ImageProvider):
         api_key: str = '',
         tier: int = 1,
         mock_mode: bool = False,
+        model_name: str = 'gpt-image-1.5',
     ):
         """
         Initialize the OpenAI image provider.
@@ -48,12 +49,18 @@ class OpenAIImageProvider(ImageProvider):
             api_key: OpenAI API key. Defaults to settings.OPENAI_API_KEY.
             tier: OpenAI API tier (1-5), determines rate limit.
             mock_mode: If True, return fake data instead of calling API.
+            model_name: OpenAI image model identifier. Defaults to
+                'gpt-image-1.5' for backward compat with pre-Session-171
+                jobs that didn't pass the value. New entries (e.g.
+                gpt-image-2) thread the value via tasks.py at job
+                dispatch time.
         """
         self.api_key = api_key or getattr(
             settings, 'OPENAI_API_KEY', ''
         )
         self.tier = tier
         self.mock_mode = mock_mode
+        self.model_name = model_name
 
     def generate(
         self,
@@ -132,7 +139,7 @@ class OpenAIImageProvider(ImageProvider):
                 # Use images.edit() when a reference image is available
                 response = client.images.edit(
                     image=ref_file,
-                    model='gpt-image-1.5',
+                    model=self.model_name,
                     prompt=prompt,
                     size=size,
                     quality=quality,
@@ -140,7 +147,7 @@ class OpenAIImageProvider(ImageProvider):
                 )
             else:
                 response = client.images.generate(
-                    model='gpt-image-1.5',
+                    model=self.model_name,
                     prompt=prompt,
                     size=size,
                     quality=quality,

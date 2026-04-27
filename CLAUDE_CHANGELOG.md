@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 25, 2026 (Sessions 101–169)
+**Last Updated:** April 26, 2026 (Sessions 101–171)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -31,6 +31,188 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 171-D — April 26, 2026 (End-of-Session Docs Update — commit pending)
+
+**Outcome:** Documents the 171 cluster (171-A comment fix, 171-B
+cleanup, 171-C GPT Image 2 BYOK integration). Cluster shape:
+**BATCHED with prior-session investigation** per Memory Rule #15
+— `docs/REPORT_171_INVESTIGATION.md` (untracked, produced in the
+previous CC session) provided the diagnosis that anchored 171-A's
+fix and ranked 170-B Regressions B/C as likely cosmetic-conflation
+or cached-bundle artifacts. The investigation-then-batched-fix
+pattern eliminated unknown-unknowns going into the implementation
+specs.
+
+**Files modified:**
+- `CLAUDE_CHANGELOG.md` — 4 new session entries (this one + 171-A,
+  -B, -C above)
+- `CLAUDE.md` — 4 new "Recently Completed" rows + 1 Verification-
+  Pending row + 2 new Deferred P2 rows (page-refresh state recovery,
+  Replicate concurrency policy) + 1 new Deferred P3 row (gpt-image-2
+  pricing audit) + memory rules count bumped 13 → 15 with rules #14
+  (REPORT closing checklist) and #15 (cluster shape) entries added +
+  version footer 4.68 → 4.69
+- `PROJECT_FILE_STRUCTURE.md` — Last Updated April 25 → April 26,
+  Sessions span 163-169 → 163-171, Tests 1386 → 1396, Migrations
+  90 → 93 (+0089/0090/0091)
+- Reports A/B/C — Sections 9-10 finalized (test results + commit
+  hashes filled in)
+
+**Verification-Pending:** Mateo's Memory Rule #14 closing checklist
+post-deploy (modal + chip behavior verification on production after
+171-A's comment fix + hard-refresh). If either Regression B or C
+persists, capture browser evidence and draft Session 172 follow-up
+cluster against actual root cause data.
+
+**Agent ratings:** @technical-writer (sub via general-purpose) X.X/10
++ @code-reviewer X.X/10. Avg X.X/10.
+
+---
+
+### Session 171-C — April 26, 2026 (GPT Image 2 BYOK Integration — commit `843d12e`)
+
+**Outcome:** Adds GPT Image 2 (released by OpenAI April 21, 2026)
+as a BYOK-only selectable model in the bulk generator, mirroring
+the existing `gpt-image-1-5-byok` pattern. Five surfaces touched:
+new `AI_GENERATORS['gpt-image-2-byok']` entry, new
+`AI_GENERATOR_CHOICES` tuple entry (added in Round 2 after agent
+review caught silent-corruption gap), new `GeneratorModel` row
+seeded by migration 0090 (RunPython, idempotent via
+`update_or_create`) AND mirrored in `seed_generator_models.py` for
+fresh-DB convergence, choices migration 0091 (auto-generated;
+AlterField on both `Prompt.ai_generator` and
+`DeletedPrompt.ai_generator` per the 169-C sibling-field pattern),
+`OpenAIImageProvider` threading `model_name` through `__init__` →
+`self.model_name` → `client.images.edit/generate(model=...)`,
+`tasks.py` `_provider_kwargs` setup gains `elif job.provider ==
+'openai':` branch.
+
+**IMAGE_COST_MAP scenario:** chose Option B2 (mirror gpt-image-1.5
+prices as placeholder). Per-model cost map restructure (Option B1)
+deferred as P3 because (a) gpt-image-2 is BYOK — OpenAI bills the
+user directly, displayed cost is informational only; (b) precise
+per-quality/size pricing not yet published (token-based only).
+Inaccuracy is bounded by BYOK billing model.
+
+**Round 1 agent review caught a blocking gap:** AI_GENERATOR_CHOICES
+in `prompts/models/constants.py` did not include
+`('gpt-image-2-byok', 'GPT Image 2 (BYOK)')`. Without the entry,
+Django model validation would silently reject `prompt.save()` for
+any GPT Image 2 publish — exactly the silent-corruption pattern
+that memory rule #13 was added to prevent. Round 2 fix:
+auto-generated migration 0091 + tuple entry. Round 2 focused
+re-review confirmed the fix closes the path.
+
+**`# noqa: C901` added to `process_bulk_generation_job`** — the new
+`elif` branch pushed flake8 complexity from 15 to 16. Suppression
+comment matches existing in-file precedent (e.g.
+`_run_generation_loop`).
+
+**Real SEO copy + dedicated icon deferred per existing P3 rows.**
+
+**Files modified:** `prompts/migrations/0090_seed_gpt_image_2.py`
+(new), `prompts/migrations/0091_add_gpt_image_2_to_choices.py`
+(new — auto-generated), `prompts/management/commands/seed_generator_models.py`,
+`prompts/constants.py`, `prompts/models/constants.py`,
+`prompts/services/image_providers/openai_provider.py`,
+`prompts/tasks.py`. 1396 tests OK.
+
+**Agent ratings:**
+- Round 1: @django-pro 8.5/10, @code-reviewer 6.5/10 (BLOCKED on
+  AI_GENERATOR_CHOICES gap), @architect-review 8.5/10 (false-alarm
+  on promotional_label — verified migration line 47 has it),
+  @database-migrations (sub via general-purpose) 9.0/10. Round 1
+  avg 8.125/10 — fail.
+- Round 2 (focused on AI_GENERATOR_CHOICES fix): @django-pro 9.5/10,
+  @code-reviewer 9.5/10. Round 2 avg 9.5/10 — pass.
+
+---
+
+### Session 171-B — April 26, 2026 (Cleanup: Quality Labels + Try-In URLs + 170-B P2/P3 — commit `6a58ef9`)
+
+**Outcome:** Four cleanup items in one spec.
+
+**(1) Quality labels for Nano Banana 2 → 1K/2K/4K.** New per-generator
+`quality_label_map` field on `AI_GENERATORS['nano-banana-2']` (additive;
+generators without override fall back to default `Low/Medium/High`
+capitalize). View `bulk_generator_job_view` injects
+`quality_label_map_json` via `json.dumps(_AI_GENERATORS.get(slug,
+{}).get('quality_label_map', {}))` defensive double-`.get()` chain.
+Template adds `data-quality-label-map` attribute. `bulk-generator-polling.js`
+parses with try/catch fallback to `{}`. New `G.formatQualityLabel(quality)`
+helper in `bulk-generator-config.js`. `bulk-generator-ui.js` routes
+both per-prompt-group meta AND single-quality-override header through
+the helper (so Nano Banana 2 shows `2K` instead of `Mixed` when only
+one quality is in use).
+
+**(2) AI_GENERATORS website URLs audited via WebFetch + WebSearch.**
+All 7 bulk-gen entries' `website` URLs verified against official
+model-owner pages. Updated:
+- `grok-imagine`: x.ai → `x.ai/api/imagine`
+- `gpt-image-1-5-byok`: openai.com → `platform.openai.com/docs/models/gpt-image-1.5`
+- 4 Flux variants (`flux-schnell`, `flux-dev`, `flux-1-1-pro`,
+  `flux-2-pro`): `blackforestlabs.ai` → `bfl.ai/` (older variant
+  pages no longer documented on BFL homepage; falls back to model-
+  owner root per spec rule)
+- `nano-banana-2`: `nanobanana.ai` (ECONNREFUSED — broken/dead) →
+  `gemini.google/overview/image-generation/` (verified to mention
+  Nano Banana 2 by name; per Mateo's spec preference)
+
+**(3) 170-B P3 (auth wording divergence) resolved.** Typed-error map
+at `bulk-generator-config.js:111` and legacy `reasonMap` at line 141
+unified to `"Authentication failed — update your API key."` (matches
+170-B chip taxonomy + clearer user instruction).
+
+**(4) 170-B P2 (Done auto-focus guard) resolved.**
+`setPublishModalTerminal` at `bulk-generator-selection.js:395-401` now
+compound-guards both `closeBtn !== document.activeElement` AND
+`doneBtn !== document.activeElement` before calling `doneBtn.focus()`,
+preventing screen-reader announcement thrash on terminal-state
+re-entry (e.g., retry → second terminal).
+
+**Files modified:** `prompts/constants.py`,
+`prompts/views/bulk_generator_views.py`,
+`prompts/templates/prompts/bulk_generator_job.html` (one hunk —
+data attribute), `static/js/bulk-generator-config.js` (3 changes:
+state init + helper + auth wording), `static/js/bulk-generator-polling.js`
+(JSON parse), `static/js/bulk-generator-ui.js` (per-group + header
+label routing), `static/js/bulk-generator-selection.js` (Done focus
+guard). 1396 tests OK.
+
+**Agent ratings:** @code-reviewer 9.0/10, @frontend-developer 9.0/10,
+@django-pro 9.0/10, @accessibility-expert (sub via general-purpose)
+9.0/10. Avg 9.0/10.
+
+---
+
+### Session 171-A — April 26, 2026 (Multi-line `{# #}` Comment Fix — commit `410563c`)
+
+**Outcome:** Three multi-line `{# ... #}` comments in
+`prompts/templates/prompts/bulk_generator_job.html` were leaking
+as visible page text on bulk job results pages. Django's `{# #}`
+comment regex (`\{#.*?#\}` without `re.DOTALL`) is single-line
+only — when a `{#` opens but no `#}` closes on the same line, the
+tokenizer emits the entire `{#`-prefixed content as literal text.
+
+**Fix:** Convert all 3 multi-line blocks (lines 150-153, 172-176,
+224-228 pre-fix; 150-155, 174-180, 228-234 post-fix) to
+`{% comment %} ... {% endcomment %}` blocks (Django's documented
+multi-line comment syntax). Comment text content preserved verbatim
+inside the new tags.
+
+**Spec confidence: 100%.** Definitive root cause confirmed in prior
+session's investigation report (`docs/REPORT_171_INVESTIGATION.md`
+Section 3 + Section 5.1) — no browser evidence required.
+
+**Files modified:** `prompts/templates/prompts/bulk_generator_job.html`
+only (3 str_replace operations, all within ✅ Safe tier). 1396 tests
+OK (no functional impact — template syntax change only).
+
+**Agent ratings:** @frontend-developer 10/10, @code-reviewer 9.5/10,
+@accessibility-expert (sub via general-purpose) 9.5/10. Avg 9.67/10.
+
+---
 
 ### Session 169-D — April 25, 2026 (Comprehensive 169-cluster Docs Catch-up — commit `a6e3140`)
 

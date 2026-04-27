@@ -187,7 +187,13 @@ syntax conversion with no Python, JS, CSS, or test surface impact.
 
 ## Section 9 — How to Test
 
-(To be filled in after full suite gate runs after Spec C.)
+### Automated
+
+```bash
+python manage.py test
+# Result: Ran 1396 tests in 665.816s. OK (skipped=12).
+# 0 failures, 0 errors.
+```
 
 ### Memory Rule #14 closing checklist for this spec
 
@@ -213,7 +219,9 @@ no API contract or model contract changed.
 
 ## Section 10 — Commits
 
-(To be filled in after full suite gate runs after Spec C.)
+| Hash | Message |
+|------|---------|
+| `410563c` | fix(bulk-gen): convert multi-line {# #} comments to {% comment %} blocks (Session 171-A) |
 
 ## Section 11 — What to Work on Next
 

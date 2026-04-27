@@ -304,7 +304,15 @@ data, view context, template attribute, and JS state-management.
 
 ## Section 9 — How to Test
 
-(To be filled in after full suite gate runs after Spec C.)
+### Automated
+
+```bash
+python manage.py test
+# Result: Ran 1396 tests in 665.816s. OK (skipped=12).
+# 0 failures, 0 errors. No regressions from Spec B's view-context
+# injection, JS module additions, or auth-wording / Done-focus-guard
+# changes.
+```
 
 ### Memory Rule #14 closing checklist for this spec
 
@@ -360,7 +368,9 @@ Round 4 (Done focus guard — keyboard navigation):
 
 ## Section 10 — Commits
 
-(To be filled in after full suite gate runs after Spec C.)
+| Hash | Message |
+|------|---------|
+| `6a58ef9` | fix(bulk-gen): cleanup — quality labels, Try-in URLs, 170-B P2/P3 (Session 171-B) |
 
 ## Section 11 — What to Work on Next
 

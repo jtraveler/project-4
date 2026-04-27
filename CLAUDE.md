@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** April 25, 2026
+**Last Updated:** April 26, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -75,6 +75,12 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
+| Session 171 — Modal + Chip Production Verification | 🟡 **Verification Pending** (Apr 26, 2026) | Post-deploy verification per Memory Rule #14 closing checklist. After 171-A's comment-leak fix and a hard-refresh in production, re-test the publish flow on the bulk job results page. Modal should appear; chip should render on Grok content_policy failure. CC's investigation report (`docs/REPORT_171_INVESTIGATION.md` Section 5.2-5.3) ranked the most likely root causes as B1/C1 (cosmetic conflation with leaked comment text) or B2/C3 (cached bundle from a7df2fe deploy) — both resolved by 171-A's fix + a hard-refresh. **If either Regression B or C persists post-verification, capture browser evidence per investigation spec section 1.3 / 2.3, hand to Claude.ai, draft Session 172 follow-up cluster against actual root cause data.** Also covers Mateo's Round 3 (Try-in URL spot-check) + Round 4 (Nano Banana 2 quality labels + GPT Image 2 BYOK selectability + small test job) per the run instructions' closing checklist. |
+| Session 171-D | Apr 26, 2026 | End-of-session docs update for the 171 cluster. (1) 4 new `CLAUDE_CHANGELOG.md` entries (171-A, -B, -C, -D); (2) 4 new "Recently Completed" rows + 1 Verification-Pending row (above); (3) 2 new Deferred P2 rows (page-refresh state recovery during bulk publish, Replicate concurrency policy) — both surfaced by Mateo April 26; (4) 1 new Deferred P3 row (gpt-image-2 pricing audit — pending OpenAI per-quality/size data publication, since 171-C chose Option B2 mirror placeholder); (5) Memory rules count `13 of 30` → `15 of 30` with rules #14 (REPORT closing checklist — added 2026-04-26) and #15 (cluster-shape disclosure) entries; (6) PFS top-line counts: Last Updated April 25 → April 26, Sessions span 163-169 → 163-171, Tests 1386 → 1396, Migrations 90 → 93; (7) version footer 4.68 → 4.69. Cluster shape: **BATCHED with prior-session investigation** per Memory Rule #15 — investigation-then-batched-fix pattern eliminated unknown-unknowns. Commit pending. Agent avg pending. 1396 tests (no change). |
+| Session 171-C | Apr 26, 2026 | GPT Image 2 (BYOK) integration. OpenAI released gpt-image-2 on April 21, 2026 (model ID `gpt-image-2`); spec adds it as a BYOK-only selectable model mirroring `gpt-image-1-5-byok`. Five surfaces: new `AI_GENERATORS['gpt-image-2-byok']` entry, new `AI_GENERATOR_CHOICES` tuple entry (Round 2 fix — see below), new `GeneratorModel` row seeded by migration 0090 (RunPython, idempotent via `update_or_create`) AND mirrored in `seed_generator_models.py` for fresh-DB convergence (defaults byte-identical), choices migration 0091 (auto-generated; AlterField on both `Prompt.ai_generator` and `DeletedPrompt.ai_generator` per the 169-C sibling-field pattern), `OpenAIImageProvider` threading `model_name` through `__init__` → `self.model_name` → API calls (replaces 2 hardcoded `'gpt-image-1.5'` literals; default preserves backward compat), `tasks.py` `_provider_kwargs` setup gains `elif job.provider == 'openai':` branch (mirrors existing Replicate pattern). **IMAGE_COST_MAP scenario:** chose Option B2 (mirror gpt-image-1.5 prices as placeholder) — gpt-image-2 is BYOK so OpenAI bills user directly; displayed cost is informational only; per-model restructure deferred as P3. **Round 1 caught a blocking gap** — AI_GENERATOR_CHOICES in `prompts/models/constants.py` did not include the new slug; without it, Django model validation would silently reject `prompt.save()` for any GPT Image 2 publish (silent corruption per memory rule #13). Round 2 fix: tuple entry + auto-generated migration 0091. `# noqa: C901` added to `process_bulk_generation_job` (new `elif` pushed flake8 complexity 15 → 16; suppression matches existing in-file precedent). Real SEO copy + dedicated icon deferred per existing P3 rows. Commit `843d12e`. Agents Round 1: @django-pro 8.5, @code-reviewer 6.5 (BLOCKED), @architect-review 8.5 (false-alarm on promotional_label), @database-migrations (sub) 9.0; avg 8.125. Round 2 (focused): @django-pro 9.5, @code-reviewer 9.5; avg 9.5. 1396 tests. |
+| Session 171-B | Apr 26, 2026 | Cleanup: quality labels + Try-in URLs + 170-B P2/P3. (1) Per-generator `quality_label_map` field on `AI_GENERATORS['nano-banana-2']` → maps `low/medium/high` to `1K/2K/4K` (additive; generators without override fall back to default capitalize). View injects `quality_label_map_json` via JSON; template exposes via `data-quality-label-map`; polling.js parses with try/catch fallback; new `G.formatQualityLabel(quality)` helper in config.js; ui.js routes per-prompt-group meta AND single-quality-override header through it. (2) AI_GENERATORS website URLs audited via WebFetch + WebSearch — all 7 bulk-gen entries updated to verified official model-owner pages. Notable: `grok-imagine` → `x.ai/api/imagine`, `gpt-image-1-5-byok` → `platform.openai.com/docs/models/gpt-image-1.5`, all 4 Flux variants → `bfl.ai/` (older variant pages no longer documented on BFL homepage; falls back to model-owner root per spec rule), `nano-banana-2` → `gemini.google/overview/image-generation/` (replaces broken `nanobanana.ai` ECONNREFUSED). (3) 170-B P3 (auth wording divergence) resolved — typed-error map and legacy reasonMap unified to `"Authentication failed — update your API key."`. (4) 170-B P2 (Done auto-focus guard) resolved — `setPublishModalTerminal` now compound-guards `closeBtn !== document.activeElement && doneBtn !== document.activeElement` before `.focus()` (prevents screen-reader announcement thrash on terminal-state re-entry). Commit `6a58ef9`. Agents @code-reviewer 9.0, @frontend-developer 9.0, @django-pro 9.0, @accessibility-expert (sub) 9.0. Avg 9.0/10. 1396 tests. |
+| Session 171-A | Apr 26, 2026 | Multi-line `{# #}` Django comment fix. Three multi-line `{# ... #}` blocks in `bulk_generator_job.html` (lines 150-153, 172-176, 224-228 pre-fix) were leaking as visible page text on bulk job results pages — Django's `{# #}` regex (`\{#.*?#\}` without `re.DOTALL`) is single-line only. Fix: convert all 3 to `{% comment %} ... {% endcomment %}` blocks (Django's documented multi-line comment syntax). Comment text content preserved verbatim. Spec confidence 100% — definitive root cause confirmed in prior CC session's investigation (`docs/REPORT_171_INVESTIGATION.md` Section 3 + 5.1, untracked). Commit `410563c`. Agents @frontend-developer 10/10, @code-reviewer 9.5, @accessibility-expert (sub) 9.5. Avg 9.67/10. 1396 tests (template-syntax change only — no functional impact on test suite). |
+| Session 171-INV | Apr 26, 2026 (untracked) | Diagnostic-only investigation pass. Reproduced + statically traced 170-B Regressions A (multi-line `{# #}` comment leak — DEFINITIVE root cause), B (modal not appearing during publish — full pipeline traced as structurally intact), C (chip not rendering on Grok content_policy failure — full pipeline traced as structurally intact). Produced 637-line `docs/REPORT_171_INVESTIGATION.md` (untracked, per spec rule — Mateo uploaded to Claude.ai for next-session multispec drafting). Section 5 hypothesis ranking drove the 171-A/B/C/D cluster shape: 171-A as definitive fix; B/C verifications deferred to post-deploy Memory-Rule-#14 checklist (regressions likely B1/C1 cosmetic-conflation or B2/C3 cached-bundle). Browser-interactive sections (1.3 / 2.3 evidence capture) flagged as Mateo TODO since CC has no browser-control tooling. No code edits, no commits, no agent reviews — investigation deliverable IS the report. Pattern-of-record for "investigation-first → batched-fix → post-deploy verification" cluster shape (Memory Rule #15). |
 | Session 169-D | Apr 25, 2026 | Comprehensive 169-cluster docs catch-up. Closes 9 documentation gaps that emerged from 169-A/B/C but were not absorbed into the cluster's session entries: (1) new `#### Generator Slug Resolution Helper` H3 in Bulk AI Image Generator section explaining the `_resolve_ai_generator_slug` helper architecture, `/prompts/other/` rationale as defensive infrastructure for silent-fallback path, sequential vs concurrent path coverage, and operator drift signal; (2) `Active memory rules (9 of 30)` → `(13 of 30)` plus 4 new rule entries (#10 read current files, #11 Cloudinary video preload observation, #12 tasks.py postmortem reference, #13 silent-fallback observability) plus token-cost math update from 9 rules to 13; (3) 4 new Deferred P3 rows (`EndToEndPublishFlowTests` fixture gap caught by @test-automator in 169-C, PFS broader stale-counts audit, `@technical-writer` substitution formalization, real SEO copy for 7 `AI_GENERATORS` model entries); (4) 169-C row placeholders `Commit pending`/`Agent avg pending` filled with actual values; (5) CC_SPEC_TEMPLATE Critical Reminder #10 (Silent-Fallback Observability) added with 162-E and 169-B as evidence; (6) CC_SPEC_TEMPLATE new "Agent Substitution Convention" subsection codifying 13+ consecutive `@technical-writer → general-purpose + persona` substitution; (7) PFS top-line counts: Last Updated April 24 → April 25, Tests 1364 → 1386, Migrations 88 → 90, Test Files 28 → 29; (8) `CLAUDE_CHANGELOG.md` 168-A entry em-dash individual agent scores → real per-agent scores from `docs/REPORT_168_A_REFACTORING_AUDIT.md`; (9) version footer 4.67 → 4.68. Commit `a6e3140`. Agent avg 8.95/10. 1386 tests (no change). |
 | Session 169-C | Apr 25, 2026 | Cleanup pass closing 169-B P2/P3 follow-ups + working-tree hygiene + 169-cluster docs catch-up. (1) `RegexValidator(GENERATOR_SLUG_REGEX)` added to `DeletedPrompt.ai_generator` (latent risk closed — 169-B added the validator to `Prompt.ai_generator` and `BulkGenerationJob.generator_category` but missed the sibling field). Migration 0088 schema-only — no `RunPython`, no data migration. (2) `AI_GENERATORS['other']` stub entry added so `/prompts/other/` serves a content-thin landing page rather than 404 when the helper's silent-fallback path fires; 169-B's `logger.warning` remains as the operator-side drift signal. (3) `PublishTaskTests.setUp` gained a `GeneratorModel` fixture + new `test_publish_sets_ai_generator_from_registry` test asserting the concurrent `publish_prompt_pages_from_job` path resolves correctly through the helper (mirrors 169-B's `ContentGenerationAlignmentTests` coverage of the sequential path). (4) Working-tree hygiene: 12 stale `CC_SPEC_*.md` files removed (7 staged-deleted + 3 already-gone + 2 untracked drafts). (5) Docs catch-up: 3 new `CLAUDE_CHANGELOG.md` entries + 3 new "Recently Completed" rows + version bump 4.66 → 4.67 + April 25 date sync. PROJECT_FILE_STRUCTURE.md NOT modified — structural additions are at granularities PFS doesn't enumerate. **Real SEO copy for the 7 169-B model entries explicitly deferred** (needs Mateo's marketing input). Commit `d9fcda7`. Agent avg 9.1/10. 1386 tests (+1 PublishTaskTests addition). |
 | Session 169-B | Apr 25, 2026 | Generator slug permanent fix. P0 production 500 on prompt detail pages caused by 4 hardcoded `ai_generator='gpt-image-1.5'` literals at `tasks.py:3387, 3424, 3636, 3693` mis-tagging Grok prompts. Six categories of change: `_resolve_ai_generator_slug` helper from `GeneratorModel` registry (with `logger.warning` for unknown providers), `RegexValidator(r'^[a-z0-9][a-z0-9-]*$\|^$')` on `Prompt.ai_generator` and `BulkGenerationJob.generator_category` (`model_name` exempt for Replicate vendor strings), bidirectional migration 0087 retagging 7 mis-tagged Grok prompts to `'grok-imagine'`, taxonomy alignment across `AI_GENERATOR_CHOICES`/`AI_GENERATORS`/`GeneratorModel.slug`, defensive `None` return in `get_generator_url_slug` + template `{% if %}{% else %}` guard, 21-test regression suite enforcing canonical rule. Agents @code-reviewer 9.3, @architect-review 8.3, @test-automator 9.1, @backend-security-coder 9.0. Avg 8.925/10. Commit `a37d2d8`. 1385 tests. |
@@ -422,13 +428,26 @@ production logs for the `logger.warning` and either:
 > ⚠️ Step 3 (frontend UI) must not be specced or built until Step 2 is fully committed and tested.
 > The Section A build order in "Bulk Job Deletion — Pre-Build Reference" is mandatory — no skipping ahead.
 
+### Deferred P2 Items
+
+Substantive items that warrant their own spec but don't block any
+in-flight work. Surfaced during 171 cluster development.
+
+| Item | File / Surface | Notes |
+|------|----------------|-------|
+| Page-refresh state recovery during bulk publish | `prompts/views/bulk_generator_views.py` + `static/js/bulk-generator-selection.js` + `static/js/bulk-generator-polling.js` | When a user refreshes the bulk job results page mid-publish or after publish completes, the modal/toast UI is lost (modal closes; sticky toast disappears; published links list resets). Server holds the truth (`BulkGenerationJob.published_count`, per-image `prompt_page_id` + `prompt_page_url`). Frontend should reconstruct UI state from polling response on page load — re-derive `totalPublishTarget`, re-render published links list, re-show terminal modal at "Done!" state. Surfaced April 26, 2026 by Mateo during 171-INV browser-task discussion. Estimated 1 spec. |
+| Replicate concurrency policy | `prompts/tasks.py` `_run_generation_loop` `_TIER_RATE_PARAMS` + `prompts/services/image_providers/replicate_provider.py` | `BULK_GEN_MAX_CONCURRENT=1` forces sequential generation across ALL providers. Replicate handles parallelism gracefully (per-call billing, no shared rate limit ceiling per user). Per-provider concurrency policy (Replicate=4-8, OpenAI=tier-bound via existing `_TIER_RATE_PARAMS`, xAI=its own limit) would substantially reduce wall-clock time on bulk Flux/Nano Banana 2 jobs. Surfaced April 26, 2026 by Mateo. Requires investigation + design + implementation. Estimated 2 specs. |
+
+---
+
 ### Deferred P3 Items
 
 Small items not worth individual specs — batch into cleanup passes periodically.
 
 | Item | File | Notes |
 |------|------|-------|
-| EndToEndPublishFlowTests `GeneratorModel` fixture gap | `prompts/tests/test_bulk_page_creation.py` | 169-C closed the parallel gap in `PublishTaskTests` (added `GeneratorModel` fixture in `setUp`) but `EndToEndPublishFlowTests` from Phase 7 has the same risk pattern — its `setUp` does not create a `GeneratorModel` row, so any future test relying on the `_resolve_ai_generator_slug` helper would fall through to `'other'` instead of the expected slug. Caught by @test-automator during 169-C review (8.5/10 score). Trivial fix — copy the fixture from `PublishTaskTests`. P3 because no current test in `EndToEndPublishFlowTests` exercises the resolution path; latent risk only. |
+| EndToEndPublishFlowTests `GeneratorModel` fixture gap | `prompts/tests/test_bulk_page_creation.py` | 169-C closed the parallel gap in `PublishTaskTests` (added `GeneratorModel` fixture in `setUp`) but `EndToEndPublishFlowTests` from Phase 7 has the same risk pattern — its `setUp` does not create a `GeneratorModel` row, so any future test relying on the `_resolve_ai_generator_slug` helper would fall through to `'other'` instead of the expected slug. Caught by @test-automator during 169-C review (8.5/10 score). Trivial fix — copy the fixture from `PublishTaskTests`. P3 because no current test in `EndToEndPublishFlowTests` exercises the resolution path; latent risk only. **Session 171-C extends the same risk to `gpt-image-2-byok`** — neither `PublishTaskTests.setUp` nor `EndToEndPublishFlowTests.setUp` creates a gpt-image-2-byok GeneratorModel fixture, so a future gpt-image-2 publish test would also fall through to `'other'`. Resolution: include a `gpt-image-2-byok` fixture in the broader test-fixture audit when this row is closed. |
+| gpt-image-2 per-quality/size pricing audit + IMAGE_COST_MAP per-model restructure | `prompts/constants.py` `IMAGE_COST_MAP` + `get_image_cost(quality, size)` signature + all callers | Session 171-C added gpt-image-2 BYOK support but chose Option B2 (mirror gpt-image-1.5 prices as placeholder) because (a) gpt-image-2 is BYOK so OpenAI bills user directly — displayed cost is informational only; (b) precise per-quality/size pricing not yet published by OpenAI (token-based pricing only at $8/M input + $30/M output tokens). Per-image equivalents range $0.01-$0.02 (low) to $0.15-$0.22 (high) — high tier ~60% more expensive than gpt-image-1.5. When OpenAI publishes per-quality/size pricing, restructure `IMAGE_COST_MAP` to be model-keyed (`{model: {quality: {size: price}}}`) and update `get_image_cost()` signature to accept a `model` parameter (Option B1 from spec section 5). Update all callers (~5-10 sites in `tasks.py` + `bulk_generator_views.py`). Add gpt-image-2 prices. Will also be required when first PLATFORM-key (non-BYOK) OpenAI model ships. |
 | PROJECT_FILE_STRUCTURE.md broader stale-counts audit | `PROJECT_FILE_STRUCTURE.md` | 169-D updated 4 top-line counts (Last Updated, Tests, Migrations, Test Files) but the file has additional stale entries inside per-session historical tree snapshots and inline LOC values. A comprehensive PFS audit pass would catch these but is out of scope for incremental docs catch-up specs. Defer until cumulative drift becomes large enough to justify a dedicated PFS audit spec. |
 | Formalize `@technical-writer` substitution in agent registry | `CC_SPEC_TEMPLATE.md` (already partial via 169-D), agent registry config | 169-D added an "Agent Substitution Convention" subsection acknowledging the substitution as canonical. The deeper question — whether `general-purpose + persona` should be added as a first-class agent in the wshobson/agents registry, OR whether a custom `@technical-writer-personality` should be authored — remains open. 13+ consecutive sessions of substitution suggests yes; defer the decision until at least one session attempts a custom-agent author. |
 | Real SEO copy for the 7 169-B `AI_GENERATORS` model entries | `prompts/constants.py` | 169-B added placeholder SEO copy for the 7 new model-specific entries (`gpt-image-1-5`, `grok-imagine`, `flux-pro-1-1`, `flux-1-1-pro-ultra`, `nano-banana-2`, `flux-pro-1-1-ultra`, `imagen-4`). Real marketing-quality copy needs Mateo's direct input — generated copy at the SEO-meaningful level requires brand voice judgment. Tracked since 169-B (April 25); defer until Phase SUB launch prep (when SEO content becomes a launch blocker). |
@@ -2766,7 +2785,7 @@ by consistent application of structural safeguards. Memory rules
 are the mechanism for making those safeguards consistent rather
 than "remember to do this" reminders that drift.
 
-### Active memory rules (13 of 30)
+### Active memory rules (15 of 30)
 
 The following rules fire in every Claude conversation for this
 project. Listed in slot order.
@@ -2969,6 +2988,44 @@ the signal that makes the defensive path *observable*.
 Codified as CC_SPEC_TEMPLATE Critical Reminder #10 in this
 spec.
 
+#### 14. REPORT Section 9 closing checklist
+Every code spec's REPORT Section 9 (How to Test) must include
+a "closing checklist" with at minimum: (a) migrations to apply,
+(b) manual browser tests grouped max 2-at-a-time (with explicit
+confirmation between each), (c) failure modes to watch for,
+(d) backward-compatibility verification steps. Empty subsections
+use "N/A — [reason]" rather than omission. Applies to every
+code spec, not just feature specs.
+
+**Rationale:** Established Session 170-B during the kickoff
+discussion with Mateo. The closing-checklist pattern moves
+post-deploy verification from ad-hoc-recall to a structured,
+repeatable Round-of-2 sequence that limits cognitive load and
+prevents skipped verification steps. Documented in MEMORY.md
+on 2026-04-26 as Rule #14.
+
+#### 15. Cluster shape disclosure
+Every multi-spec cluster discloses its shape — BATCHED,
+SEQUENTIAL, or BATCHED-WITH-PRIOR-INVESTIGATION — in the
+session's run instructions AND in each spec's Critical
+Reminders. Each spec's REPORT Section 7/11 mentions the
+cluster shape so future readers can understand the
+inter-spec dependencies and decision sequencing.
+
+**Rationale:** Established Session 171 during the run-instructions
+draft. Cluster shape is structural information that decides
+spec ordering, full-suite-gate placement, and commit
+sequencing. Without explicit disclosure, future readers
+have to re-derive the cluster's nature from indirect signals
+(commit messages, agent rounds). The 171 cluster is the
+first to use BATCHED-WITH-PRIOR-INVESTIGATION — the
+investigation-then-batched-fix pattern that produced
+171-INV → 171-A/B/C/D as a coherent unit. The shape is
+significant precedent: investigation-first eliminates
+unknown-unknowns going into the implementation specs and
+becomes a strong default for any cluster where regressions
+have ambiguous root causes.
+
 ### Three-criteria framework for future memory additions
 
 A memory edit earns a slot if it meets at least one of:
@@ -3029,13 +3086,13 @@ actual Claude behavior and documented expectations.
 
 ### Token cost trade-off
 
-With 13 active memory edits, the per-message token overhead is
-approximately 1,900–2,600 tokens. For a typical 40-message
-session, that's 76,000–104,000 extra tokens of context processed
+With 15 active memory edits, the per-message token overhead is
+approximately 2,200–3,000 tokens. For a typical 40-message
+session, that's 88,000–120,000 extra tokens of context processed
 over the session's lifetime.
 
-At current pricing, this adds roughly $0.45–$1.45 per session
-beyond the baseline. Over 20 sessions per month, $9–$29 of
+At current pricing, this adds roughly $0.50–$1.65 per session
+beyond the baseline. Over 20 sessions per month, $10–$33 of
 additional cost.
 
 This cost is justified if the memory edits prevent even one
@@ -3831,5 +3888,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.68 (Session 169-D — comprehensive 169-cluster docs catch-up: new `#### Generator Slug Resolution Helper` H3 in Bulk AI Image Generator section, memory rules 9→13 with 4 new entries plus token-cost math update, 4 new Deferred P3 rows, 169-C row placeholders filled, CC_SPEC_TEMPLATE Critical Reminder #10 (Silent-Fallback Observability) and Agent Substitution Convention codified, PFS top-line counts synced, CHANGELOG 168-A em-dash scores recovered. Closes the 169 cluster: 169-A `2106eb9` avg 9.0, 169-B `a37d2d8` avg 8.925, 169-C `d9fcda7` avg 9.1, 169-D `a6e3140` avg 8.95. 1386 tests.)
-**Last Updated:** April 25, 2026
+**Version:** 4.69 (Session 171 cluster — investigation-first → batched fix. 171-INV produced `docs/REPORT_171_INVESTIGATION.md` (untracked) with definitive root cause for 170-B Regression A and ranked B/C as cosmetic-conflation/cached-bundle. 171-A `410563c` avg 9.67/10 (multi-line `{# #}` → `{% comment %}` fix). 171-B `6a58ef9` avg 9.0/10 (Nano Banana 2 1K/2K/4K labels via per-generator `quality_label_map`, 7 Try-in URLs verified via WebFetch + WebSearch, 170-B P2/P3 resolved). 171-C `843d12e` avg 9.125 (Round 1) / 9.5 (Round 2 fix) — GPT Image 2 BYOK integration; AI_GENERATOR_CHOICES gap caught by Round 1 agents and fixed via auto-generated migration 0091. 171-D commit pending — this docs update. Memory rules 13 → 15 (#14 REPORT closing checklist, #15 cluster shape disclosure). PFS counts synced. Cluster shape: BATCHED with prior-session investigation. Production verification of modal + chip behavior pending per Memory Rule #14. 1396 tests.)
+**Last Updated:** April 26, 2026

@@ -437,7 +437,20 @@ class boundaries.
 
 ## Section 9 — How to Test
 
-(To be filled in after full suite gate runs.)
+### Automated
+
+```bash
+python manage.py test
+# Result: Ran 1396 tests in 665.816s. OK (skipped=12).
+# 0 failures, 0 errors. No regressions from Spec C's GeneratorModel
+# seed migration, OpenAIImageProvider model_name threading, or tasks.py
+# provider-kwargs branch addition.
+#
+# Spec C did NOT add new tests (would be P3 follow-up per Section 6).
+# Existing OpenAIImageProvider mocked tests at test_bulk_generator.py
+# all pass — confirms the model_name default ('gpt-image-1.5') preserves
+# backward compat for instantiations without the kwarg.
+```
 
 ### Memory Rule #14 closing checklist for this spec
 
@@ -498,7 +511,15 @@ Round 3 (admin / data integrity):
 
 ## Section 10 — Commits
 
-(To be filled in after full suite gate runs.)
+| Hash | Message |
+|------|---------|
+| `843d12e` | feat(bulk-gen): GPT Image 2 BYOK integration (Session 171-C) |
+
+(Includes the Round 2 fix for AI_GENERATOR_CHOICES + auto-generated
+migration 0091, plus the inline `# noqa: C901` suppression on
+`process_bulk_generation_job` to address a flake8 complexity threshold
+crossed by the new `elif` branch — explanatory comment per existing
+in-file precedent.)
 
 ## Section 11 — What to Work on Next
 

@@ -147,10 +147,12 @@
 
     </div>{# /.job-progress-section #}
 
-    {# ===== Publish Progress Bar (Phase 6B — kept for backward compat,
-            now hidden-by-default; modal below is the active surface.
-            Session 170-B retains markup so any legacy code path that
-            populates these IDs stays valid.) ===== #}
+    {% comment %}
+    ===== Publish Progress Bar (Phase 6B — kept for backward compat,
+    now hidden-by-default; modal below is the active surface.
+    Session 170-B retains markup so any legacy code path that
+    populates these IDs stays valid.) =====
+    {% endcomment %}
     <div id="publish-progress"
          class="publish-progress publish-progress--hidden"
          role="status"
@@ -169,11 +171,13 @@
         <ul id="publish-progress-links" class="publish-progress__links" aria-label="Published pages"></ul>
     </div>
 
-    {# ===== Publish Modal (Session 170-B) =====
-       Opens on Create Pages click. Dismissible via × — transitions
-       to sticky toast bottom-right. Reopen restores idempotently from
-       current G state. Rendered in DOM at page load (static aria-live)
-       so screen readers reliably pick up updates. #}
+    {% comment %}
+    ===== Publish Modal (Session 170-B) =====
+    Opens on Create Pages click. Dismissible via × — transitions
+    to sticky toast bottom-right. Reopen restores idempotently from
+    current G state. Rendered in DOM at page load (static aria-live)
+    so screen readers reliably pick up updates.
+    {% endcomment %}
     <div id="publish-modal"
          class="publish-modal-overlay publish-modal--hidden"
          role="dialog"
@@ -221,11 +225,13 @@
         </div>
     </div>
 
-    {# ===== Publish Sticky Toast (Session 170-B) =====
-       Activated when modal is dismissed mid-publish. Persists at
-       bottom-right; updates live; "Reopen" restores the modal. No
-       auto-dismiss — explicit close required (status="status" plus
-       explicit dismiss button). #}
+    {% comment %}
+    ===== Publish Sticky Toast (Session 170-B) =====
+    Activated when modal is dismissed mid-publish. Persists at
+    bottom-right; updates live; "Reopen" restores the modal. No
+    auto-dismiss — explicit close required (status="status" plus
+    explicit dismiss button).
+    {% endcomment %}
     <div id="publish-sticky-toast"
          class="publish-sticky-toast publish-sticky-toast--hidden"
          role="status"

@@ -189,6 +189,17 @@ def bulk_generator_job_view(request, job_id):
     ).first()
     model_display_name = _gen_model.name if _gen_model else job.model_name
 
+    # Per-generator quality label map (Session 171-B). Nano Banana 2 uses
+    # 1K/2K/4K resolution tiers instead of Low/Medium/High; surfaced here
+    # so the JS layer can render the right labels without hardcoding the
+    # mapping. Generators without a quality_label_map fall back to the
+    # default Low/Medium/High capitalization client-side.
+    from prompts.constants import AI_GENERATORS as _AI_GENERATORS
+    _gen_slug = _gen_model.slug if _gen_model else ''
+    quality_label_map_json = json.dumps(
+        _AI_GENERATORS.get(_gen_slug, {}).get('quality_label_map', {}),
+    )
+
     # Count both completed and actively generating images so the progress
     # bar reflects real work in progress on page refresh — not just finished
     # images. 'generating' images have started and will complete shortly.
@@ -213,6 +224,7 @@ def bulk_generator_job_view(request, job_id):
         'model_display_name': model_display_name,
         'live_completed_count': live_completed_count,
         'live_progress_percent': live_progress_percent,
+        'quality_label_map_json': quality_label_map_json,
     })
     response['Cache-Control'] = 'no-store'
     return response

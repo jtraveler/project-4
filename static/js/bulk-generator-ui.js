@@ -388,9 +388,14 @@
             resolvedSizeDisplay = G.sizeDisplay;
             resolvedAspectArg = G.galleryAspect;
         }
+        // Session 171-B: route through G.formatQualityLabel so per-generator
+        // overrides (e.g. Nano Banana 2's 1K/2K/4K) win over default capitalize.
+        // Job-level fallback (G.qualityDisplay) is server-rendered get_quality_display
+        // and reflects raw Low/Medium/High; route it through the formatter too so
+        // the header label matches the per-group label when no override is set.
         resolvedQualDisplay = groupQuality
-            ? (groupQuality.charAt(0).toUpperCase() + groupQuality.slice(1))
-            : G.qualityDisplay;
+            ? G.formatQualityLabel(groupQuality)
+            : G.formatQualityLabel((G.jobQuality || '').toLowerCase()) || G.qualityDisplay;
 
         var sizeSpan = document.createElement('span');
         sizeSpan.textContent = resolvedSizeDisplay;
@@ -542,7 +547,11 @@
             }
         }
 
-        // Quality: reveal column only when a prompt overrides the job default
+        // Quality: reveal column only when a prompt overrides the job default.
+        // Session 171-B: when only ONE distinct quality is in use (override but
+        // uniform), render that quality's label via G.formatQualityLabel so
+        // Nano Banana 2's 1K/2K/4K wins over a generic "Mixed" tag. When 2+
+        // distinct qualities are in use, "Mixed" remains correct.
         var qualKeys = Object.keys(qualitySet);
         var hasOverride = qualKeys.length > 1 ||
             (qualKeys.length === 1 && qualKeys[0] !== jobQuality);
@@ -550,7 +559,11 @@
             var qualTh = document.getElementById('header-quality-item');
             var qualTd = document.getElementById('header-quality-value');
             if (qualTh) { qualTh.classList.add('is-quality-visible'); }
-            if (qualTd) { qualTd.textContent = 'Mixed'; }
+            if (qualTd) {
+                qualTd.textContent = qualKeys.length === 1
+                    ? G.formatQualityLabel(qualKeys[0])
+                    : 'Mixed';
+            }
         }
 
         // Succeeded count — bold weight when non-zero (matches Failed treatment)

@@ -71,6 +71,7 @@
     G.qualityDisplay = '';
     G.sizeDisplay = '';
     G.galleryAspect = '1 / 1'; // aspect ratio for placeholder sizing
+    G.qualityLabelMap = {}; // Per-generator override (e.g. {low:'1K',medium:'2K',high:'4K'} for Nano Banana 2). Empty = fall back to capitalize(quality).
     G.announcer = null;      // aria-live region for selection announcements
     G.progressAnnouncer = null; // #generation-progress-announcer live region (A11Y-3)
     G.lastAnnouncedCompleted = -1; // track last announced count to avoid repeats
@@ -137,7 +138,7 @@
         // exact-match map so JS and backend never silently drift.
         if (!errorMessage) return '';
         var reasonMap = {
-            'Authentication error':     'Invalid API key \u2014 check your key and try again.',
+            'Authentication error':     'Authentication failed \u2014 update your API key.',
             'Invalid request':          'Invalid request \u2014 check your prompt or settings.',
             'Content policy violation': 'Content policy violation \u2014 revise this prompt.',
             'Upload failed':            'Generation succeeded but file upload failed \u2014 try regenerating.',
@@ -148,6 +149,20 @@
         };
         return reasonMap[errorMessage] ||
             'Generation failed \u2014 try again or contact support if this repeats.';
+    };
+
+    // ─── Quality Label Helper (Session 171-B) ─────────────────────
+    // Maps a raw quality key (e.g. 'medium') to the user-facing label
+    // for the current generator. Nano Banana 2 maps low/medium/high to
+    // 1K/2K/4K via G.qualityLabelMap (loaded from data-quality-label-map
+    // in init). Generators without an override fall back to
+    // capitalize(quality). Pass-through on falsy input.
+    G.formatQualityLabel = function (quality) {
+        if (!quality) return '';
+        if (G.qualityLabelMap && G.qualityLabelMap[quality]) {
+            return G.qualityLabelMap[quality];
+        }
+        return quality.charAt(0).toUpperCase() + quality.slice(1);
     };
 
     // ─── Formatters ───────────────────────────────────────────────

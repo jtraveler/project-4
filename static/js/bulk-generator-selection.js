@@ -391,8 +391,15 @@
                 });
                 doneBtn.dataset.wired = '1';
             }
-            // Move focus to Done button so keyboard users can dismiss easily
-            if (closeBtn !== document.activeElement) doneBtn.focus();
+            // Move focus to Done button so keyboard users can dismiss easily.
+            // 170-B P2: also guard against re-focusing if Done already has focus
+            // (prevents focus thrash mid-screen-reader-announcement on terminal
+            // state re-entry — possible if a previous polling cycle's terminal
+            // path already focused Done before a retry triggered another).
+            if (closeBtn !== document.activeElement
+                && doneBtn !== document.activeElement) {
+                doneBtn.focus();
+            }
         }
 
         // Mirror terminal state to sticky toast if present

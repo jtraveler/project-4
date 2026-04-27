@@ -344,6 +344,18 @@
         G.sizeDisplay = G.root.dataset.sizeDisplay || '';
         G.galleryAspect = G.root.dataset.galleryAspect || '1 / 1';
 
+        // Per-generator quality label override (Session 171-B). Empty
+        // object falls back to capitalize(quality). JSON parse is
+        // defensive — invalid payload yields {} via try/catch so a
+        // malformed attribute never crashes init.
+        try {
+            G.qualityLabelMap = JSON.parse(
+                G.root.dataset.qualityLabelMap || '{}'
+            );
+        } catch (e) {
+            G.qualityLabelMap = {};
+        }
+
         // Create aria-live region for selection announcements
         G.announcer = document.createElement('div');
         G.announcer.className = 'gallery-sr-announcer';

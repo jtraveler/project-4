@@ -27,6 +27,7 @@
      data-gallery-aspect="{{ gallery_aspect }}"
      data-model-name="{{ job.model_name }}"
      data-provider="{{ job.provider }}"
+     data-quality-label-map="{{ quality_label_map_json }}"
      data-create-pages-url="{% url 'prompts:api_bulk_create_pages' job.id %}">
 
     {# ===== Job Summary Header ===== #}

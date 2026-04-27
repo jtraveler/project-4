@@ -352,7 +352,7 @@ AI_GENERATORS = {
         'seo_subheader': 'Grok Imagine AI Image Examples',
         'seo_description': 'Browse Grok Imagine prompts on PromptFinder.',
         'description': '<p>Grok Imagine is an AI image generation model from xAI.</p>',
-        'website': 'https://x.ai',
+        'website': 'https://x.ai/api/imagine',
         'icon': 'images/generators/grok-icon.png',
         'choice_value': 'grok-imagine',
         'supports_images': True,
@@ -364,7 +364,7 @@ AI_GENERATORS = {
         'seo_subheader': 'GPT-Image-1.5 BYOK AI Image Examples',
         'seo_description': 'Browse GPT-Image-1.5 BYOK prompts on PromptFinder.',
         'description': '<p>GPT-Image-1.5 is OpenAI\'s image model, accessed via Bring-Your-Own-Key.</p>',
-        'website': 'https://openai.com',
+        'website': 'https://platform.openai.com/docs/models/gpt-image-1.5',
         'icon': 'images/generators/dalle3-icon.png',
         'choice_value': 'gpt-image-1-5-byok',
         'supports_images': True,
@@ -376,7 +376,7 @@ AI_GENERATORS = {
         'seo_subheader': 'Flux Schnell AI Image Examples',
         'seo_description': 'Browse Flux Schnell prompts on PromptFinder.',
         'description': '<p>Flux Schnell is a fast, efficient AI image generation model from Black Forest Labs.</p>',
-        'website': 'https://blackforestlabs.ai',
+        'website': 'https://bfl.ai/',
         'icon': 'images/generators/flux-icon.png',
         'choice_value': 'flux-schnell',
         'supports_images': True,
@@ -388,7 +388,7 @@ AI_GENERATORS = {
         'seo_subheader': 'Flux Dev AI Image Examples',
         'seo_description': 'Browse Flux Dev prompts on PromptFinder.',
         'description': '<p>Flux Dev is a developer-focused AI image generation model from Black Forest Labs.</p>',
-        'website': 'https://blackforestlabs.ai',
+        'website': 'https://bfl.ai/',
         'icon': 'images/generators/flux-icon.png',
         'choice_value': 'flux-dev',
         'supports_images': True,
@@ -400,7 +400,7 @@ AI_GENERATORS = {
         'seo_subheader': 'Flux 1.1 Pro AI Image Examples',
         'seo_description': 'Browse Flux 1.1 Pro prompts on PromptFinder.',
         'description': '<p>Flux 1.1 Pro is a professional-grade AI image generation model from Black Forest Labs.</p>',
-        'website': 'https://blackforestlabs.ai',
+        'website': 'https://bfl.ai/',
         'icon': 'images/generators/flux-icon.png',
         'choice_value': 'flux-1-1-pro',
         'supports_images': True,
@@ -412,7 +412,7 @@ AI_GENERATORS = {
         'seo_subheader': 'FLUX 2 Pro AI Image Examples',
         'seo_description': 'Browse FLUX 2 Pro prompts on PromptFinder.',
         'description': '<p>FLUX 2 Pro is the next-generation AI image generation model from Black Forest Labs.</p>',
-        'website': 'https://blackforestlabs.ai',
+        'website': 'https://bfl.ai/',
         'icon': 'images/generators/flux-icon.png',
         'choice_value': 'flux-2-pro',
         'supports_images': True,
@@ -424,11 +424,19 @@ AI_GENERATORS = {
         'seo_subheader': 'Nano Banana 2 AI Image Examples',
         'seo_description': 'Browse Nano Banana 2 prompts on PromptFinder.',
         'description': '<p>Nano Banana 2 is a stylized AI image generation model powered by Google\'s Gemini.</p>',
-        'website': 'https://nanobanana.ai',
+        'website': 'https://gemini.google/overview/image-generation/',
         'icon': 'images/generators/nano-banana-icon.png',
         'choice_value': 'nano-banana-2',
         'supports_images': True,
         'supports_video': False,
+        # Per-generator quality label override. Replicate's Nano Banana 2 uses
+        # resolution tiers (1K/2K/4K) rather than perceptual quality (Low/
+        # Medium/High); the underlying _NANO_BANANA_RESOLUTION_MAP in
+        # replicate_provider.py drives both the API call and the cost
+        # calculation. Surface the same labels in the UI so users see what
+        # they're paying for. Generators without this field render the
+        # default Low/Medium/High labels.
+        'quality_label_map': {'low': '1K', 'medium': '2K', 'high': '4K'},
     },
     # Catch-all entry (Session 169-C). Reached via _resolve_ai_generator_slug's
     # safe-fallback branch when a job's (provider, model_identifier) does not

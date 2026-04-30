@@ -323,7 +323,7 @@ cleanly with 0 failures, 0 errors.
 
 | Hash | Message |
 |------|---------|
-| TBD  | fix(bulk-gen): polish — modal footer + disabled select + Memory Rule #13 + NB2 default (Session 172-A) |
+| `d340e1e` | fix(bulk-gen): polish — modal footer + disabled select + Memory Rule #13 + NB2 default (Session 172-A) |
 
 ---
 

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 26, 2026 (Sessions 101–171)
+**Last Updated:** April 29, 2026 (Sessions 101–172)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -31,6 +31,254 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 172-D — April 29, 2026 (End-of-Session Docs Update — commit pending)
+
+**Outcome:** Documents the 172 cluster (172-A bundled polish,
+172-B Grok content moderation hotfix, 172-C overlay restoration on
+page reload). Cluster shape: **BATCHED with prior-session evidence
+capture** per Memory Rule #15 — three pieces of evidence anchored
+the cluster:
+
+1. **172-A:** static review of `bulk-generator-job.css` lines
+   1355-1361 confirmed `.publish-modal-footer` had no `background`
+   property; static review of `bulk-generator.css` confirmed
+   `.bg-box-override-select` had no `:disabled` rule; static review
+   of `tasks.py:3138/3140` confirmed two silent-fallback branches
+   for `model_name`; static review of `bulk-generator.js` lines
+   1003-1011 confirmed NB2 swapped option labels but didn't change
+   selected value.
+2. **172-B:** Mateo captured the verbatim xAI rejection wording
+   from the production Postgres database via `heroku pg:psql` —
+   `"Generated image rejected by content moderation."` — which
+   `_POLICY_KEYWORDS` did not match. Database-state inspection
+   was the only diagnostic path because Memory Rule #13's silent-
+   fallback observability principle had been violated (no log line
+   on the BadRequestError fallthrough). 172-B fixed both the
+   keyword gap AND the underlying observability violation.
+3. **172-C:** static review of `bulk-generator-ui.js:88` and
+   `bulk-generator-selection.js:805` confirmed `markCardPublished`
+   was never called from `renderImages` (only from the publish
+   polling loop). Backend payload contract verified at
+   `bulk_generation.py:430-431` exposes `prompt_page_id` and
+   `prompt_page_url` on every poll.
+
+**Precedent documented:** when log-based investigation fails
+(Memory Rule #13 violation masking the symptom), database-state
+inspection is a valid fallback for read-only diagnostics. 172-B
+itself fixed the Memory Rule #13 violation that necessitated the
+psql workaround.
+
+**Files modified:**
+- `CLAUDE_CHANGELOG.md` — 4 new session entries (this one + 172-A,
+  -B, -C above)
+- `CLAUDE.md` — 4 new "Recently Completed" rows + Session 171
+  Verification-Pending row resolved + 3 new Deferred P2 rows
+  (modal persistence on bulk publish refresh, IMAGE_COST_MAP
+  per-model restructure (Scenario B1), Reset Master + Clear All
+  Prompts UX) + 1 new Deferred P3 row (Try-in URL future text
+  change for single-page generator) + version footer 4.69 → 4.70
+- `PROJECT_FILE_STRUCTURE.md` — Last Updated April 26 → April 29,
+  Sessions span 163–171 → 163–172, Total Tests 1396 → 1400,
+  Migrations unchanged (none added in 172)
+- Reports A/B/C — Sections 9-10 finalized (test results filled,
+  commit hashes filled in to ride into this docs commit)
+
+**Memory rules unchanged:** still 15 of 30 — no new rules added
+in 172.
+
+**Agent ratings:** @technical-writer (sub via general-purpose)
+X.X/10 + @code-reviewer X.X/10. Avg X.X/10. *(filled post agent
+review)*
+
+---
+
+### Session 172-C — April 29, 2026 (Per-Image Overlay Restoration on Page Reload — commit `1b59266`)
+
+**Outcome:** Restores published-badge overlays on page reload for
+images already published earlier in the session. Mateo's report:
+*"would be great to have what we had before where an overlaid
+status with a link to the published page appears on top of the
+image... we had this built in before but now it's no longer
+appearing... this is great to have for when the user closes the
+modal and they still can see which images have been published."*
+
+**Root cause:** `G.markCardPublished` (introduced in 170-B at
+`bulk-generator-gallery.js:49`) was only called from inside
+`startPublishProgressPolling` (`bulk-generator-selection.js:805`)
+which only runs after a Create Pages click. On page reload,
+refresh, or navigation back, the badge was lost — even though
+the backend payload contract is intact (`bulk_generation.py:430-431`
+exposes `prompt_page_id` and `prompt_page_url` on every poll) and
+the page-load fetch at `bulk-generator-polling.js:451` already
+retrieves these fields.
+
+**Fix:** Frontend-only. Extended `G.renderImages`
+(`bulk-generator-ui.js:88`) to call `G.markCardPublished` for any
+image whose polling payload has `prompt_page_id` set. Placement
+chosen carefully: AFTER the existing status branch
+(completed/failed/generating/queued), INSIDE the `for` loop iterating
+per-image. Truthiness guard `if (image.prompt_page_id && image.id)`
+avoids null/undefined cases. `String(image.id)` cast matches the
+existing call signature at `selection.js:805`.
+
+**Idempotency:** `markCardPublished` early-returns at
+`bulk-generator-gallery.js:56` (`if (slot.classList.contains('is-published')) return;`)
+plus a secondary guard at line 65 (`!slot.querySelector('.published-badge')`).
+Calling from both `renderImages` and `startPublishProgressPolling`
+is safe — no duplicate badge nodes appended.
+
+**Tests:** 2 new tests added inside `PublishFlowTests` class —
+multi-image variants of the single-image polling-payload contract
+tests already at `test_bulk_generator_views.py:1284-1362`. Existing
+tests use count=1; the new tests use count=2 to lock in the
+multi-image iteration path that `renderImages` exercises:
+- `test_172_c_polling_response_exposes_page_id_for_multiple_published`
+- `test_172_c_polling_response_nulls_page_id_for_multiple_unpublished`
+
+**Files modified:** `static/js/bulk-generator-ui.js`,
+`prompts/tests/test_bulk_generator_views.py`. 1400 tests OK
+(1396 pre + 2 from 172-B + 2 from 172-C).
+
+**Agent ratings:** @frontend-developer 9.5/10, @code-reviewer 9.2/10,
+@accessibility-expert (sub via general-purpose) 9.0/10,
+@ui-visual-validator 9.0/10. Avg 9.175/10.
+
+---
+
+### Session 172-B — April 29, 2026 (Grok Content Moderation Hotfix: `_POLICY_KEYWORDS` Expansion — commit `b00c0d9`)
+
+**Outcome:** Fixes the regression Mateo verified post-170-B — Nano
+Banana 2 NSFW failures correctly displayed the red "Content
+blocked" chip per the 170-B taxonomy, but Grok NSFW failures
+continued showing legacy "Failed — Invalid request" text.
+
+**Root cause:** xAI's actual rejection wording is
+**`"Generated image rejected by content moderation."`** — but
+`_POLICY_KEYWORDS` (line 37 of `xai_provider.py`) had no entry
+matching `'moderation'` or `'rejected'`. The keyword check fell
+through to the `invalid_request` branch.
+
+**Evidence trail (precedent worth documenting):** Mateo captured
+the verbatim rejection wording from the production
+`prompts_generatedimage` table via `heroku pg:psql`. Database-state
+inspection was the only diagnostic path because Memory Rule #13's
+silent-fallback observability principle had been violated — no
+log line on the BadRequestError fallthrough. The Session 171
+investigation pursued the wrong ranking (cosmetic conflation /
+cached bundle) precisely because logs gave no signal.
+
+**Fix:** Two surfaces in `xai_provider.py`:
+1. Added `'moderation'` and `'rejected'` to `_POLICY_KEYWORDS`
+   (defense-in-depth: either keyword matches the wording even if
+   xAI varies it slightly between releases). Both content_policy
+   detection paths benefit (SDK at line 166 + httpx-direct edits
+   at line 292) — single tuple shared.
+2. Added `logger.info` on the BadRequestError fallthrough path
+   (Memory Rule #13 application). Future investigations can read
+   Heroku logs instead of querying Postgres. Log level `info`
+   chosen (not `warning`) — this is an expected taxonomy gap, not
+   an error condition. `[:300]` truncation safety margin over the
+   `[:200]` user-facing message cap.
+
+**False-positive risk analysis:** `'moderation'` is xAI-unique
+for non-content errors → low risk. `'rejected'` is broader (could
+appear in parameter validation 400s) → medium-low risk, mitigated
+by the `'billing'` check that fires before the keyword scan. If
+false positives observed post-deploy via the new fallthrough log,
+narrow to `'rejected by content'`.
+
+**Architectural concerns surfaced (non-blocking, P3):** keyword
+substring matching is xAI-specific (driven by API shape — no
+structured `error.code`). OpenAI uses structured codes. A future
+shared `detect_content_policy(error_str, structured_code=None)`
+utility could unify both. `_POLICY_KEYWORDS` constant name doesn't
+signal xAI scope — could rename to `_XAI_POLICY_KEYWORDS` if other
+providers add similar detection.
+
+**Tests:** 2 new tests in `XAINSFWKeywordTests` (using existing
+`_generate_with_bad_request` helper):
+- `test_xai_content_moderation_classified_as_content_policy` —
+  uses the verbatim psql-captured wording, asserts
+  `error_type == 'content_policy'`
+- `test_xai_unrecognized_400_logs_at_info` — uses `assertLogs`
+  against `prompts.services.image_providers.xai_provider` at
+  INFO level, deliberately crafted message avoiding all
+  `_POLICY_KEYWORDS` AND avoiding `'billing'` so the fallthrough
+  is the only possible path
+
+**Files modified:** `prompts/services/image_providers/xai_provider.py`,
+`prompts/tests/test_xai_provider.py`. 1400 tests OK (1396 pre + 2
+from 172-B + 2 from 172-C).
+
+**Agent ratings:** @code-reviewer 9.3/10, @debugger 9.5/10,
+@test-automator 9.5/10, @architect-review 8.8/10. Avg 9.275/10.
+
+---
+
+### Session 172-A — April 29, 2026 (Bundled Polish: Modal Footer + Disabled Select + Memory Rule #13 + NB2 Default — commit `d340e1e`)
+
+**Outcome:** Four small fixes bundled into one spec because each
+was too small to warrant its own.
+
+**(1) Modal footer transparent background.**
+`.publish-modal-footer` uses `<footer>` element semantically, which
+inherits the global page `<footer>` dark background via element
+selector. The class rule had no `background` property, so the
+cascade lost. Added explicit `background: transparent`. The
+alternative (changing markup from `<footer>` to `<div>`) would
+also work but breaks semantic structure. CSS-only is cleaner.
+
+**(2) Per-box disabled quality select styling.**
+`.bg-box-override-select` had no `:disabled` pseudo-class rule —
+disabled per-box quality dropdowns looked enabled in browser
+default styling. Added new rule mirroring master row's
+`.bg-select:disabled` (line 155-159) byte-for-byte: `gray-100`
+background, `gray-400` color, `cursor: not-allowed`. Visual
+consistency between master and per-box dropdowns. WCAG 1.4.3
+explicitly exempts disabled controls from contrast requirements
+(verified by @accessibility-expert) so the ~2.07:1 ratio is
+conformant; visual distinguishability between enabled (~10.4:1)
+and disabled states is the cognitive accessibility win.
+
+**(3) Memory Rule #13 logger.warning in `tasks.py`.** Two
+silent-fallback branches at lines 3138 (Replicate) and 3140
+(OpenAI) silently defaulted `model_name` when missing. Added
+`logger.warning` blocks BEFORE each silent assignment per
+Session 169-B's established rule. Structured field `job_id` from
+function parameter; actionable message references both the upstream
+creation site (`api_start_generation`) and the data layer
+(`GeneratorModel` seed). Should never fire in practice (every job
+is created with `model_name`), but if it does, we want observability.
+
+**(4) Nano Banana 2 master quality default to 1K.** When user
+selects NB2 model, master quality dropdown now auto-selects "1K"
+(low) rather than preserving prior selection. Includes guard
+`if (_qs.value !== 'low')` to preserve explicit within-session
+user choice — autosave restore at `bulk-generator-autosave.js:465-472`
+runs `handleModelChange` first then restores saved quality value,
+so a user with saved "2K" preference is unaffected. The 1K default
+serves cost-sensitive bulk runs.
+
+**Pre-existing working-tree state acknowledged:** The session
+began with `bulk-generator-job.css` already modified — a pre-Session-172
+removal of `font-size: 0.9rem` from `.publish-modal-links li`
+(line 1338). This change was bundled into Spec A's commit and
+documented transparently in REPORT_172_A Section 4. Two agents
+(@frontend-developer, @code-reviewer) flagged it during review;
+since it pre-dated the session, no reversal was attempted.
+
+**Files modified:** `static/css/pages/bulk-generator-job.css`,
+`static/css/pages/bulk-generator.css`, `prompts/tasks.py`,
+`static/js/bulk-generator.js`. No test additions (visual changes
++ observability paths that don't fire in normal operation).
+1400 tests OK (no regressions).
+
+**Agent ratings:** @frontend-developer 9.0/10, @code-reviewer 8.5/10,
+@accessibility-expert (sub via general-purpose) 8.5/10,
+@django-pro 9.5/10. Avg 8.875/10.
+
+---
 
 ### Session 171-D — April 26, 2026 (End-of-Session Docs Update — commit pending)
 

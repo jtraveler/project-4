@@ -370,7 +370,7 @@ Spec C 2). 0 failures, 0 errors, 12 skipped (unchanged from pre-session).
 
 | Hash | Message |
 |------|---------|
-| TBD  | fix(bulk-gen): expand xAI _POLICY_KEYWORDS to catch "rejected by content moderation" (Session 172-B) |
+| `b00c0d9` | fix(bulk-gen): expand xAI _POLICY_KEYWORDS to catch "rejected by content moderation" (Session 172-B) |
 
 ---
 

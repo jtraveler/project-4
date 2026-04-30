@@ -365,7 +365,7 @@ Both pass. PublishFlowTests went from 11 → 13 tests; full suite from
 
 | Hash | Message |
 |------|---------|
-| TBD  | fix(bulk-gen): restore published-badge overlays on page reload (Session 172-C) |
+| `1b59266` | fix(bulk-gen): restore published-badge overlays on page reload (Session 172-C) |
 
 ---
 

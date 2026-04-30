@@ -1004,6 +1004,14 @@
                 if (_qs.options[0]) _qs.options[0].text = '1K';
                 if (_qs.options[1]) _qs.options[1].text = '2K';
                 if (_qs.options[2]) _qs.options[2].text = '4K';
+                // Session 172-A: NB2 master default is 1K (low). User can
+                // still change to 2K/4K manually but the cheapest tier is
+                // the right starting default for cost-sensitive bulk runs.
+                // Only override if the current value differs — preserves
+                // user's explicit choice across model swaps.
+                if (_qs.value !== 'low') {
+                    _qs.value = 'low';
+                }
             } else {
                 if (_qs.options[0]) _qs.options[0].text = 'Low';
                 if (_qs.options[1]) _qs.options[1].text = 'Medium';

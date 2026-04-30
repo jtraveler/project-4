@@ -1335,7 +1335,6 @@ a.published-badge:focus-visible {
 .publish-modal-links li {
     padding: 6px 0;
     border-bottom: 1px solid var(--gray-100, #f5f5f5);
-    font-size: 0.9rem;
 }
 
 .publish-modal-links li:last-child {
@@ -1353,6 +1352,11 @@ a.published-badge:focus-visible {
 }
 
 .publish-modal-footer {
+    /* Session 172-A: explicit background overrides the global page <footer>
+       dark styling that bleeds in via element selector. The modal uses
+       <footer> element for semantics; this rule keeps it transparent so
+       the modal dialog's white background shows through. */
+    background: transparent;
     padding: 12px 20px 16px;
     display: flex;
     justify-content: flex-end;

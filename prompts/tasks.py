@@ -3135,8 +3135,28 @@ def process_bulk_generation_job(job_id: str) -> None:  # noqa: C901 — orchestr
     # Defaults match each provider's __init__ default for backward compat.
     _provider_kwargs = {'mock_mode': False}
     if job.provider == 'replicate':
+        # Session 172-A: Memory Rule #13 — silent-fallback observability.
+        # If job.model_name is empty/None, we silently fall back to flux-schnell.
+        # This shouldn't happen in practice (every job is created with a model_name
+        # via api_start_generation) but if it does, log so we can investigate.
+        if not job.model_name:
+            logger.warning(
+                "Replicate job %s missing model_name — falling back to flux-schnell. "
+                "This indicates a bug in job creation; investigate the api_start "
+                "endpoint or GeneratorModel seed.",
+                job_id,
+            )
         _provider_kwargs['model_name'] = job.model_name or 'black-forest-labs/flux-schnell'
     elif job.provider == 'openai':
+        # Session 172-A: Memory Rule #13 — silent-fallback observability.
+        # See Replicate comment above; same rationale for OpenAI fallback.
+        if not job.model_name:
+            logger.warning(
+                "OpenAI job %s missing model_name — falling back to gpt-image-1.5. "
+                "This indicates a bug in job creation; investigate the api_start "
+                "endpoint or GeneratorModel seed.",
+                job_id,
+            )
         _provider_kwargs['model_name'] = job.model_name or 'gpt-image-1.5'
     provider = get_provider(job.provider, **_provider_kwargs)
 

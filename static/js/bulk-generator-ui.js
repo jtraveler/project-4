@@ -145,6 +145,24 @@
                     );
                 }
                 // status === 'queued': leave as queued placeholder (default)
+
+                // Session 172-C: restore published badge on page load.
+                // markCardPublished is normally called from
+                // startPublishProgressPolling (selection.js:805) but that
+                // only runs after a Create Pages click. On a fresh page
+                // load (refresh, navigation back, different tab), already-
+                // published images need their badges restored from the
+                // polling payload's prompt_page_id field.
+                //
+                // Idempotent — markCardPublished early-returns if the
+                // card already has 'is-published' class. Safe to call
+                // even on cards that were just re-rendered above.
+                if (image.prompt_page_id && image.id) {
+                    G.markCardPublished(
+                        String(image.id),
+                        image.prompt_page_url || null
+                    );
+                }
             }
         }
 

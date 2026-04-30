@@ -1372,6 +1372,72 @@ class PublishFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['published_count'], 3)
 
+    # ── Session 172-C: page-load overlay restoration contract ────────────────
+
+    def test_172_c_polling_response_exposes_page_id_for_multiple_published(self):
+        """Session 172-C: page-reload after a multi-image publish must surface
+        prompt_page_id and prompt_page_url for EVERY published image so
+        renderImages can call markCardPublished for each one. Locks the
+        multi-image variant of the polling payload contract — the
+        single-image case is covered by test_status_api_prompt_page_id_*
+        (lines 1316/1339)."""
+        from prompts.models import Prompt
+        self.client.login(username='pub_staff', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=2, status='completed',
+        )
+        prompts = []
+        for i in range(2):
+            p = Prompt.objects.create(
+                title=f'Published Page {i}',
+                author=self.staff_user,
+                content='test',
+                status=1,
+            )
+            prompts.append(p)
+            GeneratedImage.objects.create(
+                job=job, prompt_text=f'Test {i}', prompt_order=i,
+                status='completed',
+                image_url=f'https://example.com/{i}.png',
+                prompt_page=p,
+            )
+
+        response = self.client.get(self._status_url(job.id))
+        self.assertEqual(response.status_code, 200)
+        images = response.json()['images']
+        self.assertEqual(len(images), 2)
+        # Every image must have a non-null prompt_page_id AND a leading-slash URL.
+        for img in images:
+            self.assertIn('prompt_page_id', img)
+            self.assertIn('prompt_page_url', img)
+            self.assertIsNotNone(img['prompt_page_id'])
+            self.assertTrue(img['prompt_page_url'].startswith('/'))
+
+    def test_172_c_polling_response_nulls_page_id_for_multiple_unpublished(self):
+        """Session 172-C: confirm the multi-image unpublished case still nulls
+        prompt_page_id — frontend's truthiness check before calling
+        markCardPublished depends on null/None as the 'do not show badge'
+        sentinel. Pairs with the published-case test above so the
+        pre/post-publish contract is locked symmetrically."""
+        self.client.login(username='pub_staff', password='testpass')
+        job = BulkGenerationJob.objects.create(
+            created_by=self.staff_user, total_prompts=2, status='completed',
+        )
+        for i in range(2):
+            GeneratedImage.objects.create(
+                job=job, prompt_text=f'Test {i}', prompt_order=i,
+                status='completed',
+                image_url=f'https://example.com/{i}.png',
+            )
+
+        response = self.client.get(self._status_url(job.id))
+        self.assertEqual(response.status_code, 200)
+        images = response.json()['images']
+        self.assertEqual(len(images), 2)
+        for img in images:
+            self.assertIn('prompt_page_id', img)
+            self.assertIsNone(img['prompt_page_id'])
+
     # ── Publish task ──────────────────────────────────────────────────────────
 
     @patch('prompts.tasks._call_openai_vision')

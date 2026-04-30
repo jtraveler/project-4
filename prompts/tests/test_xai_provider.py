@@ -104,6 +104,41 @@ class XAINSFWKeywordTests(SimpleTestCase):
         self.assertEqual(result.error_type, 'invalid_request')
         self.assertNotEqual(result.error_type, 'content_policy')
 
+    def test_xai_content_moderation_classified_as_content_policy(self):
+        """Session 172-B regression test: xAI returns 'Generated image
+        rejected by content moderation.' for NSFW prompts. Verify
+        _POLICY_KEYWORDS now matches this exact wording (Session 171 didn't
+        — see REPORT_172_B Section 1 for the psql-captured evidence)."""
+        result = self._generate_with_bad_request(
+            "Error code: 400 - {'code': 'Client specified an invalid argument', "
+            "'error': 'Generated image rejected by content moderation.', "
+            "'usage': {'cost_in_usd_ticks': 200000000}}"
+        )
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_type, 'content_policy')
+        self.assertNotEqual(result.error_type, 'invalid_request')
+        self.assertIn('content policy', result.error_message.lower())
+
+    def test_xai_unrecognized_400_logs_at_info(self):
+        """Session 172-B Memory Rule #13: BadRequestError fallthrough must
+        log so future investigations can read Heroku logs instead of
+        querying Postgres."""
+        with self.assertLogs(
+            'prompts.services.image_providers.xai_provider',
+            level='INFO',
+        ) as logs:
+            # Wording deliberately avoids _POLICY_KEYWORDS AND the word 'billing'
+            # so we hit the fallthrough branch (not content_policy, not quota).
+            result = self._generate_with_bad_request(
+                'malformed parameter foobar — unrecognised 400'
+            )
+
+        self.assertEqual(result.error_type, 'invalid_request')
+        self.assertTrue(
+            any('xAI BadRequestError fallthrough' in msg for msg in logs.output),
+            f"Expected fallthrough log line in {logs.output}",
+        )
+
 
 class XAISDKBillingToQuotaTests(SimpleTestCase):
     """Regression guard for 162-D.

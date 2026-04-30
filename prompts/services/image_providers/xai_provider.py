@@ -34,9 +34,18 @@ _DEFAULT_ASPECT_RATIO = '1:1'
 
 # Keywords in xAI BadRequestError messages that indicate content policy rejection.
 # Checked against str(e).lower(). Broad set to catch varied xAI error phrasing.
+#
+# Session 172-B: added 'moderation' and 'rejected' after Mateo captured the
+# actual xAI rejection wording from Postgres:
+#   "Generated image rejected by content moderation."
+# Original keywords missed this entirely — see REPORT_172_B Section 1 for full
+# evidence trail. Both 'moderation' and 'rejected' added (rather than just one)
+# for defense-in-depth: if xAI varies the wording slightly between releases,
+# either keyword catches it.
 _POLICY_KEYWORDS = (
     'content policy', 'safety', 'forbidden', 'violation',
     'blocked', 'inappropriate', 'nsfw', 'not allowed',
+    'moderation', 'rejected',
 )
 
 
@@ -184,6 +193,16 @@ class XAIImageProvider(ImageProvider):
                     error_type='quota',
                     error_message='API billing limit reached — check your xAI account.',
                 )
+            # Session 172-B: Memory Rule #13 — silent-fallback observability.
+            # If we reach here, _POLICY_KEYWORDS didn't match and 'billing'
+            # didn't appear either. Log the rejection text so future
+            # investigations can read Heroku logs instead of querying Postgres
+            # (the original bug investigation in Session 171 had to use
+            # heroku pg:psql because nothing was logged at this branch).
+            logger.info(
+                "xAI BadRequestError fallthrough (no keyword match): %s",
+                str(e)[:300],
+            )
             return GenerationResult(
                 success=False,
                 error_type='invalid_request',

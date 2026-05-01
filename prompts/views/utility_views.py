@@ -11,6 +11,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.conf import settings
 from prompts.email_utils import should_send_email
 from django.template.response import TemplateResponse
+from django.views.generic import TemplateView  # Session 173-C
 import hmac
 import hashlib
 import logging
@@ -445,4 +446,19 @@ else:
 # ============================================================================
 
 
+# ============================================================================
+# POLICY PAGES (Session 173-C)
+# ============================================================================
+# (TemplateView import moved to top of file per E402 — not duplicated here)
 
+
+class ContentPolicyPlaceholderView(TemplateView):
+    """
+    Session 173-C: minimal placeholder content policy page.
+
+    Linked from the bulk-generator NSFW chip ("Learn more" link) so
+    users have somewhere to land when their prompt is blocked. The
+    page is honest about being a placeholder — full content policy
+    ships in Session 175 (planned policy-docs cluster).
+    """
+    template_name = 'policies/content_policy_placeholder.html'

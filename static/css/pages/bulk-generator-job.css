@@ -1522,6 +1522,36 @@ a.published-badge:focus-visible {
     animation: error-chip-spin 0.8s linear infinite;
 }
 
+/* Session 173-C: alert-circle icon inside content_policy chip.
+   14px, white (inherits chip's color via currentColor), with the
+   chip's flex gap providing breathing room before the label.
+   Decorative only — aria-hidden on the SVG. */
+.error-chip__icon {
+    width: 14px;
+    height: 14px;
+    color: currentColor;
+    flex-shrink: 0;
+}
+
+/* Session 173-C: "Learn more" link inside content_policy failed slot.
+   Appears adjacent to the .failed-reason text. Underline + color match
+   the surrounding error palette without being too prominent. */
+.failed-reason__link {
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 500;
+    margin-left: 6px;
+    white-space: nowrap;
+}
+.failed-reason__link:hover {
+    text-decoration: none;
+}
+.failed-reason__link:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px #7f1d1d;
+}
+
 @keyframes error-chip-spin {
     to { transform: rotate(360deg); }
 }

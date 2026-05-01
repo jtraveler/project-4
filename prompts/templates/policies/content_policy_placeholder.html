@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Content Policy — PromptFinder{% endblock %}
+
+{% block meta_description %}PromptFinder content policy and acceptable use guidelines. This is a pre-launch placeholder; full content policy is in development.{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/pages/policy-page.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="policy-page" role="main">
+  <article class="policy-page__article">
+    <h1>Content Policy</h1>
+
+    <div class="policy-page__placeholder-banner" role="note" aria-label="Pre-launch notice">
+      <strong>Pre-launch placeholder.</strong> PromptFinder is currently in
+      development. This page will be expanded with a full content policy
+      before public launch.
+    </div>
+
+    <h2>Basic rules</h2>
+    <p>While we finalize our full content policy, the following rules apply:</p>
+    <ul>
+      <li><strong>No content involving minors in any sexual context.</strong> Zero tolerance.</li>
+      <li>No graphic violence, gore, or content depicting torture.</li>
+      <li>No hate speech, harassment, or content targeting individuals or groups.</li>
+      <li>No content that infringes others' copyrights or trademarks.</li>
+      <li>No content depicting real, identifiable people without their consent (especially in suggestive or compromising contexts).</li>
+    </ul>
+
+    <h2>AI provider content policies</h2>
+    <p>Each AI provider PromptFinder uses (Nano Banana 2, GPT Image, Grok Imagine, Flux) has its own content policies. PromptFinder enforces these provider policies on submissions made through our platform.</p>
+
+    <p>If your prompt is blocked, the AI provider's content policy flagged it. Edit the prompt and try again, or try a different model — Flux models are generally more permissive for artistic content than Nano Banana 2 or GPT Image.</p>
+
+    <h2>Reporting issues</h2>
+    <p>Believe a prompt was blocked incorrectly? Have a question about acceptable content? Email <a href="mailto:matthew.jtraveler@gmail.com">matthew.jtraveler@gmail.com</a>.</p>
+
+    <p>For copyright concerns (DMCA), email the same address. We will respond promptly.</p>
+
+    <h2>What's coming</h2>
+    <p>Before public launch, this page will include:</p>
+    <ul>
+      <li>Detailed content rules</li>
+      <li>Per-provider acceptable use guidelines</li>
+      <li>Cost absorption and refund policy</li>
+      <li>Account suspension thresholds</li>
+      <li>Formal DMCA agent designation</li>
+      <li>How to report violations</li>
+    </ul>
+
+    <p class="policy-page__last-updated">
+      Last updated: {% now "F j, Y" %}. PromptFinder pre-launch.
+    </p>
+  </article>
+</main>
+{% endblock %}

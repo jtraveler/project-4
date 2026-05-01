@@ -1,0 +1,64 @@
+/*
+ * Policy Page Styles (Session 173-C)
+ *
+ * Minimal styles for the placeholder content policy page at
+ * /policies/content/. Designed to fold cleanly into a richer
+ * /static/css/pages/policy.css when Session 175 expands the policy
+ * structure (TOS, Privacy, full Content Policy, DMCA).
+ *
+ * Currently included only by the placeholder template via the
+ * extra_css block (or base-level if added there). Self-contained
+ * — no external CSS dependencies beyond the design tokens used.
+ */
+
+.policy-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 16px;
+    line-height: 1.6;
+    color: var(--gray-800, #262626);
+}
+
+.policy-page h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.policy-page h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+/* Pre-launch notice banner — amber background, modest visibility.
+   Not alarming (the page is still useful) but clearly transient. */
+.policy-page__placeholder-banner {
+    padding: 12px 16px;
+    background: #fffaf0;            /* amber-50 */
+    border: 1px solid #fdba74;      /* amber-300 */
+    border-radius: 8px;
+    margin: 1rem 0;
+    font-size: 0.95rem;
+}
+
+.policy-page__placeholder-banner strong {
+    font-weight: 600;
+}
+
+.policy-page__article ul {
+    margin: 0.5rem 0 1rem 1.5rem;
+}
+
+.policy-page__article li {
+    margin-bottom: 0.25rem;
+}
+
+.policy-page__last-updated {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;  /* gray-200 */
+    font-size: 0.875rem;
+    color: #525252;                  /* gray-600 — passes WCAG AA on white */
+}

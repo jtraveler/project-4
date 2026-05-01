@@ -153,6 +153,9 @@ from .utility_views import (
     unsubscribe_custom,
     unsubscribe_package,
     unsubscribe_view,
+    # Session 173-C: placeholder content policy page (linked from
+    # bulk-gen NSFW chip "Learn more" link).
+    ContentPolicyPlaceholderView,
 )
 
 # Define __all__ for explicit exports

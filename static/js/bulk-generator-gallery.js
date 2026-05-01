@@ -102,9 +102,17 @@
         if (!errorType && !errorMessage) {
             return null;
         }
-        // No-retry blocked errors: red chip, plain text label
+        // No-retry blocked errors: red chip, plain text label.
+        // Session 173-C: content_policy chip prefixed with alert-circle
+        // icon (universally recognized warning glyph). Other blocked
+        // chips (quota, auth, invalid_request) keep text-only — out of
+        // scope to expand to other variants this session.
         if (errorType === 'content_policy') {
-            return { cssClass: 'error-chip--blocked', label: 'Content blocked' };
+            return {
+                cssClass: 'error-chip--blocked',
+                label: 'Content blocked',
+                iconId: 'icon-alert-circle',
+            };
         }
         if (errorType === 'quota') {
             return { cssClass: 'error-chip--blocked', label: 'Quota exhausted' };
@@ -150,6 +158,30 @@
             spinner.className = 'error-chip__spinner';
             spinner.setAttribute('aria-hidden', 'true');
             chip.appendChild(spinner);
+        }
+        // Session 173-C: render alert-circle icon when classification
+        // includes iconId (currently content_policy only). Decorative —
+        // aria-hidden so screen readers rely on the chip label alone.
+        // Appended BEFORE the label so visual order reads
+        // "[icon] Content blocked", not "Content blocked [icon]".
+        // Sprite URL is read from G.spriteUrl (the project pattern —
+        // populated from root.dataset.spriteUrl in polling.js:341,
+        // matching the existing usage at gallery.js:289).
+        if (classification.iconId && G.spriteUrl) {
+            var SVG_NS = 'http://www.w3.org/2000/svg';
+            var icon = document.createElementNS(SVG_NS, 'svg');
+            icon.setAttribute('class', 'error-chip__icon');
+            icon.setAttribute('width', '14');
+            icon.setAttribute('height', '14');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.setAttribute('focusable', 'false');
+            var use = document.createElementNS(SVG_NS, 'use');
+            use.setAttribute(
+                'href',
+                G.spriteUrl + '#' + classification.iconId
+            );
+            icon.appendChild(use);
+            chip.appendChild(icon);
         }
         var labelEl = document.createElement('span');
         labelEl.className = 'error-chip__label';
@@ -459,6 +491,29 @@
                 errorMessage, errorType, retryState
             );
             failed.appendChild(reasonText);
+
+            // Session 173-C: link to placeholder content policy page,
+            // appended only for content_policy variant. Rendered as a
+            // separate <a> node rather than inline HTML in the reason
+            // text because reasonText.textContent is the codebase-wide
+            // pattern (see bulk-generator-config.js _getReadableErrorReason
+            // — string output, no HTML). Adjacent placement keeps the
+            // call-to-action visually paired with the reason while
+            // respecting the textContent contract.
+            if (errorType === 'content_policy') {
+                var policyLink = document.createElement('a');
+                policyLink.className = 'failed-reason__link';
+                policyLink.href = '/policies/content/';
+                policyLink.target = '_blank';
+                policyLink.rel = 'noopener noreferrer';
+                policyLink.textContent = 'Learn more';
+                policyLink.setAttribute(
+                    'aria-label',
+                    'Learn more about PromptFinder content policy '
+                    + '(opens in new tab)'
+                );
+                failed.appendChild(policyLink);
+            }
         }
 
         // Prompt identifier (truncated)

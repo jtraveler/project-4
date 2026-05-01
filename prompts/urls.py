@@ -205,4 +205,11 @@ urlpatterns = [
     path('admin/moderation-dashboard/', views_admin.moderation_dashboard, name='moderation_dashboard'),
     # Note: admin maintenance tools (media-issues, debug/no-media, fix-media-issues, trash-dashboard)
     # are registered in prompts_manager/urls.py at top-level (no namespace) for clean /admin/* URLs
+
+    # Session 173-C: placeholder content policy page. Linked from the
+    # bulk-generator NSFW chip ("Learn more" link). Full /policies/
+    # structure may expand in Session 175 (TOS, Privacy, etc.).
+    path('policies/content/',
+         views.ContentPolicyPlaceholderView.as_view(),
+         name='content_policy_placeholder'),
 ]

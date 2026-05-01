@@ -390,8 +390,8 @@ Docs-only spec doesn't require re-running the suite.
 
 | Hash | Message |
 |------|---------|
-| TBD (filled by Memory Rule #17 backfill commit) | END OF SESSION DOCS UPDATE: session 173 — reset bugs, NSFW pre-flight, chip enhancements + Memory Rules #16/#17 |
-| TBD (the backfill commit itself) | docs: backfill 173-D self-reference (Memory Rule #17 application) |
+| `474b308` | END OF SESSION DOCS UPDATE: session 173 — reset bugs, NSFW pre-flight, chip enhancements + Memory Rules #16/#17 |
+| _(this backfill commit, hash filled in next iteration)_ | docs: backfill 173-D self-reference (Memory Rule #17 application) |
 
 ---
 

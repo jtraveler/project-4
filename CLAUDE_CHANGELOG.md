@@ -32,7 +32,7 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
-### Session 173-D — May 1, 2026 (End-of-Session Docs Update + 171-D/172-D backfills + Memory Rules #16/#17 — commit pending)
+### Session 173-D — May 1, 2026 (End-of-Session Docs Update + 171-D/172-D backfills + Memory Rules #16/#17 — commit `474b308`)
 
 **Outcome:** Documents the 173 cluster (173-A reset bugs + xAI keyword
 rename, 173-B NSFW pre-flight v1, 173-C content_policy chip icon +
@@ -96,7 +96,8 @@ Session 175 has full context without re-deriving from chat history.
   173-B + 2 from 173-C), Migrations 93 → 94 (+0092 from 173-B),
   Test Files +2 (test_nsfw_preflight.py + test_policy_views.py)
 
-**Agent ratings:** *(filled post-review)*
+**Agent ratings:** @technical-writer (sub via general-purpose) 8.5/10
++ @code-reviewer 9.5/10. Avg 9.0/10.
 
 ---
 

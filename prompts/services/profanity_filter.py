@@ -227,3 +227,206 @@ class ProfanityFilterService:
         cache.delete('profanity_word_list')
         self.word_list = self._load_word_list()
         logger.info("Profanity word list refreshed from database")
+
+    # ───────────────────────────────────────────────────────────────────
+    # Session 173-B: NSFW pre-flight v1 — provider-aware classification.
+    # ───────────────────────────────────────────────────────────────────
+
+    def check_text_with_provider(
+        self, text: str, provider_id: str = ''
+    ) -> Dict:
+        """
+        Provider-aware pre-flight check (Session 173-B).
+
+        Runs Tier 1 (universal_block) first, then Tier 2 (provider_advisory)
+        if a provider_id is given. Universal beats advisory when both match.
+
+        Args:
+            text: User's prompt text to validate.
+            provider_id: Model identifier the user has selected (e.g.
+                'gpt-image-1.5', 'google/nano-banana-2'). Empty string
+                falls back to universal-only check (backward-compatible
+                behavior — callers that don't yet pass provider_id get
+                the same result as the legacy check_text path).
+
+        Returns:
+            Dict with keys:
+                'allowed' (bool): True if prompt may proceed.
+                'reason' (str): 'clean' / 'universal_block' / 'provider_advisory'.
+                'matched_words' (list[str]): word(s) that triggered the block.
+                'severity' (str): severity of the highest-severity match
+                    ('critical' / 'high' / 'medium' / 'low' / 'none').
+                'message' (str): user-facing message.
+                'scope_provider' (str): for provider_advisory, which provider.
+
+        Memory Rule #13 (silent-fallback observability): logs at warning
+        level if the input text is empty/None or if the underlying word
+        list query fails. Failures degrade to "allowed" so the existing
+        check_text fallback path can still surface the issue.
+        """
+        if not text or not text.strip():
+            logger.warning(
+                "check_text_with_provider received empty text "
+                "(provider_id=%r) — returning 'allowed' as a safe default. "
+                "Caller should validate non-empty before this point.",
+                provider_id,
+            )
+            return {
+                'allowed': True,
+                'reason': 'clean',
+                'matched_words': [],
+                'severity': 'none',
+                'message': '',
+                'scope_provider': '',
+            }
+
+        # Import here to avoid circular import (existing pattern at line 44)
+        from ..models import ProfanityWord
+
+        text_lower = text.lower()
+
+        # Tier 1: universal blocks (matches legacy check_text behavior)
+        try:
+            universal_qs = ProfanityWord.objects.filter(
+                is_active=True,
+                block_scope='universal',
+            ).values('word', 'severity')
+            universal_words = list(universal_qs)
+        except Exception as e:
+            logger.warning(
+                "Tier 1 universal-words query failed (provider_id=%r): %s. "
+                "Memory Rule #13 — logging silent-fallback. Returning "
+                "'allowed' so legacy check_text path can re-attempt.",
+                provider_id, e,
+            )
+            return {
+                'allowed': True,
+                'reason': 'clean',
+                'matched_words': [],
+                'severity': 'none',
+                'message': '',
+                'scope_provider': '',
+            }
+
+        matched_universal = []
+        for w in universal_words:
+            pattern = r'\b' + re.escape(w['word']) + r'\b'
+            if re.search(pattern, text_lower):
+                matched_universal.append(w)
+
+        if matched_universal:
+            severity_rank = {
+                'critical': 4, 'high': 3, 'medium': 2, 'low': 1
+            }
+            matched_universal.sort(
+                key=lambda w: severity_rank.get(w['severity'], 0),
+                reverse=True,
+            )
+            matched_words = [w['word'] for w in matched_universal]
+            top_severity = matched_universal[0]['severity']
+            return {
+                'allowed': False,
+                'reason': 'universal_block',
+                'matched_words': matched_words,
+                'severity': top_severity,
+                'message': self._format_universal_block_message(matched_words),
+                'scope_provider': '',
+            }
+
+        # Tier 2: provider advisory — only if provider_id given.
+        # Fetches all active advisory rows then filters by provider_id in
+        # Python. Avoids JSONField __contains lookup which behaves
+        # inconsistently between PostgreSQL prod and SQLite test DB for
+        # "list contains string element" semantics — fetch + filter is
+        # the same pattern as the existing check_text iteration.
+        if provider_id:
+            try:
+                advisory_qs = ProfanityWord.objects.filter(
+                    is_active=True,
+                    block_scope='provider_advisory',
+                ).values('word', 'severity', 'affected_providers')
+                all_advisory = list(advisory_qs)
+            except Exception as e:
+                logger.warning(
+                    "Tier 2 advisory-words query failed (provider_id=%r): %s. "
+                    "Memory Rule #13 — logging silent-fallback. Falling "
+                    "through to 'allowed' since universal already cleared.",
+                    provider_id, e,
+                )
+                all_advisory = []
+
+            # Python-side filter: only words whose affected_providers list
+            # actually contains this provider_id. Empty affected_providers
+            # list = no enforcement (warn-only-future-feature edge case).
+            advisory_words = [
+                w for w in all_advisory
+                if isinstance(w.get('affected_providers'), list)
+                and provider_id in w['affected_providers']
+            ]
+
+            matched_advisory = []
+            for w in advisory_words:
+                pattern = r'\b' + re.escape(w['word']) + r'\b'
+                if re.search(pattern, text_lower):
+                    matched_advisory.append(w)
+
+            if matched_advisory:
+                matched_words = [w['word'] for w in matched_advisory]
+                return {
+                    'allowed': False,
+                    'reason': 'provider_advisory',
+                    'matched_words': matched_words,
+                    'severity': 'medium',  # advisory always medium
+                    'message': self._format_provider_advisory_message(
+                        matched_words, provider_id,
+                    ),
+                    'scope_provider': provider_id,
+                }
+
+        return {
+            'allowed': True,
+            'reason': 'clean',
+            'matched_words': [],
+            'severity': 'none',
+            'message': '',
+            'scope_provider': '',
+        }
+
+    def _format_universal_block_message(self, matched_words: List[str]) -> str:
+        """Universal-block user-facing message (preserves existing wording)."""
+        words_display = ', '.join(f'"{w}"' for w in matched_words)
+        return (
+            f"Content flagged — the following word(s) were found: "
+            f"{words_display}. Please revise your prompt."
+        )
+
+    def _format_provider_advisory_message(
+        self, matched_words: List[str], provider_id: str
+    ) -> str:
+        """
+        Session 173-B: provider-advisory message variant. Surfaces the
+        matched word(s), names the specific provider, and suggests a
+        more permissive alternative when applicable.
+        """
+        words_display = ', '.join(f'"{w}"' for w in matched_words)
+        provider_display = {
+            'gpt-image-1.5': 'GPT-Image-1.5',
+            'gpt-image-2': 'GPT Image 2',
+            'google/nano-banana-2': 'Nano Banana 2',
+            'grok-imagine-image': 'Grok Imagine',
+        }
+        provider_name = provider_display.get(provider_id, provider_id)
+
+        # Suggest a more permissive alternative for non-Flux models.
+        suggest_alt = ''
+        if 'flux' not in provider_id.lower():
+            suggest_alt = (
+                ' For more permissive content rules, try Flux Schnell, '
+                'Flux Dev, or Flux 1.1 Pro.'
+            )
+
+        return (
+            f"Content advisory for {provider_name}: prompt contains "
+            f"{words_display} which often triggers {provider_name}'s "
+            f"content moderation. Edit prompt or switch model.{suggest_alt}"
+        )

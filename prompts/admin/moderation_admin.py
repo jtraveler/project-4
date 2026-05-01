@@ -164,10 +164,19 @@ class ProfanityWordAdmin(admin.ModelAdmin):
     """Admin interface for managing profanity word list"""
     list_display = [
         "word_display", "severity_badge", "is_active_display",
+        # Session 173-B: surface block_scope + last_reviewed_at in list view
+        # so admin can scan provider-advisory entries quickly and identify
+        # stale classifications.
+        "block_scope", "last_reviewed_at",
         "created_at", "updated_at"
     ]
-    list_filter = ["severity", "is_active", "created_at"]
-    search_fields = ["word", "notes"]
+    list_filter = [
+        "severity", "is_active",
+        # Session 173-B: filter by Tier 1 (universal) vs Tier 2 (advisory).
+        "block_scope",
+        "created_at",
+    ]
+    search_fields = ["word", "notes", "review_notes"]
     list_editable = []
     actions = [
         "activate_words", "deactivate_words",
@@ -179,6 +188,25 @@ class ProfanityWordAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Word Information", {
             "fields": ("word", "severity", "is_active")
+        }),
+        # Session 173-B: NSFW pre-flight v1 — provider-aware fields.
+        # Set block_scope to "provider_advisory" and list specific
+        # provider model_identifiers in affected_providers (e.g.
+        # ["gpt-image-1.5", "google/nano-banana-2"]) for words that
+        # should only block specific models. last_reviewed_at and
+        # review_notes track classification audit trail.
+        ("Provider Awareness (Session 173-B)", {
+            "fields": (
+                "block_scope", "affected_providers",
+                "last_reviewed_at", "review_notes",
+            ),
+            "description": (
+                'Set block_scope to "provider_advisory" and list specific '
+                'provider model_identifiers in affected_providers (e.g. '
+                '["gpt-image-1.5", "google/nano-banana-2"]) for words that '
+                'should only block specific models. Universal scope (default) '
+                'blocks across all providers — matches legacy behavior.'
+            ),
         }),
         ("Notes", {
             "fields": ("notes",),

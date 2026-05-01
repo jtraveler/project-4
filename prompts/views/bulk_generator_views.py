@@ -264,7 +264,16 @@ def api_validate_prompts(request):
             {'error': 'All prompts must be strings'}, status=400,
         )
 
-    result = service.validate_prompts(prompts)
+    # Session 173-B: extract provider_id (model_identifier) from request
+    # body so the pre-flight check can apply Tier 2 (provider advisory)
+    # rules. Optional — defaults to empty string for backward-compat with
+    # frontend versions that don't yet send model_identifier. When empty,
+    # validate_prompts falls back to universal-only check.
+    provider_id = data.get('model_identifier', '')
+    if not isinstance(provider_id, str):
+        provider_id = ''
+
+    result = service.validate_prompts(prompts, provider_id=provider_id)
     return JsonResponse(result)
 
 

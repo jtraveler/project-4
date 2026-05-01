@@ -311,6 +311,57 @@ class ProfanityWord(models.Model):
         help_text='Optional notes about this word'
     )
 
+    # Session 173-B: NSFW pre-flight v1 — provider-aware classification.
+    # Existing 'severity' field continues to apply universally; new fields
+    # add provider-specific scoping for cases where a term is permissive
+    # on some models but triggers others (e.g. 'topless' is fine on Flux
+    # but trips Nano Banana 2's content moderation).
+    BLOCK_SCOPE_CHOICES = [
+        ('universal', 'Universal — blocks across all providers'),
+        ('provider_advisory', 'Provider advisory — only blocks for selected providers'),
+    ]
+    block_scope = models.CharField(
+        max_length=20,
+        choices=BLOCK_SCOPE_CHOICES,
+        default='universal',
+        help_text=(
+            "Universal: blocks across all providers (legacy behavior — "
+            "all pre-173-B words default to this). Provider advisory: "
+            "only blocks when the user has selected one of the providers "
+            "in 'affected_providers' below."
+        ),
+    )
+    affected_providers = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "List of provider+model identifiers this word triggers. "
+            "Only consulted when block_scope='provider_advisory'. Format: "
+            "model identifier strings matching the seed file's "
+            "model_identifier values, e.g. ['gpt-image-1.5', 'gpt-image-2', "
+            "'google/nano-banana-2', 'grok-imagine-image']. Empty list "
+            "with block_scope='provider_advisory' = no enforcement (warn-only)."
+        ),
+    )
+    last_reviewed_at = models.DateField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Date this word's classification was last manually reviewed. "
+            "Provider policies drift over time; entries older than 90 days "
+            "warrant review. Surfaced in admin list view."
+        ),
+    )
+    review_notes = models.TextField(
+        blank=True,
+        default='',
+        help_text=(
+            "Free-text notes on classification rationale, examples of "
+            "false positives observed, or links to provider documentation. "
+            "Internal-only."
+        ),
+    )
+
     class Meta:
         ordering = ['severity', 'word']
         indexes = [

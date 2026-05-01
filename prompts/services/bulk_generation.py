@@ -84,17 +84,25 @@ def decrypt_api_key(encrypted: bytes) -> str:
 class BulkGenerationService:
     """Orchestrates bulk image generation jobs."""
 
-    def validate_prompts(self, prompts: list[str]) -> dict:
+    def validate_prompts(
+        self, prompts: list[str], provider_id: str = ''
+    ) -> dict:
         """
         Validate a list of prompt texts before generation.
 
         Checks:
         - Empty prompts
-        - Profanity filter
+        - Profanity filter (Tier 1 universal + Tier 2 provider advisory
+          when provider_id is given — Session 173-B)
         - Duplicate detection
 
         Args:
             prompts: List of prompt text strings.
+            provider_id: Model identifier the user has selected (e.g.
+                'gpt-image-1.5', 'google/nano-banana-2'). Empty string
+                falls back to universal-only check (backward-compat).
+                Session 173-B added this parameter; existing callers
+                that don't pass it continue to work unchanged.
 
         Returns:
             dict with:
@@ -104,7 +112,10 @@ class BulkGenerationService:
                     prompt_num (int, 1-based, used by frontend link),
                     message (str),
                     flagged_words_display (str, profanity errors only
-                        with non-empty found_words).
+                        with non-empty found_words),
+                    reason (str, '' / 'universal_block' /
+                        'provider_advisory' — added Session 173-B),
+                    scope_provider (str, '' / provider_id — added 173-B).
         """
         from prompts.services.profanity_filter import ProfanityFilterService
 
@@ -123,7 +134,8 @@ class BulkGenerationService:
                 })
                 continue
 
-            # Profanity check
+            # Profanity check (Tier 1: universal — preserves existing
+            # behavior + existing test mocks against check_text).
             is_clean, found_words, max_severity = (
                 profanity_service.check_text(text)
             )
@@ -160,6 +172,32 @@ class BulkGenerationService:
                         ),
                     })
                 continue
+
+            # Session 173-B: Tier 2 provider-advisory check.
+            # Runs ONLY if Tier 1 cleared AND a provider_id was given.
+            # Backward-compat: when provider_id='' (frontend hasn't yet
+            # been wired to send model_identifier — see REPORT Section 5),
+            # this branch is skipped entirely and behavior is identical
+            # to pre-173-B.
+            if provider_id:
+                advisory = profanity_service.check_text_with_provider(
+                    text, provider_id=provider_id,
+                )
+                if (not advisory['allowed']
+                        and advisory['reason'] == 'provider_advisory'):
+                    from django.utils.html import escape
+                    word_list = ', '.join(
+                        escape(w) for w in advisory['matched_words']
+                    )
+                    errors.append({
+                        'index': i,
+                        'prompt_num': i + 1,
+                        'message': advisory['message'],
+                        'flagged_words_display': word_list,
+                        'reason': 'provider_advisory',
+                        'scope_provider': advisory['scope_provider'],
+                    })
+                    continue
 
             # Duplicate check
             normalized = ' '.join(text.lower().split())

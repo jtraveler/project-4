@@ -1,9 +1,9 @@
 # PROJECT FILE STRUCTURE
 
-**Last Updated:** April 29, 2026 (Sessions 163–172)
+**Last Updated:** May 1, 2026 (Sessions 163–173)
 **Project:** PromptFinder (Django 5.2.11)
-**Current Phase:** Phase REP (Replicate + xAI providers — Session 154; gpt-image-2 BYOK integration added Session 171-C; Grok content_policy keyword expansion + per-image overlay restoration in Session 172). Bulk AI Image Generator (Phases 1–7 + 6E complete). Avatar pipeline rebuilt B2-native (Session 163). Phase N4 (~100%), Phase K (~96%)
-**Total Tests:** 1400 passing, 12 skipped (Session 172)
+**Current Phase:** Phase REP (Replicate + xAI providers — Session 154; gpt-image-2 BYOK integration added Session 171-C; Grok content_policy keyword expansion + per-image overlay restoration in Session 172; per-card reset bug fixes + NSFW pre-flight v1 + content_policy chip icon in Session 173). Bulk AI Image Generator (Phases 1–7 + 6E complete). Avatar pipeline rebuilt B2-native (Session 163). Phase N4 (~100%), Phase K (~96%)
+**Total Tests:** 1408 passing, 12 skipped (Session 173)
 
 ---
 

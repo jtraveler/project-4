@@ -337,7 +337,7 @@ established in 173-D).*
 
 | Hash | Message |
 |------|---------|
-| TBD  | fix(bulk-gen): per-card "Use master" reset across handleModelChange + Clear All + Reset Master + xai keyword rename (Session 173-A) |
+| `369b2a0` | fix(bulk-gen): per-card "Use master" reset across handleModelChange + Clear All + Reset Master + xai keyword rename (Session 173-A) |
 
 ---
 

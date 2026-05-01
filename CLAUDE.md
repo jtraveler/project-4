@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** April 29, 2026
+**Last Updated:** May 1, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -75,12 +75,16 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Session 172-D | Apr 29, 2026 | End-of-session docs update for the 172 cluster. (1) 4 new `CLAUDE_CHANGELOG.md` entries (172-A, -B, -C, -D); (2) 4 new "Recently Completed" rows + Session 171 Verification-Pending row resolved (modal + NB2 chip verified, Grok chip resolved via 172-B's separate root cause); (3) 3 new Deferred P2 rows (modal persistence on bulk publish refresh, IMAGE_COST_MAP per-model restructure (Scenario B1), Reset Master + Clear All Prompts UX); (4) 1 new Deferred P3 row (Try-in URL future text change for single-page generator); (5) Memory rules count unchanged at 15 of 30 (no new rules in 172); (6) PFS top-line counts: Last Updated April 26 → April 29, Sessions span 163–171 → 163–172, Tests 1396 → 1400, Migrations unchanged (none added in 172); (7) version footer 4.69 → 4.70. Cluster shape: **BATCHED with prior-session evidence capture** per Memory Rule #15 — three pieces of evidence anchored the cluster (172-A static review of 4 surfaces, 172-B Mateo's heroku pg:psql capture of verbatim xAI rejection wording, 172-C static review of `bulk-generator-ui.js:88` + backend payload contract). **Precedent documented:** when log-based investigation fails (Memory Rule #13 violation masking the symptom), database-state inspection is a valid fallback for read-only diagnostics. 172-B itself fixed the Memory Rule #13 violation that necessitated the workaround. Commit pending. Agent avg pending. 1400 tests (no change). |
+| Session 173-D | May 1, 2026 | End-of-session docs update for the 173 cluster + 171-D/172-D placeholder backfills + 2 new memory rules. (1) 4 new `CLAUDE_CHANGELOG.md` entries (173-A, -B, -C, -D); (2) 4 new "Recently Completed" rows (above) + Session 175 placeholder section added documenting the full policy-docs cluster scope (~80 lines: self-drafted policy posture, DMCA registration plan, cost absorption framework, content ownership, policy-drafting skill outline, stage-gate references); (3) **Memory Rules count 15 → 17 of 30** with 2 new rule entries: **#16 (surface deferred backlog at session start)** — established after the silent-accumulation pattern in 171-D and 172-D; **#17 (docs spec self-reference backfill)** — solves the recurring "Commit pending. Agent avg pending." pattern; (4) **171-D and 172-D placeholders backfilled** (171-D: `Commit pending. Agent avg pending.` → `Commit \`3dc7e17\`. Avg 9.0/10.`; 172-D: same shape → `Commit \`66c15da\`. Avg 9.1/10.`); (5) CSS:1338 font-size removal documented as intentional (Mateo's UX call — preexisting in 172-A working tree, not a bug); (6) PFS top-line counts: Last Updated April 29 → May 1, Sessions span 163–172 → 163–173, Tests 1400 → 1408 (+6 from 173-B, +2 from 173-C), Migrations 93 → 94 (+0092 from 173-B), Test Files +2; (7) version footer 4.70 → 4.71. Cluster shape: **HYBRID** per Memory Rule #15 — 173-A and 173-B drafted from prior-session evidence, 173-C depends on 173-B's URL slug, 173-D depends on all three. **This 173-D row is itself a Memory Rule #17 application — backfilled in a follow-up commit immediately after this docs commit.** Commit pending. Agent avg pending. 1408 tests (no change). |
+| Session 173-C | May 1, 2026 | content_policy chip icon + placeholder content policy page. (1) **icon-alert-circle added to sprite** (Lucide alert-circle, 39 → 40 icons total) — universally recognized warning glyph. Index comment updated. (2) **Chip rendering prepends 14px alert-circle icon for content_policy variant only** — `_classifyErrorChip` adds `iconId` field on the content_policy classification dict; `_renderErrorChip` renders SVG icon BEFORE the label so flexbox order reads "[icon] Content blocked". Other chip variants (auth, quota, rate_limit, server_error, invalid_request) keep text-only — out of scope. Sprite URL accessed via `G.spriteUrl` (project pattern at gallery.js:289), NOT `window.SPRITE_URL` (a Round 1 BLOCKER from spec pseudocode that doesn't exist in the codebase). (3) **"Learn more" link in failed-slot for content_policy** — separate `<a>` DOM node (not inline HTML, because reason text is rendered via textContent at multiple call sites). Link: `/policies/content/`, target=_blank, rel=noopener noreferrer, descriptive aria-label. (4) **Placeholder content policy page** at `/policies/content/` — minimal ~200-word page honest about being pre-launch. Links to `mailto:matthew.jtraveler@gmail.com` for reports. Full policy ships in Session 175. View `ContentPolicyPlaceholderView(TemplateView)` in utility_views.py (TemplateView import at top per E402). 2 new smoke tests pass. **Round 1 review:** @code-reviewer 7.5/10 (BLOCKED on `window.SPRITE_URL` undefined); fix applied + Round 2 9.2/10 re-verified. **Round 1 false alarm:** @ui-visual-validator misread DOM-order; appendChild order is correct (icon child[0], label child[1] → flex renders [icon] [label]). Commit `bef3115`. Agents @frontend-developer 9.2, @accessibility-expert (sub) 9.5, @code-reviewer 7.5→9.2 (Round 2), @ui-visual-validator 9.0. Avg 9.225/10. 1408 tests. |
+| Session 173-B | May 1, 2026 | NSFW pre-flight v1 — provider-aware ProfanityWord. Mateo's account-suspension risk: every NSFW prompt that reaches the API counts against PromptFinder's API account; xAI charges $0.02/rejection, OpenAI/Google can suspend access. Pre-flight catches most before any API call. **Tiered architecture:** Tier 1 (universal, existing block_scope='universal') blocks across ALL providers; Tier 2 (provider advisory, new block_scope='provider_advisory' + affected_providers JSONField) blocks only when user has selected one of the listed providers. **Changes:** ProfanityWord 4 new fields (block_scope, affected_providers, last_reviewed_at, review_notes), migration 0092 (4 AddField only), profanity_filter.py new `check_text_with_provider()` method (universal-then-advisory pattern, dict return), bulk_generation.py `validate_prompts(prompts, provider_id='')` extended (Tier 1 still uses legacy `check_text` for backward-compat; Tier 2 conditional), bulk_generator_views.py extracts `model_identifier` from request, new `seed_provider_advisory_keywords` management command (idempotent, --dry-run), admin UI new "Provider Awareness" fieldset section. **Implementation deviation from spec section 5.2:** affected_providers__contains ORM filter is inconsistent between PostgreSQL prod and SQLite test for "list-contains-string" — switched to fetch-all-advisory + filter-in-Python pattern (defense + cross-backend). **Frontend wire-up of model_identifier in /api/validate/ POST body is OUT OF SCOPE per spec section 6.2** — backend defaults to empty provider_id (Tier 2 skipped), backward-compat preserved. Documented as Remaining Issue follow-up. **Pre-existing security gap noted (NOT introduced by 173-B):** api_start_generation does not call validate_prompts server-side — relies on frontend voluntarily hitting api_validate_prompts first. Mitigated by @staff_member_required decorator. Mateo runs after deploy: `python manage.py seed_provider_advisory_keywords --dry-run` then without --dry-run; tunes via /admin/prompts/profanityword/. Commit `e06ab5c`. Agents @django-pro 8.8, @backend-security-coder 8.7, @code-reviewer 9.3, @test-automator 9.0, @architect-review 8.8. Avg 8.92/10. 1408 tests (1400 pre + 6 new). |
+| Session 173-A | May 1, 2026 | Per-card "Use master" reset bugs + xAI keyword rename. Three independent reset gaps all manifested as "per-card quality shows 4K instead of Use master, even after delete-all + add-new". (1) `handleModelChange` (bulk-generator.js:1037) only forced `sel.value='high'` on non-quality-tier models — switching back to a quality-tier model left stale `'high'` values. Added `else { sel.value = ''; }` branch + 18-line block comment documenting the UX tradeoff (clobbering explicit per-box choice on model swap is acceptable for the three-part rationale documented inline). (2) `clearAllConfirm` (bulk-generator-generation.js:415) cleared text/paste/error but not per-box override dropdowns. Added 16-line per-box override reset block — resets quality, size, images, vision, direction-checkbox, direction-text, dirRow display, has-override class. (3) `resetMasterConfirm` (bulk-generator-generation.js:460) reset master row but not per-box overrides. Plus a separate latent bug: `I.settingModel.value = 'gpt-image-1'` is NOT a valid model_identifier — silently fell back to first dropdown option (Flux Schnell). Slug corrected to `'black-forest-labs/flux-schnell'` (Mateo confirmed) + per-box reset block added + `I.handleModelChange()` call appended to refresh capability UI. Bug #5 (sticky pricing not updating on master quality change) was downstream of 1-3 — fixes 1-3 resolve it automatically. (4) Pulled-forward cleanup from 172-B agent feedback: `_POLICY_KEYWORDS` → `_XAI_POLICY_KEYWORDS` rename in xai_provider.py at all 4 occurrences (definition, 2 comments, 2 usages) + 2 stale test comment updates. **`replace_all`-with-substring-containment gotcha** caught via verification grep — initial replace_all turned `_XAI_POLICY_KEYWORDS` into `_XAI_XAI_POLICY_KEYWORDS` because old name is a substring of new. Fixed with second replace_all + targeted edit; documented as future-spec gotcha. **CSS:1338 font-size removal is intentional** — Mateo's UX call (preexisting from 172-A working tree, the 0.9rem font on `.publish-modal-links li` was unreadable). Documented in 173-D section. Commit `369b2a0`. Agents @frontend-developer 9.4, @code-reviewer 9.5, @accessibility-expert (sub) 9.0, @django-pro 9.5. Avg 9.35/10. 1400 tests (no change — JS-side fixes verified manually). |
+| Session 172-D | Apr 29, 2026 | End-of-session docs update for the 172 cluster. (1) 4 new `CLAUDE_CHANGELOG.md` entries (172-A, -B, -C, -D); (2) 4 new "Recently Completed" rows + Session 171 Verification-Pending row resolved (modal + NB2 chip verified, Grok chip resolved via 172-B's separate root cause); (3) 3 new Deferred P2 rows (modal persistence on bulk publish refresh, IMAGE_COST_MAP per-model restructure (Scenario B1), Reset Master + Clear All Prompts UX); (4) 1 new Deferred P3 row (Try-in URL future text change for single-page generator); (5) Memory rules count unchanged at 15 of 30 (no new rules in 172); (6) PFS top-line counts: Last Updated April 26 → April 29, Sessions span 163–171 → 163–172, Tests 1396 → 1400, Migrations unchanged (none added in 172); (7) version footer 4.69 → 4.70. Cluster shape: **BATCHED with prior-session evidence capture** per Memory Rule #15 — three pieces of evidence anchored the cluster (172-A static review of 4 surfaces, 172-B Mateo's heroku pg:psql capture of verbatim xAI rejection wording, 172-C static review of `bulk-generator-ui.js:88` + backend payload contract). **Precedent documented:** when log-based investigation fails (Memory Rule #13 violation masking the symptom), database-state inspection is a valid fallback for read-only diagnostics. 172-B itself fixed the Memory Rule #13 violation that necessitated the workaround. Commit `66c15da`. Agents @technical-writer (sub via general-purpose) 9.2, @code-reviewer 9.0. Avg 9.1/10. 1400 tests (no change). |
 | Session 172-C | Apr 29, 2026 | Per-image overlay restoration on page reload. Mateo regression: published-badge overlays were lost on page reload because `G.markCardPublished` (introduced 170-B at `bulk-generator-gallery.js:49`) was only called from `startPublishProgressPolling` (`bulk-generator-selection.js:805`) which only runs after a Create Pages click. **Fix:** frontend-only — extended `G.renderImages` (`bulk-generator-ui.js:88`) to call `markCardPublished` for any image whose polling payload has `prompt_page_id` set. Placement: AFTER the status branch (completed/failed/generating/queued), INSIDE the per-image `for` loop. Truthiness guard `if (image.prompt_page_id && image.id)` avoids null cases. Idempotency guaranteed by `markCardPublished`'s early-return at `bulk-generator-gallery.js:56` (`if (slot.classList.contains('is-published')) return;`) plus secondary `!slot.querySelector('.published-badge')` guard. Backend payload contract verified intact at `bulk_generation.py:430-431`. **Tests:** 2 new tests in `PublishFlowTests` (multi-image variants, count=2) — `test_172_c_polling_response_exposes_page_id_for_multiple_published` + `test_172_c_polling_response_nulls_page_id_for_multiple_unpublished`. Complement existing single-image tests at `test_bulk_generator_views.py:1284-1362`. Commit `1b59266`. Agents @frontend-developer 9.5, @code-reviewer 9.2, @accessibility-expert (sub) 9.0, @ui-visual-validator 9.0. Avg 9.175/10. 1400 tests. |
 | Session 172-B | Apr 29, 2026 | Grok content moderation hotfix — `_POLICY_KEYWORDS` expansion. Mateo verified post-170-B that NB2 NSFW failures correctly displayed the red "Content blocked" chip but Grok NSFW failures continued showing legacy "Failed — Invalid request" text. **Root cause:** xAI's actual rejection wording is `"Generated image rejected by content moderation."` — but `_POLICY_KEYWORDS` (line 37 of `xai_provider.py`) had no entry matching `'moderation'` or `'rejected'`. Fall through to `invalid_request` branch. **Evidence trail:** Mateo captured the verbatim wording from production Postgres via `heroku pg:psql` (database-state inspection was the only diagnostic path because Memory Rule #13's silent-fallback observability principle had been violated — no log line on the BadRequestError fallthrough). **Fix:** (1) Added `'moderation'` and `'rejected'` to `_POLICY_KEYWORDS` (defense-in-depth for xAI wording variations); both content_policy detection paths benefit (SDK at line 166 + httpx-direct edits at line 292) — single tuple shared. (2) Added `logger.info` on BadRequestError fallthrough path per Memory Rule #13. Future investigations can read Heroku logs instead of querying Postgres. Log level `info` (not `warning`) — expected taxonomy gap, not error condition. `[:300]` truncation safety margin. **Architectural concerns surfaced (P3):** `'rejected'` is broader keyword (could appear in parameter validation 400s); xAI keyword-matching is provider-specific (OpenAI uses structured `error.code`); `_POLICY_KEYWORDS` should rename to `_XAI_POLICY_KEYWORDS` if other providers add similar detection. **Tests:** 2 new in `XAINSFWKeywordTests` — `test_xai_content_moderation_classified_as_content_policy` (uses verbatim psql-captured wording) + `test_xai_unrecognized_400_logs_at_info` (Memory Rule #13 observability via `assertLogs`). Commit `b00c0d9`. Agents @code-reviewer 9.3, @debugger 9.5, @test-automator 9.5, @architect-review 8.8. Avg 9.275/10. 1400 tests. |
 | Session 172-A | Apr 29, 2026 | Bundled polish — 4 small fixes. (1) **Modal footer transparent background** — `.publish-modal-footer` uses `<footer>` element semantically and inherits global page `<footer>` dark background via element selector. Class rule had no `background` property — added explicit `background: transparent`. CSS-only fix preferred over markup change to preserve semantics. (2) **Per-box disabled quality select styling** — `.bg-box-override-select` had no `:disabled` rule; added rule mirroring master row's `.bg-select:disabled` (line 155-159) byte-for-byte: `gray-100` bg, `gray-400` color, `cursor: not-allowed`. WCAG 1.4.3 disabled-controls exemption applies. (3) **Memory Rule #13 logger.warning in `tasks.py`** — both Replicate (line 3138) and OpenAI (line 3140) silent-fallback branches for `model_name` now emit `logger.warning` BEFORE the silent assignment per Session 169-B's established rule. Structured field `job_id`; actionable message references `api_start_generation` endpoint and `GeneratorModel` seed. (4) **Nano Banana 2 master quality default to 1K** — when user selects NB2, master quality auto-selects "1K" (low) instead of preserving prior selection. Guard `if (_qs.value !== 'low')` preserves explicit within-session user choice. Compatible with autosave restore (handleModelChange runs first then restore overwrites). **Pre-existing working-tree state acknowledged:** session began with `bulk-generator-job.css` already modified (font-size removal in `.publish-modal-links li` line 1338 was preexisting); bundled into commit and documented in REPORT Section 4. Commit `d340e1e`. Agents @frontend-developer 9.0, @code-reviewer 8.5, @accessibility-expert (sub) 8.5, @django-pro 9.5. Avg 8.875/10. 1400 tests (no test additions for this spec; visual + observability paths). |
 | Session 171 — Modal + Chip Production Verification | ✅ **Resolved** (Apr 29, 2026) | Modal + NB2 chip verified post-171 deploy via Mateo's Memory Rule #14 closing checklist. The Grok chip regression (Regression C) was resolved separately via Session 172-B with a different root cause (`_POLICY_KEYWORDS` keyword-list gap, not the chip pipeline that 171-INV had inspected as structurally intact). Lesson learned: log-based investigation failed because Memory Rule #13 silent-fallback observability had been violated; 172-B fixed both the keyword gap AND the underlying observability principle. |
-| Session 171-D | Apr 26, 2026 | End-of-session docs update for the 171 cluster. (1) 4 new `CLAUDE_CHANGELOG.md` entries (171-A, -B, -C, -D); (2) 4 new "Recently Completed" rows + 1 Verification-Pending row (above); (3) 2 new Deferred P2 rows (page-refresh state recovery during bulk publish, Replicate concurrency policy) — both surfaced by Mateo April 26; (4) 1 new Deferred P3 row (gpt-image-2 pricing audit — pending OpenAI per-quality/size data publication, since 171-C chose Option B2 mirror placeholder); (5) Memory rules count `13 of 30` → `15 of 30` with rules #14 (REPORT closing checklist — added 2026-04-26) and #15 (cluster-shape disclosure) entries; (6) PFS top-line counts: Last Updated April 25 → April 26, Sessions span 163-169 → 163-171, Tests 1386 → 1396, Migrations 90 → 93; (7) version footer 4.68 → 4.69. Cluster shape: **BATCHED with prior-session investigation** per Memory Rule #15 — investigation-then-batched-fix pattern eliminated unknown-unknowns. Commit pending. Agent avg pending. 1396 tests (no change). |
+| Session 171-D | Apr 26, 2026 | End-of-session docs update for the 171 cluster. (1) 4 new `CLAUDE_CHANGELOG.md` entries (171-A, -B, -C, -D); (2) 4 new "Recently Completed" rows + 1 Verification-Pending row (above); (3) 2 new Deferred P2 rows (page-refresh state recovery during bulk publish, Replicate concurrency policy) — both surfaced by Mateo April 26; (4) 1 new Deferred P3 row (gpt-image-2 pricing audit — pending OpenAI per-quality/size data publication, since 171-C chose Option B2 mirror placeholder); (5) Memory rules count `13 of 30` → `15 of 30` with rules #14 (REPORT closing checklist — added 2026-04-26) and #15 (cluster-shape disclosure) entries; (6) PFS top-line counts: Last Updated April 25 → April 26, Sessions span 163-169 → 163-171, Tests 1386 → 1396, Migrations 90 → 93; (7) version footer 4.68 → 4.69. Cluster shape: **BATCHED with prior-session investigation** per Memory Rule #15 — investigation-then-batched-fix pattern eliminated unknown-unknowns. Commit `3dc7e17`. Agents @technical-writer (sub via general-purpose) 9.0, @code-reviewer 9.0. Avg 9.0/10. 1396 tests (no change). |
 | Session 171-C | Apr 26, 2026 | GPT Image 2 (BYOK) integration. OpenAI released gpt-image-2 on April 21, 2026 (model ID `gpt-image-2`); spec adds it as a BYOK-only selectable model mirroring `gpt-image-1-5-byok`. Five surfaces: new `AI_GENERATORS['gpt-image-2-byok']` entry, new `AI_GENERATOR_CHOICES` tuple entry (Round 2 fix — see below), new `GeneratorModel` row seeded by migration 0090 (RunPython, idempotent via `update_or_create`) AND mirrored in `seed_generator_models.py` for fresh-DB convergence (defaults byte-identical), choices migration 0091 (auto-generated; AlterField on both `Prompt.ai_generator` and `DeletedPrompt.ai_generator` per the 169-C sibling-field pattern), `OpenAIImageProvider` threading `model_name` through `__init__` → `self.model_name` → API calls (replaces 2 hardcoded `'gpt-image-1.5'` literals; default preserves backward compat), `tasks.py` `_provider_kwargs` setup gains `elif job.provider == 'openai':` branch (mirrors existing Replicate pattern). **IMAGE_COST_MAP scenario:** chose Option B2 (mirror gpt-image-1.5 prices as placeholder) — gpt-image-2 is BYOK so OpenAI bills user directly; displayed cost is informational only; per-model restructure deferred as P3. **Round 1 caught a blocking gap** — AI_GENERATOR_CHOICES in `prompts/models/constants.py` did not include the new slug; without it, Django model validation would silently reject `prompt.save()` for any GPT Image 2 publish (silent corruption per memory rule #13). Round 2 fix: tuple entry + auto-generated migration 0091. `# noqa: C901` added to `process_bulk_generation_job` (new `elif` pushed flake8 complexity 15 → 16; suppression matches existing in-file precedent). Real SEO copy + dedicated icon deferred per existing P3 rows. Commit `843d12e`. Agents Round 1: @django-pro 8.5, @code-reviewer 6.5 (BLOCKED), @architect-review 8.5 (false-alarm on promotional_label), @database-migrations (sub) 9.0; avg 8.125. Round 2 (focused): @django-pro 9.5, @code-reviewer 9.5; avg 9.5. 1396 tests. |
 | Session 171-B | Apr 26, 2026 | Cleanup: quality labels + Try-in URLs + 170-B P2/P3. (1) Per-generator `quality_label_map` field on `AI_GENERATORS['nano-banana-2']` → maps `low/medium/high` to `1K/2K/4K` (additive; generators without override fall back to default capitalize). View injects `quality_label_map_json` via JSON; template exposes via `data-quality-label-map`; polling.js parses with try/catch fallback; new `G.formatQualityLabel(quality)` helper in config.js; ui.js routes per-prompt-group meta AND single-quality-override header through it. (2) AI_GENERATORS website URLs audited via WebFetch + WebSearch — all 7 bulk-gen entries updated to verified official model-owner pages. Notable: `grok-imagine` → `x.ai/api/imagine`, `gpt-image-1-5-byok` → `platform.openai.com/docs/models/gpt-image-1.5`, all 4 Flux variants → `bfl.ai/` (older variant pages no longer documented on BFL homepage; falls back to model-owner root per spec rule), `nano-banana-2` → `gemini.google/overview/image-generation/` (replaces broken `nanobanana.ai` ECONNREFUSED). (3) 170-B P3 (auth wording divergence) resolved — typed-error map and legacy reasonMap unified to `"Authentication failed — update your API key."`. (4) 170-B P2 (Done auto-focus guard) resolved — `setPublishModalTerminal` now compound-guards `closeBtn !== document.activeElement && doneBtn !== document.activeElement` before `.focus()` (prevents screen-reader announcement thrash on terminal-state re-entry). Commit `6a58ef9`. Agents @code-reviewer 9.0, @frontend-developer 9.0, @django-pro 9.0, @accessibility-expert (sub) 9.0. Avg 9.0/10. 1396 tests. |
 | Session 171-A | Apr 26, 2026 | Multi-line `{# #}` Django comment fix. Three multi-line `{# ... #}` blocks in `bulk_generator_job.html` (lines 150-153, 172-176, 224-228 pre-fix) were leaking as visible page text on bulk job results pages — Django's `{# #}` regex (`\{#.*?#\}` without `re.DOTALL`) is single-line only. Fix: convert all 3 to `{% comment %} ... {% endcomment %}` blocks (Django's documented multi-line comment syntax). Comment text content preserved verbatim. Spec confidence 100% — definitive root cause confirmed in prior CC session's investigation (`docs/REPORT_171_INVESTIGATION.md` Section 3 + 5.1, untracked). Commit `410563c`. Agents @frontend-developer 10/10, @code-reviewer 9.5, @accessibility-expert (sub) 9.5. Avg 9.67/10. 1396 tests (template-syntax change only — no functional impact on test suite). |
@@ -476,6 +480,147 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 | ~~gallery.js lightbox close button~~ | `static/js/bulk-generator-gallery.js` | ✅ RESOLVED Session 142 — confirmed on overlay (141 fix verified) |
 | ~~`[PASTE-DELETE]` ✕ button `.classList.contains()`~~ | `static/js/bulk-generator.js` | ✅ RESOLVED Session 144 — uses `.closest()` matching deleteBtn/resetBtn pattern |
 | ~~Stale 0.034 fallback in cost estimate~~ | `prompts/views/bulk_generator_views.py` | ✅ RESOLVED Session 144 — updated to 0.042, consistent with IMAGE_COST_MAP |
+
+### Session 175 — Policy Documentation Cluster (Planned)
+
+**Status:** Planned. Begins after Session 174 (modal persistence +
+IMAGE_COST_MAP restructure).
+
+**Self-drafted policy posture confirmation (Mateo, April 30, 2026):**
+Mateo accepts that policy documents (ToS, Privacy Policy, Content
+Policy) will be self-drafted by Claude.ai with documented limitations
+rather than lawyer-reviewed. Reasoning: tight budget, lawyer
+back-and-forth too slow for launch timeline, self-drafted is "better
+than 80% of indie SaaS apps" per Claude.ai's prior assessment. Plan
+to revisit when revenue justifies legal review (estimated 6-12 months
+post-launch).
+
+**Documented limitations:**
+- Liability limitation clauses have jurisdiction-specific magic-word
+  requirements not reliably captured by self-drafted text
+- GDPR Article 30 records and full Data Processing Agreements with
+  subprocessors (OpenAI, Replicate, xAI, Backblaze, Cloudflare,
+  Heroku) not included
+- COPPA / state privacy law (CCPA/VCDPA) compliance verification
+  not done
+- Specific industry compliance (none currently identified) not vetted
+
+**Mitigations in place:**
+- Self-drafted ToS/Privacy is better than no policy at all for
+  low-traffic, pre-revenue stage
+- Casual disputes (DMCA notices, refund requests, account suspension)
+  resolvable through self-drafted terms
+- DMCA Agent registration ($6 at dmca.copyright.gov, mandatory before
+  launch) provides federal safe harbor protection
+
+**Cluster scope (~6 specs):**
+
+- **175-A** Internal `docs/CONTENT_POLICY.md` — drives code, admin
+  tooling, cost absorption rules, severity definitions, refund
+  triggers, harassment escalation
+- **175-B** Internal `docs/MODERATION_RUNBOOK.md` — operational SOPs
+  for handling reports, DMCA process, repeat infringer policy +
+  **DMCA Agent registration walkthrough as non-negotiable launch
+  checklist item**
+- **175-C** Public-facing `docs/CONTENT_GUIDELINES.md` (replaces the
+  173-C placeholder at `/policies/content/`) +
+  `docs/REFUND_POLICY.md`
+- **175-D** `docs/TERMS_OF_SERVICE.md` (drafted from competitor
+  patterns + PromptFinder facts; clearly documented as not
+  lawyer-reviewed)
+- **175-E** `docs/PRIVACY_POLICY.md` (same approach)
+- **175-F** End-of-session docs
+
+**Stage-gate before 175 begins:**
+
+Mateo collects sample policy docs from comparable apps for Claude.ai
+to use as drafting references:
+- 5-7 ToS samples (Midjourney, OpenAI, Replicate, Stability,
+  ImagineArt, Civitai, Leonardo.ai)
+- 3-5 Privacy Policy samples (same)
+- 3-5 Content Policy samples
+- 2-3 DMCA pages
+- Refund policies
+
+Estimated time: 2-3 hours of clicking + saving. These get fed into
+a `policy-drafting` Claude skill (outline below).
+
+**Policy-drafting skill outline:**
+
+The skill (to be created at `/.claude/skills/policy-drafting/SKILL.md`
+or similar) should contain:
+
+1. **Reference docs** — the competitor samples Mateo collects above
+2. **PromptFinder-specific facts** — extracted from CLAUDE.md (data
+   collection, subprocessors, jurisdiction, age policy, business
+   model)
+3. **Drafting checklists** — ToS (25-point), Privacy Policy
+   (18-point), Content Policy (AI-platform specific), Refund Policy
+   (decision tree)
+4. **Jurisdiction notes** — US-based business, worldwide users,
+   GDPR/CCPA considerations
+5. **Standard clause library** — pre-written customizable boilerplate
+   (limitation of liability, indemnification, dispute resolution,
+   choice of law, termination, force majeure, severability, DMCA
+   agent designation, repeat infringer, modifications,
+   children/minors)
+6. **Red flags / common mistakes** — patterns to avoid
+7. **Self-audit questions** — post-drafting checks
+
+**Cost absorption policy (drafted in 175-A, summarized here):**
+
+Documents what PromptFinder absorbs vs charges back to users for
+content-moderation rejections:
+
+- **What we absorb:** First N (currently 3) content-policy rejections
+  per user per day; all rejections from users with <M (currently 5)
+  total rejections in account history (new users); rejections from
+  prompts that PASSED our pre-flight (provider rejected something we
+  didn't flag — that's our miss)
+- **What we don't absorb / future enforcement:** Sustained-violation
+  users (>3 rejections/day for >7 days) → soft-block via stricter
+  pre-flight + admin queue; bulk batches with >50% pre-flight
+  rejection rate → block batch entirely; repeat universal-block
+  triggers → incident logged + admin notification + possible
+  suspension
+
+xAI charges $0.02 per content-moderation rejection. OpenAI/Google
+can suspend API access for sustained violations. Pre-flight (Session
+173-B) catches most before they hit the API.
+
+**Content ownership framework (drafted in 175-D, summarized here):**
+
+User-uploaded content (avatars, source images for Vision API):
+- User represents and warrants ownership/license + no infringement
+- User grants PromptFinder limited license to host/process for
+  service delivery
+
+AI-generated content (bulk generator output):
+- PromptFinder assigns rights to user
+- Output may not be copyrightable (AI-generated); may be
+  similar/identical across users; resemblance to existing
+  works/people remains user's responsibility regardless of Terms
+  ownership
+- PromptFinder reserves aggregated/anonymized usage rights for
+  service improvement
+
+**DMCA Agent registration:**
+
+Non-negotiable line item before public launch. $6 one-time
+registration at `dmca.copyright.gov/`. Without DMCA agent
+designation, PromptFinder loses federal safe harbor protection —
+losing safe harbor means direct copyright liability for any
+infringing user uploads ($750-$30,000 statutory damages per work).
+
+Required steps:
+1. Register agent with US Copyright Office at
+   `https://dmca.copyright.gov/` (15 minutes online)
+2. List agent contact info on PromptFinder website (footer +
+   Privacy Policy + dedicated DMCA page)
+3. Document the takedown response process in
+   `MODERATION_RUNBOOK.md` (175-B)
+4. Document the repeat infringer policy in ToS and
+   `MODERATION_RUNBOOK.md`
 
 ### 🚀 Planned New Features
 
@@ -2793,7 +2938,7 @@ by consistent application of structural safeguards. Memory rules
 are the mechanism for making those safeguards consistent rather
 than "remember to do this" reminders that drift.
 
-### Active memory rules (15 of 30)
+### Active memory rules (17 of 30)
 
 The following rules fire in every Claude conversation for this
 project. Listed in slot order.
@@ -3034,6 +3179,64 @@ unknown-unknowns going into the implementation specs and
 becomes a strong default for any cluster where regressions
 have ambiguous root causes.
 
+#### 16. Surface deferred backlog at session start
+
+At the start of every cluster-planning conversation, after
+Mateo presents new asks, Claude reads CLAUDE.md's Deferred P2
+backlog and surfaces relevant items: "Before we plan new work,
+do any of these deferred items belong in this cluster?"
+Forces explicit consideration of accumulated deferred items
+rather than silent accumulation.
+
+**Rationale:** Established 2026-05-01 (Session 173-D). The
+171-D and 172-D placeholder pattern (`Commit pending. Agent avg
+pending.` left stale across sessions until 173-D backfilled
+them) revealed that deferred items can sit in CLAUDE.md
+forever without anyone explicitly considering them at planning
+time. Without an explicit prompt, the safe default is "skip,
+plan new work" — which silently accumulates technical debt.
+The rule's prompt makes the consideration cost-free and routine.
+
+**How to apply:** Read the Deferred P2 section before drafting
+any cluster spec. For each deferred item, ask: "Does the new
+asks include this?" If yes, fold it into the cluster scope. If
+no, explicitly note in the cluster's run instructions that the
+item was considered and deferred (with reason). Documented
+example: Session 173 cluster Section 2 "Items NOT in this
+cluster" — modal persistence on bulk publish refresh, IMAGE_COST_MAP
+restructure, full policy docs all explicitly considered and
+deferred.
+
+#### 17. Docs spec self-reference backfill
+
+Every docs spec includes a follow-up working-tree edit (after
+the docs commit lands) that backfills the spec's own commit
+hash and final agent scores into the just-committed docs file.
+The backfill edit is committed as a separate small commit
+immediately after the docs commit. Solves the recurring "Commit
+pending. Agent avg pending." pattern.
+
+**Rationale:** Established 2026-05-01 (Session 173-D). This
+pattern affected Sessions 171-D and 172-D — both shipped with
+their own placeholder text uncommitted, requiring 173-D to
+backfill them. The "I commit a docs change that says 'commit
+pending'" pattern is structurally awkward — the commit
+documenting the work doesn't reference itself. A two-commit
+shape (1: docs commit; 2: tiny backfill commit referencing the
+hash from commit 1) breaks the chicken-and-egg. The backfill
+commit is small (2-3 line edits across CLAUDE.md +
+CLAUDE_CHANGELOG.md), low-risk, and serves as proof of the
+rule in action.
+
+**How to apply:** After the docs commit lands, run `git log -1
+--format='%h' HEAD` to get the hash. Edit CLAUDE.md (the
+relevant Recently Completed row) and CLAUDE_CHANGELOG.md (the
+relevant entry heading + agent ratings line) to replace
+`Commit pending. Agent avg pending.` with the real hash + real
+average. Commit as a separate small commit immediately. Commit
+message format: `docs: backfill <session>-D self-reference
+(Memory Rule #17 application)`.
+
 ### Three-criteria framework for future memory additions
 
 A memory edit earns a slot if it meets at least one of:
@@ -3094,9 +3297,9 @@ actual Claude behavior and documented expectations.
 
 ### Token cost trade-off
 
-With 15 active memory edits, the per-message token overhead is
-approximately 2,200–3,000 tokens. For a typical 40-message
-session, that's 88,000–120,000 extra tokens of context processed
+With 17 active memory edits, the per-message token overhead is
+approximately 2,500–3,400 tokens. For a typical 40-message
+session, that's 100,000–136,000 extra tokens of context processed
 over the session's lifetime.
 
 At current pricing, this adds roughly $0.50–$1.65 per session
@@ -3896,5 +4099,5 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.70 (Session 172 cluster — BATCHED with prior-session evidence capture. 172-A `d340e1e` avg 8.875/10 (4 bundled fixes: modal footer transparent background, per-box disabled select styling, Memory Rule #13 logger.warning x2 in tasks.py, NB2 master quality default to 1K with within-session guard). 172-B `b00c0d9` avg 9.275/10 (Grok content moderation hotfix — `_POLICY_KEYWORDS` expanded with `'moderation'` and `'rejected'` after Mateo's heroku pg:psql captured the verbatim xAI rejection wording; Memory Rule #13 `logger.info` added on BadRequestError fallthrough; 2 new tests). 172-C `1b59266` avg 9.175/10 (per-image published-badge overlay restoration on page reload — extended `renderImages` to call `markCardPublished` for any image with `prompt_page_id`; idempotency guaranteed by markCardPublished's early-return; 2 new multi-image contract tests). 172-D commit pending — this docs update. **Precedent documented:** when log-based investigation fails (Memory Rule #13 violation masking the symptom), database-state inspection is a valid fallback for read-only diagnostics. 172-B itself fixed the Memory Rule #13 violation that necessitated the workaround. Memory rules unchanged at 15 of 30. Session 171 Verification-Pending row resolved. 3 new Deferred P2 rows (modal persistence, IMAGE_COST_MAP per-model restructure, Reset Master + Clear All UX). 1 new Deferred P3 row (Try-in URL future text change). 1400 tests.)
-**Last Updated:** April 29, 2026
+**Version:** 4.71 (Session 173 cluster — HYBRID with prior-session evidence capture. 173-A `369b2a0` avg 9.35/10 (per-card "Use master" reset bugs across handleModelChange + Clear All + Reset Master; gpt-image-1 stale slug fixed to `'black-forest-labs/flux-schnell'`; `_POLICY_KEYWORDS` → `_XAI_POLICY_KEYWORDS` rename per 172-B agent feedback). 173-B `e06ab5c` avg 8.92/10 (NSFW pre-flight v1: provider-aware ProfanityWord with 4 new fields, migration 0092, advisory keyword lists for OpenAI/NB2/Grok via new `seed_provider_advisory_keywords` command, account-suspension risk mitigation). 173-C `bef3115` avg 9.225/10 (alert-circle icon prepended to content_policy chip; placeholder /policies/content/ page; "Learn more" link in failed-slot; @code-reviewer Round 1 7.5/10 BLOCKED on `window.SPRITE_URL` undefined → Round 2 9.2/10 confirmed clean after `G.spriteUrl` fix). 173-D commit pending — this docs update. **Memory Rules 15 → 17 of 30** (#16: surface deferred backlog at session start; #17: docs spec self-reference backfill — solves the recurring "Commit pending" pattern that affected 171-D and 172-D). 171-D + 172-D placeholders backfilled (171-D: `3dc7e17` 9.0/10; 172-D: `66c15da` 9.1/10). CSS:1338 font-size removal documented as intentional Mateo UX call. **Session 175 plan section added** (~80 lines: self-drafted policy posture confirmation, DMCA agent registration plan, cost absorption policy, content ownership framework, policy-drafting skill outline, stage-gate references collection — captures all context for Session 175 without re-deriving from chat). 1408 tests.)
+**Last Updated:** May 1, 2026

@@ -452,7 +452,7 @@ Memory Rule #17.*
 
 | Hash | Message |
 |------|---------|
-| TBD  | feat(moderation): NSFW pre-flight v1 — provider-aware ProfanityWord + advisory keyword lists (Session 173-B) |
+| `e06ab5c` | feat(moderation): NSFW pre-flight v1 — provider-aware ProfanityWord + advisory keyword lists (Session 173-B) |
 
 ---
 

@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** April 29, 2026 (Sessions 101–172)
+**Last Updated:** May 1, 2026 (Sessions 101–173)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -32,7 +32,302 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
-### Session 172-D — April 29, 2026 (End-of-Session Docs Update — commit pending)
+### Session 173-D — May 1, 2026 (End-of-Session Docs Update + 171-D/172-D backfills + Memory Rules #16/#17 — commit pending)
+
+**Outcome:** Documents the 173 cluster (173-A reset bugs + xAI keyword
+rename, 173-B NSFW pre-flight v1, 173-C content_policy chip icon +
+placeholder content policy page). Cluster shape: **HYBRID** per
+Memory Rule #15 — 173-A and 173-B were drafted from already-verified
+evidence (Mateo's prior-chat file inspections); 173-C depends on
+173-B's URL slug for the chip link; 173-D depends on all three
+landing first.
+
+**Includes two new memory rules** that emerge from this and prior
+sessions' patterns:
+
+- **Memory Rule #16 (added 2026-05-01):** At cluster-planning start,
+  Claude reads CLAUDE.md's Deferred P2 backlog and surfaces relevant
+  items: "Before we plan new work, do any of these deferred items
+  belong in this cluster?" Forces explicit consideration rather
+  than silent accumulation. Established after the 171-D and 172-D
+  placeholder pattern revealed silent accumulation as a real
+  failure mode.
+
+- **Memory Rule #17 (added 2026-05-01):** Every docs spec includes a
+  follow-up working-tree edit (after the docs commit lands) that
+  backfills the spec's own commit hash and final agent scores into
+  the just-committed docs file. Solves the recurring "Commit
+  pending. Agent avg pending." pattern that affected 171-D and 172-D.
+  The backfill edit is committed as a separate small commit
+  immediately after the docs commit. **This 173-D entry will itself
+  be backfilled in a follow-up commit per Memory Rule #17 — proof
+  of the rule in action.**
+
+**Backfills landed in this commit:**
+- Session 171-D: `Commit pending. Agent avg pending.` →
+  `Commit \`3dc7e17\`. Avg 9.0/10.` (CLAUDE.md + CLAUDE_CHANGELOG.md)
+- Session 172-D: same shape → `Commit \`66c15da\`. Avg 9.1/10.`
+
+**CSS:1338 font-size removal documented as intentional:** the
+`.publish-modal-links li` `font-size: 0.9rem;` removal that appeared
+in 172-A's working-tree state was Mateo's intentional UX change —
+the small font was unreadable on the publish modal. Documented in
+the 173-A entry below so future contributors understand it's not
+a bug.
+
+**Session 175 plan section added** to CLAUDE.md (~80 lines) capturing
+the full policy-docs cluster scope: self-drafted policy posture
+confirmation (Mateo accepts limitations), DMCA agent registration
+non-negotiable, cost absorption policy, content ownership framework,
+policy-drafting skill outline, stage-gate references collection.
+Captures all context discussed in prior chat about policy work so
+Session 175 has full context without re-deriving from chat history.
+
+**Files modified:**
+- `CLAUDE_CHANGELOG.md` — 4 new session entries (this one + 173-A/B/C
+  above) + banner update to "Sessions 101–173" + 171-D/172-D
+  backfills (commit hash + agent ratings)
+- `CLAUDE.md` — 4 new "Recently Completed" rows + 171-D/172-D
+  placeholder backfills + Memory Rules count 15 → 17 with new #16
+  + #17 entries + Session 175 placeholder section + CSS:1338 note +
+  version footer 4.70 → 4.71
+- `PROJECT_FILE_STRUCTURE.md` — Last Updated April 29 → May 1,
+  Sessions span 163–172 → 163–173, Tests 1400 → 1408 (+6 from
+  173-B + 2 from 173-C), Migrations 93 → 94 (+0092 from 173-B),
+  Test Files +2 (test_nsfw_preflight.py + test_policy_views.py)
+
+**Agent ratings:** *(filled post-review)*
+
+---
+
+### Session 173-C — May 1, 2026 (content_policy chip icon + placeholder content policy page — commit `bef3115`)
+
+**Outcome:** Three small enhancements to make the NSFW chip warning
+more recognizable and give users somewhere to land for clarification.
+
+**(1) icon-alert-circle added to sprite.** Lucide alert-circle SVG
+symbol added at top of `static/icons/sprite.svg` (39 → 40 icons).
+Standard Lucide stroke style (fill=none, stroke=currentColor,
+stroke-width=2). Index comment updated with "Session 173-C" line.
+
+**(2) Chip rendering prepends icon for content_policy variant only.**
+`_classifyErrorChip` (gallery.js:106) gains an `iconId:
+'icon-alert-circle'` field on the content_policy classification
+dict. `_renderErrorChip` (gallery.js:144) gains a conditional block
+that creates a 14px SVG icon, appends it to the chip BEFORE the
+label, with `aria-hidden="true"` and `focusable="false"` (decorative).
+Sprite URL accessed via `G.spriteUrl` per project pattern (initialized
+config.js:70, populated polling.js:341, used at gallery.js:289 for
+download icon). Other chip variants (auth, quota, rate_limit,
+server_error, invalid_request) keep text-only — out of scope.
+
+**(3) "Learn more" link in failed-slot for content_policy.** Adjacent
+to the `.failed-reason` span. Separate `<a>` DOM node (NOT inline
+HTML) because reason rendering uses `textContent` (verified at
+gallery.js:395 + 458). Link points to `/policies/content/`,
+target="_blank", rel="noopener noreferrer", aria-label
+"Learn more about PromptFinder content policy (opens in new tab)".
+
+**Placeholder content policy page** at `/policies/content/`:
+- Template: `prompts/templates/policies/content_policy_placeholder.html`
+- View: `ContentPolicyPlaceholderView(TemplateView)` in
+  `utility_views.py` (TemplateView import at top per E402)
+- URL: `prompts:content_policy_placeholder` namespace, resolves to
+  `/policies/content/` (mounted via `prompts_manager/urls.py:53`'s
+  unprefixed include)
+- CSS: new `static/css/pages/policy-page.css`
+- Content: H1 + amber pre-launch banner + 4 H2 sections (Basic
+  rules, AI provider content policies, Reporting issues, What's
+  coming) + mailto link + dynamic `{% now %}` timestamp footer.
+  Honest about being a placeholder — full policy ships in Session
+  175.
+
+**Round 1 review caught a real blocker:** initial implementation
+referenced `window.SPRITE_URL` per spec section 4.1 pseudocode, but
+that constant doesn't exist in the codebase. Fix: use `G.spriteUrl`
+(project pattern). Code comment block now documents the project
+pattern + initialization chain. @code-reviewer Round 1 7.5/10
+(BLOCKED) → Round 2 9.2/10 (re-verified clean).
+
+**Round 1 false alarm:** @ui-visual-validator claimed icon DOM order
+was wrong — misreading. With `appendChild(icon)` then
+`appendChild(label)`, icon becomes child[0] and label becomes
+child[1] → flexbox renders [icon] [label]. Comment block now
+explicitly documents the appendChild ordering intent.
+
+**Files modified:** `static/icons/sprite.svg`,
+`static/js/bulk-generator-gallery.js`,
+`static/css/pages/bulk-generator-job.css`,
+`prompts/views/utility_views.py`, `prompts/views/__init__.py`,
+`prompts/urls.py`, plus 4 new files (template, page CSS, test file,
+report). 1408 tests OK (1400 pre + 2 new from this spec).
+
+**Agent ratings:** @frontend-developer 9.2/10,
+@accessibility-expert (sub via general-purpose) 9.5/10,
+@code-reviewer 7.5 → 9.2/10 (Round 2 re-verified after window.SPRITE_URL
+fix), @ui-visual-validator 9.0/10. Avg 9.225/10.
+
+---
+
+### Session 173-B — May 1, 2026 (NSFW pre-flight v1: provider-aware ProfanityWord + advisory keyword lists — commit `e06ab5c`)
+
+**Outcome:** Extends the existing profanity-filter pre-flight to be
+provider-aware, mitigating account-suspension risk from sustained
+NSFW prompts that trigger provider content moderation. xAI charges
+$0.02 per content-moderation rejection; OpenAI/Google can suspend
+API access for sustained policy violations. Pre-flight catches most
+before any API call.
+
+**Tiered architecture:**
+- **Tier 1 (universal):** existing `block_scope='universal'` —
+  blocks across ALL providers (CSAM-adjacent terms, etc.). Backward
+  compatible.
+- **Tier 2 (provider advisory):** new `block_scope='provider_advisory'`
+  with `affected_providers` JSONField — blocks only when user has
+  selected one of the listed providers. Recognizes Grok permits
+  artistic anatomical content that NB2 rejects.
+
+**Changes:**
+1. **ProfanityWord model:** 4 new fields (block_scope,
+   affected_providers JSONField, last_reviewed_at, review_notes).
+   Migration `0092_profanityword_provider_aware` (4 AddField only).
+2. **profanity_filter.py:** new `check_text_with_provider()` method
+   returning a dict (universal-then-advisory). Existing `check_text()`
+   and `check_prompt(prompt_obj)` unchanged — full backward-compat.
+3. **bulk_generation.py:** `validate_prompts(prompts, provider_id='')`
+   — Tier 1 still uses legacy `check_text` (preserves existing test
+   mocks); Tier 2 conditional on provider_id given AND Tier 1
+   cleared.
+4. **bulk_generator_views.py:** `api_validate_prompts` extracts
+   `model_identifier` from request, passes as `provider_id` to
+   service.
+5. **Seed command:** `seed_provider_advisory_keywords` with starter
+   lists for OpenAI/NB2/Grok. Idempotent via `update_or_create`.
+   `--dry-run` flag for safety.
+6. **Admin UI:** new "Provider Awareness (Session 173-B)" fieldset
+   section. `list_display` + `list_filter` + `search_fields`
+   updated.
+
+**Implementation deviation from spec section 5.2:** spec proposed
+`affected_providers__contains=provider_id` ORM filter. CC found this
+is inconsistent between PostgreSQL prod and SQLite test DB for "list
+contains string element" semantics. Switched to fetch-all-advisory +
+filter-in-Python pattern with defensive `isinstance` guard. Caught
+at first test run; @architect-review and @django-pro both confirmed
+this is the correct cross-backend pattern.
+
+**Frontend wire-up of `model_identifier` in /api/validate/ POST body
+is OUT OF SCOPE per spec section 6.2** — backend defaults to empty
+`provider_id` (Tier 2 skipped), preserving backward-compat. Documented
+as a Remaining Issue follow-up (one-line fix in
+bulk-generator-generation.js).
+
+**Mateo runs after deploy:**
+```
+python manage.py seed_provider_advisory_keywords --dry-run
+python manage.py seed_provider_advisory_keywords
+```
+Tunes via `/admin/prompts/profanityword/`.
+
+**Pre-existing security gap noted (NOT introduced by 173-B):**
+`api_start_generation` does not call `validate_prompts` server-side —
+relies on frontend voluntarily hitting `api_validate_prompts` first.
+Mitigated by `@staff_member_required` decorator. P3 candidate to
+move pre-flight into start as defense-in-depth gate. Flagged by
+@backend-security-coder.
+
+**Files modified:** `prompts/models/moderation.py`,
+`prompts/admin/moderation_admin.py`,
+`prompts/services/profanity_filter.py` (~155 lines added),
+`prompts/services/bulk_generation.py`,
+`prompts/views/bulk_generator_views.py`. New files: migration 0092,
+seed command, test_nsfw_preflight.py (6 tests), REPORT_173_B. 1408
+tests OK (1400 pre + 6 new — 2 universal-block, 1 advisory-blocks-
+multi-providers, 1 universal-precedence, 1 message-variant, 1
+empty-list-edge-case).
+
+**Agent ratings:** @django-pro 8.8/10,
+@backend-security-coder 8.7/10, @code-reviewer 9.3/10,
+@test-automator 9.0/10, @architect-review 8.8/10. Avg 8.92/10.
+
+---
+
+### Session 173-A — May 1, 2026 (per-card "Use master" reset across handleModelChange + Clear All + Reset Master + xai keyword rename — commit `369b2a0`)
+
+**Outcome:** Three independent reset gaps were all manifesting as a
+single user-visible bug — "per-card quality dropdown shows 4K
+instead of Use master, even after delete-all + add-new":
+
+**(1) `handleModelChange` reset gap** (`bulk-generator.js:1037`) —
+when switching FROM a non-quality-tier model to a quality-tier
+model (NB2/GPT-Image-1.5/GPT-Image-2), per-box quality dropdowns
+retained `'high'` from the prior session. Fix: added `else { sel.value
+= ''; }` branch so they reset to "Use master" on quality-tier model
+selection. UX tradeoff (clobbers explicit per-box choice on model
+swap) documented in inline code comment with three-part justification.
+
+**(2) `clearAllConfirm` reset gap**
+(`bulk-generator-generation.js:415`) — Clear All Prompts button
+cleared text/paste/error state but did NOT clear per-box override
+dropdowns. Fix: added 16-line per-box override reset block at end
+of the existing forEach. Resets 8 fields: quality, size, images,
+vision (set to 'no'), direction-checkbox (unchecked), direction-
+text (empty), dirRow display (none), and removes `has-override`
+class.
+
+**(3) `resetMasterConfirm` reset gap**
+(`bulk-generator-generation.js:460`) — Reset Master Settings reset
+master row settings but not per-box overrides. Plus a separate
+latent bug at line 460: `I.settingModel.value = 'gpt-image-1';` —
+`'gpt-image-1'` is NOT a valid `model_identifier` in the seed file.
+Silently fell back to first dropdown option (Flux Schnell). Fix:
+slug corrected to `'black-forest-labs/flux-schnell'` (Mateo
+confirmed) + per-box reset block added + `I.handleModelChange()`
+call appended to refresh per-box capability UI.
+
+Bug #5 (sticky pricing not updating on master quality change) was
+downstream of bugs 1-3 — when per-box overrides were stuck at
+`'high'`, master changes didn't propagate. Fixes 1-3 resolve bug #5
+automatically.
+
+**(4) Pulled-forward cleanup from 172-B agent feedback:**
+`_POLICY_KEYWORDS` → `_XAI_POLICY_KEYWORDS` rename in
+`xai_provider.py` at all 4 occurrences (definition, 2 comments, 2
+usages). Per @architect-review's 172-B Section 6 concern — name now
+signals the constant is xAI-specific. Plus 2 stale comment updates
+in `test_xai_provider.py`.
+
+**Implementation gotcha:** `replace_all` on `_POLICY_KEYWORDS` →
+`_XAI_POLICY_KEYWORDS` produced a double-prefix bug
+(`_XAI_XAI_POLICY_KEYWORDS`) because the new name contains the old
+name as a substring. Caught immediately via verification grep,
+fixed with a second replace_all. Documented in REPORT_173_A
+Section 4 + 6 as a future-spec gotcha (`replace_all` is unsafe when
+new name contains old name).
+
+**CSS:1338 font-size removal is intentional:** the
+`.publish-modal-links li` `font-size: 0.9rem;` removal in
+`bulk-generator-job.css` (line 1338) that appeared in 172-A's
+working tree was Mateo's intentional UX change — the small font
+was unreadable on the publish modal. Not a bug. Documented here so
+future contributors don't try to revert it.
+
+**Files modified:** `static/js/bulk-generator.js`,
+`static/js/bulk-generator-generation.js`,
+`prompts/services/image_providers/xai_provider.py`,
+`prompts/tests/test_xai_provider.py`, plus REPORT_173_A. No new
+tests (JS-side reset bugs verified manually per Memory Rule #14;
+the rename is mechanical). 1400 tests OK (no test count change for
+this spec).
+
+**Agent ratings:** @frontend-developer 9.4/10,
+@code-reviewer 9.5/10,
+@accessibility-expert (sub via general-purpose) 9.0/10,
+@django-pro 9.5/10. Avg 9.35/10.
+
+---
+
+### Session 172-D — April 29, 2026 (End-of-Session Docs Update — commit `66c15da`)
 
 **Outcome:** Documents the 172 cluster (172-A bundled polish,
 172-B Grok content moderation hotfix, 172-C overlay restoration on
@@ -88,8 +383,7 @@ psql workaround.
 in 172.
 
 **Agent ratings:** @technical-writer (sub via general-purpose)
-X.X/10 + @code-reviewer X.X/10. Avg X.X/10. *(filled post agent
-review)*
+9.2/10 + @code-reviewer 9.0/10. Avg 9.1/10.
 
 ---
 
@@ -280,7 +574,7 @@ since it pre-dated the session, no reversal was attempted.
 
 ---
 
-### Session 171-D — April 26, 2026 (End-of-Session Docs Update — commit pending)
+### Session 171-D — April 26, 2026 (End-of-Session Docs Update — commit `3dc7e17`)
 
 **Outcome:** Documents the 171 cluster (171-A comment fix, 171-B
 cleanup, 171-C GPT Image 2 BYOK integration). Cluster shape:
@@ -313,8 +607,8 @@ post-deploy (modal + chip behavior verification on production after
 persists, capture browser evidence and draft Session 172 follow-up
 cluster against actual root cause data.
 
-**Agent ratings:** @technical-writer (sub via general-purpose) X.X/10
-+ @code-reviewer X.X/10. Avg X.X/10.
+**Agent ratings:** @technical-writer (sub via general-purpose) 9.0/10
++ @code-reviewer 9.0/10. Avg 9.0/10.
 
 ---
 

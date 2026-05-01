@@ -414,7 +414,7 @@ Memory Rule #17.*
 
 | Hash | Message |
 |------|---------|
-| TBD  | feat(bulk-gen): content_policy chip icon + placeholder content policy page (Session 173-C) |
+| `bef3115` | feat(bulk-gen): content_policy chip icon + placeholder content policy page (Session 173-C) |
 
 ---
 

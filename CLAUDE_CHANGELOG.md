@@ -32,6 +32,78 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 173-E — May 1, 2026 (api_validate model_identifier wire-up — see commit log for hash)
+
+**Outcome:** Closes REPORT_173_B Section 5 P2 deferred item.
+Activates 173-B Tier 2 advisory pre-flight in production. Until this
+ships, Tier 2 ran with `provider_id=''` and silently never fired for
+any user — every NSFW prompt that should have been caught by Tier 2
+advisory passed through to the provider, risking API account
+suspension. After ship, the entire 173-B account-protection feature
+is live.
+
+**Step 0 finding:** the backend wire-up (extract `model_identifier`
+from request body, isinstance defense, pass as `provider_id` to
+service) was ALREADY DONE in 173-B (commit `e06ab5c`,
+`bulk_generator_views.py:267-275`). The only remaining gap was the
+frontend not sending `model_identifier` in the validate POST body.
+Spec rewrote to "frontend-only fix + 3 defensive tests on the
+existing backend handler" once Step 0 confirmed backend was already
+in place.
+
+**One-line frontend fix at `bulk-generator-generation.js:911`:**
+adds `model_identifier: modelIdentifier` to the validate fetch body,
+sourced from `(I.settingModel && I.settingModel.value) || ''`. The
+defensive empty-string fallback covers the edge case where
+`I.settingModel` is somehow not initialised — backend then falls
+back to Tier 1 universal-only (the 173-B-defined backward-compat
+path; not a silent corruption fallback, so Memory Rule #13's
+`logger.warning` requirement does NOT apply here).
+
+**3 new defensive tests** in `ValidatePromptsAPITests` at
+`test_bulk_generator_views.py:205-280`:
+1. `test_173e_validate_passes_model_identifier_to_service` — happy
+   path: `model_identifier='google/nano-banana-2'` flows through to
+   `service.validate_prompts(prompts, provider_id='google/nano-banana-2')`
+2. `test_173e_validate_defaults_model_identifier_to_empty` —
+   backward-compat: omitted field defaults to empty string
+3. `test_173e_validate_coerces_malformed_model_identifier_to_empty`
+   — defensive boundary: list/dict/null/int/bool all coerce to empty
+   string at the HTTP boundary, never passed through to the service
+
+**Memory Rule #16 application:** this cluster IS the explicit closure
+of the deferred item from REPORT_173_B Section 5. Per the rule's
+prescription, deferred items should be reviewed at cluster planning
+start. Mateo did exactly that — he raised this item before any
+Session 174 work began, which is the rule's intended cadence.
+
+**Memory Rule #17 application:** single-spec cluster, single commit
+shape — docs and code ship together. No separate backfill commit
+needed because the docs entry is in the same commit; anyone reading
+git log sees the same hash for both. The "see commit log for hash"
+phrasing avoids the chicken-and-egg of self-referencing.
+
+**Files modified:**
+- `static/js/bulk-generator-generation.js` (1 str_replace at line 911)
+- `prompts/tests/test_bulk_generator_views.py` (1 str_replace adding
+  3 tests in the existing `ValidatePromptsAPITests` class)
+- `CLAUDE.md` (1 new Recently Completed row + Deferred P2 closure
+  mark on the model_identifier wire-up row)
+- `CLAUDE_CHANGELOG.md` (this entry)
+
+Backend wire-up (`bulk_generator_views.py`) was already in place from
+173-B — NOT modified in this spec.
+
+**Test count:** 1408 baseline + 3 new = 1411. Backend handler tests
+all 11 pass (8 prior + 3 new from 173-E). Full suite:
+*(filled post-agent-review when committing)*
+
+**Cluster shape:** SINGLE-SPEC.
+
+**Agent ratings:** *(filled post-review)*
+
+---
+
 ### Session 173-D — May 1, 2026 (End-of-Session Docs Update + 171-D/172-D backfills + Memory Rules #16/#17 — commit `474b308`)
 
 **Outcome:** Documents the 173 cluster (173-A reset bugs + xAI keyword

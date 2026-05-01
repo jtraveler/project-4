@@ -200,6 +200,80 @@ class ValidatePromptsAPITests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('strings', response.json()['error'])
 
+    # ── Session 173-E: model_identifier wire-up tests ────────────────
+
+    def test_173e_validate_passes_model_identifier_to_service(self):
+        """Session 173-E: validate endpoint must extract model_identifier
+        from request body and pass it as provider_id to the service.
+        Without this, Tier 2 advisory pre-flight (173-B) cannot fire."""
+        self.client.login(username='staffuser', password='testpass')
+        with patch(
+            'prompts.views.bulk_generator_views.service.validate_prompts'
+        ) as mock_validate:
+            mock_validate.return_value = {'valid': True, 'errors': []}
+            response = self.client.post(
+                self.url,
+                data=json.dumps({
+                    'prompts': ['a clean test prompt'],
+                    'model_identifier': 'google/nano-banana-2',
+                }),
+                content_type='application/json',
+            )
+        self.assertEqual(response.status_code, 200)
+        mock_validate.assert_called_once_with(
+            ['a clean test prompt'],
+            provider_id='google/nano-banana-2',
+        )
+
+    def test_173e_validate_defaults_model_identifier_to_empty(self):
+        """Session 173-E: omitted model_identifier defaults to empty
+        string, triggering Tier 1-only fallback. Preserves the
+        173-B-defined backward-compat path for any client that hasn't
+        been updated."""
+        self.client.login(username='staffuser', password='testpass')
+        with patch(
+            'prompts.views.bulk_generator_views.service.validate_prompts'
+        ) as mock_validate:
+            mock_validate.return_value = {'valid': True, 'errors': []}
+            response = self.client.post(
+                self.url,
+                data=json.dumps({
+                    'prompts': ['a clean test prompt'],
+                    # model_identifier omitted intentionally
+                }),
+                content_type='application/json',
+            )
+        self.assertEqual(response.status_code, 200)
+        mock_validate.assert_called_once_with(
+            ['a clean test prompt'],
+            provider_id='',
+        )
+
+    def test_173e_validate_coerces_malformed_model_identifier_to_empty(self):
+        """Session 173-E: defensive isinstance check at the HTTP boundary.
+        Malformed model_identifier (list, dict, null, int, bool) coerces
+        to empty string — never passed through to the service layer."""
+        self.client.login(username='staffuser', password='testpass')
+        malformed_values = [None, 42, ['gpt-image-1.5'], {'value': 'x'}, True]
+        for malformed in malformed_values:
+            with patch(
+                'prompts.views.bulk_generator_views.service.validate_prompts'
+            ) as mock_validate:
+                mock_validate.return_value = {'valid': True, 'errors': []}
+                response = self.client.post(
+                    self.url,
+                    data=json.dumps({
+                        'prompts': ['test'],
+                        'model_identifier': malformed,
+                    }),
+                    content_type='application/json',
+                )
+                self.assertEqual(response.status_code, 200)
+                mock_validate.assert_called_once_with(
+                    ['test'],
+                    provider_id='',
+                )
+
 
 @override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
 class StartGenerationAPITests(TestCase):

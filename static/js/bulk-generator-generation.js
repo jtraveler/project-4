@@ -908,10 +908,22 @@
             I.generateStatus.textContent = 'Validating prompts...';
 
             // Step 1: Validate prompts
+            // Session 173-E: include model_identifier so the backend
+            // pre-flight can apply Tier 2 (provider-advisory) checks
+            // added in 173-B. Empty string for safety if I.settingModel
+            // is somehow not initialised — backend then falls back to
+            // Tier 1 universal-only behavior (the 173-B-defined
+            // backward-compat path; not a silent corruption fallback,
+            // so Memory Rule #13 logger.warning isn't required).
+            var modelIdentifier =
+                (I.settingModel && I.settingModel.value) || '';
             return fetch(I.urlValidate, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': I.csrf },
-                body: JSON.stringify({ prompts: finalPrompts }),
+                body: JSON.stringify({
+                    prompts: finalPrompts,
+                    model_identifier: modelIdentifier,
+                }),
             })
             .then(function (r) { return r.json(); })
             .then(function (data) {

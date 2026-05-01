@@ -107,8 +107,9 @@ class XAINSFWKeywordTests(SimpleTestCase):
     def test_xai_content_moderation_classified_as_content_policy(self):
         """Session 172-B regression test: xAI returns 'Generated image
         rejected by content moderation.' for NSFW prompts. Verify
-        _POLICY_KEYWORDS now matches this exact wording (Session 171 didn't
-        — see REPORT_172_B Section 1 for the psql-captured evidence)."""
+        _XAI_POLICY_KEYWORDS now matches this exact wording (Session 171
+        didn't — see REPORT_172_B Section 1 for the psql-captured evidence).
+        Constant renamed from _POLICY_KEYWORDS in Session 173-A."""
         result = self._generate_with_bad_request(
             "Error code: 400 - {'code': 'Client specified an invalid argument', "
             "'error': 'Generated image rejected by content moderation.', "
@@ -127,7 +128,7 @@ class XAINSFWKeywordTests(SimpleTestCase):
             'prompts.services.image_providers.xai_provider',
             level='INFO',
         ) as logs:
-            # Wording deliberately avoids _POLICY_KEYWORDS AND the word 'billing'
+            # Wording deliberately avoids _XAI_POLICY_KEYWORDS AND the word 'billing'
             # so we hit the fallthrough branch (not content_policy, not quota).
             result = self._generate_with_bad_request(
                 'malformed parameter foobar — unrecognised 400'

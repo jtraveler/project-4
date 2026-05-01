@@ -42,7 +42,13 @@ _DEFAULT_ASPECT_RATIO = '1:1'
 # evidence trail. Both 'moderation' and 'rejected' added (rather than just one)
 # for defense-in-depth: if xAI varies the wording slightly between releases,
 # either keyword catches it.
-_POLICY_KEYWORDS = (
+#
+# Session 173-A: renamed from _POLICY_KEYWORDS to _XAI_POLICY_KEYWORDS per
+# @architect-review concern in 172-B Section 6 — name now signals this is
+# xAI-specific. If a future provider (Replicate, etc.) needs similar
+# keyword-based content_policy detection, extract a shared helper rather
+# than reusing this constant.
+_XAI_POLICY_KEYWORDS = (
     'content policy', 'safety', 'forbidden', 'violation',
     'blocked', 'inappropriate', 'nsfw', 'not allowed',
     'moderation', 'rejected',
@@ -172,7 +178,7 @@ class XAIImageProvider(ImageProvider):
             )
         except BadRequestError as e:
             error_str = str(e).lower()
-            if any(kw in error_str for kw in _POLICY_KEYWORDS):
+            if any(kw in error_str for kw in _XAI_POLICY_KEYWORDS):
                 logger.info("xAI content_policy match in: %s", error_str[:100])
                 return GenerationResult(
                     success=False,
@@ -194,7 +200,7 @@ class XAIImageProvider(ImageProvider):
                     error_message='API billing limit reached — check your xAI account.',
                 )
             # Session 172-B: Memory Rule #13 — silent-fallback observability.
-            # If we reach here, _POLICY_KEYWORDS didn't match and 'billing'
+            # If we reach here, _XAI_POLICY_KEYWORDS didn't match and 'billing'
             # didn't appear either. Log the rejection text so future
             # investigations can read Heroku logs instead of querying Postgres
             # (the original bug investigation in Session 171 had to use
@@ -308,7 +314,7 @@ class XAIImageProvider(ImageProvider):
 
             if response.status_code == 400:
                 error_text = response.text.lower()
-                if any(kw in error_text for kw in _POLICY_KEYWORDS):
+                if any(kw in error_text for kw in _XAI_POLICY_KEYWORDS):
                     logger.info(
                         'xAI edits content_policy match: %s', response.text[:100]
                     )

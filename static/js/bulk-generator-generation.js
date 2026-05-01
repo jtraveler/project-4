@@ -412,6 +412,31 @@
             // Source credit
             var sc = box.querySelector('.bg-box-source-input');
             if (sc) sc.value = '';
+
+            // Session 173-A: per-box override reset.
+            // Mateo's UX expectation: "when I click 'Clear all prompts',
+            // my expectation as a user is that all of the prompt cards
+            // will reset to the default and use the master settings...
+            // and this goes for all models." Without this block,
+            // override dropdowns retained their prior values and
+            // master-quality changes failed to propagate (sticky
+            // pricing bug #5). Mirrors the per-box "reset" button
+            // behavior at bulk-generator.js:506 (resetBoxOverrides).
+            var qo = box.querySelector('.bg-override-quality');
+            if (qo) qo.value = '';
+            var so = box.querySelector('.bg-override-size');
+            if (so) so.value = '';
+            var io = box.querySelector('.bg-override-images');
+            if (io) io.value = '';
+            var vo = box.querySelector('.bg-override-vision');
+            if (vo) vo.value = 'no';
+            var dc = box.querySelector('.bg-box-direction-checkbox');
+            if (dc) dc.checked = false;
+            var vd = box.querySelector('.bg-vision-direction-input');
+            if (vd) vd.value = '';
+            var dirRow = box.querySelector('.bg-box-vision-direction');
+            if (dirRow) dirRow.style.display = 'none';
+            box.classList.remove('has-override');
         });
 
         hideModal(I.clearAllModal);
@@ -425,7 +450,14 @@
     I.resetMasterBtn.addEventListener('click', function () { showModal(I.resetMasterModal); });
     I.resetMasterCancel.addEventListener('click', function () { hideModal(I.resetMasterModal); });
     I.resetMasterConfirm.addEventListener('click', function () {
-        I.settingModel.value = 'gpt-image-1';
+        // Session 173-A: corrected from 'gpt-image-1' (non-existent
+        // model_identifier — silently fell back to first dropdown
+        // option, which was Flux Schnell at sort_order 20). Mateo
+        // confirmed 'black-forest-labs/flux-schnell' as the explicit
+        // default — cheapest, fastest, no BYOK requirement, sensible
+        // for new users testing the tool. Verified valid via
+        // seed_generator_models.py line 61.
+        I.settingModel.value = 'black-forest-labs/flux-schnell';
         I.settingQuality.value = 'medium';
         I.settingVisibility.checked = true;
         I.visibilityLabel.textContent = 'Public';
@@ -473,6 +505,39 @@
             defaultImg.setAttribute('aria-checked', 'true');
             defaultImg.setAttribute('tabindex', '0');
         }
+
+        // Session 173-A: per-box override reset on Reset Master.
+        // Mateo's UX expectation: per-box overrides should reset to
+        // "Use master" when Reset Master is clicked. Same reset block
+        // as clearAllConfirm above — kept inline rather than extracted
+        // to a helper to keep spec scope minimal. If this pattern
+        // repeats a third time, extract to a shared helper.
+        I.promptGrid.querySelectorAll('.bg-prompt-box').forEach(function (box) {
+            var qo = box.querySelector('.bg-override-quality');
+            if (qo) qo.value = '';
+            var so = box.querySelector('.bg-override-size');
+            if (so) so.value = '';
+            var io = box.querySelector('.bg-override-images');
+            if (io) io.value = '';
+            var vo = box.querySelector('.bg-override-vision');
+            if (vo) vo.value = 'no';
+            var dc = box.querySelector('.bg-box-direction-checkbox');
+            if (dc) dc.checked = false;
+            var vd = box.querySelector('.bg-vision-direction-input');
+            if (vd) vd.value = '';
+            var dirRow = box.querySelector('.bg-box-vision-direction');
+            if (dirRow) dirRow.style.display = 'none';
+            box.classList.remove('has-override');
+        });
+
+        // Session 173-A: trigger handleModelChange to refresh per-box
+        // capability UI now that the master model has changed. Without
+        // this, per-box quality dropdowns would retain pre-Reset labels
+        // (e.g. "1K/2K/4K" if NB2 was active) until the user manually
+        // changed the model again. handleModelChange reads the current
+        // settingModel.value and updates per-box label text + disabled
+        // state to match.
+        if (I.handleModelChange) I.handleModelChange();
 
         // Reset must also clear the localStorage draft — otherwise a
         // page refresh would restore the pre-reset settings, defeating

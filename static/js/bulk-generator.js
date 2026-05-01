@@ -1034,8 +1034,32 @@
                 );
             }
             sel.disabled = !supportsQuality;
+            // Session 173-A: per-box quality reset on model swap.
+            // Two paths:
+            //   (a) Switching TO a non-quality-tier model (Flux Schnell,
+            //       Flux Dev, etc.): lock to 'high' so the box's effective
+            //       quality is unambiguous (master row is also locked to
+            //       high in this case).
+            //   (b) Switching TO a quality-tier model (NB2, GPT-Image-1.5,
+            //       GPT-Image-2): reset to '' (Use master) so the box
+            //       follows the master's selected quality. Fixes the
+            //       regression where a user who previously had Flux
+            //       Schnell selected (which forced sel.value='high')
+            //       would carry that 'high' value into a subsequent
+            //       NB2/GPT-Image session, displaying "4K" instead of
+            //       "Use master".
+            //
+            // Tradeoff: this clobbers the user's explicit per-box choice
+            // ON model swap. Acceptable because (i) model swap is a
+            // significant context change where preserving micro-overrides
+            // is unlikely to be desired; (ii) "Use master" is the more
+            // discoverable default; (iii) the explicit-override pattern
+            // is one-click to restore (user picks 1K/2K/4K from the
+            // dropdown again).
             if (!supportsQuality) {
                 sel.value = 'high';
+            } else {
+                sel.value = '';
             }
             // Update per-box quality labels to match master labels
             // Option 0 = "Use master" — skip it (index 1,2,3 are low/medium/high)

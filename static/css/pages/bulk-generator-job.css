@@ -1525,7 +1525,11 @@ a.published-badge:focus-visible {
 /* Session 173-C: alert-circle icon inside content_policy chip.
    14px, white (inherits chip's color via currentColor), with the
    chip's flex gap providing breathing room before the label.
-   Decorative only — aria-hidden on the SVG. */
+   Decorative only — aria-hidden on the SVG.
+   Session 173-F: this base size applies only to non-stacked variants
+   (currently unused — content_policy switched to stacked, no other
+   chip variant uses this icon). The .error-chip--stacked .error-chip__icon
+   override below sets the larger 3em size for the redesigned chip. */
 .error-chip__icon {
     width: 14px;
     height: 14px;
@@ -1535,7 +1539,10 @@ a.published-badge:focus-visible {
 
 /* Session 173-C: "Learn more" link inside content_policy failed slot.
    Appears adjacent to the .failed-reason text. Underline + color match
-   the surrounding error palette without being too prominent. */
+   the surrounding error palette without being too prominent.
+   Session 173-F: kept for backward-compat — older job pages may still
+   render the inline failed-reason__link path. The new stacked chip
+   embeds links inside .error-chip__body via .error-chip__link instead. */
 .failed-reason__link {
     color: inherit;
     text-decoration: underline;
@@ -1550,6 +1557,98 @@ a.published-badge:focus-visible {
     outline: 2px solid #fff;
     outline-offset: 2px;
     box-shadow: 0 0 0 4px #7f1d1d;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Session 173-F: stacked chip layout for content_policy variant.
+   Per Mateo's mockup — large gray icon over red "Content blocked"
+   pill over body copy with two inline links (learn more + Let us
+   know). Applied ONLY to content_policy chips via the --stacked
+   modifier; other chip variants (auth/quota/rate_limit/exhausted/
+   retrying) keep the inline rendering above. Intentional asymmetry:
+   content_policy communicates a different kind of failure (something
+   the user can fix by editing) and warrants stronger visual treatment.
+   ───────────────────────────────────────────────────────────────── */
+
+/* Outer container becomes a vertical flex column when --stacked.
+   Override the inline rules above: transparent bg, no border, no
+   nowrap (body copy needs to wrap), block-level rendering. */
+.error-chip--stacked {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.5em 0;
+    background: transparent;
+    color: inherit;
+    border: 0;
+    border-radius: 0;
+    white-space: normal;
+    font-size: inherit;
+    font-weight: 400;
+    line-height: 1.4;
+    max-width: 100%;
+}
+
+/* When the chip is BOTH --blocked AND --stacked, the red bg/color
+   from .error-chip--blocked must be undone on the container so the
+   pill child can carry it instead. */
+.error-chip--stacked.error-chip--blocked {
+    background: transparent;
+    color: inherit;
+    border-color: transparent;
+}
+
+/* Large icon override — only when nested in a stacked chip.
+   Soft gray rather than alarm-red so the icon is recognized but
+   doesn't compete with the pill for attention. */
+.error-chip--stacked .error-chip__icon {
+    width: 3em;
+    height: 3em;
+    color: #525252;                 /* gray-600 */
+    flex-shrink: 0;
+}
+
+/* The "Content blocked" pill — preserves the visual style of the
+   pre-173-F inline chip (red-800 bg, white text, pill border-radius). */
+.error-chip__pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25em 0.875em;
+    background: #991b1b;            /* red-800 */
+    color: #fff;
+    border: 1px solid #7f1d1d;      /* red-900 — visible boundary */
+    border-radius: 9999px;
+    font-size: 0.875em;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+/* Body copy below the pill — red text, centered, wraps cleanly. */
+.error-chip__body {
+    color: #b91c1c;                 /* red-700 */
+    font-size: 0.875em;
+    line-height: 1.5;
+    text-align: center;
+    max-width: 90%;
+    margin: 0;
+}
+
+/* Inline links inside body copy ("learn more" + "Let us know"). */
+.error-chip__link {
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 500;
+    cursor: pointer;
+}
+.error-chip__link:hover {
+    text-decoration: none;
+}
+.error-chip__link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 2px;
 }
 
 @keyframes error-chip-spin {

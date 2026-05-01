@@ -225,6 +225,9 @@ def bulk_generator_job_view(request, job_id):
         'live_completed_count': live_completed_count,
         'live_progress_percent': live_progress_percent,
         'quality_label_map_json': quality_label_map_json,
+        # Session 173-F: email for "Let us know" mailto links inside
+        # content_policy chips. Surfaced to JS via data attribute.
+        'content_block_report_email': settings.CONTENT_BLOCK_REPORT_EMAIL,
     })
     response['Cache-Control'] = 'no-store'
     return response

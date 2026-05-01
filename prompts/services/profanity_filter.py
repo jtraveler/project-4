@@ -30,10 +30,20 @@ class ProfanityFilterService:
 
     def _load_word_list(self) -> List[Dict]:
         """
-        Load active profanity words from database with caching.
+        Load active universal-scope profanity words from database with caching.
 
         Returns:
             List of dictionaries with word data
+
+        Session 173-F: now filters by ``block_scope='universal'`` so the
+        legacy ``check_text`` path (used by upload moderation, admin
+        tooling, and the bulk-gen Tier 1 check) only matches words the
+        admin classified as universally-objectionable. Provider-advisory
+        words (e.g. 'topless' on Nano Banana 2) are loaded by
+        ``check_text_with_provider`` separately and only fire when the
+        relevant provider is selected. Without this filter, Tier 2
+        advisory never actually fired in production — Tier 1 always
+        won (see REPORT_173_F Section 4 for the regression detail).
         """
         # Try to get from cache first (cache for 5 minutes)
         cached_words = cache.get('profanity_word_list')
@@ -43,10 +53,13 @@ class ProfanityFilterService:
         # Import here to avoid circular imports
         from ..models import ProfanityWord
 
-        # Load active words from database
+        # Load active universal-scope words from database. Advisory
+        # words are explicitly excluded — they belong to Tier 2 only.
         words = list(
-            ProfanityWord.objects.filter(is_active=True)
-            .values('word', 'severity')
+            ProfanityWord.objects.filter(
+                is_active=True,
+                block_scope='universal',
+            ).values('word', 'severity')
         )
 
         # Cache for 5 minutes
@@ -381,6 +394,15 @@ class ProfanityFilterService:
                         matched_words, provider_id,
                     ),
                     'scope_provider': provider_id,
+                    # Session 173-F: distinguishes preflight-side blocks
+                    # (this branch — Tier 2 advisory caught the prompt
+                    # before any API call) from provider-side blocks
+                    # (the API rejected it during generation, surfaced
+                    # via get_job_status polling — see bulk_generation.py
+                    # _build_image_data which sets block_source='provider'
+                    # for failed images with error_type='content_policy').
+                    # Frontend chip body copy varies by source.
+                    'block_source': 'preflight',
                 }
 
         return {

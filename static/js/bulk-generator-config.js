@@ -72,6 +72,27 @@
     G.sizeDisplay = '';
     G.galleryAspect = '1 / 1'; // aspect ratio for placeholder sizing
     G.qualityLabelMap = {}; // Per-generator override (e.g. {low:'1K',medium:'2K',high:'4K'} for Nano Banana 2). Empty = fall back to capitalize(quality).
+    // Session 173-F: provider human display names for content_policy chip
+    // body copy. Mirrors the Python `provider_display` dict in
+    // profanity_filter.py:_format_provider_advisory_message — keep these
+    // in sync if either is updated. Identifiers come from
+    // seed_generator_models.py model_identifier field.
+    G.providerDisplayMap = {
+        'gpt-image-1.5': 'GPT-Image-1.5',
+        'gpt-image-2': 'GPT Image 2',
+        'google/nano-banana-2': 'Nano Banana 2',
+        'grok-imagine-image': 'Grok Imagine',
+        'black-forest-labs/flux-schnell': 'Flux Schnell',
+        'black-forest-labs/flux-dev': 'Flux Dev',
+        'black-forest-labs/flux-1.1-pro': 'Flux 1.1 Pro',
+        'black-forest-labs/flux-2-pro': 'Flux 2 Pro',
+    };
+    G.jobModelName = '';                  // populated from data-model-name in polling.js init
+    G.contentBlockReportEmail = '';       // populated from data-content-block-report-email in polling.js init
+    G.getProviderDisplayName = function (modelIdentifier) {
+        if (!modelIdentifier) return 'this provider';
+        return G.providerDisplayMap[modelIdentifier] || modelIdentifier;
+    };
     G.announcer = null;      // aria-live region for selection announcements
     G.progressAnnouncer = null; // #generation-progress-announcer live region (A11Y-3)
     G.lastAnnouncedCompleted = -1; // track last announced count to avoid repeats
@@ -103,14 +124,28 @@
     // and falls back to error_message string-match for older jobs without
     // error_type. Backward-compatible: legacy callers passing only
     // errorMessage still get the existing exact-match path.
-    G._getReadableErrorReason = function (errorMessage, errorType, retryState) {
+    G._getReadableErrorReason = function (
+        errorMessage, errorType, retryState, blockSource
+    ) {
         // Primary path: error_type-keyed mapping. Distinguishes "retrying"
         // vs "exhausted" for transient buckets so the reason text matches
         // the chip rendered alongside it.
+        //
+        // Session 173-F: content_policy now distinguishes preflight vs
+        // provider-side via the blockSource parameter. Both return
+        // short reason strings used as fallback in non-chip contexts
+        // (e.g. aria-label on the failed-slot container \u2014 see
+        // gallery.js:623). The full chip body copy with inline links
+        // is constructed in bulk-generator-gallery.js
+        // _renderContentPolicyChip per the chip redesign.
+        if (errorType === 'content_policy') {
+            return blockSource === 'preflight'
+                ? 'Flagged by pre-flight \u2014 try a different model or edit.'
+                : 'Content blocked \u2014 try modifying the prompt.';
+        }
         if (errorType) {
             var typedMap = {
                 'auth':            'Authentication failed \u2014 update your API key.',
-                'content_policy':  'Content blocked \u2014 try modifying the prompt.',
                 'quota':           'API quota exhausted \u2014 top up your account.',
                 'invalid_request': 'Invalid request \u2014 check your prompt or settings.',
             };

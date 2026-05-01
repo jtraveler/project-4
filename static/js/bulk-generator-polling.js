@@ -343,6 +343,17 @@
         G.jobQuality = G.root.dataset.jobQuality || ''; // raw DB key for quality comparison (UI-IMPROVEMENTS-1)
         G.sizeDisplay = G.root.dataset.sizeDisplay || '';
         G.galleryAspect = G.root.dataset.galleryAspect || '1 / 1';
+        // Session 173-F: model_identifier (e.g. 'google/nano-banana-2')
+        // for content_policy chip body copy. Falls back to '' so the
+        // chip's helper getProviderDisplayName('') returns the generic
+        // 'this provider' label rather than crashing.
+        G.jobModelName = G.root.dataset.modelName || '';
+        // Session 173-F: email address for "Let us know" report links.
+        // Sourced from CONTENT_BLOCK_REPORT_EMAIL Django setting via
+        // template data attribute. Hard-coded fallback ensures the
+        // mailto link is never broken if the data attribute is missing.
+        G.contentBlockReportEmail = G.root.dataset.contentBlockReportEmail
+            || 'matthew.jtraveler@gmail.com';
 
         // Per-generator quality label override (Session 171-B). Empty
         // object falls back to capitalize(quality). JSON parse is

@@ -274,6 +274,74 @@ class ValidatePromptsAPITests(TestCase):
                     provider_id='',
                 )
 
+    # ── Session 173-F: block_source field tests ──────────────────────
+
+    def test_173f_validate_returns_block_source_preflight_on_advisory_match(self):
+        """Session 173-F: api_validate_prompts response includes
+        block_source='preflight' on each error dict when Tier 2 advisory
+        matches. Frontend chip body copy variant depends on this field."""
+        from prompts.models import ProfanityWord
+        self.client.login(username='staffuser', password='testpass')
+        ProfanityWord.objects.get_or_create(
+            word='173ftopless',
+            defaults={
+                'severity': 'medium',
+                'is_active': True,
+                'block_scope': 'provider_advisory',
+                'affected_providers': ['google/nano-banana-2'],
+            },
+        )
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': ['173ftopless portrait'],
+                'model_identifier': 'google/nano-banana-2',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data.get('valid', True))
+        errors = data.get('errors', [])
+        self.assertTrue(len(errors) > 0)
+        # The new block_source field must be present and equal 'preflight'
+        first_error = errors[0]
+        self.assertEqual(first_error.get('block_source'), 'preflight')
+        # Sanity: scope_provider also propagated for legacy frontend
+        self.assertEqual(
+            first_error.get('scope_provider'), 'google/nano-banana-2'
+        )
+
+    def test_173f_validate_omits_block_source_for_clean_prompt(self):
+        """Session 173-F: clean prompts produce no errors; block_source
+        is therefore not present in the response (the field only attaches
+        to per-prompt error dicts)."""
+        self.client.login(username='staffuser', password='testpass')
+        response = self.client.post(
+            self.url,
+            data=json.dumps({
+                'prompts': ['a clean test prompt'],
+                'model_identifier': 'black-forest-labs/flux-schnell',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get('valid', False))
+        self.assertEqual(len(data.get('errors', [])), 0)
+
+    def test_173f_content_block_report_email_setting_exists(self):
+        """Session 173-F: CONTENT_BLOCK_REPORT_EMAIL setting must exist
+        and contain a valid-looking email so chip mailto links work.
+        Default is Mateo's contact; production may override via env var."""
+        from django.conf import settings as dj_settings
+        self.assertTrue(
+            hasattr(dj_settings, 'CONTENT_BLOCK_REPORT_EMAIL'),
+            'CONTENT_BLOCK_REPORT_EMAIL setting is missing — chip "Let us '
+            'know" mailto links would break',
+        )
+        self.assertIn('@', dj_settings.CONTENT_BLOCK_REPORT_EMAIL)
+
 
 @override_settings(OPENAI_API_KEY='test-key', FERNET_KEY=TEST_FERNET_KEY)
 class StartGenerationAPITests(TestCase):

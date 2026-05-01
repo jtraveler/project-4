@@ -334,6 +334,17 @@ ADMINS = [
     ('Admin Name', os.environ.get('ADMIN_EMAIL', 'admin@example.com')),
 ]
 
+# Session 173-F: email address for the "Let us know" report links inside
+# NSFW content_policy chips on bulk-generation failure cards. Defaults to
+# Mateo's personal contact at pre-launch; swappable via Heroku env var
+# CONTENT_BLOCK_REPORT_EMAIL when reports@promptfinder.net is set up.
+# Surfaced to JS via data-content-block-report-email attribute on
+# bulk_generator_job.html root element.
+CONTENT_BLOCK_REPORT_EMAIL = os.environ.get(
+    'CONTENT_BLOCK_REPORT_EMAIL',
+    'matthew.jtraveler@gmail.com',
+)
+
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'

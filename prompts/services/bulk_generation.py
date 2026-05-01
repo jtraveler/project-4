@@ -162,11 +162,21 @@ class BulkGenerationService:
                         # without embedding HTML in `message` (frontend
                         # uses textContent, not innerHTML).
                         'flagged_words_display': word_list,
+                        # Session 173-F: block_source='preflight' applies
+                        # to both Tier 1 (universal) and Tier 2 (advisory)
+                        # blocks — the field describes WHERE the block
+                        # happened (preflight = before any API call), not
+                        # WHICH tier caught it. Provider-side blocks (the
+                        # API rejected during generation) get block_source
+                        # ='provider' via _build_image_data in the polling
+                        # response. Frontend chip body copy varies on this.
+                        'block_source': 'preflight',
                     })
                 else:
                     errors.append({
                         'index': i,
                         'prompt_num': i + 1,
+                        'block_source': 'preflight',
                         'message': (
                             'Content flagged — please revise this prompt.'
                         ),
@@ -196,6 +206,13 @@ class BulkGenerationService:
                         'flagged_words_display': word_list,
                         'reason': 'provider_advisory',
                         'scope_provider': advisory['scope_provider'],
+                        # Session 173-F: propagate block_source so frontend
+                        # chip body copy can show preflight-specific
+                        # wording. profanity_filter.py sets
+                        # block_source='preflight' for advisory matches.
+                        'block_source': advisory.get(
+                            'block_source', 'preflight'
+                        ),
                     })
                     continue
 
@@ -462,6 +479,21 @@ class BulkGenerationService:
                 'error_message': _sanitise_error_message(img.error_message or ''),
                 'error_type': img.error_type or '',
                 'retry_state': self._derive_retry_state(img),
+                # Session 173-F: block_source distinguishes preflight
+                # (Tier 2 advisory caught) from provider (API rejected).
+                # If the image reached the API and was rejected with
+                # content_policy, this is provider-side — preflight
+                # blocks never create GeneratedImage rows, so any
+                # content_policy failure surfaced via polling response
+                # is by definition provider-side. Other error types
+                # don't carry block_source (frontend only consumes it
+                # for content_policy chip body copy).
+                'block_source': (
+                    'provider'
+                    if img.status == 'failed'
+                    and img.error_type == 'content_policy'
+                    else None
+                ),
                 'size': img.size or job.size,
                 'quality': img.quality or getattr(job, 'quality', None) or 'medium',
                 'target_count': img.target_count or job.images_per_prompt,

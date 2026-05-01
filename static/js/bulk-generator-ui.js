@@ -129,12 +129,19 @@
                 } else if (image.status === 'failed') {
                     // Session 170-B: pass error_type + retry_state through
                     // so the typed error chip renders alongside the reason.
+                    // Session 173-F: also pass block_source (preflight vs
+                    // provider, drives chip body copy variant) and a human
+                    // provider name (looked up from G.jobModelName via the
+                    // providerDisplayMap; chip falls back to 'this provider'
+                    // for unknown identifiers).
                     G.fillFailedSlot(groupIndex, slotIndex,
                         image.error_message || '',
                         image.prompt_text || '',
                         groupImages[0].size || '',
                         image.error_type || '',
-                        image.retry_state || '');
+                        image.retry_state || '',
+                        image.block_source || '',
+                        G.getProviderDisplayName(G.jobModelName));
                 } else if (image.status === 'generating') {
                     var imgQuality = image.quality || G.jobQuality || 'medium';
                     G.updateSlotToGenerating(

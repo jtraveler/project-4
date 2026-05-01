@@ -28,6 +28,8 @@
      data-model-name="{{ job.model_name }}"
      data-provider="{{ job.provider }}"
      data-quality-label-map="{{ quality_label_map_json }}"
+     {# Session 173-F: surfaced to JS as G.contentBlockReportEmail. Used to build mailto: links in content_policy chip body copy. #}
+     data-content-block-report-email="{{ content_block_report_email }}"
      data-create-pages-url="{% url 'prompts:api_bulk_create_pages' job.id %}">
 
     {# ===== Job Summary Header ===== #}

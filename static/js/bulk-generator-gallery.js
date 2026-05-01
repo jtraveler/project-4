@@ -190,6 +190,161 @@
         container.appendChild(chip);
     };
 
+    // ─── Session 173-F: stacked content_policy chip ───────────────
+    // Replaces the inline 14px-icon chip from 173-C with a stacked
+    // layout per Mateo's mockup: large gray icon (~3em) over red
+    // "Content blocked" pill over body copy with two inline links
+    // ("learn more" → /policies/content/, "Let us know" → mailto
+    // with auto-populated context). Body copy varies by blockSource:
+    //   - 'preflight': "We flagged this prompt because it contains
+    //                   words that often trigger <Provider>'s..."
+    //   - 'provider' (default): "This prompt may have violated
+    //                            <Provider>'s content policy..."
+    //
+    // Memory Rule #13 silent-fallback note: missing blockSource defaults
+    // to 'provider' wording. This is the documented backward-compat path
+    // for jobs whose polling responses pre-date 173-F's block_source
+    // field — no logger.warning required because the provider-side
+    // wording is semantically conservative for either case (it doesn't
+    // claim something that's untrue when the actual cause was preflight).
+    G._renderContentPolicyChip = function (
+        container, errorMessage, promptText, errorType,
+        blockSource, providerName
+    ) {
+        if (!container) return;
+
+        // Idempotency: remove any existing chip from prior render.
+        var existing = container.querySelector('.error-chip');
+        if (existing) existing.parentNode.removeChild(existing);
+
+        var providerLabel = providerName || 'this provider';
+        var chip = document.createElement('div');
+        chip.className = 'error-chip error-chip--blocked error-chip--stacked';
+        if (errorMessage) {
+            chip.title = errorMessage; // Hover/focus reveals full provider message
+        }
+
+        // Icon (large, gray) — sprite reference, decorative.
+        if (G.spriteUrl) {
+            var SVG_NS = 'http://www.w3.org/2000/svg';
+            var icon = document.createElementNS(SVG_NS, 'svg');
+            icon.setAttribute('class', 'error-chip__icon');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.setAttribute('focusable', 'false');
+            // CSS controls 3em sizing; viewBox handles intrinsic ratio.
+            icon.setAttribute('viewBox', '0 0 24 24');
+            var use = document.createElementNS(SVG_NS, 'use');
+            use.setAttribute('href', G.spriteUrl + '#icon-alert-circle');
+            icon.appendChild(use);
+            chip.appendChild(icon);
+        }
+
+        // Pill — red background, "Content blocked" label.
+        var pill = document.createElement('span');
+        pill.className = 'error-chip__pill';
+        pill.textContent = 'Content blocked';
+        chip.appendChild(pill);
+
+        // Body copy paragraph — DOM-node construction (not innerHTML)
+        // matches the project pattern (textContent contract). Two inline
+        // links: "learn more" → /policies/content/, "Let us know" → mailto.
+        var body = document.createElement('p');
+        body.className = 'error-chip__body';
+
+        var learnMoreLink = document.createElement('a');
+        learnMoreLink.className = 'error-chip__link';
+        learnMoreLink.href = '/policies/content/';
+        learnMoreLink.target = '_blank';
+        learnMoreLink.rel = 'noopener noreferrer';
+        learnMoreLink.textContent = 'learn more';
+        learnMoreLink.setAttribute(
+            'aria-label',
+            'Learn more about PromptFinder content policy (opens in new tab)'
+        );
+
+        var reportLink = document.createElement('a');
+        reportLink.className = 'error-chip__link';
+        reportLink.href = G._buildContentBlockReportMailto(
+            promptText, providerLabel, errorType, errorMessage
+        );
+        reportLink.textContent = 'Let us know';
+        // Session 173-F: aria-label contains the visible text "Let us
+        // know" verbatim per WCAG 2.5.3 (Label in Name). Voice-control
+        // users saying "click let us know" must reliably activate this
+        // link. Caught by @accessibility-expert in Round 1 review.
+        reportLink.setAttribute(
+            'aria-label',
+            'Let us know — report this content block via email'
+        );
+
+        if (blockSource === 'preflight') {
+            // Variant 1: Tier 2 advisory caught the prompt before any
+            // API call. Specific wording about words triggering policy.
+            body.appendChild(document.createTextNode(
+                'We flagged this prompt because it contains words that '
+                + 'often trigger ' + providerLabel + "'s content policy — "
+            ));
+            body.appendChild(learnMoreLink);
+            body.appendChild(document.createTextNode(
+                '. Try editing the prompt or switching to a more '
+                + 'permissive model. Think we got it wrong? '
+            ));
+            body.appendChild(reportLink);
+            body.appendChild(document.createTextNode('.'));
+        } else {
+            // Variant 2: provider-side rejection (default fallback if
+            // blockSource missing — Memory Rule #13 silent-fallback path
+            // documented in helper docstring above).
+            body.appendChild(document.createTextNode(
+                "This prompt may have violated " + providerLabel
+                + "'s content policy — "
+            ));
+            body.appendChild(learnMoreLink);
+            body.appendChild(document.createTextNode(
+                ". We're still evaluating how each model handles such "
+                + 'checks. Think we got it wrong? '
+            ));
+            body.appendChild(reportLink);
+            body.appendChild(document.createTextNode('.'));
+        }
+
+        chip.appendChild(body);
+        container.appendChild(chip);
+    };
+
+    // ─── Session 173-F: mailto URL builder for "Let us know" link ──
+    // Constructs a mailto: URL with auto-populated context (prompt
+    // text, provider, timestamp, error_type, error_message) so a
+    // user clicking the link gets a pre-composed report draft in
+    // their email client. Email address read from G.contentBlockReportEmail
+    // (initialized in config.js from data-content-block-report-email
+    // template attribute, sourced from CONTENT_BLOCK_REPORT_EMAIL setting).
+    G._buildContentBlockReportMailto = function (
+        promptText, providerLabel, errorType, errorMessage
+    ) {
+        var to = G.contentBlockReportEmail
+            || 'matthew.jtraveler@gmail.com';
+        var subject = encodeURIComponent(
+            'Content block report — ' + (providerLabel || 'unknown provider')
+        );
+        var bodyLines = [
+            'Hi,',
+            '',
+            'I think this content block may be incorrect:',
+            '',
+            'Prompt: ' + (promptText || '(not captured)'),
+            'Provider: ' + (providerLabel || '(not captured)'),
+            'Error type: ' + (errorType || '(not captured)'),
+            'Timestamp: ' + new Date().toISOString(),
+        ];
+        if (errorMessage) {
+            bodyLines.push('Error message: ' + errorMessage);
+        }
+        bodyLines.push('', 'Why I think this is incorrect: [please describe]');
+        var body = encodeURIComponent(bodyLines.join('\n'));
+        return 'mailto:' + to + '?subject=' + subject + '&body=' + body;
+    };
+
     // ─── Mark Card as Publish-Failed (Phase 6D / Session 170-B) ─
     // Session 170-B: extended to optionally accept errorType + retryState
     // so the per-card chip can distinguish content_policy (blocked) from
@@ -427,7 +582,17 @@
     // (Spec A polling payload), a typed error chip is rendered alongside
     // the existing reason text. Legacy callers (no extra args) get the
     // existing rendering plus a generic chip via the fallback branch.
-    G.fillFailedSlot = function (groupIndex, slotIndex, errorMessage, promptText, groupSize, errorType, retryState) {
+    //
+    // Session 173-F: blockSource + providerName added (also optional). For
+    // content_policy chips, blockSource ('preflight' vs 'provider') drives
+    // body-copy variant in the new stacked layout. Missing blockSource
+    // defaults to 'provider' wording (Memory Rule #13 silent fallback —
+    // semantically conservative, see code below). providerName ('Nano
+    // Banana 2', 'Flux Schnell', etc.) is interpolated into body copy.
+    G.fillFailedSlot = function (
+        groupIndex, slotIndex, errorMessage, promptText, groupSize,
+        errorType, retryState, blockSource, providerName
+    ) {
         var groupData = G.renderedGroups[groupIndex];
         if (!groupData) return;
 
@@ -459,8 +624,12 @@
         // announcement and what sighted users see).
         var ariaLabel = 'Image generation failed';
         if (errorMessage) {
+            // Session 173-F: pass blockSource so the aria-label uses
+            // the preflight-specific reason ("Flagged by pre-flight")
+            // when applicable. Stays consistent with the chip body's
+            // preflight-vs-provider distinction.
             ariaLabel += ': ' + G._getReadableErrorReason(
-                errorMessage, errorType, retryState
+                errorMessage, errorType, retryState, blockSource
             );
         }
         failed.setAttribute('aria-label', ariaLabel);
@@ -470,49 +639,42 @@
         failedText.textContent = 'Failed';
         failed.appendChild(failedText);
 
-        // Session 170-B: typed error chip from error_type + retry_state.
-        // Falls back to a generic chip when only errorMessage is supplied
-        // (legacy callers / older jobs without payload). The chip carries
-        // its label as text — color is never the only signal (WCAG 1.4.11).
-        var chipClassification = G._classifyErrorChip(
-            errorType, retryState, errorMessage
-        );
-        if (chipClassification) {
-            G._renderErrorChip(failed, chipClassification, errorMessage);
-        }
-
-        // Error reason line — Session 170-B: pass errorType + retryState
-        // through to _getReadableErrorReason so it can choose the typed
-        // mapping when available.
-        if (errorMessage) {
-            var reasonText = document.createElement('span');
-            reasonText.className = 'failed-reason';
-            reasonText.textContent = G._getReadableErrorReason(
-                errorMessage, errorType, retryState
+        // Session 173-F: content_policy uses the redesigned stacked
+        // chip layout (large gray icon over red pill over body copy
+        // with two inline links). All other variants — auth, quota,
+        // rate_limit, server_error, exhausted, retrying — keep the
+        // pre-173-F inline chip + separate failed-reason line. The
+        // intentional asymmetry reflects that content_policy is a
+        // user-fixable failure (edit prompt / switch model) while
+        // the others are system/account issues with different
+        // remediation paths.
+        if (errorType === 'content_policy') {
+            G._renderContentPolicyChip(
+                failed, errorMessage, promptText, errorType,
+                blockSource, providerName
             );
-            failed.appendChild(reasonText);
+        } else {
+            // Session 170-B: typed error chip from error_type + retry_state.
+            // Falls back to a generic chip when only errorMessage is supplied
+            // (legacy callers / older jobs without payload). The chip carries
+            // its label as text — color is never the only signal (WCAG 1.4.11).
+            var chipClassification = G._classifyErrorChip(
+                errorType, retryState, errorMessage
+            );
+            if (chipClassification) {
+                G._renderErrorChip(failed, chipClassification, errorMessage);
+            }
 
-            // Session 173-C: link to placeholder content policy page,
-            // appended only for content_policy variant. Rendered as a
-            // separate <a> node rather than inline HTML in the reason
-            // text because reasonText.textContent is the codebase-wide
-            // pattern (see bulk-generator-config.js _getReadableErrorReason
-            // — string output, no HTML). Adjacent placement keeps the
-            // call-to-action visually paired with the reason while
-            // respecting the textContent contract.
-            if (errorType === 'content_policy') {
-                var policyLink = document.createElement('a');
-                policyLink.className = 'failed-reason__link';
-                policyLink.href = '/policies/content/';
-                policyLink.target = '_blank';
-                policyLink.rel = 'noopener noreferrer';
-                policyLink.textContent = 'Learn more';
-                policyLink.setAttribute(
-                    'aria-label',
-                    'Learn more about PromptFinder content policy '
-                    + '(opens in new tab)'
+            // Error reason line — Session 170-B: pass errorType + retryState
+            // through to _getReadableErrorReason so it can choose the typed
+            // mapping when available.
+            if (errorMessage) {
+                var reasonText = document.createElement('span');
+                reasonText.className = 'failed-reason';
+                reasonText.textContent = G._getReadableErrorReason(
+                    errorMessage, errorType, retryState
                 );
-                failed.appendChild(policyLink);
+                failed.appendChild(reasonText);
             }
         }
 

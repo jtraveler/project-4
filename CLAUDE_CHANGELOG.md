@@ -32,6 +32,161 @@ This is a running log of development sessions. Each session entry includes:
 
 ## February–April 2026 Sessions
 
+### Session 173-F — May 1, 2026 (NSFW chip redesign + seed restoration deferred + report-to-admin mailto stub + Tier 2 architectural fix — see commit log for hash)
+
+**Outcome:** Closes three deferred items from the 173 cluster, fixes
+a 173-B architectural gap surfaced during testing, and ships a single
+cohesive commit with 5 folded items.
+
+**Chip layout (closes 173-C deferred preference):**
+- 173-C shipped 14px inline icon next to "Content blocked" text.
+  Mateo originally requested a larger icon stacked above the text;
+  Claude.ai pushed back and shipped the inline version. Production
+  verification confirmed inline doesn't read as a strong warning.
+- This commit ships the originally-requested layout: large gray
+  icon (~3em) stacked above red "Content blocked" pill, body copy
+  below with two inline links ("learn more" → `/policies/content/`,
+  "Let us know" → mailto with auto-populated context).
+- CSS adds new `.error-chip--stacked` modifier + child classes
+  `__pill`, `__body`, `__link`. Stacked layout applied ONLY to
+  content_policy variant — auth/quota/rate_limit/server_error/
+  exhausted/retrying chips keep inline rendering. Intentional
+  asymmetry (content_policy is user-fixable; others are
+  system/account issues with different remediation paths).
+- New JS helper `G._renderContentPolicyChip` builds the structure
+  via DOM-node construction (no innerHTML) — same pattern as 173-C.
+  Bypasses the inline `_classifyErrorChip` + `_renderErrorChip`
+  flow entirely for content_policy.
+
+**Block source distinction (new architectural concept):**
+- Two distinct kinds of failure look identical to users: preflight
+  blocks (Tier 2 advisory caught the prompt before any API call) and
+  provider-side blocks (the API rejected during generation). Both
+  rendered the same chip in 173-C/E.
+- Backend now includes `block_source: 'preflight' | 'provider'` in
+  validate response (preflight) and polling response (provider).
+  Threaded via `profanity_filter.py` advisory return dict →
+  `bulk_generation.py validate_prompts` error dict + polling-response
+  `_build_image_data`. Universal-block path also gets `'preflight'`
+  (semantically: ALL preflight blocks share that source label
+  regardless of which tier caught them).
+- Frontend chip body copy varies by source. Preflight: "We flagged
+  this prompt because it contains words that often trigger
+  <Provider>'s content policy..." Provider: "This prompt may have
+  violated <Provider>'s content policy..."
+- Memory Rule #13 silent-fallback: missing `block_source` defaults
+  to provider-side wording (semantically conservative for either
+  case — provider phrasing doesn't claim something untrue when the
+  actual cause was preflight). Documented inline in
+  `_renderContentPolicyChip` comment + REPORT Section 4.
+
+**Tier 2 advisory architectural fix (surfaced during testing):**
+- The new test `test_173f_validate_returns_block_source_preflight_on_advisory_match`
+  failed because legacy `check_text` (`profanity_filter.py:_load_word_list`)
+  loaded ALL active ProfanityWord rows regardless of `block_scope`,
+  so Tier 1 universal always caught advisory words first — Tier 2
+  advisory NEVER fired in production despite 173-B/E shipping the
+  full pipeline.
+- Fix: `_load_word_list` now filters `block_scope='universal'` —
+  advisory words are excluded from the universal cache and only
+  consulted by `check_text_with_provider` (Tier 2 path).
+- This is a 173-B regression closed in 173-F's scope because
+  Mateo's headline activation test (`topless` + Nano Banana 2 →
+  preflight rejection with new chip body copy) requires Tier 2
+  to actually fire. Documented in REPORT Section 4 Issue 3.
+
+**Report-to-admin mailto stub (closes 173-C deferred-feature, partial):**
+- New "Let us know" link inside chip body. Constructs `mailto:`
+  URL with auto-populated context (prompt text, provider name,
+  timestamp, error_type, error_message) in subject + body so the
+  user gets a pre-composed report draft.
+- Email address controlled via new `CONTENT_BLOCK_REPORT_EMAIL`
+  Django setting (default `matthew.jtraveler@gmail.com`, swappable
+  via Heroku env var when `reports@promptfinder.net` is set up).
+- Surfaced to JS via `data-content-block-report-email` template
+  attribute on `bulk_generator_job.html` root (matches existing
+  data-attribute pattern used for sprite URL, model name, etc.).
+- Full backend report system (Django model, API endpoint, admin
+  queue) deferred to Session 175 — tightly coupled to moderation
+  runbook work.
+
+**Seed restoration BLOCKED at permission layer:**
+- Spec section 4 + run-instructions section 7 authorized one
+  `heroku run python manage.py seed_provider_advisory_keywords`
+  invocation to restore the 11 advisory keywords Mateo accidentally
+  deleted. The harness denied the command at the permission layer
+  ("Permission to use Bash with command heroku run... has been
+  denied.") despite the spec authorization.
+- Mateo runs the seed manually post-deploy (the existing seed
+  command is idempotent — re-running restores missing entries +
+  leaves existing ones unchanged):
+  ```
+  heroku run python manage.py seed_provider_advisory_keywords --app mj-project-4 -- --dry-run
+  heroku run python manage.py seed_provider_advisory_keywords --app mj-project-4
+  heroku pg:psql --app mj-project-4 -c "SELECT COUNT(*) FROM prompts_profanityword WHERE block_scope = 'provider_advisory';"
+  ```
+  Expected post-seed: 28 advisory rows.
+- Code changes ship without depending on seed-state restoration
+  — the chip redesign + block_source threading work for any seed
+  state. Mateo's headline activation test (Round 3) requires the
+  seed restoration to complete first.
+
+**Activation test (deferred since 173-B):**
+- Once seed restored: `topless` + Nano Banana 2 should preflight-
+  reject with new stacked chip + preflight body copy variant.
+  Verifies entire 173-B pipeline end-to-end. Mateo's Round 3 test
+  in run-instructions Section 8.
+
+**Files modified:**
+- `static/css/pages/bulk-generator-job.css` — new `--stacked`
+  modifier + child rules (~70 lines added)
+- `static/js/bulk-generator-gallery.js` — fillFailedSlot signature
+  extended (blockSource + providerName), new
+  `_renderContentPolicyChip` helper (~110 lines), new
+  `_buildContentBlockReportMailto` helper (~25 lines),
+  content_policy bypasses legacy chip flow
+- `static/js/bulk-generator-config.js` — new `providerDisplayMap`
+  + `getProviderDisplayName` helper, `_getReadableErrorReason`
+  signature extended with optional `blockSource`
+- `static/js/bulk-generator-polling.js` — read `data-model-name`
+  into `G.jobModelName`, read `data-content-block-report-email`
+  into `G.contentBlockReportEmail`
+- `static/js/bulk-generator-ui.js` — pass `image.block_source` +
+  `G.getProviderDisplayName(G.jobModelName)` to fillFailedSlot
+- `prompts/services/profanity_filter.py` — `_load_word_list`
+  filters `block_scope='universal'` (architectural fix); advisory
+  return dict adds `block_source: 'preflight'`
+- `prompts/services/bulk_generation.py` — universal-block error
+  dict + advisory error dict both add `block_source: 'preflight'`;
+  `_build_image_data` polling response sets
+  `block_source: 'provider'` for failed images with
+  `error_type='content_policy'`
+- `prompts/views/bulk_generator_views.py` — passes
+  `settings.CONTENT_BLOCK_REPORT_EMAIL` to template context
+- `prompts_manager/settings.py` — new `CONTENT_BLOCK_REPORT_EMAIL`
+  setting (env-overridable)
+- `prompts/templates/prompts/bulk_generator_job.html` — new
+  `data-content-block-report-email` data attribute
+- `prompts/tests/test_bulk_generator_views.py` — 3 new tests
+  (block_source preflight, block_source omitted for clean,
+  CONTENT_BLOCK_REPORT_EMAIL setting smoke check)
+
+**Memory Rules:**
+- #16: 3 deferred items closed before Session 174 begins (chip
+  layout, report-to-admin stub, activation test setup)
+- #17: single-commit pattern (docs + code together; no separate
+  backfill commit needed)
+- #13: silent-fallback (`blockSource` default to provider-side
+  wording) documented inline + in REPORT Section 4
+- #14: closing checklist with 4 manual rounds + the headline
+  activation test (Round 3)
+
+**Cluster shape:** SINGLE-SPEC.
+
+**Agent ratings:** *(filled post-review)*
+
+---
+
 ### Session 173-E — May 1, 2026 (api_validate model_identifier wire-up — see commit log for hash)
 
 **Outcome:** Closes REPORT_173_B Section 5 P2 deferred item.

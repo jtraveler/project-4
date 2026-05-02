@@ -1,6 +1,6 @@
 # CLAUDE_CHANGELOG.md - Session History (3 of 3)
 
-**Last Updated:** May 1, 2026 (Sessions 101–173)
+**Last Updated:** May 2, 2026 (Sessions 101–173 closeout)
 
 > **📚 Document Series:**
 > - **CLAUDE.md** (1 of 3) - Core Reference
@@ -31,6 +31,69 @@ This is a running log of development sessions. Each session entry includes:
 ---
 
 ## February–April 2026 Sessions
+
+### Session 173 Arc Closeout — May 2, 2026 (End-of-Session Docs Update — Session 173 + 173-E + 173-F + the Tier 2 architectural fix — commit pending)
+
+**End-of-session documentation closeout for the entire Session 173 arc.** The arc shipped four major commits across three sub-sessions plus the Memory Rule #17 backfill commit, plus two single-spec follow-ons (173-E, 173-F).
+
+| Sub-session | Date | Commit | Scope |
+|---|---|---|---|
+| 173-A | May 1 | `369b2a0` | Per-card "Use master" reset bugs + xAI keyword rename |
+| 173-B | May 1 | `e06ab5c` | NSFW pre-flight v1 — provider-aware ProfanityWord + advisory keyword lists |
+| 173-C | May 1 | `bef3115` | content_policy chip alert-circle icon + placeholder /policies/content/ page |
+| 173-D | May 1 | `474b308` | Docs update + 171-D/172-D backfills + Memory Rules #16/#17 + Session 175 plan section |
+| 173-D backfill | May 1 | `0146049` | Memory Rule #17 self-reference backfill — proof-of-rule commit |
+| 173-E | May 1 | `2591b8c` | Frontend wire-up fix — `model_identifier` in validate POST body (1-line fix closing REPORT_173_B Section 5 P2 deferred item) |
+| 173-F | May 2 | `85c0ffa` | NSFW chip redesign per Mateo mockup + seed restoration deferred + report-to-admin mailto stub + Tier 2 architectural fix (the Tier 2 fix was the most consequential finding of the arc — see below) |
+
+**The Tier 2 architectural discovery (173-F):** Mateo's production verification of `topless` + Nano Banana 2 unexpectedly succeeded (NB2 generated an image rather than pre-flight rejecting). Initial diagnosis was a wire-up bug, but Mateo also confirmed he had accidentally deleted 11 of 28 advisory keywords from admin UI — `topless` was in the deleted set. After seed restoration, CC discovered during 173-F testing that `profanity_filter.py:_load_word_list` was loading ALL active ProfanityWord rows regardless of `block_scope`, so legacy Tier 1 `check_text` was matching on advisory words too. **Tier 2 advisory had never fired in production since 173-B shipped.** The `affected_providers` JSON list and the entire Tier 2 architecture were effectively dead code. 173-F fixes this by filtering `_load_word_list` to `block_scope='universal'`. After 173-F deploy + activation test, the entire 173-B account-protection feature is genuinely live in production for the first time.
+
+**Cluster shape across the arc (per Memory Rule #15):**
+- 173 main cluster (A/B/C/D + backfill): HYBRID
+- 173-E micro-cluster: SINGLE-SPEC
+- 173-F micro-cluster: SINGLE-SPEC
+- This closeout: SINGLE-SPEC
+
+**Test counts:** Pre-arc baseline 1400 → post-173 1408 → post-173-E 1411 → post-173-F 1414 (+14 net across the arc, all tests passing).
+
+**Memory Rules added in this arc:**
+- #16 (173-D): Surface deferred backlog at session start
+- #17 (173-D): Docs spec self-reference backfill — single-commit clusters skip the separate backfill commit (clarified in 173-E's report)
+
+Memory rules count: 15 → 17 of 30 (56% utilization).
+
+**Concerns/findings closed during the arc:**
+- Frontend wire-up gap from REPORT_173_B Section 5 P2 → closed by 173-E
+- Mid-session vs page-load chip-link inconsistency from REPORT_173_C Section 5 → still tracked as P3 (not closed)
+- Hardcoded contact email in placeholder template → partially addressed by 173-F's `CONTENT_BLOCK_REPORT_EMAIL` setting, full centralization deferred to Session 175
+- 11 missing advisory keywords in production → restored manually post-173-F (CC's seed-restoration step was blocked at permission layer; Mateo ran the heroku commands manually)
+- Tier 2 architectural gap → closed by 173-F's `_load_word_list` filter
+
+**New deferred items surfaced during this arc** (full details in CLAUDE.md Deferred sections):
+- Add `topless` to Flux Schnell advisory list (P2 — Flux flagged it provider-side during 173-F verification)
+- Admin UI for ProfanityWord — checkbox list for `affected_providers`, expanded section descriptions, auto-worded review notes, auto-expanded Notes/Timestamps sections, auto-add new model rows when models are added (P2)
+- Bulk generator pre-flight banner UX update — apply NSFW chip styling to the universal-block banner shown when validate fails. Verbatim wording target: "Please fix the following possible content violation issues (learn more) for this model:" with parenthetical inline link. **Includes an open architectural question:** does the universal-block banner warrant a "Think we got it wrong? Let us know" affordance similar to the NSFW chip? Three-option tradeoff captured in deferred row; decision needed before implementation in Session 174 (P2)
+- Bold the banned keyword in the mailto report body (P3 — small UX polish)
+- New-model-to-advisory-list automation when models are added to `seed_generator_models.py` (P2 — coupled with admin UI improvements)
+
+**Side observation from 173-F production verification:** Nano Banana 2's content classifier was more lenient than the seeded advisory list assumed when the prompt admitted creative interpretation. Mateo's `topless woman` test generated a back-view image rather than rejecting outright — observed provider behavior may diverge from documented or assumed policies. Quarterly review of advisory lists should test edge cases against actual provider rejection rather than against assumed rejection patterns. Captured as a documented note in the new "NSFW Pre-Flight Architecture (Tiered)" subsection.
+
+**New documented Claude.ai behavior commitment:** REPORT Review Verification Discipline (CLAUDE.md subsection) — Claude.ai produces a verification status table at the end of every CC report review for code-shipping specs, before discussing next steps or drafting follow-up specs. Not a new memory rule (the Three-criteria framework reserves rule slots for behaviors that need cross-context portability); a documented practice instead. Established May 2, 2026 after Memory Rule #14 was violated repeatedly across 172 Findings #2/#5 and the 173-B/C/E architectural assumption pattern.
+
+**Stage-gate updates for Session 175:** the policy-docs cluster scope is unchanged from 173-D's plan section, but the Tier 2 architectural learning (173-F) means the `CONTENT_POLICY.md` document should explicitly distinguish between universal blocks and provider-advisory blocks as a first-class architectural concept, not as an implementation detail. Updated section in CLAUDE.md.
+
+**Files modified in this docs spec:**
+- `CLAUDE_CHANGELOG.md` — banner + this arc closeout entry
+- `CLAUDE.md` — Arc Closeout row in Recently Completed; backfilled 173-E/F agent ratings; new "NSFW Pre-Flight Architecture (Tiered)" H3 subsection in Bulk AI Image Generator section; new "REPORT Review Verification Discipline (Claude.ai)" subsection after Memory Rule #17; expanded Session 175 plan with 6 architectural learnings; 5 new Deferred P2 rows; version footer 4.73 → 4.74
+- `PROJECT_FILE_STRUCTURE.md` — Last Updated May 1 → May 2, "+173-E +173-F follow-ons" → "+173 arc closeout"
+
+Cluster shape: SINGLE-SPEC (this docs spec). Memory Rule #17 single-commit pattern.
+
+Memory rules unchanged at 17 of 30.
+
+**Agent ratings:** *(filled post-review)*
+
+---
 
 ### Session 173-F — May 1, 2026 (NSFW chip redesign + seed restoration deferred + report-to-admin mailto stub + Tier 2 architectural fix — see commit log for hash)
 

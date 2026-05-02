@@ -12,7 +12,7 @@ Do NOT edit or reference this document without reading all three.
 ---
 
 **Project Status:** Pre-Launch Development
-**Last Updated:** May 1, 2026
+**Last Updated:** May 2, 2026
 
 **Owner:** Mateo Johnson - Prompt Finder
 
@@ -75,8 +75,9 @@ The following files MUST stay in the project root. They are referenced by CLAUDE
 
 | Phase | When | What It Was |
 |-------|------|-------------|
-| Session 173-F | May 1, 2026 | NSFW chip redesign + report-to-admin mailto stub + Tier 2 architectural fix + seed restoration deferred. **Single-spec cluster, 5 folded items, single commit.** (1) **Chip layout** (closes 173-C deferred preference): replaces 14px inline icon with stacked layout — large gray icon (~3em) over red "Content blocked" pill over body copy with two inline links ("learn more" + "Let us know"). New CSS modifier `.error-chip--stacked` + child classes `__pill`/`__body`/`__link`. Stacked applied ONLY to content_policy variant — auth/quota/rate_limit/exhausted/retrying chips keep inline rendering (intentional asymmetry). New JS helper `_renderContentPolicyChip` builds via DOM-node construction. (2) **Block source distinction** (new): backend now includes `block_source: 'preflight' \| 'provider'` in validate + polling responses. Frontend chip body copy varies — preflight: "We flagged this prompt because..."; provider: "This prompt may have violated...". Memory Rule #13 silent-fallback: missing field defaults to provider-side wording (semantically conservative). (3) **Tier 2 advisory architectural fix** (surfaced during testing): legacy `check_text` `_load_word_list` loaded ALL active words regardless of `block_scope`, so Tier 1 universal always caught advisory words first — Tier 2 advisory NEVER fired in production despite 173-B/E shipping the full pipeline. Fix: filter `block_scope='universal'` in `_load_word_list`. Required for Mateo's headline activation test to actually verify Tier 2. (4) **Report-to-admin mailto stub** (closes 173-C deferred-feature, partial): "Let us know" link constructs `mailto:` URL with auto-populated context. New `CONTENT_BLOCK_REPORT_EMAIL` Django setting (default `matthew.jtraveler@gmail.com`, swappable via env var). Surfaced to JS via `data-content-block-report-email` attribute. Full backend report system deferred to Session 175. (5) **Seed restoration BLOCKED** at permission layer: `heroku run python manage.py seed_provider_advisory_keywords` denied by harness despite spec authorization. Mateo runs manually post-deploy (idempotent command restores 11 missing advisory keywords from accidental admin-UI deletion). Code changes ship without depending on seed-state — chip redesign + block_source threading work for any seed state. **Activation test deferred until seed restored.** 3 new tests on validate endpoint (block_source flow, settings smoke check). 1411 → 1414 tests. Memory Rules #16 (3 deferred items closed) + #17 (single-commit pattern) + #13 (silent fallback documented) + #14 (closing checklist with activation as headline). Commit pending. Agent avg pending. |
-| Session 173-E | May 1, 2026 | Frontend wire-up of `model_identifier` in `api_validate_prompts` POST body — activates 173-B Tier 2 advisory pre-flight in production. Closes REPORT_173_B Section 5 P2 deferred item (Memory Rule #16 application — explicit closure of prior-session deferred item before Session 174 begins). **Step 0 finding:** the backend wire-up was ALREADY DONE in 173-B (commit `e06ab5c`, `bulk_generator_views.py:267-275` already extracts `model_identifier` with isinstance defense + passes to service). The remaining gap was frontend-only — `bulk-generator-generation.js:911` POST body excluded `model_identifier`. **One-line fix:** added `model_identifier: (I.settingModel && I.settingModel.value) || ''` to the validate fetch body. Defensive empty-string fallback covers uninitialised state — backend then falls back to Tier 1 universal-only (the 173-B-defined backward-compat path; not silent corruption, so Memory Rule #13's `logger.warning` requirement does NOT apply). **3 new defensive tests** in `ValidatePromptsAPITests`: happy-path (model_identifier flows to `service.validate_prompts(prompts, provider_id=...)`), backward-compat (omitted field defaults to empty), defensive boundary (list/dict/null/int/bool all coerce to empty at the HTTP boundary, never passed to service). All 11 ValidatePromptsAPITests pass (8 prior + 3 new). **Memory Rule #17 single-commit pattern:** docs and code ship in same commit; "see commit log for hash" phrasing avoids self-referencing chicken-and-egg. **Cluster shape:** SINGLE-SPEC. Commit: see git log. Agent avg pending. 1411 tests (1408 pre + 3 new). |
+| Session 173 Arc Closeout | May 2, 2026 | End-of-session docs update for the entire Session 173 arc (173 main cluster + 173-E + 173-F). Documents the Tier 2 architectural discovery in 173-F (`_load_word_list` was loading all active words regardless of `block_scope`, so Tier 2 advisory had never fired in production since 173-B shipped — fixed in 173-F by filtering to `block_scope='universal'`). Captures 5 new deferred items surfaced during 173-F verification: add `topless` to Flux Schnell advisory list, admin UI improvements for ProfanityWord (checkbox list, auto-worded review notes, expanded sections, auto-add new models), bulk generator pre-flight banner UX update (with **open architectural question** on whether universal-block banner warrants a "Think we got it wrong?" affordance — three-option tradeoff documented for resolution in Session 174 planning), bold banned keyword in mailto body, new-model-to-advisory-list automation. Documents observed NB2 classifier divergence — the May 2 `topless woman` test generated a back-view image rather than rejecting, signaling that observed provider behavior may diverge from documented policies and quarterly review should test against actual rejection patterns. Adds new **"NSFW Pre-Flight Architecture (Tiered)" H3 subsection** in the Bulk AI Image Generator section — promotes the tiered architecture to a first-class documented concept. Adds new **"REPORT Review Verification Discipline (Claude.ai)" subsection** — a documented Claude.ai behavior commitment (not a memory rule, per the Three-criteria framework) that requires producing a verification status table at the end of every CC report review for code-shipping specs, addressing the recurring Memory Rule #14 violation pattern across 172 Findings #2/#5 and the 173-B/C/E architectural assumption gaps. Expanded Session 175 plan section with 6 architectural learnings derived from the arc. Backfilled 173-E (`2591b8c`, avg 9.367) and 173-F (`85c0ffa`, avg 9.18) agent ratings + commit hashes. Memory Rules unchanged at 17 of 30. Tests 1411 → 1414 (no new tests in this docs spec). Cluster shape: SINGLE-SPEC. Commit pending. Agent avg pending. |
+| Session 173-F | May 1, 2026 | NSFW chip redesign + report-to-admin mailto stub + Tier 2 architectural fix + seed restoration deferred. **Single-spec cluster, 5 folded items, single commit.** (1) **Chip layout** (closes 173-C deferred preference): replaces 14px inline icon with stacked layout — large gray icon (~3em) over red "Content blocked" pill over body copy with two inline links ("learn more" + "Let us know"). New CSS modifier `.error-chip--stacked` + child classes `__pill`/`__body`/`__link`. Stacked applied ONLY to content_policy variant — auth/quota/rate_limit/exhausted/retrying chips keep inline rendering (intentional asymmetry). New JS helper `_renderContentPolicyChip` builds via DOM-node construction. (2) **Block source distinction** (new): backend now includes `block_source: 'preflight' \| 'provider'` in validate + polling responses. Frontend chip body copy varies — preflight: "We flagged this prompt because..."; provider: "This prompt may have violated...". Memory Rule #13 silent-fallback: missing field defaults to provider-side wording (semantically conservative). (3) **Tier 2 advisory architectural fix** (surfaced during testing): legacy `check_text` `_load_word_list` loaded ALL active words regardless of `block_scope`, so Tier 1 universal always caught advisory words first — Tier 2 advisory NEVER fired in production despite 173-B/E shipping the full pipeline. Fix: filter `block_scope='universal'` in `_load_word_list`. Required for Mateo's headline activation test to actually verify Tier 2. (4) **Report-to-admin mailto stub** (closes 173-C deferred-feature, partial): "Let us know" link constructs `mailto:` URL with auto-populated context. New `CONTENT_BLOCK_REPORT_EMAIL` Django setting (default `matthew.jtraveler@gmail.com`, swappable via env var). Surfaced to JS via `data-content-block-report-email` attribute. Full backend report system deferred to Session 175. (5) **Seed restoration BLOCKED** at permission layer: `heroku run python manage.py seed_provider_advisory_keywords` denied by harness despite spec authorization. Mateo runs manually post-deploy (idempotent command restores 11 missing advisory keywords from accidental admin-UI deletion). Code changes ship without depending on seed-state — chip redesign + block_source threading work for any seed state. **Activation test deferred until seed restored.** 3 new tests on validate endpoint (block_source flow, settings smoke check). 1411 → 1414 tests. Memory Rules #16 (3 deferred items closed) + #17 (single-commit pattern) + #13 (silent fallback documented) + #14 (closing checklist with activation as headline). Commit `85c0ffa`. Agents @frontend-developer 9.3, @accessibility-expert (sub) 9.2, @django-pro 9.2, @code-reviewer 9.2, @ui-visual-validator 9.0. Avg 9.18/10. |
+| Session 173-E | May 1, 2026 | Frontend wire-up of `model_identifier` in `api_validate_prompts` POST body — activates 173-B Tier 2 advisory pre-flight in production. Closes REPORT_173_B Section 5 P2 deferred item (Memory Rule #16 application — explicit closure of prior-session deferred item before Session 174 begins). **Step 0 finding:** the backend wire-up was ALREADY DONE in 173-B (commit `e06ab5c`, `bulk_generator_views.py:267-275` already extracts `model_identifier` with isinstance defense + passes to service). The remaining gap was frontend-only — `bulk-generator-generation.js:911` POST body excluded `model_identifier`. **One-line fix:** added `model_identifier: (I.settingModel && I.settingModel.value) || ''` to the validate fetch body. Defensive empty-string fallback covers uninitialised state — backend then falls back to Tier 1 universal-only (the 173-B-defined backward-compat path; not silent corruption, so Memory Rule #13's `logger.warning` requirement does NOT apply). **3 new defensive tests** in `ValidatePromptsAPITests`: happy-path (model_identifier flows to `service.validate_prompts(prompts, provider_id=...)`), backward-compat (omitted field defaults to empty), defensive boundary (list/dict/null/int/bool all coerce to empty at the HTTP boundary, never passed to service). All 11 ValidatePromptsAPITests pass (8 prior + 3 new). **Memory Rule #17 single-commit pattern:** docs and code ship in same commit; "see commit log for hash" phrasing avoids self-referencing chicken-and-egg. **Cluster shape:** SINGLE-SPEC. Commit `2591b8c`. Agents @frontend-developer 9.5, @django-pro 9.2, @code-reviewer 9.4. Avg 9.367/10. 1411 tests (1408 pre + 3 new). |
 | Session 173-D | May 1, 2026 | End-of-session docs update for the 173 cluster + 171-D/172-D placeholder backfills + 2 new memory rules. (1) 4 new `CLAUDE_CHANGELOG.md` entries (173-A, -B, -C, -D); (2) 4 new "Recently Completed" rows (above) + Session 175 placeholder section added documenting the full policy-docs cluster scope (~80 lines: self-drafted policy posture, DMCA registration plan, cost absorption framework, content ownership, policy-drafting skill outline, stage-gate references); (3) **Memory Rules count 15 → 17 of 30** with 2 new rule entries: **#16 (surface deferred backlog at session start)** — established after the silent-accumulation pattern in 171-D and 172-D; **#17 (docs spec self-reference backfill)** — solves the recurring "Commit pending. Agent avg pending." pattern; (4) **171-D and 172-D placeholders backfilled** (171-D: `Commit pending. Agent avg pending.` → `Commit \`3dc7e17\`. Avg 9.0/10.`; 172-D: same shape → `Commit \`66c15da\`. Avg 9.1/10.`); (5) CSS:1338 font-size removal documented as intentional (Mateo's UX call — preexisting in 172-A working tree, not a bug); (6) PFS top-line counts: Last Updated April 29 → May 1, Sessions span 163–172 → 163–173, Tests 1400 → 1408 (+6 from 173-B, +2 from 173-C), Migrations 93 → 94 (+0092 from 173-B), Test Files +2; (7) version footer 4.70 → 4.71. Cluster shape: **HYBRID** per Memory Rule #15 — 173-A and 173-B drafted from prior-session evidence, 173-C depends on 173-B's URL slug, 173-D depends on all three. **This 173-D row is itself a Memory Rule #17 application — backfilled in a follow-up commit immediately after the docs commit.** Commit `474b308` (docs) + the backfill commit applying Rule #17 itself. Agents @technical-writer (sub via general-purpose) 8.5, @code-reviewer 9.5. Avg 9.0/10. 1408 tests (no change). |
 | Session 173-C | May 1, 2026 | content_policy chip icon + placeholder content policy page. (1) **icon-alert-circle added to sprite** (Lucide alert-circle, 39 → 40 icons total) — universally recognized warning glyph. Index comment updated. (2) **Chip rendering prepends 14px alert-circle icon for content_policy variant only** — `_classifyErrorChip` adds `iconId` field on the content_policy classification dict; `_renderErrorChip` renders SVG icon BEFORE the label so flexbox order reads "[icon] Content blocked". Other chip variants (auth, quota, rate_limit, server_error, invalid_request) keep text-only — out of scope. Sprite URL accessed via `G.spriteUrl` (project pattern at gallery.js:289), NOT `window.SPRITE_URL` (a Round 1 BLOCKER from spec pseudocode that doesn't exist in the codebase). (3) **"Learn more" link in failed-slot for content_policy** — separate `<a>` DOM node (not inline HTML, because reason text is rendered via textContent at multiple call sites). Link: `/policies/content/`, target=_blank, rel=noopener noreferrer, descriptive aria-label. (4) **Placeholder content policy page** at `/policies/content/` — minimal ~200-word page honest about being pre-launch. Links to `mailto:matthew.jtraveler@gmail.com` for reports. Full policy ships in Session 175. View `ContentPolicyPlaceholderView(TemplateView)` in utility_views.py (TemplateView import at top per E402). 2 new smoke tests pass. **Round 1 review:** @code-reviewer 7.5/10 (BLOCKED on `window.SPRITE_URL` undefined); fix applied + Round 2 9.2/10 re-verified. **Round 1 false alarm:** @ui-visual-validator misread DOM-order; appendChild order is correct (icon child[0], label child[1] → flex renders [icon] [label]). Commit `bef3115`. Agents @frontend-developer 9.2, @accessibility-expert (sub) 9.5, @code-reviewer 7.5→9.2 (Round 2), @ui-visual-validator 9.0. Avg 9.225/10. 1408 tests. |
 | Session 173-B | May 1, 2026 | NSFW pre-flight v1 — provider-aware ProfanityWord. Mateo's account-suspension risk: every NSFW prompt that reaches the API counts against PromptFinder's API account; xAI charges $0.02/rejection, OpenAI/Google can suspend access. Pre-flight catches most before any API call. **Tiered architecture:** Tier 1 (universal, existing block_scope='universal') blocks across ALL providers; Tier 2 (provider advisory, new block_scope='provider_advisory' + affected_providers JSONField) blocks only when user has selected one of the listed providers. **Changes:** ProfanityWord 4 new fields (block_scope, affected_providers, last_reviewed_at, review_notes), migration 0092 (4 AddField only), profanity_filter.py new `check_text_with_provider()` method (universal-then-advisory pattern, dict return), bulk_generation.py `validate_prompts(prompts, provider_id='')` extended (Tier 1 still uses legacy `check_text` for backward-compat; Tier 2 conditional), bulk_generator_views.py extracts `model_identifier` from request, new `seed_provider_advisory_keywords` management command (idempotent, --dry-run), admin UI new "Provider Awareness" fieldset section. **Implementation deviation from spec section 5.2:** affected_providers__contains ORM filter is inconsistent between PostgreSQL prod and SQLite test for "list-contains-string" — switched to fetch-all-advisory + filter-in-Python pattern (defense + cross-backend). **Frontend wire-up of model_identifier in /api/validate/ POST body is OUT OF SCOPE per spec section 6.2** — backend defaults to empty provider_id (Tier 2 skipped), backward-compat preserved. Documented as Remaining Issue follow-up. **Pre-existing security gap noted (NOT introduced by 173-B):** api_start_generation does not call validate_prompts server-side — relies on frontend voluntarily hitting api_validate_prompts first. Mitigated by @staff_member_required decorator. Mateo runs after deploy: `python manage.py seed_provider_advisory_keywords --dry-run` then without --dry-run; tunes via /admin/prompts/profanityword/. Commit `e06ab5c`. Agents @django-pro 8.8, @backend-security-coder 8.7, @code-reviewer 9.3, @test-automator 9.0, @architect-review 8.8. Avg 8.92/10. 1408 tests (1400 pre + 6 new). |
@@ -426,6 +427,114 @@ production logs for the `logger.warning` and either:
    data migration similar to migration 0087 (169-B's Grok
    retag pattern)
 
+#### NSFW Pre-Flight Architecture (Tiered)
+
+PromptFinder runs a two-tier pre-flight check on every bulk
+generator prompt submission. The architecture mitigates
+account-suspension risk for sustained provider-policy
+violations and absorbs cost from rejected API requests (xAI
+charges $0.02 per content-moderation rejection;
+OpenAI/Google can suspend API access for sustained violations).
+
+**Tier 1 — Universal blocks** (`block_scope='universal'`):
+terms blocked across ALL providers regardless of model
+selection. Originally the pre-173-B behavior; preserves
+backward compatibility. Includes CSAM-adjacent terms,
+definite hard-blocks (slurs/hate speech), and
+severity='critical' terms.
+
+**Tier 2 — Provider advisory**
+(`block_scope='provider_advisory'`): terms that trigger
+SPECIFIC providers' content moderation. Per-provider lists
+stored in `affected_providers` JSONField on the
+ProfanityWord model. Recognizes that providers differ —
+Grok permits artistic anatomical content that Nano Banana 2
+rejects; Flux variants are generally permissive.
+
+**Tier 3 — Permissive providers** (Flux Schnell/Dev/1.1
+Pro/2 Pro): empty advisory lists; the pre-flight allows all
+prompts and lets the provider's own moderation handle
+rejection. This is intentional — Flux is the recommended
+fallback for users hitting strict-provider rejections.
+
+**Architectural fix in 173-F:** Before 173-F,
+`profanity_filter.py:_load_word_list` was loading ALL active
+ProfanityWord rows regardless of `block_scope`. Legacy Tier
+1 `check_text` matched on advisory words too — Tier 1
+always won, Tier 2 never fired. The `affected_providers`
+JSON list was effectively dead code in production despite
+the full pipeline shipping in 173-B. 173-F fixed this by
+filtering `_load_word_list` to `block_scope='universal'`,
+so advisory words are now only consulted by
+`check_text_with_provider` (Tier 2 path).
+
+**Backward-compat semantics of the fix:** advisory words
+are no longer matched by `check_prompt(prompt_obj)` (used
+by upload moderation, admin tools, orchestrator). This is
+the intended behavior — advisory words are
+provider-specific and shouldn't trigger universal-style
+blocks in upload context (where there's no provider
+selection). If any test surfaces a regression in upload
+moderation, revisit.
+
+**Frontend wire-up (173-E):** the
+`bulk-generator-generation.js` validate fetch body includes
+`model_identifier: I.settingModel.value` so the backend can
+route to the right Tier 2 advisory list. Backend
+defensively coerces empty/missing identifier to empty
+string, falling back to Tier 1-only check (documented
+backward-compat path, not silent corruption).
+
+**Block source distinction (173-F):** the validate response
+and polling response include
+`block_source: 'preflight' | 'provider'` so the frontend
+chip body copy can differ:
+- Preflight (Tier 2 caught): "We flagged this prompt
+  because it contains words that often trigger
+  \<Provider\>'s content policy..."
+- Provider-side (API rejected): "This prompt may have
+  violated \<Provider\>'s content policy..."
+
+Default fallback when `block_source` missing: provider-side
+wording (semantically conservative for either case).
+Memory Rule #13 documented inline.
+
+**Observed provider-classifier divergence (173-F production
+verification):** During Mateo's testing of `topless woman` +
+Nano Banana 2, NB2 generated a back-view image (subject
+from behind, no breasts visible) rather than rejecting
+outright. The image generated for two reasons: (1) the
+seed-deletion gap (`topless` had been accidentally removed
+from production advisory list) plus (2) the architectural
+bug above — but a third factor surfaced as a side
+observation: NB2's own content classifier was more lenient
+than the seeded advisory list assumed when the prompt
+admitted creative interpretation. This means observed
+provider behavior may diverge from documented or assumed
+policies, and quarterly review of advisory lists should
+test edge cases against actual provider rejection rather
+than against assumed rejection patterns. Some
+currently-seeded NB2 advisory keywords might be
+over-inclusive — the architecturally-correct response is
+empirical re-validation, not removal-on-assumption. Track
+quarterly review cadence in `last_reviewed_at` field; flag
+entries older than 90 days for re-validation against
+current provider behavior.
+
+**Maintenance:** the per-provider lists live in the
+ProfanityWord admin UI at
+`/admin/prompts/profanityword/`. Tunable from any device
+without code deploys. Each entry has `last_reviewed_at`
+(date) and `review_notes` (free text) for audit trail.
+Quarterly review recommended; entries older than 90 days
+warrant re-validation against current provider behavior.
+
+**Seeding:** `python manage.py seed_provider_advisory_keywords`
+is idempotent (`update_or_create` keyed on `word`).
+Production currently has 28 provider-advisory entries
+seeded May 1-2, 2026, plus the original 27 universal-block
+entries from before 173-B.
+
 ### Recommended Build Sequence — Remaining Safety Infrastructure
 
 | Step | Item | Status |
@@ -460,6 +569,10 @@ in-flight work. Surfaced during 171–172 cluster development.
 | Reset Master Settings + Clear All Prompts UX | `static/js/bulk-generator-autosave.js` (not yet uploaded by Mateo) + `static/js/bulk-generator.js` (Reset Master button handler + Clear All Prompts handler) + per-box override reset propagation | When user clicks Reset Master Settings, existing prompt cards' overrides should reset to "Use master" (currently they retain their explicit value). When user clicks Clear All Prompts, same expectation. Plus: Reset Master should respect Nano Banana 2's 1K default (currently resetting sets master quality to "medium"/"2K" which is wrong for NB2 — Session 172-A established 1K as the NB2 master default). Requires `bulk-generator-autosave.js` analysis (file not yet uploaded by Mateo for static review) and per-box override reset propagation logic. Estimated 1 spec. Surfaced April 28, 2026 by Mateo, deferred from Session 172 due to missing autosave file. |
 | Page-refresh state recovery during bulk publish | `prompts/views/bulk_generator_views.py` + `static/js/bulk-generator-selection.js` + `static/js/bulk-generator-polling.js` | When a user refreshes the bulk job results page mid-publish or after publish completes, the modal/toast UI is lost (modal closes; sticky toast disappears; published links list resets). Server holds the truth (`BulkGenerationJob.published_count`, per-image `prompt_page_id` + `prompt_page_url`). Frontend should reconstruct UI state from polling response on page load — re-derive `totalPublishTarget`, re-render published links list, re-show terminal modal at "Done!" state. Surfaced April 26, 2026 by Mateo during 171-INV browser-task discussion. Estimated 1 spec. **Note:** Session 172-C resolved the per-image published-badge restoration on page reload (the overlay use case). The remaining work for this row is the *modal* and *sticky toast* + *published links list* which are session-state UI not per-card UI. Largely overlaps with the new "Modal persistence on bulk publish refresh" P2 row above — should be reconciled when either is specced. |
 | Replicate concurrency policy | `prompts/tasks.py` `_run_generation_loop` `_TIER_RATE_PARAMS` + `prompts/services/image_providers/replicate_provider.py` | `BULK_GEN_MAX_CONCURRENT=1` forces sequential generation across ALL providers. Replicate handles parallelism gracefully (per-call billing, no shared rate limit ceiling per user). Per-provider concurrency policy (Replicate=4-8, OpenAI=tier-bound via existing `_TIER_RATE_PARAMS`, xAI=its own limit) would substantially reduce wall-clock time on bulk Flux/Nano Banana 2 jobs. Surfaced April 26, 2026 by Mateo. Requires investigation + design + implementation. Estimated 2 specs. |
+| Add `topless` to Flux Schnell advisory list | `prompts/management/commands/seed_provider_advisory_keywords.py` (or admin UI direct edit) | Mateo verified `topless woman` + Flux Schnell submission passed pre-flight (correct behavior — Flux advisory list is empty/permissive) but Flux's provider-side API flagged it and returned a content_policy chip. Mateo's preference: also catch this preflight-side for consistency. Implementation: add `topless` to Flux Schnell's affected_providers list. Tradeoff: this contradicts the "Flux is permissive" architectural framing; consider whether Flux Schnell should instead get a separate "moderate" tier, OR whether all Flux variants should get a small advisory list. Architectural decision needed before implementation. P2 because it surfaces a real UX gap (user expects consistent preflight behavior) but isn't urgent. Surfaced May 2, 2026 (Session 173-F verification). |
+| Admin UI for ProfanityWord — checkbox list + expanded sections + auto-worded notes + auto-add new models | `prompts/admin/moderation_admin.py` ProfanityWordAdmin | Mateo's feedback on `/admin/prompts/profanityword/`: (1) replace the freeform "Affected providers" JSONField widget with a checkbox list of all GeneratorModel rows (auto-populated from seed file via context-aware admin form); (2) expand the "Provider Awareness (Session 173-B)" section with detailed onboarding instructions for new admins (assume they may not have project history); (3) auto-word the `review_notes` field based on which providers are checked rather than freeform text — reduces drift between actual classification and documented rationale; (4) make "Notes" and "Timestamps" subsections expanded by default rather than collapsed; (5) auto-add new model rows when GeneratorModel entries are added to seed_generator_models.py — admin form should always reflect the current model registry, not stale data. Implementation: ModelAdmin form override + custom widget for affected_providers + signal handler on GeneratorModel save. P2 because it's UX polish on an admin-only surface (not user-facing) but the auto-add-new-models hook is the largest item — without it, every new model added requires manual admin curation across all advisory entries. Surfaced May 2, 2026 (Session 173-F verification). |
+| Bulk generator pre-flight banner UX update — match NSFW chip styling | `static/js/bulk-generator-generation.js` (validate-error rendering) + `static/css/pages/bulk-generator-job.css` (or bulk-generator.css for the input page) | Currently when bulk generator validate fails, the page shows "Please fix the following issues:" at the top with a flat list of issues. Mateo wants this banner restyled to match the NSFW chip's redesigned visual treatment (large icon, descriptive body text). **Verbatim wording target from Mateo:** "Please fix the following possible content violation issues (learn more[link to policy page, same as for how we do it on the nsfw chip]) for this model:" — note the parenthetical "learn more" link sits inline with the heading text, NOT at the end. The "learn more" link goes to `/policies/content/` (same target as the NSFW chip's "learn more" link, for consistency). **OPEN ARCHITECTURAL QUESTION (Mateo asked Claude.ai for help thinking through this):** does the universal-block banner warrant a "Think we got it wrong? Let us know" affordance similar to the NSFW chip? Mateo's exact framing: *"the user may be like Hey!, this is a mistake and it's a legit safe keyword!"* — arguing FOR the affordance. Counter-argument: universal blocks are typically clear-cut (slurs, CSAM-adjacent, severity='critical' terms) where a user clicking "report" is more likely to be defending intentionally violating content than catching a false positive. Tradeoff space: (a) include the affordance verbatim from the NSFW chip — maximizes user feedback channel but may invite spurious reports for genuinely-blocked content; (b) include the affordance but with different copy that signals higher confidence in the block (e.g. "These words are blocked across all models. If you believe this is a mistake, contact us.") — softer affordance, less prominent than the NSFW chip's; (c) omit the affordance entirely for universal blocks — universal terms shouldn't be re-litigated by users; the rare false positive (e.g. a name that happens to overlap with a universal-block term like "Dick" the proper noun) is rare enough to warrant a different handling path. **Decision needed before implementation begins** — flag this question early in Session 174's planning so it's resolved before drafting the actual code spec. Implementation regardless of decision: extract chip rendering helper from `bulk-generator-gallery.js` and reuse for the validate-error banner; CSS styling re-uses existing `.error-chip__*` rules from 173-F; the "learn more" link is unconditional regardless of which option is picked above. P2 because it improves UX consistency and (depending on decision) may give users an explicit feedback channel for false positives. Surfaced May 2, 2026 (Session 173-F verification). |
+| New-model-to-advisory-list automation | Django signal on `GeneratorModel` post_save in `prompts/signals/` (or new file) + ProfanityWord admin form widget refresh | When a new model is added to `seed_generator_models.py` (e.g. when Phase REP adds Replicate models or Imagen 4 ships), the corresponding affected_providers list in admin UI should auto-populate so admins can immediately curate per-model advisory keywords. Without this, every new model requires manual cross-curation of all existing ProfanityWord entries. Couples with the admin UI checkbox-list improvement above. Implementation: Django signal on GeneratorModel post_save → ensures all relevant ProfanityWord rows have a corresponding entry in their affected_providers (or simply ensures the admin form's checkbox widget always reflects the current GeneratorModel registry). P2 because it's pre-emptive infrastructure; becomes urgent when next new model lands. Surfaced May 2, 2026 (Session 173-F verification). |
 
 ---
 
@@ -470,6 +583,7 @@ Small items not worth individual specs — batch into cleanup passes periodicall
 | Item | File | Notes |
 |------|------|-------|
 | Try-in URL text adjustment for future single-page generator | (TBD — likely `prompts/templates/prompts/prompt_detail.html` or wherever the future single-page generator's "Try in [model]" link lives) | Mateo noted the "Try in [model]" link text should adjust slightly when the project's single-page generator launches — wording should encourage users to try the prompt in PromptFinder's own generator first rather than (or in addition to) the model-owner's site. No code change yet; this is a placeholder for when the single-page generator ships. Surfaced April 28, 2026 by Mateo during 172 cluster scoping. |
+| Bold banned keyword in mailto report body | `static/js/bulk-generator-gallery.js` `_buildReportMailto()` (or equivalent) + chip "Report" button handler | When the user clicks "Report" on an NSFW chip, the resulting mailto-prefilled email body includes the banned keyword inline as plain text. Mateo's polish suggestion: bold the banned keyword in the body (HTML email body via the `body=` query param URL-escapes whitespace but most modern mail clients render limited markdown/HTML in the prefilled body; alternative: wrap the keyword in `**asterisks**` per Markdown convention which Gmail/Apple Mail render as bold). P3 because it's a small polish on an already-functional report flow — the report itself works; this is purely visual emphasis. Surfaced May 2, 2026 (Session 173-F verification). |
 | EndToEndPublishFlowTests `GeneratorModel` fixture gap | `prompts/tests/test_bulk_page_creation.py` | 169-C closed the parallel gap in `PublishTaskTests` (added `GeneratorModel` fixture in `setUp`) but `EndToEndPublishFlowTests` from Phase 7 has the same risk pattern — its `setUp` does not create a `GeneratorModel` row, so any future test relying on the `_resolve_ai_generator_slug` helper would fall through to `'other'` instead of the expected slug. Caught by @test-automator during 169-C review (8.5/10 score). Trivial fix — copy the fixture from `PublishTaskTests`. P3 because no current test in `EndToEndPublishFlowTests` exercises the resolution path; latent risk only. **Session 171-C extends the same risk to `gpt-image-2-byok`** — neither `PublishTaskTests.setUp` nor `EndToEndPublishFlowTests.setUp` creates a gpt-image-2-byok GeneratorModel fixture, so a future gpt-image-2 publish test would also fall through to `'other'`. Resolution: include a `gpt-image-2-byok` fixture in the broader test-fixture audit when this row is closed. |
 | gpt-image-2 per-quality/size pricing audit + IMAGE_COST_MAP per-model restructure | `prompts/constants.py` `IMAGE_COST_MAP` + `get_image_cost(quality, size)` signature + all callers | Session 171-C added gpt-image-2 BYOK support but chose Option B2 (mirror gpt-image-1.5 prices as placeholder) because (a) gpt-image-2 is BYOK so OpenAI bills user directly — displayed cost is informational only; (b) precise per-quality/size pricing not yet published by OpenAI (token-based pricing only at $8/M input + $30/M output tokens). Per-image equivalents range $0.01-$0.02 (low) to $0.15-$0.22 (high) — high tier ~60% more expensive than gpt-image-1.5. When OpenAI publishes per-quality/size pricing, restructure `IMAGE_COST_MAP` to be model-keyed (`{model: {quality: {size: price}}}`) and update `get_image_cost()` signature to accept a `model` parameter (Option B1 from spec section 5). Update all callers (~5-10 sites in `tasks.py` + `bulk_generator_views.py`). Add gpt-image-2 prices. Will also be required when first PLATFORM-key (non-BYOK) OpenAI model ships. |
 | PROJECT_FILE_STRUCTURE.md broader stale-counts audit | `PROJECT_FILE_STRUCTURE.md` | 169-D updated 4 top-line counts (Last Updated, Tests, Migrations, Test Files) but the file has additional stale entries inside per-session historical tree snapshots and inline LOC values. A comprehensive PFS audit pass would catch these but is out of scope for incremental docs catch-up specs. Defer until cumulative drift becomes large enough to justify a dedicated PFS audit spec. |
@@ -633,6 +747,55 @@ Required steps:
    `MODERATION_RUNBOOK.md` (175-B)
 4. Document the repeat infringer policy in ToS and
    `MODERATION_RUNBOOK.md`
+
+**Architectural learnings from the 173 arc to incorporate into Session 175:**
+
+1. **The CONTENT_POLICY.md document should distinguish universal
+   blocks from provider-advisory blocks as a first-class
+   architectural concept.** This isn't just an implementation
+   detail — it shapes how the public-facing
+   CONTENT_GUIDELINES.md communicates rules to users ("our
+   rules" vs "the AI provider's rules"). The 173-F architectural
+   fix proved this distinction is real and consequential.
+
+2. **The cost-absorption policy section should reference the
+   Tier 2 architecture as the primary defense.** Pre-flight
+   catches an estimated 80-90% of NSFW prompts before they hit
+   the API, so cost-absorption is a backstop, not the primary
+   mechanism. Update the policy section to reflect this.
+
+3. **The DMCA Agent registration step should be paired with the
+   moderation runbook section that explains how repeat-
+   infringer enforcement integrates with the existing
+   ProfanityWord severity model.** The runbook should answer:
+   "if a user submits 5 universal-block prompts in a week,
+   what happens?" The answer should reference both the existing
+   moderation_status field on PromptPage and the (pending)
+   content-block report system from 173-F's mailto stub.
+
+4. **The full report-to-admin backend (Django model, API
+   endpoint, admin queue) should be Session 175-A.** It's
+   deferred from 173-F's mailto stub. The mailto-to-real-backend
+   migration is mechanical: parse incoming reports from the
+   mailto-generated emails (or build a proper API endpoint),
+   normalize into a `ContentBlockReport` model, surface via
+   admin queue. The 173-F mailto body format is already
+   structured (prompt, provider, error_type, timestamp,
+   error_message) so parsing is straightforward.
+
+5. **The placeholder content policy page at `/policies/content/`**
+   (created in 173-C) needs to be replaced by the full
+   `docs/CONTENT_GUIDELINES.md` rendered through a real template.
+   The placeholder uses an honest "pre-launch placeholder"
+   banner; the production version should remove this banner and
+   add the full content.
+
+6. **Session 175 should include a `policy-drafting` Claude skill
+   at `/.claude/skills/policy-drafting/SKILL.md`** with the
+   structure outlined in the existing 173-D plan section. This
+   is the most leverage-positive item — it makes future policy
+   drafts (Privacy Policy updates, ToS amendments, content
+   policy expansions) significantly higher-quality.
 
 ### 🚀 Planned New Features
 
@@ -3249,6 +3412,102 @@ average. Commit as a separate small commit immediately. Commit
 message format: `docs: backfill <session>-D self-reference
 (Memory Rule #17 application)`.
 
+### REPORT Review Verification Discipline (Claude.ai)
+
+**This is a Claude.ai-side behavior commitment, not a CC-side
+instruction.** It complements Memory Rule #14 (closing checklist
+after CC reports a completed spec).
+
+**Origin:** This discipline was established May 2, 2026 (Session
+173 arc closeout) after Memory Rule #14 was violated repeatedly
+across the 172 and 173 arcs:
+
+- Session 172 Findings #2 and #5 (per-card "Use master" reset
+  bugs and sticky pricing not updating on master quality changes)
+  were never explicitly verified after 173-A shipped — Claude.ai
+  assumed downstream coverage from upstream fixes
+- 173-B architectural assumption (`_load_word_list` would respect
+  `block_scope` filtering) was unverified at draft time and
+  shipped a feature that never fired in production until 173-F
+  caught the gap during testing
+- 173-C chip layout assumption (a horizontal layout would be
+  acceptable to Mateo) was based on Claude.ai's design preference
+  rather than explicit verification of Mateo's stated preference,
+  leading to redesign in 173-F
+- 173-E ProfanityWord admin screenshot data was treated as
+  ground-truth without confirming the count vs. the seed file
+  (17 visible vs 28 expected) — the discrepancy turned out to be
+  Mateo's manual deletions plus the architectural bug, but
+  Claude.ai didn't flag the gap at the time
+
+**The discipline:** When Claude.ai reviews a CC completion REPORT
+after a session lands, Claude.ai produces a **verification status
+table** at the end of the REPORT review — before discussing next
+steps, before drafting follow-up specs, before any forward-looking
+framing.
+
+**Table format:**
+
+| Item | Status | Evidence reference |
+|------|--------|---------------------|
+| (Each item from the REPORT's claimed deliverables) | (status emoji + text) | (where the verification or non-verification is anchored) |
+
+**Status values:**
+- ✅ Verified — Mateo or Claude.ai confirmed the behavior change
+  in production or via deterministic check
+- ⚠️ Pending Mateo verification — claimed by CC, not yet tested by
+  Mateo, requires manual user-facing test before treating as
+  verified
+- ⏸ Deferred — knowingly out-of-scope or punted with explicit
+  rationale
+- ❌ Failed — verified to NOT meet the spec's claim
+- N/A — administrative item not subject to verification (e.g.
+  docs entries, comment additions)
+
+**When the table applies:** Every CC completion REPORT review for
+code-shipping specs. Skip for:
+- Docs-only specs where every deliverable is a documentation
+  entry (use Memory Rule #17 self-reference backfill verification
+  instead)
+- Hotfixes shipped within a working session where verification
+  happens inline (the table isn't useful when verification and
+  review collapse into one step)
+
+**What the table is NOT:** This is not a substitute for Memory
+Rule #14's closing checklist, which lists migrations + manual
+tests + failure modes + backward-compat checks. The verification
+table is about **what state the work is currently in** (verified
+vs pending vs deferred), while Memory Rule #14's checklist is
+about **what Mateo should do next**. Both apply.
+
+**Anti-pattern this prevents:** Claude.ai treating "suite green +
+commit landed + report says 9.0/10" as equivalent to "feature
+works in production." The 173 arc proved this gap is real —
+173-B shipped a fully-tested green-suite feature that never
+fired in production for 24 hours until manual testing in 173-F
+caught the gap. The verification table forces explicit
+acknowledgment of every item's verification state, making "we
+don't actually know yet" visible rather than absorbed into
+optimistic framing.
+
+**This discipline does not require a memory rule.** It is a
+documented practice that applies when Claude.ai reads a CC
+REPORT, equivalent in weight to a Critical Reminder in
+CC_SPEC_TEMPLATE but on the Claude.ai side.
+
+**Why this lives here and not as a new memory rule (#18):** Per
+the Three-criteria framework discussions across 169-D and 173-D,
+new memory rules require (1) a recurring failure pattern, (2)
+inadequacy of existing rules to prevent it, (3) a generalizable
+behavioral correction. While criteria (1) and (2) clearly apply,
+criterion (3) is best satisfied by a documented practice rather
+than a memorized rule because the behavior is bounded in time
+(only applies during REPORT review) and benefits from the
+visible structure of a documented checklist that Mateo can
+reference and call out if Claude.ai misses it. Adding a memory
+rule would also bump per-message token cost without proportional
+benefit relative to a discoverable doc-side commitment.
+
 ### Three-criteria framework for future memory additions
 
 A memory edit earns a slot if it meets at least one of:
@@ -4111,9 +4370,9 @@ B2_UPLOAD_RATE_WINDOW = 3600 # window = 1 hour (3600 seconds)
 
 ---
 
-**Version:** 4.73 (Session 173-F SINGLE-SPEC cluster — NSFW chip redesign + Tier 2 architectural fix + report-to-admin mailto stub + seed restoration deferred. **5 folded items, single commit.** (1) Chip stacked layout: large gray icon over red "Content blocked" pill over body copy with two inline links — closes 173-C deferred preference; only content_policy variant gets stacked, others stay inline (intentional asymmetry). (2) Block source distinction: backend `block_source: 'preflight' \| 'provider'` threaded through validate response + polling response; frontend chip body copy varies — Memory Rule #13 silent-fallback to provider-side wording. (3) Tier 2 architectural fix: legacy `check_text` `_load_word_list` was loading ALL active words regardless of `block_scope`, so Tier 1 universal always caught advisory words first — Tier 2 NEVER fired in production despite 173-B/E shipping the pipeline. Fixed by filtering `block_scope='universal'`. Required for Mateo's headline activation test. (4) Report-to-admin mailto stub: "Let us know" link with auto-populated mailto, new `CONTENT_BLOCK_REPORT_EMAIL` Django setting (env-overridable), surfaced via `data-content-block-report-email` template attribute. Full backend deferred to Session 175. (5) **Seed restoration BLOCKED at harness permission layer** despite spec authorization — Mateo runs `heroku run python manage.py seed_provider_advisory_keywords` manually post-deploy to restore 11 advisory keywords accidentally deleted from admin UI. Activation test deferred until seed restored. 3 new tests on validate endpoint. **Cluster shape:** SINGLE-SPEC. **Memory Rules:** #16 (3 deferred items closed) + #17 (single-commit pattern) + #13 (silent fallback) + #14 (closing checklist). Commit pending — see git log for hash. 1414 tests.)
+**Version:** 4.74 (Session 173 Arc Closeout — May 2, 2026. End-of-session docs update for the full 173 arc (173 main cluster + 173-E + 173-F + Memory Rule #17 backfill). The arc's most consequential finding was the Tier 2 architectural fix in 173-F: `_load_word_list` had been loading all active words regardless of `block_scope`, so Tier 2 advisory had never fired in production since 173-B shipped — fixed in 173-F. After deploy, the entire 173-B account-protection feature is genuinely live in production for the first time. New **"NSFW Pre-Flight Architecture (Tiered)"** subsection added to CLAUDE.md as a first-class concept, including a documented note on observed NB2 classifier divergence from assumed policies. New **"REPORT Review Verification Discipline (Claude.ai)"** subsection added — a documented Claude.ai behavior commitment (NOT a memory rule per the Three-criteria framework) requiring a verification status table at the end of every CC report review for code-shipping specs. 5 new Deferred items captured from 173-F verification: 4 P2 rows (`topless` Flux advisory, ProfanityWord admin UI improvements, bulk generator pre-flight banner UX with **open architectural question** on universal-block "Think we got it wrong?" affordance, new-model-to-advisory-list automation) + 1 P3 row (bold banned keyword in mailto). Backfilled 173-E (`2591b8c`, avg 9.367) and 173-F (`85c0ffa`, avg 9.18) agent ratings + commit hashes. Session 175 plan section expanded with 6 architectural learnings derived from the arc. Memory Rules unchanged at 17 of 30. Tests 1411 → 1414 (no new tests in this docs spec). Cluster shape: SINGLE-SPEC. Commit pending. Agent avg pending.)
 // Prior version footer (4.72, Session 173-E) preserved for traceability:
 // 4.72 (Session 173-E SINGLE-SPEC follow-on cluster — frontend wire-up of `model_identifier` in `api_validate_prompts` POST body. Activates 173-B Tier 2 advisory pre-flight in production. Closes REPORT_173_B Section 5 P2 deferred item per Memory Rule #16. Step 0 finding: backend wire-up was ALREADY DONE in 173-B; only frontend gap remained. 1411 tests.)
 // Prior version footer (4.71, Session 173 main cluster) preserved below for historical reference:
 // 4.71 (Session 173 cluster — HYBRID with prior-session evidence capture. 173-A `369b2a0` avg 9.35/10 (per-card "Use master" reset bugs + xai keyword rename). 173-B `e06ab5c` avg 8.92/10 (NSFW pre-flight v1). 173-C `bef3115` avg 9.225/10 (alert-circle chip icon + placeholder content policy page). 173-D `474b308` avg 9.0/10 (docs update + 171-D/172-D backfills + Memory Rules #16/#17 + Session 175 plan section). Memory Rules 15 → 17 of 30. 1408 tests.)
-**Last Updated:** May 1, 2026
+**Last Updated:** May 2, 2026

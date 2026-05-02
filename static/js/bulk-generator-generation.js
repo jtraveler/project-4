@@ -12,6 +12,15 @@
     var I = window.BulkGenInput;
     if (!I) return;
 
+    // ─── Helpers ──────────────────────────────────────────────────
+    // Session 174-A: NB2-detection helper. Module-scope (not inline
+    // in the Reset Master handler) so future per-model defaults can
+    // share it. Slug verified from
+    // prompts/management/commands/seed_generator_models.py:153.
+    function _isNB2Model(modelIdentifier) {
+        return modelIdentifier === 'google/nano-banana-2';
+    }
+
     // ─── API Key Validation ───────────────────────────────────────
     function showApiKeyStatus(message, type) {
         if (!I.apiKeyStatus) return;
@@ -450,15 +459,16 @@
     I.resetMasterBtn.addEventListener('click', function () { showModal(I.resetMasterModal); });
     I.resetMasterCancel.addEventListener('click', function () { hideModal(I.resetMasterModal); });
     I.resetMasterConfirm.addEventListener('click', function () {
-        // Session 173-A: corrected from 'gpt-image-1' (non-existent
-        // model_identifier — silently fell back to first dropdown
-        // option, which was Flux Schnell at sort_order 20). Mateo
-        // confirmed 'black-forest-labs/flux-schnell' as the explicit
-        // default — cheapest, fastest, no BYOK requirement, sensible
-        // for new users testing the tool. Verified valid via
-        // seed_generator_models.py line 61.
-        I.settingModel.value = 'black-forest-labs/flux-schnell';
-        I.settingQuality.value = 'medium';
+        // Session 174-A: Reset Master keeps the user's currently
+        // selected model and resets master quality to a model-aware
+        // default. Nano Banana 2 → 'low' (1K per Session 172-A);
+        // all other models → 'medium'. The model itself is NOT reset
+        // — Mateo's intent is "reset master row to sane defaults,"
+        // not "switch the user's model." This closes the
+        // EXISTING-3 P2 deferred item from CLAUDE.md.
+        // Cluster shape per Memory Rule #15: BATCHED-WITH-PRIOR-INVESTIGATION.
+        var currentModel = I.settingModel.value;
+        I.settingQuality.value = _isNB2Model(currentModel) ? 'low' : 'medium';
         I.settingVisibility.checked = true;
         I.visibilityLabel.textContent = 'Public';
         I.settingCharDesc.value = '';
@@ -477,19 +487,68 @@
 
         if (I.removeRefImage) I.removeRefImage();
 
-        // Reset dimensions to 1:1
-        var dimGroup = document.getElementById('settingDimensions');
-        dimGroup.querySelectorAll('.bg-btn-group-option').forEach(function (b) {
-            b.classList.remove('active');
-            b.setAttribute('aria-checked', 'false');
-            b.setAttribute('tabindex', '-1');
-        });
-        var defaultDim = dimGroup.querySelector('[data-value="1024x1024"]');
-        if (defaultDim) {
-            defaultDim.classList.add('active');
-            defaultDim.setAttribute('aria-checked', 'true');
-            defaultDim.setAttribute('tabindex', '0');
-            I.updateDimensionLabel('1024x1024');
+        // Session 174-A: Reset dimensions/aspect ratio to 2:3, scoped
+        // to whichever dimension group is currently active for the
+        // user's model. Detection pattern from bulk-generator.js:1185
+        // — I.aspectRatioGroup.style.display gates the AR group's
+        // visibility based on _modelConfig.supported_aspect_ratios.
+        // 1:1 fallback is defensive (every currently-seeded model
+        // includes 2:3); console.warn fires per silent-fallback rule.
+        if (I.aspectRatioGroup && I.aspectRatioGroup.style.display !== 'none') {
+            // Replicate / xAI models — settingAspectRatio is visible
+            var arGroup = I.settingAspectRatio;
+            if (arGroup) {
+                arGroup.querySelectorAll('.bg-btn-group-option').forEach(function (b) {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-checked', 'false');
+                    b.setAttribute('tabindex', '-1');
+                });
+                var defaultAR = arGroup.querySelector('[data-value="2:3"]');
+                if (!defaultAR) {
+                    defaultAR = arGroup.querySelector('[data-value="1:1"]');
+                    if (window.console && typeof console.warn === 'function') {
+                        console.warn(
+                            '[Reset Master] Model "' + I.settingModel.value +
+                            '" does not support 2:3 aspect ratio; falling back to 1:1.'
+                        );
+                    }
+                }
+                if (defaultAR) {
+                    defaultAR.classList.add('active');
+                    defaultAR.setAttribute('aria-checked', 'true');
+                    defaultAR.setAttribute('tabindex', '0');
+                }
+            }
+        } else {
+            // OpenAI models — settingDimensions pixel-size group is visible
+            var dimGroup = document.getElementById('settingDimensions');
+            if (dimGroup) {
+                dimGroup.querySelectorAll('.bg-btn-group-option').forEach(function (b) {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-checked', 'false');
+                    b.setAttribute('tabindex', '-1');
+                });
+                var defaultDim = dimGroup.querySelector('[data-value="1024x1536"]');
+                var dimFallbackUsed = false;
+                if (!defaultDim) {
+                    defaultDim = dimGroup.querySelector('[data-value="1024x1024"]');
+                    dimFallbackUsed = true;
+                    if (window.console && typeof console.warn === 'function') {
+                        console.warn(
+                            '[Reset Master] Model "' + I.settingModel.value +
+                            '" does not support 2:3 (1024x1536); falling back to 1:1.'
+                        );
+                    }
+                }
+                if (defaultDim) {
+                    defaultDim.classList.add('active');
+                    defaultDim.setAttribute('aria-checked', 'true');
+                    defaultDim.setAttribute('tabindex', '0');
+                    if (I.updateDimensionLabel) {
+                        I.updateDimensionLabel(dimFallbackUsed ? '1024x1024' : '1024x1536');
+                    }
+                }
+            }
         }
 
         // Reset images per prompt to 1
@@ -529,15 +588,6 @@
             if (dirRow) dirRow.style.display = 'none';
             box.classList.remove('has-override');
         });
-
-        // Session 173-A: trigger handleModelChange to refresh per-box
-        // capability UI now that the master model has changed. Without
-        // this, per-box quality dropdowns would retain pre-Reset labels
-        // (e.g. "1K/2K/4K" if NB2 was active) until the user manually
-        // changed the model again. handleModelChange reads the current
-        // settingModel.value and updates per-box label text + disabled
-        // state to match.
-        if (I.handleModelChange) I.handleModelChange();
 
         // Reset must also clear the localStorage draft — otherwise a
         // page refresh would restore the pre-reset settings, defeating

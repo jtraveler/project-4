@@ -230,7 +230,7 @@ All 6 manual tests **passed** per Mateo on May 2, 2026.
 
 | Hash | Message |
 |------|---------|
-| `<COMMIT_HASH>` | fix(bulk-gen): Reset Master keeps current model + 2:3 default + NB2 1K quality (174-A) |
+| `7f7b838` | fix(bulk-gen): Reset Master keeps current model + 2:3 default + NB2 1K quality (174-A) |
 
 Single commit per Memory Rule #17 (single-spec single-commit pattern; CHANGELOG entry will reference this commit hash via "see commit log for hash" phrasing — no separate backfill commit needed).
 
